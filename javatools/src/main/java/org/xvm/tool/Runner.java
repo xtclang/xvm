@@ -327,12 +327,23 @@ public class Runner
             out(sName + " version " + sVer);
             }
 
+        boolean jit = options.isJit();
+        if (jit && Runtime.version().compareTo(Runtime.Version.parse("24")) < 0) {
+            log(Severity.WARNING, "JIT requires Java version 24 or later; switching to interpreter");
+            jit = false;
+        }
+
         log(Severity.INFO, "Executing " + sName + " from " + binLocDesc);
         try
             {
-            Connector connector = new Connector(repo);
+            Connector connector;
+            if (jit) {
+                // TODO make a JitConnector
+                connector = new Connector(repo);
+            } else {
+                connector = new Connector(repo);
+            }
             connector.loadModule(module.getName());
-
             connector.start(options.getInjections());
 
             ConstantPool pool = connector.getConstantPool();
@@ -478,6 +489,7 @@ public class Runner
             super();
 
             addOption("I" ,     "inject",       Form.Pair,   true,  "Specifies name/value pairs for injection; the format is \"name1=value1,name2=value2\"");
+            addOption("J" ,     "jit",          Form.Name,   false, "Specifies name/value pairs for injection; the format is \"name1=value1,name2=value2\"");
             addOption("L" ,     null,           Form.Repo,   true,  "Module path; a \"" + File.pathSeparator + "\"-delimited list of file and/or directory names");
             addOption("M",      "method",       Form.String, false, "Method name; defaults to \"run\"");
             addOption(null,     "no-recompile", Form.Name,   false, "Disable automatic compilation");
@@ -508,6 +520,14 @@ public class Runner
         public boolean isCompileDisabled()
             {
             return specified("no-recompile");
+            }
+
+        /**
+         * @return true iff "-J" or "--jit" is specified
+         */
+        public boolean isJit()
+            {
+            return specified("J");
             }
 
         /**

@@ -50,5 +50,5 @@ public class Enter
         m_nNextVar = scope.getCurVars();
     }
 
-    private int m_nNextVar;
+    private transient int m_nNextVar;
 }

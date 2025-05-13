@@ -31,8 +31,7 @@ import java.util.Map;
 /**
  * Handy static methods.
  */
-public final class Handy
-    {
+public final class Handy {
     private Handy() {}
 
     // ----- String formatting ---------------------------------------------------------------------
@@ -45,13 +44,12 @@ public final class Handy
      *
      * @return the hexadecimal representation of the passed nibble
      */
-    public static char nibbleToChar(int n)
-        {
+    public static char nibbleToChar(int n) {
         n = n & 0xf;
         return (n <= 9)
                 ? (char) ('0' + n)
                 : (char) ('a' - 0xa + n);
-        }
+    }
 
     /**
      * Render the passed byte (the low order 8 bits of the int) into the passed StringBuilder as
@@ -62,11 +60,10 @@ public final class Handy
      *
      * @return the StringBuilder
      */
-    public static StringBuilder appendByteAsHex(StringBuilder sb, int n)
-        {
+    public static StringBuilder appendByteAsHex(StringBuilder sb, int n) {
         return sb.append(nibbleToChar(n >> 4))
                  .append(nibbleToChar(n));
-        }
+    }
 
     /**
      * Format the passed byte (the low order 8 bits of the int) into a String of the form "0xFF".
@@ -75,10 +72,9 @@ public final class Handy
      *
      * @return a String representation of the byte
      */
-    public static String byteToHexString(int n)
-        {
+    public static String byteToHexString(int n) {
         return appendByteAsHex(new StringBuilder(4).append("0x"), n).toString();
-        }
+    }
 
     /**
      * Append a portion of a byte array to a StringBuilder as a sequence of hex digits.
@@ -90,17 +86,15 @@ public final class Handy
      *
      * @return the StringBuilder
      */
-    public static StringBuilder appendByteArrayAsHex(StringBuilder sb, byte[] ab, int of, int cb)
-        {
+    public static StringBuilder appendByteArrayAsHex(StringBuilder sb, byte[] ab, int of, int cb) {
         sb.ensureCapacity(sb.length() + cb * 2);
-        while (--cb >= 0)
-            {
+        while (--cb >= 0) {
             int n = ab[of++];
             sb.append(nibbleToChar(n >> 4))
               .append(nibbleToChar(n));
-            }
-        return sb;
         }
+        return sb;
+    }
 
     /**
      * Append the contents of a byte array to a StringBuilder as a sequence of hex digits.
@@ -110,10 +104,9 @@ public final class Handy
      *
      * @return the StringBuilder
      */
-    public static StringBuilder appendByteArrayAsHex(StringBuilder sb, byte[] ab)
-        {
+    public static StringBuilder appendByteArrayAsHex(StringBuilder sb, byte[] ab) {
         return appendByteArrayAsHex(sb, ab, 0, ab.length);
-        }
+    }
 
     /**
      * Format a portion of the passed byte array into a String of the form "0x01234FF".
@@ -124,11 +117,10 @@ public final class Handy
      *
      * @return a String representation of the byte array
      */
-    public static String byteArrayToHexString(byte[] ab, int of, int cb)
-        {
+    public static String byteArrayToHexString(byte[] ab, int of, int cb) {
         return appendByteArrayAsHex(new StringBuilder(2 + cb * 2).append("0x"),
                 ab, of, cb).toString();
-        }
+    }
 
     /**
      * Format the passed byte array into a String of the form "0x01234FF".
@@ -137,10 +129,9 @@ public final class Handy
      *
      * @return a String representation of the byte array
      */
-    public static String byteArrayToHexString(byte[] ab)
-        {
+    public static String byteArrayToHexString(byte[] ab) {
         return byteArrayToHexString(ab, 0, ab.length);
-        }
+    }
 
     /**
      * Convert a String of hex digits into a <tt>byte[]</tt>.
@@ -149,37 +140,33 @@ public final class Handy
      *
      * @return a byte array
      */
-    public static byte[] hexStringToByteArray(String s)
-        {
+    public static byte[] hexStringToByteArray(String s) {
         int ofch = 0;
         int cch  = s.length();
         int ofb  = 0;
         int cb   = (cch + 1) / 2;
 
         // check for (and skip) the "0x" prefix
-        if (s.charAt(0) == '0' && (s.charAt(1) == 'x' || s.charAt(1) == 'X'))
-            {
+        if (s.charAt(0) == '0' && (s.charAt(1) == 'x' || s.charAt(1) == 'X')) {
             ofch += 2;
             --cb;
-            }
+        }
 
         final byte[] ab = new byte[cb];
 
         // handle the case where the first nibble is an implied (missing) '0'
-        if ((cch & 0x1) != 0)
-            {
+        if ((cch & 0x1) != 0) {
             ab[ofb++] = (byte) hexitValue(s.charAt(ofch++));
-            }
+        }
 
         // convert the remaining pairs of hexits to bytes
-        while (ofch < cch)
-            {
+        while (ofch < cch) {
             ab[ofb++] = (byte) (hexitValue(s.charAt(ofch)) << 4 | hexitValue(s.charAt(ofch+1)));
             ofch += 2;
-            }
+        }
 
         return ab;
-        }
+    }
 
     /**
      * Format bytes from the passed byte array as a "hex dump", useful for debugging.
@@ -193,8 +180,7 @@ public final class Handy
      *
      * @return a String containing the hex dump
      */
-    public static String byteArrayToHexDump(byte[] ab, int of, int cb, int cBytesPerLine)
-        {
+    public static String byteArrayToHexDump(byte[] ab, int of, int cb, int cBytesPerLine) {
         assert ab != null;
         assert of >= 0 && cb >= 0 &&  of + cb <= ab.length;
         assert cBytesPerLine > 0;
@@ -215,37 +201,32 @@ public final class Handy
         final int           ofHex  = cchAddr + 2;
         final int           ofChar = ofHex + cBytesPerLine * 3;
 
-        for (int iLine = 0; iLine < cLines; ++iLine)
-            {
+        for (int iLine = 0; iLine < cLines; ++iLine) {
             // format the address
             renderIntToHex(of, ach, 0, cchAddr);
 
-            for (int iByte = 0; iByte < cBytesPerLine; ++iByte)
-                {
-                if (cb > 0)
-                    {
+            for (int iByte = 0; iByte < cBytesPerLine; ++iByte) {
+                if (cb > 0) {
                     int b = ab[of];
                     renderByteToHex(b, ach, ofHex + iByte * 3);
 
                     char ch = (char) (b & 0xFF);
                     ach[ofChar + iByte] = Character.isISOControl(ch) ? '.' : ch;
-                    }
-                else
-                    {
+                } else {
                     ach[ofHex + iByte * 3    ] = ' ';
                     ach[ofHex + iByte * 3 + 1] = ' ';
                     ach[ofChar + iByte       ] = ' ';
-                    }
+                }
 
                 ++of;
                 --cb;
-                }
-
-            sb.append(ach, 0, iLine < cLines - 1 ? cch : cch - 1);
             }
 
-        return sb.toString();
+            sb.append(ach, 0, iLine < cLines - 1 ? cch : cch - 1);
         }
+
+        return sb.toString();
+    }
 
     /**
      * Format bytes from the passed byte array as a "hex dump", useful for debugging.
@@ -256,10 +237,9 @@ public final class Handy
      *
      * @return a String containing the hex dump
      */
-    public static String byteArrayToHexDump(byte[] ab, int cBytesPerLine)
-        {
+    public static String byteArrayToHexDump(byte[] ab, int cBytesPerLine) {
         return byteArrayToHexDump(ab, 0, ab.length, cBytesPerLine);
-        }
+    }
 
     /**
      * Convert an array of bytes to a long value.
@@ -269,8 +249,7 @@ public final class Handy
      *
      * @return the long value
      */
-    public static long byteArrayToLong(byte[] ab, int of)
-        {
+    public static long byteArrayToLong(byte[] ab, int of) {
         return   ((long) (ab[of++])        << 56)
                + ((long) (ab[of++] & 0xFF) << 48)
                + ((long) (ab[of++] & 0xFF) << 40)
@@ -279,7 +258,7 @@ public final class Handy
                + (       (ab[of++] & 0xFF) << 16)
                + (       (ab[of++] & 0xFF) << 8 )
                + (        ab[of  ] & 0xFF       );
-        }
+    }
 
     /**
      * Produce an array of bytes for the specified long value.
@@ -288,10 +267,8 @@ public final class Handy
      *
      * @return the byte array
      */
-    public static byte[] toByteArray(long l)
-        {
-        return new byte[]
-            {
+    public static byte[] toByteArray(long l) {
+        return new byte[] {
             (byte) (l >> 56),
             (byte) (l >> 48),
             (byte) (l >> 40),
@@ -300,8 +277,8 @@ public final class Handy
             (byte) (l >> 16),
             (byte) (l >> 8 ),
             (byte) l,
-            };
-        }
+        };
+    }
 
     /**
      * Render the bytes of the specified long value into an array of bytes at the specified location.
@@ -310,8 +287,7 @@ public final class Handy
      * @param ab  the byte array to copy into
      * @param of  the byte array offset to write the long value at
      */
-    public static void toByteArray(long l, byte[] ab, int of)
-        {
+    public static void toByteArray(long l, byte[] ab, int of) {
         ab[of++] = (byte) (l >> 56);
         ab[of++] = (byte) (l >> 48);
         ab[of++] = (byte) (l >> 40);
@@ -320,7 +296,7 @@ public final class Handy
         ab[of++] = (byte) (l >> 16);
         ab[of++] = (byte) (l >> 8 );
         ab[of  ] = (byte) l;
-        }
+    }
 
     /**
      * Determine how many hex digits it will take to render the passed <tt>int</tt> value as an
@@ -330,10 +306,9 @@ public final class Handy
      *
      * @return the number of hex digits required to render the int value
      */
-    public static int countHexDigits(int n)
-        {
+    public static int countHexDigits(int n) {
         return Math.max((32 - Integer.numberOfLeadingZeros(n) + 3) / 4, 1);
-        }
+    }
 
     /**
      * Render the passed <tt>int</tt> into the passed StringBuilder as the specified number of hex
@@ -345,15 +320,13 @@ public final class Handy
      *
      * @return the StringBuilder
      */
-    public static StringBuilder appendIntAsHex(StringBuilder sb, int n, int cch)
-        {
+    public static StringBuilder appendIntAsHex(StringBuilder sb, int n, int cch) {
         assert cch >= 0 && cch <= 8;
-        for (int cBits = (cch-1) * 4; cBits >= 0; cBits -= 4)
-            {
+        for (int cBits = (cch-1) * 4; cBits >= 0; cBits -= 4) {
             sb.append(nibbleToChar(n >> cBits));
-            }
-        return sb;
         }
+        return sb;
+    }
 
     /**
      * Render the passed <tt>int</tt> into the passed StringBuilder as 8 hexadecimal digits.
@@ -363,10 +336,9 @@ public final class Handy
      *
      * @return the StringBuilder
      */
-    public static StringBuilder appendIntAsHex(StringBuilder sb, int n)
-        {
+    public static StringBuilder appendIntAsHex(StringBuilder sb, int n) {
         return appendIntAsHex(sb, n, 8);
-        }
+    }
 
     /**
      * Format the passed <tt>int</tt> into a String of the form "0x12345678".
@@ -375,10 +347,9 @@ public final class Handy
      *
      * @return a hexadecimal String representation of the value
      */
-    public static String intToHexString(int n)
-        {
+    public static String intToHexString(int n) {
         return appendIntAsHex(new StringBuilder(10).append("0x"), n).toString();
-        }
+    }
 
     /**
      * Determine how many hex digits it will take to render the passed <tt>long</tt> value as an
@@ -388,10 +359,9 @@ public final class Handy
      *
      * @return the number of hex digits required to render the long value
      */
-    public static int countHexDigits(long n)
-        {
+    public static int countHexDigits(long n) {
         return Math.max((64 - Long.numberOfLeadingZeros(n) + 3) / 4, 1);
-        }
+    }
 
     /**
      * Render the passed <tt>long</tt> into the passed StringBuilder as the specified number of hex
@@ -403,15 +373,13 @@ public final class Handy
      *
      * @return the StringBuilder
      */
-    public static StringBuilder appendLongAsHex(StringBuilder sb, long n, int cch)
-        {
+    public static StringBuilder appendLongAsHex(StringBuilder sb, long n, int cch) {
         assert cch >= 0 && cch <= 16;
-        for (int cBits = (cch-1) * 4; cBits >= 0; cBits -= 4)
-            {
+        for (int cBits = (cch-1) * 4; cBits >= 0; cBits -= 4) {
             sb.append(nibbleToChar((int) (n >> cBits)));
-            }
-        return sb;
         }
+        return sb;
+    }
 
     /**
      * Render the passed <tt>long</tt> into the passed StringBuilder as 16 hexadecimal digits.
@@ -421,10 +389,9 @@ public final class Handy
      *
      * @return the StringBuilder
      */
-    public static StringBuilder appendLongAsHex(StringBuilder sb, long n)
-        {
+    public static StringBuilder appendLongAsHex(StringBuilder sb, long n) {
         return appendLongAsHex(sb, n, 16);
-        }
+    }
 
 
     /**
@@ -434,10 +401,9 @@ public final class Handy
      *
      * @return a hexadecimal String representation of the value
      */
-    public static String longToHexString(long n)
-        {
+    public static String longToHexString(long n) {
         return appendLongAsHex(new StringBuilder(18).append("0x"), n).toString();
-        }
+    }
 
     /**
      * Format the specified byte value into the passed char array as two hex digits.
@@ -448,12 +414,11 @@ public final class Handy
      *
      * @return the offset of the first character after the two hex digits
      */
-    public static int renderByteToHex(int n, char[] ach, int of)
-        {
+    public static int renderByteToHex(int n, char[] ach, int of) {
         ach[of  ] = nibbleToChar(n >> 4);
         ach[of+1] = nibbleToChar(n);
         return of + 2;
-        }
+    }
 
     /**
      * Format the specified int value into the passed char array as the specified number of hex
@@ -466,15 +431,13 @@ public final class Handy
      *
      * @return the offset of the first character after the last hex digit
      */
-    public static int renderIntToHex(int n, char[] ach, int of, int cch)
-        {
-        for (int i = 0; i < cch; ++i)
-            {
+    public static int renderIntToHex(int n, char[] ach, int of, int cch) {
+        for (int i = 0; i < cch; ++i) {
             ach[of+cch-i-1] = nibbleToChar(n);
             n >>>= 4;
-            }
-        return of + cch;
         }
+        return of + cch;
+    }
 
     /**
      * Format the specified long value into the passed char array as the specified number of hex
@@ -487,15 +450,13 @@ public final class Handy
      *
      * @return the offset of the first character after the last hex digit
      */
-    public static int renderLongToHex(long n, char[] ach, int of, int cch)
-        {
-        for (int i = 0; i < cch; ++i)
-            {
+    public static int renderLongToHex(long n, char[] ach, int of, int cch) {
+        for (int i = 0; i < cch; ++i) {
             ach[of+cch-i-1] = nibbleToChar((int) n);
             n >>>= 4;
-            }
-        return of + cch;
         }
+        return of + cch;
+    }
 
     /**
      * Determine if the specified character is a decimal digit.
@@ -504,10 +465,9 @@ public final class Handy
      *
      * @return true iff the character is a decimal digit
      */
-    public static boolean isDigit(char ch)
-        {
+    public static boolean isDigit(char ch) {
         return ch >= '0' & ch <= '9';
-        }
+    }
 
     /**
      * For a decimal digit, determine its integer value.
@@ -516,11 +476,10 @@ public final class Handy
      *
      * @return the integer value of the specified decimal digit
      */
-    public static int digitValue(char ch)
-        {
+    public static int digitValue(char ch) {
         assert isDigit(ch);
         return ch - '0';
-        }
+    }
 
     /**
      * Determine if the specified character is a hexadecimal digit.
@@ -529,8 +488,7 @@ public final class Handy
      *
      * @return true iff the character is a hexadecimal digit
      */
-    public static boolean isHexit(char ch)
-        {
+    public static boolean isHexit(char ch) {
         // hexits in the unicode range appear in this order:
         //   {..., 0, ..., 9, ..., A, ..., F, ..., a, ..., f, ...}
         // so a hexit has to be in the range 0..f, and the entire character
@@ -540,7 +498,7 @@ public final class Handy
                 // 0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456
                 // 0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[/]^_`abcdef
                 0b01111111111000000011111100000000000000000000000000111111L) != 0;
-        }
+    }
 
     /**
      * For a hexadecimal digit, determine its integer value.
@@ -549,11 +507,10 @@ public final class Handy
      *
      * @return the integer value of the specified hexadecimal digit
      */
-    public static int hexitValue(char ch)
-        {
+    public static int hexitValue(char ch) {
         assert isHexit(ch);
         return ch <= '9' ? ch - '0' : (ch | 0x20) - ('a' - 0xa);
-        }
+    }
 
     /**
      * Determine if the specified character is an ASCII letter, which is in the range 'A' to 'Z',
@@ -563,8 +520,7 @@ public final class Handy
      *
      * @return true iff the character is an ASCII letter
      */
-    public static boolean isAsciiLetter(char ch)
-        {
+    public static boolean isAsciiLetter(char ch) {
         // ASCII letters in the unicode range appear in this order:
         //   {..., A, ..., Z, ..., a, ..., z, ...}
         return ch >= 'A' & ch <= 'z' & ((1L << ('z' - ch)) &
@@ -572,7 +528,7 @@ public final class Handy
                 // 123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789A
                 // ABCDEFGHIJKLMNOPQRSTUVWXYZ[/]^_`abcdefghijklmnopqrstuvwxyz
                 0b01111111111111111111111111100000011111111111111111111111111L) != 0;
-        }
+    }
 
 
     // ----- String manipulation -------------------------------------------------------------------
@@ -585,17 +541,15 @@ public final class Handy
      *
      * @return the number of occurrences of the character
      */
-    public static int countChar(String s, char ch)
-        {
+    public static int countChar(String s, char ch) {
         int c  = 0;
         int of = s.indexOf(ch);
-        while (of >= 0)
-            {
+        while (of >= 0) {
             ++c;
             of = s.indexOf(ch, of + 1);
-            }
-        return c;
         }
+        return c;
+    }
 
     /**
      * Using the specified delimiter, parse the passed String into an array of Strings, each of
@@ -606,36 +560,31 @@ public final class Handy
      *
      * @return the array of Strings parsed from the passed String
      */
-    public static String[] parseDelimitedString(String s, char chDelim)
-        {
-        if (s == null)
-            {
+    public static String[] parseDelimitedString(String s, char chDelim) {
+        if (s == null) {
             return null;
-            }
+        }
 
-        if (s.isEmpty())
-            {
+        if (s.isEmpty()) {
             return NO_ARGS;
-            }
+        }
 
         int of = s.indexOf(chDelim);
-        if (of < 0)
-            {
+        if (of < 0) {
             return new String[] {s};
-            }
+        }
 
         ArrayList<String> list = new ArrayList<>();
         int ofPrev = 0;
-        do
-            {
+        do {
             list.add(s.substring(ofPrev, of));
             ofPrev = of + 1;
             of     = s.indexOf(chDelim, ofPrev);
-            }
+        }
         while (of >= 0);
         list.add(s.substring(ofPrev));
         return list.toArray(NO_ARGS);
-        }
+    }
 
     /**
      * Parse a comma-delimited string containing "key=value" pairs. Key and or value strings can be
@@ -646,12 +595,10 @@ public final class Handy
      * @return null iff the passed string was not parseable; otherwise a map from string keys to
      *         string values
      */
-    public static Map<String, String> parseStringMap(String s)
-        {
-        if (s == null || s.isEmpty())
-            {
+    public static Map<String, String> parseStringMap(String s) {
+        if (s == null || s.isEmpty()) {
             return Collections.emptyMap();
-            }
+        }
 
         ListMap<String, String> map = new ListMap<>();
         int     of    = 0;
@@ -659,97 +606,75 @@ public final class Handy
         boolean doKey = true;       // either "parsing key" or "parsing value"
         String  key   = "";
         String  val   = "";
-        while (of < cch)
-            {
-            if (doKey)
-                {
-                if (!key.isEmpty())
-                    {
+        while (of < cch) {
+            if (doKey) {
+                if (!key.isEmpty()) {
                     // note: later pairs can override earlier pairs
                     map.put(key, val);
-                    }
-                else if (!val.isEmpty())
-                    {
+                } else if (!val.isEmpty()) {
                     return null;
-                    }
+                }
                 key = "";
                 val = "";
-                }
+            }
 
-            String cur = null;
-            switch (s.charAt(of))
-                {
-                case '\"':
-                case '\'':
-                case '`':
-                    // appears to be a quoted string
-                    int close = closingQuote(s, of);
-                    if (close > of)
-                        {
-                        cur = unquotedString(s.substring(of, close+1));
-                        of = close + 1;
-                        break;
-                        }
-                    // fall through
-                default:
-                    int next = s.indexOf(',', of);
-                    if (next < 0)
-                        {
-                        next = cch;
-                        }
-                    if (doKey)
-                        {
-                        int ofVal = s.indexOf('=', of);
-                        if (ofVal >= 0 && ofVal < next)
-                            {
-                            next = ofVal;
-                            }
-                        }
-                    cur = s.substring(of, next);
-                    of  = next;
+            String cur;
+            switch (s.charAt(of)) {
+            case '\"':
+            case '\'':
+            case '`':
+                // appears to be a quoted string
+                int close = closingQuote(s, of);
+                if (close > of) {
+                    cur = unquotedString(s.substring(of, close+1));
+                    of = close + 1;
                     break;
                 }
+                // fall through
+            default:
+                int next = s.indexOf(',', of);
+                if (next < 0) {
+                    next = cch;
+                }
+                if (doKey) {
+                    int ofVal = s.indexOf('=', of);
+                    if (ofVal >= 0 && ofVal < next) {
+                        next = ofVal;
+                    }
+                }
+                cur = s.substring(of, next);
+                of  = next;
+                break;
+            }
 
-            if (doKey)
-                {
+            if (doKey) {
                 key = cur;
-                }
-            else
-                {
+            } else {
                 val = cur;
-                }
+            }
 
-            if (of < cch)
-                {
+            if (of < cch) {
                 char delim = s.charAt(of++);
-                if (doKey && delim == '=')
-                    {
+                if (doKey && delim == '=') {
                     doKey = false;
-                    }
-                else if (delim == ',')
-                    {
+                } else if (delim == ',') {
                     doKey = true;
-                    }
-                else
-                    {
+                } else {
                     // garbage
                     return null;
-                    }
                 }
             }
+        }
 
-        if (!key.isEmpty())
-            {
+        if (!key.isEmpty()) {
             // note: later pairs can override earlier pairs
             map.put(key, val);
-            }
-        else if (!val.isEmpty())
-            {
+        } else if (!val.isEmpty()) {
             return null;
-            }
+        }
 
         return map;
-        }
+    }
 
     /**
      * Create a string containing the specified number of the specified character.
@@ -759,15 +684,13 @@ public final class Handy
      *
      * @return a string containing the specified number of the specified character
      */
-    public static String dup(char ch, int cch)
-        {
+    public static String dup(char ch, int cch) {
         StringBuilder sb = new StringBuilder(cch);
-        while (cch-- > 0)
-            {
+        while (cch-- > 0) {
             sb.append(ch);
-            }
-        return sb.toString();
         }
+        return sb.toString();
+    }
 
     /**
      * Indent each line of the passed text by prepending the specified indentation String.
@@ -777,13 +700,11 @@ public final class Handy
      *
      * @return the indented String
      */
-    public static String indentLines(String sText, String sIndent)
-        {
+    public static String indentLines(String sText, String sIndent) {
         int cchOld = sText.length();
-        if (cchOld == 0)
-            {
+        if (cchOld == 0) {
             return "";
-            }
+        }
 
         int cLines = countChar(sText, '\n') + 1;
         int cchNew = cchOld + cLines * sIndent.length();
@@ -791,26 +712,23 @@ public final class Handy
 
         int ofLine    = 0;
         int ofNewline = sText.indexOf('\n');
-        while (ofNewline >= 0)
-            {
-            if (ofNewline > ofLine)
-                {
+        while (ofNewline >= 0) {
+            if (ofNewline > ofLine) {
                 sb.append(sIndent);
-                }
+            }
             sb.append(sText, ofLine, ofNewline + 1);
 
             ofLine = ofNewline + 1;
             ofNewline = sText.indexOf('\n', ofLine);
-            }
+        }
 
-        if (ofLine < cchOld)
-            {
+        if (ofLine < cchOld) {
             sb.append(sIndent)
               .append(sText, ofLine, cchOld);
-            }
+        }
 
         return sb.toString();
-        }
+    }
 
     /**
      * Determine if the specified character needs to be escaped in order to be displayed.
@@ -819,19 +737,15 @@ public final class Handy
      *
      * @return true iff the character should be escaped in order to be displayed
      */
-    public static boolean isCharEscaped(char ch)
-        {
-        if (ch < 0x80)
-            {
+    public static boolean isCharEscaped(char ch) {
+        if (ch < 0x80) {
             return ch < 0x20 || ch == '\'' || ch == '\"' || ch == '\\' || ch == 0x7F;
-            }
-        else
-            {
+        } else {
             return !Character.isValidCodePoint(ch) ||
                     Character.getType(ch) == Character.CONTROL ||
                     ch == '\u2028' || ch == '\u2029';
-            }
         }
+    }
 
     /**
      * Append the specified character to the StringBuilder, escaping if necessary.
@@ -841,47 +755,28 @@ public final class Handy
      *
      * @return the StringBuilder
      */
-    public static StringBuilder appendChar(StringBuilder sb, char ch)
-        {
-        if (isCharEscaped(ch))
-            {
-            switch (ch)
-                {
-                case '\\':
-                    return sb.append("\\\\");
-                case '\b':
-                    return sb.append("\\b");
-                case '\f':
-                    return sb.append("\\f");
-                case '\n':
-                    return sb.append("\\n");
-                case '\r':
-                    return sb.append("\\r");
-                case '\t':
-                    return sb.append("\\t");
-                case '\'':
-                    return sb.append("\\'");
-                case '\"':
-                    return sb.append("\\\"");
-                case 0x00:
-                    return sb.append("\\0");
-                case 0x0B:
-                    return sb.append("\\v");
-                case 0x1A:
-                    return sb.append("\\z");
-                case 0x1B:
-                    return sb.append("\\e");
-                case 0x7F:              // DEL
-                    return sb.append("\\d");
-                default:
-                    return appendIntAsHex(sb.append('\\').append('u'), ch, 4);
-                }
-            }
-        else
-            {
+    public static StringBuilder appendChar(StringBuilder sb, char ch) {
+        if (isCharEscaped(ch)) {
+            return switch (ch) {
+                case '\\' -> sb.append("\\\\");
+                case '\b' -> sb.append("\\b");
+                case '\f' -> sb.append("\\f");
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                case '\'' -> sb.append("\\'");
+                case '\"' -> sb.append("\\\"");
+                case 0x00 -> sb.append("\\0");
+                case 0x0B -> sb.append("\\v");
+                case 0x1A -> sb.append("\\z");
+                case 0x1B -> sb.append("\\e");
+                case 0x7F -> sb.append("\\d"); // DEL
+                default   -> appendIntAsHex(sb.append('\\').append('u'), ch, 4);
+            };
+        } else {
             return sb.append(ch);
-            }
         }
+    }
 
     /**
      * Render a character as it would appear as a constant in source code.
@@ -890,10 +785,9 @@ public final class Handy
      *
      * @return a string showing the specified character, escaped if necessary
      */
-    public static String quotedChar(char ch)
-        {
+    public static String quotedChar(char ch) {
         return appendChar(new StringBuilder(9).append('\''), ch).append('\'').toString();
-        }
+    }
 
     /**
      * Append the specified String to the StringBuilder, escaping if and as necessary.
@@ -903,14 +797,12 @@ public final class Handy
      *
      * @return the StringBuilder
      */
-    public static StringBuilder appendString(StringBuilder sb, String s)
-        {
-        for (int of = 0, cch = s.length(); of < cch; ++of)
-            {
+    public static StringBuilder appendString(StringBuilder sb, String s) {
+        for (int of = 0, cch = s.length(); of < cch; ++of) {
             appendChar(sb, s.charAt(of));
-            }
-        return sb;
         }
+        return sb;
+    }
 
     /**
      * Render a String as it would appear as a constant in source code.
@@ -920,11 +812,10 @@ public final class Handy
      * @return a String showing the quoted version of the passed String,
      *         escaping characters if and when necessary
      */
-    public static String quotedString(String s)
-        {
+    public static String quotedString(String s) {
         return appendString(new StringBuilder(s.length() + 2).append('\"'), s).append(
                 '\"').toString();
-        }
+    }
 
     /**
      * Find the closing quote corresponding to the opening quote at the specified offset.
@@ -934,52 +825,42 @@ public final class Handy
      *
      * @return the offset of the closing quote, or -1 if no closing quote could be found
      */
-    public static int closingQuote(String s, int of)
-        {
-        if (s == null || of < 0)
-            {
+    public static int closingQuote(String s, int of) {
+        if (s == null || of < 0) {
             throw new IllegalArgumentException();
-            }
+        }
 
         int cch = s.length();
-        if (cch <= of + 1)
-            {
+        if (cch <= of + 1) {
             // string is not long enough to contain a closing quote
             return -1;
-            }
+        }
 
         char quote = s.charAt(of);
-        if (quote != '\"' && quote != '\'' && quote != '`')
-            {
+        if (quote != '\"' && quote != '\'' && quote != '`') {
             // unknown quote character
             return -1;
-            }
+        }
 
         ++of;
-        while (of < cch)
-            {
+        while (of < cch) {
             char ch = s.charAt(of);
-            switch (ch)
-                {
+            switch (ch) {
                 case '\"':
                 case '\'':
                 case '`':
-                    if (ch == quote)
-                        {
+                    if (ch == quote) {
                         return of;
-                        }
+                    }
                     break;
 
-                case '\\':
-                    {
-                    if (cch <= of + 2)
-                        {
+                case '\\': {
+                    if (cch <= of + 2) {
                         // string is not long enough to contain an escaped char and a closing quote
                         return -1;
-                        }
+                    }
 
-                    switch (s.charAt(of+1))
-                        {
+                    switch (s.charAt(of+1)) {
                         case '\\':
                         case '\'':
                         case '\"':
@@ -995,16 +876,16 @@ public final class Handy
                         case 'z':
                             // valid escape
                             ++of;
-                        }
                     }
                 }
+            }
 
             ++of;
-            }
+        }
 
         // no closing quote
         return -1;
-        }
+    }
 
     /**
      * Convert a quoted string to a string value. This implementation allows the string to be quoted
@@ -1016,25 +897,20 @@ public final class Handy
      *
      * @return the String value that was present in the quoted String,
      */
-    public static String unquotedString(String s)
-        {
+    public static String unquotedString(String s) {
         int cch = s.length();
-        if (cch < 2 || s.charAt(0) != s.charAt(cch-1) || "\"\'`".indexOf(s.charAt(0)) < 0)
-            {
+        if (cch < 2 || s.charAt(0) != s.charAt(cch-1) || "\"'`".indexOf(s.charAt(0)) < 0) {
             // it's not a quoted string
             return s;
-            }
+        }
 
         StringBuilder buf = new StringBuilder(cch-2);
         --cch;                              // don't process the closing quote
-        for (int of = 1; of < cch; ++of)    // don't process the opening quote
-            {
+        for (int of = 1; of < cch; ++of) {  // don't process the opening quote
             char ch = s.charAt(of);
-            if (ch == '\\' && of + 1 < cch)
-                {
+            if (ch == '\\' && of + 1 < cch) {
                 char escaped = s.charAt(++of);
-                switch (escaped)
-                    {
+                switch (escaped) {
                     case '\\':
                         buf.append('\\');
                         break;
@@ -1081,40 +957,29 @@ public final class Handy
                         --of;
                         buf.append('\\');
                         break;
-                    }
                 }
-            else
-                {
+            } else {
                 buf.append(ch);
-                }
             }
+        }
 
         return buf.toString();
-        }
+    }
 
     /**
      * @param cMillis  date/time in millis
      *
      * @return date/time string in format "YYYY-MM-DD HH:MM:SS" format
      */
-    @SuppressWarnings("unused")
-    public static String dateString(long cMillis)
-        {
+    public static String dateString(long cMillis) {
         Date date = new Date(cMillis);
-        return new StringBuilder(19)
-            .append(String.valueOf(11900 + date.getYear()).substring(1, 5)) // only ok for 0-9999
-            .append('-')
-            .append(String.valueOf(101 + date.getMonth()).substring(1))
-            .append('-')
-            .append(String.valueOf(100 + date.getDate()).substring(1))
-            .append(' ')
-            .append(String.valueOf(100 + date.getHours()).substring(1))
-            .append(':')
-            .append(String.valueOf(100 + date.getMinutes()).substring(1))
-            .append(':')
-            .append(String.valueOf(100 + date.getSeconds()).substring(1))
-            .toString();
-        }
+        return String.valueOf(11900 + date.getYear()).substring(1, 5) + // only works thru year 9999
+                '-' + String.valueOf(101 + date.getMonth()  ).substring(1) +
+                '-' + String.valueOf(100 + date.getDate()   ).substring(1) +
+                ' ' + String.valueOf(100 + date.getHours()  ).substring(1) +
+                ':' + String.valueOf(100 + date.getMinutes()).substring(1) +
+                ':' + String.valueOf(100 + date.getSeconds()).substring(1);
+    }
 
 
     // ----- packed integers -----------------------------------------------------------------------
@@ -1131,10 +996,9 @@ public final class Handy
      *         a <tt>long</tt> value
      */
     public static long readPackedLong(DataInput in)
-            throws IOException
-        {
+            throws IOException {
         return PackedInteger.readLong(in);
-        }
+    }
 
     /**
      * Write a signed 64-bit integer to a stream using variable-length encoding.
@@ -1145,10 +1009,9 @@ public final class Handy
      * @throws IOException  if an I/O exception occurs
      */
     public static void writePackedLong(DataOutput out, long n)
-            throws IOException
-        {
+            throws IOException {
         PackedInteger.writeLong(out, n);
-        }
+    }
 
     /**
      * Read a variable-length encoded 32-bit integer from a stream.
@@ -1160,16 +1023,14 @@ public final class Handy
      * @throws java.io.IOException  if an I/O exception occurs
      */
     public static int readPackedInt(DataInput in)
-            throws IOException
-        {
+            throws IOException {
         long n = readPackedLong(in);
-        if (n < Integer.MIN_VALUE || n > Integer.MAX_VALUE)
-            {
+        if (n < Integer.MIN_VALUE || n > Integer.MAX_VALUE) {
             throw new IOException("value (" + n + ") exceeds 32-bit range");
-            }
+        }
 
         return (int) n;
-        }
+    }
 
     /**
      * Read a variable-length encoded 32-bit integer magnitude from a stream.
@@ -1185,22 +1046,18 @@ public final class Handy
      * @throws java.io.IOException  if an I/O exception occurs
      */
     public static int readMagnitude(DataInput in)
-            throws IOException
-        {
+            throws IOException {
         long n = readPackedLong(in);
-        if (n > Integer.MAX_VALUE)
-            {
+        if (n > Integer.MAX_VALUE) {
             // this is unsupported in Java; arrays are limited in size
             // by their use of signed 32-bit magnitudes and indexes
             throw new IOException("magnitude (" + n + ") exceeds 32-bit maximum");
-            }
-        else if (n < 0)
-            {
+        } else if (n < 0) {
             throw new IOException("negative magnitude (" + n + ") is illegal");
-            }
+        }
 
         return (int) n;
-        }
+    }
 
     /**
      * Read a variable-length encoded 32-bit integer index from a stream.
@@ -1217,22 +1074,18 @@ public final class Handy
      * @throws java.io.IOException  if an I/O exception occurs
      */
     public static int readIndex(DataInput in)
-            throws IOException
-        {
+            throws IOException {
         long n = readPackedLong(in);
-        if (n > Integer.MAX_VALUE)
-            {
+        if (n > Integer.MAX_VALUE) {
             // this is unsupported in Java; arrays are limited in size
             // by their use of signed 32-bit magnitudes and indexes
             throw new IOException("index (" + n + ") exceeds 32-bit maximum");
-            }
-        else if (n < -1)
-            {
+        } else if (n < -1) {
             throw new IOException("negative index (" + n + ") is illegal");
-            }
+        }
 
         return (int) n;
-        }
+    }
 
 
     // ----- unicode -------------------------------------------------------------------------------
@@ -1250,14 +1103,12 @@ public final class Handy
      *         or if a UTF-8 format error is detected
      */
     public static int readUtf8Char(DataInput in)
-            throws IOException
-        {
+            throws IOException {
         int b = in.readUnsignedByte();
-        if ((b & 0x80) == 0)
-            {
+        if ((b & 0x80) == 0) {
             // ASCII - single byte 0xxxxxxx format
             return b;
-            }
+        }
 
         // otherwise the format is based on the number of high-order 1-bits:
         // #1s first byte  trailing  # trailing  bits  code-points
@@ -1267,8 +1118,7 @@ public final class Handy
         //  4  11110xxx    10xxxxxx      3        21   U+10000   - U+1FFFFF
         //  5  111110xx    10xxxxxx      4        26   U+200000  - U+3FFFFFF
         //  6  1111110x    10xxxxxx      5        31   U+4000000 - U+7FFFFFFF
-        switch (Integer.highestOneBit(~(0xFFFFFF00 | b)))
-            {
+        switch (Integer.highestOneBit(~(0xFFFFFF00 | b))) {
             case 0b00100000: // 2-byte format
                 return (b & 0b00011111) <<  6 | nextCharBits(in);
             case 0b00010000: // 3-byte format
@@ -1281,8 +1131,8 @@ public final class Handy
                 return (b & 0b00000001) << 30 | nextCharBits(in) << 24 | nextCharBits(in) << 18 | nextCharBits(in) << 12 | nextCharBits(in) << 6 | nextCharBits(in);
             default:
                 throw new UTFDataFormatException("initial byte: " + byteToHexString(b));
-            }
         }
+    }
 
     /**
      * Internal: Read a UTF-8 continuation byte and validate/decode it.
@@ -1295,15 +1145,13 @@ public final class Handy
      *         or if a UTF-8 format error is detected
      */
     private static int nextCharBits(DataInput in)
-            throws IOException
-        {
+            throws IOException {
         int n = in.readUnsignedByte();
-        if ((n & 0b11000000) != 0b10000000)
-            {
+        if ((n & 0b11000000) != 0b10000000) {
             throw new UTFDataFormatException("trailing unicode byte does not match 10xxxxxx");
-            }
-        return n & 0b00111111;
         }
+        return n & 0b00111111;
+    }
 
     /**
      * Write a single unicode character (code-point) to the passed DataOutput, encoding using the
@@ -1319,14 +1167,12 @@ public final class Handy
      *         or if a UTF-8 format error is detected
      */
     public static void writeUtf8Char(DataOutput out, int ch)
-            throws IOException
-        {
-        if ((ch & ~0x7F) == 0)
-            {
+            throws IOException {
+        if ((ch & ~0x7F) == 0) {
             // ASCII - single byte 0xxxxxxx format
             out.write(ch);
             return;
-            }
+        }
 
         // otherwise the format is based on the number of significant bits:
         // bits  code-points             first byte  trailing  # trailing
@@ -1337,8 +1183,7 @@ public final class Handy
         //  26   U+200000  - U+3FFFFFF   111110xx    10xxxxxx      4
         //  31   U+4000000 - U+7FFFFFFF  1111110x    10xxxxxx      5
         int cTrail;
-        switch (Integer.highestOneBit(ch))
-            {
+        switch (Integer.highestOneBit(ch)) {
             case 0b00000000000000000000000010000000:
             case 0b00000000000000000000000100000000:
             case 0b00000000000000000000001000000000:
@@ -1382,15 +1227,14 @@ public final class Handy
 
             default:
                 throw new UTFDataFormatException("illegal character: " + intToHexString(ch));
-            }
+        }
 
         // write out trailing bytes; each has the same "10xxxxxx" format with 6
         // bits of data
-        while (cTrail > 0)
-            {
+        while (cTrail > 0) {
             out.write(0b10_000000 | (ch >>> --cTrail * 6 & 0b00_111111));
-            }
         }
+    }
 
     /**
      * Read a length-encoded string of unicode characters (code-point) from the passed DataInput,
@@ -1408,35 +1252,29 @@ public final class Handy
      *         or if a UTF-8 format error is detected
      */
     public static String readUtf8String(DataInput in)
-            throws IOException
-        {
+            throws IOException {
         int           cb  = readMagnitude(in);
         int           cch = cb - readMagnitude(in);
         StringBuilder sb  = new StringBuilder(cch);
-        for (int ofch = 0; ofch < cch; ++ofch)
-            {
+        for (int ofch = 0; ofch < cch; ++ofch) {
             int ch = readUtf8Char(in);
-            if (ch >= 0xFFFF)
-                {
-                if (!Character.isSupplementaryCodePoint(ch))
-                    {
+            if (ch >= 0xFFFF) {
+                if (!Character.isSupplementaryCodePoint(ch)) {
                     throw new UTFDataFormatException(
                             "Character is outside of UTF-16 (including supplemental) range: " +
                             intToHexString(ch));
-                    }
+                }
 
                 // the "supplemental" range is composed of two UTF-16 characters
                 sb.append(Character.highSurrogate(ch))  // "leading"
                   .append(Character.lowSurrogate(ch));  // "trailing"
-                }
-            else
-                {
+            } else {
                 sb.append((char) ch);
-                }
             }
+        }
 
         return sb.toString();
-        }
+    }
 
     /**
      * Write a length-encoded string of unicode characters (code-points) to the passed DataOutput,
@@ -1452,55 +1290,47 @@ public final class Handy
      *         or if a UTF-8 format error is detected
      */
     public static void writeUtf8String(DataOutput out, String s)
-            throws IOException
-        {
+            throws IOException {
         // figure out the actual number of unicode code-points (not the number
         // of "Java chars") and how many bytes the UTF-8 format will use
         final int   cch  = s.length();      // count of UTF-16 "Java chars"
         final int[] anch = new int[cch];    // array of unicode code points
         int cb   = 0;                       // count of bytes
         int cnch = 0;                       // count of unicode code points
-        for (int ofch = 0; ofch < cch; ++ofch)
-            {
+        for (int ofch = 0; ofch < cch; ++ofch) {
             char ch = s.charAt(ofch);
             int  nch;
-            if (Character.isSurrogate(ch))
-                {
+            if (Character.isSurrogate(ch)) {
                 // first character must be a high surrogate
-                if (!Character.isHighSurrogate(ch))
-                    {
+                if (!Character.isHighSurrogate(ch)) {
                     throw new UTFDataFormatException(
                             "low surrogate unexpected: " + intToHexString(ch));
-                    }
+                }
 
                 // next character must be a low surrogate
                 char ch2;
-                if (++ofch >= cch || !Character.isLowSurrogate(ch2 = s.charAt(ofch)))
-                    {
+                if (++ofch >= cch || !Character.isLowSurrogate(ch2 = s.charAt(ofch))) {
                     throw new UTFDataFormatException(
                             "low surrogate expected after: " + intToHexString(ch));
-                    }
+                }
 
                 nch = Character.toCodePoint(ch, ch2);
-                }
-            else
-                {
+            } else {
                 nch = ch;
-                }
+            }
 
             anch[cnch++] = nch;
             cb += calcUtf8Length(nch);
-            }
+        }
 
         // write out the UTF-8 form of the String
         assert cb >= cnch;
         writePackedLong(out, cb);
         writePackedLong(out, cb - cnch);
-        for (int of = 0; of < cnch; ++of)
-            {
+        for (int of = 0; of < cnch; ++of) {
             writeUtf8Char(out, anch[of]);
-            }
         }
+    }
 
     /**
      * Internal: Calculate the UTF-8 length for a particular code-point.
@@ -1513,16 +1343,13 @@ public final class Handy
      * @throws UTFDataFormatException  if an invalid character is passed
      */
     private static int calcUtf8Length(int ch)
-            throws IOException
-        {
-        if ((ch & ~0x7F) == 0)
-            {
+            throws IOException {
+        if ((ch & ~0x7F) == 0) {
             // ASCII - single byte 0xxxxxxx format
             return 1;
-            }
+        }
 
-        switch (Integer.highestOneBit(ch))
-            {
+        switch (Integer.highestOneBit(ch)) {
             case 0b00000000000000000000000010000000:
             case 0b00000000000000000000000100000000:
             case 0b00000000000000000000001000000000:
@@ -1559,8 +1386,8 @@ public final class Handy
 
             default:
                 throw new UTFDataFormatException("illegal character: " + intToHexString(ch));
-            }
         }
+    }
 
     // ----- file I/O ------------------------------------------------------------------------------
 
@@ -1572,29 +1399,21 @@ public final class Handy
      *
      * @return a resolved file or directory
      */
-    public static File resolveFile(File file)
-        {
-        if (file != null)
-            {
-            try
-                {
+    public static File resolveFile(File file) {
+        if (file != null) {
+            try {
                 return file.getCanonicalFile();
-                }
-            catch (IOException e)
-                {
+            } catch (IOException e) {
                 return file.getAbsoluteFile();
-                }
-            }
-
-        try
-            {
-            return new File(".").getAbsoluteFile().getCanonicalFile();
-            }
-        catch (IOException e)
-            {
-            return new File(".").getAbsoluteFile();
             }
         }
+
+        try {
+            return new File(".").getAbsoluteFile().getCanonicalFile();
+        } catch (IOException e) {
+            return new File(".").getAbsoluteFile();
+        }
+    }
 
     /**
      * Given a starting directory and a sequence of '/'-delimited directory names, obtain the file
@@ -1605,52 +1424,45 @@ public final class Handy
      *
      * @return the indicated file or directory, or null if it could not be navigated to
      */
-    protected static File navigateTo(File file, String sPath)
-        {
-        if (file == null)
-            {
+    @SuppressWarnings("unused")
+    static File navigateTo(File file, String sPath) {
+        if (file == null) {
             return null;
-            }
+        }
 
         file = resolveFile(file);
 
-        if (File.separatorChar != '/')
-            {
+        if (File.separatorChar != '/') {
             sPath = sPath.replace(File.separatorChar, '/');
-            }
+        }
 
-        for (String sPart : parseDelimitedString(sPath, '/'))
-            {
-            file = switch (sPart)
-                {
+        for (String sPart : parseDelimitedString(sPath, '/')) {
+            file = switch (sPart) {
                 case "."  -> file;
                 case ".." -> file.getParentFile();
                 default   -> file.isDirectory() ? new File(file, sPart) : null;
-                };
+            };
 
-            if (file == null || !file.exists())
-                {
+            if (file == null || !file.exists()) {
                 return null;
-                }
             }
+        }
 
         return file;
-        }
+    }
 
     /**
      * @return an array of files in the specified directory ordered by case-insensitive name
      */
-    public static File[] listFiles(File dir)
-        {
-        if (dir == null || !dir.isDirectory())
-            {
+    public static File[] listFiles(File dir) {
+        if (dir == null || !dir.isDirectory()) {
             return NO_FILES;
-            }
+        }
 
         File[] aFile = dir.listFiles();
         Arrays.sort(aFile, Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
         return aFile;
-        }
+    }
 
     /**
      * Obtain an array of files (not including directories) from the specified directory that match
@@ -1661,12 +1473,11 @@ public final class Handy
      *
      * @return an array of zero or more files that match the specified extension
      */
-    public static File[] listFiles(File dir, String extension)
-        {
+    public static File[] listFiles(File dir, String extension) {
         return extension == null
                 ? dir.listFiles(f -> !f.isDirectory() && getExtension(f.getName()) == null)
                 : dir.listFiles(f -> !f.isDirectory() && extension.equalsIgnoreCase(getExtension(f.getName())));
-        }
+    }
 
     /**
      * Determine if the passed file name is pathed, instead of just being a simple file name.
@@ -1675,10 +1486,9 @@ public final class Handy
      *
      * @return true iff the passed file name contains any path indicators
      */
-    public static boolean isPathed(String sFile)
-        {
+    public static boolean isPathed(String sFile) {
         return sFile.indexOf('/') >= 0 || sFile.indexOf(File.separatorChar) >= 0;
-        }
+    }
 
     /**
      * If the passed file  has a "dot extension" such as ".x" or ".xtc" extension, then return the
@@ -1688,10 +1498,9 @@ public final class Handy
      *
      * @return the extension, if the file has an extension; otherwise null
      */
-    public static String getExtension(File file)
-        {
+    public static String getExtension(File file) {
         return file == null ? null : getExtension(file.getName());
-        }
+    }
 
     /**
      * If the passed file name has a "dot extension" such as ".x" or ".xtc" extension, then return
@@ -1701,22 +1510,19 @@ public final class Handy
      *
      * @return the extension, if the file has an extension; otherwise null
      */
-    public static String getExtension(String sFile)
-        {
-        if (sFile == null)
-            {
+    public static String getExtension(String sFile) {
+        if (sFile == null) {
             return null;
-            }
+        }
 
         int ofDot = sFile.lastIndexOf('.');
-        if (ofDot <= 0)
-            {
+        if (ofDot <= 0) {
             return null;
-            }
+        }
 
         String sExt = sFile.substring(ofDot + 1);
         return isPathed(sExt) ? null : sExt;
-        }
+    }
 
     /**
      * If the passed file name ends with an extension (such as ".x" or a ".xtc"), then return the
@@ -1726,18 +1532,16 @@ public final class Handy
      *
      * @return the same file name, but without an extension (if it previously had an extension)
      */
-    public static String removeExtension(String sFile)
-        {
+    public static String removeExtension(String sFile) {
         int ofDot = sFile.lastIndexOf('.');
-        if (ofDot <= 0)
-            {
+        if (ofDot <= 0) {
             return sFile;
-            }
+        }
 
         return sFile.lastIndexOf('/') < ofDot && sFile.lastIndexOf(File.separatorChar) < ofDot
                 ? sFile.substring(0, ofDot)
                 : sFile;
-        }
+    }
 
     /**
      * Produce a string describing the path of the passed file.
@@ -1746,28 +1550,23 @@ public final class Handy
      *
      * @return a string for display of the file's path
      */
-    public static String toPathString(File file)
-        {
-        if (file == null)
-            {
+    public static String toPathString(File file) {
+        if (file == null) {
             return "<null>";
-            }
+        }
 
         String sPath = file.getPath();
         String sAbs;
-        try
-            {
+        try {
             sAbs = file.getCanonicalPath();
-            }
-        catch (IOException e)
-            {
+        } catch (IOException e) {
             sAbs = file.getAbsolutePath();
-            }
+        }
 
         return sPath.equals(sAbs)
             ? sPath
             : sPath + " (" + sAbs + ')';
-        }
+    }
 
     /**
      * Evaluate the passed file to make sure that it exists and can be read.
@@ -1776,10 +1575,9 @@ public final class Handy
      *
      * @return true if the file check passes
      */
-    public static boolean checkReadable(File file)
-        {
+    public static boolean checkReadable(File file) {
         return file != null && file.exists() && !file.isDirectory() && file.canRead();
-        }
+    }
 
     /**
      * Open the specified file as an InputStream.
@@ -1792,20 +1590,17 @@ public final class Handy
      *         FileStructure
      */
     public static InputStream toInputStream(File file)
-            throws IOException
-        {
-        if (!file.exists())
-            {
+            throws IOException {
+        if (!file.exists()) {
             throw new IOException("file does not exist: " + file);
-            }
+        }
 
-        if (!file.isFile() || !file.canRead())
-            {
+        if (!file.isFile() || !file.canRead()) {
             throw new IOException("not a readable file: " + file);
-            }
+        }
 
         return new BufferedInputStream(new FileInputStream(file));
-        }
+    }
 
     /**
      * Read the raw bytes contained in the specified file.
@@ -1818,53 +1613,43 @@ public final class Handy
      *         of the specified file
      */
     public static byte[] readFileBytes(File file)
-            throws IOException
-        {
-        if (file == null)
-            {
+            throws IOException {
+        if (file == null) {
             throw new IllegalArgumentException("file required");
-            }
+        }
 
-        if (!file.exists() || !file.isFile())
-            {
+        if (!file.exists() || !file.isFile()) {
             throw new FileNotFoundException(file.toString());
-            }
+        }
 
         final long lcb = file.length();
-        if (lcb == 0L)
-            {
+        if (lcb == 0L) {
             return EMPTY_BYTE_ARRAY;
-            }
-        else if (lcb > Integer.MAX_VALUE - 1024)
-            {
+        } else if (lcb > Integer.MAX_VALUE - 1024) {
             // assume a maximum byte array size just under 2GB
             throw new IOException("file exceeds max supported length (2GB): "
                     + file + "=" + lcb + " bytes");
-            }
+        }
 
         // read the complete contents of the file
         int    cb = (int) lcb;
         byte[] ab = new byte[cb];
-        try (FileInputStream stream = new FileInputStream(file))
-            {
-            for (int of = 0; of < cb; )
-                {
+        try (FileInputStream stream = new FileInputStream(file)) {
+            for (int of = 0; of < cb; ) {
                 int cbChunk = stream.read(ab, of, cb-of);
-                if (cbChunk < 0)
-                    {
+                if (cbChunk < 0) {
                     throw new EOFException("unexpected end-of-file: " + file);
-                    }
-                of += cbChunk;
                 }
+                of += cbChunk;
             }
+        }
 
-        if (file.length() != lcb)
-            {
+        if (file.length() != lcb) {
             throw new IOException("file was concurrently modified while being read: " + file);
-            }
+        }
 
         return ab;
-        }
+    }
 
     /**
      * Read the text contents of the specified file. Supported formats are ASCII, UTF-8, UTF-16, and
@@ -1878,10 +1663,9 @@ public final class Handy
      *         of the specified file
      */
     public static char[] readFileChars(File file)
-            throws IOException
-        {
+            throws IOException {
         return readFileChars(file, null);
-        }
+    }
 
     /**
      * Read the text contents of the specified file using the specified encoding. If no encoding is
@@ -1898,75 +1682,61 @@ public final class Handy
      */
     @SuppressWarnings("fallthrough")
     public static char[] readFileChars(File file, String sEncoding)
-            throws IOException
-        {
+            throws IOException {
         byte[] ab = readFileBytes(file);
         int    cb = ab.length;
-        if (cb == 0)
-            {
+        if (cb == 0) {
             return EMPTY_CHAR_ARRAY;
-            }
+        }
 
         // check to see if there is a byte order mark
         int cbBOM = 0;
-        if (sEncoding == null)
-            {
-            switch (cb)
-                {
+        if (sEncoding == null) {
+            switch (cb) {
                 default:
-                    if (ab[0] == 0x00 && ab[1] == 0x00 && (ab[2] & 0xFF) == 0xFE && (ab[3] & 0xFF) == 0xFF)
-                        {
+                    if (ab[0] == 0x00 && ab[1] == 0x00 && (ab[2] & 0xFF) == 0xFE && (ab[3] & 0xFF) == 0xFF) {
                         sEncoding = "UTF-32BE";
                         cbBOM = 4;
                         break;
-                        }
-                    else if ((ab[0] & 0xFF) == 0xFF && (ab[1] & 0xFF) == 0xFE && ab[2] == 0x00 && ab[3] == 0x00)
-                        {
+                    } else if ((ab[0] & 0xFF) == 0xFF && (ab[1] & 0xFF) == 0xFE && ab[2] == 0x00 && ab[3] == 0x00) {
                         sEncoding = "UTF-32LE";
                         cbBOM = 4;
                         break;
-                        }
+                    }
                 case 3:
-                    if ((ab[0] & 0xFF) == 0xEF && (ab[1] & 0xFF) == 0xBB && (ab[2] & 0xFF) == 0xBF)
-                        {
+                    if ((ab[0] & 0xFF) == 0xEF && (ab[1] & 0xFF) == 0xBB && (ab[2] & 0xFF) == 0xBF) {
                         sEncoding = "UTF-8";
                         cbBOM = 3;
                         break;
-                        }
+                    }
                 case 2:
-                    if ((ab[0] & 0xFF) == 0xFE && (ab[1] & 0xFF) == 0xFF)
-                        {
+                    if ((ab[0] & 0xFF) == 0xFE && (ab[1] & 0xFF) == 0xFF) {
                         sEncoding = "UTF-16BE";
                         cbBOM = 2;
                         break;
-                        }
-                    else if ((ab[0] & 0xFF) == 0xFF && (ab[1] & 0xFF) == 0xFE)
-                        {
+                    } else if ((ab[0] & 0xFF) == 0xFF && (ab[1] & 0xFF) == 0xFE) {
                         sEncoding = "UTF-16LE";
                         cbBOM = 2;
                         break;
-                        }
+                    }
                 case 1:
                 case 0:
-                }
             }
+        }
 
-        scan: if (sEncoding == null)
-            {
+        scan: if (sEncoding == null) {
             // quick scan to verify that the contents are ASCII
             char[] ach = new char[cb];
-            for (int of = 0; of < cb; ++of)
-                {
+            for (int of = 0; of < cb; ++of) {
                 int b = ab[of] & 0xFF;
-                if (b > 0x7F)
-                    {
+                if (b > 0x7F) {
                     // use default encoding
                     break scan;
-                    }
-                ach[of] = (char) (b & 0xFF);
                 }
-            return ach;
+                ach[of] = (char) (b & 0xFF);
             }
+            return ach;
+        }
 
         // use the encoding that was specified or otherwise determined, or fall
         // back to the default encoding
@@ -1976,7 +1746,7 @@ public final class Handy
         char[] ach = new char[charbuf.length()];
         charbuf.get(ach);
         return ach;
-        }
+    }
 
 
     // ----- array and collection helpers ----------------------------------------------------------
@@ -1992,8 +1762,8 @@ public final class Handy
      * @return an array containing all of the elements from the {@code aoAdd} array that are not
      *         duplicates of elements in the {@code aoBase} array
      */
-    public static <T> T[] dedupAdds(T[] aoBase, T[] aoAdd)
-        {
+    @SuppressWarnings("unused")
+    public static <T> T[] dedupAdds(T[] aoBase, T[] aoAdd) {
         // there's a fair likelihood that *ALL* of the "adds" will be duplicates, and a fair
         // likelihood that *NONE* of the "adds" will be unique, so assume both up front, and only
         // de-optimize when *BOTH* of those two things have been proven to be false
@@ -2002,74 +1772,85 @@ public final class Handy
         boolean      fAllDups  = true;
         boolean      fNoDups   = true;
         ArrayList<T> listDeDup = null;
-        NextLayer: for (int iAdd = 0; iAdd < cAdd; ++iAdd)
-            {
+        NextLayer: for (int iAdd = 0; iAdd < cAdd; ++iAdd) {
             T oAdd = aoAdd[iAdd];
-            for (int iBase = 0; iBase < cBase; ++iBase)
-                {
-                if (oAdd.equals(aoBase[iBase]))
-                    {
+            for (int iBase = 0; iBase < cBase; ++iBase) {
+                if (oAdd.equals(aoBase[iBase])) {
                     // we found a duplicate; is it the first one?
-                    if (fNoDups)
-                        {
+                    if (fNoDups) {
                         fNoDups = false;
 
                         // if we already know that there are some that are NOT duplicates, then we
                         // need to start maintaining a list of non-duplicates to add; since this is
                         // the first duplicate encountered, just take everything up to this point
-                        if (!fAllDups)
-                            {
+                        if (!fAllDups) {
                             assert listDeDup == null;
                             listDeDup = startList(aoAdd, iAdd);
-                            }
                         }
+                    }
 
                     // this one was a duplicate, so advance to the next thing to add
                     continue NextLayer;
-                    }
                 }
+            }
 
             // this one to add is NOT a duplicate; is it the first one?
-            if (fAllDups)
-                {
+            if (fAllDups) {
                 fAllDups = false;
 
                 // if we already know that there are duplicates (i.e. NOT no duplicates), then we
                 // need to start maintaining a list of non-duplicates (starting with this one)
-                if (!fNoDups)
-                    {
+                if (!fNoDups) {
                     assert listDeDup == null;
                     listDeDup = new ArrayList<>();
-                    }
                 }
+            }
 
             // if, for whatever reason, we are maintaining a list of non-duplicates by this point,
             // and since we just verified that this is a non-duplicate, then add it to the list
-            if (listDeDup != null)
-                {
+            if (listDeDup != null) {
                 listDeDup.add(oAdd);
-                }
             }
+        }
 
         // at this point, we finished our check for duplicates; if there are no duplicates, then
         // the original array of things to add is the result
-        if (fNoDups)
-            {
+        if (fNoDups) {
             assert listDeDup == null;
             return aoAdd;
-            }
+        }
 
         // otherwise, there are duplicates, which boils down into two possibilities: they're all
         // duplicates (so we return an empty array), or just some are duplicates (in which case
         // there is a list of the ones that are NOT duplicates that we should return)
         int cResult  = listDeDup == null ? 0 : listDeDup.size();
         T[] aoResult = (T[]) Array.newInstance(aoAdd.getClass().getComponentType(), cResult);
-        if (cResult > 0)
-            {
+        if (cResult > 0) {
             aoResult = listDeDup.toArray(aoResult);
-            }
-        return aoResult;
         }
+        return aoResult;
+    }
+
+    /**
+     * Resize an array. The elements from the first array will be present in the resized array,
+     * although shrinking the array will cause any elements beyond the new size to be discarded.
+     *
+     * @param array  the array to resize
+     * @param size   the new array size
+     *
+     * @return an array of the specified size
+     */
+    @SuppressWarnings("unused")
+    public static <T> T[] resize(T[] array, int size) {
+        int oldSize = array.length;
+        if (size == oldSize) {
+            return array;
+        }
+
+        T[] newArray = (T[]) Array.newInstance(array.getClass().getComponentType(), size);
+        System.arraycopy(array, 0, newArray, 0, Math.min(size, oldSize));
+        return newArray;
+    }
 
     /**
      * Glue two arrays together.
@@ -2079,26 +1860,40 @@ public final class Handy
      *
      * @return an array containing all of the elements of both passed arrays
      */
-    public static <T> T[] append(T[] aoBase, T[] aoAdd)
-        {
+    public static <T> T[] append(T[] aoBase, T[] aoAdd) {
         int cBase = aoBase.length;
-        if (cBase == 0)
-            {
+        if (cBase == 0) {
             return aoAdd;
-            }
+        }
 
         int cAdd = aoAdd.length;
-        if (cAdd == 0)
-            {
+        if (cAdd == 0) {
             return aoBase;
-            }
+        }
 
         int cResult  = cBase + cAdd;
         T[] aoResult = (T[]) Array.newInstance(aoAdd.getClass().getComponentType(), cResult);
         System.arraycopy(aoBase, 0, aoResult, 0, cBase);
         System.arraycopy(aoAdd, 0, aoResult, cBase, cAdd);
         return aoResult;
-        }
+    }
+
+    /**
+     * Expand an array by one element, using the element provided by the caller.
+     *
+     * @param array  the array to expand
+     * @param value  the element to add
+     *
+     * @return the expanded array containing the passed value
+     */
+    public static <T> T[] append(T[] array, T value) {
+        assert array != null && value != null;
+        int oldSize  = array.length;
+        T[] newArray = (T[]) Array.newInstance(array.getClass().getComponentType(), oldSize+1);
+        System.arraycopy(array, 0, newArray, 0, oldSize);
+        newArray[oldSize] = value;
+        return newArray;
+    }
 
     /**
      * Add the specified element at the top of the specified array.
@@ -2108,15 +1903,38 @@ public final class Handy
      *
      * @return an array containing all the elements
      */
-    public static <T> T[] appendHead(T[] aoBase, T oAdd)
-        {
+    public static <T> T[] prepend(T[] aoBase, T oAdd) {
         int c    = aoBase.length;
         T[] aNew = (T[]) Array.newInstance(oAdd.getClass(), c + 1);
 
         aNew[0] = oAdd;
         System.arraycopy(aoBase, 0, aNew, 1, c);
         return aNew;
+    }
+
+    /**
+     * Contract an array by one element, removing the element at the specified index from the old
+     * array.
+     *
+     * @param array  the array to delete from
+     * @param index  the element index to delete
+     *
+     * @return the contracted array
+     */
+    @SuppressWarnings("unused")
+    public static <T> T[] delete(T[] array, int index) {
+        assert array != null && index >= 0 && index < array.length;
+        int oldSize  = array.length;
+        int newSize  = oldSize - 1;
+        T[] newArray = (T[]) Array.newInstance(array.getClass().getComponentType(), newSize);
+        if (index > 0) {
+            System.arraycopy(array, 0, newArray, 0, index);
         }
+        if (index < newSize) {
+            System.arraycopy(array, index+1, newArray, index, newSize-index);
+        }
+        return newArray;
+    }
 
     /**
      * Create an ArrayList that contains the first {@code c} elements of the array {@code ao}.
@@ -2126,10 +1944,9 @@ public final class Handy
      *
      * @return a new ArrayList of the first {@code c} elements of the {@code ao} array
      */
-    public static <T> ArrayList<T> startList(T[] ao, int c)
-        {
+    public static <T> ArrayList<T> startList(T[] ao, int c) {
         return appendList(new ArrayList<>(), ao, 0, c);
-        }
+    }
 
     /**
      * Append the specified elements from the passed array to the list.
@@ -2141,14 +1958,12 @@ public final class Handy
      *
      * @return the list
      */
-    public static <T> ArrayList<T> appendList(ArrayList<T> list, T[] ao, int of, int c)
-        {
-        for (int ofEnd = of+c; of < ofEnd; ++of)
-            {
+    public static <T> ArrayList<T> appendList(ArrayList<T> list, T[] ao, int of, int c) {
+        for (int ofEnd = of+c; of < ofEnd; ++of) {
             list.add(ao[of]);
-            }
-        return list;
         }
+        return list;
+    }
 
 
     // ----- hashing & equality --------------------------------------------------------------------
@@ -2160,10 +1975,9 @@ public final class Handy
      *
      * @return a hashcode
      */
-    public static int hashCode(final Object o)
-        {
+    public static int hashCode(final Object o) {
         return Hash.of(o);
-        }
+    }
 
     /**
      * Perform a comparison for equality. The types of the objects must be equal
@@ -2174,23 +1988,19 @@ public final class Handy
      *
      * @return true iff <tt>o1</tt> is equals to <tt>o2</tt>
      */
-    public static boolean equals(final Object o1, final Object o2)
-        {
-        if (o1 == null)
-            {
+    public static boolean equals(final Object o1, final Object o2) {
+        if (o1 == null) {
             return o2 == null;
-            }
-        if (o2 == null)
-            {
+        }
+        if (o2 == null) {
             return false;
-            }
+        }
 
         final Class clz1 = o1.getClass();
         final Class clz2 = o2.getClass();
-        if (clz1 != clz2)
-            {
+        if (clz1 != clz2) {
             return false;
-            }
+        }
 
         Class<?> clzComp = clz1.getComponentType();
         return clzComp == null || clzComp != clz2.getComponentType()
@@ -2205,7 +2015,7 @@ public final class Handy
                 : clzComp == short .class ? Arrays.equals(  (short[]) o1,   (short[]) o2)
                                           : Arrays.equals((boolean[]) o1, (boolean[]) o2)
             : Arrays.equals((Object[]) o1, (Object[]) o2);
-        }
+    }
 
     /**
      * Perform a comparison of two arrays for ordering. This performs a deep
@@ -2217,36 +2027,30 @@ public final class Handy
      * @return negative, zero, or positive iff <tt>ao1</tt> is less than, equal
      *         to, or greater than <tt>ao2</tt>
      */
-    public static int compareArrays(final Comparable[] ao1, final Comparable[] ao2)
-        {
-        if (ao1 == ao2)
-            {
+    public static int compareArrays(final Comparable[] ao1, final Comparable[] ao2) {
+        if (ao1 == ao2) {
             return 0;
-            }
+        }
 
-        if (ao1 == null)
-            {
+        if (ao1 == null) {
             return -1;
-            }
+        }
 
-        if (ao2 == null)
-            {
+        if (ao2 == null) {
             return 1;
-            }
+        }
 
         final int c1 = ao1.length;
         final int c2 = ao2.length;
-        for (int i = 0, c = Math.min(c1, c2); i < c; ++i)
-            {
+        for (int i = 0, c = Math.min(c1, c2); i < c; ++i) {
             final int n = ao1[i].compareTo(ao2[i]);
-            if (n != 0)
-                {
+            if (n != 0) {
                 return n;
-                }
             }
+        }
 
         return c1 - c2;
-        }
+    }
 
     /**
      * Verify that the array is non-null and all elements are non-null.
@@ -2258,23 +2062,19 @@ public final class Handy
      * @throws IllegalArgumentException  if the array is null, or any elements
      *         of the array are null
      */
-    public static boolean checkElementsNonNull(Object[] ao)
-        {
-        if (ao == null)
-            {
+    public static boolean checkElementsNonNull(Object[] ao) {
+        if (ao == null) {
             throw new IllegalArgumentException("array is null");
-            }
+        }
 
-        for (Object o : ao)
-            {
-            if (o == null)
-                {
+        for (Object o : ao) {
+            if (o == null) {
                 throw new IllegalArgumentException("array element is null");
-                }
             }
+        }
 
         return true;
-        }
+    }
 
 
     // ----- constants -----------------------------------------------------------------------------
@@ -2298,4 +2098,4 @@ public final class Handy
      * A constant empty array of <tt>File</tt>.
      */
     public static final File[] NO_FILES = new File[0];
-    }
+}

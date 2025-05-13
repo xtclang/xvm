@@ -43,8 +43,8 @@ interface FileTemplate
     conditional ModuleTemplate extractVersion(Version? version = Null);
 
     /**
-     * The date/time at which the FileTemplate was created. The value is not `Null` for
-     * `FileTemplate`s that are read from a persistent storage.
+     * The date/time at which the `FileTemplate` was created. The value is not `Null` for
+     * `FileTemplates` that are read from a persistent storage.
      */
     @RO Time? created;
 
