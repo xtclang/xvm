@@ -12,8 +12,8 @@ const OSFile
 
     @Override
     immutable Byte[] contents {
-        immutable Byte[] get()                       {TODO("native");}
-        void             set(immutable Byte[] bytes) {TODO("native");}
+        immutable Byte[] get()                       = TODO("native");
+        void             set(immutable Byte[] bytes) = TODO("native");
     }
 
     @Override
@@ -25,7 +25,7 @@ const OSFile
     }
 
     @Override
-    File truncate(Int newSize = 0) {
+    File truncate(Int newSize) {
         if (!exists) {
             throw new FileNotFound(path);
         }
@@ -74,7 +74,7 @@ const OSFile
 
     // ----- native --------------------------------------------------------------------------------
 
-    immutable Byte[] readImpl(Range<Int> range) {TODO("native");}
-    void truncateImpl(Int newSize)              {TODO("native");}
-    void appendImpl(Byte[] contents)            {TODO("native");}
+    immutable Byte[] readImpl(Range<Int> range) = TODO("native");
+    void truncateImpl(Int newSize)              = TODO("native");
+    void appendImpl(Byte[] contents)            = TODO("native");
 }

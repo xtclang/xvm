@@ -18,9 +18,7 @@ interface FileChannel
     /**
      * The number of bytes available for reading or writing without growing the size.
      */
-    @RO Int remaining.get() {
-        return size - position;
-    }
+    @RO Int remaining.get() = size - position;
 
     /**
      * Ensure all the changes are written to the underlying storage medium.

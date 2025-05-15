@@ -356,7 +356,7 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
         immutable Byte[] read(Range<Int> range) = origFile.read(range);
 
         @Override
-        File truncate(Int newSize = 0) {
+        File truncate(Int newSize) {
             checkWritable();
             origFile.truncate(newSize);
             return this;

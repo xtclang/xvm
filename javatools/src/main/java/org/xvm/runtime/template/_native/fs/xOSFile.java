@@ -321,20 +321,26 @@ public class xOSFile
         long cOld = file.length();
         long cNew = hNewSize.getValue();
 
+        if (cNew < 0)
+            {
+            cNew += cOld;
+            }
+
         if (cNew > cOld || cNew < 0)
             {
             return frame.raiseException(xException.outOfBounds(frame, cNew, cOld));
             }
 
+        long cTruncate = cNew;
         Callable<Void> task = () ->
             {
-            try (FileChannel channel = cNew == 0
+            try (FileChannel channel = cTruncate == 0
                     ? FileChannel.open(path, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
                     : FileChannel.open(path, StandardOpenOption.WRITE))
                 {
-                if (cNew > 0)
+                if (cTruncate > 0)
                     {
-                    channel.truncate(cNew);
+                    channel.truncate(cTruncate);
                     }
                 return null;
                 }

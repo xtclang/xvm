@@ -2866,13 +2866,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     protected void appendLog(String s, Int? safepoint=Null) {
         validateLog();
 
-        File file   = logFile;
-        Int  length = file.size;
-        assert length >= 20;        // log file is never empty!
+        assert logFile.size >= 20; // log file is never empty!
 
-        file.truncate(length-2)
-            .append(s.utf8());
-
+        logFile.truncate(-2)
+               .append(s.utf8());
         logUpdated(safepoint);
     }
 

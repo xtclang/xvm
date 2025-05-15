@@ -17,10 +17,10 @@ const OSFileNode
     @Lazy Path path.calc() = new Path(pathString);
 
     @Override
-    Boolean exists.get() { TODO("native"); }
+    Boolean exists.get() = TODO("Native");
 
     @Override
-    Int size.get() { TODO("native"); }
+    Int size.get() = TODO("Native");
 
     @Override
     conditional File linkAsFile() = store.linkAsFile(this:protected);
@@ -36,10 +36,10 @@ const OSFileNode
     @RO Time accessed.get() = new Time(accessedMillis*TimeOfDay.PicosPerMilli);
 
     @Override
-    Boolean readable.get() { TODO("native"); }
+    Boolean readable.get() = TODO("Native");
 
     @Override
-    Boolean writable.get() { TODO("native"); }
+    Boolean writable.get() = TODO("Native");
 
     @Override
     Boolean create() = !exists && store.create(this:protected);
@@ -82,9 +82,9 @@ const OSFileNode
 
     // ----- native --------------------------------------------------------------------------------
 
-    String pathString.get() { TODO("native"); }
+    String pathString.get() = TODO("Native");
 
-    private Int createdMillis.get()   { TODO("native"); }
-    private Int accessedMillis.get()  { TODO("native"); }
-    private Int modifiedMillis.get()  { TODO("native"); }
+    private Int createdMillis.get()  = TODO("Native");
+    private Int accessedMillis.get() = TODO("Native");
+    private Int modifiedMillis.get() = TODO("Native");
 }

@@ -670,14 +670,10 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
                 // write the changes to disk
                 if (file.exists) {
-                    Int length = file.size;
-
                     // TODO right now this assumes that no manual edits have occurred; must cache "last
                     //      update timestamp" and rebuild file if someone else changed it
-                    assert length >= 6;
-
                     Byte[] bytes = buf.toString().utf8();
-                    file.truncate(length-2)
+                    file.truncate(-2)
                         .append(bytes);
                     bytesUsed += bytes.size;
                 } else {

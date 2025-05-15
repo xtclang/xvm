@@ -12,13 +12,13 @@ service OSFileChannel(RawChannel rawChannel)
     // ----- FileChannel API -----------------------------------------------------------------------
 
     @Override
-    Int size.get() {TODO("native");}
+    Int size.get() = TODO("native");
 
     @Override
-    Int position.get() {TODO("native");}
+    Int position.get() = TODO("native");
 
     @Override
-    void flush() {TODO("native");}
+    void flush() = TODO("native");
 
     @Override
     String toString() = "FileChannel";

@@ -533,11 +533,7 @@ service JsonProcessorStore<Message extends immutable Const>
 
                 // write the changes to disk
                 if (file.exists && !cleanupPending) {
-                    Int length = file.size;
-
-                    assert length >= 6;
-
-                    file.truncate(length-2)
+                    file.truncate(-2)
                         .append(buf.toString().utf8());
                 } else {
                     // replace the opening "," with an array begin "["

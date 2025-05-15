@@ -33,14 +33,15 @@ interface File
     /**
      * Modify the contents of the file so that it has the specified size.
      *
-     * @param newSize  the size to truncate the file to; defaults to 0
+     * @param newSize  if non-negative, the size to truncate the file to; otherwise the number of
+     *                 bytes to truncate from the end
      *
      * @return this File
      *
      * @throws FileNotFound  if the file does not exist
      * @throws AccessDenied  if permission to modify the file has not been granted
      */
-    File truncate(Int newSize = 0);
+    File truncate(Int newSize);
 
     /**
      * Append the specified bytes to the end of the file.
@@ -183,7 +184,7 @@ interface File
      * @throws FileAlreadyExists  if the file exists, but the WriteOption of Create is specified or
      *                            implied
      */
-    FileChannel open(ReadOption read=Read, WriteOption[] write = NoWrite);
+    FileChannel open(ReadOption read = Read, WriteOption[] write = NoWrite);
 
     @Override
     Appender<Char> emitListing(Appender<Char> buf, Boolean recursive = False, String indent = "") {

@@ -1337,7 +1337,7 @@ class Lexer
                 if (possibleExponent) {
                     // the "P" or the "E" was for an exponent, not for the integer
                     rewind();
-                    buf.truncate(buf.size-1);
+                    buf.truncate(-1);
                     break PossibleSuffix;
                 }
                 break;

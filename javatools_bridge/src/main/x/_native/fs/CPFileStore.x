@@ -133,21 +133,16 @@ const CPFileStore(String path, Object constRoot)
     /**
      * Load meta-data for a node.
      */
-    static (Boolean isDir, String name, Time created, Time modified, Int size) loadNode(Object constNode) {
-        TODO("native");
-    }
+    static (Boolean isDir, String name, Time created, Time modified, Int size)
+        loadNode(Object constNode) = TODO("native");
 
     /**
      * Load contents for a directory.
      */
-    static (String[] names, Object[] cookies) loadDirectory(Object constNode) {
-        TODO("native");
-    }
+    static (String[] names, Object[] cookies) loadDirectory(Object constNode) = TODO("native");
 
     /**
      * Load contents for a file.
      */
-    static immutable Byte[] loadFile(Object constNode) {
-        TODO("native");
-    }
+    static immutable Byte[] loadFile(Object constNode) = TODO("native");
 }
