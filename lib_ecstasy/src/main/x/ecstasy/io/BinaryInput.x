@@ -18,38 +18,6 @@ interface BinaryInput
     Byte readByte();
 
     /**
-     * Read bytes into the provided array.
-     *
-     * @param  bytes  the byte array to read into
-     *
-     * @throws IOException  represents the general category of input/output exceptions
-     * @throws EndOfFile    if the end of the stream has been reached
-     */
-    void readBytes(Byte[] bytes) {
-        readBytes(bytes, 0, bytes.size);
-    }
-
-    /**
-     * Read the specified number of bytes into the provided array.
-     *
-     * @param  bytes   the byte array to read into
-     * @param  offset  the offset into the array to store the first byte read
-     * @param  count   the number of bytes to read
-     *
-     * @throws IOException  represents the general category of input/output exceptions
-     * @throws EndOfFile    if the end of the stream has been reached
-     */
-    void readBytes(Byte[] bytes, Int offset, Int count) {
-        assert:arg offset >= 0 && count >= 0;
-
-        Int last = offset + count;
-        assert last <= bytes.size;
-        while (offset < last) {
-            bytes[offset++] = readByte();
-        }
-    }
-
-    /**
      * Read the specified number of bytes, returning those bytes as an array.
      *
      * @param count  the number of bytes to read
@@ -59,12 +27,12 @@ interface BinaryInput
      * @throws IOException  represents the general category of input/output exceptions
      * @throws EndOfFile    if the end of the stream has been reached
      */
-    Byte[] readBytes(Int count) {
+    immutable Byte[] readBytes(Int count) {
         assert:arg count >= 0;
 
         Byte[] bytes = new Byte[count];
-        readBytes(bytes);
-        return bytes;
+        readBytes(bytes, 0, count);
+        return bytes.freeze(inPlace=True);
     }
 
     /**
@@ -94,11 +62,32 @@ interface BinaryInput
     }
 
     @Override
-    void close(Exception? cause = Null) {
-    }
-
+    void close(Exception? cause = Null) {}
 
     // ----- helper functions ----------------------------------------------------------------------
+
+    /**
+     * Read the specified number of bytes into the provided array.
+     *
+     * Note: this method cannot be used as a common API, since most of the `BinaryInput`
+     *       implementations are services and cannot be called passing a mutable array.
+     *
+     * @param  bytes   the byte array to read into
+     * @param  offset  the offset into the array to store the first byte read
+     * @param  count   the number of bytes to read
+     *
+     * @throws IOException  represents the general category of input/output exceptions
+     * @throws EndOfFile    if the end of the stream has been reached
+     */
+    private void readBytes(Byte[] bytes, Int offset, Int count) {
+        assert:arg offset >= 0 && count >= 0;
+
+        Int last = offset + count;
+        assert last <= bytes.size;
+        while (offset < last) {
+            bytes[offset++] = readByte();
+        }
+    }
 
     /**
      * Read a sequence of bytes from the stream corresponding to a single Unicode character that is

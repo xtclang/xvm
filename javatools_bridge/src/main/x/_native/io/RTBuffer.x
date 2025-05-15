@@ -21,7 +21,6 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
     private Int        rawSize;
     private Int        rawOffset;
 
-
     // ----- ReadBuffer methods --------------------------------------------------------------------
 
     @Override
@@ -33,9 +32,7 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
     @Override
     Int offset {
         @Override
-        Int get() {
-            return rawOffset;
-        }
+        Int get() = rawOffset;
 
         @Override
         void set(Int offset) {
@@ -46,9 +43,7 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
     }
 
     @Override
-    @RO Int size.get() {
-        return rawSize;
-    }
+    @RO Int size.get() = rawSize;
 
     @Override
     Byte readByte() {
@@ -62,27 +57,7 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
     }
 
     @Override
-    void readBytes(Byte[] bytes, Int offset, Int count) {
-        Int thisOffset = rawOffset;
-        Int thisSize   = rawSize;
-        Int thatSize   = bytes.size;
-
-        assert:bounds 0 <= offset <= thatSize;
-        assert:bounds 0 <= count;
-        assert:bounds offset + count <= thatSize;
-
-        Int copy = count.notGreaterThan(thisSize - thisOffset);
-        for (Int i = 0; i < copy; ++i) {
-            bytes[offset+i] = rawBytes[thisOffset+i];
-        }
-
-        rawOffset = thisOffset + copy;
-
-        if (copy < count) {
-            // pretend that we were reading byte by byte and then suddenly hit an unexpected EOF
-            throw new EndOfFile();
-        }
-    }
+    void readBytes(Byte[] bytes, Int offset, Int count) = TODO("native");
 
     @Override
     void pipeTo(BinaryOutput out, Int count) {
@@ -111,13 +86,10 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
         super(out, count);
     }
 
-
     // ----- WriteBuffer methods -------------------------------------------------------------------
 
     @Override
-    @RO Int capacity.get() {
-        return rawBytes.size;
-    }
+    @RO Int capacity.get() = rawBytes.size;
 
     @Override
     @Op("[]=") void setByte(Int index, Byte value) {
@@ -180,7 +152,6 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
         return &buf.maskAs(ReadBuffer);
     }
 
-
     // ----- Transferable methods ------------------------------------------------------------------
 
     @Override
@@ -204,7 +175,6 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
         return transferee;  // TODO mask
     }
 
-
     // ----- Closeable methods ---------------------------------------------------------------------
 
     @Override
@@ -216,20 +186,16 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
         }
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    String toString() {
-        return readOnly ? "ReadBuffer" : "WriteBuffer";
-    }
+    String toString() = readOnly ? "ReadBuffer" : "WriteBuffer";
 
     @Override
     immutable RTBuffer makeImmutable() {
         // it is illegal to attempt to make a native buffers into an immutable object
         throw new Unsupported();
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 

@@ -49,9 +49,7 @@ service TransferableBuffer(Int size) {
     /**
      * The configured buffer size.
      */
-    Int capacity.get() {
-        return actual.capacity;
-    }
+    Int capacity.get() = actual.capacity;
 
 
     // ----- public API ----------------------------------------------------------------------------
@@ -61,19 +59,15 @@ service TransferableBuffer(Int size) {
      *
      * @return a new WriteBuffer
      */
-    io.WriteBuffer createWriteBuffer() {
-        return actual.createWriteBuffer();
-    }
+    io.WriteBuffer createWriteBuffer() = actual.createWriteBuffer();
 
     /**
      * Invalidate whatever WriteBuffer or ReadBuffer is current. Optionally erase all of the buffer
      * contents.
      *
-     * @param zero  pass True to explicitly zero the contents of the buffer
+     * @param zero  pass True to explicitly zero out the contents of the buffer
      */
-    void invalidateCurrent(Boolean zero = False) {
-        actual.invalidateCurrent(zero);
-    }
+    void invalidateCurrent(Boolean zero = False) = actual.invalidateCurrent(zero);
 
 
     // ----- ActualBuffer hidden implementation class ----------------------------------------------
@@ -103,9 +97,7 @@ service TransferableBuffer(Int size) {
         /**
          * The configured buffer size.
          */
-        Int capacity.get() {
-            return bytes.size;
-        }
+        Int capacity.get() = bytes.size;
 
         /**
          * The current WriteBuffer or ReadBuffer "ticket" value that is permitted to access and
@@ -343,6 +335,28 @@ service TransferableBuffer(Int size) {
         }
 
         /**
+         * Read the specified number of bytes into the provided array.
+         *
+         * @param ticket  the ticket that was provided to the ReadBuffer
+         * @param bytes   the byte array to read into
+         * @param offset  the offset into the array to store the first byte read
+         * @param count   the number of bytes to read
+         *
+         * @throws IOException  represents the general category of input/output exceptions
+         * @throws EndOfFile    if the end of the stream has been reached
+         */
+        void readBytes(Int ticket, Byte[] bytes, Int offset, Int count) {
+            checkValid(ticket);
+            assert:arg offset >= 0 && count >= 0;
+
+            Int last = offset + count;
+            assert last <= bytes.size;
+            while (offset < last) {
+                bytes[offset++] = readByte(ticket);
+            }
+        }
+
+        /**
          * Store the specified byte value at the current offset within the stream.
          *
          * @param ticket  the ticket that was provided to the ReadBuffer or WriteBuffer
@@ -359,7 +373,6 @@ service TransferableBuffer(Int size) {
             }
         }
     }
-
 
     // ----- ReadBuffer proxy implementation -------------------------------------------------------
 
@@ -462,13 +475,7 @@ service TransferableBuffer(Int size) {
         @Override
         void readBytes(Byte[] bytes, Int offset, Int count) {
             checkService();
-            assert offset >= 0 && count >= 0;
-
-            Int last = offset + count;
-            assert last <= bytes.size;
-            while (offset < last) {
-                bytes[offset++] = actual.readByte(ticket);
-            }
+            return actual.readBytes(ticket, bytes, offset, count);
         }
 
         @Override

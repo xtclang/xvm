@@ -20,6 +20,18 @@ interface ReadBuffer
     @Op("[]") Byte getByte(Int index);
 
     /**
+     * Read the specified number of bytes into the provided array.
+     *
+     * @param  bytes   the byte array to read into
+     * @param  offset  the offset into the array to store the first byte read
+     * @param  count   the number of bytes to read
+     *
+     * @throws IOException  represents the general category of input/output exceptions
+     * @throws EndOfFile    if the end of the stream has been reached
+     */
+    void readBytes(Byte[] bytes, Int offset, Int count);
+
+    /**
      * Skip over the specified number of bytes. This modifies the [offset] of the ReadBuffer.
      *
      * @param count  a value in the range `(0 <= count <= size - offset)` that indicates the number
