@@ -33,6 +33,9 @@ class ByteArrayInputStream
     // ----- BinaryInput interface -----------------------------------------------------------------
 
     @Override
+    @RO Int available.get() = remaining;
+
+    @Override
     Byte readByte() {
         if (offset >= size) {
             throw new EndOfFile();

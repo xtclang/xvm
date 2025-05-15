@@ -27,8 +27,6 @@ interface InputStream
      */
     @RO Int remaining.get() = (size - offset).notLessThan(0);
 
-    /**
-     * True iff the end of the stream has been reached.
-     */
+    @Override
     @RO Boolean eof.get() = remaining == 0;
 }

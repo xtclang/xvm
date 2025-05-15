@@ -10,6 +10,19 @@
 interface BinaryInput
         extends Closeable {
     /**
+     * `True` iff the end of the stream is known to have been reached.
+     */
+    @RO Boolean eof;
+
+    /**
+     * The number of bytes that can be read from this `BinaryInput` without blocking on the
+     * underlying data source. Implementations are allowed to "under-report" the result (e.g.
+     * returning zero indicating no knowledge of the blocking situation), but must never
+     * over-report, which would lead to unintended blocking of the caller.
+     */
+    @RO Int available;
+
+    /**
      * @return  a value of type Byte read from the stream
      *
      * @throws IOException  represents the general category of input/output exceptions
