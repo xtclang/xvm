@@ -232,15 +232,11 @@ interface BufferProvider {
      * The number of buffers that the `BufferProvider` can provide at this point without actually
      * allocating any new buffers.
      */
-    @RO Int availableBuffers.get() {
-        return totalBuffers - consumedBuffers;
-    }
+    @RO Int availableBuffers.get() = totalBuffers - consumedBuffers;
 
     /**
      * The number of buffer bytes that the `BufferProvider` can still provide without actually
      * allocating any new buffers.
      */
-    @RO Int availableBytes.get() {
-        return totalBytes - consumedBytes;
-    }
+    @RO Int availableBytes.get() = totalBytes - consumedBytes;
 }

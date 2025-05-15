@@ -40,19 +40,19 @@ service ObjectStore(Catalog catalog, DboInfo info)
     // ----- properties ----------------------------------------------------------------------------
 
     /**
-     * The Catalog that this ObjectStore belongs to. The Catalog reference is provided as part of
+     * The Catalog that this `ObjectStore` belongs to. The Catalog reference is provided as part of
      * instantiation, and never changes.
      */
     public/private Catalog catalog;
 
     /**
-     * The DboInfo that identifies the configuration of this ObjectStore. The information is
+     * The DboInfo that identifies the configuration of this `ObjectStore`. The information is
      * provided as part of instantiation, and never changes.
      */
     public/private DboInfo info;
 
     /**
-     * The transaction manager that this ObjectStore is being managed by. A reference to the
+     * The transaction manager that this `ObjectStore` is being managed by. A reference to the
      * TxManager is lazily obtained from the Catalog service and then cached here, to avoid service
      * hopping just to get a reference to the TxManager every time that it is needed.
      */
@@ -70,18 +70,18 @@ service ObjectStore(Catalog catalog, DboInfo info)
     DBCategory category.get() = info.category;
 
     /**
-     * The current [Status] of this ObjectStore.
+     * The current [Status] of this `ObjectStore`.
      */
     public/protected Status status = Closed;
 
     /**
-     * True iff the ObjectStore is in a running state and has performed its initial load of data.
+     * True iff the `ObjectStore` is in a running state and has performed its initial load of data.
      */
     private Boolean loaded = False;
 
     /**
-     * True iff the ObjectStore is permitted to write to persistent storage. Implementations of
-     * ObjectStore must check this value before making any changes to persistent storage.
+     * True iff the `ObjectStore` is permitted to write to persistent storage. Implementations of
+         * ObjectStore must check this value before making any changes to persistent storage.
      */
     public/protected Boolean writeable = False;
 
@@ -92,9 +92,9 @@ service ObjectStore(Catalog catalog, DboInfo info)
     Path path.get() = info.path;
 
     /**
-     * The directory within which the named ObjectStore file or directory exists. That file or
-     * directory is used to load data from and store data into by this ObjectStore. Generally, the
-     * ObjectStore does not use the `containingDir` directly.
+     * The directory within which the named `ObjectStore` file or directory exists. That file or
+     * directory is used to load data from and store data into by this `ObjectStore`. Generally, the
+     * `ObjectStore` does not use the `containingDir` directly.
      */
     @Concurrent
     @Lazy public/private Directory containingDir.calc() {
@@ -109,12 +109,12 @@ service ObjectStore(Catalog catalog, DboInfo info)
     }
 
     /**
-     * The directory owned by this ObjectStore for purpose of its data storage. The ObjectStore may
-     * create and remove this directory, and may create, modify, and remove any files within this
+     * The directory owned by this `ObjectStore` for purpose of its data storage. The `ObjectStore`
+     * may create and remove this directory, and may create, modify, and remove any files within this
      * directory, except for any `FileNode`s in the directory whose names match any of the names
-     * of child `DBObject`s of the `DBObject` that this ObjectStore corresponds to. (In other words,
+     * of child `DBObject`s of the `DBObject` that this `ObjectStore` corresponds to. (In other words,
      * if the corresponding `DBObject` has children named `A`, `B`, and `C`, then any file or
-     * directory with any name can be created, modified, and removed by this ObjectStore except for
+     * directory with any name can be created, modified, and removed by this `ObjectStore` except for
      * the file nodes named `A`, `B`, or `C`.)
      */
     @Concurrent
@@ -142,7 +142,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
     enum StorageModel {Empty, Small, Medium, Large}
 
     /**
-     * Statistics: The current storage model for this ObjectStore.
+     * Statistics: The current storage model for this `ObjectStore`.
      */
     public/protected StorageModel model = Empty;
 
@@ -164,7 +164,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
     public/protected Time? lastModified = Null;
 
     /**
-     * Determine if this ObjectStore for a DBObject is allowed to write to disk. True iff the
+     * Determine if this `ObjectStore` for a DBObject is allowed to write to disk. True iff the
      * catalog is not read only and the DBObject has not been deprecated or removed.
      */
     @Concurrent
@@ -252,8 +252,8 @@ service ObjectStore(Catalog catalog, DboInfo info)
     }
 
     /**
-     * In flight transactions involving this ObjectStore, keyed by "write" transaction id. This
-     * property is required to be initialized only by transactional instances of ObjectStore.
+     * In flight transactions involving this `ObjectStore`, keyed by "write" transaction id. This
+     * property is required to be initialized only by transactional instances of `ObjectStore`.
      */
     @Unassigned protected SkiplistMap<Int, Changes> inFlight;
 
@@ -267,12 +267,12 @@ service ObjectStore(Catalog catalog, DboInfo info)
     // ----- life cycle ----------------------------------------------------------------------------
 
     /**
-     * For a closed ObjectStore, examine the contents of the persistent storage and recover from
+     * For a closed `ObjectStore`, examine the contents of the persistent storage and recover from
      * that to a running state if at all possible.
      *
      * @return True iff the store has successfully recovered and is `Running`
      *
-     * @throws IllegalState  if the ObjectStore is not `Closed`
+     * @throws IllegalState  if the `ObjectStore` is not `Closed`
      */
     @Synchronized
     Boolean recover() {
@@ -291,12 +291,12 @@ service ObjectStore(Catalog catalog, DboInfo info)
     }
 
     /**
-     * For a closed ObjectStore, quickly open the contents of the persistent storage in order to
+     * For a closed `ObjectStore`, quickly open the contents of the persistent storage in order to
      * achieve a running state.
      *
      * @return True iff the store has successfully opened and is `Running`
      *
-     * @throws IllegalState  if the ObjectStore is not `Closed`
+     * @throws IllegalState  if the `ObjectStore` is not `Closed`
      */
     @Synchronized
     Boolean open() {
@@ -327,7 +327,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
     }
 
     /**
-     * Delete the contents of the ObjectStore's persistent data.
+     * Delete the contents of the `ObjectStore` persistent data.
      */
     @Synchronized
     void delete() {
@@ -432,11 +432,11 @@ service ObjectStore(Catalog catalog, DboInfo info)
 
     /**
      * Validate that the transaction ID is a write ID, and see if a transaction exists for that
-     * write ID on this ObjectStore.
+     * write ID on this `ObjectStore`.
      *
      * @param txId  the transaction id
      *
-     * @return True if the transaction exists on this ObjectStore
+     * @return True if the transaction exists on this `ObjectStore`
      * @return (conditional) the Changes record for the transaction
      */
     protected conditional Changes peekTx(Int txId) {
@@ -446,11 +446,11 @@ service ObjectStore(Catalog catalog, DboInfo info)
     /**
      * Possible outcomes from a [prepare] call:
      *
-     * * FailedRolledBack indicates that the prepare failed, and this ObjectStore has rolled back
+     * * FailedRolledBack indicates that the prepare failed, and this `ObjectStore` has rolled back
      *   all of its data associated with the specified transaction.
      *
      * * CommittedNoChanges indicates that the prepare succeeded, but that there were no changes,
-     *   so an implicit commit has already occurred for this transaction on this ObjectStore.
+     *   so an implicit commit has already occurred for this transaction on this `ObjectStore`.
      *
      * * Prepared indicates that there were changes, and they were successfully prepared; once
      *   the prepare stage has completed, changes are subject to Validator evaluation, then
@@ -469,7 +469,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * check that no changes have occurred in the meantime that would invalidate the transaction.
      *
      * If the the result of the `prepare()` operation is `FailedRolledBack` or `CommittedNoChanges`,
-     * then the `ObjectStore` will have forgotten its `Changes` (the `writeId`) by the time that
+     * then the ``ObjectStore`` will have forgotten its `Changes` (the `writeId`) by the time that
      * this method returns, and nothing will be associated with the `prepareId`.
      *
      * If the the result of the `prepare()` operation is `Prepared`, then all of the `Changes` data
@@ -489,7 +489,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
     }
 
     /**
-     * Indicates that this ObjectStore is going to receive validation/rectification/distribution
+     * Indicates that this `ObjectStore` is going to receive validation/rectification/distribution
      * operations.
      *
      * @param txId  the transaction ID that indications which of validation, rectification, and
@@ -503,7 +503,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
 
     /**
      * Indicates that the previously indicated validation/rectification/distribution phase has
-     * completed for this ObjectStore.
+     * completed for this `ObjectStore`.
      *
      * @param writeId  the transaction ID that was previously passed to [triggerBegin]
      */
@@ -517,13 +517,13 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * Possible outcomes from a [mergePrepare] call:
      *
      * * `CommittedNoChanges` indicates that the result of the [mergePrepare] is that the
-     *   transaction contains no changes, and has been forgotten by the ObjectStore. This can occur
+     *   transaction contains no changes, and has been forgotten by the `ObjectStore`. This can occur
      *   if there were changes to merge, but the result of merging those changes undid the
-     *   previously prepared changes for this one ObjectStore, because the merged changes perfectly
+     *   previously prepared changes for this one `ObjectStore`, because the merged changes perfectly
      *   negated the previously prepared changes.
      *
      * * `NoMerge` indicates that there were no new changes to merge, but that there is still
-     *   a transaction record for `prepareId` being held by the ObjectStore.
+     *   a transaction record for `prepareId` being held by the `ObjectStore`.
      *
      * * `Merged` indicates that there were changes to merge, and they were successfully merged into
      *   the `prepareId` transaction.
@@ -554,7 +554,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
      *
      * @param writeId  the write ID to commit
      *
-     * @return the ObjectStore's commit record, as a JSON document String, corresponding to the
+     * @return the `ObjectStore` commit record, as a JSON document String, corresponding to the
      *         passed `writeId`
      *
      * @throws Exception on any failure, including if serialization of the transactional data into
@@ -590,13 +590,11 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @throws Exception on any failure
      */
     @Concurrent
-    void commit(Int writeId) {
-        commit([writeId]);
-    }
+    void commit(Int writeId) = commit([writeId]);
 
     /**
      * Roll back any transactional data associated with the specified transaction id. When this
-     * method returns, the transactional changes related to this ObjectStore will have been
+     * method returns, the transactional changes related to this `ObjectStore` will have been
      * discarded, including any prepared changes, and the `writeId` (and the `prepareId`, if one
      * exists) will have been discarded.
      *
@@ -612,15 +610,15 @@ service ObjectStore(Catalog catalog, DboInfo info)
     }
 
     /**
-     * Inform the ObjectStore of all of the read-transaction-ids that are still being relied upon
-     * by in-flight transactions. The latest version of the ObjectStore's data must always be
+     * Inform the `ObjectStore` of all of the read-transaction-ids that are still being relied upon
+     * by in-flight transactions. The latest version of the `ObjectStore` data must always be
      * retained, whether or not it is indicated by the passed set of ids. All other historical
-     * transaction information can be discarded by the ObjectStore, both in-memory and in the
+     * transaction information can be discarded by the `ObjectStore`, both in-memory and in the
      * persistent storage.
      *
      * @param inUseTxIds  an ordered set of read transaction ids whose information needs to be
      *                    retained by the `ObjectStore`
-     * @param force       (optional) specify True to force the ObjectStore to immediately clean out
+     * @param force       (optional) specify True to force the `ObjectStore` to immediately clean out
      *                    all older transactions in order to synchronously compress the storage
      */
     @Concurrent
@@ -642,8 +640,8 @@ service ObjectStore(Catalog catalog, DboInfo info)
     }
 
     /**
-     * Initialize the state of the ObjectStore by scanning the persistent image of the ObjectStore's
-     * data.
+     * Initialize the state of the `ObjectStore` by scanning the persistent image of the
+     *`ObjectStore` data.
      *
      * @return True if no issues were detected (which does not guarantee that no issues exist);
      *         False indicates that fixes are required
@@ -678,8 +676,8 @@ service ObjectStore(Catalog catalog, DboInfo info)
     }
 
     /**
-     * Initialize the state of the ObjectStore by deep-scanning (and optionally fixing as necessary)
-     * the persistent image of the ObjectStore's data.
+     * Initialize the state of the `ObjectStore` by deep-scanning (and optionally fixing as necessary)
+     * the persistent image of the `ObjectStore` data.
      *
      * @param fix  (optional) specify True to fix the persistent data if necessary, and False to
      *             deep scan without modifying the persistent data even if an error is detected
@@ -694,11 +692,11 @@ service ObjectStore(Catalog catalog, DboInfo info)
     }
 
     /**
-     * Fill in any missing persistent state of the ObjectStore by re-applying the provided
-     * transaction seals that may not have been persisted by the ObjectStore.
+     * Fill in any missing persistent state of the `ObjectStore` by re-applying the provided
+     * transaction seals that may not have been persisted by the `ObjectStore`.
      *
      * @param sealsByTxId  a Map, keyed and ordered by internal transaction id, that contains the
-     *                     seal information provided by this ObjectStore at the time that the
+     *                     seal information provided by this `ObjectStore` at the time that the
      *                     transaction was prepared
      *
      * @return True if the recovery data was applied successfully
@@ -739,7 +737,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
     }
 
     /**
-     * Ensure that the ObjectStore has loaded its initial set of data from disk.
+     * Ensure that the `ObjectStore` has loaded its initial set of data from disk.
      *
      * @return True
      *
@@ -755,7 +753,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
     }
 
     /**
-     * Ensure that the ObjectStore has loaded its initial set of data from disk.
+     * Ensure that the `ObjectStore` has loaded its initial set of data from disk.
      *
      * @return True
      *
@@ -776,7 +774,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
     }
 
     /**
-     * Initialize the ObjectStore as empty, to its default state.
+     * Initialize the `ObjectStore` as empty, to its default state.
      */
     @Synchronized
     void initializeEmpty() {
@@ -784,7 +782,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
     }
 
     /**
-     * Load the necessary ObjectStore state from disk.
+     * Load the necessary `ObjectStore` state from disk.
      */
     @Synchronized
     void loadInitial() {
@@ -823,7 +821,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * Choose what transactions from `eachPresent` iterator could be discarded, based on the content
      * of `eachInUse` iterator.
      *
-     * @param lastCommit   the latest known committed transaction ID for this ObjectStore
+     * @param lastCommit   the latest known committed transaction ID for this `ObjectStore`
      * @param eachPresent  the iterator of all transaction IDs recorded by this store
      * @param eachInUse    the iterator of transaction IDs that are currently in use
      * @param discard      the callback function to call to discard a transaction

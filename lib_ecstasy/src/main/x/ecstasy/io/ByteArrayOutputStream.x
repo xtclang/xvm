@@ -26,7 +26,6 @@
         this.bytes = bytes;
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -41,16 +40,13 @@
      */
     Int capacity {
         @Override
-        Int get() {
-            return bytes.capacity;
-        }
+        Int get() = bytes.capacity;
 
         @Override
         void set(Int newCapacity) {
             bytes.capacity = newCapacity;
         }
     }
-
 
     // ----- OutputStream interface ----------------------------------------------------------------
 
@@ -61,10 +57,7 @@
     }
 
     @Override
-    Int size.get() {
-        return bytes.size;
-    }
-
+    Int size.get() = bytes.size;
 
     // ----- BinaryInput interface -----------------------------------------------------------------
 
@@ -79,9 +72,7 @@
     }
 
     @Override
-    void writeBytes(Byte[] bytes) {
-        writeBytes(bytes, 0, bytes.size);
-    }
+    void writeBytes(Byte[] bytes) = writeBytes(bytes, 0, bytes.size);
 
     @Override
     void writeBytes(Byte[] bytes, Int offset, Int count) {

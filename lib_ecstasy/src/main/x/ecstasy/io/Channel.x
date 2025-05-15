@@ -106,9 +106,7 @@ interface Channel
      * @throws TimedOut      it is expected that a time-out could occur while a read is being
      *                       awaited, if a [Timeout] exists
      */
-    Int read(WriteBuffer buffer, Int minBytes = MaxValue) {
-        return read([buffer], minBytes);
-    }
+    Int read(WriteBuffer buffer, Int minBytes = MaxValue) = read([buffer], minBytes);
 
     /**
      * Read a sequence of bytes from this channel into the specified buffers.
@@ -163,9 +161,7 @@ interface Channel
      * @throws TimedOut      it is expected that a time-out could occur while a write completion is
      *                       being awaited, if a [Timeout] exists
      */
-    Int write(ReadBuffer buffer) {
-        return write([buffer]);
-    }
+    Int write(ReadBuffer buffer);
 
     /**
      * Write a sequence of bytes from the specified buffers into this channel into starting at
@@ -188,7 +184,7 @@ interface Channel
      * @throws TimedOut      it is expected that a time-out could occur while a write completion is
      *                       being awaited, if a [Timeout] exists
      */
-    Int write(ReadBuffer[] buffers, function void(ReadBuffer)? written=Null) {
+    Int write(ReadBuffer[] buffers, function void(ReadBuffer)? written = Null) {
         // either this implementation or the implementation of the write(ReadBuffer) method must be
         // overridden, or infinite recursion will result; this implementation is intended to convey
         // the expected behavior for this method, assuming that the other method is re-implemented

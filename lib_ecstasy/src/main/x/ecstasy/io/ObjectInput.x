@@ -7,7 +7,7 @@
 interface ObjectInput
         extends Closeable {
     /**
-     * @return  an object from the stream
+     * @return an object from the stream
      */
     <ObjectType> ObjectType read<ObjectType>();
 }

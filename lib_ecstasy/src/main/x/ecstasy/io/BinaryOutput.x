@@ -21,9 +21,7 @@ interface BinaryOutput
      *
      * @param  bytes   the byte array containing the bytes to write out
      */
-    void writeBytes(Byte[] bytes) {
-        writeBytes(bytes, 0, bytes.size);
-    }
+    void writeBytes(Byte[] bytes) = writeBytes(bytes, 0, bytes.size);
 
     /**
      * Write the specified number of bytes to the stream from the provided array.
@@ -42,6 +40,5 @@ interface BinaryOutput
     }
 
     @Override
-    void close(Exception? cause = Null) {
-    }
+    void close(Exception? cause = Null) {}
 }

@@ -423,7 +423,5 @@ service RequestInfoImpl(RTServer       server,
     }
 
     @Override
-    String toString() {
-        return $"({uriString=}, {method.name=}, {tls=})";
-    }
+    String toString() = $"({uriString=}, {method.name=}, {tls=})";
 }

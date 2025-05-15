@@ -21,7 +21,7 @@ interface Body
      * being sent, its size will not be known if the [bodyWriter] is used to stream it, and no
      * `knownSize` was provided to that method.
      *
-     * @return True iff the size of the body is known
+     * @return `True` iff the size of the body is known
      * @return (conditional) the size in bytes of the body
      */
     conditional Int knownSize() {
@@ -57,12 +57,10 @@ interface Body
      *
      * @param type  the desired result type
      *
-     * @return True iff the content was successfully turned into a result of the desired type
+     * @return `True` iff the content was successfully turned into a result of the desired type
      * @return (conditional) the result
      */
-    <Result> conditional Result to(Type<Result> type) {
-        return False;
-    }
+    <Result> conditional Result to(Type<Result> type) = False;
 
     /**
      * In order to _consume_ the body as a stream of bytes, the caller can use this method to obtain
@@ -71,11 +69,9 @@ interface Body
      * By using this method, it may be possible for the body to be streamed without having to buffer
      * the entire body in memory.
      *
-     * @return a BinaryInput that provides the body as a stream
+     * @return a `BinaryInput` that provides the body as a stream
      */
-    BinaryInput bodyReader() {
-        return new ecstasy.io.ByteArrayInputStream(bytes);
-    }
+    BinaryInput bodyReader() = new ecstasy.io.ByteArrayInputStream(bytes);
 
     /**
      * In order to _consume_ the body as a stream of bytes, the caller can use this method to
@@ -84,11 +80,9 @@ interface Body
      * By using this method, it may be possible for the body to be streamed without having to buffer
      * the entire body in memory.
      *
-     * @param receiver  the BinaryOutput stream that the bytes of the body will written to
+     * @param receiver  the `BinaryOutput` stream that the bytes of the body will written to
      */
-    void streamBodyTo(BinaryOutput receiver) {
-        receiver.writeBytes(bytes);
-    }
+    void streamBodyTo(BinaryOutput receiver) = receiver.writeBytes(bytes);
 
     /**
      * In order to _provide_ the body as a stream of bytes, the caller can use this method, passing
@@ -97,7 +91,7 @@ interface Body
      * By using this method, it may be possible for the body to be streamed without having to buffer
      * the entire body in memory.
      *
-     * @param source  the InputStream that provides the bytes of the body
+     * @param source  the `InputStream` that provides the bytes of the body
      */
     void streamBodyFrom(InputStream source) {
         bytes = source.readBytes(source.size);

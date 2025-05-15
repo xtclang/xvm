@@ -49,23 +49,16 @@ service RTChannel(RawChannel rawChannel)
      */
     protected Boolean closed;
 
-
     // ----- Channel API ---------------------------------------------------------------------------
 
     @Override
-    @RO BufferProvider buffers.get() {
-        return &this.maskAs(BufferProvider);
-    }
+    @RO BufferProvider buffers.get() = &this.maskAs(BufferProvider);
 
     @Override
-    @RO Boolean readable.get() {
-        return !closed && leftover == Null && rawChannel.readable;
-    }
+    @RO Boolean readable.get() = !closed && leftover == Null && rawChannel.readable;
 
     @Override
-    @RO Boolean eof.get() {
-        return !closed && leftover == Null && rawChannel.eof;
-    }
+    @RO Boolean eof.get() = !closed && leftover == Null && rawChannel.eof;
 
     @Override
     ReadBuffer? read(Origin origin=Incoming) {
@@ -107,7 +100,7 @@ service RTChannel(RawChannel rawChannel)
     }
 
     @Override
-    Int read(WriteBuffer buffer, Int minBytes=MaxValue, Origin origin=Incoming) {
+    Int read(WriteBuffer buffer, Int minBytes = MaxValue, Origin origin = Incoming) {
         assert !closed as "The Channel was closed before the read operation began";
 
         // if another read is in progress, queue up this read to run later
@@ -145,7 +138,7 @@ service RTChannel(RawChannel rawChannel)
     }
 
     @Override
-    (Int, Int) read(WriteBuffer[] buffers, Int minBytes=MaxValue, Origin origin=Incoming) {
+    (Int, Int) read(WriteBuffer[] buffers, Int minBytes = MaxValue, Origin origin = Incoming) {
         assert !closed as "The Channel was closed before the read operation began";
 
         // if another read is in progress, queue up this read to run later
@@ -185,12 +178,10 @@ service RTChannel(RawChannel rawChannel)
     }
 
     @Override
-    @RO Boolean writable.get() {
-        return !closed && rawChannel.writable;
-    }
+    @RO Boolean writable.get() = !closed && rawChannel.writable;
 
     @Override
-    Int write(ReadBuffer buffer, Origin origin=Incoming) {
+    Int write(ReadBuffer buffer, Origin origin = Incoming) {
         assert !closed as "The Channel was closed before the write operation began";
 
         // if another write is in progress, queue up this write to run later
@@ -302,7 +293,7 @@ service RTChannel(RawChannel rawChannel)
     }
 
     @Override
-    Int write(ReadBuffer[] buffers, function void(ReadBuffer)? written=Null, Origin origin=Incoming) {
+    Int write(ReadBuffer[] buffers, function void(ReadBuffer)? written = Null, Origin origin = Incoming) {
         assert !closed as "The Channel was closed before the write operation began";
 
         // if another write is in progress, queue up this write to run later
@@ -358,25 +349,16 @@ service RTChannel(RawChannel rawChannel)
     }
 
     @Override
-    @RO Int totalBuffers.get() {
-        return rawChannel.totalBuffers;
-    }
+    @RO Int totalBuffers.get() = rawChannel.totalBuffers;
 
     @Override
-    @RO Int totalBytes.get() {
-        return rawChannel.totalBytes;
-    }
+    @RO Int totalBytes.get() = rawChannel.totalBytes;
 
     @Override
-    @RO Int consumedBuffers.get() {
-        return rawChannel.consumedBuffers;
-    }
+    @RO Int consumedBuffers.get() = rawChannel.consumedBuffers;
 
     @Override
-    @RO Int consumedBytes.get() {
-        return rawChannel.consumedBytes;
-    }
-
+    @RO Int consumedBytes.get() = rawChannel.consumedBytes;
 
     // ----- Closeable API -------------------------------------------------------------------------
 
@@ -389,9 +371,7 @@ service RTChannel(RawChannel rawChannel)
     }
 
     @Override
-    String toString() {
-        return "Channel";
-    }
+    String toString() = "Channel";
 
     // ----- internal ------------------------------------------------------------------------------
 
@@ -640,7 +620,8 @@ service RTChannel(RawChannel rawChannel)
     /**
      * A pending call to `Int write(ReadBuffer[] buffers, function void(ReadBuffer)? written)`.
      */
-    private class PendingMultiWrite(ReadBuffer[] buffers, function void(ReadBuffer)? written, Future<Int> pendingResult)
+    private class PendingMultiWrite(ReadBuffer[] buffers,
+                                    function void(ReadBuffer)? written, Future<Int> pendingResult)
             extends Pending {
         @Override
         protected void process() {

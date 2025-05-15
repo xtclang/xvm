@@ -90,45 +90,35 @@ interface DataOutput
      *
      * @param value  a value of type UInt8 to write to the stream
      */
-    void writeUInt8(UInt8 value) {
-        writeByte(value);
-    }
+    void writeUInt8(UInt8 value) = writeByte(value);
 
     /**
      * Write a UInt16 value to the stream.
      *
      * @param value  a value of type UInt16 to write to the stream
      */
-    void writeUInt16(UInt16 value) {
-        writeBytes(value.toByteArray());
-    }
+    void writeUInt16(UInt16 value) = writeBytes(value.toByteArray());
 
     /**
      * Write a UInt32 value to the stream.
      *
      * @param value  a value of type UInt32 to write to the stream
      */
-    void writeUInt32(UInt32 value) {
-        writeBytes(value.toByteArray());
-    }
+    void writeUInt32(UInt32 value) = writeBytes(value.toByteArray());
 
     /**
      * Write a 64-bit UInt value to the stream.
      *
      * @param value  a value of type UInt64 to write to the stream
      */
-    void writeUInt64(UInt64 value) {
-        writeBytes(value.toByteArray());
-    }
+    void writeUInt64(UInt64 value) = writeBytes(value.toByteArray());
 
     /**
      * Write a UInt128 value to the stream.
      *
      * @param value  a value of type UInt128 to write to the stream
      */
-    void writeUInt128(UInt128 value) {
-        writeBytes(value.toByteArray());
-    }
+    void writeUInt128(UInt128 value) = writeBytes(value.toByteArray());
 
     /**
      * Write a UIntN value to the stream.
@@ -146,27 +136,21 @@ interface DataOutput
      *
      * @param value  a value of type Dec64 to write to the stream
      */
-    void writeDec32(Dec32 value) {
-        writeBytes(value.toByteArray());
-    }
+    void writeDec32(Dec32 value) = writeBytes(value.toByteArray());
 
     /**
      * Write a Dec64 value to the stream.
      *
      * @param value  a value of type Dec64 to write to the stream
      */
-    void writeDec64(Dec64 value) {
-        writeBytes(value.toByteArray());
-    }
+    void writeDec64(Dec64 value) = writeBytes(value.toByteArray());
 
     /**
      * Write a Dec128 value to the stream.
      *
      * @param value  a value of type Dec128 to write to the stream
      */
-    void writeDec128(Dec128 value) {
-        writeBytes(value.toByteArray());
-    }
+    void writeDec128(Dec128 value) = writeBytes(value.toByteArray());
 
     /**
      * Write a DecN value to the stream.
@@ -427,9 +411,7 @@ interface DataOutput
      *
      * @throws IllegalUTF if the data cannot be written as valid UTF data
      */
-    static void writeUTF8Char(BinaryOutput out, Char ch) {
-        writeUTF8Codepoint(out, ch.codepoint);
-    }
+    static void writeUTF8Char(BinaryOutput out, Char ch) = writeUTF8Codepoint(out, ch.codepoint);
 
     /**
      * Write a Unicode codepoint to the stream using the UTF-8 format.
@@ -552,9 +534,7 @@ interface DataOutput
      *
      * @throws IllegalUTF if the data cannot be written as valid UTF data
      */
-    static void writeUTF32Char(DataOutput out, Char ch) {
-        writeUTF32Codepoint(out, ch.codepoint);
-    }
+    static void writeUTF32Char(DataOutput out, Char ch) = writeUTF32Codepoint(out, ch.codepoint);
 
     /**
      * Write a Unicode codepoint to the stream using the UTF-32 format.
@@ -564,9 +544,8 @@ interface DataOutput
      *
      * @throws IllegalUTF if the data cannot be written as valid UTF data
      */
-    static void writeUTF32Codepoint(DataOutput out, UInt32 codepoint) {
-        out.writeBytes(codepoint.toByteArray());
-    }
+    static void writeUTF32Codepoint(DataOutput out, UInt32 codepoint) =
+            out.writeBytes(codepoint.toByteArray());
 
     /**
      * Write a String to the DataOutput stream as a null-terminated ASCII string.
