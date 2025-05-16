@@ -1,3 +1,5 @@
+import ecstasy.io.BinaryInput;
+
 import net.Host;
 import net.HostPort;
 import net.SocketAddress;
@@ -42,7 +44,7 @@ interface HttpServer
      *                      going through these reverse proxies; the default is that there are no
      *                      trusted reverse proxies (or that a client can reach the server directly)
      */
-    void bind(HostInfo binding, ProxyCheck reverseProxy=NoTrustedProxies);
+    void bind(HostInfo binding, ProxyCheck reverseProxy = NoTrustedProxies);
 
     /**
      * Unbind the server from the specified address and ports.
@@ -57,7 +59,6 @@ interface HttpServer
      * server validators.
      */
     @RO Map<HostInfo, ProxyCheck> bindings;
-
 
     // ----- host routes ---------------------------------------------------------------------------
 
@@ -94,7 +95,7 @@ interface HttpServer
      * @return the `HostInfo` object created to represent the new route
      */
      void addRoute(HostInfo|String route, Handler handler, KeyStore? keystore = Null,
-                   String? tlsKey=Null, String? cookieKey=Null);
+                   String? tlsKey = Null, String? cookieKey = Null);
 
     /**
      * Update an existing route such that it will now route to the specified `Handler`. The purpose
@@ -134,7 +135,6 @@ interface HttpServer
      * surfaced here.
      */
     @RO Map<HostInfo, Handler> routes;
-
 
     // ----- request handling ----------------------------------------------------------------------
 
@@ -292,10 +292,17 @@ interface HttpServer
         /**
          * Obtain all of the bytes in the request body.
          *
-         * @return True if there is a body
+         * @return True iff there is a body
          * @return (conditional) an array of `Byte` representing the body content
          */
         conditional Byte[] getBodyBytes();
+
+        /**
+         * Obtain the [BinaryInput] from which the body content can be read (streamed).
+         *
+         * @return a `BinaryInput` object
+         */
+        @RO BinaryInput bodyReader;
 
         /**
          * Determine if the body contains nested information (e.g. multi-part) with its own headers,

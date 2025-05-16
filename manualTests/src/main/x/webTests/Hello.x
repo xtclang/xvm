@@ -15,6 +15,9 @@ module Hello {
     package web   import web.xtclang.org;
     package xenia import xenia.xtclang.org;
 
+    import ecstasy.io.FileInputStream;
+    import ecstasy.io.FileOutputStream;
+
     import net.IPAddress;
 
     import json.*;
@@ -167,6 +170,35 @@ module Hello {
                     }
                 }
                 return "<No data>";
+            }
+
+            @StreamingRequest
+            @Post("stream{/name}")
+            String streamIn(RequestIn request, String name) {
+                if (Body body ?= request.body) {
+                    @Inject Directory curDir;
+                    File file = curDir.fileFor(name);
+                    if (file.exists) {
+                        file.delete();
+                    }
+                    body.streamBodyTo(new FileOutputStream(file));
+                    return $"Created {file.name}; {file.size} bytes";
+                }
+                return "<No data>";
+            }
+
+            @StreamingRequest
+            @Get("stream{/name}")
+            HttpStatus streamOut(RequestIn request, String name) {
+                @Inject Directory curDir;
+                File file = curDir.fileFor(name);
+                if (file.exists) {
+                    ResponseOut response = TODO("new StreamingResponse()");
+                    assert Body body ?= response.body;
+                    body.streamBodyFrom(new FileInputStream(file));
+                } else {
+                    return NotFound;
+                }
             }
 
             @Default @Get

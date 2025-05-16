@@ -971,11 +971,19 @@ public class xArray
      */
     public static ArrayHandle makeByteArrayHandle(byte[] abValue, Mutability mutability)
         {
+        return makeByteArrayHandle(abValue, abValue.length, mutability);
+        }
+
+    /**
+     * @return a Byte array handle
+     */
+    public static ArrayHandle makeByteArrayHandle(byte[] abValue, int cBytes, Mutability mutability)
+        {
         if (abValue.length == 0 && mutability == Mutability.Constant)
             {
             return ensureEmptyByteArray();
             }
-        DelegateHandle hDelegate = xRTUInt8Delegate.INSTANCE.makeHandle(abValue, abValue.length, mutability);
+        DelegateHandle hDelegate = xRTUInt8Delegate.INSTANCE.makeHandle(abValue, cBytes, mutability);
         return new ArrayHandle(BYTE_ARRAY_CLZ, hDelegate, mutability);
         }
 

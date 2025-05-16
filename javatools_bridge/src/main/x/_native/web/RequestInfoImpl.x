@@ -16,6 +16,9 @@ import RTServer.RequestInfo;
 
 import ecstasy.collections.CaseInsensitive;
 
+import ecstasy.io.BinaryInput;
+import ecstasy.io.EndOfFile;
+
 /**
  * The natural RequestInfo implementation.
  *
@@ -397,12 +400,103 @@ service RequestInfoImpl(RTServer       server,
     @Lazy String[] headerNames.calc() = server.getHeaderNames(context);
 
     @Override
-    conditional String[] getHeaderValuesForName(String name) {
-        return server.getHeaderValuesForName(context, name);
+    conditional String[] getHeaderValuesForName(String name) =
+            server.getHeaderValuesForName(context, name);
+
+    @Override
+    conditional Byte[] getBodyBytes() {
+        Byte[] bytes = server.readBody(context, MaxValue);
+        return bytes.empty ? False : True, bytes;
+    }
+
+    /**
+     * Read the next chunk async.
+     * TODO GG: we should be able to move this inside bodyReader.calc() method.
+     */
+    private FutureVar<Byte[]> requestNextBuffer() {
+        @Future Byte[] buffer = server.readBody^(context, 8Kib);
+        return &buffer;
     }
 
     @Override
-    conditional Byte[] getBodyBytes() = server.getBodyBytes(context);
+    @Lazy BinaryInput bodyReader.calc() {
+        return new BinaryInput() {
+            construct() {
+                // prime the buffer
+                bufferRef = requestNextBuffer();
+                offset    = 0;
+            }
+
+            /**
+             * Asynchronously filled buffer.
+             */
+            FutureVar<Byte[]> bufferRef;
+            Byte[] buffer.get() = bufferRef.get();
+
+            /**
+             * The current offset into the buffer.
+             */
+            Int offset;
+
+            @Override
+            @RO Boolean eof.get() = buffer.empty;
+
+            @Override
+            @RO Int available.get() = bufferRef.assigned ? buffer.size - offset : 0;
+
+            @Override
+            Byte readByte() {
+                Int size = buffer.size;
+                if (size == 0) {
+                    throw new EndOfFile();
+                }
+
+                Byte byte = buffer[offset++];
+                if (offset == size) {
+                    // request a new buffer
+                    bufferRef = requestNextBuffer();
+                    offset    = 0;
+                }
+                return byte;
+            }
+
+            @Override
+            immutable Byte[] readBytes(Int count) {
+                if (offset == 0 && count == buffer.size) {
+                    // request a new buffer; freeze and return our current buffer
+                    Byte[] bufferCurr = buffer;
+                    bufferRef = requestNextBuffer();
+                    return bufferCurr.freeze(inPlace=True);
+                } else {
+                    return super(count);
+                }
+            }
+
+            @Override
+            Int pipeTo(BinaryOutput out, Int count = MaxValue) {
+                if (count > 0 && offset == 0) {
+                    Int    piped      = 0;
+                    Byte[] bufferCurr = buffer;
+                    Int    bufferSize = bufferCurr.size;
+                    while (count >= bufferSize > 0) {
+                        bufferRef = requestNextBuffer();
+                        out.writeBytes(bufferCurr);
+                        piped += bufferSize;
+                        count -= bufferSize;
+
+                        bufferCurr = buffer;
+                        bufferSize = bufferCurr.size;
+                    }
+                    if (count > 0 && !eof) {
+                        piped += super(out, count);
+                    }
+                    return piped;
+                } else {
+                    return super(out, count);
+                }
+            }
+        };
+    }
 
     @Override
     Boolean containsNestedBodies() = server.containsNestedBodies(context);

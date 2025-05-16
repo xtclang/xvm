@@ -10,6 +10,7 @@ import com.sun.net.httpserver.HttpsParameters;
 import com.sun.net.httpserver.HttpsServer;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 
 import java.net.InetSocketAddress;
@@ -116,7 +117,7 @@ public class xRTServer
         markNativeMethod("getProtocolString",      null, null);
         markNativeMethod("getHeaderNames",         null, null);
         markNativeMethod("getHeaderValuesForName", null, null);
-        markNativeMethod("getBodyBytes",           null, null);
+        markNativeMethod("readBody",               null, null);
         markNativeMethod("containsNestedBodies",   null, null);
 
         invalidateTypeInfo();
@@ -153,6 +154,7 @@ public class xRTServer
         return new HttpServerHandle(clazz.ensureAccess(Constants.Access.STRUCT), context);
         }
 
+    @Override
     public int invokeNative1(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
@@ -174,6 +176,7 @@ public class xRTServer
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
+    @Override
     public int invokeNativeN(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
         {
@@ -198,10 +201,15 @@ public class xRTServer
                         : xRTFunction.makeAsyncNativeHandle(method).
                                 call1(frame, hServer, ahArg, iReturn);
 
+            case "readBody":
+                return frame.f_context == hServer.f_context
+                        ? invokeReadBody(frame, ahArg, iReturn)
+                        : xRTFunction.makeAsyncNativeHandle(method).
+                                call1(frame, hServer, ahArg, iReturn);
+
             case "closeImpl":
                 assert frame.f_context == hServer.f_context;
                 return invokeClose(hServer);
-
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -225,9 +233,6 @@ public class xRTServer
             case "getHeaderValuesForName":
                 return invokeGetHeaderValues(frame, (HttpContextHandle) ahArg[0],
                         (StringHandle) ahArg[1], aiReturn);
-
-            case "getBodyBytes":
-                return invokeGetBody(frame, (HttpContextHandle) ahArg[0], aiReturn);
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
@@ -542,22 +547,24 @@ public class xRTServer
         }
 
     /**
-     * Implementation of "conditional Byte[] getBodyBytes(RequestContext context)" method.
+     * Implementation of "Byte[] readBody(RequestContext context, Int size)" method.
      */
-    private int invokeGetBody(Frame frame, HttpContextHandle hCtx, int[] aiResult)
+    private int invokeReadBody(Frame frame, ObjectHandle[] ahArg, int iResult)
         {
+        HttpContextHandle hCtx = (HttpContextHandle) ahArg[0];
+        int              cb    = (int) ((JavaLong) ahArg[1]).getValue();
+
         try
             {
-            byte[] ab = hCtx.f_exchange.getRequestBody().readAllBytes();
-
-            return ab.length == 0
-                ? frame.assignValue(aiResult[0], xBoolean.FALSE)
-                : frame.assignValues(aiResult, xBoolean.TRUE,
-                    xByteArray.makeByteArrayHandle(ab, Mutability.Constant));
+            InputStream in    = hCtx.f_exchange.getRequestBody();
+            byte[]      ab    = in.readNBytes(cb);
+            return frame.assignValue(iResult, ab.length == 0
+                    ? xByteArray.ensureEmptyByteArray()
+                    : xByteArray.makeByteArrayHandle(ab, Mutability.Constant));
             }
         catch (IOException e)
             {
-            return frame.assignValue(aiResult[0], xBoolean.FALSE);
+            return frame.raiseException(xException.obscureIoException(frame, e.getMessage()));
             }
         }
 

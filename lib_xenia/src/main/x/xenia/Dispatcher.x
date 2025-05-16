@@ -173,7 +173,7 @@ service Dispatcher {
                 // about the Session that it is associated with
                 Session?  session = Null;
                 RequestIn request = new Http1Request(requestInfo, sessionBroker, endpoint.template,
-                                                     uriParams, bindRequired=True);
+                        uriParams, bindRequired=True, streaming=endpoint.allowRequestStreaming);
                 ResponseOut? sendNow = Null;
                 // check if there is already a Session for the Request
                 if ((session, sendNow) := sessionBroker.findSession(request)) {

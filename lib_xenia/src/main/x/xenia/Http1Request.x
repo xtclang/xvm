@@ -1,4 +1,5 @@
 import ecstasy.collections.CaseInsensitive;
+import ecstasy.io.BinaryInput;
 
 import net.UriTemplate;
 import net.UriTemplate.UriParameters;
@@ -17,7 +18,6 @@ import web.sessions.Broker as SessionBroker;
 
 import HttpServer.RequestInfo;
 
-
 /**
  * An implementation of an HTTP/1 (i.e. 0.9, 1.0, 1.1) request, as received by a server, using the
  * raw request data provided by the `HttpServer.Handler` interface.
@@ -28,18 +28,23 @@ const Http1Request(RequestInfo   info,
                    UriParameters matchResult  = [],
                    Endpoint?     endpoint     = Null,
                    Boolean       bindRequired = False,
+                   Boolean       streaming    = False,
                   )
         implements RequestIn
         implements Header
         implements Body {
 
     assert() {
-        // TODO handle non-simple bodies e.g. multi-part, streaming
+        // TODO handle non-simple bodies e.g. multi-part
         if (info.containsNestedBodies()) {
             TODO multi-part body requests are not yet supported
         }
 
-        if (Byte[] bytes := info.getBodyBytes()) {
+        if (streaming) {
+            this.hasBody   = True;
+            this.bytes     = [];
+            this.mediaType = Binary;
+        } else if (Byte[] bytes := info.getBodyBytes()) {
             this.hasBody = True;
             this.bytes   = bytes;
 
@@ -94,7 +99,6 @@ const Http1Request(RequestInfo   info,
      */
     protected Boolean hasBody;
 
-
     // ----- HttpMessage interface -----------------------------------------------------------------
 
     @Override
@@ -118,7 +122,6 @@ const Http1Request(RequestInfo   info,
 
     @Override
     immutable HttpMessage freeze(Boolean inPlace = False) = this;
-
 
     // ----- Request Interface ---------------------------------------------------------------------
 
@@ -155,7 +158,6 @@ const Http1Request(RequestInfo   info,
         assert AcceptList list := AcceptList.of(accept);
         return list;
     }
-
 
     // ----- RequestIn Interface -------------------------------------------------------------------
 
@@ -307,15 +309,26 @@ const Http1Request(RequestInfo   info,
     @Override
     void removeAll(String name) = throw new ReadOnly();
 
-
     // ----- Body interface ------------------------------------------------------------------------
 
     @Override
     MediaType mediaType;
 
     @Override
-    Byte[] bytes;
+    Byte[] bytes.get() = streaming ? throw new IllegalState("Streaming only") : super();
 
     @Override
     Body from(Object content) = throw new ReadOnly();
+
+    @Override
+    void streamBodyTo(BinaryOutput receiver) {
+        if (streaming) {
+            bodyReader().pipeTo(receiver);
+        } else {
+            super(receiver);
+        }
+    }
+
+    @Override
+    BinaryInput bodyReader() = streaming ? info.bodyReader : super();
 }

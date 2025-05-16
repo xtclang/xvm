@@ -1,3 +1,5 @@
+import ecstasy.io.BinaryInput;
+
 import libcrypto.Algorithm;
 import libcrypto.CryptoKey;
 import libcrypto.Decryptor;
@@ -26,7 +28,6 @@ service RTServer
 
     @Override
     String toString() = "HttpServer";  // purposefully vague; do NOT leak any info!
-
 
     // ----- network bindings ----------------------------------------------------------------------
 
@@ -57,7 +58,6 @@ service RTServer
 
     @Override
     public/private Map<HostInfo, ProxyCheck> bindings = [];
-
 
     // ----- host routes ---------------------------------------------------------------------------
 
@@ -180,7 +180,6 @@ service RTServer
         }
     }
 
-
     // ----- request handling ----------------------------------------------------------------------
 
     /**
@@ -205,6 +204,7 @@ service RTServer
         @RO Uri httpsUrl;
         @RO String? userAgent;
         @RO String[] headerNames;
+        @RO BinaryInput bodyReader;
         conditional String[] getHeaderValuesForName(String name);
         conditional Byte[] getBodyBytes();
         Boolean containsNestedBodies();
@@ -212,25 +212,23 @@ service RTServer
         void respond(Int status, String[] headerNames, String[] headerValues, Byte[] body);
     }
 
-
     // ----- native implementations all run on the service context ---------------------------------
 
-    private void bindImpl(HostInfo binding, String bindAddr, UInt16 httpPort, UInt16 httpsPort)                {TODO("Native");}
+    private void bindImpl(HostInfo binding, String bindAddr, UInt16 httpPort, UInt16 httpsPort)                = TODO("Native");
     private void addRouteImpl(String hostName, UInt16 httpPort, UInt16 httpsPort,
-            HandlerWrapper wrapper, KeyStore? keystore, String? tlsKey)     {TODO("Native");}
-    private Boolean replaceRouteImpl(String hostName, HandlerWrapper wrapper)                                  {TODO("Native");}
-    private void removeRouteImpl(String hostName)                                                              {TODO("Native");}
-    (Byte[], UInt16) getReceivedAtAddress(RequestContext context)                                              {TODO("Native");}
-    (Byte[], UInt16) getReceivedFromAddress(RequestContext context)                                            {TODO("Native");}
-    conditional (String, UInt16) getHostInfo(RequestContext context)                                           {TODO("Native");}
-    String getProtocolString(RequestContext context)                                                           {TODO("Native");}
-    String[] getHeaderNames(RequestContext context)                                                            {TODO("Native");}
-    conditional String[] getHeaderValuesForName(RequestContext context, String name)                           {TODO("Native");}
-    conditional Byte[] getBodyBytes(RequestContext context)                                                    {TODO("Native");}
-    Boolean containsNestedBodies(RequestContext context)                                                       {TODO("Native");}
-    void respond(RequestContext context, Int status, String[] headerNames, String[] headerValues, Byte[] body) {TODO("Native");}
-    private void closeImpl()                                                                                   {TODO("Native");}
-
+            HandlerWrapper wrapper, KeyStore? keystore, String? tlsKey)                                        = TODO("Native");
+    private Boolean replaceRouteImpl(String hostName, HandlerWrapper wrapper)                                  = TODO("Native");
+    private void removeRouteImpl(String hostName)                                                              = TODO("Native");
+    (Byte[], UInt16) getReceivedAtAddress(RequestContext context)                                              = TODO("Native");
+    (Byte[], UInt16) getReceivedFromAddress(RequestContext context)                                            = TODO("Native");
+    conditional (String, UInt16) getHostInfo(RequestContext context)                                           = TODO("Native");
+    String getProtocolString(RequestContext context)                                                           = TODO("Native");
+    String[] getHeaderNames(RequestContext context)                                                            = TODO("Native");
+    conditional String[] getHeaderValuesForName(RequestContext context, String name)                           = TODO("Native");
+    Byte[] readBody(RequestContext context, Int size)                                                          = TODO("Native");
+    Boolean containsNestedBodies(RequestContext context)                                                       = TODO("Native");
+    void respond(RequestContext context, Int status, String[] headerNames, String[] headerValues, Byte[] body) = TODO("Native");
+    private void closeImpl()                                                                                   = TODO("Native");
 
     // ----- internal classes ----------------------------------------------------------------------
 
@@ -253,7 +251,6 @@ service RTServer
             handler.handle^(&info.maskAs(RequestInfo));
         }
     }
-
 
     // ----- interfaces ----------------------------------------------------------------------------
 
