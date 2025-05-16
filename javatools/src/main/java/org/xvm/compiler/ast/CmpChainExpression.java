@@ -353,9 +353,8 @@ public class CmpChainExpression
         if (constVal == null)
             {
             // everything has to get compared, left to right
-            Token[]    aTokOp = operators;
-            int        cOps   = aTokOp.length;
-            for (int iCmp = 0; iCmp < cOps; iCmp++)
+            Token[] aTokOp = operators;
+            for (int iCmp = 0, cOps = aTokOp.length; iCmp < cOps; iCmp++)
                 {
                 Token    tok  = aTokOp[iCmp];
                 Argument arg1 = aArgs[iCmp];
@@ -458,49 +457,31 @@ public class CmpChainExpression
             return;
             }
 
+        Label labelFalse = fWhenTrue ? new Label("not_eq") : label;
+
         // otherwise, everything has to get compared, left to right
-        Token[]  aTokOp  = operators;
+        Token[] aTokOp  = operators;
         for (int iCmp = 0, cOps = aTokOp.length; iCmp < cOps; ++iCmp)
             {
             Argument arg1 = aArgs[iCmp];
             Argument arg2 = aArgs[iCmp + 1];
 
-            // generate the op that combines the two sub-expressions
             code.add(switch (aTokOp[iCmp].getId())
                 {
-                case COMP_EQ ->
-                    fWhenTrue
-                        ? new JumpEq(typeCmp, arg1, arg2, label)
-                        : new JumpNotEq(typeCmp, arg1, arg2, label);
-
-                case COMP_NEQ ->
-                    fWhenTrue
-                        ? new JumpNotEq(typeCmp, arg1, arg2, label)
-                        : new JumpEq(typeCmp, arg1, arg2, label);
-
-                case COMP_LT ->
-                    fWhenTrue
-                        ? new JumpLt(typeCmp, arg1, arg2, label)
-                        : new JumpGte(typeCmp, arg1, arg2, label);
-
-                case COMP_GT ->
-                    fWhenTrue
-                        ? new JumpGt(typeCmp, arg1, arg2, label)
-                        : new JumpLte(typeCmp, arg1, arg2, label);
-
-                case COMP_LTEQ ->
-                    fWhenTrue
-                        ? new JumpLte(typeCmp, arg1, arg2, label)
-                        : new JumpGt(typeCmp, arg1, arg2, label);
-
-                case COMP_GTEQ ->
-                    fWhenTrue
-                        ? new JumpGte(typeCmp, arg1, arg2, label)
-                        : new JumpLt(typeCmp, arg1, arg2, label);
-
-                default ->
-                    throw new IllegalStateException();
+                case COMP_EQ   -> new JumpNotEq(typeCmp, arg1, arg2, labelFalse);
+                case COMP_NEQ  -> new JumpEq   (typeCmp, arg1, arg2, labelFalse);
+                case COMP_LT   -> new JumpGte  (typeCmp, arg1, arg2, labelFalse);
+                case COMP_GT   -> new JumpLte  (typeCmp, arg1, arg2, labelFalse);
+                case COMP_LTEQ -> new JumpGt   (typeCmp, arg1, arg2, labelFalse);
+                case COMP_GTEQ -> new JumpLt   (typeCmp, arg1, arg2, labelFalse);
+                default        -> throw new IllegalStateException();
                 });
+            }
+
+        if (fWhenTrue)
+            {
+            code.add(new Jump(label));
+            code.add(labelFalse);
             }
         }
 
@@ -524,8 +505,7 @@ public class CmpChainExpression
                     case COMP_GT    -> Operator.CompGt;
                     case COMP_LTEQ  -> Operator.CompLtEq;
                     case COMP_GTEQ  -> Operator.CompGtEq;
-                    default
-                        -> throw new UnsupportedOperationException(operators[i].getValueText());
+                    default         -> throw new IllegalStateException();
                     };
                 }
             }
