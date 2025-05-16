@@ -33,17 +33,17 @@ interface BinaryInput
     /**
      * Read the specified number of bytes, returning those bytes as an array.
      *
-     * @param count  the number of bytes to read
+     * @param count  the maximum number of bytes to read
      *
-     * @return an array of the specified size, containing the bytes read from the stream
+     * @return an array up to the specified size, containing the bytes read from the stream; if the
+     *         array is smaller than `count` bytes, then the end of this stream has been reached
      *
      * @throws IOException  represents the general category of input/output exceptions
-     * @throws EndOfFile    if the end of the stream has been reached
      */
     immutable Byte[] readBytes(Int count) {
         assert:arg count >= 0;
 
-        Byte[] bytes = new Byte[count];
+        Byte[] bytes = new Byte[](count);
         readBytes(bytes, 0, count);
         return bytes.freeze(inPlace=True);
     }
@@ -51,26 +51,34 @@ interface BinaryInput
     /**
      * Pipe contents from this stream to the specified stream.
      *
-     * @param out  the OutputStream to pipe to
-     * @param max  the number of bytes to pipe
+     * @param out    the OutputStream to pipe to
+     * @param count  the maximum number of bytes to pipe
+     *
+     * @return the actual number of bytes transferred; if this value is less than `count`, then the
+     *         end of this stream has been reached
      *
      * @throws IOException  represents the general category of input/output exceptions
-     * @throws EndOfFile    if the end of the stream has been reached
      */
-    void pipeTo(BinaryOutput out, Int count) {
+    Int pipeTo(BinaryOutput out, Int count = MaxValue) {
         if (count > 0) {
             Int    bufSize  = count.notGreaterThan(8192);
             Byte[] buf      = new Byte[bufSize];
-            while (count > 0) {
-                Int copySize = bufSize.notGreaterThan(count);
-                readBytes(buf, 0, copySize);
-                out.writeBytes(buf, 0, copySize);
-                count -= copySize;
+            Int    piped    = 0;
+            while (piped < count) {
+                Int request = bufSize.notGreaterThan(count-piped);
+                Int actual  = readBytes(buf, 0, request);
+                if (actual == 0) {
+                    break;
+                }
+                out.writeBytes(buf, 0, actual);
+                piped += actual;
             }
+            return piped;
         } else {
             // the only legal value for count is zero at this point, but the assertion is likely
             // to print a detailed message of the assertion condition, so it needs to be obvious
             assert:arg count >= 0;
+            return 0;
         }
     }
 
@@ -80,26 +88,29 @@ interface BinaryInput
     // ----- helper functions ----------------------------------------------------------------------
 
     /**
-     * Read the specified number of bytes into the provided array.
+     * Read up to the specified number of bytes into the provided array.
      *
      * Note: this method cannot be used as a common API, since most of the `BinaryInput`
      *       implementations are services and cannot be called passing a mutable array.
      *
      * @param  bytes   the byte array to read into
      * @param  offset  the offset into the array to store the first byte read
-     * @param  count   the number of bytes to read
+     * @param  count   the maximum number of bytes to read
+     *
+     * @return the actual number of bytes read; if this value is less than `count`, then the end of
+     *         stream has been reached
      *
      * @throws IOException  represents the general category of input/output exceptions
-     * @throws EndOfFile    if the end of the stream has been reached
      */
-    private void readBytes(Byte[] bytes, Int offset, Int count) {
-        assert:arg offset >= 0 && count >= 0;
+    private Int readBytes(Byte[] bytes, Int offset, Int count) {
+        assert:arg offset >= 0 && count > 0;
 
-        Int last = offset + count;
-        assert last <= bytes.size;
-        while (offset < last) {
+        Int read = 0;
+        while (read < count && !eof) {
             bytes[offset++] = readByte();
+            read++;
         }
+        return read;
     }
 
     /**

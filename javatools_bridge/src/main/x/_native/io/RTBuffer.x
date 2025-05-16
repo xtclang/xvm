@@ -57,10 +57,10 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
     }
 
     @Override
-    void readBytes(Byte[] bytes, Int offset, Int count) = TODO("native");
+    Int readBytes(Byte[] bytes, Int offset, Int count) = TODO("native");
 
     @Override
-    void pipeTo(BinaryOutput out, Int count) {
+    Int pipeTo(BinaryOutput out, Int count = MaxValue) {
         WriteBuffer? buf = Null;
         if (buf := &out.revealAs(RTBuffer)) {
             // it's one of "me"
@@ -78,12 +78,12 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
 
                 count -= copy;
                 if (count == 0) {
-                    return;
+                    return copy;
                 }
             }
         }
 
-        super(out, count);
+        return super(out, count);
     }
 
     // ----- WriteBuffer methods -------------------------------------------------------------------

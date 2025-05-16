@@ -20,19 +20,21 @@ interface ReadBuffer
     @Op("[]") Byte getByte(Int index);
 
     /**
-     * Read the specified number of bytes into the provided array.
+     * Read up to the specified number of bytes into the provided array.
      *
      * @param  bytes   the byte array to read into
      * @param  offset  the offset into the array to store the first byte read
-     * @param  count   the number of bytes to read
+     * @param  count   the maximum number of bytes to read
+     *
+     * @return the actual number of bytes read; if this value is less than `count`, then the end of
+     *         buffer has been reached
      *
      * @throws IOException  represents the general category of input/output exceptions
-     * @throws EndOfFile    if the end of the stream has been reached
      */
-    void readBytes(Byte[] bytes, Int offset, Int count);
+    Int readBytes(Byte[] bytes, Int offset, Int count);
 
     /**
-     * Skip over the specified number of bytes. This modifies the [offset] of the ReadBuffer.
+     * Skip over the specified number of bytes. This modifies the [offset] of the `ReadBuffer`.
      *
      * @param count  a value in the range `(0 <= count <= size - offset)` that indicates the number
      *               of elements to skip over
@@ -70,8 +72,8 @@ interface ReadBuffer
     }
 
     /**
-     * Release the buffer. After this method is invoked, the ReadBuffer is no longer valid, and must
-     * not be used; any attempt to subsequently use the buffer may result in an exception.
+     * Release the buffer. After this method is invoked, the `ReadBuffer` is no longer valid, and
+     * must not be used; any attempt to subsequently use the buffer may result in an exception.
      */
     @Override
     void close(Exception? cause = Null);

@@ -6,7 +6,7 @@
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a ByteArrayOutputStream with an optional initial capacity. The stream will
+     * Construct a `ByteArrayOutputStream` with an optional initial capacity. The stream will
      * construct its own mutable array internally.
      *
      * @param initialCapacity  (optional) the initial byte array capacity
@@ -16,7 +16,7 @@
     }
 
     /**
-     * Construct a ByteArrayOutputStream on top of an existing array.
+     * Construct a `ByteArrayOutputStream` on top of an existing array.
      *
      * @param bytes  the mutable or fixed-size byte array to write to
      */

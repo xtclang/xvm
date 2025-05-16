@@ -46,30 +46,25 @@ class ByteArrayInputStream
 
     @Override
     immutable Byte[] readBytes(Int count) {
-        if (offset + count > size) {
-            // behave as if we had read each byte until encountering an EndOfFile
-            offset = size;
-            throw new EndOfFile();
+        if (offset >= size) {
+            return [];
         }
 
-        Int first = offset;
-        Int last  = first + count - 1;
-        offset    = last + 1;
-        return bytes[first..last].freeze(inPlace=False);
+        Int first     = offset;
+        Int afterLast = (first + count).notGreaterThan(size);
+        offset        = afterLast;
+        return bytes[first..<afterLast].freeze(inPlace=False);
     }
 
     @Override
-    void pipeTo(BinaryOutput out, Int count) {
+    Int pipeTo(BinaryOutput out, Int count = MaxValue) {
         if (out.is(ByteArrayOutputStream)) {
             Int copy = Int.minOf(count, remaining);
             out.writeBytes(bytes, offset, copy);
             offset += copy;
-            if (copy < count) {
-                throw new EndOfFile();
-            }
-            return;
+            return copy;
         }
 
-        super(out, count);
+        return super(out, count);
     }
 }

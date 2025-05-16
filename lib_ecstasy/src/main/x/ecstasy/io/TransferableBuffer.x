@@ -335,25 +335,28 @@ service TransferableBuffer(Int size) {
         }
 
         /**
-         * Read the specified number of bytes into the provided array.
+         * Read up to the specified number of bytes into the provided array.
          *
          * @param ticket  the ticket that was provided to the ReadBuffer
          * @param bytes   the byte array to read into
          * @param offset  the offset into the array to store the first byte read
          * @param count   the number of bytes to read
          *
+         * @return the actual number of bytes read; if this value is less than `count`, then the end
+         *         of buffer has been reached
+         *
          * @throws IOException  represents the general category of input/output exceptions
-         * @throws EndOfFile    if the end of the stream has been reached
          */
-        void readBytes(Int ticket, Byte[] bytes, Int offset, Int count) {
+        Int readBytes(Int ticket, Byte[] bytes, Int offset, Int count) {
             checkValid(ticket);
             assert:arg offset >= 0 && count >= 0;
 
-            Int last = offset + count;
-            assert last <= bytes.size;
-            while (offset < last) {
+            Int read = 0;
+            while (read < count && getRemaining(ticket) > 0) {
                 bytes[offset++] = readByte(ticket);
+                read++;
             }
+            return read;
         }
 
         /**
@@ -473,18 +476,21 @@ service TransferableBuffer(Int size) {
         }
 
         @Override
-        void readBytes(Byte[] bytes, Int offset, Int count) {
+        Int readBytes(Byte[] bytes, Int offset, Int count) {
             checkService();
             return actual.readBytes(ticket, bytes, offset, count);
         }
 
         @Override
-        void pipeTo(BinaryOutput out, Int count) {
+        Int pipeTo(BinaryOutput out, Int count = MaxValue) {
             checkService();
             assert:bounds count >= 0;
-            while (count-- > 0) {
+            Int piped = 0;
+            while (piped < count && actual.getRemaining(ticket) > 0) {
                 out.writeByte(actual.readByte(ticket));
+                piped++;
             }
+            return piped;
         }
 
         @Override
