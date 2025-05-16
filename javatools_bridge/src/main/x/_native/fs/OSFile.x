@@ -41,16 +41,14 @@ const OSFile
 
     @Override
     File append(Byte[] contents) {
-        if (!exists) {
-            throw new FileNotFound(path);
+        if (exists) {
+            if (!writable) {
+                throw new AccessDenied(path);
+            }
+            appendImpl(contents);
+        } else {
+            this.contents = contents.freeze(inPlace=False);
         }
-
-        if (!writable) {
-            throw new AccessDenied(path);
-        }
-
-        appendImpl(contents);
-
         return this;
     }
 
