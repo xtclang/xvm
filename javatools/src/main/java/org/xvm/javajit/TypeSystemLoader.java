@@ -17,11 +17,11 @@ class TypeSystemLoader
      * @param name           the name assigned to the TypeSystemLoader
      * @param sharedLoaders  the loaders that are "shared into" this type system from other type
      *                       systems
-     * @param javaGen        Java ClassFile generator to use for this type system's Ecstasy code
+     * @param typeSystem        Java ClassFile generator to use for this type system's Ecstasy code
      */
-    TypeSystemLoader(String name, ModuleLoader[] sharedLoaders, JavaGen javaGen) {
+    TypeSystemLoader(String name, ModuleLoader[] sharedLoaders, TypeSystem typeSystem) {
         super(name, TypeSystemLoader.class.getClassLoader());
-        this.javaGen = javaGen;
+        this.typeSystem = typeSystem;
         if (sharedLoaders == null) {
             prefixes = new String[0];
             loaders  = new ModuleLoader[0];
@@ -39,6 +39,7 @@ class TypeSystemLoader
      * Per-module path prefixes.
      */
     String[] prefixes;
+
     /**
      * The module ClassLoaders, each corresponding to an entry in `prefixes`.
      */
@@ -50,9 +51,9 @@ class TypeSystemLoader
     boolean started;
 
     /**
-     * Java ClassFile generator.
+     * The Java ClassFile generator.
      */
-    public final JavaGen javaGen;
+    public final TypeSystem typeSystem;
 
     /**
      * Add a module to the type system. This method can only be called before the TypeSystemLoader
@@ -65,7 +66,7 @@ class TypeSystemLoader
      */
     ModuleLoader includeModule(ModuleStructure module, String prefix) {
         assert !started;
-        ModuleLoader child = new ModuleLoader(this, module, prefix, javaGen);
+        ModuleLoader child = new ModuleLoader(this, module, prefix, typeSystem);
         addModule(child);
         return child;
     }
