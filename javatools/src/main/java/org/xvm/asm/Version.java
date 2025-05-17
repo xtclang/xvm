@@ -12,8 +12,7 @@ import static org.xvm.util.Handy.quotedString;
  * Represents an Ecstasy module version.
  */
 public class Version
-        implements Comparable<Version>
-    {
+        implements Comparable<Version> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -21,8 +20,7 @@ public class Version
      *
      * @param sLiteral  the version string
      */
-    public Version(String sLiteral)
-        {
+    public Version(String sLiteral) {
         ArrayList<Integer> listParts = new ArrayList<>();
         String             sBuild    = null;
         int                cLen      = sLiteral.length();
@@ -30,35 +28,29 @@ public class Version
         String             sErr      = null;
 
         boolean requiredNumber = false;
-        Numbers: while (ix < cLen)
-            {
+        Numbers: while (ix < cLen) {
             char ch = sLiteral.charAt(ix);
-            switch (ch)
-                {
+            switch (ch) {
                 case '0': case '1': case '2': case '3': case '4':
                 case '5': case '6': case '7': case '8': case '9':
                     int n = 0;
-                    do
-                        {
-                        if (n > 200000000)
-                            {
+                    do {
+                        if (n > 200000000) {
                             sErr = "version number overflow";
                             break Numbers;
-                            }
-                        n = n * 10 + (sLiteral.charAt(ix++) - '0');
                         }
-                    while (ix < cLen && isDigit(sLiteral.charAt(ix)));
+                        n = n * 10 + (sLiteral.charAt(ix++) - '0');
+                    } while (ix < cLen && isDigit(sLiteral.charAt(ix)));
                     listParts.add(n);
                     requiredNumber = false;
                     break;
 
                 case '.':
                 case '-':
-                    if (requiredNumber || ix == 0)
-                        {
+                    if (requiredNumber || ix == 0) {
                         sErr = "number expected; '" + ch + "' found";
                         break Numbers;
-                        }
+                    }
                     ix++;
                     requiredNumber = true;
                     break;
@@ -84,19 +76,16 @@ public class Version
                 default:
                     sErr = "unknown version component " + quotedString(sLiteral.substring(ix));
                     break Numbers;
-                }
             }
+        }
 
-        if (requiredNumber && sErr == null)
-            {
+        if (requiredNumber && sErr == null) {
             sErr = "number expected; " + quotedString(sLiteral.substring(ix) + " found");
-            }
+        }
 
-        if (sErr == null && ix < cLen)
-            {
+        if (sErr == null && ix < cLen) {
             String expectedWord = null;
-            switch (sLiteral.charAt(ix))
-                {
+            switch (sLiteral.charAt(ix)) {
                 case 'A':
                 case 'a':
                     listParts.add(-3);
@@ -140,94 +129,75 @@ public class Version
                 default:
                     sErr = "illegal character " + quotedChar(sLiteral.charAt(ix));
                     break;
-                }
+            }
 
-            if (expectedWord != null)
-                {
+            if (expectedWord != null) {
                 String word    = grabLetters(sLiteral, ix);
                 int    wordlen = word.length();
                 ix += wordlen;
-                if (wordlen > 1 && !word.equalsIgnoreCase(expectedWord))
-                    {
+                if (wordlen > 1 && !word.equalsIgnoreCase(expectedWord)) {
                     sErr = "expected \"" + expectedWord + "\" but encountered \"" + word + "\"";
-                    }
-                else if (ix < cLen)
-                    {
+                } else if (ix < cLen) {
                     boolean requireDigits = false;
                     char ch = sLiteral.charAt(ix);
-                    if (ch == '.' || ch == '-')
-                        {
+                    if (ch == '.' || ch == '-') {
                         ++ix;
                         requireDigits = true;
                         ch = ix < cLen ? sLiteral.charAt(ix) : '?';
-                        }
+                    }
 
-                    if (isDigit(ch))
-                        {
+                    if (isDigit(ch)) {
                         int n = 0;
-                        do
-                            {
-                            if (n > 200000000)
-                                {
+                        do {
+                            if (n > 200000000) {
                                 sErr = "version number overflow";
                                 break;
-                                }
+                            }
                             n = n * 10 + (ch - '0');
                             ++ix;
-                            }
-                        while (ix < cLen && isDigit(ch = sLiteral.charAt(ix)));
+                        } while (ix < cLen && isDigit(ch = sLiteral.charAt(ix)));
                         listParts.add(n);
-                        }
-                    else if (requireDigits)
-                        {
+                    } else if (requireDigits) {
                         sErr = "expected trailing version; " + quotedChar(ch) + " found";
-                        }
                     }
                 }
             }
+        }
 
-        if (sErr == null && ix < cLen)
-            {
-            if (sLiteral.charAt(ix) == '+')
-                {
+        if (sErr == null && ix < cLen) {
+            if (sLiteral.charAt(ix) == '+') {
                 // parse the build string, which must be the remainder of the version
                 sBuild = sLiteral.substring(ix + 1);
 
                 // semver states that only A..Z, a..z, 0..9, and '-' may occur in the build
                 // metadata, but the examples given also include '.', so Ecstasy considers the
                 // '.' to be legal
-                if (!sBuild.matches("[A-Za-z0-9\\-.]*"))
-                    {
+                if (!sBuild.matches("[A-Za-z0-9\\-.]*")) {
                     sErr = "illegal build string \"" + sBuild + "\"; only A-Z, a-z, 0-9, '-', and '.' are permitted";
-                    }
                 }
-            else
-                {
+            } else {
                 sErr = "invalid trailing string: " + quotedString(sLiteral.substring(ix));
-                }
             }
+        }
 
-        if (sErr == null && listParts.isEmpty())
-            {
+        if (sErr == null && listParts.isEmpty()) {
             sErr = "no version number";
-            }
+        }
 
-        if (sErr != null)
-            {
+        if (sErr != null) {
             throw new IllegalStateException("illegal version string \"" + sLiteral + "\": " + sErr);
-            }
+        }
 
         int   cParts  = listParts.size();
         int[] aiParts = new int[cParts];
-        for (int i = 0; i < cParts; ++i)
-            {
+        for (int i = 0; i < cParts; ++i) {
             aiParts[i] = listParts.get(i);
-            }
+        }
 
         this.literal = sLiteral;
         this.ints    = aiParts;
         this.build   = sBuild;
-        }
+    }
 
     /**
      * Construct a Version from an array of version indicators and an optional description.
@@ -235,8 +205,7 @@ public class Version
      * @param aiParts  the array of version indicators
      * @param sBuild  an optional build description
      */
-    public Version(int[] aiParts, String sBuild)
-        {
+    public Version(int[] aiParts, String sBuild) {
         assert aiParts != null;
 
         // each version indicator must be >= 0, except the second-to-the-last or last, which may be
@@ -244,72 +213,59 @@ public class Version
         StringBuilder sb  = new StringBuilder();
         boolean       err = aiParts.length == 0;
         boolean       fGA = true;
-        for (int i = 0, c = aiParts.length; i < c; ++i)
-            {
+        for (int i = 0, c = aiParts.length; i < c; ++i) {
             int part = aiParts[i];
-            if (aiParts[i] >= 0)
-                {
-                if (i > 0 && fGA)
-                    {
+            if (aiParts[i] >= 0) {
+                if (i > 0 && fGA) {
                     sb.append('.');
-                    }
-                sb.append(part);
                 }
-            else if (part >= -PREFIX.length)
-                {
+                sb.append(part);
+            } else if (part >= -PREFIX.length) {
                 fGA = false;
-                switch (c - i)
-                    {
-                    case 1:
-                        // last element; ok
-                        break;
-                    case 2:
-                        // second to last element; last must be >= 0
-                        if (aiParts[i+1] < 0)
-                            {
-                            err = true;
-                            }
-                        break;
-                    default:
+                switch (c - i) {
+                case 1:
+                    // last element; ok
+                    break;
+                case 2:
+                    // second to last element; last must be >= 0
+                    if (aiParts[i+1] < 0) {
                         err = true;
-                        break;
                     }
-                if (i > 0 && aiParts[i-1] == 0)
-                    {
+                    break;
+                default:
+                    err = true;
+                    break;
+                }
+                if (i > 0 && aiParts[i-1] == 0) {
                     // previous part must > 0
                     err = true;
-                    }
-
-                if (i > 0)
-                    {
-                    sb.append('-');
-                    }
-                sb.append(PREFIX[part + PREFIX.length]);
                 }
-            else
-                {
+
+                if (i > 0) {
+                    sb.append('-');
+                }
+                sb.append(PREFIX[part + PREFIX.length]);
+            } else {
                 sb.append(".illegal(")
                   .append(i)
                   .append(')');
                 err = true;
-                }
             }
+        }
 
-        if (sBuild != null && !sBuild.isEmpty())
-            {
+        if (sBuild != null && !sBuild.isEmpty()) {
             sb.append('+')
               .append(sBuild);
-            }
+        }
 
         this.literal = sb.toString();
         this.ints    = aiParts;
         this.build   = sBuild;
 
-        if (err)
-            {
+        if (err) {
             throw new IllegalStateException("illegal version: " + literal);
-            }
         }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -319,41 +275,34 @@ public class Version
      *         version number indicates a continuous integration build, a dev build, an alpha or
      *         beta release, or a release candidate
      */
-    public boolean isGARelease()
-        {
-        for (int part : getIntArray())
-            {
-            if (part < 0)
-                {
+    public boolean isGARelease() {
+        for (int part : getIntArray()) {
+            if (part < 0) {
                 return false;
-                }
             }
-        return true;
         }
+        return true;
+    }
 
     /**
      * @return a value between -5 and 0, representing "dev", "ci", "alpha", "beta", "rc", or "ga"
      */
-    public int getReleaseCategory()
-        {
-        for (int part : getIntArray())
-            {
-            if (part < 0)
-                {
+    public int getReleaseCategory() {
+        for (int part : getIntArray()) {
+            if (part < 0) {
                 return part;
-                }
             }
-        return 0;
         }
+        return 0;
+    }
 
     /**
      * @return one of "dev", "ci", "alpha", "beta", "rc", or "ga"
      */
-    public String getReleaseCategoryString()
-        {
+    public String getReleaseCategoryString() {
         int n = getReleaseCategory();
         return n < 0 ? PREFIX[n + PREFIX.length] : "ga";
-        }
+    }
 
     /**
      * Determine if another version is the same version as this, or derives from this version.
@@ -392,12 +341,10 @@ public class Version
      *
      * @return true iff the specified Version is the same as or is derived from this Version
      */
-    public boolean isSubstitutableFor(Version that)
-        {
-        if (this.equals(that))
-            {
+    public boolean isSubstitutableFor(Version that) {
+        if (this.equals(that)) {
             return true;
-            }
+        }
 
         // check all of the shared version parts (except for the last shared version part) to make
         // sure that they are identical; for example, when comparing "1.2.3" and "1.2.4", this would
@@ -410,104 +357,86 @@ public class Version
         int   cThat    = thatInts.length;
         int   cThatGA  = thatInts[cThat - 1] < 0 ? cThat - 1 : cThat >= 2 && thatInts[cThat - 2] < 0 ? cThat - 2 : cThat;
         int   iLastGA  = Math.min(cThisGA, cThatGA) - 1;
-        for (int i = 0; i < iLastGA; ++i)
-            {
-            if (thisInts[i] != thatInts[i])
-                {
+        for (int i = 0; i < iLastGA; ++i) {
+            if (thisInts[i] != thatInts[i]) {
                 return false;
-                }
             }
+        }
 
         // if this was a smaller version than that, then this cannot substitute for that
         int nVerDif = iLastGA >= 0 ? thisInts[iLastGA] - thatInts[iLastGA] : 0;
-        if (nVerDif < 0)
-            {
+        if (nVerDif < 0) {
             return false;
-            }
+        }
 
         // if this was a larger version than that, then this can sub for that if we're comparing
         // the last digit of that
-        if (nVerDif > 0)
-            {
+        if (nVerDif > 0) {
             return cThisGA >= cThatGA;
-            }
+        }
 
         // all of the shared GA digits are identical; check the non-shared digits
-        if (cThisGA > cThatGA)
-            {
+        if (cThisGA > cThatGA) {
             // any remaining version part number in this version higher than zero indicates this
             // could sub for that
-            for (int i = cThatGA; i < cThisGA; ++i)
-                {
-                if (thisInts[i] > 0)
-                    {
+            for (int i = cThatGA; i < cThisGA; ++i) {
+                if (thisInts[i] > 0) {
                     return true;
-                    }
                 }
-            // this could still be substitutable for that, because the GA versions are the same
             }
-        else if (cThisGA < cThatGA)
-            {
+            // this could still be substitutable for that, because the GA versions are the same
+        } else if (cThisGA < cThatGA) {
             // any remaining version part number in that version higher than zero indicates this
             // can NOT sub for that; the number of version parts in this is fewer than the number of
             // version parts in that, so the only way that this is substitutable for that is if all
             // subsequent version parts of that are "0"; for example, "1.2" can sub for "1.2.0.0.0"
-            for (int i = cThisGA; i < cThatGA; ++i)
-                {
-                if (thatInts[i] > 0)
-                    {
+            for (int i = cThisGA; i < cThatGA; ++i) {
+                if (thatInts[i] > 0) {
                     return false;
-                    }
                 }
-            // this could still be substitutable for that, because the GA versions are the same
             }
+            // this could still be substitutable for that, because the GA versions are the same
+        }
 
         // the two GA versions are identical; the only thing left to check is the non-GA information
         boolean fThisGA = cThis == cThisGA;
         boolean fThatGA = cThat == cThatGA;
-        if (!fThisGA || !fThatGA)
-            {
+        if (!fThisGA || !fThatGA) {
             // at least one is a non-GA
             // if this is GA and that is a non-GA, then this will sub for that
             // if this is non-GA and that is GA, then this can not sub for that
-            if (fThisGA ^ fThatGA)
-                {
+            if (fThisGA ^ fThatGA) {
                 return fThisGA;
-                }
+            }
 
             // they're both pre-release versions; need to compare the pre-release version parts
             int cThisNonGA   = cThis - cThisGA;
             int cThatNonGA   = cThat - cThatGA;
             int cSharedNonGA = Math.min(cThisNonGA, cThatNonGA);
             assert cSharedNonGA == 1 || cSharedNonGA == 2;
-            for (int of = 0; of < cSharedNonGA; ++of)
-                {
+            for (int of = 0; of < cSharedNonGA; ++of) {
                 nVerDif = thisInts[cThisGA + of] - thatInts[cThatGA + of];
-                if (nVerDif < 0)
-                    {
+                if (nVerDif < 0) {
                     // this is an older pre-release
                     return false;
-                    }
-                else if (nVerDif > 0)
-                    {
+                } else if (nVerDif > 0) {
                     // this is a newer pre-release
                     return true;
-                    }
                 }
+            }
 
             // all the shared digits of the pre-release matched; check for non-shared digits of
             // one of the pre-release versions
-            if (cThisNonGA != cThatNonGA)
-                {
+            if (cThisNonGA != cThatNonGA) {
                 // one of the pre-release versions has a sub-version
                 // if this has a sub-version, then this is newer (and thus substitutable)
                 // if that has a sub-version, then that is newer (and this is NOT substitutable)
                 return cThisNonGA > cThatNonGA;
-                }
             }
+        }
 
         return true;
-        }
+    }
 
     /**
      * Compare two versions to determine if they are the same version. This is a different test than
@@ -521,12 +450,10 @@ public class Version
      *
      * @return true iff <i>this</i> Version refers to the same exact version as <i>that</i> Version
      */
-    public boolean isSameAs(Version that)
-        {
-        if (this.equals(that))
-            {
+    public boolean isSameAs(Version that) {
+        if (this.equals(that)) {
             return true;
-            }
+        }
 
         // check all of the shared version parts to make sure that they are identical
         int[] thisInts = this.getIntArray();
@@ -534,29 +461,24 @@ public class Version
         int   cThis    = thisInts.length;
         int   cThat    = thatInts.length;
         int   cShared  = Math.min(cThis, cThat);
-        for (int i = 0; i < cShared; ++i)
-            {
-            if (thisInts[i] != thatInts[i])
-                {
+        for (int i = 0; i < cShared; ++i) {
+            if (thisInts[i] != thatInts[i]) {
                 return false;
-                }
             }
+        }
 
         // all remaining parts need to be "0"
-        if (cThis != cThat)
-            {
+        if (cThis != cThat) {
             int[] remaining = cThis > cThat ? thisInts : thatInts;
-            for (int i = cShared, c = remaining.length; i < c; ++i)
-                {
-                if (thatInts[i] != 0)
-                    {
+            for (int i = cShared, c = remaining.length; i < c; ++i) {
+                if (thatInts[i] != 0) {
                     return false;
-                    }
                 }
             }
+        }
 
         return true;
-        }
+    }
 
     /**
      * If the version ends with ".0", return a version that does not end with ".0" but represents
@@ -564,100 +486,92 @@ public class Version
      *
      * @return a normalized version
      */
-    public Version normalize()
-        {
+    public Version normalize() {
         int[] parts  = getIntArray();
         int   cParts = parts.length;
         int   cZeros = 0;
-        for (int i = cParts - 1; i > 0; --i)
-            {
-            if (parts[i] == 0)
-                {
+        for (int i = cParts - 1; i > 0; --i) {
+            if (parts[i] == 0) {
                 ++cZeros;
-                }
-            else
-                {
+            } else {
                 break;
-                }
             }
+        }
 
-        if (cZeros == 0)
-            {
+        if (cZeros == 0) {
             return this;
-            }
+        }
 
         int[] partsNew = new int[cParts - cZeros];
         System.arraycopy(parts, 0, partsNew, 0, cParts - cZeros);
         return new Version(partsNew, build);
-        }
+    }
 
     /**
      * @return the number of parts of the version
      */
-    public int getPartCount()
-        {
+    public int getPartCount() {
         return ints.length;
-        }
+    }
 
     /**
      * @param i  specifies which part of the version to obtain
      *
      * @return the i-th part of the version
      */
-    public int getPart(int i)
-        {
+    public int getPart(int i) {
         assert i >= 0 && i < getPartCount();
         return ints[i];
-        }
+    }
 
     /**
-     * @return the optional build string (may be null)
+     * @return the optional build string; may be `null`
      */
-    public String getBuildString()
-        {
+    public String getBuildString() {
         return build;
-        }
+    }
+
+    /**
+     * @return this Version but with a `null` build string
+     */
+    public Version withoutBuildString() {
+        return build == null ? this : new Version(ints, null);
+    }
 
 
     // ----- Comparable methods --------------------------------------------------------------------
 
     @Override
-    public int compareTo(Version that)
-        {
+    public int compareTo(Version that) {
         int[] thisParts = this.getIntArray();
         int[] thatParts = that.getIntArray();
         int   nDefault  = thisParts.length - thatParts.length;
-        for (int i = 0, c = Math.min(thisParts.length, thatParts.length); i < c; ++i)
-            {
-            if (thisParts[i] != thatParts[i])
-                {
+        for (int i = 0, c = Math.min(thisParts.length, thatParts.length); i < c; ++i) {
+            if (thisParts[i] != thatParts[i]) {
                 return thisParts[i] - thatParts[i];
-                }
             }
+        }
 
         return nDefault;
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return literal;
-        }
+    }
 
     @Override
-    public int hashCode()
-        {
+    public int hashCode() {
         return literal.hashCode();
-        }
+    }
 
     @Override
-    public boolean equals(Object obj)
-        {
+    public boolean equals(Object obj) {
         return obj instanceof Version && literal.equals(((Version) obj).literal);
-        }
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -665,24 +579,21 @@ public class Version
     /**
      * @return the string of letters starting at the specified offset
      */
-    private String grabLetters(String sLiteral, int of)
-        {
+    private String grabLetters(String sLiteral, int of) {
         int start  = of;
         int strlen = sLiteral.length();
-        while (of < strlen && Character.isLetter(sLiteral.charAt(of)))
-            {
+        while (of < strlen && Character.isLetter(sLiteral.charAt(of))) {
             ++of;
-            }
-        return sLiteral.substring(start, of);
         }
+        return sLiteral.substring(start, of);
+    }
 
     /**
      * @return the version as an array of ints
      */
-    protected int[] getIntArray()
-        {
+    protected int[] getIntArray() {
         return ints;
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -692,4 +603,4 @@ public class Version
     protected String literal;
     protected int[]  ints;
     protected String build;
-    }
+}
