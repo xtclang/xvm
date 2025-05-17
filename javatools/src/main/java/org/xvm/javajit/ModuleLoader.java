@@ -21,13 +21,13 @@ class ModuleLoader
      *                 module, which in theory this loader
      *                 will "own" responsibility for loading all classes under that package, and
      *                 nothing outside of that package
-     * @param javaGen  Java ClassFile generator to use for this module's Ecstasy code
+     * @param typeSystem  Java ClassFile generator to use for this module's Ecstasy code
      */
-    ModuleLoader(TypeSystemLoader parent, ModuleStructure module, String prefix, JavaGen javaGen) {
+    ModuleLoader(TypeSystemLoader parent, ModuleStructure module, String prefix, TypeSystem typeSystem) {
         super("xvm:" + prefix, parent);
         this.module  = module;
         this.prefix  = prefix;
-        this.javaGen = javaGen;
+        this.typeSystem = typeSystem;
     }
 
     /**
@@ -41,15 +41,15 @@ class ModuleLoader
     public final String prefix;
 
     /**
-     * Java ClassFile generator.
+     * The Java ClassFile generator.
      */
-    public final JavaGen javaGen;
+    public final TypeSystem typeSystem;
 
     @Override
     protected Class<?> findClass(String name)
             throws ClassNotFoundException {
         if (name.startsWith(prefix)) {
-            byte[] classBytes = javaGen.genClass(module, prefix, name);
+            byte[] classBytes = typeSystem.genClass(module, prefix, name);
             if (classBytes == null) {
                 throw new ClassNotFoundException(name);
             }

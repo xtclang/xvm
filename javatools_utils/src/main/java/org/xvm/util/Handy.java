@@ -2076,6 +2076,23 @@ public final class Handy {
         return true;
     }
 
+    /**
+     * Verify that the value associated with the specified variable name is non-null.
+     *
+     * @param name   the variable name to test
+     * @param value  the value to test
+     *
+     * @return true iff the value is non-null
+     *
+     * @throws IllegalArgumentException  if the value is null
+     */
+    public static boolean require(String name, Object value) {
+        if (value == null) {
+            throw new IllegalArgumentException((name == null ? "Required value" : name) + " is null");
+        }
+        return true;
+    }
+
 
     // ----- constants -----------------------------------------------------------------------------
 
