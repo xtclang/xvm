@@ -3,53 +3,71 @@ package org.xvm.javajit;
 
 import org.xvm.asm.ModuleStructure;
 
+import static org.xvm.util.Handy.require;
+
 
 /**
- * A ModuleLoader is responsible for loading exactly one module, with a specified set of attributes
- * such as the module version, the presence of other modules, and a set of defined names.
+ * A ModuleLoader is responsible for loading exactly one module with a specified set of attributes
+ * such as the module version, the absence/presence of other modules, and a set of defined (or
+ * explicitly undefined) names.
  */
-class ModuleLoader
+public class ModuleLoader
         extends ClassLoader {
     /**
      * Construct a ModuleLoader. Since modules can be dependent on other modules within the same
      * TypeSystem, the parent ClassLoader is always the TypeSystemLoader responsible for introducing
      * (bringing into existence) the module.
      *
-     * @param parent   the TypeSystemLoader within which the module is being loaded
-     * @param module   the ModuleStructure that this loader is responsible for loading
-     * @param prefix   the Java package prefix assigned to this loader and corresponding to the
-     *                 module, which in theory this loader
-     *                 will "own" responsibility for loading all classes under that package, and
-     *                 nothing outside of that package
-     * @param javaGen  Java ClassFile generator to use for this module's Ecstasy code
+     * @param pkg         the '.'-delimited Java package name assigned to this loader and
+     *                    corresponding to the module, which in theory this loader will "own"
+     *                    responsibility for loading all classes under that package, and nothing
+     *                    outside of that package
+     * @param parent      the TypeSystemLoader within which the module is being loaded
+     * @param module      the ModuleStructure that this loader is responsible for loading
      */
-    ModuleLoader(TypeSystemLoader parent, ModuleStructure module, String prefix, JavaGen javaGen) {
-        super("xvm:" + prefix, parent);
-        this.module  = module;
-        this.prefix  = prefix;
-        this.javaGen = javaGen;
+    ModuleLoader(TypeSystemLoader parent, ModuleStructure module, String pkg) {
+        super("module:" + pkg, parent);
+        require("parent", parent);
+        require("module", module);
+        require("pkg", pkg);
+        assert pkg.indexOf('/') < 0;
+        assert pkg.indexOf('.') > 0;        // no anonymous packages
+        assert module.isRefined();
+
+        this.module     = module;
+        this.pkg        = pkg;
+        this.prefix     = pkg.replace('.', '/') + '/';
+        this.typeSystem = parent.typeSystem;
     }
 
     /**
-     * This is the ModuleStructure that this ClassLoader is responsible for loading as Java classes.
+     * The ModuleStructure that this ClassLoader is responsible for loading as Java classes.
      */
     public final ModuleStructure module;
 
     /**
-     * This is the package name assigned to this loader to load all of its classes within.
+     * The '.'-delimited package name assigned to this loader to load all of its classes within.
+     */
+    public final String pkg;
+
+    /**
+     * The '/'-delimited package prefix (as used in the JVM ClassFile Specification) assigned to
+     * this loader to create all of its class names beginning with. The prefix will always end with
+     * a '/' character. This is the same name as {@link #pkg}, but in the JVM's internal format.
      */
     public final String prefix;
 
     /**
-     * Java ClassFile generator.
+     * The TypeSystem that this ModuleLoader is working on behalf of, and which does the Java
+     * ClassFile generation for the module that this ModuleLoader is responsible for loading.
      */
-    public final JavaGen javaGen;
+    public final TypeSystem typeSystem;
 
     @Override
     protected Class<?> findClass(String name)
             throws ClassNotFoundException {
         if (name.startsWith(prefix)) {
-            byte[] classBytes = javaGen.genClass(module, prefix, name);
+            byte[] classBytes = typeSystem.genClass(module, prefix, name);
             if (classBytes == null) {
                 throw new ClassNotFoundException(name);
             }

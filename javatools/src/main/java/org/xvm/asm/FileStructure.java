@@ -1208,7 +1208,7 @@ public class FileStructure
         }
 
     @Override
-    public Collection<? extends Component> children()
+    public Collection<? extends ModuleStructure> children()
         {
         return f_moduleById.values();
         }
