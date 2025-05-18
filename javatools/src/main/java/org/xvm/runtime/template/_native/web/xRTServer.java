@@ -552,13 +552,13 @@ public class xRTServer
     private int invokeReadBody(Frame frame, ObjectHandle[] ahArg, int iResult)
         {
         HttpContextHandle hCtx = (HttpContextHandle) ahArg[0];
-        int              cb    = (int) ((JavaLong) ahArg[1]).getValue();
+        long              cb    = ((JavaLong) ahArg[1]).getValue();
 
         try
             {
             InputStream in    = hCtx.f_exchange.getRequestBody();
-            byte[]      ab    = in.readNBytes(cb);
-            return frame.assignValue(iResult, ab.length == 0
+            byte[]      ab    = in.readNBytes((int) Math.min(cb, Integer.MAX_VALUE));
+            return frame.assignValue(iResult, ab.length <= 0
                     ? xByteArray.ensureEmptyByteArray()
                     : xByteArray.makeByteArrayHandle(ab, Mutability.Constant));
             }
