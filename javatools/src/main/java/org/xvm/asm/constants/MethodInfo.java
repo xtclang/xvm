@@ -1141,14 +1141,16 @@ public class MethodInfo
             }
 
         SignatureConstant sigSuper = bodySuper.getSignature();
-        if (sigSuper.containsAutoNarrowing(false))
+
+        // if the "head" is auto-narrowing, we need to adjust the "super()" signature as well
+        if (bodyHead.getSignature().containsAutoNarrowing(false))
             {
             sigSuper = sigSuper.resolveAutoNarrowing(pool(), infoType.getType(), null);
             }
         if (sigSuper.containsTypeParameters())
             {
             // formal type parameters need to be resolved by the "head"
-            sigSuper = sigSuper.resolveGenericTypes(pool(), getHead().getIdentity());
+            sigSuper = sigSuper.resolveGenericTypes(pool(), bodyHead.getIdentity());
             }
 
         return sigSuper;
