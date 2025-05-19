@@ -6,7 +6,6 @@ service LRUCache<Key extends immutable Hashable, Value extends Shareable>(Int ma
         assert:arg maxSize > 0;
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -17,22 +16,19 @@ service LRUCache<Key extends immutable Hashable, Value extends Shareable>(Int ma
     /**
      * The least recently used node.
      */
-    private Node? lruHead;
+    private Node? head;
 
     /**
      * The most recently used node.
      */
-    private Node? lruTail;
-
+    private Node? tail;
 
     // ----- cache API -----------------------------------------------------------------------------
 
     /**
-     *The number of entries (key/value pairs) in the cache.
+     * The number of entries (key/value pairs) in the cache.
      */
-    Int size.get() {
-        return map.size;
-    }
+    Int size.get() = map.size;
 
     /**
      * Obtain the value associated with the specified key, iff that key is present in the cache. If
@@ -88,15 +84,16 @@ service LRUCache<Key extends immutable Hashable, Value extends Shareable>(Int ma
             Node node;
             if (map.size >= maxSize) {
                 // recycle the least recently used node
-                assert node ?= lruHead;
+                assert node ?= head;
                 map.remove(node.key);
+                unlink(node);
                 node.key   = key;
                 node.value = value;
             } else {
                 node = new Node(key, value);
             }
             map.put(key, node);
-            touch(node);
+            link(node);
         }
     }
 
@@ -112,14 +109,12 @@ service LRUCache<Key extends immutable Hashable, Value extends Shareable>(Int ma
         }
     }
 
-
     // ----- Node class ----------------------------------------------------------------------------
 
     /**
      * The class that holds a single cache entry.
      */
-    protected static class Entry<Key, Value>
-            (Key key, Value value, Entry? nextLRU = Null, Entry? prevLRU = Null) {}
+    protected static class Entry<Key, Value>(Key key, Value value, Entry? nextLRU = Null, Entry? prevLRU = Null);
 
     /**
      * An easier name for referring to `Entry<Key, Value>`.
@@ -127,41 +122,60 @@ service LRUCache<Key extends immutable Hashable, Value extends Shareable>(Int ma
     protected typedef Entry<Key, Value> as Node;
 
     /**
-     * Touch the node, making it the most recently used node.
+     * Touch the [Node], making it the most recently used [Node].
      *
-     * This method will link the node into the LRU, if the node is not already linked.
+     * @param node  a [Node] that is already in the LRU cache
      */
     protected void touch(Node node) {
-        if (&node != &lruTail) {
+        // only move the node if the cache has more than one node, and this node is not already the
+        // tail
+        if (size > 1 && &node != &tail) {
             // unlink node from present position
             node.nextLRU?.prevLRU = node.prevLRU;
             node.prevLRU?.nextLRU = node.nextLRU;
 
-            if (&node == &lruHead) {
-                lruHead = node.nextLRU;
+            if (&node == &head) {
+                head = node.nextLRU ?: assert;
             }
 
             // place the node on the end of the tail
-            lruTail?.nextLRU = node;
-            node.prevLRU = lruTail;
-            node.nextLRU = Null;
-            lruTail = node;
+            assert Node oldTail ?= tail;
+            oldTail.nextLRU = node;
+            tail            = node;
+            node.prevLRU    = oldTail;
+            node.nextLRU    = Null;
         }
     }
 
     /**
-     * Completely unlink the node from the LRU list.
+     * Add the [Node] into the LRU.
+     *
+     * @param node  the [Node] to add to the LRU cache
+     */
+    protected void link(Node node) {
+        // place the node after the tail
+        tail?.nextLRU = node;
+        node.prevLRU  = tail;
+        node.nextLRU  = Null;
+        head        ?:= node;
+        tail          = node;
+    }
+
+    /**
+     * Unlink the [Node] from the LRU list.
+     *
+     * @param node  the [Node] to remove from the LRU list
      */
     protected void unlink(Node node) {
         node.nextLRU?.prevLRU = node.prevLRU;
         node.prevLRU?.nextLRU = node.nextLRU;
 
-        if (&node == &lruHead) {
-            lruHead = node.nextLRU;
+        if (&node == &head) {
+            head = node.nextLRU;
         }
 
-        if (&node == &lruTail) {
-            lruTail = node.prevLRU;
+        if (&node == &tail) {
+            tail = node.prevLRU;
         }
     }
 }
