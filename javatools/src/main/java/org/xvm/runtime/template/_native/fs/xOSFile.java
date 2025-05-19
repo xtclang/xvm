@@ -4,8 +4,11 @@ package org.xvm.runtime.template._native.fs;
 import com.sun.nio.file.ExtendedOpenOption;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 import java.nio.ByteBuffer;
 
@@ -71,8 +74,9 @@ public class xOSFile
         markNativeProperty("contents");
 
         markNativeMethod("readImpl", null, BYTES);
-        markNativeMethod("appendImpl", null, VOID);
         markNativeMethod("truncateImpl", null, VOID);
+        markNativeMethod("appendBytes", null, VOID);
+        markNativeMethod("appendFile", null, VOID);
         markNativeMethod("open", null, null);
 
         invalidateTypeInfo();
@@ -147,8 +151,11 @@ public class xOSFile
                         : frame.assignValue(iReturn, xArray.ensureEmptyByteArray());
                 }
 
-            case "appendImpl":
-                return invokeAppendImpl(frame, hFile, (ArrayHandle) hArg);
+            case "appendBytes":
+                return invokeAppendBytes(frame, hFile, (ArrayHandle) hArg);
+
+            case "appendFile":
+                return invokeAppendFile(frame, hFile, (NodeHandle) hArg);
 
             case "truncateImpl":
                 return invokeTruncateImpl(frame, hFile, (JavaLong) hArg);
@@ -236,7 +243,7 @@ public class xOSFile
 
         Callable<Void> task = () ->
             {
-            try (FileOutputStream out = new FileOutputStream(path.toFile()))
+            try (OutputStream out = new FileOutputStream(path.toFile()))
                 {
                 out.write(ab);
                 return null;
@@ -365,16 +372,16 @@ public class xOSFile
         }
 
     /**
-     * Implementation for: "void appendImpl(Byte[] contents)".
+     * Implementation for: "void appendBytes(Byte[] contents)".
      */
-    private int invokeAppendImpl(Frame frame, NodeHandle hFile, ArrayHandle hContents)
+    private int invokeAppendBytes(Frame frame, NodeHandle hFile, ArrayHandle hContents)
         {
         Path   path = hFile.f_path;
         byte[] ab   = xByteArray.getBytes(hContents);
 
         Callable<Void> task = () ->
             {
-            try (FileOutputStream out = new FileOutputStream(path.toFile(), /*append*/ true))
+            try (OutputStream out = new FileOutputStream(path.toFile(), /*append*/ true))
                 {
                 out.write(ab);
                 return null;
@@ -393,6 +400,47 @@ public class xOSFile
             catch (Throwable e)
                 {
                 return raisePathException(frameCaller, e, path);
+                }
+            };
+
+        return frame.waitForIO(cfAppend, continuation);
+        }
+
+    /**
+     * Implementation for: "void appendFile(File file)".
+     */
+    private int invokeAppendFile(Frame frame, NodeHandle hFileThis, NodeHandle hFileThat)
+        {
+        Path pathThis = hFileThis.f_path;
+        Path pathThat = hFileThat.f_path;
+
+        Callable<Void> task = () ->
+            {
+            try (InputStream  in  = new FileInputStream(pathThat.toFile());
+                 OutputStream out = new FileOutputStream(pathThis.toFile(), /*append*/ true))
+                {
+                byte[] ab = new byte[1024];
+                int    cb;
+                while ((cb = in.read(ab)) != -1)
+                    {
+                    out.write(ab, 0, cb);
+                    }
+                return null;
+                }
+            };
+
+        CompletableFuture cfAppend = frame.f_context.f_container.scheduleIO(task);
+
+        Frame.Continuation continuation = frameCaller ->
+            {
+            try
+                {
+                cfAppend.get();
+                return Op.R_NEXT;
+                }
+            catch (Throwable e)
+                {
+                return raisePathException(frameCaller, e, pathThis);
                 }
             };
 

@@ -45,11 +45,26 @@ const OSFile
             if (!writable) {
                 throw new AccessDenied(path);
             }
-            appendImpl(contents);
+            appendBytes(contents);
         } else {
             this.contents = contents.freeze(inPlace=False);
         }
         return this;
+    }
+
+    @Override
+    File append(File file) {
+        if (exists && !writable) {
+            throw new AccessDenied(path);
+        }
+        if (OSFileNode osFile := unwrap(file)) {
+            appendFile(osFile);
+            return this;
+        } else {
+            // could be suboptimal, but it's unlikely we are getting here for large files
+            super(file);
+            return this;
+        }
     }
 
     @Override
@@ -74,5 +89,6 @@ const OSFile
 
     immutable Byte[] readImpl(Range<Int> range) = TODO("native");
     void truncateImpl(Int newSize)              = TODO("native");
-    void appendImpl(Byte[] contents)            = TODO("native");
+    void appendBytes(Byte[] contents)           = TODO("native");
+    void appendFile(OSFileNode file)            = TODO("native");
 }

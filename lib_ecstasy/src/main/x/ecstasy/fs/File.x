@@ -55,6 +55,18 @@ interface File
     File append(Byte[] contents);
 
     /**
+     * Append the content of the specified file to the end of the file. If the file did not exist,
+     * it will be created if possible.
+     *
+     * @param file  the file to append
+     *
+     * @return this File
+     *
+     * @throws AccessDenied  if permission to modify the file has not been granted
+     */
+    File append(File file) = append(file.contents);
+
+    /**
      * Determine if this file is an _archive_, which is a directory structure encoded into a file,
      * and which may contain any number of directories and files nested within it. If the file is
      * an archive **and** the archive format is known and supported by the containing [FileStore],

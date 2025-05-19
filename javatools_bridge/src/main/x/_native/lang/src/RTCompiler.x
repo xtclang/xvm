@@ -1,4 +1,3 @@
-import ecstasy.fs.DirectoryFileStore.FileNodeWrapper;
 import ecstasy.fs.FileNode;
 
 import ecstasy.lang.src.Compiler;
@@ -37,22 +36,12 @@ service RTCompiler
 
         ModuleRepository? repo = &libRepo.assigned ? libRepo : Null;
 
-        conditional OSFileNode unwrap(FileNode node) {
-            if (OSFileNode osNode := &node.revealAs(OSFileNode)) {
-                return True, osNode;
-            }
-            if (FileNodeWrapper wrapper := &node.revealAs(FileNodeWrapper)) {
-                return unwrap(wrapper.origNode);
-            }
-            return False;
-        }
-
         // make sure all the sources we pass to the "compileImpl" method are OSFileNode objects,
         // so the native implementation can trivially retrieve the corresponding paths
         OSFileNode[] osSources = new OSFileNode[];
         Boolean[]    temporary = new Boolean[];
         for ((Directory|File) source : sources) {
-            if (OSFileNode osNode := unwrap(source)) {
+            if (OSFileNode osNode := OSFileNode.unwrap(source)) {
                 osSources += osNode;
                 temporary += False;
             } else if (source.is(File)) {

@@ -1,3 +1,4 @@
+import ecstasy.fs.DirectoryFileStore.FileNodeWrapper;
 import ecstasy.fs.FileNode;
 import ecstasy.fs.FileWatcher;
 
@@ -66,6 +67,20 @@ const OSFileNode
         }
     }
 
+    /**
+     * @return `True` if the specified `FileNode` represents a native `OSFileNode`
+     * @return (conditionally) the corresponding `OSFileNode`
+     */
+    static conditional OSFileNode unwrap(FileNode node) {
+        if (OSFileNode osNode := &node.revealAs(OSFileNode)) {
+            return True, osNode;
+        }
+        if (FileNodeWrapper wrapper := &node.revealAs(FileNodeWrapper)) {
+            return unwrap(wrapper.origNode);
+        }
+        return False;
+    }
+
     // ----- equality support ----------------------------------------------------------------------
 
     @Override
@@ -78,7 +93,6 @@ const OSFileNode
         return node1.pathString == node2.pathString &&
                node1.is(OSFile) == node2.is(OSFile);
     }
-
 
     // ----- native --------------------------------------------------------------------------------
 
