@@ -14,6 +14,7 @@ import web.MediaType;
 import web.Protocol;
 import web.Scheme;
 
+import web.http;
 import web.sessions.Broker as SessionBroker;
 
 import HttpServer.RequestInfo;
@@ -41,21 +42,20 @@ const Http1Request(RequestInfo   info,
         }
 
         if (streaming) {
-            this.hasBody   = True;
-            this.bytes     = [];
-            this.mediaType = Binary;
+            this.hasBody = True;
+            this.bytes   = [];
         } else if (Byte[] bytes := info.getBodyBytes()) {
             this.hasBody = True;
             this.bytes   = bytes;
-
-            assert String[] contentTypes := info.getHeaderValuesForName(Header.ContentType)
-                    as $"{Header.ContentType.quoted()} header is missing";
-            assert mediaType := MediaType.of(contentTypes[0])
-                    as $"Invalid media type {contentTypes[0].quoted()}";
         } else {
-            this.hasBody   = False;
-            this.bytes     = [];
-            this.mediaType = Text; // whatever
+            this.hasBody = False;
+            this.bytes   = [];
+        }
+
+        if (String[] contentTypes := info.getHeaderValuesForName(Header.ContentType),
+            this.mediaType := MediaType.of(contentTypes[0])) {
+        } else {
+            this.mediaType = Binary;
         }
     }
 
@@ -323,7 +323,18 @@ const Http1Request(RequestInfo   info,
     @Override
     void streamBodyTo(BinaryOutput receiver) {
         if (streaming) {
-            bodyReader().pipeTo(receiver);
+            BinaryInput reader    = info.bodyReader;
+            MediaType   mediaType = mediaType;
+
+            if (mediaType.type    == MediaType.FormData.type &&
+                mediaType.subtype == MediaType.FormData.subtype) {
+
+                // skip all the "Content-Disposition" elements except the "file" itself
+                http.FormDataFile fileData = http.parseSingleFile(reader, mediaType.text);
+                receiver.writeBytes(fileData.contents);
+            }
+
+            reader.pipeTo(receiver);
         } else {
             super(receiver);
         }

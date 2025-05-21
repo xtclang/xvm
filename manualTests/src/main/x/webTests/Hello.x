@@ -179,7 +179,7 @@ module Hello {
                     @Inject Directory curDir;
                     File file = curDir.fileFor(name);
                     if (file.exists) {
-                        file.delete();
+                        file.truncate(0);
                     }
                     body.streamBodyTo(new FileOutputStream(file));
                     return $"Created {file.name}; {file.size} bytes";
