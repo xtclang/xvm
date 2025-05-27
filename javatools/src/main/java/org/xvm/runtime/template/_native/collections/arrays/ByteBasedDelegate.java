@@ -199,6 +199,48 @@ public abstract class ByteBasedDelegate
         hDelegate.m_cSize -= cDelete;
         }
 
+    @Override
+    public int invokeIndexOf(Frame frame, DelegateHandle hTarget, DelegateHandle hThat,
+                             int ofStart, int[] aiReturn)
+        {
+        // direct port of List.x implementation
+        byte[] abThis = ((ByteArrayHandle) hTarget).m_abValue;
+        byte[] abThat = ((ByteArrayHandle) hThat)  .m_abValue;
+        int    cbThis = abThis.length;
+        int    cbThat = abThat.length;
+
+        ofStart = Math.max(ofStart, 0);
+
+        if (cbThat == 0)
+            {
+            return ofStart > cbThis
+                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
+                : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(ofStart));
+            }
+        if (ofStart > cbThis - cbThat)
+            {
+            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            }
+
+        byte bFirstMatch = abThat[0];
+        Next:
+        for (int of = ofStart, stopAt = cbThis - cbThat; of <= stopAt; ++of)
+            {
+            if (abThis[of] == bFirstMatch)
+                {
+                for (int i = 1; i < cbThat; ++i)
+                    {
+                    if (abThis[of + i] != abThat[i])
+                        {
+                        continue Next;
+                        }
+                    }
+                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(of));
+                }
+            }
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+    }
+
 
     // ----- ByteView implementation ---------------------------------------------------------------
 

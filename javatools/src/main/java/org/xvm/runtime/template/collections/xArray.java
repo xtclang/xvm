@@ -154,6 +154,10 @@ public class xArray
         BIT_ARRAY_CLZ     = f_container.resolveClass(pool.typeBitArray());
         BYTE_ARRAY_CLZ    = f_container.resolveClass(pool.typeByteArray());
 
+        ClassStructure clzList = f_container.getTemplate("collections.List").getStructure();
+        LIST_INDEX_OF = clzList.findMethod("indexOf", m ->
+                        m.getParamCount() == 2 && m.getParam(0).getType().isA(pool.typeList()));
+
         // mark native properties and methods
         markNativeProperty("delegate");
         markNativeProperty("mutability");
@@ -164,6 +168,8 @@ public class xArray
         markNativeMethod("elementAt",  INT,  null);
         markNativeMethod("slice",      null, THIS);
         markNativeMethod("deleteAll",  null, THIS);
+        markNativeMethod("indexOf",    new String[]{"collections.List", "numbers.Int64"},
+                                       new String[]{"Boolean", "numbers.Int64"});
 
         ClassTemplate mixinNumber = f_container.getTemplate("collections.arrays.NumberArray");
         mixinNumber.markNativeMethod("asBitArray" , VOID, null);
@@ -579,6 +585,48 @@ public class xArray
                 return assignArrayValue(frame, hTarget, ((JavaLong) ahArg[0]).getValue(), ahArg[1]);
             }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                              ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        switch (ahArg.length)
+            {
+            case 2:
+                switch (method.getName())
+                    {
+                    case "indexOf":
+                        {
+                        ArrayHandle hThis = (ArrayHandle) hTarget;
+
+                        if (ahArg[0] instanceof ArrayHandle hThat)
+                            {
+                            DelegateHandle hDelegateThis = hThis.m_hDelegate;
+                            DelegateHandle hDelegateThat = hThat.m_hDelegate;
+                            if (hDelegateThis.getTemplate() instanceof xRTDelegate templateThis &&
+                                hDelegateThat.getTemplate() instanceof xRTDelegate templateThat &&
+                                    templateThis == templateThat)
+                                {
+                                ObjectHandle hStart = ahArg[1];
+                                int ofStart = hStart == ObjectHandle.DEFAULT
+                                        ? 0
+                                        : (int) ((JavaLong) hStart).getValue();
+                                int iResult = templateThis.invokeIndexOf(
+                                        frame, hDelegateThis, hDelegateThat, ofStart, aiReturn);
+                                if (iResult < 0)
+                                    {
+                                    return iResult;
+                                    }
+                                }
+                            }
+                        return frame.callN(LIST_INDEX_OF, hTarget,
+                            Utils.ensureSize(ahArg, LIST_INDEX_OF.getMaxVars()), aiReturn);
+                        }
+                    }
+            }
+
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
     @Override
@@ -1119,6 +1167,7 @@ public class xArray
 
     private static MethodStructure CREATE_LIST_SET;
     private static MethodStructure FILL_FROM_ITERABLE;
+    private static MethodStructure LIST_INDEX_OF;
 
     private static Map<TypeConstant, xArray> ARRAY_TEMPLATES;
 

@@ -79,6 +79,8 @@ public class xString
         markNativeMethod("construct", STRING, VOID);
         markNativeMethod("indexOf", new String[]{"text.Char", "numbers.Int64"},
                                     new String[]{"Boolean", "numbers.Int64"});
+        markNativeMethod("indexOf", new String[]{"text.String", "numbers.Int64"},
+                                    new String[]{"Boolean", "numbers.Int64"});
         markNativeMethod("hashCode",  null, INT);
         markNativeMethod("equals",    null, BOOLEAN);
         markNativeMethod("compare",   null, null);
@@ -161,30 +163,41 @@ public class xString
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                               ObjectHandle[] ahArg, int[] aiReturn)
         {
-        StringHandle hThis = (StringHandle) hTarget;
-
         switch (ahArg.length)
             {
             case 2:
                 switch (method.getName())
                     {
-                    case "indexOf": // (Boolean, Int) indexOf(Char value, Int startAt)
+                    case "indexOf":
                         {
+                        StringHandle hThis  = (StringHandle) hTarget;
                         ObjectHandle hValue = ahArg[0];
                         ObjectHandle hStart = ahArg[1];
 
-                        char chValue = (char) ((JavaLong) hValue).getValue();
                         int  ofStart = hStart == ObjectHandle.DEFAULT
                                 ? 0
                                 : (int) ((JavaLong) hStart).getValue();
 
-                        int  ofResult = indexOf(hThis.m_achValue, chValue, ofStart);
+                        int ofResult;
+                        if (hValue instanceof JavaLong hChar)
+                            {
+                            // (Boolean, Int) indexOf(Char value, Int startAt)
+                            char chValue = (char) hChar.getValue();
+
+                            ofResult = indexOf(hThis.m_achValue, chValue, ofStart);
+                            }
+                        else
+                            {
+                            // (Boolean, Int) indexOf(String value, Int startAt)
+                            String sValue = ((StringHandle) hValue).getStringValue();
+
+                            ofResult = hThis.getStringValue().indexOf(sValue, ofStart);
+                            }
                         return ofResult < 0
                                 ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
                                 : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(ofResult));
                         }
                     }
-                break;
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);

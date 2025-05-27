@@ -326,6 +326,48 @@ public class xRTCharDelegate
         hDelegate.m_cSize -= cDelete;
         }
 
+    @Override
+    public int invokeIndexOf(Frame frame, DelegateHandle hTarget, DelegateHandle hThat,
+                             int ofStart, int[] aiReturn)
+        {
+        // direct port of List.x implementation
+        char[] achThis = ((CharArrayHandle) hTarget).m_achValue;
+        char[] achThat = ((CharArrayHandle) hThat)  .m_achValue;
+        int    cchThis = achThis.length;
+        int    cchThat = achThat.length;
+
+        ofStart = Math.max(ofStart, 0);
+
+        if (cchThat == 0)
+            {
+            return ofStart > cchThis
+                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
+                : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(ofStart));
+            }
+        if (ofStart > cchThis - cchThat)
+            {
+            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            }
+
+        char chFirstMatch = achThat[0];
+        Next:
+        for (int of = ofStart, stopAt = cchThis - cchThat; of <= stopAt; ++of)
+            {
+            if (achThis[of] == chFirstMatch)
+                {
+                for (int i = 1; i < cchThat; ++i)
+                    {
+                    if (achThis[of + i] != achThat[i])
+                        {
+                        continue Next;
+                        }
+                    }
+                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(of));
+                }
+            }
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+    }
+
 
     // ----- helper methods ------------------------------------------------------------------------
 

@@ -458,6 +458,15 @@ public class xRTDelegate
         return frame.assignValue(iReturn, hDelegate);
         }
 
+    /**
+     * "indexOf(Array that, Int startAt)" implementation.
+     */
+    public int invokeIndexOf(Frame frame, DelegateHandle hTarget, DelegateHandle hThat,
+                                int ofStart, int[] aiReturn)
+        {
+        // a bit of a hack - overriding methods return Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION
+        return 0;
+        }
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 
