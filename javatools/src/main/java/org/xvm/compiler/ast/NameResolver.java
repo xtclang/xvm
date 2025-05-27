@@ -548,10 +548,20 @@ public class NameResolver
             case RESOLVED:
                 if (stmtImport.isWildcard())
                     {
-                    m_component = ((IdentityConstant) resolver.getConstant()).getComponent().getChild(m_sName);
-                    assert m_component instanceof ClassStructure ||
-                           m_component instanceof TypedefStructure;
-                    m_constant  = m_component.getIdentityConstant();
+                    Component component =
+                        ((IdentityConstant) resolver.getConstant()).getComponent().getChild(m_sName);
+                    assert component instanceof ClassStructure ||
+                           component instanceof TypedefStructure;
+                    if (component instanceof PackageStructure pkg && pkg.isModuleImport())
+                        {
+                        ModuleStructure module = pkg.getImportedModule();
+                        if (module.isFingerprint())
+                            {
+                            component = module.getFingerprintOrigin();
+                            }
+                        }
+                    m_constant  = component.getIdentityConstant();
+                    m_component = component;
                     }
                 else
                     {
