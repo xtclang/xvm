@@ -15,6 +15,8 @@ import web.Protocol;
 import web.Scheme;
 
 import web.http;
+import web.http.FormDataFile;
+
 import web.sessions.Broker as SessionBroker;
 
 import HttpServer.RequestInfo;
@@ -325,16 +327,17 @@ const Http1Request(RequestInfo   info,
         if (streaming) {
             BinaryInput reader    = info.bodyReader;
             MediaType   mediaType = mediaType;
-
             if (mediaType.type    == MediaType.FormData.type &&
                 mediaType.subtype == MediaType.FormData.subtype) {
 
                 // skip all the "Content-Disposition" elements except the "file" itself
-                http.FormDataFile fileData = http.parseSingleFile(reader, mediaType.text);
-                receiver.writeBytes(fileData.contents);
-            }
+                function void (String, String)       ignoreValues = (_, _) -> {};
+                function void (FormDataFile, Byte[]) pipeFile     = (_, bytes) -> {receiver.writeBytes(bytes);};
 
-            reader.pipeTo(receiver);
+                http.pipeFormData(reader, mediaType.text, ignoreValues, pipeFile);
+            } else {
+                reader.pipeTo(receiver);
+            }
         } else {
             super(receiver);
         }
