@@ -324,22 +324,23 @@ const Http1Request(RequestInfo   info,
 
     @Override
     void streamBodyTo(BinaryOutput receiver) {
-        if (streaming) {
-            BinaryInput reader    = info.bodyReader;
-            MediaType   mediaType = mediaType;
-            if (mediaType.type    == MediaType.FormData.type &&
-                mediaType.subtype == MediaType.FormData.subtype) {
+        if (!streaming) {
+            throw new IllegalState(\|This method can only be used by "@StreamingRequest" endpoints
+                                  );
+        }
 
-                // skip all the "Content-Disposition" elements except the "file" itself
-                function void (String, String)       ignoreValues = (_, _) -> {};
-                function void (FormDataFile, Byte[]) pipeFile     = (_, bytes) -> {receiver.writeBytes(bytes);};
+        BinaryInput reader    = info.bodyReader;
+        MediaType   mediaType = mediaType;
+        if (mediaType.type    == MediaType.FormData.type &&
+            mediaType.subtype == MediaType.FormData.subtype) {
 
-                http.pipeFormData(reader, mediaType.text, ignoreValues, pipeFile);
-            } else {
-                reader.pipeTo(receiver);
-            }
+            // skip all the "Content-Disposition" elements except the "file" itself
+            function void (String, String)       ignoreValues = (_, _) -> {};
+            function void (FormDataFile, Byte[]) pipeFile     = (_, bytes) -> {receiver.writeBytes(bytes);};
+
+            http.pipeFormData(reader, mediaType.text, ignoreValues, pipeFile);
         } else {
-            super(receiver);
+            reader.pipeTo(receiver);
         }
     }
 
