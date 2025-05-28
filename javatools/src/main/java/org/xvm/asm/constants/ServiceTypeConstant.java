@@ -107,6 +107,28 @@ public class ServiceTypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
+    public Relation calculateRelation(TypeConstant typeLeft)
+        {
+        ConstantPool pool = getConstantPool();
+
+        // turn (service T) into (service Object) + T
+        return typeLeft instanceof ServiceTypeConstant that
+                ? m_constType.calculateRelation(that.m_constType)
+                : m_constType.equals(pool.typeObject())
+                    ? super.calculateRelation(typeLeft)
+                    : m_constType.combine(pool, pool.ensureServiceTypeConstant(pool.typeObject())).
+                            calculateRelation(typeLeft);
+        }
+
+    @Override
+    protected Relation calculateRelationToRight(TypeConstant typeRight)
+        {
+        return typeRight.isService()
+                ? m_constType.calculateRelationToRight(typeRight)
+                : Relation.INCOMPATIBLE;
+        }
+
+    @Override
     protected boolean isDuckTypeAbleFrom(TypeConstant typeRight)
         {
         return typeRight.isService() && super.isDuckTypeAbleFrom(typeRight);

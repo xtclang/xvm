@@ -2,12 +2,17 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        Int a = 0;
-        Int b = 1;
+        new Test().run();
+    }
 
-        while (b >= a > 0) { // this used to enter the loop
-            console.print($"1) {a=} {b=} {b >= a > 0}");
-            break;
+    service Test {
+        annotation Data into SessionImpl;
+
+        class SessionImpl(String name);
+
+        void run() {
+            Data d = new @Data SessionImpl("Test"); // this used to report a "suspicious assignment"
+                                                    // claiming that Data is not a "service"
         }
     }
 }
