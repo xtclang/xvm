@@ -1,4 +1,7 @@
-- GG/CP: update the CookieBroker doc regarding the cookies (SameSite, Secure etc)
+- CP/GG: update the CookieBroker doc regarding the cookies (SameSite, Secure etc.)
+
+- CP/GG: prevent requests with "Sec-Fetch-Site=cross-site" from being processed except when an end point
+     explicitly allows it (e.g. @AllowCrossSite)
 
 - GG:
         String str;
@@ -34,26 +37,31 @@
     }
     // would be nice as to have a simple "`;` is missing" error
 
-- CP: Prevent requests with "Sec-Fetch-Site=cross-site" from being processed except when an end point
-     explicitly allows it (e.g. @AllowCrossSite)
-
 - CP: Response.Cookie - not implemented and as such not used at all, do we still need it?
 
 - GG: fix HttpClient talking to raw address (127.0.0.1 instead of localhost)
 
-- GG: add "quit" to the cli "help"
 - GG: add batch commands support to cli
+
 - GG: group CLI commands into sections (one per class? @CommandGroup?)
 
 - GG: add compiler error for assigning non-transient properties for module or package
 
 - GG: add typeExpected, typeActual to TypeMismatch exception
 
+- consider an additional flavor of the createConnection API:
+    static <Schema extends RootSchema> (oodb.Connection<Schema>+Schema) createConnection(
+        Type<Schema> type, Directory dataDir, Directory buildDir,
+        oodb.DBUser? user = Null, Version? version = Null) {
+
 - GG: need to be able to do:
     class Test {
         String value = "a";
-        void test() { Test.value ref = &value; ref.set("a"); }
+        void test() { Test.value ref = &value; ref.set("b"); }
     }
+    Currently, one can do
+        val ref = &value; ref.set("b");
+    and "&ref.type.toString()" produces "Test.value"
 
 - GG: BAST generation for "map[x] = y" is completely broken; additionally if a class has
       only a setter @Op("[]="), but no getter (@Op"[]") the compiler barfs
@@ -65,18 +73,9 @@
         @Op("[]=") void put(String name, String value) {}
     }
 
-- GG: incoming request info without "Content-Type" header asserts the Http1Request construction;
-      it should respond with UnsupportedMediaType (415)
-
 - CP: how to prevent a DoS attack by a "curl" loop to overwhelm the session cache
 
-- CP: make DigestAuthenticator.NonceTable into a service
-
 - CP: do we need a UrlEncoder (similar to Java's)?
-
-- CP: a content-type header for FormData has the following format:
-    multipart/form-data; boundary=---------------------------1612195806993123533773008794
-  the logic in MediaType.of() does not recognize it as parameters; simply drops it
 
 - CP: add API support for multi-part body, for example (Body.x):
     conditional Body[] multipart() = False;
@@ -96,10 +95,6 @@
          */
         <ElementType> List<ElementType> asList(Type<ElementType> elementType = Object)
 
-- CP: BinaryInput:
-    - readBytes() methods need to return the number of bytes read
-    - would be nice to have an "eof" indicator
-
 - GG: consider allowing to debug an eval expression (debug eval)
 
 - GG: consider changing Service.callLater() API to
@@ -107,8 +102,6 @@
 
 - add a method to Map API to evaluate the "worst lookup cost" based on the current content
   (Mark's suggestion to evaluated keys' hashCode distribution)
-
-- consider using (new ConcurrentSection()) to get "pre-switching" notification
 
 - compiler to report on ambiguous type parameter name across a virtual child and its parent(s)
 
@@ -127,8 +120,6 @@
                 return value > 0;  // the compiler could figure out the value is an Int
             }
         }
-
-- CP: consider adding specialized String.append(Char c) and String.append(String s)
 
 - CP: consider a compiler warning if a return value of Closeable type is ignored (@Adopt annotation)
 
