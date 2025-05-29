@@ -3,6 +3,7 @@ package org.xvm.asm.constants;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
@@ -162,6 +163,17 @@ public class ChildInfo
 
 
     // ----- Object methods ------------------------------------------------------------------------
+
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        return obj instanceof ChildInfo that
+            && this.f_child.equals(that.f_child)
+            && Objects.equals(this.f_access, that.f_access)
+            && Objects.equals(this.f_setIds, that.f_setIds)
+            ;
+        }
 
     @Override
     public String toString()

@@ -181,10 +181,11 @@ public abstract class OpCallable extends Op {
 
         ClassStructure clzTargetC = (ClassStructure) constructor.getParent().getParent();
         if (clzTargetC.isVirtualChild()) {
-            ClassStructure   clzParentC = (ClassStructure) clzTargetC.getParent();
-            IdentityConstant idParentC  = clzParentC.getIdentityConstant();
+            ClassStructure clzParentC = (ClassStructure) clzTargetC.getParent();
 
-            if (!idParentR.equals(idParentC)) {
+            // if the parent is an annotation part of the virtual child type - no virtualization
+            if (clzParentC.getFormat() != Component.Format.ANNOTATION &&
+                    !idParentR.equals(clzParentC.getIdentityConstant())) {
                 // find the run-time target's constructor;
                 // note that we don't need to resolve the actual types
                 ClassStructure clzParentR  = (ClassStructure) idParentR.getComponent();
@@ -274,12 +275,11 @@ public abstract class OpCallable extends Op {
     /**
      * @return R_EXCEPTION
      */
-    protected int reportNonExtendable(Frame frame, MethodStructure constructor)
-        {
+    protected int reportNonExtendable(Frame frame, MethodStructure constructor) {
         return frame.raiseException(xException.unsupported(frame,
             "Class \"" + constructor.getContainingClass().getIdentityConstant().getPathString() +
             "\" is not extendable"));
-        }
+    }
 
     /**
      * Retrieve the constructor to be used by this Construct_* op code.

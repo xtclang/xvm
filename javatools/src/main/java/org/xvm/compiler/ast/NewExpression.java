@@ -535,6 +535,25 @@ public class NewExpression
                     }
                 assert listClass.isEmpty() && !listMixin.isEmpty();
                 annos = listMixin.toArray(Annotation.NO_ANNOTATIONS);
+
+                for (Annotation anno : annos)
+                    {
+                    TypeConstant typeA = anno.getAnnotationType();
+                    if (typeA.isVirtualChild())
+                        {
+                        if (!typeTarget.isVirtualChild())
+                            {
+                            log(errs, Severity.ERROR, Compiler.PARENT_MISSING, typeA.getValueString());
+                            return null;
+                            }
+                        else if (!typeTarget.getParentType().isA(typeA.getParentType()))
+                            {
+                            log(errs, Severity.ERROR, Compiler.NEW_UNRELATED_PARENT,
+                                typeA.getValueString(), typeTarget.getParentType().getValueString());
+                            return null;
+                            }
+                        }
+                    }
                 }
             else
                 {
@@ -655,7 +674,7 @@ public class NewExpression
                         }
                     else
                         {
-                        log(errs, Severity.ERROR, Compiler.PARENT_MISSING);
+                        log(errs, Severity.ERROR, Compiler.PARENT_MISSING, typeTarget.getValueString());
                         return null;
                         }
                     }

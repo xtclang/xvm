@@ -5795,10 +5795,11 @@ public abstract class TypeConstant
         ConstantPool pool = getConstantPool();
 
         // merge the private view of the annotation on top if the specified view of the underlying type
-        Map<Object          , ParamInfo>    mapMixinParams  = infoMixin.getTypeParams();
-        Map<PropertyConstant, PropertyInfo> mapMixinProps   = infoMixin.getProperties();
-        Map<MethodConstant  , MethodInfo>   mapMixinMethods = infoMixin.getMethods();
-        TypeConstant                        typeMixin       = infoMixin.getType();
+        Map<Object          , ParamInfo>    mapMixinParams   = infoMixin.getTypeParams();
+        Map<PropertyConstant, PropertyInfo> mapMixinProps    = infoMixin.getProperties();
+        Map<MethodConstant  , MethodInfo>   mapMixinMethods  = infoMixin.getMethods();
+        Map<String          , ChildInfo>    mapMixinChildren = infoMixin.getChildInfosByName();
+        TypeConstant                        typeMixin        = infoMixin.getType();
 
         Map<Object          , ParamInfo   > mapTypeParams  = new HashMap<>(infoSource.getTypeParams());
         Map<PropertyConstant, PropertyInfo> mapProps       = new HashMap<>(infoSource.getProperties());
@@ -5837,6 +5838,22 @@ public abstract class TypeConstant
                     mapDefaults == null ? null : mapDefaults.get(idProp.getName()), nBaseRank, errs);
             }
 
+        for (Map.Entry<String, ChildInfo> entry : mapMixinChildren.entrySet())
+            {
+            String    sName    = entry.getKey();
+            ChildInfo childNew = entry.getValue();
+            ChildInfo childOld = mapChildren.get(sName);
+
+            if (childOld == null)
+                {
+                mapChildren.put(entry.getKey(), entry.getValue());
+                }
+            else if (!childOld.equals(childNew))
+                {
+                // TODO: layer on the ChildInfo
+                }
+            }
+
         ContribSource contribSource = annotation == null
                 ? ContribSource.ConditionalIncorp
                 : ContribSource.Annotation;
@@ -5856,7 +5873,6 @@ public abstract class TypeConstant
 
         Annotation[] aAnnoMixin = collectMixinAnnotations(listProcess);
 
-        // TODO handle mapChildren
         return new TypeInfo(typeTarget, cInvalidations, structBase, 0, false, mapTypeParams,
                 aAnnoClass, aAnnoMixin,
                 infoSource.getExtends(), infoSource.getRebases(), infoSource.getInto(),

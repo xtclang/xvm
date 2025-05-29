@@ -6,13 +6,28 @@ module TestSimple {
     }
 
     service Test {
-        annotation Data into SessionImpl;
+        annotation Data into Session {
 
-        class SessionImpl(String name);
+            const InsideConst(Int i);
+
+            void foo() {
+                val c = new InsideConst(0); // this used to blow up at runtime
+                console.print(c);
+            }
+        }
+
+        class SessionImpl(String name) implements Session;
 
         void run() {
-            Data d = new @Data SessionImpl("Test"); // this used to report a "suspicious assignment"
-                                                    // claiming that Data is not a "service"
+            for (Int i : 0..3) {
+                Data d = new @Data SessionImpl($"Test {i}");
+                d.foo();
+            }
         }
     }
+
+    // we used to allow having the mixed-in class outside; now it would be a compiler error
+    // class SessionImpl(String name) implements Session;
+
+    interface Session {}
 }

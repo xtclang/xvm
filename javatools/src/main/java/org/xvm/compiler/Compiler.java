@@ -1427,7 +1427,7 @@ public class Compiler
      */
     public static final String PROP_READONLY_INIT                 = "COMPILER-202";
     /**
-     * Virtual child construction requires a parent instance.
+     * Virtual child {0} construction requires a parent instance.
      */
     public static final String PARENT_MISSING                     = "COMPILER-203";
     /**

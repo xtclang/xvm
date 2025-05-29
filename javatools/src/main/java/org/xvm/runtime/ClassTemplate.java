@@ -2565,6 +2565,12 @@ public abstract class ClassTemplate
                             ClassStructure  structAnno = (ClassStructure) idAnno.getComponent();
                             MethodStructure ctorAnno   = structAnno.findMethod("construct", cArgs);
 
+                            if (structAnno.isVirtualChild() && !hStruct.getComposition().hasOuter())
+                                {
+                                return frameCaller.raiseException("Annotation \"" +
+                                    idAnno.getValueString() + "\" requires a parent, which is missing");
+                                }
+
                             if (ctorAnno.isNoOp())
                                 {
                                 iResult = Op.R_NEXT;
