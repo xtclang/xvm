@@ -70,8 +70,7 @@ import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.op.Construct_0;
 import org.xvm.asm.op.Construct_1;
 import org.xvm.asm.op.Construct_N;
-import org.xvm.asm.op.IsType;
-import org.xvm.asm.op.JumpFalse;
+import org.xvm.asm.op.JumpNType;
 import org.xvm.asm.op.L_Get;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.SynInit;
@@ -3232,10 +3231,7 @@ public class TypeCompositionStatement
 
                             Register regActualType = new Register(typeConstraint, null, Op.A_STACK);
                             code.add(new L_Get(idFormal, regActualType));
-
-                            Register regIs = new Register(pool.typeBoolean(), null, Op.A_STACK);
-                            code.add(new IsType(regActualType, typeConstraint, regIs));
-                            code.add(new JumpFalse(regIs, labelSkipSuper));
+                            code.add(new JumpNType(regActualType, typeConstraint, labelSkipSuper));
 
                             ExprAST astFormal = new PropertyExprAST(
                                                     ctxConstruct.getThisRegisterAST(), idFormal);
