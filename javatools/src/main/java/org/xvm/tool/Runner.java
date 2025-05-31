@@ -22,6 +22,7 @@ import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.javajit.Xvm;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
@@ -339,6 +340,8 @@ public class Runner
             Connector connector;
             if (jit) {
                 // TODO make a JitConnector
+                Xvm xvm = new Xvm(repo);
+                // TODO
                 connector = new Connector(repo);
             } else {
                 connector = new Connector(repo);
@@ -489,7 +492,7 @@ public class Runner
             super();
 
             addOption("I" ,     "inject",       Form.Pair,   true,  "Specifies name/value pairs for injection; the format is \"name1=value1,name2=value2\"");
-            addOption("J" ,     "jit",          Form.Name,   false, "Specifies name/value pairs for injection; the format is \"name1=value1,name2=value2\"");
+            addOption("J" ,     "jit",          Form.Name,   false, "Enable the JIT-to-Java back-end");
             addOption("L" ,     null,           Form.Repo,   true,  "Module path; a \"" + File.pathSeparator + "\"-delimited list of file and/or directory names");
             addOption("M",      "method",       Form.String, false, "Method name; defaults to \"run\"");
             addOption(null,     "no-recompile", Form.Name,   false, "Disable automatic compilation");

@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -17,6 +18,7 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.VersionConstant;
 
 import org.xvm.util.Handy;
+import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -115,6 +117,137 @@ public class ModuleStructure
         }
 
     /**
+     * @return a VersionTree that provides a catalog of all versions of this module that are present
+     */
+    public VersionTree getVersions()
+        {
+        VersionTree tree = new VersionTree();
+        if (isRefined())
+            {
+            Version ver = getVersion();
+            if (ver != null)
+                {
+                tree.put(ver, null);
+                }
+            }
+        else
+            {
+            // TODO GG
+            if (isMainModule())
+                {
+                tree.putAll(getFileStructure().getVersionTree());
+                }
+            }
+        return tree;
+        }
+
+    /**
+     * @return the Version of this module, or null if there is no version (or more than one version)
+     */
+    public Version getVersion()
+        {
+        VersionConstant constant = getVersionConstant();
+        return constant == null ? null : constant.getVersion();
+        }
+
+    /**
+     * Obtain all the _conditional_ names that this module is aware of, and whether the names are
+     * defined (if that is known). The keys are the conditional names. For each name, the value is
+     * `null` to indicate that the condition is unknown (no choice has been made), `FALSE` to
+     * indicate that the name was explicitly NOT defined, and `TRUE` to indicate that the name was
+     * explicitly defined.
+     *
+     * @return a Map containing the conditional names known within this module
+     */
+    public Map<String, Boolean> getConditionalNames()
+        {
+        // TODO GG
+        return Collections.emptyMap();
+        }
+
+    /**
+     * Obtain all dependencies from this module.
+     *
+     * Because the result from this method can differ from version to version, and based on
+     * conditional names, the module version and the conditional names must be refined before
+     * using this method.
+     *
+     * @return a Map keyed by the ModuleConstant of each dependency, with a corresponding value of
+     *         {@link ModuleType#Required}, {@link ModuleType#Desired}, or {@link ModuleType#Optional}
+     */
+    public Map<ModuleConstant, ModuleType> getDependencyTypes()
+        {
+        if (!isRefined())
+            {
+            if (getVersions().size() > 1)
+                {
+                throw new IllegalStateException("module contains unrefined versions");
+                }
+
+            if (getConditionalNames().containsValue(null))
+                {
+                throw new IllegalStateException("module contains unrefined conditional names");
+                }
+            }
+
+        // TODO GG
+        return Collections.emptyMap();
+        }
+
+    /**
+     * @return a Map keyed by the ModuleConstant of each dependency, with a corresponding value of
+     *         {@link Boolean#FALSE} for omitted optional and desired dependencies,
+     *         {@link Boolean#TRUE} for required dependencies and for optional and desired
+     *         dependencies that a decision was made to fill, and `null` for dependencies that no
+     *         decision has been made yet regarding omitting or filling the dependency
+     */
+    public Map<ModuleConstant, Boolean> getDependencies()
+        {
+        Map<ModuleConstant, Boolean> map = new ListMap<>();
+        for (Iterator<Map.Entry<ModuleConstant, ModuleType>> iter = getDependencyTypes().entrySet().iterator();
+                iter.hasNext(); )
+            {
+            var entry = iter.next();
+            // TODO GG
+            map.put(entry.getKey(), entry.getValue() == ModuleType.Required ? Boolean.TRUE : Boolean.FALSE);
+            }
+        return map;
+        }
+
+    /**
+     * Produce a strong, repeatable hash of the module. This value is intended to show that two
+     * modules with the same name, version, etc. are truly the same by hashing every constituent  or are not the same.
+     *
+     * @return a digest value that acts as strong hash of the module
+     */
+    public byte[] getDigest()
+        {
+        // TODO GG
+        return (getName() + '/' + getVersions().toString() + '/' + getConditionalNames().toString()
+                + '/' + getDependencies().toString()).getBytes();
+        }
+
+    /**
+     * @return `true` iff the module is real (not just a fingerprint) and all of its version,
+     *         optional dependencies, and conditional names have been decided and resolved
+     */
+    public boolean isRefined()
+        {
+        if (isFingerprint())
+            {
+            return false;
+            }
+
+        if (isLinked())
+            {
+            return true;
+            }
+
+        // TODO GG
+        return true;
+        }
+
+    /**
      * @return true iff this module is already fully loaded and linked
      */
     public boolean isLinked()
@@ -176,15 +309,6 @@ public class ModuleStructure
         }
 
     /**
-     * @return the Version of this module, or null
-     */
-    public Version getVersion()
-        {
-        VersionConstant constant = getVersionConstant();
-        return constant == null ? null : constant.getVersion();
-        }
-
-    /**
      * Set the module version.
      *
      * @param version  the version constant
@@ -238,7 +362,6 @@ public class ModuleStructure
     public List<Version> getFingerprintVersionPrefs()
         {
         assert isFingerprint();
-
         List<Version> list = m_listImportPreferVers;
         assert (list = Collections.unmodifiableList(list)) != null;
         return list;
@@ -323,9 +446,7 @@ public class ModuleStructure
         }
 
     /**
-     * Build a list of all of the module dependencies, and the shortest path to each.
-     *
-     * @return  a map containing all of the module dependencies, and the shortest path to each
+     * @return a map containing the module dependencies, and the shortest path to each
      */
     public Map<ModuleConstant, String> collectDependencies()
         {

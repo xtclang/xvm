@@ -27,6 +27,8 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.Map;
 
+import static java.util.Arrays.sort;
+
 
 /**
  * Handy static methods.
@@ -971,6 +973,7 @@ public final class Handy {
      *
      * @return date/time string in format "YYYY-MM-DD HH:MM:SS" format
      */
+    @SuppressWarnings("deprecation")
     public static String dateString(long cMillis) {
         Date date = new Date(cMillis);
         return String.valueOf(11900 + date.getYear()).substring(1, 5) + // only works thru year 9999
@@ -1460,7 +1463,7 @@ public final class Handy {
         }
 
         File[] aFile = dir.listFiles();
-        Arrays.sort(aFile, Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
+        sort(aFile, Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
         return aFile;
     }
 
@@ -1750,6 +1753,77 @@ public final class Handy {
 
 
     // ----- array and collection helpers ----------------------------------------------------------
+
+    /**
+     * Scan the array for an equal value, using the value's {@link Object#equals(Object)} method.
+     *
+     * @param array  an array of values, or null
+     * @param value  the value to find, or null
+     *
+     * @return the index of the value's first occurrence in the array, otherwise -1
+     */
+    public static <T> int scan(T[] array, T value) {
+        if (value == null) {
+            return scanRef(array, value);
+        }
+
+        if (array != null) {
+            for (int i = 0; i < array.length; ++i) {
+                if (value.equals(array[i])) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Scan the array for an equal value using reference equality.
+     *
+     * @param array  an array of values, or null
+     * @param value  the value to find, or null
+     *
+     * @return the index of the value's first occurrence in the array, otherwise -1
+     */
+    public static <T> int scanRef(T[] array, T value) {
+        if (array != null) {
+            for (int i = 0; i < array.length; ++i) {
+                if (array[i] == value) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Clone and sort the passed array. The original array is not modified by this method.
+     *
+     * @param array  an array of elements
+     *
+     * @return a sorted copy of the passed array
+     */
+    public static <T> T[] sorted(T[] array) {
+        T[] result = array.clone();
+        sort(result);
+        return result;
+    }
+
+    /**
+     * Clone and sort the passed array using the provided Comparator. The original array is not
+     * modified by this method.
+     *
+     * @param array  an array of elements
+     * @param order  a Comparator for sorting the elements
+     *
+     * @return a sorted copy of the passed array
+     */
+    public static <T> T[] sorted(T[] array, Comparator<T> order) {
+        T[] result = array.clone();
+        sort(result, order);
+        return result;
+    }
+
 
     /**
      * Given an array of "base" elements and an array of elements that are being evaluated as some
@@ -2073,6 +2147,23 @@ public final class Handy {
             }
         }
 
+        return true;
+    }
+
+    /**
+     * Verify that the value associated with the specified variable name is non-null.
+     *
+     * @param name   the variable name to test
+     * @param value  the value to test
+     *
+     * @return true iff the value is non-null
+     *
+     * @throws IllegalArgumentException  if the value is null
+     */
+    public static boolean require(String name, Object value) {
+        if (value == null) {
+            throw new IllegalArgumentException((name == null ? "Required value" : name) + " is null");
+        }
         return true;
     }
 
