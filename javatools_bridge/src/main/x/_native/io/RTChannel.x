@@ -45,9 +45,9 @@ service RTChannel(RawChannel rawChannel)
     protected Pending? pendingWrite;
 
     /**
-     * Set to True when this channel is explicitly closed.
+     * Set to `True` when this channel is explicitly closed.
      */
-    protected Boolean closed;
+    protected Boolean closed.get() = rawChannel.closed;
 
     // ----- Channel API ---------------------------------------------------------------------------
 
@@ -315,7 +315,6 @@ service RTChannel(RawChannel rawChannel)
         }
     }
 
-
     // ----- BufferProvider API --------------------------------------------------------------------
 
     @Override
@@ -366,7 +365,6 @@ service RTChannel(RawChannel rawChannel)
     void close(Exception? cause = Null) {
         if (!closed) {
             rawChannel.close();
-            closed = True;
         }
     }
 

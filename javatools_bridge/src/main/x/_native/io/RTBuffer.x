@@ -39,7 +39,6 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
             assert:bounds 0 <= offset <= size;
             rawOffset = offset;
         }
-
     }
 
     @Override

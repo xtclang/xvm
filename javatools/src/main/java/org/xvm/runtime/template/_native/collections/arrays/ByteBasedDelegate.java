@@ -1,6 +1,8 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
 
+import java.nio.ByteBuffer;
+
 import java.util.Arrays;
 
 import org.xvm.asm.ClassStructure;
@@ -387,6 +389,14 @@ public abstract class ByteBasedDelegate
 
 
     // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * Create a ByteBuffer based on a section of the array.
+     */
+    public ByteBuffer wrap(ByteArrayHandle hTarget, int ofStart, int ofEnd)
+        {
+        return ByteBuffer.wrap(hTarget.m_abValue, ofStart, ofEnd);
+        }
 
     /**
      * Reverse the array of bites represented by the specified array.

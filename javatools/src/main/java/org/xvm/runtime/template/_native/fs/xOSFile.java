@@ -77,7 +77,7 @@ public class xOSFile
         markNativeMethod("truncateImpl", null, VOID);
         markNativeMethod("appendBytes", null, VOID);
         markNativeMethod("appendFile", null, VOID);
-        markNativeMethod("open", null, null);
+        markNativeMethod("openImpl", null, null);
 
         invalidateTypeInfo();
 
@@ -172,7 +172,7 @@ public class xOSFile
 
         switch (method.getName())
             {
-            case "open":
+            case "openImpl":
                 {
                 return invokeOpen(frame, hFile, ahArg, iReturn);
                 }
@@ -212,9 +212,7 @@ public class xOSFile
         {
         Path path = hFile.f_path;
 
-        // TODO how to limit the consumption? Need to ask the container...
-        Callable<byte[]> task = () ->
-                Handy.readFileBytes(path.toFile());
+        Callable<byte[]> task = () -> Handy.readFileBytes(path.toFile());
 
         CompletableFuture<byte[]> cfRead = frame.f_context.f_container.scheduleIO(task);
         Frame.Continuation continuation = frameCaller ->
@@ -280,9 +278,9 @@ public class xOSFile
             return frame.raiseException(xException.outOfBounds(frame, ixTo, cSize));
             }
 
-        // TODO how to limit the consumption? Need to ask the container...
-        int        cCapacity = (int) (ixTo - ixFrom + 1);
-        ByteBuffer buffer    = ByteBuffer.allocate(cCapacity);
+        // we use the HeapByteBuffer as a thin wrapper around the underlying byte array
+        int        cbCapacity = (int) (ixTo - ixFrom + 1);
+        ByteBuffer buffer     = ByteBuffer.allocate(cbCapacity);
 
         Callable<Integer> task = () ->
             {
@@ -298,7 +296,7 @@ public class xOSFile
             {
             try
                 {
-                if (cfRead.get() == cCapacity)
+                if (cfRead.get() == cbCapacity)
                     {
                     return frameCaller.assignValue(iReturn,
                         xArray.makeByteArrayHandle(buffer.array(), Mutability.Constant));
@@ -448,7 +446,7 @@ public class xOSFile
         }
 
     /**
-     * Implementation for: {@code FileChannel open(ReadOption read=Read, WriteOption[] write = [Write])}.
+     * Implementation for: {@code RawOSFileChannel openImpl(ReadOption read, WriteOption[] write)}.
      */
     private int invokeOpen(Frame frame, NodeHandle hFile, ObjectHandle[] ahArg, int iReturn)
         {
@@ -574,7 +572,7 @@ public class xOSFile
         try
             {
             FileChannel channel = FileChannel.open(path, aOpenOpt);
-            return xOSFileChannel.INSTANCE.createHandle(frame, channel, path, iReturn);
+            return xRawOSFileChannel.INSTANCE.createHandle(frame, channel, path, iReturn);
             }
         catch (IOException e)
             {

@@ -138,7 +138,6 @@ service RawChannel {
 
     /**
      * True iff the `RawChannel` is closed.
-     * REVIEW is this necessary?
      */
     @RO Boolean closed.get() = TODO("Native");
 }

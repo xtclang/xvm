@@ -22,7 +22,7 @@
  * specified contracts, while minimizing the implied costs of (i) the buffer's service boundary
  * and (ii) the creation of one-time-use proxy references.
  */
-service TransferableBuffer(Int size) {
+service TransferableBuffer {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -44,6 +44,7 @@ service TransferableBuffer(Int size) {
     /**
      * The buffer implementation.
      */
+    @Unassigned
     private ActualBuffer actual;
 
     /**

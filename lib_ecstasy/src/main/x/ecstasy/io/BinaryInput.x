@@ -61,7 +61,7 @@ interface BinaryInput
      */
     Int pipeTo(BinaryOutput out, Int count = MaxValue) {
         if (count > 0) {
-            Int    bufSize  = count.notGreaterThan(8192);
+            Int    bufSize  = count.notGreaterThan(8Kib);
             Byte[] buf      = new Byte[bufSize];
             Int    piped    = 0;
             while (piped < count) {

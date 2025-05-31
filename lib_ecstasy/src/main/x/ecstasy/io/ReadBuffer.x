@@ -2,6 +2,11 @@
  * A ReadBuffer represents a _transferable_ holder of binary data. Its contents are read-only, but
  * its state includes a current offset, which is mutable.
  *
+ * The purpose of the ReadBuffer is to represent a chunk of raw data inside of a service; as such,
+ * this API is always assumed to be "service local", i.e. not requiring crossing a service boundary.
+ * Basically, this is a wrapper around a `Byte[]`, but without exposing any references to that
+ * `Byte[]` so that after a call to [close()], that `Byte[]` can be re-used by another [WriteBuffer].
+ *
  * In addition to binary stream-based data access, the ReadBuffer also allows random access to data
  * within the buffer.
  */
@@ -39,7 +44,7 @@ interface ReadBuffer
      * @param count  a value in the range `(0 <= count <= size - offset)` that indicates the number
      *               of elements to skip over
      *
-     * @return this buffer
+     * @return this `ReadBuffer`
      */
     ReadBuffer skip(Int count) {
         assert:bounds 0 <= count <= size - offset;
@@ -48,9 +53,9 @@ interface ReadBuffer
     }
 
     /**
-     * Rewind this buffer. This sets the buffer offset to zero.
+     * Rewind this `ReadBuffer`. This sets the buffer [offset] to zero.
      *
-     * @return this buffer
+     * @return this `ReadBuffer`
      */
     ReadBuffer rewind() {
         offset = 0;
@@ -58,12 +63,12 @@ interface ReadBuffer
     }
 
     /**
-     * Move the current position to the specified offset.
+     * Set the current [offset] to the specified `newOffset`.
      *
      * @param newOffset  a value in the range `(0 <= newOffset <= size)` that specifies the new
-     *                   offset for this ReadBuffer
+     *                   [offset] for this `ReadBuffer`
      *
-     * @return this buffer
+     * @return this `ReadBuffer`
      */
     ReadBuffer moveTo(Int newOffset) {
         assert:bounds 0 <= newOffset <= size;
@@ -77,4 +82,27 @@ interface ReadBuffer
      */
     @Override
     void close(Exception? cause = Null);
+
+    /**
+     * An empty `ReadBuffer`.
+     */
+    static ReadBuffer Empty = new ReadBuffer() {
+        @Override
+        Byte getByte(Int index) = throw new EndOfFile();
+
+        @Override
+        Int readBytes(Byte[] bytes, Int offset, Int count) = 0;
+
+        @Override
+        @RO Int offset.get() = 0;
+
+        @Override
+        @RO Int size.get() = 0;
+
+        @Override
+        @RO Int available.get() = 0;
+
+        @Override
+        Byte readByte() = throw new EndOfFile();
+    }.makeImmutable();
 }

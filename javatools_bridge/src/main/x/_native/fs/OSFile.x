@@ -82,13 +82,18 @@ const OSFile
     }
 
     @Override
-    FileChannel open(ReadOption read=Read, WriteOption[] write = [Write]) {TODO("native");}
+    FileChannel open(ReadOption read = Read, WriteOption[] write = [Write]) {
+        RawOSFileChannel rawChannel  = openImpl(read, write);
+        FileChannel      fileChannel = new OSFileChannel(rawChannel);
+        return &fileChannel.maskAs(FileChannel);
+    }
 
 
     // ----- native --------------------------------------------------------------------------------
 
-    immutable Byte[] readImpl(Range<Int> range) = TODO("native");
-    void truncateImpl(Int newSize)              = TODO("native");
-    void appendBytes(Byte[] contents)           = TODO("native");
-    void appendFile(OSFileNode file)            = TODO("native");
+    immutable Byte[] readImpl(Range<Int> range)                     = TODO("native");
+    void truncateImpl(Int newSize)                                  = TODO("native");
+    void appendBytes(Byte[] contents)                               = TODO("native");
+    void appendFile(OSFileNode file)                                = TODO("native");
+    RawOSFileChannel openImpl(ReadOption read, WriteOption[] write) = TODO("native");
 }

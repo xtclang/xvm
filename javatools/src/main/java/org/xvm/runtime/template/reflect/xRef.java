@@ -794,13 +794,9 @@ public class xRef
                 break Supported;
                 }
 
-            if (!hGeneric.isService())
+            if (!hGeneric.isPassThrough())
                 {
-                TypeConstant type = hGeneric.getType();
-                if (!type.isImmutable() || !type.isSingleUnderlyingClass(true))
-                    {
-                    return frame.raiseException("Masked object must be shareable");
-                    }
+                return frame.raiseException("Masked object must be shareable");
                 }
 
             TypeConstant typeMasked = hType.getUnsafeDataType();

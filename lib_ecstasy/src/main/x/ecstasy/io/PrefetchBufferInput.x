@@ -1,21 +1,24 @@
 /**
- * PrefetchBinaryInput is a [BinaryInput] implementation that asynchronously pre-fetches data from
+ * PrefetchBufferInput is a [BinaryInput] implementation that asynchronously pre-fetches data from
  * the underlying data source while serving data from a pre-read buffer. This allows for improved
  * performance by overlapping I/O operations with data processing.
  *
  * This `BinaryInput` will start fetching data from the source as soon as it is created, and will
  * continue to do so in the background until it is closed or the end of the source is reached.
+ *
+ * This class is very similar to [PrefetchBinaryInput] except the source of the data is [ReadBuffer]
+ * based rather than [ByteArray] based.
  */
- class PrefetchBinaryInput
+ class PrefetchBufferInput
         implements BinaryInput {
 
     /**
      * Construct the `PrefetchBinaryInput` based on the function that fetches data from the
      * underlying source.
      */
-    construct(function Byte[]() fetch) {
+    construct(function ReadBuffer() fetch) {
         // prime the buffer
-        @Future Byte[] buffer = fetch^();
+        @Future ReadBuffer buffer = fetch();
 
         this.fetch        = fetch;
         this.bufferRef    = &buffer;
@@ -25,13 +28,13 @@
     /**
      * The function that fetches the next buffer from the underlying source.
      */
-    protected function Byte[]() fetch;
+    protected function ReadBuffer() fetch;
 
     /**
      * Asynchronously filled buffer.
      */
-    protected FutureVar<Byte[]> bufferRef;
-    protected Byte[] buffer.get() = bufferRef.get();
+    protected FutureVar<ReadBuffer> bufferRef;
+    protected ReadBuffer buffer.get() = bufferRef.get();
 
     /**
      * The current offset into the buffer.
@@ -42,14 +45,15 @@
      * Fire an async request to fetch a next buffer.
      */
     protected void requestNextBuffer() {
-        @Future Byte[] buffer = fetch^();
+        buffer.close();
+        @Future ReadBuffer buffer = fetch();
         bufferRef = &buffer;
     }
 
     // ----- BinaryInput interface -----------------------------------------------------------------
 
     @Override
-    @RO Boolean eof.get() = buffer.empty;
+    @RO Boolean eof.get() = buffer.size == 0;
 
     @Override
     @RO Int available.get() = bufferRef.assigned ? buffer.size - bufferOffset : 0;
@@ -61,7 +65,7 @@
             throw new EndOfFile();
         }
 
-        Byte byte = buffer[bufferOffset++];
+        Byte byte = buffer.getByte(bufferOffset++);
         if (bufferOffset == size) {
             // request a new buffer
             requestNextBuffer();
@@ -73,10 +77,9 @@
     @Override
     immutable Byte[] readBytes(Int count) {
         if (bufferOffset == 0 && count == buffer.size) {
-            // request a new buffer; freeze and return our current buffer
-            Byte[] bufferCurr = buffer;
+            immutable Byte[] bytes = buffer.readBytes(count);
             requestNextBuffer();
-            return bufferCurr.freeze(inPlace=True);
+            return bytes;
         } else {
             return super(count);
         }
@@ -101,17 +104,17 @@
             assert bufferOffset == 0;
         }
 
-        Byte[] bufferCurr = buffer;
-        Int    bufferSize = bufferCurr.size;
+        Int    bufferSize = buffer.size;
+        Byte[] bytes      = new Byte[](bufferSize);
         while (count >= bufferSize > 0) {
             // this is the bulk "entire buffer at a time" mode
+            Int read = buffer.readBytes(bytes, 0, bufferSize);
             requestNextBuffer();
-            out.writeBytes(bufferCurr);
-            piped += bufferSize;
-            count -= bufferSize;
+            out.writeBytes(bytes, 0, read);
+            piped += read;
+            count -= read;
 
-            bufferCurr = buffer;
-            bufferSize = bufferCurr.size;
+            bufferSize = buffer.size; // wait for the next buffer
         }
 
         if (count > 0 && bufferSize > 0) {
@@ -123,7 +126,7 @@
 
     @Override
     void close(Exception? cause = Null) {
-        fetch = () -> [];
+        fetch = () -> Empty;
         requestNextBuffer();
     }
 }

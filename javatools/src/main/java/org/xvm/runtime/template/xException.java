@@ -54,6 +54,7 @@ public class xException
             s_clzInvalidType                = f_container.getTemplate("reflect.InvalidType"           ).getCanonicalClass();
             s_clzNotImplemented             = f_container.getTemplate("NotImplemented"               ).getCanonicalClass();
             s_clzOutOfBounds                = f_container.getTemplate("OutOfBounds"                  ).getCanonicalClass();
+            s_clzOutOfMemory                = f_container.getTemplate("OutOfMemory"                  ).getCanonicalClass();
             s_clzReadOnly                   = f_container.getTemplate("ReadOnly"                     ).getCanonicalClass();
             s_clzSizeLimited                = f_container.getTemplate("collections.SizeLimited"      ).getCanonicalClass();
             s_clzStackOverflow              = f_container.getTemplate("StackOverflow"                ).getCanonicalClass();
@@ -194,6 +195,11 @@ public class xException
     public static ExceptionHandle outOfBounds(Frame frame, String sMsg)
         {
         return makeHandle(frame, s_clzOutOfBounds, sMsg);
+        }
+
+    public static ExceptionHandle outOfMemory(Frame frame)
+        {
+        return makeHandle(frame, s_clzOutOfMemory, null);
         }
 
     public static ExceptionHandle readOnly(Frame frame, xArray.Mutability mutability)
@@ -395,6 +401,7 @@ public class xException
     private static ClassComposition s_clzInvalidType;
     private static ClassComposition s_clzNotImplemented;
     private static ClassComposition s_clzOutOfBounds;
+    private static ClassComposition s_clzOutOfMemory;
     private static ClassComposition s_clzReadOnly;
     private static ClassComposition s_clzSizeLimited;
     private static ClassComposition s_clzStackOverflow;

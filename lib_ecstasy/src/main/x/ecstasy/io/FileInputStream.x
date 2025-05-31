@@ -1,61 +1,50 @@
 import ecstasy.fs.FileChannel;
 
 /**
- * The FileInputStream is an implementation of an InputStream on top of a [File].
+ * The FileInputStream is an implementation of an [InputStream] on top of a [File].
  */
- class FileInputStream(File file)
-        implements InputStream {
+class FileInputStream(File file)
+        extends PrefetchBufferInput
+        implements InputStream  {
 
-    assert() {
+    construct(File file) {
         assert:arg file.readable;
+
+        FileChannel channel = file.open(Read, []);
+
+        this.file    = file;
+        this.channel = channel;
+
+        construct PrefetchBufferInput(() -> channel.read() ?: Empty);
     }
+
 
     // ----- properties ----------------------------------------------------------------------------
 
     /**
      * The underlying file.
      */
-    private File file;
+    protected File file;
 
     /**
      * The underlying file channel.
      */
-    private @Lazy FileChannel channel.calc() = file.open(Read, []);
+    protected FileChannel channel;
 
-    /**
-     * The current ReadBuffer.
-     */
-    private ReadBuffer? buffer;
 
-    // ----- OutputStream interface ----------------------------------------------------------------
+    // ----- InputStream interface -----------------------------------------------------------------
 
     @Override
     Int offset {
-        @Override
         Int get() = channel.position;
 
-        @Override
-        void set(Int newOffset) = throw new ReadOnly();
+        void set(Int newOffset) {
+            assert:bounds newOffset < size;
+            channel.position = newOffset;
+            requestNextBuffer();
+        }
     }
 
     @Override
     Int size.get() = file.size;
-
-    // ----- BinaryInput interface -----------------------------------------------------------------
-
-    @Override
-    Byte readByte() = ensureBuffer().readByte();
-
-    // ----- internal ------------------------------------------------------------------------------
-
-    ReadBuffer ensureBuffer() {
-        if (!eof) {
-            if (ReadBuffer buffer ?= this.buffer) {
-                return buffer;
-            }
-            buffer = channel.read();
-            return ensureBuffer();
-        }
-        throw new EndOfFile();
-    }
 }
