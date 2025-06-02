@@ -443,8 +443,6 @@ public class ConstantPool
             }
         }
 
-    private transient TypeConstant      m_typeAutoFreezable;
-
     /**
      * Given the specified {@code int} value for a bit, obtain a ByteConstant that represents it.
      *
@@ -3872,166 +3870,6 @@ public class ConstantPool
         return () -> poolHolder[0] = pollPrior;
     }
 
-    // ----- fields --------------------------------------------------------------------------------
-
-    /**
-     * An immutable, empty, zero-length array of types.
-     */
-    public static final TypeConstant[] NO_TYPES = TypeConstant.NO_TYPES;
-
-    /**
-     * Storage of Constant objects by index.
-     */
-    private final ArrayList<Constant> m_listConst = new ArrayList<>();
-
-    /**
-     * Reverse lookup structure to find a particular constant by constant.
-     * <p>
-     * This map is not thread-safe and safety is provided via copy-on-write
-     */
-    private volatile EnumMap<Format, Map<Constant, Constant>> m_mapConstants = new EnumMap<>(Format.class);
-
-    /**
-     * Reverse lookup structure to find a particular constant by locator.
-     * <p>
-     * This map is not thread-safe and safety is provided via copy-on-write
-     */
-    private volatile EnumMap<Format, Map<Object, Constant>> m_mapLocators = new EnumMap<>(Format.class);
-
-    /**
-     * Set of references to ConstantPool instances, defining the only ConstantPool references that
-     * may be referred to (directly or indirectly) from constants stored in this pool.
-     */
-    private final Set<ConstantPool> m_setValidPools = Collections.newSetFromMap(new IdentityHashMap<>());
-
-    /**
-     * Tracks whether the ConstantPool should recursively register constants.
-     */
-    private transient boolean m_fRecurseReg;
-
-    private transient ModuleConstant    m_valEcstasy;
-    private transient ClassConstant     m_clzObject;
-    private transient ClassConstant     m_clzInner;
-    private transient ClassConstant     m_clzOuter;
-    private transient ClassConstant     m_clzRef;
-    private transient ClassConstant     m_clzVar;
-    private transient ClassConstant     m_clzClass;
-    private transient ClassConstant     m_clzStruct;
-    private transient ClassConstant     m_clzType;
-    private transient ClassConstant     m_clzConst;
-    private transient ClassConstant     m_clzService;
-    private transient ClassConstant     m_clzModule;
-    private transient ClassConstant     m_clzPackage;
-    private transient ClassConstant     m_clzEnum;
-    private transient ClassConstant     m_clzEnumeration;
-    private transient ClassConstant     m_clzEnumValue;
-    private transient ClassConstant     m_clzException;
-    private transient ClassConstant     m_clzCloseable;
-    private transient ClassConstant     m_clzProperty;
-    private transient ClassConstant     m_clzMethod;
-    private transient ClassConstant     m_clzFunction;
-    private transient ClassConstant     m_clzNullable;
-    private transient ClassConstant     m_clzCollection;
-    private transient ClassConstant     m_clzSet;
-    private transient ClassConstant     m_clzList;
-    private transient ClassConstant     m_clzArray;
-    private transient ClassConstant     m_clzMatrix;
-    private transient ClassConstant     m_clzMap;
-    private transient ClassConstant     m_clzSliceable;
-    private transient ClassConstant     m_clzOrderable;
-    private transient ClassConstant     m_clzTuple;
-    private transient ClassConstant     m_clzCondTuple;
-    private transient ClassConstant     m_clzAuto;
-    private transient ClassConstant     m_clzOp;
-    private transient ClassConstant     m_clzRO;
-    private transient ClassConstant     m_clzFinal;
-    private transient ClassConstant     m_clzInject;
-    private transient ClassConstant     m_clzAbstract;
-    private transient ClassConstant     m_clzAtomic;
-    private transient ClassConstant     m_clzConcurrent;
-    private transient ClassConstant     m_clzSynchronized;
-    private transient ClassConstant     m_clzFuture;
-    private transient ClassConstant     m_clzOverride;
-    private transient ClassConstant     m_clzLazy;
-    private transient ClassConstant     m_clzTest;
-    private transient ClassConstant     m_clzTransient;
-    private transient ClassConstant     m_clzUnassigned;
-    private transient ClassConstant     m_clzVolatile;
-    private transient TypeConstant      m_typeObject;
-    private transient TypeConstant      m_typeInner;
-    private transient TypeConstant      m_typeOuter;
-    private transient TypeConstant      m_typeRef;
-    private transient TypeConstant      m_typeRefRB;
-    private transient TypeConstant      m_typeVar;
-    private transient TypeConstant      m_typeVarRB;
-    private transient TypeConstant      m_typeType;
-    private transient TypeConstant      m_typeStruct;
-    private transient TypeConstant      m_typeClass;
-    private transient TypeConstant      m_typeConst;
-    private transient TypeConstant      m_typeConstRB;
-    private transient TypeConstant      m_typeService;
-    private transient TypeConstant      m_typeServiceRB;
-    private transient TypeConstant      m_typeModule;
-    private transient TypeConstant      m_typeModuleRB;
-    private transient TypeConstant      m_typePackage;
-    private transient TypeConstant      m_typePackageRB;
-    private transient TypeConstant      m_typeEnumRB;
-    private transient TypeConstant      m_typeEnumeration;
-    private transient TypeConstant      m_typeEnumValue;
-    private transient TypeConstant      m_typeException;
-    private transient TypeConstant      m_typeCloseable;
-    private transient TypeConstant      m_typeException१;
-    private transient TypeConstant      m_typeProperty;
-    private transient TypeConstant      m_typeMethod;
-    private transient TypeConstant      m_typeParameter;
-    private transient TypeConstant      m_typeFunction;
-    private transient TypeConstant      m_typeBoolean;
-    private transient TypeConstant      m_typeTrue;
-    private transient TypeConstant      m_typeFalse;
-    private transient TypeConstant      m_typeNullable;
-    private transient TypeConstant      m_typeOrdered;
-    private transient TypeConstant      m_typeNull;
-    private transient TypeConstant      m_typeChar;
-    private transient TypeConstant      m_typeIntLiteral;
-    private transient TypeConstant      m_typeFPLiteral;
-    private transient TypeConstant      m_typeRegEx;
-    private transient TypeConstant      m_typeString;
-    private transient TypeConstant      m_typeStringable;
-    private transient TypeConstant      m_typeStringBuffer;
-    private transient TypeConstant      m_typeString१;
-    private transient TypeConstant      m_typeBit;
-    private transient TypeConstant      m_typeNibble;
-    private transient TypeConstant      m_typeBitArray;
-    private transient TypeConstant      m_typeByteArray;
-    private transient TypeConstant      m_typeBinary;
-    private transient TypeConstant      m_typeInt8;
-    private transient TypeConstant      m_typeInt16;
-    private transient TypeConstant      m_typeInt32;
-    private transient TypeConstant      m_typeInt64;
-    private transient TypeConstant      m_typeInt128;
-    private transient TypeConstant      m_typeIntN;
-    private transient TypeConstant      m_typeUInt8;
-    private transient TypeConstant      m_typeUInt16;
-    private transient TypeConstant      m_typeUInt32;
-    private transient TypeConstant      m_typeUInt64;
-    private transient TypeConstant      m_typeUInt128;
-    private transient TypeConstant      m_typeUIntN;
-    private transient TypeConstant      m_typeDec64;
-    private transient TypeConstant      m_typeFloat32;
-    private transient TypeConstant      m_typeFloat64;
-    private transient TypeConstant      m_typeIndexed;
-    private transient TypeConstant      m_typeArray;
-    private transient TypeConstant      m_typeMatrix;
-    private transient TypeConstant      m_typeCollection;
-    private transient TypeConstant      m_typeSet;
-    private transient TypeConstant      m_typeList;
-    private transient TypeConstant      m_typeMap;
-    private transient TypeConstant      m_typeSliceable;
-    private transient TypeConstant      m_typeOrderable;
-    private transient TypeConstant      m_typeSequential;
-    private transient TypeConstant      m_typeNumber;
-    private transient TypeConstant      m_typeFreezable;
-
     /**
      * Discard unused Constants and order the remaining constants so that the most-referred-to
      * Constants occur before the less used constants.
@@ -4233,39 +4071,6 @@ public class ConstantPool
         f_implicits.clear();
         }
 
-    private transient TypeConstant      m_typeRange;
-    private transient TypeConstant      m_typeInterval;
-    private transient TypeConstant      m_typeIterable;
-    private transient TypeConstant      m_typeIterator;
-    private transient TypeConstant      m_typeTuple;
-    private transient TypeConstant      m_typeTuple0;
-    private transient TypeConstant      m_typeCondTuple;
-    private transient TypeConstant      m_typeDate;
-    private transient TypeConstant      m_typeTimeOfDay;
-    private transient TypeConstant      m_typeTime;
-    private transient TypeConstant      m_typeTimeZone;
-    private transient TypeConstant      m_typeDuration;
-    private transient TypeConstant      m_typeVersion;
-    private transient TypeConstant      m_typePath;
-    private transient TypeConstant      m_typeFileStore;
-    private transient TypeConstant      m_typeDirectory;
-    private transient TypeConstant      m_typeFile;
-    private transient TypeConstant      m_typeFileNode;
-    private transient IntConstant       m_val0;
-    private transient SingletonConstant m_valFalse;
-    private transient SingletonConstant m_valTrue;
-    private transient SingletonConstant m_valLesser;
-    private transient SingletonConstant m_valEqual;
-    private transient SingletonConstant m_valGreater;
-    private transient SingletonConstant m_valNull;
-    private transient RegisterConstant  m_valDefault;
-    private transient SignatureConstant m_sigToString;
-    private transient SignatureConstant m_sigEquals;
-    private transient SignatureConstant m_sigCompare;
-    private transient SignatureConstant m_sigClose;
-    private transient SignatureConstant m_sigValidator;
-    private transient TypeInfo          m_infoPlaceholder;
-
     /**
      * A cached and pre-parsed image of the "implicit.x" file.
      */
@@ -4323,6 +4128,44 @@ public class ConstantPool
             }
         }
 
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * An immutable, empty, zero-length array of types.
+     */
+    public static final TypeConstant[] NO_TYPES = TypeConstant.NO_TYPES;
+
+    /**
+     * Storage of Constant objects by index.
+     */
+    private final ArrayList<Constant> m_listConst = new ArrayList<>();
+
+    /**
+     * Reverse lookup structure to find a particular constant by constant.
+     * <p>
+     * This map is not thread-safe and safety is provided via copy-on-write
+     */
+    private volatile EnumMap<Format, Map<Constant, Constant>> m_mapConstants = new EnumMap<>(Format.class);
+
+    /**
+     * Reverse lookup structure to find a particular constant by locator.
+     * <p>
+     * This map is not thread-safe and safety is provided via copy-on-write
+     */
+    private volatile EnumMap<Format, Map<Object, Constant>> m_mapLocators = new EnumMap<>(Format.class);
+
+    /**
+     * Set of references to ConstantPool instances, defining the only ConstantPool references that
+     * may be referred to (directly or indirectly) from constants stored in this pool.
+     */
+    private final Set<ConstantPool> m_setValidPools = Collections.newSetFromMap(new IdentityHashMap<>());
+
+    /**
+     * Tracks whether the ConstantPool should recursively register constants.
+     */
+    private transient boolean m_fRecurseReg;
+
     /**
      * Cache of implicitly imported identities.
      */
@@ -4345,11 +4188,6 @@ public class ConstantPool
     private volatile int m_cInvalidated;
 
     /**
-     * NakedRef is a fundamental formal type that comes from the "_native" module.
-     */
-    private transient TypeConstant m_typeNakedRef;
-
-    /**
      * A cache of TypeInfo for parameterized NakedRef types.
      */
     private final Map<TypeConstant, TypeInfo> f_mapRefTypes = new ConcurrentHashMap<>();
@@ -4359,4 +4197,168 @@ public class ConstantPool
      */
     private static final ThreadLocal<ConstantPool[]> s_tloPool =
             ThreadLocal.withInitial(() -> new ConstantPool[1]);
+
+    /**
+     * NakedRef is a fundamental formal type that comes from the "_native" module.
+     */
+    private transient TypeConstant m_typeNakedRef;
+
+    /**
+     * Often used constants.
+     */
+    private transient ModuleConstant    m_valEcstasy;
+    private transient ClassConstant     m_clzObject;
+    private transient ClassConstant     m_clzInner;
+    private transient ClassConstant     m_clzOuter;
+    private transient ClassConstant     m_clzRef;
+    private transient ClassConstant     m_clzVar;
+    private transient ClassConstant     m_clzClass;
+    private transient ClassConstant     m_clzStruct;
+    private transient ClassConstant     m_clzType;
+    private transient ClassConstant     m_clzConst;
+    private transient ClassConstant     m_clzService;
+    private transient ClassConstant     m_clzModule;
+    private transient ClassConstant     m_clzPackage;
+    private transient ClassConstant     m_clzEnum;
+    private transient ClassConstant     m_clzEnumeration;
+    private transient ClassConstant     m_clzEnumValue;
+    private transient ClassConstant     m_clzException;
+    private transient ClassConstant     m_clzCloseable;
+    private transient ClassConstant     m_clzProperty;
+    private transient ClassConstant     m_clzMethod;
+    private transient ClassConstant     m_clzFunction;
+    private transient ClassConstant     m_clzNullable;
+    private transient ClassConstant     m_clzCollection;
+    private transient ClassConstant     m_clzSet;
+    private transient ClassConstant     m_clzList;
+    private transient ClassConstant     m_clzArray;
+    private transient ClassConstant     m_clzMatrix;
+    private transient ClassConstant     m_clzMap;
+    private transient ClassConstant     m_clzSliceable;
+    private transient ClassConstant     m_clzOrderable;
+    private transient ClassConstant     m_clzTuple;
+    private transient ClassConstant     m_clzCondTuple;
+    private transient ClassConstant     m_clzAuto;
+    private transient ClassConstant     m_clzOp;
+    private transient ClassConstant     m_clzRO;
+    private transient ClassConstant     m_clzFinal;
+    private transient ClassConstant     m_clzInject;
+    private transient ClassConstant     m_clzAbstract;
+    private transient ClassConstant     m_clzAtomic;
+    private transient ClassConstant     m_clzConcurrent;
+    private transient ClassConstant     m_clzSynchronized;
+    private transient ClassConstant     m_clzFuture;
+    private transient ClassConstant     m_clzOverride;
+    private transient ClassConstant     m_clzLazy;
+    private transient ClassConstant     m_clzTest;
+    private transient ClassConstant     m_clzTransient;
+    private transient ClassConstant     m_clzUnassigned;
+    private transient ClassConstant     m_clzVolatile;
+    private transient TypeConstant      m_typeObject;
+    private transient TypeConstant      m_typeInner;
+    private transient TypeConstant      m_typeOuter;
+    private transient TypeConstant      m_typeRef;
+    private transient TypeConstant      m_typeRefRB;
+    private transient TypeConstant      m_typeVar;
+    private transient TypeConstant      m_typeVarRB;
+    private transient TypeConstant      m_typeType;
+    private transient TypeConstant      m_typeStruct;
+    private transient TypeConstant      m_typeClass;
+    private transient TypeConstant      m_typeConst;
+    private transient TypeConstant      m_typeConstRB;
+    private transient TypeConstant      m_typeService;
+    private transient TypeConstant      m_typeServiceRB;
+    private transient TypeConstant      m_typeModule;
+    private transient TypeConstant      m_typeModuleRB;
+    private transient TypeConstant      m_typePackage;
+    private transient TypeConstant      m_typePackageRB;
+    private transient TypeConstant      m_typeEnumRB;
+    private transient TypeConstant      m_typeEnumeration;
+    private transient TypeConstant      m_typeEnumValue;
+    private transient TypeConstant      m_typeException;
+    private transient TypeConstant      m_typeCloseable;
+    private transient TypeConstant      m_typeException१;
+    private transient TypeConstant      m_typeProperty;
+    private transient TypeConstant      m_typeMethod;
+    private transient TypeConstant      m_typeParameter;
+    private transient TypeConstant      m_typeFunction;
+    private transient TypeConstant      m_typeBoolean;
+    private transient TypeConstant      m_typeTrue;
+    private transient TypeConstant      m_typeFalse;
+    private transient TypeConstant      m_typeNullable;
+    private transient TypeConstant      m_typeOrdered;
+    private transient TypeConstant      m_typeNull;
+    private transient TypeConstant      m_typeChar;
+    private transient TypeConstant      m_typeIntLiteral;
+    private transient TypeConstant      m_typeFPLiteral;
+    private transient TypeConstant      m_typeRegEx;
+    private transient TypeConstant      m_typeString;
+    private transient TypeConstant      m_typeStringable;
+    private transient TypeConstant      m_typeStringBuffer;
+    private transient TypeConstant      m_typeString१;
+    private transient TypeConstant      m_typeBit;
+    private transient TypeConstant      m_typeNibble;
+    private transient TypeConstant      m_typeBitArray;
+    private transient TypeConstant      m_typeByteArray;
+    private transient TypeConstant      m_typeBinary;
+    private transient TypeConstant      m_typeInt8;
+    private transient TypeConstant      m_typeInt16;
+    private transient TypeConstant      m_typeInt32;
+    private transient TypeConstant      m_typeInt64;
+    private transient TypeConstant      m_typeInt128;
+    private transient TypeConstant      m_typeIntN;
+    private transient TypeConstant      m_typeUInt8;
+    private transient TypeConstant      m_typeUInt16;
+    private transient TypeConstant      m_typeUInt32;
+    private transient TypeConstant      m_typeUInt64;
+    private transient TypeConstant      m_typeUInt128;
+    private transient TypeConstant      m_typeUIntN;
+    private transient TypeConstant      m_typeDec64;
+    private transient TypeConstant      m_typeFloat32;
+    private transient TypeConstant      m_typeFloat64;
+    private transient TypeConstant      m_typeIndexed;
+    private transient TypeConstant      m_typeArray;
+    private transient TypeConstant      m_typeMatrix;
+    private transient TypeConstant      m_typeCollection;
+    private transient TypeConstant      m_typeSet;
+    private transient TypeConstant      m_typeList;
+    private transient TypeConstant      m_typeMap;
+    private transient TypeConstant      m_typeSliceable;
+    private transient TypeConstant      m_typeOrderable;
+    private transient TypeConstant      m_typeSequential;
+    private transient TypeConstant      m_typeNumber;
+    private transient TypeConstant      m_typeFreezable;
+    private transient TypeConstant      m_typeAutoFreezable;
+    private transient TypeConstant      m_typeRange;
+    private transient TypeConstant      m_typeInterval;
+    private transient TypeConstant      m_typeIterable;
+    private transient TypeConstant      m_typeIterator;
+    private transient TypeConstant      m_typeTuple;
+    private transient TypeConstant      m_typeTuple0;
+    private transient TypeConstant      m_typeCondTuple;
+    private transient TypeConstant      m_typeDate;
+    private transient TypeConstant      m_typeTimeOfDay;
+    private transient TypeConstant      m_typeTime;
+    private transient TypeConstant      m_typeTimeZone;
+    private transient TypeConstant      m_typeDuration;
+    private transient TypeConstant      m_typeVersion;
+    private transient TypeConstant      m_typePath;
+    private transient TypeConstant      m_typeFileStore;
+    private transient TypeConstant      m_typeDirectory;
+    private transient TypeConstant      m_typeFile;
+    private transient TypeConstant      m_typeFileNode;
+    private transient IntConstant       m_val0;
+    private transient SingletonConstant m_valFalse;
+    private transient SingletonConstant m_valTrue;
+    private transient SingletonConstant m_valLesser;
+    private transient SingletonConstant m_valEqual;
+    private transient SingletonConstant m_valGreater;
+    private transient SingletonConstant m_valNull;
+    private transient RegisterConstant  m_valDefault;
+    private transient SignatureConstant m_sigToString;
+    private transient SignatureConstant m_sigEquals;
+    private transient SignatureConstant m_sigCompare;
+    private transient SignatureConstant m_sigClose;
+    private transient SignatureConstant m_sigValidator;
+    private transient TypeInfo          m_infoPlaceholder;
     }
