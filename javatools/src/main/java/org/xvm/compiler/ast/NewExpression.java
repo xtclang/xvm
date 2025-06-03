@@ -221,7 +221,7 @@ public class NewExpression
             errs = ErrorListener.BLACKHOLE;
             }
 
-        TypeConstant typeTarget;
+        TypeConstant typeTarget = null;
         if (body == null)
             {
             if (isVirtualNew())
@@ -233,7 +233,19 @@ public class NewExpression
                 }
             else
                 {
-                typeTarget  = type.ensureTypeConstant(ctx, errs);
+                if (left == null)
+                    {
+                    typeTarget = type.ensureTypeConstant(ctx, errs);
+                    }
+                else
+                    {
+                    TypeConstant typeLeft = left.getImplicitType(ctx).removeImmutable();
+                    if (typeLeft != null && type instanceof NamedTypeExpression exprNameType)
+                        {
+                        typeTarget = typeLeft.ensureTypeInfo(errs).
+                                calculateChildType(pool(), exprNameType.getName());
+                        }
+                    }
                 }
             }
         else
