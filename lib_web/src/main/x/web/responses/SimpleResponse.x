@@ -17,7 +17,7 @@ class SimpleResponse
         this.mediaType = mediaType ?: Json;
         this.bytes     = bytes ?: [];
     } finally {
-        if (mediaType != Null || bytes != Null) {
+        if (!this.bytes.empty) {
             this.body = this;
         }
     }
@@ -96,9 +96,8 @@ class SimpleResponse
 
     @Override
     String toString() {
-        Body? body = this.body;
-        return body != Null && body.bytes.size > 0 && (mediaType == Json || mediaType == Text)
-            ? $"{status} : {body.bytes.unpackUtf8()}"
+        return body != Null && (mediaType == Json || mediaType == Text)
+            ? $"{status} : {bytes.unpackUtf8()}"
             : status.toString();
     }
 }

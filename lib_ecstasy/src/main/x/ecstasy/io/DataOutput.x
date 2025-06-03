@@ -259,7 +259,6 @@ interface DataOutput
      */
     void writeDuration(Duration value) = writeInt128(value.picoseconds);
 
-
     // ----- aliases -------------------------------------------------------------------------------
 
     /**
@@ -271,7 +270,6 @@ interface DataOutput
      * Alias for the `writeUInt64()` method, since the `UInt64` type is aliased as `UInt`.
      */
     static Method<DataOutput, <UInt>, <>> writeUInt = writeUInt64;
-
 
     // ----- helper functions ----------------------------------------------------------------------
 

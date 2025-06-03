@@ -230,8 +230,19 @@ service Dispatcher {
                     }
                 }
 
-                (Int status, String[] names, String[] values, Byte[] body) = Http1Response.prepare(r);
-                requestInfo.respond(status, names, values, body);
+                (Int status, String[] names, String[] values, Int responseLength) =
+                    Http1Response.prepare(r);
+                if (responseLength > 0) {
+                    // fixed size body
+                    requestInfo.respond(status, names, values, r.body?.bytes) : assert;
+                } else if (responseLength < 0) {
+                    // no body
+                    requestInfo.respond(status, names, values, []);
+                } else {
+                    // streaming
+                    requestInfo.setHeaders(status, names, values, 0);
+                    requestInfo.streamBodyBytes(r.body?.bodyReader());
+                }
             });
             return;
         }

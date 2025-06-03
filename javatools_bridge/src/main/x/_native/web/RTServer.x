@@ -210,25 +210,30 @@ service RTServer
         Boolean containsNestedBodies();
         void observe(function void(Int) notify);
         void respond(Int status, String[] headerNames, String[] headerValues, Byte[] body);
+        void setHeaders(Int status, String[] headerNames, String[] headerValues, Int responseLength);
+        void setBodyBytes(Byte[] bytes);
+        void streamBodyBytes(BinaryInput source);
     }
 
     // ----- native implementations all run on the service context ---------------------------------
 
-    private void bindImpl(HostInfo binding, String bindAddr, UInt16 httpPort, UInt16 httpsPort)                = TODO("Native");
+    private void bindImpl(HostInfo binding, String bindAddr, UInt16 httpPort, UInt16 httpsPort)      = TODO("Native");
     private void addRouteImpl(String hostName, UInt16 httpPort, UInt16 httpsPort,
-            HandlerWrapper wrapper, KeyStore? keystore, String? tlsKey)                                        = TODO("Native");
-    private Boolean replaceRouteImpl(String hostName, HandlerWrapper wrapper)                                  = TODO("Native");
-    private void removeRouteImpl(String hostName)                                                              = TODO("Native");
-    (Byte[], UInt16) getReceivedAtAddress(RequestContext context)                                              = TODO("Native");
-    (Byte[], UInt16) getReceivedFromAddress(RequestContext context)                                            = TODO("Native");
-    conditional (String, UInt16) getHostInfo(RequestContext context)                                           = TODO("Native");
-    String getProtocolString(RequestContext context)                                                           = TODO("Native");
-    String[] getHeaderNames(RequestContext context)                                                            = TODO("Native");
-    conditional String[] getHeaderValuesForName(RequestContext context, String name)                           = TODO("Native");
-    Byte[] readBody(RequestContext context, Int size)                                                          = TODO("Native");
-    Boolean containsNestedBodies(RequestContext context)                                                       = TODO("Native");
-    void respond(RequestContext context, Int status, String[] headerNames, String[] headerValues, Byte[] body) = TODO("Native");
-    private void closeImpl()                                                                                   = TODO("Native");
+                              HandlerWrapper wrapper, KeyStore? keystore, String? tlsKey)            = TODO("Native");
+    private Boolean replaceRouteImpl(String hostName, HandlerWrapper wrapper)                        = TODO("Native");
+    private void removeRouteImpl(String hostName)                                                    = TODO("Native");
+    (Byte[], UInt16) getReceivedAtAddress(RequestContext context)                                    = TODO("Native");
+    (Byte[], UInt16) getReceivedFromAddress(RequestContext context)                                  = TODO("Native");
+    conditional (String, UInt16) getHostInfo(RequestContext context)                                 = TODO("Native");
+    String getProtocolString(RequestContext context)                                                 = TODO("Native");
+    String[] getHeaderNames(RequestContext context)                                                  = TODO("Native");
+    conditional String[] getHeaderValuesForName(RequestContext context, String name)                 = TODO("Native");
+    Byte[] readBody(RequestContext context, Int size)                                                = TODO("Native");
+    Boolean containsNestedBodies(RequestContext context)                                             = TODO("Native");
+    void setHeaders(RequestContext context, Int status, String[] headerNames, String[] headerValues,
+                    Int responseLength)                                                              = TODO("Native");
+    void setBodyBytes(RequestContext context, Byte[] bytes, Boolean final)                           = TODO("Native");
+    private void closeImpl()                                                                         = TODO("Native");
 
     // ----- internal classes ----------------------------------------------------------------------
 

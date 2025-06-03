@@ -110,7 +110,7 @@ annotation WebService(String path, Version? currentVer = Null, Version? defaultV
         assert this.request == Null;
         this.request = request;
         try {
-            return handle(request).freeze(True);
+            return handle(request).freeze(True); // TODO GG move ".freeze()" into the "handle" and add support for streaming there
         } catch (RequestAborted e) {
             return e.makeResponse();
         } catch (Exception e) {
@@ -119,6 +119,13 @@ annotation WebService(String path, Version? currentVer = Null, Version? defaultV
             this.request = Null;
         }
     }
+
+    /**
+     * A virtual child class that wraps the specified BinaryInput as a service (part of *this*
+     * service).
+     */
+    class BinaryInputProxy(BinaryInput source)
+            delegates BinaryInput(source);
 
     /**
      * For components -- including the application's [Authenticator](security.Authenticator) and

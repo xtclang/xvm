@@ -334,6 +334,48 @@ interface HttpServer
          *                    exception; it is important to understand that the lack of an exception
          *                    does **not** indicate a successful response to a client
          */
-        void respond(Int status, String[] headerNames, String[] headerValues, Byte[] body);
+        void respond(Int status, String[] headerNames, String[] headerValues, Byte[] body) {
+            setHeaders(status, headerNames, headerValues, body.empty ? -1 : body.size);
+            setBodyBytes(body);
+        }
+
+        /**
+         * Instruct the server to add the specified headers to a response to a previously received
+         * request.
+         *
+         * @param status          the response `Status-Code`, as defined by rfc2616
+         * @param headerNames     an array of `field-name` strings, each as defined by rfc2616
+         * @param headerValues    an array of `field-value` corresponding to `headerNames`
+         * @param responseLength  if positive, specifies a fixed response body length;
+         *                        if negative, then there is no response body;
+         *                        if zero, then chunked encoding is used, and any number of bytes
+         *                        may be written using [setBodyBytes] method
+         */
+        void setHeaders(Int status, String[] headerNames, String[] headerValues,
+                        Int responseLength);
+
+        /**
+         * Instruct the server to add the specified body to a response to a previously received
+         * request.
+         *
+         * @param bytes  the content of the body
+         *
+         * @throws Exception  if a response cannot be sent for any reason, this call _may_ raise an
+         *                    exception; it is important to understand that the lack of an exception
+         *                    does **not** indicate a successful response to a client
+         */
+        void setBodyBytes(Byte[] bytes);
+
+        /**
+         * Instruct the server to add the specified body to a response to a previously received
+         * request.
+         *
+         * @param @param source  the `BinaryInput` that provides the bytes of the body
+         *
+         * @throws Exception  if a response cannot be sent for any reason, this call _may_ raise an
+         *                    exception; it is important to understand that the lack of an exception
+         *                    does **not** indicate a successful response to a client
+         */
+        void streamBodyBytes(BinaryInput source);
     }
 }

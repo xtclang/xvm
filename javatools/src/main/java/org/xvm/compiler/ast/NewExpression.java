@@ -465,9 +465,7 @@ public class NewExpression
 
                 if (typeResult != null)
                     {
-                    if (!typeResult.isVirtualChild() ||
-                        !typeResult.getParentType().getDefiningConstant().equals(
-                            typeLeft.getDefiningConstant()))
+                    if (!typeResult.isVirtualChild() || !typeLeft.isA(typeResult.getParentType()))
                         {
                         log(errs, Severity.ERROR, Compiler.NEW_UNRELATED_PARENT,
                                 typeResult.getValueString(), typeLeft.getValueString());

@@ -1,7 +1,7 @@
 import ecstasy.fs.FileChannel;
 
 /**
- * The FileOutputStream is an implementation of an OutputStream on top of a [File].
+ * The FileOutputStream is an implementation of an [OutputStream] on top of a [File].
  */
  class FileOutputStream(File file)
         implements OutputStream {

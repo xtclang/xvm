@@ -187,18 +187,30 @@ module Hello {
                 return "<No data>";
             }
 
-            @StreamingRequest
             @Get("stream{/name}")
-            HttpStatus streamOut(RequestIn request, String name) {
+            ResponseOut|HttpStatus streamOut(String name) {
                 @Inject Directory curDir;
                 File file = curDir.fileFor(name);
-                if (file.exists) {
-                    ResponseOut response = TODO("new StreamingResponse()");
-                    assert Body body ?= response.body;
-                    body.streamBodyFrom(new FileInputStream(file));
-                } else {
-                    return NotFound;
-                }
+                return file.exists
+                    ? new StreamResponse(OK, source=new FileInputStream(file))
+                    : NotFound;
+            }
+
+            @StreamingResponse // TODO not yet implemented
+            @Get("streamF{/name}")
+            File streamOutFile(String name) {
+                @Inject Directory curDir;
+                return curDir.fileFor(name);
+            }
+
+            @StreamingResponse // TODO not yet implemented
+            @Get("streamS{/name}")
+            BinaryInput|HttpStatus streamOutStream(String name) {
+                @Inject Directory curDir;
+                File file = curDir.fileFor(name);
+                return file.exists
+                    ? new FileInputStream(file)
+                    : NotFound;
             }
 
             @Default @Get

@@ -245,14 +245,22 @@ module web.xtclang.org {
             into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
-     * This annotation, `@StreamingResponse`, is used to mark a web service call -- or any
-     * containing class thereof, up to the level of the web module itself -- as **not** requiring
-     * the content of the outgoing HTTP response to be fully buffered. This allows the web server
-     * implementation to save memory by streaming the content, instead of holding it entirely in
-     * memory before starting to send it back to the client.
+     * This annotation, `@StreamingResponse`, is used to mark a web service endpoint as **not**
+     * requiring the content of the outgoing HTTP response to be fully buffered, in order to save
+     * server resources. Streaming requires the endpoint to return either a [File] or a
+     * [BinaryInput]. This allows the web server implementation to save memory by streaming the
+     * content, instead of holding it entirely in memory before starting to send it back to the
+     * client. For example:
+     *
+     *     @StreamingResponse
+     *     @Get("stream{/name}")
+     *     File streamOut(String name) {
+     *         @Inject Directory curDir;
+     *         return curDir.fileFor(name);
+     *     }
      */
     annotation StreamingResponse
-            into Class<WebApp> | Class<WebService> | Endpoint;
+            into Endpoint;
 
     // ----- handler method annotations ------------------------------------------------------------
 

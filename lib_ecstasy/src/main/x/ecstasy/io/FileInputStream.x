@@ -18,7 +18,6 @@ class FileInputStream(File file)
         construct PrefetchBufferInput(() -> channel.read() ?: Empty);
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -30,7 +29,6 @@ class FileInputStream(File file)
      * The underlying file channel.
      */
     protected FileChannel channel;
-
 
     // ----- InputStream interface -----------------------------------------------------------------
 

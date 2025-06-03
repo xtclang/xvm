@@ -108,7 +108,8 @@ public class xRTServer
         markNativeMethod("addRouteImpl"    , null, VOID);
         markNativeMethod("removeRouteImpl" , null, VOID);
         markNativeMethod("replaceRouteImpl", null, BOOLEAN);
-        markNativeMethod("respond"         , null, VOID);
+        markNativeMethod("setHeaders"      , null, VOID);
+        markNativeMethod("setBodyBytes"    , null, VOID);
         markNativeMethod("closeImpl"       , VOID, VOID);
 
         markNativeMethod("getReceivedAtAddress",   null, null);
@@ -195,9 +196,15 @@ public class xRTServer
                 assert frame.f_context == hServer.f_context;
                 return invokeReplaceRoute(frame, hServer, ahArg, iReturn);
 
-            case "respond":
+            case "setHeaders":
                 return frame.f_context == hServer.f_context
-                        ? invokeRespond(frame, ahArg)
+                        ? invokeSetHeaders(frame, ahArg)
+                        : xRTFunction.makeAsyncNativeHandle(method).
+                                call1(frame, hServer, ahArg, iReturn);
+
+            case "setBodyBytes":
+                return frame.f_context == hServer.f_context
+                        ? invokeSetBodyBytes(frame, ahArg)
                         : xRTFunction.makeAsyncNativeHandle(method).
                                 call1(frame, hServer, ahArg, iReturn);
 
@@ -558,7 +565,7 @@ public class xRTServer
             {
             InputStream in    = hCtx.f_exchange.getRequestBody();
             byte[]      ab    = in.readNBytes((int) Math.min(cb, Integer.MAX_VALUE));
-            return frame.assignValue(iResult, ab.length <= 0
+            return frame.assignValue(iResult, ab.length == 0
                     ? xByteArray.ensureEmptyByteArray()
                     : xByteArray.makeByteArrayHandle(ab, Mutability.Constant));
             }
@@ -613,36 +620,46 @@ public class xRTServer
         }
 
     /**
-     * Implementation of "respond(
-     *   RequestContext ctx, Int status, String[] headerNames, String[] headerValues, Byte[] body)"
-     * method.
+     * Implementation of "void setHeaders(RequestContext context, Int status, String[] names,
+     *                                    String[] values, Int responseLength)" method.
      */
-    private int invokeRespond(Frame frame, ObjectHandle[] ahArg)
+    private int invokeSetHeaders(Frame frame, ObjectHandle[] ahArg)
         {
         HttpExchange      exchange      = ((HttpContextHandle) ahArg[0]).f_exchange;
         long              nStatus       = ((JavaLong) ahArg[1]).getValue();
         StringArrayHandle hHeaderNames  = (StringArrayHandle) ((ArrayHandle) ahArg[2]).m_hDelegate;
         StringArrayHandle hHeaderValues = (StringArrayHandle) ((ArrayHandle) ahArg[3]).m_hDelegate;
-        ArrayHandle       hBody         = (ArrayHandle) ahArg[4];
-        byte[]            abBody        = xByteArray.getBytes(hBody);
-        int               cbBody        = abBody.length;
+        long              nLength       = ((JavaLong) ahArg[4]).getValue();
+
+        Headers headers = exchange.getResponseHeaders();
+        for (long i = 0, c = hHeaderNames.m_cSize; i < c; i++)
+            {
+            headers.add(hHeaderNames.get(i), hHeaderValues.get(i));
+            }
 
         try
             {
-            Headers headers = exchange.getResponseHeaders();
-            for (long i = 0, c = hHeaderNames.m_cSize; i < c; i++)
-                {
-                headers.add(hHeaderNames.get(i), hHeaderValues.get(i));
-                }
-
-            exchange.sendResponseHeaders((int) nStatus, cbBody > 0 ? cbBody : -1);
+            exchange.sendResponseHeaders((int) nStatus, (int) nLength);
+            return Op.R_NEXT;
             }
         catch (IOException e)
             {
             return frame.raiseException(xException.obscureIoException(frame, e.getMessage()));
             }
+        }
 
-        if (cbBody > 0)
+    /**
+     * Implementation of "void setBodyBytes(RequestContext context, Byte[] bytes, Boolean final)"
+     * method.
+     */
+    private int invokeSetBodyBytes(Frame frame, ObjectHandle[] ahArg)
+        {
+        HttpExchange exchange = ((HttpContextHandle) ahArg[0]).f_exchange;
+        ArrayHandle  hBody    = (ArrayHandle) ahArg[1];
+        boolean      fFinal   = ((BooleanHandle) ahArg[2]).get();
+
+        byte[] abBody = xByteArray.getBytes(hBody);
+        if (abBody.length > 0)
             {
             try (OutputStream out = exchange.getResponseBody())
                 {
@@ -650,8 +667,14 @@ public class xRTServer
                 }
             catch (Throwable e)
                 {
+                exchange.close();
                 return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
                 }
+            }
+
+        if (fFinal)
+            {
+            exchange.close();
             }
         return Op.R_NEXT;
         }

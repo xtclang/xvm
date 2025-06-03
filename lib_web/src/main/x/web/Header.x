@@ -44,6 +44,7 @@ interface Header
     static String LastModified           = "Last-Modified";
     static String Location               = "Location";
     static String Origin                 = "Origin";
+    static String TransferEncoding       = "Transfer-Encoding";
     static String UserAgent              = "User-Agent";
     static String Vary                   = "Vary";
     static String WWWAuthenticate        = "WWW-Authenticate";

@@ -44,6 +44,12 @@ interface Body
     Byte[] bytes;
 
     /**
+     * If `True`, indicates that the body's content is not easily or efficiently fully realizable in
+     * memory, and that the body should be streamed if possible.
+     */
+    @RO Boolean streaming;
+
+    /**
      * Fill in the body's content from the specified object content.
      *
      * @param content  an object that can be mapped to this body's [mediaType] via a codec
@@ -89,11 +95,12 @@ interface Body
      * a stream that contains the bytes of the body.
      *
      * By using this method, it may be possible for the body to be streamed without having to buffer
-     * the entire body in memory.
+     * the entire body in memory. The actual streaming action may be deferred until the request is
+     * fully processed.
      *
-     * @param source  the `InputStream` that provides the bytes of the body
+     * @param source  the `BinaryInput` that provides the bytes of the body
      */
-    void streamBodyFrom(InputStream source) {
-        bytes = source.readBytes(source.size);
+    void streamBodyFrom(BinaryInput source) {
+        bytes = source.readBytes(MaxValue);
     }
 }

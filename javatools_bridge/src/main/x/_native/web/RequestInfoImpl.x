@@ -422,12 +422,30 @@ service RequestInfoImpl(RTServer       server,
 
     @Override
     void respond(Int status, String[] headerNames, String[] headerValues, Byte[] body) {
-        server.respond(context, status, headerNames, headerValues, body);
+        server.setHeaders(context, status, headerNames, headerValues, body.empty ? -1 : body.size);
+        server.setBodyBytes(context, body, final=True);
         for (Notify notify : observers) {
             try {
                 notify(status);
             } catch (Exception ignore) {}
         }
+    }
+
+    @Override
+    void setHeaders(Int status, String[] headerNames, String[] headerValues, Int responseLength) =
+            server.setHeaders(context, status, headerNames, headerValues, responseLength);
+
+    @Override
+    void setBodyBytes(Byte[] bytes) = server.setBodyBytes(context, bytes, final=True);
+
+    @Override
+    void streamBodyBytes(BinaryInput source) {
+        do {
+            Int     chunkSize = source.available.notLessThan(1Kib);
+            Byte[]  chunk     = source.readBytes(chunkSize);
+            Boolean final     = chunk.size < chunkSize;
+            server.setBodyBytes(context, chunk, final);
+        } while (!final);
     }
 
     @Override

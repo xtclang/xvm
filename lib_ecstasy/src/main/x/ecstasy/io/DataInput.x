@@ -207,7 +207,6 @@ interface DataInput
      */
     Duration readDuration() = new Duration(readInt128());
 
-
     // ----- aliases -------------------------------------------------------------------------------
 
     /**
@@ -219,7 +218,6 @@ interface DataInput
      * Alias for the `readUInt64()` method, since the `UInt64` type is aliased as `UInt`.
      */
     static Method<DataInput, <>, <UInt>> readUInt = readUInt64;
-
 
     // ----- helper functions ----------------------------------------------------------------------
 
