@@ -918,11 +918,14 @@ public class MethodDeclarationStatement
      */
     private boolean validateOverride(ClassStructure clzParent, MethodStructure method, ErrorListener errs)
         {
-        if (method.isConstructor())
+        if (method.isConstructor() ||
+                clzParent.getIdentityConstant().equals(pool().clzObject()))
             {
             // we don't collect the constructor chains in the TypeInfo, so the check below wouldn't
             // work; we may need to improve this and use logic similar to the special "super"
-            // processing in InvocationExpression.resolveName()
+            // processing in InvocationExpression.resolveName();
+            // also, we exempt Object.x from the validation due to a "chicken and egg" issue with
+            // Object extending Comparable interface
             return true;
             }
 

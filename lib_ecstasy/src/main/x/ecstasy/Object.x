@@ -23,7 +23,7 @@ interface Object
      * in equality only if they are the same [Object] instance, but more correctly two [Object]s are
      * equal iff the two [Object]s share the same [reference Identity](Ref.Identity).
      */
-    // TODO GG: @Override
+    @Override
     static <CompileType extends Object> Boolean equals(CompileType o1, CompileType o2) {
         return &o1 == &o2;
     }

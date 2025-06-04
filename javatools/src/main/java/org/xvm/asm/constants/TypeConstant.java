@@ -4328,7 +4328,8 @@ public abstract class TypeConstant
                                 }
                             }
                         }
-                    else if (fSelf && bodyContribTail.isOverride())
+                    else if (fSelf && bodyContribTail.isOverride() &&
+                            !constId.equals(pool.clzObject()))
                         {
                         log(errs, Severity.ERROR, VE_SUPER_MISSING,
                                 methodContrib.getIdentity().getPathString(),
