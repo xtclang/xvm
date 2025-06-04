@@ -32,8 +32,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * PresentCondition} is used.
  */
 public class VersionedCondition
-        extends ConditionalConstant
-    {
+        extends ConditionalConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -42,11 +41,10 @@ public class VersionedCondition
      * @param pool       the ConstantPool that will contain this Constant
      * @param constVer   the version of this Module to evaluate
      */
-    public VersionedCondition(ConstantPool pool, VersionConstant constVer)
-        {
+    public VersionedCondition(ConstantPool pool, VersionConstant constVer) {
         super(pool);
         m_constVer  = constVer;
-        }
+    }
 
     /**
      * Constructor used for deserialization.
@@ -58,18 +56,16 @@ public class VersionedCondition
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public VersionedCondition(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
 
         m_iVer = readMagnitude(in);
-        }
+    }
 
     @Override
-    protected void resolveConstants()
-        {
+    protected void resolveConstants() {
         m_constVer = (VersionConstant) getConstantPool().getConstant(m_iVer);
-        }
+    }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
@@ -79,143 +75,124 @@ public class VersionedCondition
      *
      * @return the version that is required
      */
-    public Version getVersion()
-        {
+    public Version getVersion() {
         return m_constVer.getVersion();
-        }
+    }
 
     /**
      * Obtain the version of the current module that the condition is predicated on.
      *
      * @return the constant for the version that is required
      */
-    public VersionConstant getVersionConstant()
-        {
+    public VersionConstant getVersionConstant() {
         return m_constVer;
-        }
+    }
 
 
     // ----- ConditionalConstant methods -----------------------------------------------------------
 
     @Override
-    public boolean evaluate(LinkerContext ctx)
-        {
+    public boolean evaluate(LinkerContext ctx) {
         return ctx.isVersion(m_constVer);
-        }
+    }
 
     @Override
-    public boolean isTerminal()
-        {
+    public boolean isTerminal() {
         return true;
-        }
+    }
 
     @Override
-    public Set<Version> versions()
-        {
+    public Set<Version> versions() {
         return Collections.singleton(m_constVer.getVersion());
-        }
+    }
 
     @Override
-    public ConditionalConstant addVersion(Version ver)
-        {
-        if (ver.equals(getVersion()))
-            {
+    public ConditionalConstant addVersion(Version ver) {
+        if (ver.equals(getVersion())) {
             return this;
-            }
+        }
 
         ConstantPool pool = getConstantPool();
         return new AnyCondition(pool, this, pool.ensureVersionedCondition(ver));
-        }
+    }
 
     @Override
-    public ConditionalConstant removeVersion(Version ver)
-        {
+    public ConditionalConstant removeVersion(Version ver) {
         return ver.equals(getVersion())
                 ? null
                 : this;
-        }
+    }
 
     @Override
-    public Relation calcRelation(ConditionalConstant that)
-        {
-        if (that instanceof VersionedCondition)
-            {
+    public Relation calcRelation(ConditionalConstant that) {
+        if (that instanceof VersionedCondition) {
             Version verThis = this.m_constVer.getVersion();
             Version verThat = ((VersionedCondition) that).m_constVer.getVersion();
 
             return verThis.isSameAs(verThat)
                     ? Relation.EQUIV
                     : Relation.MUTEX;
-            }
+        }
 
         return Relation.INDEP;
-        }
+    }
 
     @Override
     protected boolean isTerminalInfluenceFinessable(boolean fInNot,
-            Set<ConditionalConstant> setSimple, Set<ConditionalConstant> setComplex)
-        {
+            Set<ConditionalConstant> setSimple, Set<ConditionalConstant> setComplex) {
         // versions are only finessed when they are in simple ANDs/ORs; no attempt is made to
         // finesse them under a NOT
         return !fInNot && super.isTerminalInfluenceFinessable(fInNot, setSimple, setComplex);
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.ConditionVersioned;
-        }
+    }
 
     @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
+    public void forEachUnderlying(Consumer<Constant> visitor) {
         visitor.accept(m_constVer);
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof VersionedCondition constThat))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof VersionedCondition constThat)) {
             return -1;
-            }
-        return m_constVer.compareTo(constThat.m_constVer);
         }
+        return m_constVer.compareTo(constThat.m_constVer);
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return "isVersion(" + m_constVer.getValueString() + ')';
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         m_constVer = (VersionConstant) pool.register(m_constVer);
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constVer.getPosition());
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_constVer);
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -229,4 +206,4 @@ public class VersionedCondition
      * A ModuleConstant, PackageConstant, ClassConstant, PropertyConstant, or MethodConstant.
      */
     private VersionConstant m_constVer;
-    }
+}

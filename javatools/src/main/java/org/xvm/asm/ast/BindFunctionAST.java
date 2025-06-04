@@ -20,8 +20,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Bind function's arguments.
  */
 public class BindFunctionAST
-        extends ExprAST
-    {
+        extends ExprAST {
     private ExprAST      target;
     private int[]        indexes;
     private ExprAST[]    args;

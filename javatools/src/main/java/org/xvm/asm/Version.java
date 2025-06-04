@@ -31,51 +31,51 @@ public class Version
         Numbers: while (ix < cLen) {
             char ch = sLiteral.charAt(ix);
             switch (ch) {
-                case '0': case '1': case '2': case '3': case '4':
-                case '5': case '6': case '7': case '8': case '9':
-                    int n = 0;
-                    do {
-                        if (n > 200000000) {
-                            sErr = "version number overflow";
-                            break Numbers;
-                        }
-                        n = n * 10 + (sLiteral.charAt(ix++) - '0');
-                    } while (ix < cLen && isDigit(sLiteral.charAt(ix)));
-                    listParts.add(n);
-                    requiredNumber = false;
-                    break;
-
-                case '.':
-                case '-':
-                    if (requiredNumber || ix == 0) {
-                        sErr = "number expected; '" + ch + "' found";
+            case '0': case '1': case '2': case '3': case '4':
+            case '5': case '6': case '7': case '8': case '9':
+                int n = 0;
+                do {
+                    if (n > 200000000) {
+                        sErr = "version number overflow";
                         break Numbers;
                     }
-                    ix++;
-                    requiredNumber = true;
-                    break;
+                    n = n * 10 + (sLiteral.charAt(ix++) - '0');
+                } while (ix < cLen && isDigit(sLiteral.charAt(ix)));
+                listParts.add(n);
+                requiredNumber = false;
+                break;
 
-                case 'A':
-                case 'a':
-                case 'B':
-                case 'b':
-                case 'C':
-                case 'c':
-                case 'D':
-                case 'd':
-                case 'Q':
-                case 'q':
-                case 'R':
-                case 'r':
-                    requiredNumber = false;
+            case '.':
+            case '-':
+                if (requiredNumber || ix == 0) {
+                    sErr = "number expected; '" + ch + "' found";
                     break Numbers;
+                }
+                ix++;
+                requiredNumber = true;
+                break;
 
-                case '+':
-                    break Numbers;
+            case 'A':
+            case 'a':
+            case 'B':
+            case 'b':
+            case 'C':
+            case 'c':
+            case 'D':
+            case 'd':
+            case 'Q':
+            case 'q':
+            case 'R':
+            case 'r':
+                requiredNumber = false;
+                break Numbers;
 
-                default:
-                    sErr = "unknown version component " + quotedString(sLiteral.substring(ix));
-                    break Numbers;
+            case '+':
+                break Numbers;
+
+            default:
+                sErr = "unknown version component " + quotedString(sLiteral.substring(ix));
+                break Numbers;
             }
         }
 
@@ -86,49 +86,49 @@ public class Version
         if (sErr == null && ix < cLen) {
             String expectedWord = null;
             switch (sLiteral.charAt(ix)) {
-                case 'A':
-                case 'a':
-                    listParts.add(-3);
-                    expectedWord = "alpha";
-                    break;
+            case 'A':
+            case 'a':
+                listParts.add(-3);
+                expectedWord = "alpha";
+                break;
 
-                case 'B':
-                case 'b':
-                    listParts.add(-2);
-                    expectedWord = "beta";
-                    break;
+            case 'B':
+            case 'b':
+                listParts.add(-2);
+                expectedWord = "beta";
+                break;
 
-                case 'C':
-                case 'c':
-                    listParts.add(-6);
-                    expectedWord = "ci";
-                    break;
+            case 'C':
+            case 'c':
+                listParts.add(-6);
+                expectedWord = "ci";
+                break;
 
-                case 'D':
-                case 'd':
-                    listParts.add(-5);
-                    expectedWord = "dev";
-                    break;
+            case 'D':
+            case 'd':
+                listParts.add(-5);
+                expectedWord = "dev";
+                break;
 
-                case 'Q':
-                case 'q':
-                    listParts.add(-4);
-                    expectedWord = "qa";
-                    break;
+            case 'Q':
+            case 'q':
+                listParts.add(-4);
+                expectedWord = "qa";
+                break;
 
-                case 'R':
-                case 'r':
-                    listParts.add(-1);
-                    expectedWord = "rc";
-                    break;
+            case 'R':
+            case 'r':
+                listParts.add(-1);
+                expectedWord = "rc";
+                break;
 
-                case '+':
-                    // the "build string" is handled later
-                    break;
+            case '+':
+                // the "build string" is handled later
+                break;
 
-                default:
-                    sErr = "illegal character " + quotedChar(sLiteral.charAt(ix));
-                    break;
+            default:
+                sErr = "illegal character " + quotedChar(sLiteral.charAt(ix));
+                break;
             }
 
             if (expectedWord != null) {

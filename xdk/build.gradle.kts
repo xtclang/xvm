@@ -1,5 +1,4 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE
-import XdkDistribution.Companion.JAVATOOLS_INSTALLATION_NAME
 import XdkDistribution.Companion.JAVATOOLS_PREFIX_PATTERN
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
@@ -45,6 +44,7 @@ val xdkProvider by configurations.registering {
 
 dependencies {
     xdkJavaTools(libs.javatools)
+    xdkJavaTools(libs.javatools.jitbridge)
     xtcModule(libs.xdk.ecstasy)
     xtcModule(libs.xdk.aggregate)
     xtcModule(libs.xdk.cli)
@@ -185,13 +185,13 @@ val test by tasks.existing {
 val ensureTags by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Ensure that the current commit is tagged with the current version."
-    
+
     // Capture values during configuration phase to avoid runtime project access
     val snapshotOnly = snapshotOnly()
     val currentVersion = semanticVersion
     val gitHubProtocol = xdkBuildLogic.gitHubProtocol()
     val logPrefix = prefix  // Capture prefix to avoid project access during execution
-    
+
     if (!allowPublication()) {
         logger.lifecycle("$logPrefix Skipping publication task, snapshotOnly=${snapshotOnly} for version: '$currentVersion")
     }
@@ -214,8 +214,8 @@ val ensureTags by tasks.registering {
 /**
  * Creates distribution contents based on a distribution name, version and classifier.
  * This logic is used for the nain distribution artifact (named "xdk"), and the contents
- * has been broken out into this function so that we can easily generate ore installations
- * and distributions with slightly different contents, for example, based o OS, and with
+ * has been broken out into this function so that we can easily generate other installations
+ * and distributions with slightly different contents, for example, based on the OS, and with
  * an OS specific launcher already in "bin".
  */
 private fun Distribution.contentSpec(distName: String, distVersion: String, distClassifier: String = "", installLaunchers: Boolean = false) {

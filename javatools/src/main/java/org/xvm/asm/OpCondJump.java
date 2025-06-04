@@ -258,11 +258,9 @@ public abstract class OpCondJump
     protected String getLabelDesc() {
         if (m_opDest instanceof Label) {
             return ((Label) m_opDest).getName();
-        }
-        else if (m_ofJmp != 0) {
+        } else if (m_ofJmp != 0) {
             return (m_ofJmp > 0 ? "+" : "") + m_ofJmp;
-        }
-        else if (m_opDest != null) {
+        } else if (m_opDest != null) {
             return "-> " + m_opDest;
         } else {
             return "???";

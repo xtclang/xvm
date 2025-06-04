@@ -18,8 +18,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Represent an octet string (string of unsigned 8-bit bytes) constant.
  */
 public class UInt8ArrayConstant
-        extends ValueConstant
-    {
+        extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -32,15 +31,14 @@ public class UInt8ArrayConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public UInt8ArrayConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
 
         int    cb = readMagnitude(in);
         byte[] ab = new byte[cb];
         in.readFully(ab);
         m_abVal = ab;
-        }
+    }
 
     /**
      * Construct a constant whose value is an octet string. Note that this constructor does not make
@@ -49,22 +47,20 @@ public class UInt8ArrayConstant
      * @param pool   the ConstantPool that will contain this Constant
      * @param abVal  the octet string value
      */
-    public UInt8ArrayConstant(ConstantPool pool, byte[] abVal)
-        {
+    public UInt8ArrayConstant(ConstantPool pool, byte[] abVal) {
         super(pool);
 
         assert abVal != null;
         m_abVal = abVal;
-        }
+    }
 
 
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return getConstantPool().typeBinary();
-        }
+    }
 
     /**
      * {@inheritDoc}
@@ -72,75 +68,65 @@ public class UInt8ArrayConstant
      *          returned value as immutable
      */
     @Override
-    public byte[] getValue()
-        {
+    public byte[] getValue() {
         return m_abVal;
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.UInt8Array;
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof UInt8ArrayConstant))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof UInt8ArrayConstant)) {
             return -1;
-            }
+        }
         byte[] abThis = this.m_abVal;
         byte[] abThat = ((UInt8ArrayConstant) that).m_abVal;
 
         int cbThis  = abThis.length;
         int cbThat  = abThat.length;
-        for (int of = 0, cb = Math.min(cbThis, cbThat); of < cb; ++of)
-            {
-            if (abThis[of] != abThat[of])
-                {
+        for (int of = 0, cb = Math.min(cbThis, cbThat); of < cb; ++of) {
+            if (abThis[of] != abThat[of]) {
                 return (abThis[of] & 0xFF) - (abThat[of] & 0xFF);
-                }
             }
-        return cbThis - cbThat;
         }
+        return cbThis - cbThat;
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return byteArrayToHexString(m_abVal);
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         final byte[] ab = m_abVal;
         writePackedLong(out, ab.length);
         out.write(ab);
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "byte-string=" + getValueString();
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    protected int computeHashCode()
-        {
+    protected int computeHashCode() {
         return Hash.of(m_abVal);
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -149,4 +135,4 @@ public class UInt8ArrayConstant
      * The constant octet string value stored as a <tt>byte[]</tt>.
      */
     private final byte[] m_abVal;
-    }
+}

@@ -1,23 +1,38 @@
 package org.xvm.javajit;
 
+import java.lang.classfile.ClassBuilder;
+import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassHierarchyResolver;
 
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.lang.classfile.attribute.SourceFileAttribute;
+
+import java.lang.constant.ClassDesc;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
+import org.xvm.asm.Component.Contribution;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.FileStructure;
-import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.TypeConstant;
 
-import static org.xvm.asm.Constants.ECSTASY_MODULE;
-import static org.xvm.asm.Constants.NATIVE_MODULE;
-import static org.xvm.asm.Constants.TURTLE_MODULE;
-import static org.xvm.javajit.Xvm.StructureByModuleId;
+import org.xvm.javajit.builders.CommonBuilder;
+import org.xvm.javajit.builders.FunctionBuilder;
+import org.xvm.javajit.builders.ModuleBuilder;
+
+import org.xvm.util.ListMap;
+
 import static org.xvm.util.Handy.require;
-
 
 /**
  * As part of the Ecstasy JIT implementation targeting the JVM, this class represents an Ecstasy
@@ -86,59 +101,6 @@ import static org.xvm.util.Handy.require;
  */
 public class TypeSystem {
     /**
-     * Construct the core TypeSystem for the hidden "Container -1".
-     *
-     * @param xvm   the XVM
-     * @param repo  the ModuleRepository to load the core Ecstasy modules from
-     */
-    TypeSystem(Xvm xvm, ModuleRepository repo) {
-        require("xvm", xvm);
-        require("repo", repo);
-
-        ModuleStructure ecstasy = repo.loadModule(ECSTASY_MODULE);
-        ModuleStructure turtle  = repo.loadModule(TURTLE_MODULE);
-        ModuleStructure _native = repo.loadModule(NATIVE_MODULE);
-
-        if (ecstasy == null || turtle == null || _native == null) {
-            throw new IllegalStateException("missing core module");
-        }
-
-        if (!ecstasy.isRefined() || !turtle.isRefined() || !_native.isRefined()) {
-            throw new IllegalStateException("unrefined core module");
-        }
-
-        FileStructure fs = new FileStructure(ecstasy, true);
-        fs.merge(turtle, true, false);
-        fs.merge(_native, true, false);
-        ModuleConstant missing = fs.linkModules(repo, true);
-        if (missing != null) {
-            throw new IllegalStateException("missing core module: " + missing.getName());
-        }
-
-        ConstantPool pool = fs.getConstantPool();
-        try (var ignore = ConstantPool.withPool(pool)) {
-            if (pool.getNakedRefType() == null) {
-                turtle = fs.getChild(TURTLE_MODULE);
-                ClassStructure clzNakedRef = (ClassStructure) turtle.getChild("NakedRef");
-                pool.setNakedRefType(clzNakedRef.getFormalType());
-            }
-        }
-
-        // build a list of modules that will compose the core aka native TypeSystem
-        // note: use children() because ensureChildByNameMap() is always empty (TODO GG?)
-        ArrayList<ModuleStructure> list = new ArrayList<>(fs.children());
-        list.sort(StructureByModuleId);
-        ModuleLoader[]    shared = new ModuleLoader[0];
-        ModuleStructure[] owned  = list.toArray(new ModuleStructure[0]);
-
-        this.xvm    = xvm;
-        this.name   = xvm.generateTypeSystemName(shared, owned);
-        this.loader = new TypeSystemLoader(this, name, shared, owned);
-        this.shared = loader.shared;
-        this.owned  = loader.owned;
-    }
-
-    /**
      * Create a new TypeSystem. This should ONLY be called from the Linker.
      *
      * @param xvm     the XVM
@@ -152,7 +114,7 @@ public class TypeSystem {
         require("owned", owned);
 
         this.xvm    = xvm;
-        this.name   = xvm.generateTypeSystemName(shared, owned);
+        this.name   = xvm.generateTypeSystemName(shared, owned, this instanceof NativeTypeSystem);
         this.loader = new TypeSystemLoader(this, name, shared, owned);
         this.shared = loader.shared;
         this.owned  = loader.owned;
@@ -186,6 +148,107 @@ public class TypeSystem {
     public final ModuleLoader[] owned;
 
     /**
+     * A cache of function JIT class names keyed by the function types.
+     */
+    protected final Map<TypeConstant, String> functionClasses = new ConcurrentHashMap<>();
+
+    /**
+     * A cache of function types keyed by the corresponding JIT function class suffix ("$N").
+     */
+    protected final Map<String, TypeConstant> functionTypes = new ConcurrentHashMap<>();
+
+    /**
+     * A list of constants that are registered by the JIT compiler to be accessed by the run-time.
+     */
+    protected final ListMap<Constant, Integer> constantsRegistry = new ListMap<>(1024);
+
+    /**
+     * @return the ConstantPool associated with this TypeSystem
+     */
+    public ConstantPool pool() {
+        // TODO should there be a separate ConstantPool created for this type system when there are only shared modules? i.e. is there a FileStructure?
+        return owned.length == 0 ? xvm.ecstasyPool /* <-- TODO wrong */ : owned[0].module.getConstantPool();
+    }
+
+    /**
+     * Find the ConstantPool that "owns" the specified signature.
+     */
+    public ConstantPool findOwnerPool(SignatureConstant sig) {
+        ConstantPool thisPool = pool();
+
+        // try to go "up" towards the root Ecstasy type system to see if anyone "above" us fully
+        // "knows" about the specified constant
+        for (ModuleLoader loader : shared) {
+            ConstantPool thatPool = loader.module.getConstantPool();
+            if (thatPool != thisPool && sig.isShared(thatPool)) {
+                return loader.typeSystem.findOwnerPool(sig);
+            }
+        }
+
+        // if we can't go up, then we have to fully "know" the constant (i.e. there is no "down")
+        assert sig.isShared(thisPool);
+        return thisPool;
+    }
+
+    /**
+     * Find the ModuleLoader that "owns" (i.e. will assemble the class for) the specified type.
+     *
+     * @param type  a type with {@link TypeConstant#isSingleUnderlyingClass single underlying class}
+     */
+    public ModuleLoader findOwnerLoader(TypeConstant type) {
+        ConstantPool thisPool = pool();
+
+        // try to go "up" towards the root Ecstasy type system to see if anyone "above" us fully
+        // "knows" about the specified constant
+        for (ModuleLoader loader : shared) {
+            ConstantPool thatPool = loader.module.getConstantPool();
+            if (thatPool != thisPool && type.isShared(thatPool)) {
+                return loader.typeSystem.findOwnerLoader(type);
+            }
+        }
+
+        // if we can't go up, then we have to fully "know" the constant (i.e. there is no "down")
+        assert type.isShared(thisPool);
+
+        // select the module which is responsible for assembling the class for the type
+        IdentityConstant id     = type.getSingleUnderlyingClass(true);
+        ModuleConstant   module = id.getModuleConstant();
+
+        for (ModuleLoader loader : owned) {
+            if (loader.module.getIdentityConstant().equals(module)) {
+                return loader;
+            }
+        }
+
+        throw new IllegalStateException("No owner loader for " + type);
+    }
+
+    /**
+     * Find the ModuleLoader that "owns" (i.e. will assemble the class for) the specified class name.
+     */
+    public ModuleLoader findOwnerLoader(String name) {
+        for (ModuleLoader loader : owned) {
+            if (name.startsWith(loader.prefix)) {
+                return loader;
+            }
+        }
+
+        for (ModuleLoader loader : shared) {
+            if (name.startsWith(loader.prefix)) {
+                return loader;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @return the main ModuleStructure associated with this TypeSystem
+     */
+    public ModuleStructure mainModule() {
+        return owned.length == 0 ? null : owned[0].module;
+    }
+
+    /**
      * Create a Linker in order to create a new TypeSystem that is an extension of this type system.
      *
      * @return a new Linker, primed with the contents of this TypeSystem
@@ -199,15 +262,204 @@ public class TypeSystem {
      * convention for how it is constructed, and that convention is well understood by the
      * TypeSystem (because that name was created by the TypeSystem).
      *
-     * @param module  the ModuleStructure that contains the structure information for the class
-     * @param prefix  the Java package prefix used for the module
-     * @param name    the full Java class name to create
+     * @param moduleLoader the ModuleLoader that contains the structure information for the
+     *                     containing module and all its classes
+     * @param name         the suffix of the Java class name to create (sans the module prefix)
      *
      * @return the bytes of the ClassFile for the specified class name
      */
-    public byte[] genClass(ModuleStructure module, String prefix, String name) {
+    public byte[] genClass(ModuleLoader moduleLoader, String name) {
+        String className = moduleLoader.prefix + name;
+        if (className.startsWith(Builder.N_xFunction)) {
+            TypeConstant fnType = functionTypes.get(className.substring(Builder.N_xFunction.length() + 1));
+            assert fnType != null;
+            return ClassFile.of().
+                build(ClassDesc.of(className), classBuilder ->
+                    new FunctionBuilder(this, fnType).assemblePure(className, classBuilder));
+        }
+
+        Artifact art = deduceArtifact(moduleLoader.module, name);
+        if (art != null) {
+            if (art.id.getComponent() instanceof ClassStructure clz) {
+                TypeConstant type      = clz.getCanonicalType();
+                Builder      builder   = ensureBuilder(type);
+                Consumer<? super ClassBuilder> handler = classBuilder -> {
+                    classBuilder.with(SourceFileAttribute.of(clz.getSourceFileName()));
+                    switch (art.shape) {
+                        case Impl:
+                            builder.assembleImpl(className, classBuilder);
+                            break;
+
+                        default:
+                            throw new UnsupportedOperationException();
+                    }
+                };
+
+                // There are other options that can be useful:
+                //     StackMapsOption.GENERATE_STACK_MAPS
+                //     DeadCodeOption.PATCH_DEAD_CODE
+                //     DebugElementsOption.DROP_DEBUG
+                //     LineNumbersOption.DROP_LINE_NUMBERS
+                // TODO: force some of them or make configurable
+                ClassFile classFile = ClassFile.of(
+                    ClassFile.ClassHierarchyResolverOption.of(
+                        ClassHierarchyResolver.ofClassLoading(loader))
+                );
+
+                return classFile.build(ClassDesc.of(className), handler);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @return a builder for the specified type
+     */
+    protected Builder ensureBuilder(TypeConstant type) {
+        ConstantPool pool = pool();
+        if (type.isA(pool.typeModule())) {
+            // it's definitely not Module, since this is not the native TypeSystem
+            assert !type.equals(pool.typeModule());
+            return new ModuleBuilder(this, type);
+        }
+        return new CommonBuilder(this, type);
+    }
+
+    /**
+     * Jit class shapes.
+     */
+    public enum ClassfileShape {
+        Pure  ("i$"),
+        Proxy ("p$"),
+        Duck  ("d$"),
+        Mask  ("m$"),
+        Future("f$"),
+        Impl  (""), // needs to be last
+        ;
+
+        ClassfileShape(String prefix) {
+            this.prefix = prefix;
+        }
+
+        public final String prefix;
+    }
+
+    public record Artifact(IdentityConstant id, ClassfileShape shape) {}
+
+    public Artifact deduceArtifact(ModuleStructure module, String name) {
+        if (name.equals("$module")) {
+            return new Artifact(module.getIdentityConstant(), ClassfileShape.Impl);
+        }
+
+        for (ClassfileShape shape : ClassfileShape.values()) {
+            if (name.startsWith(shape.prefix)) {
+                if (shape != ClassfileShape.Impl) {
+                    name = name.substring(2); // all other suffixes are of the length 2
+                }
+                if (module.getChildByPath(name.replace('$', '.')) instanceof ClassStructure struct) {
+                    return new Artifact(struct.getIdentityConstant(), shape);
+                }
+            }
+        }
+        return null;
+    }
+
+    public Artifact deduceArtifact(ModuleStructure module, String prefix, String name) {
         // TODO
         return null;
     }
+
+    public Set<ClassfileShape> expectedClassfileShape(Component component) {
+        // TODO
+        return null;
+    }
+
+    public ModuleLoader loaderForComponent(IdentityConstant id) {
+        // TODO
+        return null;
+    }
+
+    public String classfileNameForComponent(IdentityConstant id, ClassfileShape shape) {
+        // TODO
+        return null;
+    }
+
+    /**
+     * Ensure a unique Java class name for the specified Ecstasy type.
+     */
+    public String ensureJitClassName(TypeConstant type) {
+        if (type.isSingleUnderlyingClass(true)) {
+            if (type.isA(pool().typeFunction())) {
+                // Jit class name for functions has format of "xFunction.$n"
+
+                String name = functionClasses.computeIfAbsent(type, t -> {
+                    String suffix =
+                        (t.getParamTypesArray().length == 0 // degenerated "function void()"
+                            ? "$0"
+                            : xvm.createUniqueSuffix(""));
+                    functionTypes.putIfAbsent(suffix, type);
+                    return Builder.N_xFunction + '$' + suffix;
+                });
+                return name;
+            }
+
+            ConstantPool pool = pool();
+            if (type.isTypeOfType()) {
+                return pool.typeType().ensureJitClassName(this);
+            }
+
+            if (type.isA(pool.typeClass())) {
+                return pool.typeClass().ensureJitClassName(this);
+            }
+
+            ClassStructure structure = (ClassStructure)
+                type.getSingleUnderlyingClass(true).getComponent();
+
+            List<Contribution> condIncorporates = structure.collectConditionalIncorporates(type);
+            TypeConstant       canonicalType;
+            if (condIncorporates == null) {
+                canonicalType = structure.getCanonicalType();
+            } else {
+                // TODO: implement conditional class name computation
+                // System.err.println("Not implemented: conditional incorporates for " + type);
+                canonicalType = structure.getCanonicalType();
+            }
+
+            return canonicalType.ensureJitClassName(this);
+        }
+        throw new IllegalArgumentException("No JIT class for " + type.getValueString());
+    }
+
+    /**
+     * Register a constant to be used by the runtime. The returned index is going to be stable for
+     * the lifetime of the TypeSystem.
+     *
+     * @param constant  the constant to register
+     *
+     * @return the index of the constant
+     */
+    public synchronized int registerConstant(Constant constant) {
+        ListMap<Constant, Integer> registry = constantsRegistry;
+        Integer                    index    = registry.get(constant);
+        if (index == null) {
+            int size = registry.size();
+            registry.put(constant, size);
+            return size;
+        } else {
+            return index;
+        }
+    }
+
+    /**
+     * Retrieve a constant at the specified index.
+     *
+     * Note: this operation doesn't have to be synchronized since even when the underlying array
+     * growth occurs, the old list still contains the corresponding entry at the right place.
+     */
+    public Constant getConstant(int index) {
+        return constantsRegistry.entryAt(index).getKey();
+    }
 }
+
+
 

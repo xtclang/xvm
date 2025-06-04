@@ -15,8 +15,7 @@ import org.xvm.util.Hash;
  * Represent a 16-bit "brain" binary floating point constant.
  */
 public class BFloat16Constant
-        extends ValueConstant
-    {
+        extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -29,11 +28,10 @@ public class BFloat16Constant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public BFloat16Constant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
         m_flVal = toFloat(in.readUnsignedShort());
-        }
+    }
 
     /**
      * Construct a constant whose value is a 16-bit binary floating point.
@@ -41,15 +39,13 @@ public class BFloat16Constant
      * @param pool   the ConstantPool that will contain this Constant
      * @param flVal  the floating point value
      */
-    public BFloat16Constant(ConstantPool pool, float flVal)
-        {
+    public BFloat16Constant(ConstantPool pool, float flVal) {
         super(pool);
-        if (Float.isFinite(flVal) && !Float.isFinite(toFloat(toHalf(flVal))))
-            {
+        if (Float.isFinite(flVal) && !Float.isFinite(toFloat(toHalf(flVal)))) {
             throw new IllegalArgumentException("value out of range: " + flVal);
-            }
-        m_flVal = flVal;
         }
+        m_flVal = flVal;
+    }
 
 
     // ----- type-specific methods -----------------------------------------------------------------
@@ -61,10 +57,9 @@ public class BFloat16Constant
      *
      * @return the sum, as a BFloat16Constant
      */
-    public BFloat16Constant add(BFloat16Constant that)
-        {
+    public BFloat16Constant add(BFloat16Constant that) {
         return getConstantPool().ensureBFloat16Constant(this.m_flVal + that.m_flVal);
-        }
+    }
 
 
     // ----- ValueConstant methods -----------------------------------------------------------------
@@ -74,67 +69,58 @@ public class BFloat16Constant
      * @return  the constant's value as a Java Float
      */
     @Override
-    public Float getValue()
-        {
+    public Float getValue() {
         return Float.valueOf(m_flVal);
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.BFloat16;
-        }
+    }
 
     @Override
-    protected Object getLocator()
-        {
+    protected Object getLocator() {
         return getValue();
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof BFloat16Constant))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof BFloat16Constant)) {
             return -1;
-            }
-        return Float.compare(this.m_flVal, ((BFloat16Constant) that).m_flVal);
         }
+        return Float.compare(this.m_flVal, ((BFloat16Constant) that).m_flVal);
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return Float.toString(m_flVal);
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         out.writeShort(toHalf(m_flVal));
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "value=" + getValueString();
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_flVal);
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -147,10 +133,9 @@ public class BFloat16Constant
      *
      * @return a 32-bit float
      */
-    public static float toFloat(int nHalf)
-        {
+    public static float toFloat(int nHalf) {
         return Float.intBitsToFloat(nHalf << 16);
-        }
+    }
 
     /**
      * Convert a "full precision" 32-bit float to a 16-bit "half precision" floating point value.
@@ -160,14 +145,13 @@ public class BFloat16Constant
      * @return a 16-bit floating point value stored in a 16-bit Java int, whose bits are encoded
      *         using the IEEE-754 binary-radix floating point format
      */
-    public static int toHalf(float flVal)
-        {
+    public static int toHalf(float flVal) {
         // this "magic number" rounds the result instead of truncating it
         flVal *= 1.001957f;
 
         int fbits = Float.floatToIntBits(flVal);
         return fbits >>> 16;
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -176,4 +160,4 @@ public class BFloat16Constant
      * The constant value, stored as a 32-bit float.
      */
     private final float m_flVal;
-    }
+}
