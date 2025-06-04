@@ -22,6 +22,9 @@ import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.javajit.Container;
+import org.xvm.javajit.JitConnector;
+import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.Xvm;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
@@ -337,15 +340,7 @@ public class Runner
         log(Severity.INFO, "Executing " + sName + " from " + binLocDesc);
         try
             {
-            Connector connector;
-            if (jit) {
-                // TODO make a JitConnector
-                Xvm xvm = new Xvm(repo);
-                // TODO
-                connector = new Connector(repo);
-            } else {
-                connector = new Connector(repo);
-            }
+            Connector connector = jit ? new JitConnector(repo) : new Connector(repo);
             connector.loadModule(module.getName());
             connector.start(options.getInjections());
 
