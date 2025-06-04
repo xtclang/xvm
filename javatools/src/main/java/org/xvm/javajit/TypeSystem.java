@@ -2,7 +2,6 @@ package org.xvm.javajit;
 
 
 import java.util.ArrayList;
-import java.util.Iterator;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
