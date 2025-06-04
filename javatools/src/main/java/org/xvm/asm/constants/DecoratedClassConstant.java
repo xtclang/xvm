@@ -21,8 +21,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * @see TypeConstant#isDecoratedClass()
  */
 public class DecoratedClassConstant
-        extends IdentityConstant
-    {
+        extends IdentityConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -35,11 +34,10 @@ public class DecoratedClassConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public DecoratedClassConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
         m_iType = readMagnitude(in);
-        }
+    }
 
     /**
      * Construct a constant whose value is a class identifier.
@@ -47,168 +45,145 @@ public class DecoratedClassConstant
      * @param pool  the ConstantPool that will contain this Constant
      * @param type  the Class type
      */
-    public DecoratedClassConstant(ConstantPool pool, TypeConstant type)
-        {
+    public DecoratedClassConstant(ConstantPool pool, TypeConstant type) {
         super(pool);
 
         assert type.isSingleDefiningConstant();
         m_type = type;
-        }
+    }
 
     @Override
-    protected void resolveConstants()
-        {
+    protected void resolveConstants() {
         m_type = (TypeConstant) getConstantPool().getConstant(m_iType);
         super.resolveConstants();
-        }
+    }
 
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
-    public IdentityConstant replaceParentConstant(IdentityConstant idParent)
-        {
+    public IdentityConstant replaceParentConstant(IdentityConstant idParent) {
         return this;
-        }
+    }
 
     /**
      * @return the IdentityConstant that this DecoratedClassConstant represents a class of
      */
-    IdentityConstant getClassIdentityConstant()
-        {
+    IdentityConstant getClassIdentityConstant() {
         return (IdentityConstant) m_type.getDefiningConstant();
-        }
+    }
 
     @Override
-    public String getName()
-        {
+    public String getName() {
         return getClassIdentityConstant().getName();
-        }
+    }
 
     /**
      * @return true iff this class is a virtual child class
      */
-    public boolean isVirtualChild()
-        {
+    public boolean isVirtualChild() {
         return m_type.isVirtualChild();
-        }
+    }
 
     @Override
-    public Component getComponent()
-        {
+    public Component getComponent() {
         return getClassIdentityConstant().getComponent();
-        }
+    }
 
     @Override
-    public IdentityConstant getParentConstant()
-        {
+    public IdentityConstant getParentConstant() {
         return isVirtualChild()
                 ? getConstantPool().ensureClassConstant(m_type.getParentType())
                 : getClassIdentityConstant().getParentConstant();
-        }
+    }
 
     @Override
-    public TypeConstant getFormalType()
-        {
+    public TypeConstant getFormalType() {
         return getType();
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.DecoratedClass;
-        }
+    }
 
     @Override
-    public boolean isClass()
-        {
+    public boolean isClass() {
         return true;
-        }
+    }
 
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return m_type;
-        }
+    }
 
     @Override
-    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)
-        {
+    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that) {
         ConstantPool pool = that.getConstantPool();
         return pool.ensureClassConstant(that, getName());
-        }
+    }
 
     @Override
-    public boolean containsUnresolved()
-        {
+    public boolean containsUnresolved() {
         return !isHashCached() && m_type.containsUnresolved();
-        }
+    }
 
     @Override
-    protected Object getLocator()
-        {
+    protected Object getLocator() {
         return m_type;
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof DecoratedClassConstant))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof DecoratedClassConstant)) {
             return -1;
-            }
+        }
 
         return this.m_type.compareTo(((DecoratedClassConstant) that).m_type);
-        }
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return getType().getValueString();
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         m_type = (TypeConstant) pool.register(m_type);
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-        throws IOException
-        {
+        throws IOException {
         super.assemble(out);
         writePackedLong(out, m_type.getPosition());
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         Constant constParent = getNamespace();
-        while (constParent instanceof ClassConstant)
-            {
+        while (constParent instanceof ClassConstant) {
             constParent = ((ClassConstant) constParent).getNamespace();
-            }
+        }
 
         return constParent == null
             ? "class=" + getValueString()
             : "class=" + getValueString() + ", " + constParent.getDescription();
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_type);
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -223,4 +198,4 @@ public class DecoratedClassConstant
      * The Class type.
      */
     TypeConstant m_type;
-    }
+}

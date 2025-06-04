@@ -5,8 +5,7 @@ package org.xvm.asm;
 /**
  * Represents XVM structures that can contain their own documentation.
  */
-public interface Documentable
-    {
+public interface Documentable {
     /**
      * Obtain the documentation for the item.
      *
@@ -20,4 +19,4 @@ public interface Documentable
      * @param sDoc  the documentation, or null to indicate no documentation
      */
     void setDocumentation(String sDoc);
-    }
+}

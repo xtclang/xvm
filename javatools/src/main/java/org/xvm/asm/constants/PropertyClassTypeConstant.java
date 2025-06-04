@@ -41,22 +41,21 @@ import static org.xvm.util.Handy.writePackedLong;
  *     &#64;Lazy String prop.calc()
  *         {
  *         return "hello";
- *         }
+ *     }
  *     static void test()
  *         {
  *         Outer o = new Outer();
  *         Ref&lt;String> ref = o.&amp;p;
  *         ...
- *         }
  *     }
+ * }
  * </code></pre>
  *
  * The run-time type of the variable ref above is {@code PropertyClassType(T1, "prop")}, where T1
  * is TerminalTypeConstant(Outer).
  */
 public class PropertyClassTypeConstant
-        extends AbstractDependantTypeConstant
-    {
+        extends AbstractDependantTypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -66,22 +65,19 @@ public class PropertyClassTypeConstant
      * @param typeParent  the parent's type
      * @param idProp      the property id
      */
-    public PropertyClassTypeConstant(ConstantPool pool, TypeConstant typeParent, PropertyConstant idProp)
-        {
+    public PropertyClassTypeConstant(ConstantPool pool, TypeConstant typeParent, PropertyConstant idProp) {
         super(pool, typeParent);
 
         // unlike VirtualChildConstant, it's never unresolved
-        if (typeParent.containsUnresolved())
-            {
+        if (typeParent.containsUnresolved()) {
             throw new IllegalArgumentException("parent must be a resolved type");
-            }
-        if (idProp == null)
-            {
+        }
+        if (idProp == null) {
             throw new IllegalArgumentException("property is required");
-            }
+        }
 
         m_idProp = idProp;
-        }
+    }
 
     /**
      * Constructor used for deserialization.
@@ -93,144 +89,123 @@ public class PropertyClassTypeConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public PropertyClassTypeConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool, format, in);
 
         m_iProp = readIndex(in);
-        }
+    }
 
     @Override
-    protected void resolveConstants()
-        {
+    protected void resolveConstants() {
         super.resolveConstants();
 
         m_idProp = (PropertyConstant) getConstantPool().getConstant(m_iProp);
-        }
+    }
 
     /**
      * @return the property id
      */
-    public PropertyConstant getProperty()
-        {
+    public PropertyConstant getProperty() {
         return m_idProp;
-        }
+    }
 
     /**
      * @return the PropertyInfo associated with this type
      */
-    public PropertyInfo getPropertyInfo()
-        {
+    public PropertyInfo getPropertyInfo() {
         PropertyInfo info = m_info;
-        if (info == null)
-            {
+        if (info == null) {
             TypeConstant typeParent = m_typeParent;
-            if (typeParent.isSingleDefiningConstant() && !typeParent.isFormalType())
-                {
+            if (typeParent.isSingleDefiningConstant() && !typeParent.isFormalType()) {
                 typeParent = typeParent.ensureAccess(Access.PRIVATE);
-                }
+            }
             m_info = info = typeParent.ensureTypeInfo().findProperty(m_idProp);
             assert info != null;
-            }
-        return info;
         }
+        return info;
+    }
 
     /**
      * @return the property ref type
      */
-    public TypeConstant getRefType()
-        {
+    public TypeConstant getRefType() {
         return getPropertyInfo().getBaseRefType();
-        }
+    }
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    public boolean isShared(ConstantPool poolOther)
-        {
+    public boolean isShared(ConstantPool poolOther) {
         return super.isShared(poolOther) && m_idProp.isShared(poolOther);
-        }
+    }
 
     @Override
-    public int getMaxParamsCount()
-        {
+    public int getMaxParamsCount() {
         return 0;
-        }
+    }
 
     @Override
-    public Constant getDefiningConstant()
-        {
+    public Constant getDefiningConstant() {
         return getPropertyInfo().getIdentity();
-        }
+    }
 
     @Override
-    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
-        {
+    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type) {
         return pool.ensurePropertyClassTypeConstant(type, m_idProp);
-        }
+    }
 
     @Override
     public ResolutionResult resolveContributedName(
-            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector)
-        {
+            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
         return ResolutionResult.UNKNOWN;
-        }
+    }
 
     @Override
-    public TypeConstant resolveTypedefs()
-        {
+    public TypeConstant resolveTypedefs() {
         return this;
-        }
+    }
 
     @Override
-    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
-        {
+    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver) {
         return this;
-        }
+    }
 
     @Override
-    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
-        {
+    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams) {
         return this;
-        }
+    }
 
     @Override
-    public TypeConstant[] collectGenericParameters()
-        {
+    public TypeConstant[] collectGenericParameters() {
         // property class type is not formalizable
         return null;
-        }
+    }
 
     @Override
-    public boolean extendsClass(IdentityConstant constClass)
-        {
+    public boolean extendsClass(IdentityConstant constClass) {
         PropertyConstant idProp = (PropertyConstant) getDefiningConstant();
         return idProp.getType().extendsClass(constClass);
-        }
+    }
 
     @Override
-    public Category getCategory()
-        {
+    public Category getCategory() {
         return Category.OTHER;
-        }
+    }
 
     @Override
-    public boolean isSingleUnderlyingClass(boolean fAllowInterface)
-        {
+    public boolean isSingleUnderlyingClass(boolean fAllowInterface) {
         return false;
-        }
+    }
 
     @Override
-    public boolean containsGenericParam(String sName)
-        {
+    public boolean containsGenericParam(String sName) {
         return "Referent".equals(sName)
             || m_typeParent.containsGenericParam(sName);
-        }
+    }
 
     @Override
-    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
-        {
+    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams) {
         TypeConstant type = "Referent".equals(sName) && listParams.isEmpty()
                 ? m_idProp.getType()
                 : null;
@@ -240,51 +215,44 @@ public class PropertyClassTypeConstant
                 : type.containsGenericType(true)
                     ? type.resolveGenerics(getConstantPool(), m_typeParent)
                     : type;
-        }
+    }
 
     @Override
-    public boolean isConst()
-        {
+    public boolean isConst() {
         return false;
-        }
+    }
 
     @Override
-    protected Relation calculateRelationToLeft(TypeConstant typeLeft)
-        {
+    protected Relation calculateRelationToLeft(TypeConstant typeLeft) {
         return getRefType().calculateRelationToLeft(typeLeft);
-        }
+    }
 
     @Override
-    protected Relation calculateRelationToRight(TypeConstant typeRight)
-        {
+    protected Relation calculateRelationToRight(TypeConstant typeRight) {
         return getRefType().calculateRelationToRight(typeRight);
-        }
+    }
 
     @Override
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
-                                               boolean fFunction, List<TypeConstant> listParams)
-        {
+                                               boolean fFunction, List<TypeConstant> listParams) {
         return getRefType().containsSubstitutableMethod(signature, access, fFunction, listParams);
-        }
+    }
 
     @Override
-    protected Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
-        {
+    protected Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams) {
         return Usage.NO;
-        }
+    }
 
     @Override
-    protected Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
-        {
+    protected Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams) {
         return Usage.NO;
-        }
+    }
 
 
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
-    protected TypeInfo buildTypeInfo(ErrorListener errs)
-        {
+    protected TypeInfo buildTypeInfo(ErrorListener errs) {
         ConstantPool   pool     = getConstantPool();
         int            cInvals  = pool.getInvalidationCount();
         PropertyInfo   infoProp = getPropertyInfo();
@@ -300,32 +268,28 @@ public class PropertyClassTypeConstant
         TypeInfo         infoBase = null;
         IdentityConstant idBase   = null;
         TypeConstant     typeBase = null;
-        for (int i = aBody.length - 1; i >= 0; i--)
-            {
+        for (int i = aBody.length - 1; i >= 0; i--) {
             PropertyBody body = aBody[i];
 
-            if (i != 0 && body.getExistence() != MethodBody.Existence.Class)
-                {
+            if (i != 0 && body.getExistence() != MethodBody.Existence.Class) {
                 continue;
-                }
+            }
 
-            if (infoBase == null)
-                {
+            if (infoBase == null) {
                 TypeConstant typeRef = infoProp.getBaseRefType().removeAutoNarrowing();
 
                 typeBase = pool.ensureAccessTypeConstant(typeRef, Access.PROTECTED);
                 infoBase = typeBase.ensureTypeInfoInternal(errs);
-                if (!isComplete(infoBase))
-                    {
+                if (!isComplete(infoBase)) {
                     return null;
-                    }
+                }
                 idBase = (IdentityConstant) typeRef.getDefiningConstant();
 
                 mapProps      .putAll(infoBase.getProperties());
                 mapMethods    .putAll(infoBase.getMethods());
                 mapVirtProps  .putAll(infoBase.getVirtProperties());
                 mapVirtMethods.putAll(infoBase.getVirtMethods());
-                }
+            }
 
             TypeConstant                        typeContrib;
             Map<PropertyConstant, PropertyInfo> mapContribProps;
@@ -333,8 +297,7 @@ public class PropertyClassTypeConstant
             ListMap<String      , ChildInfo   > mapContribChildren;
 
             boolean fSelf = i == 0;
-            if (fSelf)
-                {
+            if (fSelf) {
                 typeContrib        = this;
                 mapContribProps    = new HashMap<>();
                 mapContribMethods  = new HashMap<>();
@@ -346,79 +309,66 @@ public class PropertyClassTypeConstant
                 collectChildInfo(idBase, false, prop, mapTypeParams,
                     mapContribProps, mapContribMethods, mapContribChildren, listExplode, 0, 0, errs);
 
-                if (!listExplode.isEmpty())
-                    {
+                if (!listExplode.isEmpty()) {
                     // TODO: explode properties
-                    }
+                }
 
                 if (mapContribProps.isEmpty() && mapContribMethods.isEmpty() &&
-                        mapContribChildren.isEmpty())
-                    {
+                        mapContribChildren.isEmpty()) {
                     // nothing has been added
                     return infoBase;
-                    }
+                }
 
-                if (!mapContribProps.isEmpty())
-                    {
+                if (!mapContribProps.isEmpty()) {
                     // process properties by moving them to the base ref level
                     Map<PropertyConstant, PropertyInfo> mapContrib = new HashMap<>(mapContribProps.size());
-                    for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
-                        {
+                    for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet()) {
                         PropertyConstant idContrib = entry.getKey();
                         PropertyConstant idReplace = pool.ensurePropertyConstant(idBase, idContrib.getName());
                         mapContrib.put(idReplace, entry.getValue());
-                        }
-                    mapContribProps = mapContrib;
                     }
+                    mapContribProps = mapContrib;
+                }
 
-                if (!mapContribMethods.isEmpty())
-                    {
+                if (!mapContribMethods.isEmpty()) {
                     // process methods by moving them to the base ref level
                     Map<MethodConstant, MethodInfo> mapContrib = new HashMap<>(mapContribMethods.size());
-                    for (Map.Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
-                        {
+                    for (Map.Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet()) {
                         MethodConstant idContrib = entry.getKey();
                         MethodConstant idReplace = pool.ensureMethodConstant(idBase, idContrib.getSignature());
                         mapContrib.put(idReplace, entry.getValue());
-                        }
+                    }
                     mapContribMethods = mapContrib;
-                    }
                 }
-            else
-                {
+            } else {
                 typeContrib = body.getIdentity().getRefType(null);
-                if (!(typeContrib instanceof PropertyClassTypeConstant))
-                    {
+                if (!(typeContrib instanceof PropertyClassTypeConstant)) {
                     continue;
-                    }
+                }
                 TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(errs);
-                if (!isComplete(infoContrib))
-                    {
+                if (!isComplete(infoContrib)) {
                     return null;
-                    }
+                }
 
                 mapContribProps    = infoContrib.getProperties();
                 mapContribMethods  = infoContrib.getMethods();
                 mapContribChildren = infoContrib.getChildInfosByName();
-                }
+            }
 
-            if (!mapContribProps.isEmpty())
-                {
+            if (!mapContribProps.isEmpty()) {
                 layerOnProps(idBase, fSelf, null, mapProps, mapVirtProps, typeContrib,
                         mapContribProps, errs);
-                }
+            }
 
-            if (!mapContribMethods.isEmpty())
-                {
+            if (!mapContribMethods.isEmpty()) {
                 layerOnMethods(idBase, fSelf ? ContribSource.Self : ContribSource.Regular, null,
                         mapMethods, mapVirtMethods, typeContrib, mapContribMethods, errs);
-                }
-
-            if (!mapContribChildren.isEmpty())
-                {
-                // TODO process children
-                }
             }
+
+            if (!mapContribChildren.isEmpty()) {
+                // TODO process children
+            }
+        }
 
         return new TypeInfo(this, cInvals, infoBase.getClassStructure(),
                 idBase.getNestedDepth() + 1, false, mapTypeParams,
@@ -426,85 +376,75 @@ public class PropertyClassTypeConstant
                 Collections.emptyList(), ListMap.EMPTY, ListMap.EMPTY,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
                 null, TypeInfo.Progress.Complete);
-        }
+    }
 
 
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
-    public ClassTemplate getTemplate(Container container)
-        {
+    public ClassTemplate getTemplate(Container container) {
         return getRefType().getTemplate(container);
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.PropertyClassType;
-        }
+    }
 
     @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
+    public void forEachUnderlying(Consumer<Constant> visitor) {
         super.forEachUnderlying(visitor);
 
         visitor.accept(m_idProp);
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant obj)
-        {
+    protected int compareDetails(Constant obj) {
         int n = super.compareDetails(obj);
-        if (n == 0)
-            {
-            if (!(obj instanceof PropertyClassTypeConstant that))
-                {
+        if (n == 0) {
+            if (!(obj instanceof PropertyClassTypeConstant that)) {
                 return -1;
-                }
+            }
 
             n = this.m_idProp.compareTo(that.m_idProp);
-            }
-        return n;
         }
+        return n;
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return m_typeParent.getValueString() + '.' + m_idProp.getName();
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 
         m_idProp = (PropertyConstant) pool.register(m_idProp);
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         super.assemble(out);
 
         writePackedLong(out, m_idProp.getPosition());
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    protected int computeHashCode()
-        {
+    protected int computeHashCode() {
         return Hash.of(m_typeParent,
                Hash.of(m_idProp));
-        }
+    }
 
 
     // ----- data fields ---------------------------------------------------------------------------
@@ -523,4 +463,4 @@ public class PropertyClassTypeConstant
      * Cached property info.
      */
     private transient PropertyInfo m_info;
-    }
+}

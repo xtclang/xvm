@@ -288,8 +288,7 @@ public class JumpVal
             if (algorithm.isNative()) {
                 if (hCase.isNativeEqual()) {
                     mapJump.put(hCase, Integer.valueOf(iCase));
-                }
-                else if (fRange) {
+                } else if (fRange) {
                     if (addRange((GenericHandle) hCase, iCase)) {
                         algorithm = Algorithm.NativeRange;
                     } else {

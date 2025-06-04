@@ -15,8 +15,7 @@ import org.xvm.util.Hash;
  * Represent a 64-bit binary floating point constant.
  */
 public class Float64Constant
-        extends ValueConstant
-    {
+        extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -29,11 +28,10 @@ public class Float64Constant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public Float64Constant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
         m_dflVal = in.readDouble();
-        }
+    }
 
     /**
      * Construct a constant whose value is a 64-bit binary floating point.
@@ -41,11 +39,10 @@ public class Float64Constant
      * @param pool    the ConstantPool that will contain this Constant
      * @param dflVal  the floating point value
      */
-    public Float64Constant(ConstantPool pool, double dflVal)
-        {
+    public Float64Constant(ConstantPool pool, double dflVal) {
         super(pool);
         m_dflVal = dflVal;
-        }
+    }
 
 
     // ----- type-specific methods -----------------------------------------------------------------
@@ -57,10 +54,9 @@ public class Float64Constant
      *
      * @return the sum, as a Float64Constant
      */
-    public Float64Constant add(Float64Constant that)
-        {
+    public Float64Constant add(Float64Constant that) {
         return getConstantPool().ensureFloat64Constant(this.m_dflVal + that.m_dflVal);
-        }
+    }
 
 
     // ----- ValueConstant methods -----------------------------------------------------------------
@@ -70,67 +66,58 @@ public class Float64Constant
      * @return  the constant's value as a Java Double
      */
     @Override
-    public Double getValue()
-        {
+    public Double getValue() {
         return Double.valueOf(m_dflVal);
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.Float64;
-        }
+    }
 
     @Override
-    protected Object getLocator()
-        {
+    protected Object getLocator() {
         return getValue();
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof Float64Constant))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof Float64Constant)) {
             return -1;
-            }
-        return Double.compare(this.m_dflVal, ((Float64Constant) that).m_dflVal);
         }
+        return Double.compare(this.m_dflVal, ((Float64Constant) that).m_dflVal);
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return Double.toString(m_dflVal);
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         out.writeDouble(m_dflVal);
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "value=" + getValueString();
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_dflVal);
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -139,4 +126,4 @@ public class Float64Constant
      * The constant value.
      */
     private final double m_dflVal;
-    }
+}

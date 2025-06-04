@@ -21,8 +21,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Represent a range of two constant values.
  */
 public class RangeConstant
-        extends ValueConstant
-    {
+        extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -33,28 +32,24 @@ public class RangeConstant
      * @param const2  the value of the second constant
      */
     public RangeConstant(ConstantPool pool, Constant const1, boolean fExclude1,
-                                            Constant const2, boolean fExclude2)
-        {
+                                            Constant const2, boolean fExclude2) {
         super(pool);
 
-        if (const1 == null)
-            {
+        if (const1 == null) {
             throw new IllegalArgumentException("value 1 required");
-            }
-        if (const2 == null)
-            {
+        }
+        if (const2 == null) {
             throw new IllegalArgumentException("value 2 required");
-            }
-        if (const1.getFormat() != const2.getFormat() && !const1.getType().equals(const2.getType()))
-            {
+        }
+        if (const1.getFormat() != const2.getFormat() && !const1.getType().equals(const2.getType())) {
             throw new IllegalArgumentException("values must be of the same type");
-            }
+        }
 
         m_const1    = const1;
         m_fExclude1 = fExclude1;
         m_const2    = const2;
         m_fExclude2 = fExclude2;
-        }
+    }
 
     /**
      * Constructor used for deserialization.
@@ -66,44 +61,41 @@ public class RangeConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public RangeConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
 
-        switch (format)
-            {
-            case RangeExclusive:
-                m_fExclude1 = false;
-                m_fExclude2 = true;
-                break;
+        switch (format) {
+        case RangeExclusive:
+            m_fExclude1 = false;
+            m_fExclude2 = true;
+            break;
 
-            case RangeInclusive:
-                m_fExclude1 = false;
-                m_fExclude2 = false;
-                break;
+        case RangeInclusive:
+            m_fExclude1 = false;
+            m_fExclude2 = false;
+            break;
 
-            case Range:
-                int b = in.readUnsignedByte();
-                m_fExclude1 = (b & 1) != 0;
-                m_fExclude2 = (b & 2) != 0;
-                break;
+        case Range:
+            int b = in.readUnsignedByte();
+            m_fExclude1 = (b & 1) != 0;
+            m_fExclude2 = (b & 2) != 0;
+            break;
 
-            default:
-                throw new IllegalStateException("illegal format: " + format);
-            }
+        default:
+            throw new IllegalStateException("illegal format: " + format);
+        }
 
         m_iVal1 = readMagnitude(in);
         m_iVal2 = readMagnitude(in);
-        }
+    }
 
     @Override
-    protected void resolveConstants()
-        {
+    protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
         m_const1 = pool.getConstant(m_iVal1);
         m_const2 = pool.getConstant(m_iVal2);
-        }
+    }
 
 
     // ----- type-specific methods -----------------------------------------------------------------
@@ -111,34 +103,30 @@ public class RangeConstant
     /**
      * @return  the first constant in the range
      */
-    public Constant getFirst()
-        {
+    public Constant getFirst() {
         return m_const1;
-        }
+    }
 
     /**
      * @return true iff the first value is excluded from the range
      */
-    public boolean isFirstExcluded()
-        {
+    public boolean isFirstExcluded() {
         return m_fExclude1;
-        }
+    }
 
     /**
      * @return  the last constant in the range
      */
-    public Constant getLast()
-        {
+    public Constant getLast() {
         return m_const2;
-        }
+    }
 
     /**
      * @return true iff the last value is excluded from the range
      */
-    public boolean isLastExcluded()
-        {
+    public boolean isLastExcluded() {
         return m_fExclude2;
-        }
+    }
 
     /**
      * For a value of the type of the values defining the extent of this range, determine if that
@@ -148,92 +136,73 @@ public class RangeConstant
      *
      * @return true iff the value is found within this range
      */
-    public boolean contains(Constant value)
-        {
-        if (value.equals(m_const1))
-            {
+    public boolean contains(Constant value) {
+        if (value.equals(m_const1)) {
             return !m_fExclude1 && !(value.equals(m_const2) && m_fExclude2);
-            }
-
-        if (value.equals(m_const2))
-            {
-            return !m_fExclude2;
-            }
-
-        switch (Integer.signum(m_const1.compareTo(m_const2)))
-            {
-            case -1:
-                return value.compareTo(m_const1) >= 0 && value.compareTo(m_const2) <= 0;
-
-            default:
-            case 0:
-                return false;
-
-            case 1:
-                return value.compareTo(m_const2) >= 0 && value.compareTo(m_const1) <= 0;
-            }
         }
+
+        if (value.equals(m_const2)) {
+            return !m_fExclude2;
+        }
+
+        return switch (Integer.signum(m_const1.compareTo(m_const2))) {
+            case -1 -> value.compareTo(m_const1) >= 0 && value.compareTo(m_const2) <= 0;
+            default -> false;
+            case 1  -> value.compareTo(m_const2) >= 0 && value.compareTo(m_const1) <= 0;
+        };
+    }
 
     /**
      * @return  true iff the last constant in the range is ordered before the first constant in
      *          the range
      */
-    public boolean isReverse()
-        {
+    public boolean isReverse() {
         // only indicate "Reverse" if the first constant is greater than the second constant when
         // they are compared; apply() must return either valTrue() or valFalse() for this op
         return getConstantPool().valTrue().equals(m_const1.apply(Id.COMP_GT, m_const2));
-        }
+    }
 
     // ----- Interval-specific support -------------------------------------------------------------
 
     /**
      * @return true iff the Range is an Interval (ie a range of Sequential type)
      */
-    public boolean isInterval()
-        {
+    public boolean isInterval() {
         return m_const1 instanceof EnumValueConstant ||
                m_const1.getType().isA(getConstantPool().typeSequential());
-        }
+    }
 
     /**
      * @return the number of elements in the interval
      */
-    public long size()
-        {
+    public long size() {
         Constant constLo = getEffectiveLow();
         Constant constHi = getEffectiveHigh();
 
         Constant constGT = constLo.apply(Id.COMP_GT, constHi);
-        if (getConstantPool().valTrue().equals(constGT))
-            {
+        if (getConstantPool().valTrue().equals(constGT)) {
             // lo > hi, e.g. "0 >..< 1" or "1 ..< 1"
             return 0;
-            }
+        }
 
         return sub(constHi, constLo) + 1;
-        }
+    }
 
     /**
      * @return the distance between two constants (can be negative)
      */
-    private static long sub(Constant const1, Constant const2)
-        {
-        try
-            {
+    private static long sub(Constant const1, Constant const2) {
+        try {
             return const1.apply(Id.SUB, const2).getIntValue().getLong();
-            }
-        catch (RuntimeException e)
-            {
+        } catch (RuntimeException e) {
             return const1.getIntValue().sub(const2.getIntValue()).getLong();
-            }
         }
+    }
 
     /**
      * @return the effective first value in the interval (ie if it were inclusive)
      */
-    public Constant getEffectiveFirst()
-        {
+    public Constant getEffectiveFirst() {
         assert isInterval();
 
         Constant constFirst = getFirst();
@@ -241,13 +210,12 @@ public class RangeConstant
                 ? constFirst.apply(isReverse() ? Id.SUB : Id.ADD,
                         getConstantPool().ensureLiteralConstant(Format.IntLiteral, "1"))
                 : constFirst;
-        }
+    }
 
     /**
      * @return the effective last value in the interval (ie if it were inclusive)
      */
-    public Constant getEffectiveLast()
-        {
+    public Constant getEffectiveLast() {
         assert isInterval();
 
         Constant constLast = getLast();
@@ -255,85 +223,74 @@ public class RangeConstant
             ? constLast.apply(isReverse() ? Id.ADD : Id.SUB,
                         getConstantPool().ensureLiteralConstant(Format.IntLiteral, "1"))
             : constLast;
-        }
+    }
 
     /**
      * @return the effective lower bound value in the interval (ie if it were inclusive)
      */
-    public Constant getEffectiveLow()
-        {
+    public Constant getEffectiveLow() {
         return isReverse() ? getEffectiveLast() : getEffectiveFirst();
-        }
+    }
 
     /**
      * @return the effective high value in the interval (ie if it were inclusive)
      */
-    public Constant getEffectiveHigh()
-        {
+    public Constant getEffectiveHigh() {
         return isReverse() ? getEffectiveFirst() : getEffectiveLast();
-        }
+    }
 
 
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         TypeConstant type1 = m_const1.getType();
         TypeConstant type2 = m_const2.getType();
-        if (type1.equals(type2))
-            {
+        if (type1.equals(type2)) {
             return getConstantPool().ensureRangeType(type1);
-            }
+        }
         if (m_const1 instanceof EnumValueConstant enumVal1 &&
-            m_const2 instanceof EnumValueConstant enumVal2)
-            {
+            m_const2 instanceof EnumValueConstant enumVal2) {
             IdentityConstant idEnum1 = enumVal1.getClassConstant().getParentConstant();
             IdentityConstant idEnum2 = enumVal2.getClassConstant().getParentConstant();
 
-            if (idEnum1.equals(idEnum2))
-                {
+            if (idEnum1.equals(idEnum2)) {
                 return getConstantPool().ensureRangeType(idEnum1.getType());
-                }
             }
-        throw new IllegalStateException("Non-uniform range " + this);
         }
+        throw new IllegalStateException("Non-uniform range " + this);
+    }
 
     /**
      * {@inheritDoc}
      * @return  the constant's contents as an array of two constants
      */
     @Override
-    public Constant[] getValue()
-        {
+    public Constant[] getValue() {
         return new Constant[] {m_const1, m_const2};
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.Range;
-        }
+    }
 
     @Override
-    public boolean containsUnresolved()
-        {
+    public boolean containsUnresolved() {
         return !isHashCached() && (m_const1.containsUnresolved() || m_const2.containsUnresolved());
-        }
+    }
 
     @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
+    public void forEachUnderlying(Consumer<Constant> visitor) {
         visitor.accept(m_const1);
         visitor.accept(m_const2);
-        }
+    }
 
     @Override
-    public RangeConstant resolveTypedefs()
-        {
+    public RangeConstant resolveTypedefs() {
         Constant constOld1 = m_const1;
         Constant constOld2 = m_const2;
         Constant constNew1 = constOld1.resolveTypedefs();
@@ -341,90 +298,74 @@ public class RangeConstant
         return constNew1 == constOld1 && constNew2 == constOld2
                 ? this
                 : getConstantPool().ensureRangeConstant(constNew1, constNew2);
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof RangeConstant range))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof RangeConstant range)) {
             return -1;
-            }
+        }
 
         int nResult = this.m_const1.compareTo(range.m_const1);
-        if (nResult == 0)
-            {
-            if (this.m_fExclude1 != range.m_fExclude1)
-                {
+        if (nResult == 0) {
+            if (this.m_fExclude1 != range.m_fExclude1) {
                 nResult = m_fExclude1 ? 1 : -1;
-                }
-            else
-                {
+            } else {
                 nResult = this.m_const2.compareTo(range.m_const2);
-                if (nResult == 0)
-                    {
-                    if (this.m_fExclude2 != range.m_fExclude2)
-                        {
+                if (nResult == 0) {
+                    if (this.m_fExclude2 != range.m_fExclude2) {
                         nResult = m_fExclude2 ? -1 : 1;
-                        }
                     }
                 }
             }
-        return nResult;
         }
+        return nResult;
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return (m_fExclude1 ? '(' : '[') + m_const1.getValueString()
             + ".." + m_const2.getValueString() + (m_fExclude2 ? ')' : ']');
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         m_const1 = pool.register(m_const1);
         m_const2 = pool.register(m_const2);
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
-        if (!m_fExclude1)
-            {
+            throws IOException {
+        if (!m_fExclude1) {
             out.writeByte((m_fExclude2 ? Format.RangeExclusive : Format.RangeInclusive).ordinal());
-            }
-        else
-            {
+        } else {
             out.writeByte(Format.Range.ordinal());
             out.writeByte((m_fExclude1 ? 1 : 0) | (m_fExclude2 ? 2 : 0));
-            }
+        }
 
         writePackedLong(out, m_const1.getPosition());
         writePackedLong(out, m_const2.getPosition());
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return getValueString();
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_const1,
                Hash.of(m_const2,
                Hash.of(m_fExclude1,
                Hash.of(m_fExclude2))));
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -463,8 +404,7 @@ public class RangeConstant
      * Unfortunately, there is currently no way to write a standalone test for RangeConstant since
      * it requires a real ConstantPool. This function is just a sanity check to run in the debugger.
      */
-    public static void testSize(ConstantPool pool)
-        {
+    public static void testSize(ConstantPool pool) {
         IntConstant n0 = pool.ensureIntConstant(0);
         IntConstant n1 = pool.ensureIntConstant(1);
 
@@ -487,5 +427,5 @@ public class RangeConstant
         assert r0e1i.size() == 1;
         assert r0i1e.size() == 1;
         assert r0i1i.size() == 2;
-        }
     }
+}

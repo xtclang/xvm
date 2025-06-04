@@ -1,10 +1,16 @@
 package org.xvm.javajit;
 
+import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassModel;
+
+import java.lang.classfile.constantpool.ClassEntry;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import org.xvm.asm.ModuleStructure;
 
 import static org.xvm.util.Handy.require;
-
 
 /**
  * A ModuleLoader is responsible for loading exactly one module with a specified set of attributes
@@ -36,7 +42,7 @@ public class ModuleLoader
 
         this.module     = module;
         this.pkg        = pkg;
-        this.prefix     = pkg.replace('.', '/') + '/';
+        this.prefix     = pkg + '.';
         this.typeSystem = parent.typeSystem;
     }
 
@@ -51,9 +57,9 @@ public class ModuleLoader
     public final String pkg;
 
     /**
-     * The '/'-delimited package prefix (as used in the JVM ClassFile Specification) assigned to
+     * The '.'-delimited package prefix (as used in the JVM ClassFile Specification) assigned to
      * this loader to create all of its class names beginning with. The prefix will always end with
-     * a '/' character. This is the same name as {@link #pkg}, but in the JVM's internal format.
+     * a '.' character. This is the same name as {@link #pkg}.
      */
     public final String prefix;
 
@@ -63,19 +69,74 @@ public class ModuleLoader
      */
     public final TypeSystem typeSystem;
 
+    // ----- ClassLoader API -----------------------------------------------------------------------
+
     @Override
     protected Class<?> findClass(String name)
             throws ClassNotFoundException {
         if (name.startsWith(prefix)) {
-            byte[] classBytes = typeSystem.genClass(module, prefix, name);
+            Class clz = findLoadedClass(name);
+            if (clz != null) {
+                assert clz.getClassLoader() == this;
+                return clz;
+            }
+
+            String suffix     = name.substring(prefix.length());
+            byte[] classBytes = typeSystem.genClass(this, suffix);
             if (classBytes == null) {
                 throw new ClassNotFoundException(name);
             }
-            return defineClass(name, classBytes, 0, classBytes.length);
+            clz = defineClass(name, classBytes, 0, classBytes.length);
+            loadedClasses.add(ClassFile.of().parse(classBytes));
+            return clz;
         } else if (getParent() instanceof TypeSystemLoader tsLoader) {
             return tsLoader.findClass(name);
         } else {
             throw new ClassNotFoundException(name);
         }
     }
+
+    @Override
+    public String toString() {
+        return module.toString();
+    }
+
+    // ----- debugging -----------------------------------------------------------------------------
+
+    public void dump() {
+        // TODO: REMOVE
+
+        // the "dumping" itself causes the classes to be transitively loaded;
+        // limit the number of cycles
+        int iters = 2;
+        do {
+            List<ClassModel> currentlyLoaded = new ArrayList<>(loadedClasses);
+            loadedClasses.clear();
+            for (ClassModel model : currentlyLoaded) {
+                System.out.println("\n**** Class " + model.thisClass().asSymbol().displayName());
+
+                model.superclass().ifPresent(ce ->
+                    System.out.println("Extends: " + ce.asSymbol().displayName()));
+
+                List<ClassEntry> interfaces = model.interfaces();
+                if (!interfaces.isEmpty()) {
+                    System.out.println("Implements:");
+                    interfaces.stream().map(iface -> "  " + iface.asSymbol().displayName()).
+                        forEach(System.out::println);
+                }
+
+                System.out.println("Fields:");
+                model.fields().stream().map(f -> "  " + f.fieldName() + " " + f.fieldTypeSymbol().descriptorString()).
+                    forEach(System.out::println);
+
+                System.out.println("Methods:");
+                model.methods().stream().map(m -> "  " + m.methodName() +
+                    m.methodTypeSymbol().displayDescriptor() +
+                        (m.code().isPresent() ? "\n" + m.code().get().toDebugString() : "")).
+                    forEach(System.out::println);
+            }
+        } while (!loadedClasses.isEmpty() && --iters > 0);
+    }
+
+    private final List<ClassModel> loadedClasses = new ArrayList<>();
 }

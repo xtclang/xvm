@@ -21,8 +21,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Represent a FileStore that was embedded into the constant pool.
  */
 public class FileStoreConstant
-        extends ValueConstant
-    {
+        extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -32,23 +31,20 @@ public class FileStoreConstant
      * @param sPath     the path of the directory that acts as the root of this FileStore
      * @param constDir  the directory that acts as the root of this FileStore
      */
-    public FileStoreConstant(ConstantPool pool, String sPath, FSNodeConstant constDir)
-        {
+    public FileStoreConstant(ConstantPool pool, String sPath, FSNodeConstant constDir) {
         super(pool);
 
-        if (sPath == null)
-            {
+        if (sPath == null) {
             throw new IllegalArgumentException("directory path required");
-            }
+        }
 
-        if (constDir == null)
-            {
+        if (constDir == null) {
             throw new IllegalArgumentException("directory contents required");
-            }
+        }
 
         m_constPath = pool.ensureStringConstant(sPath);
         m_constDir  = constDir;
-        }
+    }
 
     /**
      * Constructor used for deserialization.
@@ -60,22 +56,20 @@ public class FileStoreConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public FileStoreConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
 
         m_iPath = readMagnitude(in);
         m_iDir  = readMagnitude(in);
-        }
+    }
 
     @Override
-    protected void resolveConstants()
-        {
+    protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
         m_constPath = (StringConstant) pool.getConstant(m_iPath);
         m_constDir  = (FSNodeConstant) pool.getConstant(m_iDir);
-        }
+    }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
@@ -83,28 +77,25 @@ public class FileStoreConstant
     /**
      * @return the original path that this filestore represents the contents of
      */
-    public String getPath()
-        {
+    public String getPath() {
         return getPathConstant().getValue();
-        }
+    }
 
     /**
      * @return the StringConstant holding the path that this filestore represents the contents of
      */
-    public StringConstant getPathConstant()
-        {
+    public StringConstant getPathConstant() {
         return m_constPath;
-        }
+    }
 
     /**
      * {@inheritDoc}
      * @return  the directory constant
      */
     @Override
-    public FSNodeConstant getValue()
-        {
+    public FSNodeConstant getValue() {
         return m_constDir;
-        }
+    }
 
 
     // ----- run-time support  ---------------------------------------------------------------------
@@ -112,108 +103,94 @@ public class FileStoreConstant
     /**
      * @return an ObjectHandle representing this singleton value
      */
-    public ObjectHandle getHandle()
-        {
+    public ObjectHandle getHandle() {
         return m_handle;
-        }
+    }
 
     /**
      * Set the handle for this singleton's value.
      *
      * @param handle  the corresponding handle
      */
-    public void setHandle(ObjectHandle handle)
-        {
+    public void setHandle(ObjectHandle handle) {
         assert handle != null;
         assert m_handle == null;
 
         m_handle = handle;
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.FileStore;
-        }
+    }
 
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return getConstantPool().ensureEcstasyTypeConstant("fs.FileStore");
-        }
+    }
 
     @Override
-    public boolean containsUnresolved()
-        {
+    public boolean containsUnresolved() {
         return !isHashCached() && m_constDir.containsUnresolved();
-        }
+    }
 
     @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
+    public void forEachUnderlying(Consumer<Constant> visitor) {
         visitor.accept(m_constPath);
         visitor.accept(m_constDir);
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof FileStoreConstant))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof FileStoreConstant)) {
             return this.getFormat().compareTo(that.getFormat());
-            }
+        }
 
         int nResult = this.m_constPath.compareTo(((FileStoreConstant) that).m_constPath);
-        if (nResult == 0)
-            {
+        if (nResult == 0) {
             nResult = this.m_constDir.compareTo(((FileStoreConstant) that).m_constDir);
-            }
-        return nResult;
         }
+        return nResult;
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return m_constDir.getName();
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         m_constPath = (StringConstant) pool.register(m_constPath);
         m_constDir  = (FSNodeConstant) pool.register(m_constDir);
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constPath.getPosition());
         writePackedLong(out, m_constDir .getPosition());
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "filestore:" + m_constPath.getValue();
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_constPath,
                Hash.of(m_constDir));
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -242,4 +219,4 @@ public class FileStoreConstant
      * The ObjectHandle representing this singleton's value.
      */
     private transient ObjectHandle m_handle;
-    }
+}

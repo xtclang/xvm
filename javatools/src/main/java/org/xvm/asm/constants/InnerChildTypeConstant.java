@@ -27,11 +27,11 @@ import static org.xvm.util.Handy.writePackedLong;
  *         {
  *         class Child&lt;ChildType>
  *             {
- *             }
+ *         }
  *         Child&lt;Int> c = new Child();
  *         ...
- *         }
  *     }
+ * }
  * </pre>
  *
  * The type of the variable "c" above is:
@@ -41,8 +41,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * <br/>where T3 is {@code TerminalTypeConstant(Parent)}
  */
 public class InnerChildTypeConstant
-        extends AbstractDependantChildTypeConstant
-    {
+        extends AbstractDependantChildTypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -52,20 +51,17 @@ public class InnerChildTypeConstant
      * @param typeParent  the parent's type
      * @param idChild     the child class id
      */
-    public InnerChildTypeConstant(ConstantPool pool, TypeConstant typeParent, ClassConstant idChild)
-        {
+    public InnerChildTypeConstant(ConstantPool pool, TypeConstant typeParent, ClassConstant idChild) {
         super(pool, typeParent);
 
-        if (typeParent.isAccessSpecified())
-            {
+        if (typeParent.isAccessSpecified()) {
             throw new IllegalArgumentException("parent's access cannot be specified");
-            }
-        if (idChild == null)
-            {
-            throw new IllegalArgumentException("id is required");
-            }
-        m_idChild = idChild;
         }
+        if (idChild == null) {
+            throw new IllegalArgumentException("id is required");
+        }
+        m_idChild = idChild;
+    }
 
     /**
      * Constructor used for deserialization.
@@ -77,116 +73,101 @@ public class InnerChildTypeConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public InnerChildTypeConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool, format, in);
 
         m_iChild = readIndex(in);
-        }
+    }
 
     @Override
-    protected void resolveConstants()
-        {
+    protected void resolveConstants() {
         super.resolveConstants();
 
         m_idChild = (ClassConstant) getConstantPool().getConstant(m_iChild);
-        }
+    }
 
     @Override
-    protected ClassStructure getChildStructure()
-        {
+    protected ClassStructure getChildStructure() {
         return (ClassStructure) m_idChild.getComponent();
-        }
+    }
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    public boolean isShared(ConstantPool poolOther)
-        {
+    public boolean isShared(ConstantPool poolOther) {
         return super.isShared(poolOther) && m_idChild.isShared(poolOther);
-        }
+    }
 
     @Override
-    public boolean isInnerChildClass()
-        {
+    public boolean isInnerChildClass() {
         return true;
-        }
+    }
 
     @Override
-    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
-        {
+    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type) {
         return pool.ensureInnerChildTypeConstant(type, m_idChild);
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.InnerChildType;
-        }
+    }
 
     @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
+    public void forEachUnderlying(Consumer<Constant> visitor) {
         super.forEachUnderlying(visitor);
 
         visitor.accept(m_idChild);
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant obj)
-        {
+    protected int compareDetails(Constant obj) {
         int n = super.compareDetails(obj);
-        if (n == 0)
-            {
-            if (!(obj instanceof InnerChildTypeConstant that))
-                {
+        if (n == 0) {
+            if (!(obj instanceof InnerChildTypeConstant that)) {
                 return -1;
-                }
+            }
 
             n = this.m_idChild.compareTo(that.m_idChild);
-            }
-        return n;
         }
+        return n;
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return m_typeParent.getValueString() + '.' + m_idChild.getValueString();
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 
         m_idChild = (ClassConstant) pool.register(m_idChild);
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         super.assemble(out);
 
         writePackedLong(out, m_idChild.getPosition());
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_typeParent,
                Hash.of(m_idChild));
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -200,4 +181,4 @@ public class InnerChildTypeConstant
      * The ClassConstant representing this child.
      */
     protected ClassConstant m_idChild;
-    }
+}

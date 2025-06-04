@@ -112,7 +112,7 @@ The CI pipeline automatically maintains the Homebrew formula in the [xtclang/hom
 
 - **Formula Path**: `Formula/xdk-latest.rb` 
 - **Auto-generated**: Version, SHA256, download URL are computed automatically
-- **Java Dependency**: Dynamically sourced from `xdk.properties` (`org.xtclang.java.jdk=21`)
+- **Java Dependency**: Dynamically sourced from `xdk.properties` (`org.xtclang.java.jdk=24`)
 - **Branch Configuration**: Controlled by GitHub variable `HOMEBREW_TAP_BRANCH` (currently: `lagergren/brew-tap`)
 
 **For Maintainers**:

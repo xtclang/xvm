@@ -5,7 +5,7 @@
 #
 
 # Build arguments with defaults
-ARG JAVA_VERSION=21
+ARG JAVA_VERSION=24
 ARG GH_BRANCH=master
 ARG GH_COMMIT
 ARG TARGETARCH

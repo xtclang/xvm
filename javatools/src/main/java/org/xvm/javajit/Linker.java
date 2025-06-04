@@ -9,6 +9,7 @@ import java.util.Map;
 
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener.ErrorInfo;
+import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
@@ -373,6 +374,13 @@ public class Linker {
         // TODO check for an existing type system with the same exact contents
         // TODO perform linking
         // TODO register new type system
+
+        // replace the "ecstasy" module in the main FileStructure with the shared one
+        FileStructure mainFile = owned[0].getFileStructure();
+        ModuleStructure ecstasy = shared[0].module;
+        mainFile.removeChild(mainFile.getChild(ecstasy.getIdentityConstant()));
+        mainFile.addChild(ecstasy);
+        mainFile.getConstantPool().setNakedRefType(ecstasy.getConstantPool().getNakedRefType());
 
         if (isBad()) {
             return null;

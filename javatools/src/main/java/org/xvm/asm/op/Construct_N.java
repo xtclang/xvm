@@ -73,8 +73,7 @@ public class Construct_N
                 return R_EXCEPTION;
             }
 
-            if (constructor.isNative())
-                {
+            if (constructor.isNative()) {
                 return reportNonExtendable(frame, constructor);
                 }
 

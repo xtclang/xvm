@@ -433,8 +433,7 @@ public class JumpVal_N
                             mapJump.compute(hCase, (h, LOld) ->
                                 Long.valueOf(lCaseBit | (LOld == null ?  0 : LOld.longValue())));
                         }
-                    }
-                    else if (fRange) {
+                    } else if (fRange) {
                         // assume native element
                         if (addRange((GenericHandle) hCase, lCaseBit, cColumns, iC)) {
                             aAlgorithm[iC] = aAlgorithm[iC].worstOf(Algorithm.NativeRange);

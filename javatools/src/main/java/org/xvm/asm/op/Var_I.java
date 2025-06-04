@@ -1,14 +1,17 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import java.lang.classfile.CodeBuilder;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -16,7 +19,6 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * VAR_I TYPE, rvalue-src ; (next register is an initialized anonymous variable)
@@ -100,6 +102,16 @@ public class Var_I
         return super.toString()
                 + ' ' + Argument.toIdString(m_argValue, m_nValueId);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        bctx.introduceVar(code, m_nVar, m_nType, 0);
+        bctx.loadArgument(code, m_nValueId);
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int m_nValueId;
 

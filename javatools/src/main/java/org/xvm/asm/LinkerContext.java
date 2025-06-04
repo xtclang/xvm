@@ -13,8 +13,7 @@ import org.xvm.asm.constants.VersionConstant;
  * modules (and what versions of those modules) are available in the container, and what named
  * link-time options are specified.
  */
-public interface LinkerContext
-    {
+public interface LinkerContext {
     /**
      * Determine if the specified name is <i>defined</i> in this context.
      *
@@ -53,5 +52,5 @@ public interface LinkerContext
      * @return true iff the module being loaded within this context has the specified version
      */
     boolean isVersion(VersionConstant constVer);
-    }
+}
 

@@ -112,7 +112,7 @@ Example for `lagergren/gradle-lifecycle-fixes`:
 - Downloads source from GitHub using branch/commit (no local source used)
 - `GH_BRANCH=master` - Default branch to build from
 - `GH_COMMIT` - Optional specific commit SHA (defaults to latest from branch)
-- `JAVA_VERSION=21` - Uses Bellsoft Liberica OpenJDK 21 Alpine (consistent across build stages)
+- `JAVA_VERSION=24` - Uses Bellsoft Liberica OpenJDK 24 Alpine (consistent across build stages)
 - Platform matches host architecture (linux/amd64 on x86, linux/arm64 on ARM)
 - Compiles native launchers from C source for target platform
 - Creates architecture-specific xcc/xec executables
@@ -144,7 +144,7 @@ docker buildx build --build-arg GH_BRANCH=v1.0.0 -t xvm:latest .
 ### Build Argument Options
 - `GH_BRANCH` (default: master) - Downloads specific branch or tag from GitHub
 - `GH_COMMIT` (default: latest from branch) - Downloads specific commit SHA
-- `JAVA_VERSION` (default: 21) - Java version to use for build and runtime
+- `JAVA_VERSION` (default: 24) - Java version to use for build and runtime
 
 ## Direct Docker Commands (Alternative to Gradle)
 

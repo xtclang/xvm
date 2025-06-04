@@ -19,8 +19,7 @@ import static org.xvm.util.Handy.writeUtf8String;
  * Represent a regular expression constant.
  */
 public class RegExConstant
-        extends ValueConstant
-    {
+        extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -33,10 +32,9 @@ public class RegExConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public RegExConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         this(pool, readUtf8String(in), in.readInt());
-        }
+    }
 
     /**
      * Construct a constant whose value is a regular expression.
@@ -44,14 +42,13 @@ public class RegExConstant
      * @param pool   the ConstantPool that will contain this Constant
      * @param regex  the regular expression pattern
      */
-    public RegExConstant(ConstantPool pool, String regex, int nFlags)
-        {
+    public RegExConstant(ConstantPool pool, String regex, int nFlags) {
         super(pool);
 
         assert regex != null;
         f_regex  = regex;
         f_nFlags = nFlags;
-        }
+    }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
@@ -59,88 +56,76 @@ public class RegExConstant
     /**
      * @return the value of the regular expression
      */
-    public String getValue()
-        {
+    public String getValue() {
         return f_regex;
-        }
+    }
 
     /**
      * @return the flags to create the regular expression pattern
      */
-    public int getFlags()
-        {
+    public int getFlags() {
         return f_nFlags;
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.RegEx;
-        }
+    }
 
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return getConstantPool().typeRegEx();
-        }
+    }
 
     @Override
-    public Object getLocator()
-        {
+    public Object getLocator() {
         return f_regex;
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof RegExConstant))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof RegExConstant)) {
             return -1;
-            }
-        int n = this.f_regex.compareTo(((RegExConstant) that).f_regex);
-        if (n == 0)
-            {
-            n = Integer.compare(f_nFlags, ((RegExConstant) that).f_nFlags);
-            }
-        return n;
         }
+        int n = this.f_regex.compareTo(((RegExConstant) that).f_regex);
+        if (n == 0) {
+            n = Integer.compare(f_nFlags, ((RegExConstant) that).f_nFlags);
+        }
+        return n;
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return quotedString(f_regex);
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         writeUtf8String(out, f_regex);
         out.writeInt(f_nFlags);
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "regEx=" + getValueString() + "; flags=" + f_nFlags;
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(f_regex,
                Hash.of(f_nFlags));
-        }
+    }
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -153,4 +138,4 @@ public class RegExConstant
      * The flags used to create the reg-ex pattern.
      */
     private final int f_nFlags;
-    }
+}

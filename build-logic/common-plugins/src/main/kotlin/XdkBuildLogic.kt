@@ -54,7 +54,6 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
     }
 
     companion object {
-        const val XDK_TASK_GROUP_DEBUG = "debug"
         const val XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE = "xdk-distribution-archive"
         const val XDK_ARTIFACT_NAME_JAVATOOLS_JAR = "javatools-jar"
         const val XDK_ARTIFACT_NAME_MACK_DIR = "mack-dir"

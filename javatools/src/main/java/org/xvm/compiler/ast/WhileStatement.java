@@ -30,10 +30,11 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.IP_Inc;
-import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
+import org.xvm.asm.op.Loop;
+import org.xvm.asm.op.LoopEnd;
 import org.xvm.asm.op.Move;
 import org.xvm.asm.op.Var_IN;
 
@@ -116,17 +117,7 @@ public class WhileStatement
         Label label = m_labelContinue;
         if (label == null)
             {
-            m_labelContinue = label = new Label("continue_while_" + getLabelId());
-            }
-        return label;
-        }
-
-    public Label getRepeatLabel()
-        {
-        Label label = m_labelRepeat;
-        if (label == null)
-            {
-            m_labelRepeat = label = new Label("repeat_while_" + getLabelId());
+            m_labelContinue = label = new Label("continue_" + (isDoWhile() ? "do_" : "") + "while_" + getLabelId());
             }
         return label;
         }
@@ -499,7 +490,7 @@ public class WhileStatement
                 {
                 // there are no breaks out of the loop, therefore the only way to get out is for the
                 // condition to be "false" and thus any type inferences from the "true" branch
-                // should be discarded (not retained pass the loop)
+                // should be discarded (not retained past the loop)
                 ctxFork.setReachable(false);
                 }
 
@@ -608,41 +599,31 @@ public class WhileStatement
             //   ENTER
             //   VAR_IN first true      ; optional
             //   VAR_IN count 0         ; optional
-            //   JMP First              ; optional
-            //   Repeat:
+            //   LOOP
+            //   [body]
             //   Continue:
             //   MOV false first        ; optional
             //   IP_INC count           ; optional
-            //   First:                 ; optional
-            //   [body]
-            //   JMP Repeat
+            //   LOOP_END
             //   EXIT
             //   Break:
             code.add(new Enter());
-            Label labelInit = emitLabelVarCreation(code, regFirst, regCount);
-            if (labelInit != null)
-                {
-                code.add(new Jump(labelInit));
-                }
-            code.add(getRepeatLabel());
-            code.add(getContinueLabel());
-            emitLabelVarUpdate(code, regFirst, regCount, labelInit);
+            emitLabelVarCreation(code, regFirst, regCount);
+            code.add(new Loop());
 
             Op opLast = code.getLastOp();
-
             block.suppressScope();
             block.completes(ctx, fCompletes, code, errs);
-
             if (code.getLastOp() == opLast)
                 {
                 // the block didn't add any ops; this is just an infinite loop
                 log(errs, Severity.ERROR, Compiler.INFINITE_LOOP);
                 }
-            else
-                {
-                code.add(new Jump(getRepeatLabel()));
-                code.add(new Exit());
-                }
+
+            code.add(getContinueLabel());
+            emitLabelVarUpdate(code, regFirst, regCount);
+            code.add(new LoopEnd());
+            code.add(new Exit());
 
             holder.setAst(this, new LoopStmtAST(m_aAllocSpecial, holder.getAst(block)));
             return false; // while(true) never completes naturally
@@ -655,34 +636,29 @@ public class WhileStatement
             //   ENTER
             //   VAR_IN first true      ; optional
             //   VAR_IN count 0         ; optional
-            //   JMP First              ; optional
-            //   Repeat:
-            //   MOV false first        ; optional
-            //   IP_INC count           ; optional
-            //   First:                 ; optional
+            //   LOOP
             //   [body]                 ; body's scope is explicitly suppressed
             //   Continue:
             //   [cond]
-            //   JMP_TRUE cond Repeat
+            //   JMP_FALSE Break;
+            //   MOV false first        ; optional
+            //   IP_INC count           ; optional
+            //   LOOP_END
             //   EXIT
             //   Break:
             code.add(new Enter());
-            Label labelInit = emitLabelVarCreation(code, regFirst, regCount);
-            if (labelInit != null)
-                {
-                code.add(new Jump(labelInit));
-                }
-            code.add(getRepeatLabel());
-            emitLabelVarUpdate(code, regFirst, regCount, labelInit);
+            emitLabelVarCreation(code, regFirst, regCount);
+            code.add(new Loop());
 
             // we explicitly do NOT check the block completion, since our completion is not dependent on
             // the block's ability to complete (since the loop may execute zero times)
             block.completes(ctx, fCompletes, code, errs);
-
             BinaryAST astBlock = holder.getAst(block);
 
             code.add(getContinueLabel());
             fCompletes = emitConditionTest(ctx, fCompletes, code, errs);
+            emitLabelVarUpdate(code, regFirst, regCount);
+            code.add(new LoopEnd());
             code.add(new Exit());
 
             holder.setAst(this, new DoWhileStmtAST(m_aAllocSpecial, astBlock, m_astCond));
@@ -691,66 +667,35 @@ public class WhileStatement
 
         // while(cond) {body}
         //
-        //   ENTER                  ; omitted if no declarations
+        //   ENTER
         //   VAR_IN first true      ; optional
         //   VAR_IN count 0         ; optional
-        //   [cond:decl]            ; omitted if no declarations
-        //   JMP First (or Continue, if there is no First)
-        //   Repeat:
+        //   LOOP
+        //   [cond]
+        //   JMP_FALSE Break;
         //   [body]
         //   Continue:
         //   MOV false first        ; optional
         //   IP_INC count           ; optional
-        //   First:                 ; optional
-        //   [cond]
-        //   JMP_TRUE cond Repeat
-        //   EXIT                   ; omitted if no declarations
+        //   LOOP_END
+        //   EXIT
         //   Break:
-        boolean fHasDecls = conds.stream().anyMatch(cond ->
-                cond instanceof AssignmentStatement stmtAsn && stmtAsn.hasDeclarations());
-        boolean fOwnScope = fHasDecls || fHasLabelVars;
-        if (fOwnScope)
-            {
-            code.add(new Enter());
-            }
-        Label labelInit = emitLabelVarCreation(code, regFirst, regCount);
-
-        List<RegAllocAST> listAlloc = new ArrayList<>();
-        if (fHasDecls)
-            {
-            for (AstNode cond : conds)
-                {
-                if (cond instanceof AssignmentStatement stmtCond)
-                    {
-                    for (VariableDeclarationStatement stmtDecl : stmtCond.takeDeclarations())
-                        {
-                        fCompletes &= stmtDecl.completes(ctx, fCompletes, code, errs);
-
-                        listAlloc.add((RegAllocAST) holder.getAst(stmtDecl));
-                        }
-                    }
-                }
-            }
-        code.add(new Jump(labelInit == null ? getContinueLabel() : labelInit));
-        code.add(getRepeatLabel());
+        code.add(new Enter());
+        emitLabelVarCreation(code, regFirst, regCount);
+        code.add(new Loop());
+        fCompletes = emitConditionTest(ctx, fCompletes, code, errs);
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
         // the block's ability to complete (since the loop may execute zero times)
         block.completes(ctx, fCompletes, code, errs);
-
         BinaryAST astBlock = holder.getAst(block);
 
         code.add(getContinueLabel());
-        emitLabelVarUpdate(code, regFirst, regCount, labelInit);
-        fCompletes = emitConditionTest(ctx, fCompletes, code, errs);
-        if (fOwnScope)
-            {
-            code.add(new Exit());
-            }
+        emitLabelVarUpdate(code, regFirst, regCount);
+        code.add(new LoopEnd());
+        code.add(new Exit());
 
-        holder.setAst(this, new WhileStmtAST(
-                m_aAllocSpecial, listAlloc.isEmpty() ? null : listAlloc.toArray(BinaryAST.NO_ALLOCS),
-                m_astCond, astBlock));
+        holder.setAst(this, new WhileStmtAST(m_aAllocSpecial, null, m_astCond, astBlock));
         return fCompletes;
         }
 
@@ -765,7 +710,7 @@ public class WhileStatement
      * @return a label that skips the variable update for the first iteration iff either "first" or
      *         "count" exists, otherwise null
      */
-    private Label emitLabelVarCreation(Code code, Register regFirst, Register regCount)
+    private void emitLabelVarCreation(Code code, Register regFirst, Register regCount)
         {
         ConstantPool  pool   = pool();
         RegAllocAST[] aAlloc = null;
@@ -798,7 +743,6 @@ public class WhileStatement
             }
 
         m_aAllocSpecial = aAlloc;
-        return aAlloc == null ? null : new Label("first_while_" + getLabelId());
         }
 
     /**
@@ -808,22 +752,16 @@ public class WhileStatement
      * @param code      the code to emit
      * @param regFirst  the (optional) register for the "first" variable
      * @param regCount  the (optional) register for the "count" variable
-     *
-     * @param labelInit  the label previously returned from {@link #emitLabelVarCreation}
      */
-    private void emitLabelVarUpdate(Code code, Register regFirst, Register regCount, Label labelInit)
+    private void emitLabelVarUpdate(Code code, Register regFirst, Register regCount)
         {
-        if (labelInit != null)
+        if (regFirst != null)
             {
-            if (regFirst != null)
-                {
-                code.add(new Move(pool().valFalse(), regFirst));
-                }
-            if (regCount != null)
-                {
-                code.add(new IP_Inc(regCount));
-                }
-            code.add(labelInit);
+            code.add(new Move(pool().valFalse(), regFirst));
+            }
+        if (regCount != null)
+            {
+            code.add(new IP_Inc(regCount));
             }
         }
 
@@ -840,38 +778,19 @@ public class WhileStatement
         for (int i = 0; i < cConds; ++i)
             {
             AstNode cond  = getCondition(i);
-            boolean fLast = i == cConds-1;
             if (cond instanceof AssignmentStatement stmtCond)
                 {
                 fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
-
-                if (fLast)
-                    {
-                    code.add(stmtCond.isNegated()
-                        ? new JumpFalse(stmtCond.getConditionRegister(), getRepeatLabel())
-                        : new JumpTrue (stmtCond.getConditionRegister(), getRepeatLabel()));
-                    }
-                else
-                    {
-                    code.add(stmtCond.isNegated()
+                code.add(stmtCond.isNegated()
                         ? new JumpTrue (stmtCond.getConditionRegister(), getEndLabel())
                         : new JumpFalse(stmtCond.getConditionRegister(), getEndLabel()));
-                    }
                 aCondASTs[i] = (ExprAST) holder.getAst(stmtCond);
                 }
             else
                 {
                 Expression exprCond = (Expression) cond;
-                if (fLast)
-                    {
-                    exprCond.generateConditionalJump(ctx, code, getRepeatLabel(), true, errs);
-                    }
-                else
-                    {
-                    exprCond.generateConditionalJump(ctx, code, getEndLabel(), false, errs);
-                    }
+                exprCond.generateConditionalJump(ctx, code, getEndLabel(), false, errs);
                 fCompletes &= exprCond.isCompletable();
-
                 aCondASTs[i] = exprCond.getExprAST(ctx);
                 }
             }
@@ -935,9 +854,7 @@ public class WhileStatement
     protected StatementBlock block;
     protected long           lEndPos;
 
-    private transient Label m_labelContinue;
-    private transient Label m_labelRepeat;
-
+    private transient Label         m_labelContinue;
     private transient Context       m_ctxLabelVars;
     private transient ErrorListener m_errsLabelVars;
     private transient Register      m_regFirst;

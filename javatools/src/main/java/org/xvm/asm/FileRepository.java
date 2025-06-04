@@ -12,8 +12,7 @@ import java.util.Set;
  * A simple ModuleRepository for a single file with a single module.
  */
 public class FileRepository
-        implements ModuleRepository
-    {
+        implements ModuleRepository {
     // ----- constructors  -------------------------------------------------------------------------
 
     /**
@@ -22,26 +21,21 @@ public class FileRepository
      * @param file       the file that contains the single module
      * @param fReadOnly  true to make the repository "read-only"
      */
-    public FileRepository(File file, boolean fReadOnly)
-        {
+    public FileRepository(File file, boolean fReadOnly) {
         assert file != null && !file.isDirectory();
 
         String sName = file.getName();
-        if (!sName.endsWith(".xtc"))
-            {
-            if (sName.endsWith(".x"))
-                {
+        if (!sName.endsWith(".xtc")) {
+            if (sName.endsWith(".x")) {
                 file = new File(file.getParentFile(), sName.substring(0, sName.lastIndexOf('.')) + ".xtc");
-                }
-            else
-                {
+            } else {
                 file = new File(file.getParentFile(), sName + ".xtc");
-                }
             }
+        }
 
         this.file = file;
         this.fRO = fReadOnly;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -49,107 +43,91 @@ public class FileRepository
     /**
      * @return the module file (which may or may not exist)
      */
-    public File getFile()
-        {
+    public File getFile() {
         return file;
-        }
+    }
 
     /**
      * @return true iff read-only
      */
-    public boolean isReadOnly()
-        {
+    public boolean isReadOnly() {
         return fRO;
-        }
+    }
 
 
     // ----- ModuleRepository API ------------------------------------------------------------------
 
     @Override
-    public Set<String> getModuleNames()
-        {
+    public Set<String> getModuleNames() {
         checkCache();
         return file.exists() && name != null ? Collections.singleton(name) : Collections.emptySet();
-        }
+    }
 
     @Override
-    public VersionTree<Boolean> getAvailableVersions(String sModule)
-        {
+    public VersionTree<Boolean> getAvailableVersions(String sModule) {
         checkCache();
         return !err && name.equals(sModule) ? versions : null;
-        }
+    }
 
     @Override
-    public ModuleStructure loadModule(String sModule)
-        {
+    public ModuleStructure loadModule(String sModule) {
         ModuleStructure module = checkCache();
-        if (sModule.equals(name))
-            {
+        if (sModule.equals(name)) {
             return module == null ? ensureModule() : module;
-            }
-        return null;
         }
+        return null;
+    }
 
     @Override
     public void storeModule(ModuleStructure module)
-            throws IOException
-        {
-        if (fRO)
-            {
+            throws IOException {
+        if (fRO) {
             throw new IOException("repository is read-only: " + this);
-            }
+        }
 
-        if (file.exists() && !file.delete())
-            {
+        if (file.exists() && !file.delete()) {
             err = true;
             throw new IOException("unable to delete " + file);
-            }
+        }
 
-        try
-            {
+        try {
             module.getFileStructure().writeTo(file);
             err = false;
-            }
-        catch (IOException e)
-            {
+        } catch (IOException e) {
             err = true;
             throw new IOException("Error writing module to file: " + file);
-            }
+        }
 
         this.name      = module.getIdentityConstant().getName();
-        this.versions  = module.getFileStructure().getVersionTree();
+        this.versions  = module.getVersions();
         this.timestamp = file.lastModified();
         this.size      = file.length();
         this.module    = module;
         this.lastScan  = System.currentTimeMillis();
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
-        {
+    public int hashCode() {
         return file.hashCode();
-        }
+    }
 
     @Override
-    public boolean equals(Object obj)
-        {
-        if (obj == this || !(obj instanceof FileRepository that))
-            {
+    public boolean equals(Object obj) {
+        if (obj == this || !(obj instanceof FileRepository that)) {
             return obj == this;
-            }
+        }
 
         return this.file.equals(that.file) &&
                this.fRO      == that.fRO;
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return "FileRepository(Path=" + file.toString() + ", RO=" + fRO + ")";
-        }
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -159,93 +137,77 @@ public class FileRepository
      *
      * @return the module, if it is handy, or null if it is not handy
      */
-    ModuleStructure checkCache()
-        {
-        if (isCacheValid())
-            {
+    ModuleStructure checkCache() {
+        if (isCacheValid()) {
             return module;  // might be null, or might not be
-            }
+        }
 
         this.timestamp = file.lastModified();
         this.size      = file.length();
         this.err       = false;
 
         ModuleStructure module = tryLoad();
-        if (module == null)
-            {
+        if (module == null) {
             this.name     = null;
             this.versions = null;
             this.err      = true;
-            }
-        else
-            {
+        } else {
             this.name     = module.getIdentityConstant().getName();
-            this.versions = module.getFileStructure().getVersionTree();
-            }
+            this.versions = module.getVersions();
+        }
 
         this.module   = null;
         this.lastScan = System.currentTimeMillis();
         return module;
-        }
+    }
 
     /**
      * Quick scan to make sure that the cache is still valid.
      *
      * @return true if the cache is still good, or false if it needs to be rebuilt
      */
-    private boolean isCacheValid()
-        {
+    private boolean isCacheValid() {
         // only scan once a second (at the most)
-        if (System.currentTimeMillis() < lastScan + 1000)
-            {
+        if (System.currentTimeMillis() < lastScan + 1000) {
             return true;
-            }
+        }
 
-        if (!file.exists())
-            {
+        if (!file.exists()) {
             name   = null;
             module = null;
             return true;
-            }
+        }
 
-        if (name == null || timestamp != file.lastModified() || size != file.length())
-            {
+        if (name == null || timestamp != file.lastModified() || size != file.length()) {
             return false;
-            }
+        }
 
         return true;
+    }
+
+    private ModuleStructure ensureModule() {
+        if (err) {
+            return null;
         }
 
-    private ModuleStructure ensureModule()
-        {
-        if (err)
-            {
-            return null;
-            }
-
-        if (module == null || module.isModified())
-            {
+        if (module == null || module.isModified()) {
             module = tryLoad();
-            }
+        }
 
         return module;
-        }
+    }
 
-    private ModuleStructure tryLoad()
-        {
-        try
-            {
+    private ModuleStructure tryLoad() {
+        try {
             FileStructure struct = new FileStructure(file);
             return struct.getModule();
-            }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             System.out.println("Error loading module from file: " + file + "; " + e.getMessage());
-            }
+        }
 
         err = true;
         return null;
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -260,4 +222,4 @@ public class FileRepository
     private ModuleStructure      module;
     private long                 lastScan;
     private boolean              err;
-    }
+}

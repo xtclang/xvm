@@ -13,8 +13,7 @@ import org.xvm.compiler.Token;
  * Represent a constant that will eventually be replaced with a value constant.
  */
 public class DeferredValueConstant
-        extends PseudoConstant
-    {
+        extends PseudoConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -24,80 +23,68 @@ public class DeferredValueConstant
      *              contain it while it's unresolved and will immediately replace it as it becomes
      *              resolved
      */
-    public DeferredValueConstant(ConstantPool pool)
-        {
+    public DeferredValueConstant(ConstantPool pool) {
         super(pool);
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.DeferredValue;
-        }
+    }
 
     @Override
-    public boolean containsUnresolved()
-        {
+    public boolean containsUnresolved() {
         return true;
-        }
+    }
 
     @Override
-    public Constant apply(Token.Id op, Constant that)
-        {
+    public Constant apply(Token.Id op, Constant that) {
         return this;
-        }
+    }
 
     @Override
-    public Constant convertTo(TypeConstant typeOut)
-        {
+    public Constant convertTo(TypeConstant typeOut) {
         return this;
-        }
+    }
 
     @Override
-    protected void setPosition(int iPos)
-        {
+    protected void setPosition(int iPos) {
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return getConstantPool().typeObject();
-        }
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return "";
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
+    protected int compareDetails(Constant that) {
         return this == that ? 0 : -1;
-        }
+    }
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return 0;
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void assemble(DataOutput out)
-        {
+    protected void assemble(DataOutput out) {
         throw new IllegalStateException();
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return getValueString();
-        }
     }
+}

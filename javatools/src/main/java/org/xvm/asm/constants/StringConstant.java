@@ -9,6 +9,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.compiler.Token;
+
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.quotedString;
@@ -20,8 +21,7 @@ import static org.xvm.util.Handy.writeUtf8String;
  * Represent an XVM char string (string of unicode characters) constant.
  */
 public class StringConstant
-        extends ValueConstant
-    {
+        extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -34,11 +34,10 @@ public class StringConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public StringConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
         m_sVal  = readUtf8String(in);
-        }
+    }
 
     /**
      * Construct a constant whose value is a char string.
@@ -46,13 +45,12 @@ public class StringConstant
      * @param pool  the ConstantPool that will contain this Constant
      * @param sVal  the char string value
      */
-    public StringConstant(ConstantPool pool, String sVal)
-        {
+    public StringConstant(ConstantPool pool, String sVal) {
         super(pool);
 
         assert sVal != null;
         m_sVal  = sVal;
-        }
+    }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
@@ -62,132 +60,119 @@ public class StringConstant
      *
      * @return the constant's char string value as a {@code String}
      */
-    public String getValue()
-        {
+    public String getValue() {
         return m_sVal;
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.String;
-        }
+    }
 
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return getConstantPool().typeString();
-        }
+    }
 
     @Override
-    public Constant apply(Token.Id op, Constant that)
-        {
+    public Constant apply(Token.Id op, Constant that) {
         ConstantPool pool = getConstantPool();
-        switch (op.TEXT + that.getFormat().name())
-            {
-            case "+String":
-                return pool.ensureStringConstant(this.m_sVal + ((StringConstant) that).m_sVal);
+        switch (op.TEXT + that.getFormat().name()) {
+        case "+String":
+            return pool.ensureStringConstant(this.m_sVal + ((StringConstant) that).m_sVal);
 
-            case "+Char":
-                assert Character.isValidCodePoint(((CharConstant) that).getValue());
-                return pool.ensureStringConstant(
-                        this.m_sVal + (char) (int) ((CharConstant) that).getValue());
+        case "+Char":
+            assert Character.isValidCodePoint(((CharConstant) that).getValue());
+            return pool.ensureStringConstant(
+                    this.m_sVal + (char) (int) ((CharConstant) that).getValue());
 
-            case "+IntLiteral":
-            case "+FPLiteral":
-                return pool.ensureStringConstant(
-                        this.m_sVal + ((LiteralConstant) that).getValue());
+        case "+IntLiteral":
+        case "+FPLiteral":
+            return pool.ensureStringConstant(
+                    this.m_sVal + ((LiteralConstant) that).getValue());
 
-            case "+EnumValueConst":
-                return pool.ensureStringConstant(
-                        this.m_sVal + ((EnumValueConstant) that).getClassConstant().getName());
+        case "+EnumValueConst":
+            return pool.ensureStringConstant(
+                    this.m_sVal + ((EnumValueConstant) that).getClassConstant().getName());
 
-            case "*IntLiteral":
-            case "*Int64":
-                {
-                String s = m_sVal;
-                int n = that.getFormat() == Format.IntLiteral
-                        ? ((LiteralConstant) that).getPackedInteger().getInt()
-                        : ((IntConstant) that).getValue().getInt();
-                assert n >= 0 && n * s.length() < 1000000;
+        case "*IntLiteral":
+        case "*Int64": {
+            String s = m_sVal;
+            int n = that.getFormat() == Format.IntLiteral
+                    ? ((LiteralConstant) that).getPackedInteger().getInt()
+                    : ((IntConstant) that).getValue().getInt();
+            assert n >= 0 && n * s.length() < 1000000;
 
-                return getConstantPool().ensureStringConstant(s.repeat(n));
-                }
-
-            case "==String":
-                return getConstantPool().valOf(this.m_sVal.equals(((StringConstant) that).m_sVal));
-            case "!=String":
-                return getConstantPool().valOf(!this.m_sVal.equals(((StringConstant) that).m_sVal));
-            case "<String":
-                return getConstantPool().valOf(this.m_sVal.compareTo(((StringConstant) that).m_sVal) < 0);
-            case "<=String":
-                return getConstantPool().valOf(this.m_sVal.compareTo(((StringConstant) that).m_sVal) <= 0);
-            case ">String":
-                return getConstantPool().valOf(this.m_sVal.compareTo(((StringConstant) that).m_sVal) > 0);
-            case ">=String":
-                return getConstantPool().valOf(this.m_sVal.compareTo(((StringConstant) that).m_sVal) >= 0);
-
-            case "<=>String":
-                return getConstantPool().valOrd(this.m_sVal.compareTo(((StringConstant) that).m_sVal));
-
-            case "..String":
-                return getConstantPool().ensureRangeConstant(this, that);
-
-            default:
-                return super.apply(op, that);
-            }
+            return getConstantPool().ensureStringConstant(s.repeat(n));
         }
 
+        case "==String":
+            return getConstantPool().valOf(this.m_sVal.equals(((StringConstant) that).m_sVal));
+        case "!=String":
+            return getConstantPool().valOf(!this.m_sVal.equals(((StringConstant) that).m_sVal));
+        case "<String":
+            return getConstantPool().valOf(this.m_sVal.compareTo(((StringConstant) that).m_sVal) < 0);
+        case "<=String":
+            return getConstantPool().valOf(this.m_sVal.compareTo(((StringConstant) that).m_sVal) <= 0);
+        case ">String":
+            return getConstantPool().valOf(this.m_sVal.compareTo(((StringConstant) that).m_sVal) > 0);
+        case ">=String":
+            return getConstantPool().valOf(this.m_sVal.compareTo(((StringConstant) that).m_sVal) >= 0);
+
+        case "<=>String":
+            return getConstantPool().valOrd(this.m_sVal.compareTo(((StringConstant) that).m_sVal));
+
+        case "..String":
+            return getConstantPool().ensureRangeConstant(this, that);
+
+        default:
+            return super.apply(op, that);
+        }
+    }
+
     @Override
-    public Object getLocator()
-        {
+    public Object getLocator() {
         return m_sVal;
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof StringConstant))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof StringConstant)) {
             return -1;
-            }
-        return this.m_sVal.compareTo(((StringConstant) that).m_sVal);
         }
+        return this.m_sVal.compareTo(((StringConstant) that).m_sVal);
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return quotedString(m_sVal);
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         writeUtf8String(out, m_sVal);
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "char-string=" + getValueString();
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_sVal);
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -196,4 +181,4 @@ public class StringConstant
      * The constant character string value.
      */
     private final String m_sVal;
-    }
+}

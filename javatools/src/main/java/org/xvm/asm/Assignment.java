@@ -11,8 +11,7 @@ package org.xvm.asm;
  * <li>If the variable is known to be effectively final.</li>
  * </ul>
  */
-public enum Assignment
-    {
+public enum Assignment {
     //           def    def    eff
     //           unasn  asn    final
     //           -----  -----  -----
@@ -48,18 +47,16 @@ public enum Assignment
     Assigned_Unknown     (Assigned,     Unknown),
     Assigned_Assigned1   (Assigned,     AssignedOnce);
 
-    Assignment(boolean fUnassigned, boolean fAssigned, boolean fExactlyOnce)
-        {
+    Assignment(boolean fUnassigned, boolean fAssigned, boolean fExactlyOnce) {
         assert !(fAssigned & fUnassigned);
 
         fSplit                = false;
         fUnassignedWhenFalse  = fUnassignedWhenTrue   = fUnassigned;
         fAssignedWhenFalse    = fAssignedWhenTrue     = fAssigned;
         fExactlyOnceWhenFalse = fExactlyOnceWhenTrue  = fExactlyOnce;
-        }
+    }
 
-    Assignment(Assignment whenFalse, Assignment whenTrue)
-        {
+    Assignment(Assignment whenFalse, Assignment whenTrue) {
         fSplit                = true;
         fUnassignedWhenFalse  = whenFalse.isDefinitelyUnassigned();
         fAssignedWhenFalse    = whenFalse.isDefinitelyAssigned();
@@ -67,52 +64,47 @@ public enum Assignment
         fUnassignedWhenTrue   = whenTrue.isDefinitelyUnassigned();
         fAssignedWhenTrue     = whenTrue.isDefinitelyAssigned();
         fExactlyOnceWhenTrue  = whenTrue.isEffectivelyFinal();
-        }
+    }
 
     /**
      * @return true iff the Assignment indicates definite <b>un</b>assignment
      */
-    public boolean isDefinitelyUnassigned()
-        {
+    public boolean isDefinitelyUnassigned() {
         return fUnassignedWhenFalse & fUnassignedWhenTrue;
-        }
+    }
 
     /**
      * @return true iff the Assignment indicates definite assignment
      */
-    public boolean isDefinitelyAssigned()
-        {
+    public boolean isDefinitelyAssigned() {
         return fAssignedWhenFalse & fAssignedWhenTrue;
-        }
+    }
 
     /**
      * @return true iff the Assignment indicates "effectively final" assignment
      */
-    public boolean isEffectivelyFinal()
-        {
+    public boolean isEffectivelyFinal() {
         // unassigned branch doesn't contradict "effectively final" semantics
         return fExactlyOnceWhenFalse & fExactlyOnceWhenTrue |
                fExactlyOnceWhenFalse & fUnassignedWhenTrue  |
                fUnassignedWhenFalse  & fExactlyOnceWhenTrue;
-        }
+    }
 
     /**
      * Apply an assignment to this Assignment state.
      *
      * @return the result of assignment
      */
-    public Assignment applyAssignment()
-        {
-        if (fSplit)
-            {
+    public Assignment applyAssignment() {
+        if (fSplit) {
             return join(this.whenFalse().applyAssignment(),
                         this.whenTrue() .applyAssignment());
-            }
+        }
 
         return isDefinitelyUnassigned()
                 ? AssignedOnce
                 : Assigned;
-        }
+    }
 
     /**
      * Apply a potentially asynchronous assignment that occurs from a lambda or anonymous inner
@@ -121,18 +113,16 @@ public enum Assignment
      *
      * @return the resulting Assignment state
      */
-    public Assignment applyAssignmentFromCapture()
-        {
-        if (fSplit)
-            {
+    public Assignment applyAssignmentFromCapture() {
+        if (fSplit) {
             return join(this.whenFalse().applyAssignmentFromCapture(),
                         this.whenTrue() .applyAssignmentFromCapture());
-            }
+        }
 
         return isDefinitelyAssigned()
                 ? Assigned
                 : Unknown;
-        }
+    }
 
     /**
      * Apply assignment information from an Assignment from a non-completing inner context to this
@@ -142,64 +132,56 @@ public enum Assignment
      *
      * @return the resulting Assignment state
      */
-    public Assignment promoteFromNonCompleting(Assignment that)
-        {
-        if (this == that)
-            {
+    public Assignment promoteFromNonCompleting(Assignment that) {
+        if (this == that) {
             return this;
-            }
+        }
 
-        if (this.fSplit || that.fSplit)
-            {
+        if (this.fSplit || that.fSplit) {
             return join(this.whenFalse().promoteFromNonCompleting(that.whenFalse()),
                         this.whenTrue() .promoteFromNonCompleting(that.whenTrue()));
-            }
+        }
 
         return this.isEffectivelyFinal() && !that.isEffectivelyFinal()
                 ? forFlags(getFlags() & 0b110110)   // erase effectively final flags
                 : this;
-        }
+    }
 
     /**
      * @return the Assignment representing the "when false" portion of this Assignment
      */
-    public Assignment whenFalse()
-        {
-        if (!fSplit)
-            {
+    public Assignment whenFalse() {
+        if (!fSplit) {
             return this;
-            }
+        }
 
         return forFlags((fUnassignedWhenFalse ? 0b100100 : 0)
                 |       (fAssignedWhenFalse   ? 0b010010 : 0)
                 |       (fExactlyOnceWhenFalse? 0b001001 : 0));
-        }
+    }
 
     /**
      * @return the Assignment representing the "when true" portion of this Assignment
      */
-    public Assignment whenTrue()
-        {
-        if (!fSplit)
-            {
+    public Assignment whenTrue() {
+        if (!fSplit) {
             return this;
-            }
+        }
 
         return forFlags((fUnassignedWhenTrue ? 0b100100 : 0)
                 |       (fAssignedWhenTrue   ? 0b010010 : 0)
                 |       (fExactlyOnceWhenTrue? 0b001001 : 0));
-        }
+    }
 
     /**
      * @return the negated form of this Assignment, such that the state for "when false" and
      *         "when true" are reversed
      */
-    public Assignment negate()
-        {
+    public Assignment negate() {
         return fSplit
                 ? join(whenTrue(), whenFalse())
                 : this;
-        }
+    }
 
     /**
      * Combine information from this Assignment with information from another in a manner that
@@ -209,15 +191,14 @@ public enum Assignment
      *
      * @return the resulting Assignment
      */
-    public Assignment join(Assignment that)
-        {
+    public Assignment join(Assignment that) {
         return forFlags((this.fUnassignedWhenFalse  & that.fUnassignedWhenFalse  ? 0b100000 : 0)
                 |       (this.fAssignedWhenFalse    & that.fAssignedWhenFalse    ? 0b010000 : 0)
                 |       (this.fExactlyOnceWhenFalse & that.fExactlyOnceWhenFalse ? 0b001000 : 0)
                 |       (this.fUnassignedWhenTrue   & that.fUnassignedWhenTrue   ? 0b000100 : 0)
                 |       (this.fAssignedWhenTrue     & that.fAssignedWhenTrue     ? 0b000010 : 0)
                 |       (this.fExactlyOnceWhenTrue  & that.fExactlyOnceWhenTrue  ? 0b000001 : 0));
-        }
+    }
 
     /**
      * Combine an Assignment from a "when false" or "when true" fork with this Assignment.
@@ -228,8 +209,7 @@ public enum Assignment
      *
      * @return the Assignment representing the combined Assignment states
      */
-    public Assignment join(Assignment that, boolean fWhenTrue)
-        {
+    public Assignment join(Assignment that, boolean fWhenTrue) {
         return fWhenTrue
                 ? forFlags((this.fUnassignedWhenFalse     ? 0b100000 : 0)
                     |      (this.fAssignedWhenFalse       ? 0b010000 : 0)
@@ -243,7 +223,7 @@ public enum Assignment
                     |      (this.fUnassignedWhenTrue      ? 0b000100 : 0)
                     |      (this.fAssignedWhenTrue        ? 0b000010 : 0)
                     |      (this.fExactlyOnceWhenTrue     ? 0b000001 : 0));
-        }
+    }
 
     /**
      * Combine the portions an Assignment from a "when false" or "when true" fork with this
@@ -254,15 +234,14 @@ public enum Assignment
      *
      * @return the Assignment representing the combined Assignment states
      */
-    public static Assignment join(Assignment whenFalse, Assignment whenTrue)
-        {
+    public static Assignment join(Assignment whenFalse, Assignment whenTrue) {
         return forFlags((whenFalse.isDefinitelyUnassigned() ? 0b100000 : 0)
                     |   (whenFalse.isDefinitelyAssigned()   ? 0b010000 : 0)
                     |   (whenFalse.isEffectivelyFinal()     ? 0b001000 : 0)
                     |   (whenTrue .isDefinitelyUnassigned() ? 0b000100 : 0)
                     |   (whenTrue .isDefinitelyAssigned()   ? 0b000010 : 0)
                     |   (whenTrue .isEffectivelyFinal()     ? 0b000001 : 0));
-        }
+    }
 
     /**
      * If this is an assignment at the end of a single iteration of a loop, calculate what the
@@ -273,31 +252,22 @@ public enum Assignment
      * @return the Assignment representing the state of this Assignment as if the loop had been
      *         executed multiple times
      */
-    public Assignment joinLoop(Assignment that)
-        {
-        if (this == that)
-            {
+    public Assignment joinLoop(Assignment that) {
+        if (this == that) {
             return this;
-            }
+        }
 
-        if (this.fSplit || that.fSplit)
-            {
+        if (this.fSplit || that.fSplit) {
             return join(this.whenFalse().joinLoop(that.whenFalse()),
                         this.whenTrue() .joinLoop(that.whenTrue()));
-            }
-
-        switch (that)
-            {
-            case UnknownOnce:
-                return Unknown;
-
-            case AssignedOnce:
-                return Assigned;
-
-            default:
-                return that;
-            }
         }
+
+        return switch (that) {
+            case UnknownOnce -> Unknown;
+            case AssignedOnce -> Assigned;
+            default -> that;
+        };
+    }
 
     /**
      * If an Assignment contains information that differs between "when false" and "when true"
@@ -309,17 +279,15 @@ public enum Assignment
      *         represents the same combined state as this Assignment
      *
      */
-    public Assignment demux()
-        {
-        if (!fSplit)
-            {
+    public Assignment demux() {
+        if (!fSplit) {
             return this;
-            }
+        }
 
         return forFlags((isDefinitelyUnassigned() ? 0b100100 : 0)
                 |       (isDefinitelyAssigned()   ? 0b010010 : 0)
                 |       (isEffectivelyFinal()     ? 0b001001 : 0));
-        }
+    }
 
     /**
      * Look up an Assignment enum by its ordinal.
@@ -328,47 +296,42 @@ public enum Assignment
      *
      * @return the Assignment enum for the specified ordinal
      */
-    public static Assignment valueOf(int i)
-        {
+    public static Assignment valueOf(int i) {
         return ASSIGNMENTS[i];
-        }
+    }
 
     /**
      * All of the Assignment enums.
      */
     private static final Assignment[] ASSIGNMENTS = Assignment.values();
 
-    private int getFlags()
-        {
+    private int getFlags() {
         return    (fUnassignedWhenFalse  ? 0b100000 : 0)
                 | (fAssignedWhenFalse    ? 0b010000 : 0)
                 | (fExactlyOnceWhenFalse ? 0b001000 : 0)
                 | (fUnassignedWhenTrue   ? 0b000100 : 0)
                 | (fAssignedWhenTrue     ? 0b000010 : 0)
                 | (fExactlyOnceWhenTrue  ? 0b000001 : 0);
-        }
+    }
 
-    private static Assignment forFlags(int nFlags)
-        {
+    private static Assignment forFlags(int nFlags) {
         Assignment assignment = BY_FLAGS[nFlags];
         assert assignment != null;
         return assignment;
-        }
+    }
 
     /**
      * All of the Assignment enums, indexed by their boolean flags.
      */
     private static final Assignment[] BY_FLAGS = new Assignment[64];
 
-    static
-        {
-        for (Assignment assignment : ASSIGNMENTS)
-            {
+    static {
+        for (Assignment assignment : ASSIGNMENTS) {
             int n = assignment.getFlags();
             assert BY_FLAGS[n] == null;
             BY_FLAGS[n] = assignment;
-            }
         }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -380,4 +343,4 @@ public enum Assignment
     private final boolean fUnassignedWhenTrue;
     private final boolean fAssignedWhenTrue;
     private final boolean fExactlyOnceWhenTrue;
-    }
+}

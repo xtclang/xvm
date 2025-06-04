@@ -150,17 +150,13 @@ public class xRTFileTemplate
                 {
                 String sVersion = ((StringHandle) ahArg[0]).getStringValue();
 
-                ModuleStructure module;
-                if (sVersion.isEmpty())
-                    {
-                    module = file.getModule();
-                    }
-                else
+                ModuleStructure module = file.getModule();
+                if (!sVersion.isEmpty())
                     {
                     Version version = new Version(sVersion);
-                    if (file.containsVersion(version))
+                    if (module.containsVersion(version))
                         {
-                        module = file.extractVersion(version);
+                        module = module.extractVersion(version);
                         }
                     else
                         {
