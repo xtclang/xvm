@@ -14,8 +14,7 @@ import org.xvm.asm.MultiMethodStructure;
  * Represent a collection of methods or functions with the same name.
  */
 public class MultiMethodConstant
-        extends NamedConstant
-    {
+        extends NamedConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -28,10 +27,9 @@ public class MultiMethodConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public MultiMethodConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool, format, in);
-        }
+    }
 
     /**
      * Construct a constant whose value is a multi-method identifier.
@@ -41,80 +39,71 @@ public class MultiMethodConstant
      *                     multi-method
      * @param sName        the method name
      */
-    public MultiMethodConstant(ConstantPool pool, IdentityConstant constParent, String sName)
-        {
+    public MultiMethodConstant(ConstantPool pool, IdentityConstant constParent, String sName) {
         super(pool, constParent, sName);
 
-        switch (constParent.getFormat())
-            {
-            case Module:
-            case Package:
-            case Class:
-            case NativeClass:
-            case Method:
-            case Property:
-            case FormalTypeChild:
-            case TypeParameter:
-            case DynamicFormal:
-                break;
+        switch (constParent.getFormat()) {
+        case Module:
+        case Package:
+        case Class:
+        case NativeClass:
+        case Method:
+        case Property:
+        case FormalTypeChild:
+        case TypeParameter:
+        case DynamicFormal:
+            break;
 
-            default:
-                throw new IllegalArgumentException("invalid parent: " + constParent.getFormat());
-            }
+        default:
+            throw new IllegalArgumentException("invalid parent: " + constParent.getFormat());
         }
+    }
 
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
-    public IdentityConstant replaceParentConstant(IdentityConstant idParent)
-        {
+    public IdentityConstant replaceParentConstant(IdentityConstant idParent) {
         return new MultiMethodConstant(getConstantPool(), idParent, getName());
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.MultiMethod;
-        }
+    }
 
     @Override
-    public MultiMethodStructure relocateNestedIdentity(ClassStructure clz)
-        {
+    public MultiMethodStructure relocateNestedIdentity(ClassStructure clz) {
         Component parent = getNamespace().relocateNestedIdentity(clz);
-        if (parent == null)
-            {
+        if (parent == null) {
             return null;
-            }
+        }
 
         Component that = parent.getChild(this.getName());
         return that instanceof MultiMethodStructure
                 ? (MultiMethodStructure) that
                 : null;
-        }
+    }
 
     @Override
-    public MultiMethodConstant ensureNestedIdentity(ConstantPool pool, IdentityConstant that)
-        {
+    public MultiMethodConstant ensureNestedIdentity(ConstantPool pool, IdentityConstant that) {
         return pool.ensureMultiMethodConstant(
                 getParentConstant().ensureNestedIdentity(pool, that), getName());
-        }
+    }
 
     @Override
-    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)
-        {
+    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that) {
         return that.getConstantPool().ensureMultiMethodConstant(that, getName());
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "multimethod=" + getValueString();
-        }
     }
+}

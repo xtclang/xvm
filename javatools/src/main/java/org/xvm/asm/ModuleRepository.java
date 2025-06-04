@@ -10,27 +10,23 @@ import java.util.TreeSet;
 /**
  * An interface representing the ability to find Modules by identity.
  */
-public interface ModuleRepository
-    {
+public interface ModuleRepository {
     /**
      * Obtain a set of domain names that are known by this repository.
      *
      * @return a set of domain names
      */
-    default Set<String> getDomainNames()
-        {
+    default Set<String> getDomainNames() {
         Set<String> modules = getModuleNames();
         Set<String> domains = new TreeSet<>();
-        for (String module : modules)
-            {
+        for (String module : modules) {
             int of = module.indexOf('.');
-            if (of >= 0)
-                {
+            if (of >= 0) {
                 domains.add(module.substring(of + 1));
-                }
             }
-        return domains;
         }
+        return domains;
+    }
 
     /**
      * For a specified domain name, obtain a set of qualified module names
@@ -40,17 +36,15 @@ public interface ModuleRepository
      *
      * @return a set of qualified module names
      */
-    default Set<String> getModuleNames(String sDomain)
-        {
+    default Set<String> getModuleNames(String sDomain) {
         Set<String> modules = getModuleNames();
         Set<String> names = new TreeSet<>();
-        for (String module : modules)
-            {
+        for (String module : modules) {
             int of = module.indexOf('.');
             names.add(of < 0 ? module : module.substring(0, of));
-            }
-        return names;
         }
+        return names;
+    }
 
     /**
      * Obtain a set of all of the qualified module names known by this
@@ -69,11 +63,10 @@ public interface ModuleRepository
      *         note that the set may contain a null value, indicating a
      *         versionless module; or null if the module does not exist
      */
-    default VersionTree<Boolean> getAvailableVersions(String sModule)
-        {
+    default VersionTree<Boolean> getAvailableVersions(String sModule) {
         ModuleStructure module = loadModule(sModule);
-        return module == null ? null : module.getFileStructure().getVersionTree();
-        }
+        return module == null ? null : module.getVersions();
+    }
 
     /**
      * Load the specified module.
@@ -94,53 +87,41 @@ public interface ModuleRepository
      *
      * @return a ModuleStructure, or null if the specified module is unavailable
      */
-    default ModuleStructure loadModule(String sModule, Version version, boolean fExact)
-        {
+    default ModuleStructure loadModule(String sModule, Version version, boolean fExact) {
         ModuleStructure module = loadModule(sModule);
-        if (module == null || version == null)
-            {
+        if (module == null || version == null) {
             return module;
-            }
+        }
 
-        Version       useVersion = null;
-        FileStructure file       = module.getFileStructure();
-        if (file.containsVersion(version))
-            {
+        Version useVersion = null;
+        if (module.containsVersion(version)) {
             useVersion = version;
-            }
-        else
-            {
+        } else {
             // check each version in the module to see if it would work; keep the most appropriate one
-            for (Version possibleVer : file.getVersionTree())
-                {
-                if (possibleVer.isSubstitutableFor(version))
-                    {
-                    if (version.isSubstitutableFor(possibleVer))
-                        {
+            for (Version possibleVer : module.getVersions()) {
+                if (possibleVer.isSubstitutableFor(version)) {
+                    if (version.isSubstitutableFor(possibleVer)) {
                         // use that version; it's the same as this version (except for .0 etc.)
                         useVersion = possibleVer;
                         break;
-                        }
+                    }
 
-                    if (!fExact)
-                        {
-                        if (useVersion == null || useVersion.isSubstitutableFor(possibleVer))
-                            {
+                    if (!fExact) {
+                        if (useVersion == null || useVersion.isSubstitutableFor(possibleVer)) {
                             // use the oldest available version that matches
                             useVersion = possibleVer;
-                            }
                         }
                     }
                 }
-
-            if (useVersion == null)
-                {
-                return null;
-                }
             }
 
-        return file.extractVersion(useVersion);
+            if (useVersion == null) {
+                return null;
+            }
         }
+
+        return module.extractVersion(useVersion);
+    }
 
     /**
      * Store the specified module in the repository.
@@ -161,4 +142,4 @@ public interface ModuleRepository
      * A constant empty array of <tt>ModuleRepository</tt>.
      */
     ModuleRepository[] NO_REPOS = new ModuleRepository[0];
-    }
+}

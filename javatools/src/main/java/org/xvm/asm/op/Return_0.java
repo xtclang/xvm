@@ -3,8 +3,12 @@ package org.xvm.asm.op;
 
 import java.io.DataInput;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpReturn;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 
@@ -40,6 +44,15 @@ public class Return_0
             ? frame.processAllGuard(new Return0Action(m_ixAllGuard))
             : frame.returnVoid();
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        code.return_();
+    }
+
+    // ----- inner classes -------------------------------------------------------------------------
 
     protected static class Return0Action
             extends Frame.DeferredGuardAction {

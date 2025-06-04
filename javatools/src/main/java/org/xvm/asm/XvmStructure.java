@@ -86,8 +86,7 @@ import org.xvm.util.Severity;
  * </ul>
  */
 public abstract class XvmStructure
-        implements Constants
-    {
+        implements Constants {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -95,10 +94,9 @@ public abstract class XvmStructure
      *
      * @param xsParent  the containing XVM structure
      */
-    protected XvmStructure(XvmStructure xsParent)
-        {
+    protected XvmStructure(XvmStructure xsParent) {
         m_xsParent = xsParent;
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
@@ -109,30 +107,27 @@ public abstract class XvmStructure
      * @return the XvmStructure that contains this XvmStructure, or null if this XvmStructure is not
      *         contained by another XvmStructure
      */
-    public XvmStructure getContaining()
-        {
+    public XvmStructure getContaining() {
         return m_xsParent;
-        }
+    }
 
     /**
      * Modify the containing XVM structure.
      *
      * @param xsParent  the XvmStructure that will contain this XvmStructure
      */
-    protected void setContaining(XvmStructure  xsParent)
-        {
+    protected void setContaining(XvmStructure  xsParent) {
         m_xsParent = xsParent;
-        }
+    }
 
     /**
      * Get a reference to the FileStructure that contains this XvmStructure.
      *
      * @return the FileStructure
      */
-    public FileStructure getFileStructure()
-        {
+    public FileStructure getFileStructure() {
         return getContaining().getFileStructure();
-        }
+    }
 
     /**
      * Get a reference to the ConstantPool that is shared by all of the XvmStructures within the
@@ -140,10 +135,9 @@ public abstract class XvmStructure
      *
      * @return  the ConstantPool
      */
-    public ConstantPool getConstantPool()
-        {
+    public ConstantPool getConstantPool() {
         return getContaining().getConstantPool();
-        }
+    }
 
     /**
      * If this XvmStructure has an identity that is a Constant in the ConstantPool, then obtain that
@@ -151,10 +145,9 @@ public abstract class XvmStructure
      *
      * @return the Constant that represents the identity of this XvmStructure; otherwise null
      */
-    public IdentityConstant getIdentityConstant()
-        {
+    public IdentityConstant getIdentityConstant() {
         return null;
-        }
+    }
 
     /**
      * Obtain the nested XVM structures contained within this XVM structure. The caller should treat
@@ -162,10 +155,9 @@ public abstract class XvmStructure
      *
      * @return an Iterable object representing all nested XVM structures
      */
-    public Iterator<? extends XvmStructure> getContained()
-        {
+    public Iterator<? extends XvmStructure> getContained() {
         return Collections.emptyIterator();
-        }
+    }
 
     /**
      * Determine if the XVM structure (or any nested XVM structure) has been modified.
@@ -173,18 +165,15 @@ public abstract class XvmStructure
      * @return true if the XVM structure has been modified since the last call to
      *         {@link #resetModified()}
      */
-    public boolean isModified()
-        {
-        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); )
-            {
-            if (iter.next().isModified())
-                {
+    public boolean isModified() {
+        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); ) {
+            if (iter.next().isModified()) {
                 return true;
-                }
             }
+        }
 
         return false;
-        }
+    }
 
     /**
      * Mark the XVM structure as having been modified.
@@ -201,13 +190,11 @@ public abstract class XvmStructure
      * After calling this method, and before any further modifications occur, {@link #isModified()}
      * must return false.
      */
-    protected void resetModified()
-        {
-        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); )
-            {
+    protected void resetModified() {
+        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); ) {
             iter.next().resetModified();
-            }
         }
+    }
 
     /**
      * Determine whether the presence of this XVM structure is conditional.
@@ -216,10 +203,9 @@ public abstract class XvmStructure
      *         to the presence of its module; true if this XVM structure may or may not be present
      *         at runtime within its module
      */
-    public boolean isConditional()
-        {
+    public boolean isConditional() {
         return getCondition() != null || m_xsParent.isConditional();
-        }
+    }
 
     /**
      * Obtain the condition for this XVM Structure. Note that this is not an aggregate condition;
@@ -230,10 +216,9 @@ public abstract class XvmStructure
      * @return the ConditionalConstant that represents the condition (if any) for this XVM Structure
      *         to be available at runtime
      */
-    public ConditionalConstant getCondition()
-        {
+    public ConditionalConstant getCondition() {
         return null;
-        }
+    }
 
     /**
      * Obtain the condition for the entire path from the root XVM Structure down to this XVM
@@ -241,18 +226,16 @@ public abstract class XvmStructure
      *
      * @return
      */
-    public ConditionalConstant getAggregateCondition()
-        {
+    public ConditionalConstant getAggregateCondition() {
         ConditionalConstant[] conds = aggregateConditions(0);
-        if (conds == null)
-            {
+        if (conds == null) {
             return null;
-            }
+        }
 
         return conds.length == 1
                 ? conds[0]
                 : getConstantPool().ensureAllCondition(conds);
-        }
+    }
 
     /**
      * Aggregate all of the conditions for a specified XVM Structure by walking the tree up to its
@@ -262,39 +245,32 @@ public abstract class XvmStructure
      *
      * @return an array of conditions, or nullif the XVM Structure is not conditional
      */
-    protected ConditionalConstant[] aggregateConditions(int cConditions)
-        {
+    protected ConditionalConstant[] aggregateConditions(int cConditions) {
         ConditionalConstant[] conds  = null;
         XvmStructure          parent = m_xsParent;
         ConditionalConstant   cond   = getCondition();
-        if (cond != null)
-            {
+        if (cond != null) {
             ++cConditions;
-            }
+        }
 
-        if (parent == null)
-            {
+        if (parent == null) {
             // we're at the top of the tree; create the storage to hold the aggregated conditions
             // (if any)
-            if (cConditions > 0)
-                {
+            if (cConditions > 0) {
                 conds = new ConditionalConstant[cConditions];
-                }
             }
-        else
-            {
+        } else {
             // go up the tree
             conds = parent.aggregateConditions(cConditions);
-            }
+        }
 
         // add our condition to the end
-        if (cond != null)
-            {
+        if (cond != null) {
             conds[conds.length-cConditions] = cond;
-            }
+        }
 
         return conds;
-        }
+    }
 
     /**
      * Specify a condition for this XVM Structure. Note that this condition is <i>in addition to</i>
@@ -304,10 +280,9 @@ public abstract class XvmStructure
      *                   Structure to be available at runtime, or null to specify that this XVM
      *                   Structure has no additional conditions to its presence at runtime
      */
-    protected void setCondition(ConditionalConstant condition)
-        {
+    protected void setCondition(ConditionalConstant condition) {
         throw new UnsupportedOperationException();
-        }
+    }
 
     /**
      * Remove any portions of the XVM Structure that are conditionally present only for the passed
@@ -317,13 +292,11 @@ public abstract class XvmStructure
      * @param condition a NamedCondition, a PresentCondition, or a VersionedCondition, or a
      *                  NotCondition of any of the above
      */
-    protected void purgeCondition(ConditionalConstant condition)
-        {
-        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); )
-            {
+    protected void purgeCondition(ConditionalConstant condition) {
+        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); ) {
             iter.next().purgeCondition(condition);
-            }
         }
+    }
 
     /**
      * Given a specified context, determine if this XVM Structure would be present at runtime.
@@ -334,16 +307,14 @@ public abstract class XvmStructure
      *
      * @return true if this XVM Structure would be present given the specified context
      */
-    public boolean isPresent(LinkerContext ctx)
-        {
-        if (!m_xsParent.isPresent(ctx))
-            {
+    public boolean isPresent(LinkerContext ctx) {
+        if (!m_xsParent.isPresent(ctx)) {
             return false;
-            }
+        }
 
         final ConditionalConstant cond = getCondition();
         return cond == null || cond.isPresent(ctx);
-        }
+    }
 
     /**
      * Determine if this XVM Structure is resolved. An XVM Structure is considered resolved if it
@@ -355,23 +326,19 @@ public abstract class XvmStructure
      *
      * @see ConditionalConstant
      */
-    public boolean isResolved()
-        {
-        if (getCondition() != null)
-            {
+    public boolean isResolved() {
+        if (getCondition() != null) {
             return false;
-            }
+        }
 
-        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); )
-            {
-            if (!iter.next().isResolved())
-                {
+        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); ) {
+            if (!iter.next().isResolved()) {
                 return false;
-                }
             }
+        }
 
         return true;
-        }
+    }
 
     /**
      * Use the specified context to evaluate and thus eliminate conditional inclusion within this
@@ -381,15 +348,13 @@ public abstract class XvmStructure
      *             available, what the contents of those modules are, what the version of this
      *             module is, and what named options are specified
      */
-    public void resolve(LinkerContext ctx)
-        {
+    public void resolve(LinkerContext ctx) {
         // just pass down the resolve to any children; note that this must be overridden if any of
         // the children themselves can be discarded as part of the resolve process
-        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); )
-            {
+        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); ) {
             iter.next().resolve(ctx);
-            }
         }
+    }
 
     /**
      * Read an XVM structure from the DataInput stream.
@@ -400,9 +365,8 @@ public abstract class XvmStructure
      *                      DataInput stream, or if there is invalid data in the stream
      */
     protected void disassemble(DataInput in)
-            throws IOException
-        {
-        }
+            throws IOException {
+    }
 
     /**
      * The first assembly step collects the necessary entries for the constant pool.  During this
@@ -412,13 +376,11 @@ public abstract class XvmStructure
      * @param pool  the ConstantPool with which to register each constant referenced by the XVM
      *              structure
      */
-    protected void registerConstants(ConstantPool pool)
-        {
-        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); )
-            {
+    protected void registerConstants(ConstantPool pool) {
+        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); ) {
             iter.next().registerConstants(pool);
-            }
         }
+    }
 
     /**
      * The second assembly step writes the XVM structure to the DataOutput stream.
@@ -429,9 +391,8 @@ public abstract class XvmStructure
      *                      stream
      */
     protected void assemble(DataOutput out)
-            throws IOException
-        {
-        }
+            throws IOException {
+    }
 
     /**
      * Validate the XvmStructure and its contents, checking for any errors or violations of the XVM
@@ -442,18 +403,15 @@ public abstract class XvmStructure
      * @return true if the validation process was halted before it completed, for example if the
      *         error list reached its size limit
      */
-    public boolean validate(ErrorListener errs)
-        {
-        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); )
-            {
-            if (iter.next().validate(errs))
-                {
+    public boolean validate(ErrorListener errs) {
+        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); ) {
+            if (iter.next().validate(errs)) {
                 return true;
-                }
             }
+        }
 
         return false;
-        }
+    }
 
     /**
      * Log an error against this structure.
@@ -463,11 +421,10 @@ public abstract class XvmStructure
      * @param sCode    the error code
      * @param aoParam  the parameters of the error
      */
-    public boolean log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam)
-        {
+    public boolean log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam) {
         // TODO need a way to log to compiler error list if we have compile-time info on the location in the source code
         return ensureErrorListener(errs).log(sev, sCode, aoParam, this);
-        }
+    }
 
     /**
      * Make sure that an error listener is returned to use.
@@ -477,28 +434,25 @@ public abstract class XvmStructure
      * @return the error listener passed in, if it was not null, otherwise the previously specified
      *         error listener, otherwise the runtime error listener
      */
-    public ErrorListener ensureErrorListener(ErrorListener errs)
-        {
+    public ErrorListener ensureErrorListener(ErrorListener errs) {
         return errs == null ? getErrorListener() : errs;
-        }
+    }
 
     /**
      * @return the error listener, if provided, otherwise the runtime error listener
      */
-    public ErrorListener getErrorListener()
-        {
+    public ErrorListener getErrorListener() {
         return m_xsParent.getErrorListener();
-        }
+    }
 
     /**
      * Specify an error listener.
      *
      * @param errs  the error listener
      */
-    public void setErrorListener(ErrorListener errs)
-        {
+    public void setErrorListener(ErrorListener errs) {
         m_xsParent.setErrorListener(errs);
-        }
+    }
 
 
     // ----- debugging support ---------------------------------------------------------------------
@@ -517,29 +471,26 @@ public abstract class XvmStructure
      *
      * @return a String containing a dump of this XVM Structure
      */
-    public String toDebugString()
-        {
+    public String toDebugString() {
         StringWriter sw  = new StringWriter(1024);
         PrintWriter  out = new PrintWriter(sw);
         dump(out);
         out.flush();
         return sw.toString();
-        }
+    }
 
     /**
      * For debugging purposes, dump the contents of the XVM Structure to the provided PrintWriter.
      *
      * @param out  the PrintWriter to dump to, or null to dump to the console
      */
-    public void dump(PrintWriter out)
-        {
-        if (out == null)
-            {
+    public void dump(PrintWriter out) {
+        if (out == null) {
             out = System.console().writer();
-            }
+        }
 
         dump(out, "");
-        }
+    }
 
     /**
      * This is the method that implements the actual debugging dump of the contents of this XVM
@@ -562,38 +513,32 @@ public abstract class XvmStructure
      * @param collStructs  the collection of XVM Structure
      */
     protected void dumpStructureCollection(PrintWriter out, String sIndent, String sTitle,
-            Collection<? extends XvmStructure> collStructs)
-        {
-        if (collStructs != null && !collStructs.isEmpty())
-            {
+            Collection<? extends XvmStructure> collStructs) {
+        if (collStructs != null && !collStructs.isEmpty()) {
             out.print(sIndent);
             out.println(sTitle);
 
             int i = 0;
             String sIndentMore = nextIndent(sIndent);
-            for (XvmStructure xs : collStructs)
-                {
+            for (XvmStructure xs : collStructs) {
                 StringBuilder sb = new StringBuilder();
                 sb.append(sIndent)
                   .append('[')
                   .append(i++)
                   .append("]");
 
-                if (xs == null || xs instanceof Constant)
-                    {
+                if (xs == null || xs instanceof Constant) {
                     sb.append('=')
                       .append(xs);
                     out.println(sb);
-                    }
-                else
-                    {
+                } else {
                     sb.append(':');
                     out.println(sb);
                     xs.dump(out, sIndentMore);
-                    }
                 }
             }
         }
+    }
 
     /**
      * A helper method to dump out the contents of a map containing XVM Structures.
@@ -605,17 +550,14 @@ public abstract class XvmStructure
      * @param mapStructs   the map from identity to XVM Structure
      */
     protected void dumpStructureMap(PrintWriter out, String sIndent, String sTitle,
-            Map<?, ? extends XvmStructure> mapStructs)
-        {
-        if (mapStructs != null && !mapStructs.isEmpty())
-            {
+            Map<?, ? extends XvmStructure> mapStructs) {
+        if (mapStructs != null && !mapStructs.isEmpty()) {
             out.print(sIndent);
             out.println(sTitle);
 
             int i = 0;
             String sIndentMore = nextIndent(sIndent);
-            for (Map.Entry<?, ? extends XvmStructure> entry : mapStructs.entrySet())
-                {
+            for (Map.Entry<?, ? extends XvmStructure> entry : mapStructs.entrySet()) {
                 out.println(sIndent +
                     '[' +
                     i++ +
@@ -623,18 +565,15 @@ public abstract class XvmStructure
                     entry.getKey());
 
                 XvmStructure xs = entry.getValue();
-                if (xs == null)
-                    {
+                if (xs == null) {
                     out.print(sIndentMore);
                     out.print(xs);
-                    }
-                else
-                    {
+                } else {
                     xs.dump(out, sIndentMore);
-                    }
                 }
             }
         }
+    }
 
     /**
      * Obtain a String to use for indentation for the next nested level of output by
@@ -644,34 +583,30 @@ public abstract class XvmStructure
      *
      * @return the indentation to use for the next nested level
      */
-    protected String nextIndent(String sIndent)
-        {
+    protected String nextIndent(String sIndent) {
         return sIndent + "  ";
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
-        {
+    public int hashCode() {
         Constant constant = getIdentityConstant();
-        if (constant != null)
-            {
+        if (constant != null) {
             return constant.hashCode();
-            }
+        }
 
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
     public abstract boolean equals(Object obj);
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return getClass().getSimpleName() + '{' + getDescription() + '}';
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -680,4 +615,4 @@ public abstract class XvmStructure
      * The containing XVM structure.
      */
     private XvmStructure m_xsParent;
-    }
+}

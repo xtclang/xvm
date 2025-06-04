@@ -13,8 +13,7 @@ import org.xvm.asm.Version;
  * Represent a version number.
  */
 public class VersionConstant
-        extends LiteralConstant
-    {
+        extends LiteralConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -23,12 +22,11 @@ public class VersionConstant
      * @param pool  the ConstantPool that will contain this Constant
      * @param ver   the version
      */
-    public VersionConstant(ConstantPool pool, Version ver)
-        {
+    public VersionConstant(ConstantPool pool, Version ver) {
         super(pool, Format.Version, ver.toString(), null);
 
         m_ver = ver;
-        }
+    }
 
     /**
      * Constructor used for deserialization.
@@ -40,18 +38,16 @@ public class VersionConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public VersionConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool, format, in);
-        }
+    }
 
     @Override
-    protected void resolveConstants()
-        {
+    protected void resolveConstants() {
         super.resolveConstants();
 
         m_ver = new Version(getValue());
-        }
+    }
 
 
     // ----- ValueConstant methods -----------------------------------------------------------------
@@ -59,44 +55,38 @@ public class VersionConstant
     /**
      * @return the fully qualified version number
      */
-    public Version getVersion()
-        {
+    public Version getVersion() {
         return m_ver;
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return getConstantPool().typeVersion();
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof VersionConstant))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof VersionConstant)) {
             return -1;
-            }
-        return this.m_ver.compareTo(((VersionConstant) that).m_ver);
         }
+        return this.m_ver.compareTo(((VersionConstant) that).m_ver);
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return "v:" + getValue();
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "version=" + getValue();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -105,4 +95,4 @@ public class VersionConstant
      * The version indicator for this version.
      */
     private Version m_ver;
-    }
+}

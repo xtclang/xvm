@@ -21,8 +21,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * ("instance") inner class.
  */
 public class ParentClassConstant
-        extends PseudoConstant
-    {
+        extends PseudoConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -31,23 +30,20 @@ public class ParentClassConstant
      * @param pool        the ConstantPool that will contain this Constant
      * @param constChild  a TypeConstant that this constant represents the enclosing parent of
      */
-    public ParentClassConstant(ConstantPool pool, PseudoConstant constChild)
-        {
+    public ParentClassConstant(ConstantPool pool, PseudoConstant constChild) {
         super(pool);
 
-        if (constChild == null)
-            {
+        if (constChild == null) {
             throw new IllegalArgumentException("child class required");
-            }
+        }
 
-        if (!(constChild instanceof ParentClassConstant || constChild instanceof ThisClassConstant))
-            {
+        if (!(constChild instanceof ParentClassConstant || constChild instanceof ThisClassConstant)) {
             throw new IllegalArgumentException("child must be an auto-narrowable class identity," +
                     " either \"this:class\" or a parent class thereof (child=" + constChild + ')');
-            }
+        }
 
         m_constChild = constChild;
-        }
+    }
 
     /**
      * Constructor used for deserialization.
@@ -59,18 +55,16 @@ public class ParentClassConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public ParentClassConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
 
         m_iChild = readMagnitude(in);
-        }
+    }
 
     @Override
-    protected void resolveConstants()
-        {
+    protected void resolveConstants() {
         m_constChild = (PseudoConstant) getConstantPool().getConstant(m_iChild);
-        }
+    }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
@@ -78,152 +72,130 @@ public class ParentClassConstant
     /**
      * @return the PseudoConstant that this constant represents the parent class of
      */
-    public PseudoConstant getChildClass()
-        {
+    public PseudoConstant getChildClass() {
         return m_constChild;
-        }
+    }
 
     /**
      * @return the number of {@link ParentClassConstant} (including this one) that wrap an
      *         underlying {@link ThisClassConstant}
      */
-    public int getDepth()
-        {
+    public int getDepth() {
         PseudoConstant idClz  = this;
         int            cDepth = 0;
-        do
-            {
+        do {
             ++cDepth;
             idClz = ((ParentClassConstant) idClz).getChildClass();
-            }
-        while (idClz instanceof ParentClassConstant);
+        } while (idClz instanceof ParentClassConstant);
 
         assert idClz instanceof ThisClassConstant;
         return cDepth;
-        }
+    }
 
     @Override
-    public IdentityConstant getDeclarationLevelClass()
-        {
+    public IdentityConstant getDeclarationLevelClass() {
         PseudoConstant constChild = m_constChild;
-        switch (constChild.getFormat())
-            {
-            case ParentClass:
-            case ChildClass:
-            case ThisClass:
-                IdentityConstant idParent = constChild.getDeclarationLevelClass().getParentConstant();
-                while (!idParent.isClass())
-                    {
-                    idParent = idParent.getParentConstant();
-                    }
-                return idParent;
-
-            default:
-                throw new IllegalStateException("constChild=" + constChild);
+        switch (constChild.getFormat()) {
+        case ParentClass:
+        case ChildClass:
+        case ThisClass:
+            IdentityConstant idParent = constChild.getDeclarationLevelClass().getParentConstant();
+            while (!idParent.isClass()) {
+                idParent = idParent.getParentConstant();
             }
+            return idParent;
+
+        default:
+            throw new IllegalStateException("constChild=" + constChild);
         }
+    }
 
     @Override
-    public boolean isCongruentWith(PseudoConstant that)
-        {
+    public boolean isCongruentWith(PseudoConstant that) {
         return that instanceof ParentClassConstant thatParent &&
                this.m_constChild.isCongruentWith(thatParent.m_constChild);
-        }
+    }
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.ParentClass;
-        }
+    }
 
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return getConstantPool().ensureParentTypeConstant(m_constChild.getType());
-        }
+    }
 
     @Override
-    public boolean isClass()
-        {
+    public boolean isClass() {
         return true;
-        }
+    }
 
     @Override
-    public boolean isAutoNarrowing()
-        {
+    public boolean isAutoNarrowing() {
         return true;
-        }
+    }
 
     @Override
-    protected Object getLocator()
-        {
+    protected Object getLocator() {
         return m_constChild.getLocator() != null
                 ? m_constChild
                 : null;
-        }
+    }
 
     @Override
-    public boolean containsUnresolved()
-        {
+    public boolean containsUnresolved() {
         return !isHashCached() && m_constChild.containsUnresolved();
-        }
+    }
 
     @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
+    public void forEachUnderlying(Consumer<Constant> visitor) {
         visitor.accept(m_constChild);
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof ParentClassConstant))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof ParentClassConstant)) {
             return -1;
-            }
-        return this.m_constChild.compareTo(((ParentClassConstant) that).m_constChild);
         }
+        return this.m_constChild.compareTo(((ParentClassConstant) that).m_constChild);
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         // this isn't real syntax, but it at least conveys the information
         return m_constChild.getValueString() + ":parent";
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         m_constChild = (PseudoConstant) pool.register(m_constChild);
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constChild.getPosition());
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "child=" + m_constChild;
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_constChild);
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -237,4 +209,4 @@ public class ParentClassConstant
      * The child class that this is a parent class of.
      */
     private PseudoConstant m_constChild;
-    }
+}

@@ -22,9 +22,7 @@ public class CondOpExprAST
         super(expr1, op, expr2);
 
         assert switch (op) {
-            case CondOr, CondXor, CondAnd, CompEq, CompNeq,
-                 CompLt, CompGt, CompLtEq, CompGtEq, CompOrd
-                    -> true;
+            case CondOr, CondXor, CondAnd, CompEq, CompNeq, CompLt, CompGt, CompLtEq, CompGtEq, CompOrd -> true;
             default -> false;
             };
     }
@@ -45,15 +43,10 @@ public class CondOpExprAST
             throws IOException {
         super.readBody(in, res);
 
-        type = switch (getOp())
-            {
-            case CondOr, CondXor, CondAnd, CompEq, CompNeq ->
-                res.typeForName("Boolean");
-
-            case CompLt, CompGt, CompLtEq, CompGtEq, CompOrd ->
-                res.typeForName("Ordered");
-
+        type = switch (getOp()) {
+            case CondOr, CondXor, CondAnd, CompEq, CompNeq   -> res.typeForName("Boolean");
+            case CompLt, CompGt, CompLtEq, CompGtEq, CompOrd -> res.typeForName("Ordered");
             default -> throw new IllegalStateException();
-            };
+        };
     }
 }

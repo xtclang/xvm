@@ -1,16 +1,31 @@
 package org.xvm.asm;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
+
+import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
+
 import org.xvm.asm.Constants.Access;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.BuildContext.DoubleSlot;
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitMethodDesc;
+import org.xvm.javajit.JitParamDesc;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.CallChain.VirtualConstructorChain;
@@ -24,9 +39,12 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
+import static java.lang.constant.ConstantDescs.CD_boolean;
+
+import static org.xvm.javajit.Builder.CD_Nullable;
+
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Common base for NVOK_ ops.
@@ -290,6 +308,145 @@ public abstract class OpInvocable extends Op {
         return "void";
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    protected void buildInvoke(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
+        Slot targetSlot = bctx.loadArgument(code, m_nTarget);
+        if (!targetSlot.isSingle()) {
+            throw new UnsupportedOperationException("TODO");
+        }
+        MethodConstant idMethod   = (MethodConstant) bctx.getConstant(m_nMethodId);
+        MethodInfo     infoMethod = targetSlot.type().ensureTypeInfo().getMethodById(idMethod);
+        JitMethodDesc  jmd        = infoMethod.getJitDesc(bctx.typeSystem);
+        MethodTypeDesc md         = jmd.optimizedMD;
+        String         methodName = idMethod.getName();
+        boolean        fOptimized = false;
+
+        if (md == null) {
+            md = jmd.standardMD;
+        } else {
+            methodName += Builder.OPT;
+            fOptimized  = true;
+        }
+
+        bctx.loadCtx(code);
+        for (int i = 0, c = anArgValue == null ? 0 : anArgValue.length; i < c; i++ ) {
+            int          iArg = anArgValue[i];
+            JitParamDesc pd   = fOptimized ? jmd.getOptimizedParam(i) : jmd.standardParams[i];
+            switch (pd.flavor) {
+            case SpecificWithDefault:
+                if (iArg == A_DEFAULT) {
+                    code.aconst_null();
+                    continue;
+                }
+                break;
+
+            case PrimitiveWithDefault:
+                if (iArg == A_DEFAULT) {
+                    assert fOptimized;
+                    // default primitive with an additional `true`
+                    Builder.defaultLoad(code, pd.cd);
+                    code.iconst_1();
+                } else {
+                    // actual primitive with an additional `false`
+                    bctx.loadArgument(code, iArg);
+                    code.iconst_0();
+                }
+                continue;
+
+            default:
+                assert iArg != A_DEFAULT;
+                break;
+            }
+            bctx.loadArgument(code, iArg, pd);
+        }
+
+        if (infoMethod.getHead().getImplementation().getExistence() == MethodBody.Existence.Interface) {
+            code.invokeinterface(targetSlot.cd(), methodName, md);
+        } else {
+            code.invokevirtual(targetSlot.cd(), methodName, md);
+        }
+
+        int cReturns = infoMethod.getSignature().getReturnCount();
+        if (cReturns > 0) {
+            // TODO: extract into assignReturns() method
+            for (int i = 0; i < cReturns; i++) {
+                int          iOpt    = fOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
+                JitParamDesc pdRet   = fOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
+                int          nVar    = isMultiReturn() ? m_anRetValue[i] : m_nRetValue;
+                TypeConstant typeRet = pdRet.type;
+                ClassDesc    cdRet   = pdRet.cd;
+                Slot         slot    = bctx.ensureSlot(nVar, typeRet, cdRet, "");
+
+                if (i == 0) {
+                    switch (pdRet.flavor) {
+                    case MultiSlotPrimitive:
+                        assert fOptimized;
+                        JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
+
+                        // if the value is `True`, then the return value is Ecstasy `Null`
+                        Builder.loadFromContext(code, CD_boolean, pdExt.altIndex);
+
+                        if (slot instanceof DoubleSlot doubleSlot) {
+                            bctx.storeValue(code, slot);
+                        } else {
+                            Label ifTrue = code.newLabel();
+                            Label endIf  = code.newLabel();
+                            code.iconst_0()
+                                .if_icmpne(ifTrue);
+                                Builder.box(code, bctx.typeSystem, typeRet, cdRet);
+                            code.goto_(endIf)
+                                .labelBinding(ifTrue)
+                                .pop()
+                                .getstatic(CD_Nullable, "Null", CD_Nullable)
+                                .labelBinding(endIf);
+                            bctx.storeValue(code, slot);
+                        }
+                        break;
+
+                    default:
+                        // process the natural return
+                        bctx.storeValue(code, slot);
+                        break;
+                    }
+                } else {
+                    switch (pdRet.flavor) {
+                    case MultiSlotPrimitive:
+                        assert fOptimized;
+                        JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
+
+                        // if the value is `True`, then the return value is Ecstasy `Null`
+                        Builder.loadFromContext(code, cdRet, pdExt.altIndex);
+
+                        if (slot instanceof DoubleSlot doubleSlot) {
+                            bctx.storeValue(code, slot);
+                        } else {
+                            Label ifTrue = code.newLabel();
+                            Label endIf  = code.newLabel();
+                            code.iconst_0()
+                                .if_icmpeq(ifTrue);
+                                Builder.box(code, bctx.typeSystem, typeRet, cdRet);
+                                code.goto_(endIf);
+                            code.labelBinding(ifTrue)
+                                .pop()
+                                .getstatic(CD_Nullable, "Null", CD_Nullable)
+                                .labelBinding(endIf);
+                            bctx.storeValue(code, slot);
+                        }
+                        break;
+
+                    default:
+                        Builder.loadFromContext(code, cdRet, pdRet.altIndex);
+                        bctx.storeValue(code, slot);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
+
     protected int   m_nTarget;
     protected int   m_nMethodId;
     protected int   m_nRetValue = A_IGNORE;
@@ -302,4 +459,6 @@ public abstract class OpInvocable extends Op {
 
     // categories for cached info
     enum Category {Chain, Composition}
+
+    protected static int[] NO_ARGS = new int[0];
 }

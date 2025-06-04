@@ -26,8 +26,7 @@ import static org.xvm.util.Handy.writePackedLong;
  */
 public class Parameter
         extends XvmStructure
-        implements Cloneable
-    {
+        implements Cloneable {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -42,16 +41,14 @@ public class Parameter
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public Parameter(ConstantPool pool, DataInput in, boolean fReturn, int index, boolean fSpecial)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
 
         int          cAnnos = readPackedInt(in);
         Annotation[] aAnnos = cAnnos == 0 ? Annotation.NO_ANNOTATIONS : new Annotation[cAnnos];
-        for (int i = 0; i < cAnnos; ++i)
-            {
+        for (int i = 0; i < cAnnos; ++i) {
             aAnnos[i] = (Annotation) pool.getConstant(readMagnitude(in));
-            }
+        }
 
         int iType      = readMagnitude(in);
         int iName      = fReturn ? readIndex(in) : readMagnitude(in);
@@ -64,7 +61,7 @@ public class Parameter
 
         f_iParam       = fReturn ? -1 - index : index;
         f_fOrdinary    = !fSpecial;
-        }
+    }
 
     /**
      * Construct a Parameter definition structure.
@@ -78,19 +75,16 @@ public class Parameter
      * @param fSpecial      true iff the "condition" return value or a type-param parameter
      */
     public Parameter(ConstantPool pool, TypeConstant constType, String sName,
-                     Constant constDefault, boolean fReturn, int index, boolean fSpecial)
-        {
+                     Constant constDefault, boolean fReturn, int index, boolean fSpecial) {
         super(pool);
 
-        if (constType == null)
-            {
+        if (constType == null) {
             throw new IllegalArgumentException("parameter type required");
-            }
+        }
 
-        if (sName == null && !fReturn)
-            {
+        if (sName == null && !fReturn) {
             throw new IllegalArgumentException("parameter name required");
-            }
+        }
 
         m_aAnnotations = Annotation.NO_ANNOTATIONS;
         m_constType    = constType;
@@ -99,7 +93,7 @@ public class Parameter
 
         f_iParam       = fReturn ? -1 - index : index;
         f_fOrdinary    = !fSpecial;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -109,52 +103,45 @@ public class Parameter
      *         index of the return value in the return value list (including the leading boolean in
      *         the case of a conditional method)
      */
-    public int getIndex()
-        {
+    public int getIndex() {
         int iParam = f_iParam;
         return iParam >= 0
                 ? iParam
                 : -1 - iParam;
-        }
+    }
 
     /**
      * @return true iff this is a parameter; false iff this is a return value
      */
-    public boolean isParameter()
-        {
+    public boolean isParameter() {
         return f_iParam >= 0;
-        }
+    }
 
     /**
      * @return an array of Annotation structures that represent all annotations of the parameter
      */
-    public Annotation[] getAnnotations()
-        {
+    public Annotation[] getAnnotations() {
         return m_aAnnotations;
-        }
+    }
 
     /**
      * Add an annotation to this parameter.
      *
      * @param anno  the annotation to add
      */
-    public void addAnnotation(Annotation anno)
-        {
+    public void addAnnotation(Annotation anno) {
         assert isParameter();
 
         int cAnnos = m_aAnnotations.length;
-        if (cAnnos == 0)
-            {
+        if (cAnnos == 0) {
             m_aAnnotations = new Annotation[] {anno};
-            }
-        else
-            {
+        } else {
             Annotation[] aAnnos = new Annotation[cAnnos + 1];
             System.arraycopy(m_aAnnotations, 0, aAnnos, 0, cAnnos);
             aAnnos[cAnnos] = anno;
             m_aAnnotations = aAnnos;
-            }
         }
+    }
 
     /**
      * Check if all annotations are resolved; extract those that apply to the Parameter itself.
@@ -162,58 +149,49 @@ public class Parameter
      * @return true if the annotations have been resolved; false if this method has to be called
      *         later in order to resolve annotations
      */
-    public boolean resolveAnnotations()
-        {
+    public boolean resolveAnnotations() {
         TypeConstant typeParam = m_constType;
-        if (typeParam.containsUnresolved())
-            {
+        if (typeParam.containsUnresolved()) {
             return false;
-            }
+        }
 
-        if (!typeParam.isAnnotated())
-            {
+        if (!typeParam.isAnnotated()) {
             return true;
-            }
+        }
 
         int          cExtract = 0;
         TypeConstant typeBase = typeParam.resolveTypedefs();
-        while (typeBase instanceof AnnotatedTypeConstant typeAnnotated)
-            {
+        while (typeBase instanceof AnnotatedTypeConstant typeAnnotated) {
             Annotation   anno     = typeAnnotated.getAnnotation();
             TypeConstant typeAnno = anno.getAnnotationType();
 
-            if (typeAnno.getExplicitClassFormat() != Component.Format.ANNOTATION)
-                {
+            if (typeAnno.getExplicitClassFormat() != Component.Format.ANNOTATION) {
                 // no need to do anything; an error will be reported later
                 return true;
-                }
+            }
 
             TypeConstant typeInto = typeAnno.getExplicitClassInto();
-            if (typeInto.containsUnresolved())
-                {
+            if (typeInto.containsUnresolved()) {
                 return false;
-                }
+            }
 
-            if (typeInto.isIntoMethodParameterType())
-                {
+            if (typeInto.isIntoMethodParameterType()) {
                 ++cExtract;
-                }
+            }
             typeBase = typeAnnotated.getUnderlyingType();
-            }
+        }
 
-        if (cExtract == 0)
-            {
+        if (cExtract == 0) {
             return true;
-            }
+        }
 
         Annotation[] aAnnos = typeParam.getAnnotations();
         int          cAll   = aAnnos.length;
-        if (cExtract == cAll)
-            {
+        if (cExtract == cAll) {
             m_aAnnotations = aAnnos;
             m_constType    = typeBase;
             return true;
-            }
+        }
 
         int          cKeep = cAll - cExtract;
         Annotation[] aKeep = new Annotation[cKeep];
@@ -221,90 +199,78 @@ public class Parameter
         int          iKeep = 0;
         int          iMove = 0;
 
-        for (Annotation annotation : aAnnos)
-            {
-            if (annotation.getAnnotationType().getExplicitClassInto().isIntoMethodParameterType())
-                {
+        for (Annotation annotation : aAnnos) {
+            if (annotation.getAnnotationType().getExplicitClassInto().isIntoMethodParameterType()) {
                 aMove[iMove++] = annotation;
-                }
-            else
-                {
+            } else {
                 aKeep[iKeep++] = annotation;
-                }
             }
+        }
 
         m_constType    = getConstantPool().ensureAnnotatedTypeConstant(typeBase, aKeep);
         m_aAnnotations = aMove;
         return true;
-        }
+    }
 
     /**
      * Get the type of the parameter.
      *
      * @return the parameter type
      */
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return m_constType;
-        }
+    }
 
     /**
      * @return true iff the method takes type parameters and this is one of them
      */
-    public boolean isTypeParameter()
-        {
+    public boolean isTypeParameter() {
         return isParameter() && !f_fOrdinary;
-        }
+    }
 
     /**
      * @return the TypeParameterConstant that corresponds to this register being used as a type param
      */
-    public TypeParameterConstant asTypeParameterConstant(MethodConstant constMethod)
-        {
+    public TypeParameterConstant asTypeParameterConstant(MethodConstant constMethod) {
         assert isTypeParameter();
         return getConstantPool().ensureRegisterConstant(constMethod, f_iParam, getName());
-        }
+    }
 
     /**
      * @return the TerminalTypeConstant that corresponds to this register being used as a type param
      */
-    public TypeConstant asTypeParameterType(MethodConstant constMethod)
-        {
+    public TypeConstant asTypeParameterType(MethodConstant constMethod) {
         return getConstantPool().ensureTerminalTypeConstant(asTypeParameterConstant(constMethod));
-        }
+    }
 
     /**
      * @return true iff the method has a conditional return and this represents a return value that
      *         is only available if the condition is true
      */
-    public boolean isConditionalReturn()
-        {
+    public boolean isConditionalReturn() {
         return !isParameter() && !f_fOrdinary;
-        }
+    }
 
     /**
      * @return true iff the parameter or return value has a name
      */
-    public boolean isNamed()
-        {
+    public boolean isNamed() {
         return m_constName != null;
-        }
+    }
 
     /**
      * @return the name of the parameter or return value, or null if there is none
      */
-    public String getName()
-        {
+    public String getName() {
         return m_constName == null ? null : m_constName.getValue();
-        }
+    }
 
     /**
      * @return the name of the parameter or return value, or null if there is none
      */
-    public StringConstant getNameConstant()
-        {
+    public StringConstant getNameConstant() {
         return m_constName;
-        }
+    }
 
     /**
      * Specify that the parameter will have a default value.
@@ -312,59 +278,53 @@ public class Parameter
      * This is a temporary value that is used as a place-holder until the property's actual value is
      * available.
      */
-    public void markDefaultValue()
-        {
+    public void markDefaultValue() {
         m_fHasDefault = true;
-        }
+    }
 
     /**
      * @return true iff the Property is known to have a value, even if the value has not yet been
      *         determined
      */
-    public boolean hasDefaultValue()
-        {
+    public boolean hasDefaultValue() {
         return m_fHasDefault || m_constDefault != null;
-        }
+    }
 
     /**
      * @return the default value of the parameter or return value, if it is a compile-time constant,
      *         or null if there is none or the default value is computed by an initializer
      */
-    public Constant getDefaultValue()
-        {
+    public Constant getDefaultValue() {
         return m_constDefault;
-        }
+    }
 
     /**
      * Fill in the default value of the parameter.
      *
      * @param constDefault  the default value of the parameter
      */
-    public void setDefaultValue(Constant constDefault)
-        {
+    public void setDefaultValue(Constant constDefault) {
         assert hasDefaultValue();
         assert constDefault != null;
         m_constDefault = constDefault;
-        }
+    }
 
     /**
      * Mark the parameter as representing a Ref/Var that must be implicitly de-referenced on every
      * access.
      */
-    public void markImplicitDeref()
-        {
+    public void markImplicitDeref() {
         assert getType().isA(getConstantPool().typeRef());
         m_fImplicitDeref = true;
-        }
+    }
 
     /**
      * @return true iff the parameter has been marked as requiring an implicit de-reference on every
      *         access
      */
-    public boolean isImplicitDeref()
-        {
+    public boolean isImplicitDeref() {
         return m_fImplicitDeref;
-        }
+    }
 
     /**
      * Obtain the register that de-references the implicitly de-referenced register.
@@ -374,160 +334,137 @@ public class Parameter
      *
      * @return the register representing the de-reference of the passed register
      */
-    public Register deref(Register regVar, MethodStructure method)
-        {
+    public Register deref(Register regVar, MethodStructure method) {
         assert isImplicitDeref();
 
-        if (m_regDeref == null)
-            {
+        if (m_regDeref == null) {
             TypeConstant typeVar = getType();
             TypeConstant typeVal = typeVar.getParamType(0);
             Register     reg     = new Register(typeVal, null, method);
             reg.specifyRegType(typeVar);
 
             m_regDeref = reg;
-            }
+        }
 
         return m_regDeref;
-        }
+    }
 
     /**
      * Clone this Parameter.
      *
      * @return a clone of this Parameter
      */
-    protected Parameter cloneBody()
-        {
+    protected Parameter cloneBody() {
         Parameter that;
-        try
-            {
+        try {
             that = (Parameter) super.clone();
-            }
-        catch (CloneNotSupportedException e)
-            {
+        } catch (CloneNotSupportedException e) {
             throw new IllegalStateException(e);
-            }
+        }
 
         m_fImplicitDeref = false;
         m_regDeref       = null;
         return that;
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void markModified()
-        {
+    protected void markModified() {
         // parameters are basically constants
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
-    protected void disassemble(DataInput in)
-        {
+    protected void disassemble(DataInput in) {
         throw new IllegalStateException();
-        }
+    }
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         m_aAnnotations = (Annotation[])   Constant.registerConstants(pool, m_aAnnotations);
         m_constType    = (TypeConstant)   pool.register(m_constType   );
         m_constName    = (StringConstant) pool.register(m_constName   );
         m_constDefault =                  pool.register(m_constDefault);
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         writePackedLong(out, m_aAnnotations.length);
-        for (Annotation anno : m_aAnnotations)
-            {
+        for (Annotation anno : m_aAnnotations) {
             writePackedLong(out, anno.getPosition());
-            }
+        }
 
         writePackedLong(out, Constant.indexOf(m_constType));
         writePackedLong(out, Constant.indexOf(m_constName));
         writePackedLong(out, Constant.indexOf(m_constDefault));
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         StringBuilder sb = new StringBuilder();
 
         sb.append(isParameter() ? "param" : "return")
           .append("-index=")
           .append(getIndex());
 
-        if (isTypeParameter())
-            {
+        if (isTypeParameter()) {
             sb.append(" (type parameter)");
-            }
-        else if (isConditionalReturn())
-            {
+        } else if (isConditionalReturn()) {
             sb.append(" (conditional return)");
-            }
+        }
 
         sb.append(", type=")
           .append(m_constType.getValueString());
 
-        if (isNamed())
-            {
+        if (isNamed()) {
             sb.append(", name=")
               .append(getName());
-            }
+        }
 
-        if (hasDefaultValue())
-            {
+        if (hasDefaultValue()) {
             sb.append(", has default");
 
-            if (m_constDefault != null)
-                {
+            if (m_constDefault != null) {
                 sb.append("=")
                   .append(m_constDefault.getValueString());
-                }
             }
+        }
 
         return sb.toString();
-        }
+    }
 
     @Override
-    protected void dump(PrintWriter out, String sIndent)
-        {
+    protected void dump(PrintWriter out, String sIndent) {
         out.print(sIndent);
         out.println(this);
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
-        {
+    public int hashCode() {
         return f_iParam;
-        }
+    }
 
     @Override
-    public boolean equals(Object obj)
-        {
-        if (this == obj)
-            {
+    public boolean equals(Object obj) {
+        if (this == obj) {
             return true;
-            }
+        }
 
-        if (!(obj instanceof Parameter that))
-            {
+        if (!(obj instanceof Parameter that)) {
             return false;
-            }
+        }
 
         return this.f_iParam == that.f_iParam && this.f_fOrdinary == that.f_fOrdinary
                 && this.m_constType.equals(that.m_constType)
                 && Handy.equals(this.m_constName, that.m_constName)
                 && Handy.equals(this.m_constDefault, that.m_constDefault);
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -583,4 +520,4 @@ public class Parameter
      * The register that we create to act as the implicit de-ref.
      */
     private transient Register m_regDeref;
-    }
+}

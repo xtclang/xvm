@@ -1,8 +1,6 @@
 package org.xvm.javajit;
 
-
 import static org.xvm.util.Handy.require;
-
 
 /**
  * Represents an Ecstasy `Container`.
@@ -94,4 +92,10 @@ public class Container {
     // TODO create child container
     // TODO control surface area
     // TODO stats surface area
+
+    // ----- memory accounting ---------------------------------------------------------------------
+
+    // TODO
+    // public long committed()
+    // public long allocated()
 }

@@ -24,8 +24,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Implements the logical combination of any number of conditions.
  */
 public abstract class MultiCondition
-        extends ConditionalConstant
-    {
+        extends ConditionalConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -34,31 +33,26 @@ public abstract class MultiCondition
      * @param pool        the ConstantPool that will contain this Constant
      * @param aconstCond  an array of underlying conditions to evaluate
      */
-    protected MultiCondition(ConstantPool pool, ConditionalConstant[] aconstCond)
-        {
+    protected MultiCondition(ConstantPool pool, ConditionalConstant[] aconstCond) {
         super(pool);
 
-        if (aconstCond == null)
-            {
+        if (aconstCond == null) {
             throw new IllegalArgumentException("conditions required");
-            }
+        }
 
         final int c = aconstCond.length;
-        if (c < 1 || c > 1000)
-            {
+        if (c < 1 || c > 1000) {
             throw new IllegalArgumentException("# conditions: " + c);
-            }
+        }
 
-        for (int i = 0; i < c; ++i)
-            {
-            if (aconstCond[i] == null)
-                {
+        for (int i = 0; i < c; ++i) {
+            if (aconstCond[i] == null) {
                 throw new IllegalArgumentException("condition " + i + " required");
-                }
             }
+        }
 
         m_aconstCond = aconstCond;
-        }
+    }
 
     /**
      * Constructor used for deserialization.
@@ -70,69 +64,58 @@ public abstract class MultiCondition
      * @throws IOException  if an issue occurs reading the Constant value
      */
     protected MultiCondition(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
 
         int c = readMagnitude(in);
-        if (c < 2 || c > 63)
-            {
+        if (c < 2 || c > 63) {
             throw new IllegalStateException("# conditions=" + c);
-            }
-
-        int[] ai = new int[c];
-        for (int i = 0; i < c; ++i)
-            {
-            ai[i] = readMagnitude(in);
-            }
-
-        m_aiCond = ai;
         }
 
+        int[] ai = new int[c];
+        for (int i = 0; i < c; ++i) {
+            ai[i] = readMagnitude(in);
+        }
+
+        m_aiCond = ai;
+    }
+
     @Override
-    protected void resolveConstants()
-        {
+    protected void resolveConstants() {
         int[] ai = m_aiCond;
         int   c  = ai.length;
         ConditionalConstant[] aconstCond = new ConditionalConstant[c];
 
-        if (c > 0)
-            {
+        if (c > 0) {
             ConstantPool pool = getConstantPool();
-            for (int i = 0; i < c; ++i)
-                {
+            for (int i = 0; i < c; ++i) {
                 aconstCond[i] = (ConditionalConstant) pool.getConstant(ai[i]);
-                }
             }
+        }
 
         m_aconstCond = aconstCond;
-        }
+    }
 
 
     // ----- ConditionalConstant functionality -----------------------------------------------------
 
     @Override
-    public void collectTerminals(Set<ConditionalConstant> terminals)
-        {
-        for (ConditionalConstant cond : m_aconstCond)
-            {
+    public void collectTerminals(Set<ConditionalConstant> terminals) {
+        for (ConditionalConstant cond : m_aconstCond) {
             cond.collectTerminals(terminals);
-            }
         }
+    }
 
     @Override
-    public boolean containsTerminal(ConditionalConstant that)
-        {
-        for (ConditionalConstant cond : m_aconstCond)
-            {
-            if (cond.containsTerminal(that))
-                {
+    public boolean containsTerminal(ConditionalConstant that) {
+        for (ConditionalConstant cond : m_aconstCond) {
+            if (cond.containsTerminal(that)) {
                 return true;
-                }
             }
+        }
 
         return false;
-        }
+    }
 
     /**
      * Flatten any nested conditions, as long as the conditions are all of the same type ("and" or
@@ -140,51 +123,41 @@ public abstract class MultiCondition
      *
      * @return an iterator of the multiple conditions represented by this condition
      */
-    public Iterator<ConditionalConstant> flatIterator()
-        {
-        return new Iterator<>()
-            {
+    public Iterator<ConditionalConstant> flatIterator() {
+        return new Iterator<>() {
             final ConditionalConstant[]   acond   = m_aconstCond;
             int                           iNext   = 0;
             Iterator<ConditionalConstant> iterSub = null;
 
             @Override
-            public boolean hasNext()
-                {
+            public boolean hasNext() {
                 return iNext < acond.length || iterSub != null;
-                }
+            }
 
             @Override
-            public ConditionalConstant next()
-                {
-                if (iterSub != null)
-                    {
+            public ConditionalConstant next() {
+                if (iterSub != null) {
                     ConditionalConstant cond = iterSub.next();
-                    if (!iterSub.hasNext())
-                        {
+                    if (!iterSub.hasNext()) {
                         iterSub = null;
-                        }
-                    return cond;
                     }
+                    return cond;
+                }
 
-                if (iNext < acond.length)
-                    {
+                if (iNext < acond.length) {
                     ConditionalConstant cond = acond[iNext++];
-                    if (cond.getClass() == MultiCondition.this.getClass())
-                        {
+                    if (cond.getClass() == MultiCondition.this.getClass()) {
                         iterSub = ((MultiCondition) cond).flatIterator();
                         return next(); // recurse max one level to this method
-                        }
-                    else
-                        {
+                    } else {
                         return cond;
-                        }
                     }
+                }
 
                 throw new NoSuchElementException();
-                }
-            };
-        }
+            }
+        };
+    }
 
     /**
      * @return the operator represented by this condition
@@ -198,18 +171,15 @@ public abstract class MultiCondition
      *
      * @return the modified multi-condition if the specified conditional was found; otherwise this
      */
-    public ConditionalConstant remove(ConditionalConstant cond)
-        {
+    public ConditionalConstant remove(ConditionalConstant cond) {
         ConditionalConstant[] acond = m_aconstCond;
-        for (int i = 0, c = acond.length; i < c; ++i)
-            {
-            if (acond[i].equals(cond))
-                {
+        for (int i = 0, c = acond.length; i < c; ++i) {
+            if (acond[i].equals(cond)) {
                 return remove(i);
-                }
             }
-        return this;
         }
+        return this;
+    }
 
     /**
      * Remove the specified condition from the multi-condition.
@@ -218,27 +188,24 @@ public abstract class MultiCondition
      *
      * @return the resulting condition
      */
-    public ConditionalConstant remove(int i)
-        {
+    public ConditionalConstant remove(int i) {
         ConditionalConstant[] acondOld = m_aconstCond;
         int                   cConds   = acondOld.length;
         assert i >= 0 && i < cConds;
 
-        if (cConds < 2)
-            {
+        if (cConds < 2) {
             throw new IllegalStateException("length=" + cConds);
-            }
+        }
 
-        if (cConds == 2)
-            {
+        if (cConds == 2) {
             return acondOld[-(i-1)];
-            }
+        }
 
         ConditionalConstant[] acondNew = new ConditionalConstant[cConds-1];
         System.arraycopy(acondOld, 0, acondNew, 0, i);
         System.arraycopy(acondOld, i+1, acondNew, i, cConds - i - 1);
         return instantiate(acondNew);
-        }
+    }
 
     /**
      * Factory.
@@ -253,169 +220,142 @@ public abstract class MultiCondition
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public boolean containsUnresolved()
-        {
-        if (isHashCached())
-            {
+    public boolean containsUnresolved() {
+        if (isHashCached()) {
             return false;
-            }
+        }
 
-        for (Constant constant : m_aconstCond)
-            {
-            if (constant.containsUnresolved())
-                {
+        for (Constant constant : m_aconstCond) {
+            if (constant.containsUnresolved()) {
                 return true;
-                }
             }
+        }
         return false;
-        }
+    }
 
     @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
-        for (Constant constant : m_aconstCond)
-            {
+    public void forEachUnderlying(Consumer<Constant> visitor) {
+        for (Constant constant : m_aconstCond) {
             visitor.accept(constant);
-            }
         }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof MultiCondition))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof MultiCondition)) {
             return -1;
-            }
+        }
         return this.equals(that)
                 ? 0
                 : Handy.compareArrays(m_aconstCond, ((MultiCondition) that).m_aconstCond);
-        }
+    }
 
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         final ConditionalConstant[] aconstCond = m_aconstCond;
 
         StringBuilder sb = new StringBuilder();
         sb.append('(')
           .append(m_aconstCond[0].getValueString());
 
-        for (int i = 1, c = aconstCond.length; i < c; ++i)
-            {
+        for (int i = 1, c = aconstCond.length; i < c; ++i) {
             sb.append(' ')
               .append(getOperatorString())
               .append(' ')
               .append(aconstCond[i].getValueString());
-            }
+        }
 
         return sb.append(')').toString();
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         m_aconstCond = (ConditionalConstant[]) registerConstants(pool, m_aconstCond);
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
 
         final ConditionalConstant[] aconstCond = m_aconstCond;
 
         writePackedLong(out, aconstCond.length);
 
-        for (ConditionalConstant constCond : aconstCond)
-            {
+        for (ConditionalConstant constCond : aconstCond) {
             writePackedLong(out, constCond.getPosition());
-            }
         }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         // any order is allowed, thus we don't use Hash.of
         int nHash = 0;
-        for (ConditionalConstant cond : m_aconstCond)
-            {
+        for (ConditionalConstant cond : m_aconstCond) {
             nHash ^= cond.hashCode();
-            }
+        }
 
         return Hash.of(getOperatorString(),
                nHash);
-        }
+    }
 
     @Override
-    public boolean equals(Object obj)
-        {
+    public boolean equals(Object obj) {
         // TODO this should all be moved to the compareDetails() method, and the equals() method should be dropped (let Constant.equals() handle it by calling compareDetails())
 
         // must both be multi-conditions
-        if (!(obj instanceof MultiCondition that))
-            {
+        if (!(obj instanceof MultiCondition that)) {
             return false;
-            }
+        }
 
         // must both have the same operator
-        if (!this.getOperatorString().equals(that.getOperatorString()))
-            {
+        if (!this.getOperatorString().equals(that.getOperatorString())) {
             return false;
-            }
+        }
 
         // must both contain the same conditions; order of conditionals is not important; start by
         // verify that they both have the same number of conditionals
         final ConditionalConstant[] aconstThis = this.m_aconstCond;
         final ConditionalConstant[] aconstThat = that.m_aconstCond;
         int cConds = aconstThis.length;
-        if (cConds != aconstThat.length)
-            {
+        if (cConds != aconstThat.length) {
             return false;
-            }
+        }
 
         // sequentially match as many as possible
         int cSeqMatch = 0;
-        for (int i = 0; i < cConds; ++i)
-            {
-            if (aconstThis[i].equals(aconstThat[i]))
-                {
+        for (int i = 0; i < cConds; ++i) {
+            if (aconstThis[i].equals(aconstThat[i])) {
                 ++cSeqMatch;
-                }
-            else
-                {
+            } else {
                 break;
-                }
             }
+        }
 
         // n^2 match the remaining
-        if (cSeqMatch < cConds)
-            {
+        if (cSeqMatch < cConds) {
             boolean[] matched = new boolean[cConds];
-            NextCond: for (int iThis = cSeqMatch; iThis < cConds; ++iThis)
-                {
+            NextCond: for (int iThis = cSeqMatch; iThis < cConds; ++iThis) {
                 ConditionalConstant constThis = aconstThis[iThis];
-                for (int iThat = cSeqMatch; iThat < cConds; ++iThat)
-                    {
-                    if (!matched[iThat] && constThis.equals(aconstThat[iThat]))
-                        {
+                for (int iThat = cSeqMatch; iThat < cConds; ++iThat) {
+                    if (!matched[iThat] && constThis.equals(aconstThat[iThat])) {
                         matched[iThat] = true;
                         continue NextCond;
-                        }
                     }
-                return false;
                 }
+                return false;
             }
+        }
 
         return true;
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -429,4 +369,4 @@ public abstract class MultiCondition
      * The underlying conditions to evaluate.
      */
     protected ConditionalConstant[] m_aconstCond;
-    }
+}

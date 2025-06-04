@@ -18,8 +18,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * type, by associating a named structure (this) with a type constant.
  */
 public class TypedefStructure
-        extends Component
-    {
+        extends Component {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -31,78 +30,70 @@ public class TypedefStructure
      * @param condition  the optional condition for this TypeDefStructure
      */
     protected TypedefStructure(XvmStructure xsParent, int nFlags, TypedefConstant constId,
-            ConditionalConstant condition)
-        {
+            ConditionalConstant condition) {
         super(xsParent, nFlags, constId, condition);
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public TypedefConstant getIdentityConstant()
-        {
+    public TypedefConstant getIdentityConstant() {
         return (TypedefConstant) super.getIdentityConstant();
-        }
+    }
 
     /**
      * @return the TypeConstant representing the data type of the typedef
      */
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return m_type;
-        }
+    }
 
     /**
      * Configure the typedef's type.
      *
      * @param type  the type constant that indicates the typedef's type
      */
-    public void setType(TypeConstant type)
-        {
+    public void setType(TypeConstant type) {
         assert type != null;
         m_type = type;
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     protected void disassemble(DataInput in)
-    throws IOException
-        {
+    throws IOException {
         super.disassemble(in);
 
         m_type = (TypeConstant) getConstantPool().getConstant(readIndex(in));
-        }
+    }
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 
         m_type = (TypeConstant) pool.register(m_type);
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-    throws IOException
-        {
+    throws IOException {
         super.assemble(out);
 
         writePackedLong(out, m_type.getPosition());
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return new StringBuilder()
                 .append("type=")
                 .append(m_type)
                 .append(", ")
                 .append(super.getDescription())
                 .toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -111,4 +102,4 @@ public class TypedefStructure
      * The actual type that the typedef represents.
      */
     private TypeConstant m_type;
-    }
+}
