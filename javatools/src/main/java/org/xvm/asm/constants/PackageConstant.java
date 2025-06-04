@@ -13,8 +13,7 @@ import org.xvm.asm.ConstantPool;
  * or Package which contains this package, and the unqualified name of this Package.
  */
 public class PackageConstant
-        extends NamedConstant
-    {
+        extends NamedConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -27,10 +26,9 @@ public class PackageConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public PackageConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool, format, in);
-        }
+    }
 
     /**
      * Construct a constant whose value is a package identifier.
@@ -39,59 +37,51 @@ public class PackageConstant
      * @param constParent  the module or package that contains this package
      * @param sName        the unqualified package name
      */
-    public PackageConstant(ConstantPool pool, IdentityConstant constParent, String sName)
-        {
+    public PackageConstant(ConstantPool pool, IdentityConstant constParent, String sName) {
         super(pool, constParent, sName);
 
         if (  !(constParent.getFormat() == Format.Module ||
-                constParent.getFormat() == Format.Package))
-            {
+                constParent.getFormat() == Format.Package)) {
             throw new IllegalArgumentException("parent module or package required");
-            }
         }
+    }
 
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
-    public IdentityConstant replaceParentConstant(IdentityConstant idParent)
-        {
+    public IdentityConstant replaceParentConstant(IdentityConstant idParent) {
         return new PackageConstant(getConstantPool(), idParent, getName());
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.Package;
-        }
+    }
 
     @Override
-    public boolean isClass()
-        {
+    public boolean isClass() {
         return true;
-        }
+    }
 
     @Override
-    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)
-        {
+    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that) {
         return that.getConstantPool().ensurePackageConstant(that, getName());
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         Constant constParent = getNamespace();
-        while (constParent instanceof PackageConstant)
-            {
+        while (constParent instanceof PackageConstant) {
             constParent = ((PackageConstant) constParent).getNamespace();
-            }
+        }
 
         return "package=" + getValueString() + ", " + constParent.getDescription();
-        }
     }
+}

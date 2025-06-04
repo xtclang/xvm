@@ -40,8 +40,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * A TypeConstant that represents the annotation of another type constant.
  */
 public class AnnotatedTypeConstant
-        extends TypeConstant
-    {
+        extends TypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -53,29 +52,25 @@ public class AnnotatedTypeConstant
      * @param constType    the type being annotated
      */
     public AnnotatedTypeConstant(ConstantPool pool, Constant constClass,
-                                 Constant[] aconstParam, TypeConstant constType)
-        {
+                                 Constant[] aconstParam, TypeConstant constType) {
         super(pool);
 
-        if (constClass == null)
-            {
+        if (constClass == null) {
             throw new IllegalArgumentException("annotation class required");
-            }
+        }
 
-        if (aconstParam != null)
-            {
+        if (aconstParam != null) {
             checkElementsNonNull(aconstParam);
-            }
+        }
 
-        if (constType == null)
-            {
+        if (constType == null) {
             throw new IllegalArgumentException("annotated type required");
-            }
+        }
 
         // the applicability of the annotated class will be checked by the "validate" method
         m_annotation = pool.ensureAnnotation(constClass, aconstParam);
         m_constType  = constType;
-        }
+    }
 
     /**
      * Construct a constant whose value is an annotated data type.
@@ -84,24 +79,21 @@ public class AnnotatedTypeConstant
      * @param annotation   the annotation
      * @param constType    the type being annotated
      */
-    public AnnotatedTypeConstant(ConstantPool pool, Annotation annotation, TypeConstant constType)
-        {
+    public AnnotatedTypeConstant(ConstantPool pool, Annotation annotation, TypeConstant constType) {
         super(pool);
 
-        if (annotation == null)
-            {
+        if (annotation == null) {
             throw new IllegalArgumentException("annotation required");
-            }
+        }
 
-        if (constType == null)
-            {
+        if (constType == null) {
             throw new IllegalArgumentException("annotated type required");
-            }
+        }
 
         // the applicability of the annotated type will be checked by the "validate" method
         m_annotation = annotation;
         m_constType  = constType;
-        }
+    }
 
     /**
      * Constructor used for deserialization.
@@ -113,22 +105,20 @@ public class AnnotatedTypeConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public AnnotatedTypeConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
 
         m_iAnno = readIndex(in);
         m_iType = readIndex(in);
-        }
+    }
 
     @Override
-    protected void resolveConstants()
-        {
+    protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
         m_annotation = (Annotation) pool.getConstant(m_iAnno);
         m_constType  = (TypeConstant) pool.getConstant(m_iType);
-        }
+    }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
@@ -136,10 +126,9 @@ public class AnnotatedTypeConstant
     /**
      * @return the annotation
      */
-    public Annotation getAnnotation()
-        {
+    public Annotation getAnnotation() {
         return m_annotation;
-        }
+    }
 
     /**
      * Return the annotation type with any type parameters resolved that overlap with the
@@ -149,19 +138,16 @@ public class AnnotatedTypeConstant
      *
      * @return the resolved annotation type
      */
-    public TypeConstant getAnnotationType()
-        {
+    public TypeConstant getAnnotationType() {
         TypeConstant typeAnno = m_typeAnno;
-        if (typeAnno != null)
-            {
+        if (typeAnno != null) {
             return typeAnno;
-            }
+        }
 
         ClassStructure anno = (ClassStructure) getAnnotationClass().getComponent();
-        if (!anno.isParameterizedDeep())
-            {
+        if (!anno.isParameterizedDeep()) {
             return anno.getCanonicalType();
-            }
+        }
 
         // here we assume that the type parameters for the annotations are structurally and
         // semantically congruent with the type parameters for the class the annotation is mixing
@@ -172,201 +158,171 @@ public class AnnotatedTypeConstant
         TypeConstant typeActual = m_constType;
 
         Map<String, TypeConstant> mapResolve = new HashMap<>();
-        for (Map.Entry<StringConstant, TypeConstant> entry : anno.getTypeParamsAsList())
-            {
+        for (Map.Entry<StringConstant, TypeConstant> entry : anno.getTypeParamsAsList()) {
             String       sName = entry.getKey().getValue();
             TypeConstant type  = typeInto.resolveTypeParameter(typeActual, sName);
-            if (type != null)
-                {
+            if (type != null) {
                 mapResolve.put(sName, type);
-                }
             }
-        return m_typeAnno = typeFormal.resolveGenerics(getConstantPool(), mapResolve::get);
         }
+        return m_typeAnno = typeFormal.resolveGenerics(getConstantPool(), mapResolve::get);
+    }
 
     /**
      * @return the class of the annotation
      */
-    public ClassConstant getAnnotationClass()
-        {
+    public ClassConstant getAnnotationClass() {
         return (ClassConstant) m_annotation.getAnnotationClass();
-        }
+    }
 
     /**
      * @return an array of constants which are the parameters for the annotation
      */
-    public Constant[] getAnnotationParams()
-        {
+    public Constant[] getAnnotationParams() {
         return m_annotation.getParams();
-        }
+    }
 
     /**
      * @return a topologically equivalent AnnotatedTypeConstant that doesn't contain any annotation
      *         parameters
      */
-    public AnnotatedTypeConstant stripParameters()
-        {
+    public AnnotatedTypeConstant stripParameters() {
         TypeConstant typeUnderlying = getUnderlyingType();
         boolean      fDiff          = false;
 
-        if (typeUnderlying instanceof AnnotatedTypeConstant typeAnno)
-            {
+        if (typeUnderlying instanceof AnnotatedTypeConstant typeAnno) {
             TypeConstant typeU = typeAnno.stripParameters();
 
             fDiff          = typeU != typeUnderlying;
             typeUnderlying = typeU;
-            }
+        }
         return fDiff || getAnnotationParams().length > 0
                 ? getConstantPool().ensureAnnotatedTypeConstant(getAnnotationClass(),
                         Constant.NO_CONSTS, typeUnderlying)
                 : this;
-        }
+    }
 
     /**
      * @return true iff {@link #getAnnotationParams() annotation parameters} contain any
      *         {@link RegisterConstant}.
      */
-    public boolean containsRegisterParameters()
-        {
-        for (Constant constParam : getAnnotationParams())
-            {
-            if (constParam instanceof RegisterConstant)
-                {
+    public boolean containsRegisterParameters() {
+        for (Constant constParam : getAnnotationParams()) {
+            if (constParam instanceof RegisterConstant) {
                 return true;
-                }
             }
+        }
 
         TypeConstant typeUnderlying = getUnderlyingType();
         return typeUnderlying instanceof AnnotatedTypeConstant typeAnno &&
                 typeAnno.containsRegisterParameters();
-        }
+    }
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    public boolean isModifyingType()
-        {
+    public boolean isModifyingType() {
         return true;
-        }
+    }
 
     @Override
-    public TypeConstant getUnderlyingType()
-        {
+    public TypeConstant getUnderlyingType() {
         return m_constType;
-        }
+    }
 
     @Override
-    public boolean isShared(ConstantPool poolOther)
-        {
+    public boolean isShared(ConstantPool poolOther) {
         return super.isShared(poolOther) && getAnnotationClass().isShared(poolOther);
-        }
+    }
 
     @Override
-    public boolean isAccessModifiable()
-        {
+    public boolean isAccessModifiable() {
         return false;
-        }
+    }
 
     @Override
-    public boolean isAnnotated()
-        {
+    public boolean isAnnotated() {
         return true;
-        }
+    }
 
     @Override
-    public boolean containsAnnotation(ClassConstant idAnno)
-        {
+    public boolean containsAnnotation(ClassConstant idAnno) {
         return getAnnotationClass().equals(idAnno) || super.containsAnnotation(idAnno);
-        }
+    }
 
     @Override
-    public Annotation[] getAnnotations()
-        {
+    public Annotation[] getAnnotations() {
         List<Annotation>      listAnnos = new ArrayList<>();
         AnnotatedTypeConstant typeAnno  = this;
-        while (true)
-            {
+        while (true) {
             listAnnos.add(typeAnno.getAnnotation());
 
             TypeConstant typeNext = typeAnno.getUnderlyingType();
-            if (typeNext instanceof AnnotatedTypeConstant typeNextA)
-                {
+            if (typeNext instanceof AnnotatedTypeConstant typeNextA) {
                 typeAnno = typeNextA;
-                }
-            else
-                {
+            } else {
                 break;
-                }
             }
+        }
         return listAnnos.toArray(Annotation.NO_ANNOTATIONS);
-        }
+    }
 
     @Override
-    public boolean isNullable()
-        {
+    public boolean isNullable() {
         return m_constType.isNullable();
-        }
+    }
 
     @Override
-    public TypeConstant removeNullable()
-        {
+    public TypeConstant removeNullable() {
         return isNullable()
                 ? getConstantPool().ensureAnnotatedTypeConstant(getAnnotationClass(),
                         getAnnotationParams(), m_constType.removeNullable())
                 : this;
-        }
+    }
 
     @Override
-    public TypeConstant andNot(ConstantPool pool, TypeConstant that)
-        {
+    public TypeConstant andNot(ConstantPool pool, TypeConstant that) {
         TypeConstant typeAnno = getAnnotationType();
         TypeConstant typeBase = getUnderlyingType().resolveTypedefs();
 
-        if (typeAnno.equals(that))
-            {
+        if (typeAnno.equals(that)) {
             // (@A B) - A => B
             return typeBase;
-            }
+        }
 
-        if (that.isA(typeBase))
-            {
+        if (that.isA(typeBase)) {
             // (@A B) - Sub(B) => B
             return pool.typeObject();
-            }
+        }
 
         // recurse to cover cases like this:
         // (@A1 (@A2 B)) - A2 => @A1 B
-        if (typeBase.isAnnotated())
-            {
+        if (typeBase.isAnnotated()) {
             TypeConstant typeBaseR = typeBase.andNot(pool, that);
             if (typeBaseR != null && typeBaseR != typeBase &&
-                    !(typeBaseR instanceof DifferenceTypeConstant))
-                {
+                    !(typeBaseR instanceof DifferenceTypeConstant)) {
                 return cloneSingle(pool, typeBaseR);
-                }
             }
+        }
 
         return super.andNot(pool, that);
-        }
+    }
 
     @Override
-    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
-        {
+    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type) {
         return pool.ensureAnnotatedTypeConstant(m_annotation.getAnnotationClass(),
             m_annotation.getParams(), type);
-        }
+    }
 
     @Override
-    public boolean containsGenericParam(String sName)
-        {
+    public boolean containsGenericParam(String sName) {
         return super.containsGenericParam(sName) ||
                getAnnotationType().containsGenericParam(sName);
-        }
+    }
 
     @Override
-    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
-        {
+    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams) {
         assert listParams.isEmpty();
 
         // annotation itself usually just follows the underlying type; check it first
@@ -374,11 +330,10 @@ public class AnnotatedTypeConstant
         return type == null
                 ? getAnnotationType().resolveGenericType(sName)
                 : type;
-        }
+    }
 
     @Override
-    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
-        {
+    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver) {
         TypeConstant constOriginal = getUnderlyingType();
         TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
 
@@ -386,12 +341,11 @@ public class AnnotatedTypeConstant
         return constResolved == constOriginal || constResolved.isRelationalType()
                 ? this
                 : cloneSingle(pool, constResolved);
-        }
+    }
 
     @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
-                                             TypeConstant typeTarget, IdentityConstant idCtx)
-        {
+                                             TypeConstant typeTarget, IdentityConstant idCtx) {
         TypeConstant constOriginal = getUnderlyingType();
         TypeConstant constResolved = constOriginal.resolveAutoNarrowing(
                                                     pool, fRetainParams, typeTarget, idCtx);
@@ -403,22 +357,20 @@ public class AnnotatedTypeConstant
                             (ClassConstant) m_annotation.getAnnotationClass())
                     ? constResolved
                     : cloneSingle(pool, constResolved);
-        }
+    }
 
     @Override
-    public TypeInfo ensureTypeInfo(ErrorListener errs)
-        {
-        if (m_annotation.containsUnresolved() && m_annotation.getParams().length > 0)
-            {
+    public TypeInfo ensureTypeInfo(ErrorListener errs) {
+        if (m_annotation.containsUnresolved() && m_annotation.getParams().length > 0) {
             // during the compilation we may need the TypeInfo for the annotated type before
             // the parameters have been fully resolved (e.g. lambda); since the annotation
             // parameters don't play any role in the TypeInfo, simply remove them
             AnnotatedTypeConstant typeSansParams = getConstantPool().ensureAnnotatedTypeConstant(
                 m_annotation.getAnnotationClass(), Constant.NO_CONSTS, m_constType);
             return typeSansParams.ensureTypeInfo(errs);
-            }
-        return super.ensureTypeInfo(errs);
         }
+        return super.ensureTypeInfo(errs);
+    }
 
     /**
      * Create a TypeInfo for the private access type of this type.
@@ -427,8 +379,7 @@ public class AnnotatedTypeConstant
      *
      * @return a new TypeInfo representing this annotated type (private)
      */
-    TypeInfo buildPrivateInfo(ErrorListener errs)
-        {
+    TypeInfo buildPrivateInfo(ErrorListener errs) {
         // this can only be called from TypeConstant.buildTypeInfoImpl()
         assert getAccess() == Access.PUBLIC;
 
@@ -438,41 +389,34 @@ public class AnnotatedTypeConstant
         List<Annotation> listMixinAnnos = new ArrayList<>();
         TypeConstant     typeBase       = extractAnnotation(listClassAnnos, listMixinAnnos, errs);
 
-        if (typeBase == null)
-            {
+        if (typeBase == null) {
             // an error must've been reported
             return null;
-            }
+        }
 
-        if (typeBase.isFormalType())
-            {
+        if (typeBase.isFormalType()) {
             // replace the base with its constraint
             typeBase = ((FormalConstant) typeBase.getDefiningConstant()).getConstraintType();
-            }
+        }
 
         Annotation[] aAnnoClass      = listClassAnnos.toArray(Annotation.NO_ANNOTATIONS);
         TypeConstant typePrivateBase = pool.ensureAccessTypeConstant(typeBase, Access.PRIVATE);
 
         TypeInfo infoBase = typePrivateBase.ensureTypeInfoInternal(errs);
-        if (!isComplete(infoBase))
-            {
+        if (!isComplete(infoBase)) {
             return infoBase;
-            }
+        }
 
         IdentityConstant idBase;
         ClassStructure   struct;
-        try
-            {
+        try {
             idBase = (IdentityConstant) typeBase.getDefiningConstant();
             struct = (ClassStructure)   idBase.getComponent();
-            }
-        catch (RuntimeException e)
-            {
+        } catch (RuntimeException e) {
             throw new IllegalStateException("Unable to determine class for " + getValueString(), e);
-            }
+        }
 
-        if (listMixinAnnos.isEmpty())
-            {
+        if (listMixinAnnos.isEmpty()) {
             // there are no other annotations except the "into Class" tags
             assert aAnnoClass.length > 0;
 
@@ -486,13 +430,13 @@ public class AnnotatedTypeConstant
                     infoBase.getVirtProperties(), infoBase.getVirtMethods(),
                     infoBase.getChildInfosByName(),
                     null, TypeInfo.Progress.Complete);
-            }
+        }
 
         TypeConstant typeTarget = pool.ensureAccessTypeConstant(this, Access.PRIVATE);
         Annotation[] aAnnoMixin = listMixinAnnos.toArray(Annotation.NO_ANNOTATIONS);
 
         return typeTarget.layerOnAnnotations(idBase, struct, infoBase, aAnnoMixin, aAnnoClass, cInvals, errs);
-        }
+    }
 
     /**
      * Extract the type annotations in front of this type.
@@ -507,115 +451,98 @@ public class AnnotatedTypeConstant
      */
     public TypeConstant extractAnnotation(List<Annotation> listClassAnnos,
                                           List<Annotation> listMixinAnnos,
-                                          ErrorListener    errs)
-        {
+                                          ErrorListener    errs) {
         List<Constant> listAnnoClz = new ArrayList<>();
         TypeConstant   typeCurr    = this;
 
-        while (true)
-            {
-            switch (typeCurr.getFormat())
-                {
-                case AnnotatedType:
-                    {
-                    AnnotatedTypeConstant constAnno  = (AnnotatedTypeConstant) typeCurr;
-                    Annotation            annotation = constAnno.getAnnotation();
-                    TypeConstant          typeAnno   = constAnno.getAnnotationType();
-                    TypeConstant          typeNext   = typeCurr.getUnderlyingType();
+        while (true) {
+            switch (typeCurr.getFormat()) {
+            case AnnotatedType: {
+                AnnotatedTypeConstant constAnno  = (AnnotatedTypeConstant) typeCurr;
+                Annotation            annotation = constAnno.getAnnotation();
+                TypeConstant          typeAnno   = constAnno.getAnnotationType();
+                TypeConstant          typeNext   = typeCurr.getUnderlyingType();
 
-                    // has to be an explicit class identity
-                    if (!typeAnno.isExplicitClassIdentity(true))
-                        {
-                        log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
-                            typeNext.getValueString(), typeAnno.getValueString());
-                        return null;
-                        }
-
-                    // has to be an annotation
-                    if (typeAnno.getExplicitClassFormat() != Component.Format.ANNOTATION)
-                        {
-                        log(errs, Severity.ERROR, VE_CLASS_NOT_ANNOTATION,
-                            typeAnno.getValueString());
-                        return null;
-                        }
-
-                    if (typeAnno.containsAutoNarrowing(false))
-                        {
-                        log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
-                            typeAnno.getValueString(), this.getValueString());
-                        typeAnno = typeAnno.removeAutoNarrowing();
-                        }
-
-                    // check for duplicate annotation
-                    if (listAnnoClz.contains(annotation.getAnnotationClass()))
-                        {
-                        log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
-                            this.getValueString(), annotation.getAnnotationClass().getValueString());
-                        return null;
-                        }
-
-                    // the annotation could be a annotation "into Class", which means that it's a
-                    // non-virtual, compile-time annotation (like @Abstract)
-                    TypeConstant typeInto = typeAnno.getExplicitClassInto(true);
-
-                    // the annotation has to be able to apply to the remainder of the type chain
-                    if (getUnderlyingType().isA(typeInto))
-                        {
-                        listMixinAnnos.add(annotation);
-                        }
-                    else if (typeInto.isIntoClassType())
-                        {
-                        listClassAnnos.add(annotation);
-                        }
-                    else
-                        {
-                        log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
-                            typeCurr.getUnderlyingType().getValueString(),
-                            typeAnno.getValueString(),
-                            typeInto.getValueString());
-                        return null;
-                        }
-
-                    listAnnoClz.add(constAnno.getAnnotation().getAnnotationClass());
-
-                    typeCurr = typeNext;
-                    break;
-                    }
-
-                default:
-                    if (typeCurr.isAnnotated())
-                        {
-                        // annotations must all be in-front
-                        log(errs, Severity.ERROR, VE_ANNOTATION_ILLEGAL, typeCurr.getValueString());
-                        return null;
-                        }
-                    return typeCurr;
+                // has to be an explicit class identity
+                if (!typeAnno.isExplicitClassIdentity(true)) {
+                    log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
+                        typeNext.getValueString(), typeAnno.getValueString());
+                    return null;
                 }
+
+                // has to be an annotation
+                if (typeAnno.getExplicitClassFormat() != Component.Format.ANNOTATION) {
+                    log(errs, Severity.ERROR, VE_CLASS_NOT_ANNOTATION,
+                        typeAnno.getValueString());
+                    return null;
+                }
+
+                if (typeAnno.containsAutoNarrowing(false)) {
+                    log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
+                        typeAnno.getValueString(), this.getValueString());
+                    typeAnno = typeAnno.removeAutoNarrowing();
+                }
+
+                // check for duplicate annotation
+                if (listAnnoClz.contains(annotation.getAnnotationClass())) {
+                    log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
+                        this.getValueString(), annotation.getAnnotationClass().getValueString());
+                    return null;
+                }
+
+                // the annotation could be a annotation "into Class", which means that it's a
+                // non-virtual, compile-time annotation (like @Abstract)
+                TypeConstant typeInto = typeAnno.getExplicitClassInto(true);
+
+                // the annotation has to be able to apply to the remainder of the type chain
+                if (getUnderlyingType().isA(typeInto)) {
+                    listMixinAnnos.add(annotation);
+                } else if (typeInto.isIntoClassType()) {
+                    listClassAnnos.add(annotation);
+                } else {
+                    log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
+                        typeCurr.getUnderlyingType().getValueString(),
+                        typeAnno.getValueString(),
+                        typeInto.getValueString());
+                    return null;
+                }
+
+                listAnnoClz.add(constAnno.getAnnotation().getAnnotationClass());
+
+                typeCurr = typeNext;
+                break;
+            }
+
+            default:
+                if (typeCurr.isAnnotated()) {
+                    // annotations must all be in-front
+                    log(errs, Severity.ERROR, VE_ANNOTATION_ILLEGAL, typeCurr.getValueString());
+                    return null;
+                }
+                return typeCurr;
             }
         }
+    }
 
 
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
-    protected Relation calculateRelationToLeft(TypeConstant typeLeft)
-        {
+    protected Relation calculateRelationToLeft(TypeConstant typeLeft) {
         // this logic is identical to the intersection of the annotation type and the underlying type
-        if (typeLeft.isRelationalType() || typeLeft.isAnnotated())
-            {
+        if (typeLeft.isRelationalType() || typeLeft.isAnnotated()) {
             return super.calculateRelationToLeft(typeLeft);
-            }
+        }
         TypeConstant typeAnno = getAnnotationType();
         TypeConstant typeOrig = getUnderlyingType();
 
         Relation rel1 = typeAnno.calculateRelation(typeLeft);
         Relation rel2 = typeOrig.calculateRelation(typeLeft);
         return rel1.bestOf(rel2);
-        }
+    }
 
     @Override
-    protected Relation calculateRelationToRight(TypeConstant typeRight)
-        {
+    protected Relation calculateRelationToRight(TypeConstant typeRight) {
         // this logic is identical to the intersection of the annotation type and the underlying type
         TypeConstant typeAnno = getAnnotationType();
         TypeConstant typeOrig = getUnderlyingType();
@@ -623,32 +550,29 @@ public class AnnotatedTypeConstant
         Relation rel1 = typeRight.calculateRelation(typeAnno);
         Relation rel2 = typeRight.calculateRelation(typeOrig);
         return rel1.worseOf(rel2);
-        }
+    }
 
     @Override
-    protected Relation findUnionContribution(UnionTypeConstant typeLeft)
-        {
+    protected Relation findUnionContribution(UnionTypeConstant typeLeft) {
         // the annotation cannot be of a union type
         return Relation.INCOMPATIBLE;
-        }
+    }
 
     @Override
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
-                                               boolean fFunction, List<TypeConstant> listParams)
-        {
+                                               boolean fFunction, List<TypeConstant> listParams) {
         TypeConstant typeAnno = getAnnotationType();
         TypeConstant typeOrig = getUnderlyingType();
 
         return typeAnno.containsSubstitutableMethod(signature, access, fFunction, listParams)
             || typeOrig.containsSubstitutableMethod(signature, access, fFunction, listParams);
-        }
+    }
 
 
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
-    public ClassTemplate getTemplate(Container container)
-        {
+    public ClassTemplate getTemplate(Container container) {
         TypeConstant     typeBase    = getUnderlyingType();
         IdentityConstant constIdAnno = (IdentityConstant) getAnnotation().getAnnotationClass();
         ClassTemplate    templateAnno = container.getTemplate(constIdAnno);
@@ -658,32 +582,28 @@ public class AnnotatedTypeConstant
         return templateAnno instanceof xRef
                 ? templateAnno.getTemplate(typeBase)
                 : typeBase.getTemplate(container);
-        }
+    }
 
     @Override
-    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         return Utils.callEqualsSequence(frame,
             m_annotation.getAnnotationType(), m_constType, hValue1, hValue2, iReturn);
-        }
+    }
 
     @Override
-    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         return Utils.callCompareSequence(frame,
             m_annotation.getAnnotationType(), m_constType, hValue1, hValue2, iReturn);
-        }
+    }
 
     @Override
-    public int callHashCode(Frame frame, ObjectHandle hValue, int iReturn)
-        {
+    public int callHashCode(Frame frame, ObjectHandle hValue, int iReturn) {
         // use just the underlying type
         return m_constType.callHashCode(frame, hValue, iReturn);
-        }
+    }
 
     @Override
-    public MethodInfo findFunctionInfo(SignatureConstant sig)
-        {
+    public MethodInfo findFunctionInfo(SignatureConstant sig) {
         // identical to IntersectionTypeConstant implementation
         MethodInfo info1 = m_annotation.getAnnotationType().findFunctionInfo(sig);
         MethodInfo info2 = m_constType.findFunctionInfo(sig);
@@ -693,99 +613,85 @@ public class AnnotatedTypeConstant
                info1.getIdentity().equals(info2.getIdentity())
                         ? info1
                         : null; // ambiguous
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.AnnotatedType;
-        }
+    }
 
     @Override
-    public boolean isValueCacheable()
-        {
+    public boolean isValueCacheable() {
         return super.isValueCacheable() && !containsRegisterParameters();
-        }
+    }
 
     @Override
-    public boolean containsUnresolved()
-        {
+    public boolean containsUnresolved() {
         return !isHashCached() && (m_annotation.containsUnresolved() || m_constType.containsUnresolved());
-        }
+    }
 
     @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
+    public void forEachUnderlying(Consumer<Constant> visitor) {
         m_annotation.forEachUnderlying(visitor);
         visitor.accept(m_constType);
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant obj)
-        {
-        if (!(obj instanceof AnnotatedTypeConstant that))
-            {
+    protected int compareDetails(Constant obj) {
+        if (!(obj instanceof AnnotatedTypeConstant that)) {
             return -1;
-            }
+        }
 
         int n = this.m_annotation.compareTo(that.m_annotation);
-        if (n == 0)
-            {
+        if (n == 0) {
             n = this.m_constType.compareTo(that.m_constType);
-            }
+        }
 
         return n;
-        }
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return m_annotation.getValueString() + ' ' + m_constType.getValueString();
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         m_annotation = (Annotation)   pool.register(m_annotation);
         m_constType  = (TypeConstant) pool.register(m_constType);
 
         // invalidate cached type
         m_typeAnno = null;
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, indexOf(m_annotation));
         writePackedLong(out, indexOf(m_constType));
-        }
+    }
 
     @Override
-    public boolean validate(ErrorListener errs)
-        {
-        if (!isValidated())
-            {
+    public boolean validate(ErrorListener errs) {
+        if (!isValidated()) {
             // an annotated type constant can modify a parameterized or a terminal type constant
             // that refers to a class/interface
             TypeConstant typeBase = m_constType.resolveTypedefs();
-            if (typeBase.isFormalType())
-                {
+            if (typeBase.isFormalType()) {
                 typeBase = ((FormalConstant) typeBase.getDefiningConstant()).getConstraintType();
-                }
+            }
 
-            if (!(typeBase instanceof AnnotatedTypeConstant || typeBase.isExplicitClassIdentity(true)))
-                {
+            if (!(typeBase instanceof AnnotatedTypeConstant || typeBase.isExplicitClassIdentity(true))) {
                 log(errs, Severity.ERROR, VE_ANNOTATION_ILLEGAL, typeBase.getValueString());
                 return true;
-                }
+            }
 
             // validate the annotation itself
             boolean fBad = m_annotation.validate(errs);
@@ -794,48 +700,42 @@ public class AnnotatedTypeConstant
             ClassConstant idAnno = (ClassConstant) m_annotation.getAnnotationClass();
             for (TypeConstant typeNext = typeBase;
                               typeNext instanceof AnnotatedTypeConstant typeAnno;
-                              typeNext = typeAnno.m_constType)
-                {
-                if (typeAnno.m_annotation.getAnnotationClass().equals(idAnno))
-                    {
+                              typeNext = typeAnno.m_constType) {
+                if (typeAnno.m_annotation.getAnnotationClass().equals(idAnno)) {
                     log(errs, Severity.ERROR, VE_ANNOTATION_REDUNDANT, idAnno.getValueString());
                     fBad = true;
                     break;
-                    }
                 }
+            }
 
-            if (!fBad)
-                {
+            if (!fBad) {
                 TypeConstant typeAnno = getAnnotationType();
                 TypeConstant typeInto = typeAnno.getExplicitClassInto(true);
-                if (!m_constType.isA(typeInto))
-                    {
+                if (!m_constType.isA(typeInto)) {
                     log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
                             m_constType.getValueString(),
                             idAnno.getValueString(),
                             typeInto.getValueString());
                     fBad = true;
-                    }
-                }
-
-            if (!fBad)
-                {
-                return super.validate(errs);
                 }
             }
 
-        return false;
+            if (!fBad) {
+                return super.validate(errs);
+            }
         }
+
+        return false;
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_annotation,
                Hash.of(m_constType));
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -864,4 +764,4 @@ public class AnnotatedTypeConstant
      * Cached annotation type.
      */
     private transient TypeConstant m_typeAnno;
-    }
+}

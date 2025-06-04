@@ -1,12 +1,10 @@
 package org.xvm.javajit;
 
-
 import java.util.Arrays;
 import org.xvm.asm.ModuleStructure;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.util.Handy.require;
-
 
 /**
  * A ClassLoader that represents a collection of modules that form an Ecstasy TypeSystem
@@ -62,20 +60,25 @@ public class TypeSystemLoader
     @Override
     protected Class<?> findClass(String name)
             throws ClassNotFoundException {
-        for (int i = 0; i < owned.length; ++i) {
-            ModuleLoader loader = owned[i];
+        for (ModuleLoader loader : owned) {
             if (name.startsWith(loader.prefix)) {
                 return loader.findClass(name);
             }
         }
 
-        for (int i = 0; i < shared.length; ++i) {
-            ModuleLoader loader = shared[i];
+        for (ModuleLoader loader : shared) {
             if (name.startsWith(loader.prefix)) {
                 return loader.findClass(name);
             }
         }
 
         throw new ClassNotFoundException(name);
+    }
+
+    // ----- debugging -----------------------------------------------------------------------------
+
+    public void dump() {
+        // Arrays.stream(shared).forEach(ModuleLoader::dump);
+        Arrays.stream(owned).forEach(ModuleLoader::dump);
     }
 }

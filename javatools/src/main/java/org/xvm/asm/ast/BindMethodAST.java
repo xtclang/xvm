@@ -19,8 +19,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Bind method's target.
  */
 public class BindMethodAST
-        extends ExprAST
-    {
+        extends ExprAST {
     private ExprAST      target;
     private Constant     method;
     private TypeConstant type;

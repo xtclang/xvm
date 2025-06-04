@@ -17,8 +17,7 @@ import org.xvm.asm.TypedefStructure;
  * Represent a "typedef" constant, which identifies a specific typedef structure.
  */
 public class TypedefConstant
-        extends NamedConstant
-    {
+        extends NamedConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -28,18 +27,16 @@ public class TypedefConstant
      * @param constParent  the structure that contains the typedef
      * @param sName        the typedef name
      */
-    public TypedefConstant(ConstantPool pool, IdentityConstant constParent, String sName)
-        {
+    public TypedefConstant(ConstantPool pool, IdentityConstant constParent, String sName) {
         super(pool, constParent, sName);
 
         if (    !( constParent.getFormat() == Format.Module
                 || constParent.getFormat() == Format.Package
                 || constParent.getFormat() == Format.Class
-                || constParent.getFormat() == Format.Method ))
-            {
+                || constParent.getFormat() == Format.Method )) {
             throw new IllegalArgumentException("parent module, package, class, or method required");
-            }
         }
+    }
 
     /**
      * Constructor used for deserialization.
@@ -51,10 +48,9 @@ public class TypedefConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public TypedefConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool, format, in);
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -63,111 +59,95 @@ public class TypedefConstant
      * @return the underlying type that the typedef represents (note that this is a "static" type
      *         and does not reflect the type parameters of the containing runtime type)
      */
-    public TypeConstant getReferredToType()
-        {
+    public TypeConstant getReferredToType() {
         TypeConstant typeReferred = ((TypedefStructure) getComponent()).getType();
-        if (!m_fInitialized)
-            {
+        if (!m_fInitialized) {
             ConstantPool    pool      = getConstantPool();
             TypedefConstant constSelf = this;
 
-            Consumer<Constant> visitor = new Consumer<>()
-                {
-                public void accept(Constant constant)
-                    {
-                    if (constant instanceof UnresolvedTypeConstant typeU)
-                        {
-                        if (typeU.isSingleDefiningConstant())
-                            {
+            Consumer<Constant> visitor = new Consumer<>() {
+                public void accept(Constant constant) {
+                    if (constant instanceof UnresolvedTypeConstant typeU) {
+                        if (typeU.isSingleDefiningConstant()) {
                             constant = typeU.getDefiningConstant();
-                            if (constant == constSelf)
-                                {
+                            if (constant == constSelf) {
                                 TypeConstant typeRecursive = new RecursiveTypeConstant(pool, constSelf);
 
                                 typeU.resolve(typeRecursive);
                                 typeU.markRecursive();
                                 return;
-                                }
                             }
                         }
-
-                    if (constant instanceof TypeConstant)
-                        {
-                        constant.forEachUnderlying(this);
-                        }
                     }
-                };
+
+                    if (constant instanceof TypeConstant) {
+                        constant.forEachUnderlying(this);
+                    }
+                }
+            };
 
             typeReferred.forEachUnderlying(visitor);
 
             m_fInitialized = !typeReferred.containsUnresolved();
-            }
-        return typeReferred.resolveTypedefs();
         }
+        return typeReferred.resolveTypedefs();
+    }
 
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
-    public IdentityConstant replaceParentConstant(IdentityConstant idParent)
-        {
+    public IdentityConstant replaceParentConstant(IdentityConstant idParent) {
         return new TypedefConstant(getConstantPool(), idParent, getName());
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.Typedef;
-        }
+    }
 
     @Override
-    public boolean containsUnresolved()
-        {
+    public boolean containsUnresolved() {
         return false;
-        }
+    }
 
     @Override
-    public TypedefStructure relocateNestedIdentity(ClassStructure clz)
-        {
+    public TypedefStructure relocateNestedIdentity(ClassStructure clz) {
         Component parent = getNamespace().relocateNestedIdentity(clz);
-        if (parent == null)
-            {
+        if (parent == null) {
             return null;
-            }
+        }
 
         Component child = parent.getChild(this.getName());
         return child instanceof TypedefStructure that
                 ? that
                 : null;
-        }
+    }
 
     @Override
-    public TypedefConstant ensureNestedIdentity(ConstantPool pool, IdentityConstant that)
-        {
+    public TypedefConstant ensureNestedIdentity(ConstantPool pool, IdentityConstant that) {
         return pool.ensureTypedefConstant(
                 getParentConstant().ensureNestedIdentity(pool, that), getName());
-        }
+    }
 
     @Override
-    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)
-        {
+    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that) {
         return that.getConstantPool().ensureTypedefConstant(that, getName());
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "typedef name=" + getValueString();
-        }
+    }
 
     /**
      * Indicates whether or not this typedef has been initialized.
      */
     private boolean m_fInitialized;
-    }
+}

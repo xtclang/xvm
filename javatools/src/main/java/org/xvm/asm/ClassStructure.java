@@ -56,8 +56,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * package structures.
  */
 public class ClassStructure
-        extends Component
-    {
+        extends Component {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -69,10 +68,9 @@ public class ClassStructure
      * @param condition  the optional condition for this ClassStructure
      */
     protected ClassStructure(XvmStructure xsParent, int nFlags, IdentityConstant constId,
-                             ConditionalConstant condition)
-        {
+                             ConditionalConstant condition) {
         super(xsParent, nFlags, constId, condition);
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -80,91 +78,80 @@ public class ClassStructure
     /**
      * @return the literal constant indicating the source path, or Null
      */
-    public LiteralConstant getSourcePath()
-        {
-        if (m_constPath != null)
-            {
+    public LiteralConstant getSourcePath() {
+        if (m_constPath != null) {
             return m_constPath;
-            }
+        }
 
-        if (getFormat() == Format.MODULE)
-            {
+        if (getFormat() == Format.MODULE) {
             return null;
-            }
+        }
 
         Component outer = getParent();
-        while (!(outer instanceof ClassStructure))
-            {
+        while (!(outer instanceof ClassStructure)) {
             outer = outer.getParent();
-            }
-        return ((ClassStructure) outer).getSourcePath();
         }
+        return ((ClassStructure) outer).getSourcePath();
+    }
 
     /**
      * Specify the source path.
      *
      * @param constPath  the literal constant indicating the source path, or Null
      */
-    public void setSourcePath(LiteralConstant constPath)
-        {
+    public void setSourcePath(LiteralConstant constPath) {
         m_constPath = constPath;
         markModified();
-        }
+    }
 
     /**
      * Return the simple name of the source file that this class originates from.
      *
      * @return the file name
      */
-    public String getSourceFileName()
-        {
+    public String getSourceFileName() {
         LiteralConstant constPath = getSourcePath();
-        if (constPath != null)
-            {
+        if (constPath != null) {
             String sPath = constPath.getValue();
             int of = sPath.lastIndexOf('/');
             return of >= 0 ? sPath.substring(of+1) : sPath;
-            }
+        }
 
         // best guess: walk up to the first "top level" class
         ClassStructure clzTopLevel = this;
-        while (!clzTopLevel.isTopLevel())
-            {
+        while (!clzTopLevel.isTopLevel()) {
             clzTopLevel = clzTopLevel.getOuter();
-            }
+        }
 
         // assume the implied class name
         return clzTopLevel.getSimpleName() + ".x";
-        }
+    }
 
     /**
      * @return true iff this class is a singleton
      */
-    public boolean isSingleton()
-        {
-        switch (getFormat())
-            {
-            case MODULE, PACKAGE, ENUMVALUE:
-                // these types are always singletons
-                return true;
+    public boolean isSingleton() {
+        switch (getFormat()) {
+        case MODULE, PACKAGE, ENUMVALUE:
+            // these types are always singletons
+            return true;
 
-            case INTERFACE, CLASS, ENUM, ANNOTATION, MIXIN:
-                // these types are never singletons
-                return false;
+        case INTERFACE, CLASS, ENUM, ANNOTATION, MIXIN:
+            // these types are never singletons
+            return false;
 
-            case CONST, SERVICE:
-                // these COULD be singletons (if they are static and NOT an inner class)
-                if (isStatic())
-                    {
-                    Format format = getParent().getFormat();
-                    return format == Format.MODULE || format == Format.PACKAGE;
-                    }
-                return false;
-
-            default:
-                throw new IllegalStateException();
+        case CONST, SERVICE:
+            // these COULD be singletons (if they are static and NOT an inner class)
+            if (isStatic()) {
+                Format format = getParent().getFormat();
+                return format == Format.MODULE || format == Format.PACKAGE;
             }
+            return false;
+
+        default:
+            throw new IllegalStateException();
         }
+    }
 
     /**
      * Check if this class is annotated as "Abstract".
@@ -174,41 +161,35 @@ public class ClassStructure
      *
      * @return true iff this class is annotated as Abstract
      */
-    public boolean isExplicitlyAbstract()
-        {
+    public boolean isExplicitlyAbstract() {
         return containsAnnotation(getConstantPool().clzAbstract());
-        }
+    }
 
     /**
      * Check if this class is annotated as "Override".
      *
      * @return true iff this class is annotated with {@code @Override}
      */
-    public boolean isExplicitlyOverride()
-        {
+    public boolean isExplicitlyOverride() {
         return containsAnnotation(getConstantPool().clzOverride());
-        }
+    }
 
     /**
      * @return true iff this class is annotated by the specified annotation
      */
-    public boolean containsAnnotation(ClassConstant idAnno)
-        {
-        for (Contribution contrib : getContributionsAsList())
-            {
-            if (contrib.getComposition() == Composition.Annotation)
-                {
+    public boolean containsAnnotation(ClassConstant idAnno) {
+        for (Contribution contrib : getContributionsAsList()) {
+            if (contrib.getComposition() == Composition.Annotation) {
                 TypeConstant type = contrib.getTypeConstant();
 
                 if (type.isExplicitClassIdentity(false) &&
-                    type.getSingleUnderlyingClass(false).equals(idAnno))
-                    {
+                    type.getSingleUnderlyingClass(false).equals(idAnno)) {
                     return true;
-                    }
                 }
             }
-        return false;
         }
+        return false;
+    }
 
     /**
      * Collect the annotations for this class.
@@ -218,141 +199,119 @@ public class ClassStructure
      *
      * @return an array of annotations
      */
-    public Annotation[] collectAnnotations(boolean fIntoClass)
-        {
+    public Annotation[] collectAnnotations(boolean fIntoClass) {
         Annotation[] annos = fIntoClass ? m_aAnnoClass : m_aAnnoMixin;
-        if (annos == null)
-            {
+        if (annos == null) {
             List<Annotation> listAnnos = null;
 
-            for (Contribution contrib : getContributionsAsList())
-                {
-                if (contrib.getComposition() == Composition.Annotation)
-                    {
+            for (Contribution contrib : getContributionsAsList()) {
+                if (contrib.getComposition() == Composition.Annotation) {
                     Annotation anno = contrib.getAnnotation();
 
-                    if (fIntoClass == anno.getAnnotationType().getExplicitClassInto().isIntoClassType())
-                        {
-                        if (listAnnos == null)
-                            {
+                    if (fIntoClass == anno.getAnnotationType().getExplicitClassInto().isIntoClassType()) {
+                        if (listAnnos == null) {
                             listAnnos = new ArrayList<>();
-                            }
-                        listAnnos.add(anno);
                         }
+                        listAnnos.add(anno);
                     }
                 }
+            }
             annos = listAnnos == null
                     ? Annotation.NO_ANNOTATIONS
                     : listAnnos.toArray(Annotation.NO_ANNOTATIONS);
-            if (fIntoClass)
-                {
+            if (fIntoClass) {
                 m_aAnnoClass = annos;
-                }
-            else
-                {
+            } else {
                 m_aAnnoMixin = annos;
-                }
             }
-        return annos;
         }
+        return annos;
+    }
 
     /**
      * @return true iff this class is a module, package, or class whose immediate parent is a module
      *         or package
      */
-    public boolean isTopLevel()
-        {
-        switch (getFormat())
-            {
-            case MODULE, PACKAGE:
-                return true;
+    public boolean isTopLevel() {
+        switch (getFormat()) {
+        case MODULE, PACKAGE:
+            return true;
 
-            case INTERFACE, CLASS, ENUM, MIXIN, ANNOTATION, CONST, SERVICE:
-                {
-                Format format = getParent().getFormat();
-                return format == Format.MODULE || format == Format.PACKAGE;
-                }
-
-            case ENUMVALUE:
-                // enum values are always a child of an enum
-                return false;
-
-            default:
-                throw new IllegalStateException();
-            }
+        case INTERFACE, CLASS, ENUM, MIXIN, ANNOTATION, CONST, SERVICE: {
+            Format format = getParent().getFormat();
+            return format == Format.MODULE || format == Format.PACKAGE;
         }
+
+        case ENUMVALUE:
+            // enum values are always a child of an enum
+            return false;
+
+        default:
+            throw new IllegalStateException();
+        }
+    }
 
     /**
      * @return true iff this class is an inner class nested under a method or property member
      */
-    public boolean isMemberClass()
-        {
-        return switch (getParent().getFormat())
-            {
+    public boolean isMemberClass() {
+        return switch (getParent().getFormat()) {
             case METHOD, PROPERTY -> true;
             default               -> false;
-            };
-        }
+        };
+    }
 
     /**
      * @return true iff this class is an anonymous inner class
      */
-    public boolean isAnonInnerClass()
-        {
+    public boolean isAnonInnerClass() {
         return isMemberClass() && isSynthetic()
                 && getIdentityConstant().getParentConstant() instanceof MethodConstant;
-        }
+    }
 
     /**
      * @return true iff this class is a non-static inner class
      */
-    public boolean isInnerChild()
-        {
+    public boolean isInnerChild() {
         return isMemberClass() && !isStatic();
-        }
+    }
 
     /**
      * @return true iff this class is a virtual child of its parent
      */
-    public boolean isVirtualChild()
-        {
-        switch (getFormat())
-            {
-            case MODULE, PACKAGE, ENUM, ENUMVALUE:
+    public boolean isVirtualChild() {
+        switch (getFormat()) {
+        case MODULE, PACKAGE, ENUM, ENUMVALUE:
+            return false;
+
+        case INTERFACE, ANNOTATION, MIXIN, CLASS, CONST, SERVICE: {
+            if (isSynthetic() || isStatic()) {
+                // anonymous and static child classes are not virtual
                 return false;
-
-            case INTERFACE, ANNOTATION, MIXIN, CLASS, CONST, SERVICE:
-                {
-                if (isSynthetic() || isStatic())
-                    {
-                    // anonymous and static child classes are not virtual
-                    return false;
-                    }
-
-                Component parent = getParent();
-                Format    format = parent.getFormat();
-                while (format == Format.PROPERTY)
-                    {
-                    parent = parent.getParent();
-                    format = parent.getFormat();
-                    }
-                // neither a top-level class nor a local class inside a method are considered
-                // virtual children
-                return format != Format.MODULE && format != Format.PACKAGE && format != Format.METHOD;
-                }
-
-            default:
-                throw new IllegalStateException();
             }
+
+            Component parent = getParent();
+            Format    format = parent.getFormat();
+            while (format == Format.PROPERTY) {
+                parent = parent.getParent();
+                format = parent.getFormat();
+            }
+            // neither a top-level class nor a local class inside a method are considered
+            // virtual children
+            return format != Format.MODULE && format != Format.PACKAGE && format != Format.METHOD;
         }
+
+        default:
+            throw new IllegalStateException();
+        }
+    }
 
     /**
      * @return true iff an object of this class needs to hold a reference to its parent
      */
-    public boolean isInstanceChild()
-        {
+    public boolean isInstanceChild() {
         return isVirtualChild() || isInnerChild();
-        }
+    }
 
     /**
      * Note: A virtual child class can be instantiated using any of the "NEWC_*" op codes.
@@ -360,40 +319,36 @@ public class ClassStructure
      *
      * @return true iff this class is a virtual child class
      */
-    public boolean isVirtualChildClass()
-        {
-        if (isVirtualChild())
-            {
-            switch (getFormat())
-                {
-                case CLASS:
-                case CONST:
-                case SERVICE:
-                    return true;
-                }
-            }
-        return false;
+    public boolean isVirtualChildClass() {
+        if (!isVirtualChild()) {
+            return false;
         }
+
+        return switch (getFormat()) {
+            case CLASS   -> true;
+            case CONST   -> true;
+            case SERVICE -> true;
+            default      -> false;
+        };
+    }
 
     /**
      * @return true iff this class is the specified parent class itself, or a virtual child of that
      *         class or any of its virtual children (recursively)
      */
-    public boolean isVirtualDescendant(IdentityConstant idParent)
-        {
+    public boolean isVirtualDescendant(IdentityConstant idParent) {
         return getIdentityConstant().equals(idParent) ||
                 isVirtualChild() && getOuter().isVirtualDescendant(idParent);
-        }
+    }
 
     /**
      * @return true iff this class is the specified parent class itself, or a child of that class or
      *         any of its children (recursively)
      */
-    public boolean isDescendant(IdentityConstant idParent)
-        {
+    public boolean isDescendant(IdentityConstant idParent) {
         return getIdentityConstant().equals(idParent) ||
             getParent() instanceof ClassStructure parent && parent.isDescendant(idParent);
-        }
+    }
 
     /**
      * Ensure that all generic types referred to by the specified type are accessible in the context
@@ -404,132 +359,106 @@ public class ClassStructure
      * @return null iff all generic types are accessible; otherwise a non-accessible generic
      *         property name (used for error reporting)
      */
-    public String checkGenericTypeVisibility(TypeConstant type)
-        {
+    public String checkGenericTypeVisibility(TypeConstant type) {
         String[] asName = new String[1];
 
-        Consumer<Constant> visitor = new Consumer<>()
-            {
-            public void accept(Constant c)
-                {
-                if (c instanceof TypeConstant t)
-                    {
-                    if (t.isGenericType())
-                        {
+        Consumer<Constant> visitor = new Consumer<>() {
+            public void accept(Constant c) {
+                if (c instanceof TypeConstant t) {
+                    if (t.isGenericType()) {
                         Constant constId = t.getDefiningConstant();
-                        if (constId.getFormat() == Constant.Format.Property)
-                            {
+                        if (constId.getFormat() == Constant.Format.Property) {
                             String sName = ((PropertyConstant) constId).getName();
                             if (!getFormalType().containsGenericParam(sName)
-                                    && asName[0] == null)
-                                {
+                                    && asName[0] == null) {
                                 asName[0] = sName;
-                                }
                             }
                         }
-                    else
-                        {
+                    } else {
                         t.forEachUnderlying(this);
-                        }
                     }
                 }
-            };
+            }
+        };
 
         type.forEachUnderlying(visitor);
         return asName[0];
-        }
+    }
 
     /**
      * @return an "outer this" class structure
      */
-    public ClassStructure getOuter()
-        {
+    public ClassStructure getOuter() {
         assert isInstanceChild();
 
         Component parent = getParent();
-        while (true)
-            {
-            switch (parent.getFormat())
-                {
-                case MULTIMETHOD, METHOD, PROPERTY:
-                    parent = parent.getParent();
-                    continue;
+        while (true) {
+            switch (parent.getFormat()) {
+            case MULTIMETHOD, METHOD, PROPERTY:
+                parent = parent.getParent();
+                continue;
 
-                case MODULE, PACKAGE, INTERFACE, CLASS, CONST, SERVICE, ENUM, ENUMVALUE,
-                     ANNOTATION, MIXIN:
-                    return (ClassStructure) parent;
+            case MODULE, PACKAGE, INTERFACE, CLASS, CONST, SERVICE, ENUM, ENUMVALUE,
+                 ANNOTATION, MIXIN:
+                return (ClassStructure) parent;
 
-                default:
-                    throw new IllegalStateException(
-                        parent.getIdentityConstant() + " format=" + parent.getFormat());
-                }
+            default:
+                throw new IllegalStateException(
+                    parent.getIdentityConstant() + " format=" + parent.getFormat());
             }
         }
+    }
 
     /**
      * @return true iff this class is a Service, or a virtual child thereof
      */
-    public boolean isService()
-        {
+    public boolean isService() {
         return getFormat() == Format.SERVICE || isVirtualChild() && getOuter().isService();
-        }
+    }
 
     /**
      * @return true iff this class is a Const
      */
-    public boolean isConst()
-        {
-        return switch (getFormat())
-            {
-            case MODULE, PACKAGE, CONST, ENUM, ENUMVALUE ->
-                true;
-
-            default ->
-                false;
-            };
-        }
+    public boolean isConst() {
+        return switch (getFormat()) {
+            case MODULE, PACKAGE, CONST, ENUM, ENUMVALUE -> true;
+            default -> false;
+        };
+    }
 
     /**
      * @return true iff this class implements an "immutable X" interface
      */
-    public boolean isImmutable()
-        {
-        switch (getFormat())
-            {
-            case MODULE, PACKAGE, CONST, ENUM, ENUMVALUE:
-                return true;
+    public boolean isImmutable() {
+        switch (getFormat()) {
+        case MODULE, PACKAGE, CONST, ENUM, ENUMVALUE:
+            return true;
 
-            case ANNOTATION, MIXIN:
-                {
-                TypeConstant typeInto = getTypeInto();
-                if (typeInto.containsUnresolved())
-                    {
-                    return false;
-                    }
-                if (typeInto.isImmutable())
-                    {
-                    return true;
-                    }
-                }
-                // fall through
-            case CLASS, INTERFACE:
-                for (Contribution contrib : getContributionsAsList())
-                    {
-                    if (contrib.getComposition() == Composition.Implements)
-                        {
-                        if (!contrib.containsUnresolved() && contrib.getTypeConstant().isImmutable())
-                            {
-                            return true;
-                            }
-                        }
-                    }
-                return false;
-
-            case SERVICE: // service is always assumed to be NOT immutable
-            default:
+        case ANNOTATION, MIXIN: {
+            TypeConstant typeInto = getTypeInto();
+            if (typeInto.containsUnresolved()) {
                 return false;
             }
+            if (typeInto.isImmutable()) {
+                return true;
+            }
         }
+            // fall through
+        case CLASS, INTERFACE:
+            for (Contribution contrib : getContributionsAsList()) {
+                if (contrib.getComposition() == Composition.Implements) {
+                    if (!contrib.containsUnresolved() && contrib.getTypeConstant().isImmutable()) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+
+        case SERVICE: // service is always assumed to be NOT immutable
+        default:
+            return false;
+        }
+    }
 
     /**
      * Get a virtual child class by the specified name on this class or any of its contributions.
@@ -538,88 +467,78 @@ public class ClassStructure
      *
      * @return a child structure or null if not found
      */
-    public ClassStructure getVirtualChild(String sName)
-        {
+    public ClassStructure getVirtualChild(String sName) {
         Component child = findChildDeep(sName, true);
         return child instanceof ClassStructure clz && clz.isVirtualChild() ? clz : null;
-        }
+    }
 
     /**
      * Find a child with a given name in the class or any of its contributions.
      */
-    public Component findChildDeep(String sName)
-        {
+    public Component findChildDeep(String sName) {
         return findChildDeep(sName, true);
+    }
+
+    private Component findChildDeep(String sName, boolean fAllowInto) {
+        Component child = getChild(sName);
+        if (child != null) {
+            return child;
         }
 
-    private Component findChildDeep(String sName, boolean fAllowInto)
-        {
-        Component child = getChild(sName);
-        if (child != null)
-            {
-            return child;
-            }
-
-        for (Contribution contrib : getContributionsAsList())
-            {
+        for (Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib = contrib.getTypeConstant();
 
             // TODO: allow intersection types to be traversed as well
             if (   typeContrib.containsUnresolved()
-               || !typeContrib.isExplicitClassIdentity(true)) // disregard relational type contributions
-                {
+               || !typeContrib.isExplicitClassIdentity(true)) { // disregard relational type contributions
                 continue;
-                }
+            }
 
             boolean fCheck;
-            switch (contrib.getComposition())
-                {
-                case Annotation:
-                    fCheck     = !isIntoClassAnnotation(typeContrib);
-                    fAllowInto = false;
-                    break;
+            switch (contrib.getComposition()) {
+            case Annotation:
+                fCheck     = !isIntoClassAnnotation(typeContrib);
+                fAllowInto = false;
+                break;
 
-                case Into:
-                    fCheck     = fAllowInto;
-                    fAllowInto = false;
-                    break;
+            case Into:
+                fCheck     = fAllowInto;
+                fAllowInto = false;
+                break;
 
-                case Incorporates:
-                    fAllowInto = false;
-                    // break through
-                case Delegates, Implements, Extends:
-                    fCheck = true;
-                    break;
+            case Incorporates:
+                fAllowInto = false;
+                // break through
+            case Delegates, Implements, Extends:
+                fCheck = true;
+                break;
 
-                default:
-                    fCheck = false;
-                    break;
-                }
+            default:
+                fCheck = false;
+                break;
+            }
 
-            if (fCheck)
-                {
+            if (fCheck) {
                 ClassStructure clzContrib = (ClassStructure)
                         typeContrib.getSingleUnderlyingClass(true).getComponent();
                 child = clzContrib.findChildDeep(sName, fAllowInto);
-                if (child != null)
-                    {
+                if (child != null) {
                     return child;
-                    }
                 }
             }
-        return null;
         }
+        return null;
+    }
 
     /**
      * @return the number of type parameters for this class
      */
-    public int getTypeParamCount()
-        {
+    public int getTypeParamCount() {
         Map<StringConstant, TypeConstant> mapThis = m_mapParams;
         return mapThis == null
                 ? 0
                 : mapThis.size();
-        }
+    }
 
     /**
      * Obtain the type parameters for the class as an ordered read-only map, keyed by name and with
@@ -627,26 +546,24 @@ public class ClassStructure
      *
      * @return a read-only map of type parameter name to type
      */
-    public ListMap<StringConstant, TypeConstant> getTypeParams()
-        {
+    public ListMap<StringConstant, TypeConstant> getTypeParams() {
         ListMap<StringConstant, TypeConstant> mapThis = m_mapParams;
         return mapThis == null
                 ? ListMap.EMPTY
                 : mapThis;
-        }
+    }
 
     /**
      * Obtain the type parameters for the class as a list of map entries from name to type.
      *
      * @return a read-only list of map entries from type parameter name to type
      */
-    public List<Map.Entry<StringConstant, TypeConstant>> getTypeParamsAsList()
-        {
+    public List<Map.Entry<StringConstant, TypeConstant>> getTypeParamsAsList() {
         ListMap<StringConstant, TypeConstant> mapThis = m_mapParams;
         return mapThis == null
                 ? Collections.emptyList()
                 : mapThis.asList();
-        }
+    }
 
     /**
      * Add a generic type parameter.
@@ -656,23 +573,20 @@ public class ClassStructure
      *
      * @return a newly created PropertyStructure that represents the generic type parameter
      */
-    public PropertyStructure addTypeParam(String sName, TypeConstant typeConstraint)
-        {
+    public PropertyStructure addTypeParam(String sName, TypeConstant typeConstraint) {
         ListMap<StringConstant, TypeConstant> map = m_mapParams;
-        if (map == null)
-            {
+        if (map == null) {
             m_mapParams = map = new ListMap<>();
-            }
+        }
 
         ConstantPool pool = getConstantPool();
 
         // check for turtles, for example: "ElementTypes extends Tuple<ElementTypes>"
         if (typeConstraint.getParamsCount() >= 1 &&
                 typeConstraint.isTuple() &&
-                typeConstraint.getParamType(0).getValueString().equals(sName))
-            {
+                typeConstraint.getParamType(0).getValueString().equals(sName)) {
             typeConstraint = pool.ensureTypeSequenceTypeConstant();
-            }
+        }
         map.put(pool.ensureStringConstant(sName), typeConstraint);
 
         // each type parameter also has a synthetic property of the same name,
@@ -689,7 +603,7 @@ public class ClassStructure
         m_typeCanonical = null;
         m_typeFormal    = null;
         return prop;
-        }
+    }
 
     /**
      * Obtain the constraint type for the specified generic type.
@@ -698,10 +612,9 @@ public class ClassStructure
      *
      * @return the constraint type
      */
-    public TypeConstant getConstraint(String sName)
-        {
+    public TypeConstant getConstraint(String sName) {
         return m_mapParams.get(getConstantPool().ensureStringConstant(sName));
-        }
+    }
 
     /**
      * Update (narrow) the constraint type for the specified generic type.
@@ -709,8 +622,7 @@ public class ClassStructure
      * @param sName           the generic type name
      * @param typeConstraint  the new constraint type
      */
-    public void updateConstraint(String sName, TypeConstant typeConstraint)
-        {
+    public void updateConstraint(String sName, TypeConstant typeConstraint) {
         ListMap<StringConstant, TypeConstant> map = m_mapParams;
         assert map != null;
 
@@ -725,84 +637,69 @@ public class ClassStructure
         prop.setType(typeConstraintType);
 
         markModified();
-        }
+    }
 
     /**
      * @return true if this class is parameterized (generic)
      */
-    public boolean isParameterized()
-        {
+    public boolean isParameterized() {
         return m_mapParams != null;
-        }
+    }
 
     /**
      * @return true iff if this class is parameterized or has a parameterized virtual parent
      */
-    public boolean isParameterizedDeep()
-        {
+    public boolean isParameterizedDeep() {
         return isParameterized() ||
                isVirtualChild() && getOuter().isParameterized();
-        }
+    }
 
     /**
      * @return the formal type (e.g. Map<Key, Value>)
      */
-    public TypeConstant getFormalType()
-        {
+    public TypeConstant getFormalType() {
         TypeConstant typeFormal = m_typeFormal;
-        if (typeFormal == null)
-            {
+        if (typeFormal == null) {
             ConstantPool     pool        = getConstantPool();
             IdentityConstant constantClz = getIdentityConstant();
 
-            if (isAnonInnerClass())
-                {
+            if (isAnonInnerClass()) {
                 typeFormal = constantClz.getType();
 
                 // for anonymous inner class the constraints are the formal types
-                if (isParameterized())
-                    {
+                if (isParameterized()) {
                     typeFormal = pool.ensureParameterizedTypeConstant(typeFormal,
                         m_mapParams.values().toArray(TypeConstant.NO_TYPES));
-                    }
                 }
-            else
-                {
-                if (isVirtualChild())
-                    {
+            } else {
+                if (isVirtualChild()) {
                     TypeConstant typeParent = ((ClassStructure) getParent()).getFormalType();
                     typeFormal = pool.ensureVirtualChildTypeConstant(typeParent, getName());
-                    }
-                else if (isInnerChild())
-                    {
+                } else if (isInnerChild()) {
                     TypeConstant typeParent = getOuter().getFormalType();
                     typeFormal = pool.ensureInnerChildTypeConstant(typeParent,
                                         (ClassConstant) getIdentityConstant());
-                    }
-                else
-                    {
+                } else {
                     typeFormal = constantClz.getType();
-                    }
+                }
 
-                if (isParameterized())
-                    {
+                if (isParameterized()) {
                     Map<StringConstant, TypeConstant> mapThis = m_mapParams;
                     TypeConstant[] aTypes = new TypeConstant[mapThis.size()];
                     int ix = 0;
-                    for (StringConstant constName : mapThis.keySet())
-                        {
+                    for (StringConstant constName : mapThis.keySet()) {
                         PropertyStructure prop = (PropertyStructure) getChild(constName.getValue());
                         aTypes[ix++] = prop.getIdentityConstant().getFormalType();
-                        }
+                    }
 
                     typeFormal = pool.ensureParameterizedTypeConstant(typeFormal, aTypes);
-                    }
                 }
+            }
 
             m_typeFormal = typeFormal;
-            }
-        return typeFormal;
         }
+        return typeFormal;
+    }
 
     /**
      * This method is similar to the one above, except that it creates a "this"
@@ -810,68 +707,56 @@ public class ClassStructure
      *
      * @return the formal type
      */
-    public TypeConstant getAutoNarrowingFormalType()
-        {
-        if (isVirtualChild())
-            {
+    public TypeConstant getAutoNarrowingFormalType() {
+        if (isVirtualChild()) {
             ClassStructure clzParent = (ClassStructure) getParent();
             return getConstantPool().ensureThisVirtualChildTypeConstant(
                     clzParent.getAutoNarrowingFormalType(), getName());
-            }
-        return getFormalType();
         }
+        return getFormalType();
+    }
 
     /**
      * @return the canonical type (e.g. Map<Object, Object>)
      */
-    public TypeConstant getCanonicalType()
-        {
+    public TypeConstant getCanonicalType() {
         TypeConstant typeCanonical = m_typeCanonical;
-        if (typeCanonical == null)
-            {
+        if (typeCanonical == null) {
             ConstantPool     pool     = getConstantPool();
             IdentityConstant constClz = getIdentityConstant();
 
-            if (constClz.equals(pool.clzTuple()))
-                {
+            if (constClz.equals(pool.clzTuple())) {
                 // canonical Tuple
                 return m_typeCanonical = pool.typeTuple0();
-                }
+            }
 
-            if (isVirtualChild())
-                {
+            if (isVirtualChild()) {
                 TypeConstant typeParent = ((ClassStructure) getParent()).getCanonicalType();
                 typeCanonical = pool.ensureVirtualChildTypeConstant(typeParent, getName());
-                }
-            else if (isInnerChild())
-                {
+            } else if (isInnerChild()) {
                 TypeConstant typeParent = getOuter().getCanonicalType();
                 typeCanonical = pool.ensureInnerChildTypeConstant(typeParent, (ClassConstant) constClz);
-                }
-            else
-                {
+            } else {
                 typeCanonical = constClz.getType();
-                }
+            }
 
-            if (isParameterized())
-                {
+            if (isParameterized()) {
                 Map<StringConstant, TypeConstant> mapParams = getTypeParams();
                 TypeConstant[] atypeParam = new TypeConstant[mapParams.size()];
                 int ix = 0;
                 GenericTypeResolver resolver = new SimpleTypeResolver(pool, new ArrayList<>());
-                for (TypeConstant typeParam : mapParams.values())
-                    {
+                for (TypeConstant typeParam : mapParams.values()) {
                     atypeParam[ix++] = typeParam.isFormalTypeSequence()
                             ? pool.typeTuple0()
                             : typeParam.resolveGenerics(pool, resolver);
-                    }
-                typeCanonical = pool.ensureParameterizedTypeConstant(typeCanonical, atypeParam);
                 }
+                typeCanonical = pool.ensureParameterizedTypeConstant(typeCanonical, atypeParam);
+            }
 
             m_typeCanonical = typeCanonical;
-            }
-        return typeCanonical;
         }
+        return typeCanonical;
+    }
 
     /**
      * Resolve the formal type for this class based on the specified list of actual types.
@@ -884,12 +769,11 @@ public class ClassStructure
      *
      * @return the resolved type
      */
-    public TypeConstant resolveType(ConstantPool pool, List<TypeConstant> listActual)
-        {
+    public TypeConstant resolveType(ConstantPool pool, List<TypeConstant> listActual) {
         return listActual.isEmpty() && !isParameterized()
             ? getCanonicalType()
             : getFormalType().resolveGenerics(pool, new SimpleTypeResolver(pool, listActual));
-        }
+    }
 
     /**
      * If the specified list of actual parameters is missing some number of actual parameters,
@@ -900,15 +784,14 @@ public class ClassStructure
      *
      * @return a list of types that has exact size as the map of formal parameters for this class
      */
-    public List<TypeConstant> normalizeParameters(ConstantPool pool, List<TypeConstant> listActual)
-        {
+    public List<TypeConstant> normalizeParameters(ConstantPool pool, List<TypeConstant> listActual) {
         int cActual = listActual.size();
         int cFormal = getTypeParamCount();
 
         return cActual == cFormal
             ? listActual
             : resolveType(pool, listActual).getParamTypes();
-        }
+    }
 
     /**
      * If the specified array of actual parameters is missing some number of actual parameters,
@@ -919,15 +802,14 @@ public class ClassStructure
      *
      * @return an array of types that has exact size as the map of formal parameters for this class
      */
-    public TypeConstant[] normalizeParameters(ConstantPool pool, TypeConstant[] atypeActual)
-        {
+    public TypeConstant[] normalizeParameters(ConstantPool pool, TypeConstant[] atypeActual) {
         int cActual = atypeActual.length;
         int cFormal = getTypeParamCount();
 
         return cActual == cFormal
             ? atypeActual
             : resolveType(pool, Arrays.asList(atypeActual)).getParamTypesArray();
-        }
+    }
 
     /**
      * Given this structure being a module or a package, build a list of all module dependencies,
@@ -937,14 +819,10 @@ public class ClassStructure
      * @param mapModulePaths  pass a map containing all previously encountered modules (including
      *                        the current one)
      */
-    protected void collectDependencies(String sModulePath, Map<ModuleConstant, String> mapModulePaths)
-        {
-        for (Component child : children())
-            {
-            if (child instanceof PackageStructure pkg)
-                {
-                if (pkg.isModuleImport())
-                    {
+    protected void collectDependencies(String sModulePath, Map<ModuleConstant, String> mapModulePaths) {
+        for (Component child : children()) {
+            if (child instanceof PackageStructure pkg) {
+                if (pkg.isModuleImport()) {
                     ModuleStructure moduleDep  = pkg.getImportedModule();
                     ModuleConstant  idDep      = moduleDep.getIdentityConstant();
                     String          sOldPath   = mapModulePaths.get(idDep);
@@ -952,13 +830,10 @@ public class ClassStructure
                     String          sNewPath   = sModulePath.isEmpty()
                                                ? sLocalPath
                                                : sModulePath + '.' + sLocalPath;
-                    if (sOldPath == null)
-                        {
+                    if (sOldPath == null) {
                         mapModulePaths.put(idDep, sNewPath);
                         moduleDep.collectDependencies(sNewPath, mapModulePaths);
-                        }
-                    else if (sNewPath.length() < sOldPath.length())
-                        {
+                    } else if (sNewPath.length() < sOldPath.length()) {
                         mapModulePaths.put(idDep, sNewPath);
 
                         // replace everything else using the new path that was already registered
@@ -966,15 +841,33 @@ public class ClassStructure
                         mapModulePaths.entrySet().stream()
                                 .filter(e -> e.getValue().startsWith(sOldPath + '.'))
                                 .forEach(e -> e.setValue(sNewPath + e.getValue().substring(sOldPath.length())));
-                        }
                     }
-                else
-                    {
+                } else {
                     pkg.collectDependencies(sModulePath, mapModulePaths);
-                    }
                 }
             }
         }
+    }
+
+    /**
+     * @return a list of conditional incorporates for this class that applies to the specified type;
+     *         null if there are none
+     */
+    public List<Contribution> collectConditionalIncorporates(TypeConstant type) {
+        ConstantPool       pool             = getConstantPool();
+        List<Contribution> listIncorporates = null;
+        for (Contribution contrib : getContributionsAsList()) {
+            if (contrib.getComposition() == Composition.Incorporates &&
+                    contrib.isConditional() && contrib.resolveGenerics(pool, type) != null) {
+                if (listIncorporates == null) {
+                    listIncorporates = new ArrayList<>();
+                }
+                listIncorporates.add(contrib);
+            }
+        }
+
+        return listIncorporates;
+    }
 
 
     // ----- Tuple support -------------------------------------------------------------------------
@@ -982,32 +875,24 @@ public class ClassStructure
     /**
      * @return true iff this class is a Tuple or a Tuple mixin
      */
-    public boolean isTuple()
-        {
-        if (getIdentityConstant().equals(getConstantPool().clzTuple()))
-            {
+    public boolean isTuple() {
+        if (getIdentityConstant().equals(getConstantPool().clzTuple())) {
             return true;
-            }
-
-        for (Contribution contrib : getContributionsAsList())
-            {
-            if (contrib.getComposition() == Composition.Into)
-                {
-                if (contrib.getTypeConstant().isTuple())
-                    {
-                    return true;
-                    }
-                }
-            else if (getFormat() == Format.INTERFACE)
-                {
-                if (contrib.getComposition() == Composition.Extends && contrib.getTypeConstant().isTuple())
-                    {
-                    return true;
-                    }
-                }
-            }
-        return false;
         }
+
+        for (Contribution contrib : getContributionsAsList()) {
+            if (contrib.getComposition() == Composition.Into) {
+                if (contrib.getTypeConstant().isTuple()) {
+                    return true;
+                }
+            } else if (getFormat() == Format.INTERFACE) {
+                if (contrib.getComposition() == Composition.Extends && contrib.getTypeConstant().isTuple()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     /**
      * When this class represents a Tuple or a Tuple mixin, get the resulting Tuple type parameters
@@ -1017,147 +902,122 @@ public class ClassStructure
      *
      * @return the list of types
      */
-    public List<TypeConstant> getTupleParamTypes(ConstantPool pool, List<TypeConstant> listParams)
-        {
-        if (getIdentityConstant().equals(pool.clzTuple()))
-            {
+    public List<TypeConstant> getTupleParamTypes(ConstantPool pool, List<TypeConstant> listParams) {
+        if (getIdentityConstant().equals(pool.clzTuple())) {
             return listParams;
-            }
+        }
 
-        for (Contribution contrib : getContributionsAsList())
-            {
-            if (contrib.getComposition() == Composition.Into)
-                {
+        for (Contribution contrib : getContributionsAsList()) {
+            if (contrib.getComposition() == Composition.Into) {
                 TypeConstant typeContrib = contrib.resolveGenerics(pool,
                                                 new SimpleTypeResolver(pool, listParams));
-                if (typeContrib != null && typeContrib.isTuple())
-                    {
+                if (typeContrib != null && typeContrib.isTuple()) {
                     return typeContrib.getTupleParamTypes();
-                    }
                 }
             }
-        return Collections.emptyList();
         }
+        return Collections.emptyList();
+    }
 
 
     // ----- component methods ---------------------------------------------------------------------
 
     @Override
-    public boolean isClassContainer()
-        {
+    public boolean isClassContainer() {
         return true;
-        }
+    }
 
     @Override
-    public boolean isMethodContainer()
-        {
+    public boolean isMethodContainer() {
         return true;
-        }
+    }
 
     @Override
-    public ConcurrencySafety getConcurrencySafety()
-        {
-        if (m_safety != null)
-            {
+    public ConcurrencySafety getConcurrencySafety() {
+        if (m_safety != null) {
             return m_safety;
-            }
+        }
 
         ConcurrencySafety safety;
-        switch (getFormat())
-            {
-            case MODULE, PACKAGE, CONST, ENUM, ENUMVALUE:
+        switch (getFormat()) {
+        case MODULE, PACKAGE, CONST, ENUM, ENUMVALUE:
+            safety = ConcurrencySafety.Safe;
+            break;
+
+        case CLASS, INTERFACE, ANNOTATION, MIXIN, SERVICE:
+            ConstantPool pool = getConstantPool();
+            if (containsAnnotation(pool.clzSynchronized())) {
+                safety = ConcurrencySafety.Unsafe;
+            } else if (containsAnnotation(pool.clzConcurrent())) {
                 safety = ConcurrencySafety.Safe;
-                break;
-
-            case CLASS, INTERFACE, ANNOTATION, MIXIN, SERVICE:
-                ConstantPool pool = getConstantPool();
-                if (containsAnnotation(pool.clzSynchronized()))
-                    {
-                    safety = ConcurrencySafety.Unsafe;
-                    }
-                else if (containsAnnotation(pool.clzConcurrent()))
-                    {
-                    safety = ConcurrencySafety.Safe;
-                    }
-                else
-                    {
-                    safety = ConcurrencySafety.Instance;
-                    }
-                break;
-
-            default:
-                throw new IllegalStateException();
+            } else {
+                safety = ConcurrencySafety.Instance;
             }
-        return m_safety = safety;
+            break;
+
+        default:
+            throw new IllegalStateException();
         }
+        return m_safety = safety;
+    }
 
     @Override
-    public boolean isAutoNarrowingAllowed()
-        {
-        if (!getFormat().isAutoNarrowingAllowed())
-            {
+    public boolean isAutoNarrowingAllowed() {
+        if (!getFormat().isAutoNarrowingAllowed()) {
             return false;
-            }
+        }
 
         // a class must not be a singleton
-        if (isSingleton())
-            {
+        if (isSingleton()) {
             return false;
-            }
+        }
 
         // inner classes inside a method (including anonymous inner classes) do not auto-narrow
         // because they are effectively final
         Component parent = getParent();
-        if (parent instanceof MethodStructure)
-            {
+        if (parent instanceof MethodStructure) {
             return false;
-            }
+        }
 
         // otherwise, assuming that this not the "outermost" class, keep asking up the parent chain
         return ((ClassConstant) getIdentityConstant()).getDepthFromOutermost() == 0
                 || parent.isAutoNarrowingAllowed();
-        }
+    }
 
     @Override
-    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector)
-        {
+    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector) {
         ResolutionResult result = super.resolveName(sName, access, collector);
-        if (result == ResolutionResult.UNKNOWN && getFormat() == Format.SERVICE)
-            {
+        if (result == ResolutionResult.UNKNOWN && getFormat() == Format.SERVICE) {
             // look into the Service interface itself
             ClassStructure   clzSvc       = (ClassStructure) getConstantPool().clzService().getComponent();
             SimpleCollector  collectorSvc = new SimpleCollector(ErrorListener.BLACKHOLE);
             ResolutionResult resultSvc    = clzSvc.resolveName(sName, Access.PROTECTED, collectorSvc);
-            if (resultSvc == ResolutionResult.RESOLVED)
-                {
+            if (resultSvc == ResolutionResult.RESOLVED) {
                 // only allow child classes; properties and methods are resolved by the TypeInfo
                 Constant constant = collectorSvc.getResolvedConstant();
-                if (constant.getFormat() == Constant.Format.Class)
-                    {
+                if (constant.getFormat() == Constant.Format.Class) {
                     collector.resolvedConstant(constant);
                     return ResolutionResult.RESOLVED;
-                    }
                 }
             }
-        return result;
         }
+        return result;
+    }
 
     @Override
-    protected ClassStructure cloneBody()
-        {
+    protected ClassStructure cloneBody() {
         ClassStructure that = (ClassStructure) super.cloneBody();
 
         // deep-clone the parameter list information (since the structure is mutable)
-        if (this.m_mapParams != null)
-            {
+        if (this.m_mapParams != null) {
             ListMap<StringConstant, TypeConstant> mapThis = this.m_mapParams;
             ListMap<StringConstant, TypeConstant> mapThat = new ListMap<>();
             mapThat.putAll(mapThis);
             that.m_mapParams = mapThat;
-            }
+        }
 
         return that;
-        }
+    }
 
     /**
      * Check if this class extends the specified class.
@@ -1166,45 +1026,38 @@ public class ClassStructure
      *
      * @return true if this type represents a sub-classing of the specified class
      */
-    public boolean extendsClass(IdentityConstant idClass)
-        {
-        if (getFormat() == Format.INTERFACE)
-            {
+    public boolean extendsClass(IdentityConstant idClass) {
+        if (getFormat() == Format.INTERFACE) {
             // interfaces do not extend; they implement
             return false;
-            }
+        }
 
-        if (idClass.equals(getIdentityConstant()))
-            {
+        if (idClass.equals(getIdentityConstant())) {
             // while a class cannot technically extend itself, this does satisfy the "is-a" test
             return true;
-            }
+        }
 
         ClassStructure structCur = this;
-        NextSuper: while (true)
-            {
-            for (Contribution contrib : structCur.getContributionsAsList())
-                {
-                if (contrib.getComposition() == Composition.Extends)
-                    {
+        NextSuper: while (true) {
+            for (Contribution contrib : structCur.getContributionsAsList()) {
+                if (contrib.getComposition() == Composition.Extends) {
                     // even though this class may be id'd by a ModuleConstant or PackageConstant,
                     // the super will always be a class (because a Module and a Package cannot be
                     // extended)
                     ClassConstant constSuper = (ClassConstant)
                         contrib.getTypeConstant().getSingleUnderlyingClass(false);
-                    if (idClass.equals(constSuper))
-                        {
+                    if (idClass.equals(constSuper)) {
                         return true;
-                        }
+                    }
 
                     structCur = (ClassStructure) constSuper.getComponent();
                     continue NextSuper;
-                    }
                 }
+            }
 
             return false;
-            }
         }
+    }
 
     /**
      * Check if the specified annotation type is "into Class", meaning that the annotation applies
@@ -1224,28 +1077,25 @@ public class ClassStructure
      *
      * @return true iff the annotation applies to the class meta-data
      */
-    public boolean isIntoClassAnnotation(TypeConstant typeAnno)
-        {
+    public boolean isIntoClassAnnotation(TypeConstant typeAnno) {
         assert typeAnno.isExplicitClassIdentity(true);
 
-        if (typeAnno.getExplicitClassFormat() != Format.ANNOTATION)
-            {
+        if (typeAnno.getExplicitClassFormat() != Format.ANNOTATION) {
             return false;
-            }
+        }
 
         TypeConstant typeInto = typeAnno.getExplicitClassInto();
 
         return typeInto.isIntoClassType() &&
                !typeInto.isComposedOfAny(Collections.singleton(getIdentityConstant()));
-        }
+    }
 
     /**
      * @return a contribution for this class that has a cyclical dependency; null otherwise
      */
-    public Contribution hasCyclicalContribution()
-        {
+    public Contribution hasCyclicalContribution() {
         return findContributionImpl(getIdentityConstant(), false);
-        }
+    }
 
     /**
      * Check if this class has the specified class as any of its contributions (recursively).
@@ -1254,21 +1104,18 @@ public class ClassStructure
      *
      * @return true if this type has a contribution of the specified class
      */
-    public boolean hasContribution(IdentityConstant idClass)
-        {
-        if (idClass.equals(getConstantPool().clzObject()))
-            {
+    public boolean hasContribution(IdentityConstant idClass) {
+        if (idClass.equals(getConstantPool().clzObject())) {
             // everything is considered to implement the Object interface
             return true;
-            }
+        }
 
-        if (idClass.equals(getIdentityConstant()))
-            {
+        if (idClass.equals(getIdentityConstant())) {
             return true;
-            }
+        }
 
         return findContributionImpl(idClass, true) != null;
-        }
+    }
 
     /**
      * Find a contribution of a specified identity.
@@ -1278,15 +1125,13 @@ public class ClassStructure
      * @return a first (if more than one) contribution matching the specified identity
      *         or null if none found
      */
-    public Contribution findContribution(IdentityConstant idContrib)
-        {
-        if (idContrib.equals(getIdentityConstant()))
-            {
+    public Contribution findContribution(IdentityConstant idContrib) {
+        if (idContrib.equals(getIdentityConstant())) {
             return new Contribution(Composition.Equal, getFormalType());
-            }
+        }
 
         return findContributionImpl(idContrib, true);
-        }
+    }
 
     /**
      * Implementation of the contribution lookup.
@@ -1297,61 +1142,52 @@ public class ClassStructure
      * @return a first (if more than one) contribution matching the specified identity
      *         or null if none found
      */
-    private Contribution findContributionImpl(IdentityConstant idContrib, boolean fAllowInto)
-        {
-        for (Contribution contrib : getContributionsAsList())
-            {
+    private Contribution findContributionImpl(IdentityConstant idContrib, boolean fAllowInto) {
+        for (Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib  = contrib.getTypeConstant();
             Contribution contribMatch = null;
 
-            if (typeContrib.isExplicitClassIdentity(true))
-                {
+            if (typeContrib.isExplicitClassIdentity(true)) {
                 boolean fCheck;
-                switch (contrib.getComposition())
-                    {
-                    case Annotation:
-                        {
-                        fCheck     = !isIntoClassAnnotation(typeContrib);
-                        fAllowInto = false;
-                        break;
-                        }
-                    case Into:
-                        fCheck     = fAllowInto;
-                        fAllowInto = false;
-                        break;
-
-                    case Incorporates:
-                        fAllowInto = false;
-                        // break through
-                    case Delegates, Implements, Extends:
-                        fCheck = true;
-                        break;
-
-                    default:
-                        // ignore any other contributions
-                        fCheck = false;
-                        break;
-                    }
-
-                if (fCheck)
-                    {
-                    contribMatch = checkContribution(contrib, typeContrib, idContrib);
-                    }
+                switch (contrib.getComposition()) {
+                case Annotation: {
+                    fCheck     = !isIntoClassAnnotation(typeContrib);
+                    fAllowInto = false;
+                    break;
                 }
-            else if (typeContrib instanceof IntersectionTypeConstant typeIntersection)
-                {
+                case Into:
+                    fCheck     = fAllowInto;
+                    fAllowInto = false;
+                    break;
+
+                case Incorporates:
+                    fAllowInto = false;
+                    // break through
+                case Delegates, Implements, Extends:
+                    fCheck = true;
+                    break;
+
+                default:
+                    // ignore any other contributions
+                    fCheck = false;
+                    break;
+                }
+
+                if (fCheck) {
+                    contribMatch = checkContribution(contrib, typeContrib, idContrib);
+                }
+            } else if (typeContrib instanceof IntersectionTypeConstant typeIntersection) {
                 // the only relational type contributions we can process further are the
                 // intersection types
                 contribMatch = checkIntersectionContribution(contrib, typeIntersection, idContrib);
-                }
-
-            if (contribMatch != null)
-                {
-                return contribMatch;
-                }
             }
-        return null;
+
+            if (contribMatch != null) {
+                return contribMatch;
+            }
         }
+        return null;
+    }
 
     /**
      * Check whether the specified contribution or any of its descendants matches the specified
@@ -1365,17 +1201,15 @@ public class ClassStructure
      * @return the contribution that matches the specified identity
      */
     private Contribution checkContribution(Contribution contrib,
-                                           TypeConstant typeContrib, IdentityConstant idTest)
-        {
+                                           TypeConstant typeContrib, IdentityConstant idTest) {
         IdentityConstant idContrib = typeContrib.getSingleUnderlyingClass(true);
-        if (idContrib.equals(idTest))
-            {
+        if (idContrib.equals(idTest)) {
             return contrib;
-            }
+        }
 
         ClassStructure clzContrib = (ClassStructure) idContrib.getComponent();
         return clzContrib.findContributionImpl(idTest, false);
-        }
+    }
 
     /**
      * Check whether specified contribution of the intersection type or any of its descendants
@@ -1389,18 +1223,16 @@ public class ClassStructure
      */
     private Contribution checkIntersectionContribution(Contribution             contrib,
                                                        IntersectionTypeConstant typeContrib,
-                                                       IdentityConstant         idTest)
-        {
+                                                       IdentityConstant         idTest) {
         TypeConstant type1    = typeContrib.getUnderlyingType();
         Contribution contrib1 = type1.isExplicitClassIdentity(true)
                 ? checkContribution(contrib, type1, idTest)
                 : type1 instanceof IntersectionTypeConstant typeIntersection1
                         ? checkIntersectionContribution(contrib, typeIntersection1, idTest)
                         : null;
-        if (contrib1 != null)
-            {
+        if (contrib1 != null) {
             return contrib1;
-            }
+        }
 
         TypeConstant type2 = typeContrib.getUnderlyingType2();
         return type2.isExplicitClassIdentity(true)
@@ -1408,69 +1240,62 @@ public class ClassStructure
                 : type2 instanceof IntersectionTypeConstant typeIntersection2
                         ? checkIntersectionContribution(contrib, typeIntersection2, idTest)
                         : null;
-        }
+    }
 
     /**
      * @return true iff this class is an Exception
      */
-    public boolean isException()
-        {
+    public boolean isException() {
         return extendsClass(getConstantPool().clzException());
-        }
+    }
 
     /**
      * Determine the type to rebase onto. Note that a rebase type is NEVER parameterized.
      *
      * @return a type to rebase onto, if rebasing is required by this class; otherwise null
      */
-    public TypeConstant getRebaseType()
-        {
+    public TypeConstant getRebaseType() {
         ConstantPool pool   = getConstantPool();
         Format       format = getFormat();
 
-        switch (format)
-            {
-            case MODULE:
-                return pool.typeModuleRB();
+        switch (format) {
+        case MODULE:
+            return pool.typeModuleRB();
 
-            case PACKAGE:
-                return pool.typePackageRB();
+        case PACKAGE:
+            return pool.typePackageRB();
 
-            case ENUM:
-                return pool.typeEnumRB();
+        case ENUM:
+            return pool.typeEnumRB();
 
-            case CONST:
-            case SERVICE:
-                // only if the format differs from the format of the super
-                ClassStructure clzSuper = getSuper();
-                if (clzSuper == null || format != clzSuper.getFormat())
-                    {
-                    return format == Format.CONST ? pool.typeConstRB() : pool.typeServiceRB();
-                    }
-                // break through
-            default:
-                return null;
+        case CONST:
+        case SERVICE:
+            // only if the format differs from the format of the super
+            ClassStructure clzSuper = getSuper();
+            if (clzSuper == null || format != clzSuper.getFormat()) {
+                return format == Format.CONST ? pool.typeConstRB() : pool.typeServiceRB();
             }
+            // break through
+        default:
+            return null;
         }
+    }
 
     /**
      * @return the ClassStructure that this ClassStructure extends, or null if this ClassStructure
      *         is an interface or does not contain an Extends contribution
      */
-    public ClassStructure getSuper()
-        {
+    public ClassStructure getSuper() {
         Contribution contribExtends = findContribution(Composition.Extends);
-        if (contribExtends != null)
-            {
+        if (contribExtends != null) {
             TypeConstant typeExtends = contribExtends.getTypeConstant();
             if (typeExtends.isExplicitClassIdentity(true) &&
-                typeExtends.isSingleUnderlyingClass(false))
-                {
+                typeExtends.isSingleUnderlyingClass(false)) {
                 return (ClassStructure) typeExtends.getSingleUnderlyingClass(false).getComponent();
-                }
             }
-        return null;
         }
+        return null;
+    }
 
     /**
      * For a "virtual child" ClassStructure component that is still being resolved during the
@@ -1483,8 +1308,7 @@ public class ClassStructure
      *         determination of a virtual child super; the return valued does NOT imply the presence
      *         or the absence of a virtual child super
      */
-    public boolean resolveVirtualSuper(Set<Contribution> setContribs)
-        {
+    public boolean resolveVirtualSuper(Set<Contribution> setContribs) {
         assert isVirtualChild();
 
         // prevent circularity and repeatedly checking the same components
@@ -1494,36 +1318,27 @@ public class ClassStructure
 
         Component parent = getParent();
         int       cDepth = 1;
-        while (true)
-            {
+        while (true) {
             // avoid circular / repetitive checks
-            if (setVisited.add(parent.getIdentityConstant()))
-                {
+            if (setVisited.add(parent.getIdentityConstant())) {
                 Iterator<IdentityConstant> iter = parent.potentialVirtualChildContributors();
-                if (iter == null)
-                    {
+                if (iter == null) {
                     return false;
-                    }
-                while (iter.hasNext())
-                    {
+                } while (iter.hasNext()) {
                     IdentityConstant idContrib = iter.next();
-                    if (idContrib.containsUnresolved())
-                        {
+                    if (idContrib.containsUnresolved()) {
                         return false;
-                        }
+                    }
 
                     Component component = idContrib.getComponent();
-                    if (component != null)
-                        {
+                    if (component != null) {
                         Object o = component.findVirtualChildSuper(idThis, cDepth, setVisited);
-                        if (o != null)
-                            {
-                            if (o instanceof Boolean Flag)
-                                {
+                        if (o != null) {
+                            if (o instanceof Boolean Flag) {
                                 // something necessary hasn't resolved yet
                                 assert !Flag;
                                 return false;
-                                }
+                            }
 
                             // we found a virtual child super, which may be a super interface
                             // (implying "implements") or class (implying "extends"); the identity
@@ -1534,138 +1349,118 @@ public class ClassStructure
                             Component        compSuper = idSuper.getComponent();
                             ClassStructure   clzSuper;
                             TypeConstant     typeSuper;
-                            if (compSuper == null)
-                                {
+                            if (compSuper == null) {
                                 ConstantPool pool = getConstantPool();
                                 clzSuper  = (ClassStructure) o;
                                 assert clzSuper.isVirtualChild();
                                 typeSuper = pool.ensureVirtualChildTypeConstant(
                                         ((ClassStructure) component).getFormalType(), idThis.getName());
-                                if (clzSuper.isParameterized())
-                                    {
+                                if (clzSuper.isParameterized()) {
                                     typeSuper = typeSuper.adoptParameters(pool, clzSuper.getFormalType());
-                                    }
                                 }
-                            else if (compSuper instanceof ClassStructure clz)
-                                {
+                            } else if (compSuper instanceof ClassStructure clz) {
                                 clzSuper  = clz;
                                 typeSuper = clzSuper.getFormalType();
-                                }
-                            else
-                                {
+                            } else {
                                 return false;
-                                }
+                            }
                             Composition composition = clzSuper.getFormat() == Format.INTERFACE
                                     ? Composition.Implements : Composition.Extends;
                             setContribs.add(new Contribution(composition, typeSuper));
-                            }
                         }
                     }
                 }
+            }
 
             // we are finished walking up the parent chain AFTER we have processed the first class
             // in that chain that is NOT a virtual child class
-            if (parent instanceof ClassStructure clz && !clz.isVirtualChild())
-                {
+            if (parent instanceof ClassStructure clz && !clz.isVirtualChild()) {
                 break;
-                }
+            }
 
             parent = parent.getParent();
             ++cDepth;
-            }
+        }
 
         return true;
-        }
+    }
 
     @Override
     protected Object findVirtualChildSuper(
             IdentityConstant        idVirtChild,
             int                     cDepth,
-            Set<IdentityConstant>   setVisited)
-        {
+            Set<IdentityConstant>   setVisited) {
         Object oResult = super.findVirtualChildSuper(idVirtChild, cDepth, setVisited);
 
-        if (oResult == null && isVirtualChild())
-            {
+        if (oResult == null && isVirtualChild()) {
             // classes also walk up the parent chain (as long as the chain corresponds to a chain of
             // virtual children and the parent containing them) to find contributions that can lead
             // to the virtual child super
             oResult = getParent().findVirtualChildSuper(idVirtChild, cDepth+1, setVisited);
-            }
-
-        return oResult;
         }
 
+        return oResult;
+    }
+
     @Override
-    protected Iterator<IdentityConstant> potentialVirtualChildContributors()
-        {
+    protected Iterator<IdentityConstant> potentialVirtualChildContributors() {
         List<IdentityConstant> list = null;
 
-        for (Contribution contrib : getContributionsAsList())
-            {
+        for (Contribution contrib : getContributionsAsList()) {
             TypeConstant type = contrib.getTypeConstant();
-            switch (contrib.getComposition())
-                {
-                case Annotation:
-                    if (isIntoClassAnnotation(type))
-                        {
-                        break;
-                        }
-                    // break through
-                case Extends:
-                case Incorporates:
-                case Implements:
-                    if (type.containsUnresolved())
-                        {
-                        return null;
-                        }
-                    if (type.isExplicitClassIdentity(true))
-                        {
-                        if (list == null)
-                            {
-                            list = new ArrayList<>();
-                            }
-
-                        list.add(type.getSingleUnderlyingClass(true));
-                        }
+            switch (contrib.getComposition()) {
+            case Annotation:
+                if (isIntoClassAnnotation(type)) {
                     break;
                 }
+                // break through
+            case Extends:
+            case Incorporates:
+            case Implements:
+                if (type.containsUnresolved()) {
+                    return null;
+                }
+                if (type.isExplicitClassIdentity(true)) {
+                    if (list == null) {
+                        list = new ArrayList<>();
+                    }
+
+                    list.add(type.getSingleUnderlyingClass(true));
+                }
+                break;
             }
+        }
 
         return list == null
                 ? Collections.emptyIterator()
                 : list.iterator();
-        }
+    }
 
     /**
      * Determine the "into" type of this annotation or mixin.
      *
      * @return a TypeConstant of the "into" contribution
      */
-    public TypeConstant getTypeInto()
-        {
-        switch (getFormat())
-            {
-            case ANNOTATION, MIXIN:
-                break;
-            default:
-                throw new IllegalStateException("not an annotation or mixin: " + getIdentityConstant());
-            }
+    public TypeConstant getTypeInto() {
+        switch (getFormat()) {
+        case ANNOTATION, MIXIN:
+            break;
+        default:
+            throw new IllegalStateException("not an annotation or mixin: " + getIdentityConstant());
+        }
 
         Contribution contribInto = findContribution(Composition.Into);
-        if (contribInto != null)
-            {
+        if (contribInto != null) {
             return contribInto.getTypeConstant();
-            }
+        }
 
         ClassStructure structSuper = getSuper();
-        if (structSuper != null)
-            {
+        if (structSuper != null) {
             return structSuper.getTypeInto();
-            }
+        }
 
         return getConstantPool().typeObject();
-        }
+    }
 
     /**
      * Find an index of a generic parameter with the specified name.
@@ -1676,18 +1471,15 @@ public class ClassStructure
      *
      * @return the parameter index or -1 if not found
      */
-    public int indexOfGenericParameter(String sParamName)
-        {
+    public int indexOfGenericParameter(String sParamName) {
         List<Map.Entry<StringConstant, TypeConstant>> listFormal = getTypeParamsAsList();
-        for (int i = 0, c = listFormal.size(); i < c; i++)
-            {
-            if (listFormal.get(i).getKey().getValue().equals(sParamName))
-                {
+        for (int i = 0, c = listFormal.size(); i < c; i++) {
+            if (listFormal.get(i).getKey().getValue().equals(sParamName)) {
                 return i;
-                }
             }
-        return -1;
         }
+        return -1;
+    }
 
     /**
      * Recursively check if the formal name is introduced by this class or any of its contributions.
@@ -1697,10 +1489,9 @@ public class ClassStructure
      *
      * @return true if the formal type with this name exists
      */
-    public boolean containsGenericParamType(String sName)
-        {
+    public boolean containsGenericParamType(String sName) {
         return containsGenericParamTypeImpl(sName, true);
-        }
+    }
 
     /**
      * Recursive implementation of containsGenericParamType method.
@@ -1710,64 +1501,57 @@ public class ClassStructure
      *
      * @return the corresponding actual type or null if there is no matching formal type
      */
-    protected boolean containsGenericParamTypeImpl(String sName, boolean fAllowInto)
-        {
+    protected boolean containsGenericParamTypeImpl(String sName, boolean fAllowInto) {
         int ix = indexOfGenericParameter(sName);
-        if (ix >= 0)
-            {
+        if (ix >= 0) {
             return true;
-            }
+        }
 
-        for (Contribution contrib : getContributionsAsList())
-            {
+        for (Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib = contrib.getTypeConstant();
 
-            if (typeContrib.containsUnresolved() || !typeContrib.isSingleUnderlyingClass(true))
-                {
+            if (typeContrib.containsUnresolved() || !typeContrib.isSingleUnderlyingClass(true)) {
                 // TODO: how do we process relational types?
                 continue;
-                }
-
-            boolean fCheck;
-            switch (contrib.getComposition())
-                {
-                case Annotation:
-                    fCheck     = !isIntoClassAnnotation(typeContrib);
-                    fAllowInto = false;
-                    break;
-
-                case Into:
-                    fCheck     = fAllowInto;
-                    fAllowInto = false;
-                    break;
-
-                case Incorporates:
-                    fAllowInto = false;
-                    // break through
-                case Delegates, Implements, Extends:
-                    fCheck = true;
-                    break;
-
-                case Import:
-                    continue;
-
-                default:
-                    throw new IllegalStateException();
-                }
-
-            if (fCheck)
-                {
-                ClassStructure clzContrib = (ClassStructure)
-                        typeContrib.getSingleUnderlyingClass(true).getComponent();
-                if (clzContrib.containsGenericParamTypeImpl(sName, fAllowInto))
-                    {
-                    return true;
-                    }
-                }
             }
 
-        return false;
+            boolean fCheck;
+            switch (contrib.getComposition()) {
+            case Annotation:
+                fCheck     = !isIntoClassAnnotation(typeContrib);
+                fAllowInto = false;
+                break;
+
+            case Into:
+                fCheck     = fAllowInto;
+                fAllowInto = false;
+                break;
+
+            case Incorporates:
+                fAllowInto = false;
+                // break through
+            case Delegates, Implements, Extends:
+                fCheck = true;
+                break;
+
+            case Import:
+                continue;
+
+            default:
+                throw new IllegalStateException();
+            }
+
+            if (fCheck) {
+                ClassStructure clzContrib = (ClassStructure)
+                        typeContrib.getSingleUnderlyingClass(true).getComponent();
+                if (clzContrib.containsGenericParamTypeImpl(sName, fAllowInto)) {
+                    return true;
+                }
+            }
         }
+
+        return false;
+    }
 
     /**
      * Recursively find the type for the specified formal name. Note that the formal name could
@@ -1778,10 +1562,9 @@ public class ClassStructure
      *
      * @return the corresponding actual type or null if there is no matching formal type
      */
-    public TypeConstant getGenericParamType(ConstantPool pool, String sName, TypeConstant typeActual)
-        {
+    public TypeConstant getGenericParamType(ConstantPool pool, String sName, TypeConstant typeActual) {
         return getGenericParamTypeImpl(pool, sName, typeActual, true);
-        }
+    }
 
     /**
      * Recursive implementation of getGenericParamType method.
@@ -1792,86 +1575,76 @@ public class ClassStructure
      * @return the corresponding actual type or null if there is no matching formal type
      */
     protected TypeConstant getGenericParamTypeImpl(ConstantPool pool, String sName,
-                                                   TypeConstant typeActual, boolean fAllowInto)
-        {
+                                                   TypeConstant typeActual, boolean fAllowInto) {
         int ix = indexOfGenericParameter(sName);
-        if (ix >= 0)
-            {
+        if (ix >= 0) {
             // the formal name is declared at this level; don't traverse the contributions
             return extractGenericType(pool, ix, typeActual.getParamTypes());
-            }
+        }
 
-        for (Contribution contrib : getContributionsAsList())
-            {
+        for (Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib = contrib.getTypeConstant();
 
-            if (typeContrib.containsUnresolved() || !typeContrib.isSingleUnderlyingClass(true))
-                {
+            if (typeContrib.containsUnresolved() || !typeContrib.isSingleUnderlyingClass(true)) {
                 // TODO: how do we process relational types?
                 continue;
-                }
+            }
 
             TypeConstant typeResolved = contrib.resolveType(pool, this, typeActual);
-            if (typeResolved == null)
-                {
+            if (typeResolved == null) {
                 // conditional incorporation
                 continue;
-                }
+            }
 
             boolean fCheck;
-            switch (contrib.getComposition())
-                {
-                case Annotation:
-                    fCheck     = !isIntoClassAnnotation(typeContrib);
-                    fAllowInto = false;
-                    break;
+            switch (contrib.getComposition()) {
+            case Annotation:
+                fCheck     = !isIntoClassAnnotation(typeContrib);
+                fAllowInto = false;
+                break;
 
-                case Into:
-                    fCheck     = fAllowInto;
-                    fAllowInto = false;
-                    break;
+            case Into:
+                fCheck     = fAllowInto;
+                fAllowInto = false;
+                break;
 
-                case Incorporates:
-                    fAllowInto = false;
-                    // break through
-                case Delegates, Implements, Extends:
-                    fCheck = true;
-                    break;
+            case Incorporates:
+                fAllowInto = false;
+                // break through
+            case Delegates, Implements, Extends:
+                fCheck = true;
+                break;
 
-                case Import:
-                    // ignore
-                    continue;
+            case Import:
+                // ignore
+                continue;
 
-                default:
-                    throw new IllegalStateException();
-                }
+            default:
+                throw new IllegalStateException();
+            }
 
-            if (fCheck)
-                {
+            if (fCheck) {
                 ClassStructure clzContrib = (ClassStructure)
                         typeContrib.getSingleUnderlyingClass(true).getComponent();
 
                 TypeConstant type = clzContrib.getGenericParamTypeImpl(
                         pool, sName, typeResolved, fAllowInto);
-                if (type != null)
-                    {
+                if (type != null) {
                     return type;
-                    }
+                }
 
-                if (clzContrib.isVirtualChild() && typeResolved.isVirtualChild())
-                    {
+                if (clzContrib.isVirtualChild() && typeResolved.isVirtualChild()) {
                     type = clzContrib.getOuter().getGenericParamTypeImpl(pool, sName,
                             typeResolved.getParentType(), fAllowInto);
-                    if (type != null)
-                        {
+                    if (type != null) {
                         return type;
-                        }
                     }
                 }
             }
+        }
 
         return null;
-        }
+    }
 
     /**
      * Extract a generic type for the formal parameter of the specified name from the specified list.
@@ -1882,14 +1655,13 @@ public class ClassStructure
      *
      * @return the type corresponding to the specified formal type or null if cannot be determined
      */
-    private TypeConstant extractGenericType(ConstantPool pool, String sName, List<TypeConstant> list)
-        {
+    private TypeConstant extractGenericType(ConstantPool pool, String sName, List<TypeConstant> list) {
         int ix = indexOfGenericParameter(sName);
 
         return ix >= 0
                 ? extractGenericType(pool, ix, list)
                 : null;
-        }
+    }
 
     /**
      * Extract a generic type for the formal parameter at the specified index from the specified list.
@@ -1900,25 +1672,22 @@ public class ClassStructure
      *
      * @return the type corresponding to the specified formal type or null if cannot be determined
      */
-    private TypeConstant extractGenericType(ConstantPool pool, int ix, List<TypeConstant> list)
-        {
-        if (isTuple())
-            {
+    private TypeConstant extractGenericType(ConstantPool pool, int ix, List<TypeConstant> list) {
+        if (isTuple()) {
             return pool.ensureTupleType(list.toArray(TypeConstant.NO_TYPES));
-            }
-
-        return ix < list.size() ? list.get(ix) : null;
         }
 
+        return ix < list.size() ? list.get(ix) : null;
+    }
+
     @Override
-    public void addAnnotation(Annotation annotation)
-        {
+    public void addAnnotation(Annotation annotation) {
         super.addAnnotation(annotation);
 
         // clear the cache
         m_aAnnoMixin = null;
         m_aAnnoClass = null;
-        }
+    }
 
     // ----- type comparison support ---------------------------------------------------------------
 
@@ -1929,8 +1698,7 @@ public class ClassStructure
      */
     public Relation calculateAssignability(ConstantPool pool,
                                            List<TypeConstant> listLeft, Access accessLeft,
-                                           List<TypeConstant> listRight)
-        {
+                                           List<TypeConstant> listRight) {
         int     cParamsLeft  = listLeft.size();
         int     cParamsRight = listRight.size();
         int     cParamsMax   = Math.max(cParamsRight, cParamsLeft);
@@ -1942,62 +1710,52 @@ public class ClassStructure
                 ? normalizeParameters(pool, listRight)
                 : listRight;
 
-        if (!fTuple && cParamsMax > listFormal.size())
-            {
+        if (!fTuple && cParamsMax > listFormal.size()) {
             // soft assert
             System.err.println("Invalid number of arguments for " + getName()
                     + ": required=" + listFormal.size()
                     + ", provided " + cParamsMax);
             return Relation.INCOMPATIBLE;
-            }
+        }
 
         Iterator<Map.Entry<StringConstant, TypeConstant>> iterFormal = listFormal.iterator();
-        for (int i = 0; i < cParamsMax; i++)
-            {
+        for (int i = 0; i < cParamsMax; i++) {
             String sName = fTuple ? null : iterFormal.next().getKey().getValue();
 
-            if (i >= cParamsLeft)
-                {
+            if (i >= cParamsLeft) {
                 // if an assignment C<L1> = C<R1> is allowed, then an assignment
                 // C<L1> = C<R1, R2> is allowed for any R2, but is "weak" for consumers
-                if (fTuple || consumesFormalType(pool, sName, accessLeft, listLeft))
-                    {
+                if (fTuple || consumesFormalType(pool, sName, accessLeft, listLeft)) {
                     fWeak = true;
-                    }
-                break;
                 }
+                break;
+            }
 
             TypeConstant typeLeft = listLeft.get(i);
             TypeConstant typeRight;
             boolean      fProduces;
             boolean      fLeftIsRight;
 
-            if (i < cParamsRight)
-                {
+            if (i < cParamsRight) {
                 typeRight = listRight.get(i);
 
-                if (typeLeft.equals(typeRight))
-                    {
+                if (typeLeft.equals(typeRight)) {
                     continue;
-                    }
+                }
 
                 fProduces    = fTuple || producesFormalType(pool, sName, accessLeft, listLeft);
                 fLeftIsRight = typeLeft.isA(typeRight);
 
-                if (fLeftIsRight && !fProduces)
-                    {
+                if (fLeftIsRight && !fProduces) {
                     // consumer only methods; rule 1.2.1
                     continue;
-                    }
                 }
-            else
-                {
+            } else {
                 // since dynamic types are added automatically, we can treat them as they are
                 // "not there" and therefore non-conflicting with the right type
-                if (typeLeft.isDynamicType())
-                    {
+                if (typeLeft.isDynamicType()) {
                     continue;
-                    }
+                }
 
                 // Assignment  C<L1, L2> = C<R1> is not the same as
                 //             C<L1, L2> = C<R1, [normalized (resolved canonical) type for R2]>;
@@ -2011,49 +1769,44 @@ public class ClassStructure
                 typeRight    = fTuple ? pool.typeObject() : listRightNormalized.get(i);
                 fProduces    = fTuple || producesFormalType(pool, sName, accessLeft, listLeft);
                 fLeftIsRight = false;
-                }
+            }
 
-            if (typeRight.isA(typeLeft))
-                {
-                if (fLeftIsRight)
-                    {
+            if (typeRight.isA(typeLeft)) {
+                if (fLeftIsRight) {
                     // both hold true:
                     //   typeLeft.isA(typeRight), and
                     //   typeRight.isA(typeLeft)
                     // we take it that the types are congruent
                     // (e,g. "this:class", but with different declaration levels)
                     continue;
-                    }
+                }
 
                 boolean fConsumes = fTuple || consumesFormalType(pool, sName, accessLeft, listLeft);
-                if (fProduces || !fConsumes)
-                    {
+                if (fProduces || !fConsumes) {
                     // there are some producing methods; rule 1.2.2.2
                     // or the formal type is completely unused
                     // consuming methods may need to be "wrapped"
-                    if (fConsumes)
-                        {
+                    if (fConsumes) {
                         fWeak = true;
-                        }
-                    continue;
                     }
+                    continue;
+                }
 
-                if (typeLeft.isFormalType())
-                    {
+                if (typeLeft.isFormalType()) {
                     // the left type is formal (e.g. "HashSet.Element") and right "isA" left;
                     // therefore, the right must be some narrowing of that formal type, for example:
                     // (Element + Hashable), which warrants a "weak" assignment, such as:
                     // Consumer<Element> <- Consumer<Element + Hashable>
                     fWeak = true;
                     continue;
-                    }
                 }
+            }
 
             // this parameter didn't match
             return Relation.INCOMPATIBLE;
-            }
-        return fWeak ? Relation.IS_A_WEAK : Relation.IS_A;
         }
+        return fWeak ? Relation.IS_A_WEAK : Relation.IS_A;
+    }
 
     /**
      * Helper method to find a method by the name and number of arguments.
@@ -2064,34 +1817,28 @@ public class ClassStructure
      *
      * @return the specified MethodStructure of null if not found
      */
-    public MethodStructure findMethod(String sName, int cArgs, TypeConstant... aType)
-        {
-        return findMethod(sName, method ->
-            {
+    public MethodStructure findMethod(String sName, int cArgs, TypeConstant... aType) {
+        return findMethod(sName, method -> {
             int cParamsAll     = method.getParamCount();
             int cParamsDefault = method.getDefaultParamCount();
-            if (cArgs < cParamsAll - cParamsDefault || cArgs > cParamsAll)
-                {
+            if (cArgs < cParamsAll - cParamsDefault || cArgs > cParamsAll) {
                 return false;
-                }
+            }
 
-            if (aType == null)
-                {
+            if (aType == null) {
                 return true;
-                }
+            }
 
-            for (int i = 0, c = Math.min(method.getParamCount(), aType.length); i < c; i++)
-                {
+            for (int i = 0, c = Math.min(method.getParamCount(), aType.length); i < c; i++) {
                 TypeConstant typeParam = method.getParam(i).getType();
                 TypeConstant typeTest  = aType[i];
-                if (typeTest != null && !typeTest.isA(typeParam))
-                    {
+                if (typeTest != null && !typeTest.isA(typeParam)) {
                     return false;
-                    }
                 }
+            }
             return true;
-            });
-        }
+        });
+    }
 
     /**
      * Helper method to find a method by the name and a predicate.
@@ -2101,21 +1848,17 @@ public class ClassStructure
      *
      * @return the specified MethodStructure or null if not found
      */
-    public MethodStructure findMethod(String sName, Predicate<MethodStructure> test)
-        {
+    public MethodStructure findMethod(String sName, Predicate<MethodStructure> test) {
         MultiMethodStructure structMM = (MultiMethodStructure) getChild(sName);
-        if (structMM != null)
-            {
-            for (MethodStructure method : structMM.methods())
-                {
-                if (test.test(method))
-                    {
+        if (structMM != null) {
+            for (MethodStructure method : structMM.methods()) {
+                if (test.test(method)) {
                     return method;
-                    }
                 }
             }
-        return null;
         }
+        return null;
+    }
 
     /**
      * Helper method to find a method by the name and a predicate for this class and all its
@@ -2126,52 +1869,43 @@ public class ClassStructure
      *
      * @return the specified MethodStructure or null if not found
      */
-    public MethodStructure findMethodDeep(String sName, Predicate<MethodStructure> test)
-        {
+    public MethodStructure findMethodDeep(String sName, Predicate<MethodStructure> test) {
         MethodStructure method = findMethod(sName, test);
-        if (method == null)
-            {
-            for (Contribution contrib : getContributionsAsList())
-                {
+        if (method == null) {
+            for (Contribution contrib : getContributionsAsList()) {
                 TypeConstant typeContrib = contrib.getTypeConstant();
-                switch (contrib.getComposition())
-                    {
-                    case Into:
-                    case Delegates:
-                        break;
+                switch (contrib.getComposition()) {
+                case Into:
+                case Delegates:
+                    break;
 
-                    case Annotation:
-                        if (isIntoClassAnnotation(typeContrib))
-                            {
-                            break;
-                            }
-                        // break through
-                    case Incorporates:
-                    case Extends:
-                    case Implements:
-                        {
-                        if (typeContrib.isExplicitClassIdentity(true))
-                            {
-                            ClassStructure clzContrib = (ClassStructure)
-                                typeContrib.getSingleUnderlyingClass(true).getComponent();
-                            if (clzContrib == null)
-                                {
-                                // this method could be used before the pool is "connected"
-                                break;
-                                }
-                            method = clzContrib.findMethodDeep(sName, test);
-                            if (method != null)
-                                {
-                                return method;
-                                }
-                            }
+                case Annotation:
+                    if (isIntoClassAnnotation(typeContrib)) {
                         break;
+                    }
+                    // break through
+                case Incorporates:
+                case Extends:
+                case Implements: {
+                    if (typeContrib.isExplicitClassIdentity(true)) {
+                        ClassStructure clzContrib = (ClassStructure)
+                            typeContrib.getSingleUnderlyingClass(true).getComponent();
+                        if (clzContrib == null) {
+                            // this method could be used before the pool is "connected"
+                            break;
+                        }
+                        method = clzContrib.findMethodDeep(sName, test);
+                        if (method != null) {
+                            return method;
                         }
                     }
+                    break;
+                }
                 }
             }
-        return method;
         }
+        return method;
+    }
 
     /**
      * Find the specified constructor of this class.
@@ -2182,16 +1916,14 @@ public class ClassStructure
      *
      * @throws IllegalStateException if the constructor cannot be found
      */
-    public MethodStructure findConstructor(TypeConstant... types)
-        {
+    public MethodStructure findConstructor(TypeConstant... types) {
         MethodStructure method = findMethod("construct", types.length, types);
-        if (method == null)
-            {
+        if (method == null) {
             throw new IllegalStateException(
                 "no such constructor for " + types.length + " params on " + this);
-            }
-        return method;
         }
+        return method;
+    }
 
     /**
      * Find a constructor for this class which should be used for the specified const arguments.
@@ -2201,40 +1933,34 @@ public class ClassStructure
      *
      * @return the matching constructor or null, if not found
      */
-    public MethodStructure findConstructor(Constant[] aconstArgs, TypeConstant typeTarget)
-        {
+    public MethodStructure findConstructor(Constant[] aconstArgs, TypeConstant typeTarget) {
         ConstantPool pool  = typeTarget.getConstantPool();
         int          cArgs = aconstArgs.length;
 
-        return findMethod("construct",  m ->
-            {
-            if (cArgs < m.getRequiredParamCount() || cArgs > m.getParamCount())
-                {
+        return findMethod("construct",  m -> {
+            if (cArgs < m.getRequiredParamCount() || cArgs > m.getParamCount()) {
                 return false;
-                }
+            }
 
             TypeConstant[] atypeParam = m.getParamTypes();
-            for (int i = 0; i < cArgs; i++)
-                {
+            for (int i = 0; i < cArgs; i++) {
                 Constant constArg = aconstArgs[i];
-                if (constArg instanceof FrameDependentConstant)
-                    {
+                if (constArg instanceof FrameDependentConstant) {
                     continue;
-                    }
+                }
                 // we know the ValueConstants do produce the right type by getType() method,
                 // but some others (as PropertyClassTypeConstant) require special handling;
                 // we may need to augment the logic below for other Constant sub-types
                 TypeConstant typeArg = constArg instanceof PropertyClassTypeConstant constProp
                         ? constProp.getProperty().getValueType(pool, null)
                         : constArg.getType();
-                if (!typeArg.isA(atypeParam[i].resolveGenerics(pool, typeTarget)))
-                    {
+                if (!typeArg.isA(atypeParam[i].resolveGenerics(pool, typeTarget))) {
                     return false;
-                    }
                 }
+            }
             return true;
-            });
-        }
+        });
+    }
 
     /**
      * Helper method to find a property by the name for this class and all its contributions.
@@ -2243,52 +1969,43 @@ public class ClassStructure
      *
      * @return the specified PropertyStructure or null if not found
      */
-    public PropertyStructure findPropertyDeep(String sName)
-        {
+    public PropertyStructure findPropertyDeep(String sName) {
         Component component = getChild(sName);
-        if (component == null)
-            {
-            for (Contribution contrib : getContributionsAsList())
-                {
+        if (component == null) {
+            for (Contribution contrib : getContributionsAsList()) {
                 TypeConstant typeContrib = contrib.getTypeConstant();
-                switch (contrib.getComposition())
-                    {
-                    case Into:
-                    case Delegates:
-                        break;
+                switch (contrib.getComposition()) {
+                case Into:
+                case Delegates:
+                    break;
 
-                    case Annotation:
-                        if (isIntoClassAnnotation(typeContrib))
-                            {
-                            break;
-                            }
-                        // break through
-                    case Incorporates:
-                    case Extends:
-                    case Implements:
-                        {
-                        if (typeContrib.isExplicitClassIdentity(true))
-                            {
-                            ClassStructure clzContrib = (ClassStructure)
-                                typeContrib.getSingleUnderlyingClass(true).getComponent();
-                            if (clzContrib == null)
-                                {
-                                // this method could be used before the pool is "connected"
-                                break;
-                                }
-                            PropertyStructure prop = clzContrib.findPropertyDeep(sName);
-                            if (prop != null)
-                                {
-                                return prop;
-                                }
-                            }
+                case Annotation:
+                    if (isIntoClassAnnotation(typeContrib)) {
                         break;
+                    }
+                    // break through
+                case Incorporates:
+                case Extends:
+                case Implements: {
+                    if (typeContrib.isExplicitClassIdentity(true)) {
+                        ClassStructure clzContrib = (ClassStructure)
+                            typeContrib.getSingleUnderlyingClass(true).getComponent();
+                        if (clzContrib == null) {
+                            // this method could be used before the pool is "connected"
+                            break;
+                        }
+                        PropertyStructure prop = clzContrib.findPropertyDeep(sName);
+                        if (prop != null) {
+                            return prop;
                         }
                     }
+                    break;
+                }
                 }
             }
-        return component instanceof PropertyStructure prop ? prop : null;
         }
+        return component instanceof PropertyStructure prop ? prop : null;
+    }
 
     /**
      * For this class structure representing an R-Value, find the best "isA" relation among all its
@@ -2301,10 +2018,9 @@ public class ClassStructure
      * @return the best "isA" relation
      */
     public Relation calculateRelation(ConstantPool pool,
-                                      TypeConstant typeLeft, TypeConstant typeRight)
-        {
+                                      TypeConstant typeLeft, TypeConstant typeRight) {
         return calculateRelationImpl(pool, typeLeft, typeRight, true);
-        }
+    }
 
     /**
      * The implementation of the {@link #calculateRelation} method above.
@@ -2313,8 +2029,7 @@ public class ClassStructure
      */
     protected Relation calculateRelationImpl(ConstantPool pool,
                                              TypeConstant typeLeft, TypeConstant typeRight,
-                                             boolean fAllowInto)
-        {
+                                             boolean fAllowInto) {
         assert typeLeft.isSingleDefiningConstant();
 
         Constant         constIdLeft = typeLeft.getDefiningConstant();
@@ -2323,244 +2038,216 @@ public class ClassStructure
         // virtual children implement an implicit "Inner" interface, and are contained inside a
         // container class that implements an implicit "Outer" interface
         if (containsVirtualChild() && typeLeft.equals(pool.typeOuter()) ||
-            isVirtualChild()       && typeLeft.equals(pool.typeInner()))
-            {
+            isVirtualChild()       && typeLeft.equals(pool.typeInner())) {
             return Relation.IS_A;
+        }
+
+        switch (constIdLeft.getFormat()) {
+        case Module:
+        case Package:
+            // modules and packages are never parameterized
+            return constIdLeft.equals(idClzRight) ? Relation.IS_A : Relation.INCOMPATIBLE;
+
+        case NativeClass:
+            constIdLeft = ((NativeRebaseConstant) constIdLeft).getClassConstant();
+            // fall through
+        case Class:
+            if (constIdLeft.equals(pool.clzObject())) {
+                return Relation.IS_A;
             }
 
-        switch (constIdLeft.getFormat())
-            {
-            case Module:
-            case Package:
-                // modules and packages are never parameterized
-                return constIdLeft.equals(idClzRight) ? Relation.IS_A : Relation.INCOMPATIBLE;
-
-            case NativeClass:
-                constIdLeft = ((NativeRebaseConstant) constIdLeft).getClassConstant();
-                // fall through
-            case Class:
-                if (constIdLeft.equals(pool.clzObject()))
-                    {
-                    return Relation.IS_A;
-                    }
-
-                if (constIdLeft.equals(idClzRight))
-                    {
-                    Relation relation = calculateAssignability(pool, typeLeft.getParamTypes(),
-                            typeLeft.getAccess(), typeRight.getParamTypes());
-                    if (relation == Relation.INCOMPATIBLE || !isVirtualChild())
-                        {
-                        return relation;
-                        }
-
-                    assert typeLeft.isVirtualChild() && typeRight.isVirtualChild();
-
-                    // for virtual child we need to repeat the check for the parent types
-                    TypeConstant typeParentLeft  = typeLeft.getParentType();
-                    TypeConstant typeParentRight = typeRight.getParentType();
-
-                    // similar to the algorithm at TypeConstant.calculateRelationToContribution()
-                    // for auto-narrowing constants, without any additional context auto-narrowing
-                    // virtual children of the same name are assignable if the parents are
-                    // assignable in any direction
-                    if (typeParentRight.isA(typeParentLeft) ||
-                            typeRight.containsAutoNarrowing(true) && typeParentLeft.isA(typeParentRight))
-                        {
-                        return relation;
-                        }
-
-                    return Relation.INCOMPATIBLE;
-                    }
-
-                // similar to the comment above, without any additional context auto-narrowing virtual
-                // children of the same name are assignable if the parents are assignable in any direction
-                IdentityConstant idClzLeft = (IdentityConstant) constIdLeft;
-                if (typeLeft.isVirtualChild() && typeRight.isVirtualChild() &&
-                        idClzLeft.getName().equals(idClzRight.getName()))
-                    {
-                    TypeConstant typeParentLeft  = typeLeft.getParentType();
-                    TypeConstant typeParentRight = typeRight.getParentType();
-
-                    if (typeParentRight.isA(typeParentLeft))
-                        {
-                        return calculateAssignability(pool, typeLeft.getParamTypes(),
-                                    typeLeft.getAccess(), typeRight.getParamTypes());
-                        }
-
-                    if (typeRight.containsAutoNarrowing(true) && typeParentLeft.isA(typeParentRight))
-                        {
-                        return ((ClassStructure) idClzLeft.getComponent()).
-                                calculateAssignability(pool, typeLeft.getParamTypes(),
-                                    typeLeft.getAccess(), typeRight.getParamTypes());
-                        }
-
-                    return Relation.INCOMPATIBLE;
-                    }
-
-                TypeConstant typeRebase = getRebaseType();
-                if (typeRebase != null)
-                    {
-                    ClassStructure clzRebase = (ClassStructure)
-                        typeRebase.getSingleUnderlyingClass(true).getComponent();
-
-                    // rebase types are never parameterized and therefore cannot be "weak"
-                    if (clzRebase.calculateRelationImpl(pool, typeLeft,
-                            clzRebase.getCanonicalType(), fAllowInto) == Relation.IS_A)
-                        {
-                        return Relation.IS_A;
-                        }
-                    }
-                break;
-
-            case Property:
-            case TypeParameter:
-            case FormalTypeChild:
-                // r-value (this) is a real type; it cannot be assigned to a formal type
-            case UnresolvedName:
-                return Relation.INCOMPATIBLE;
-
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                {
-                assert typeLeft.containsAutoNarrowing(false);
-                Relation relation = calculateRelationImpl(pool,
-                        typeLeft.removeAutoNarrowing(), typeRight, fAllowInto);
-                if (relation != Relation.INCOMPATIBLE)
-                    {
+            if (constIdLeft.equals(idClzRight)) {
+                Relation relation = calculateAssignability(pool, typeLeft.getParamTypes(),
+                        typeLeft.getAccess(), typeRight.getParamTypes());
+                if (relation == Relation.INCOMPATIBLE || !isVirtualChild()) {
                     return relation;
-                    }
-                // TODO GG explain
-                break;
                 }
 
-            case Typedef:
-                return calculateRelationImpl(pool,
-                        ((TypedefConstant) constIdLeft).getReferredToType(), typeRight, fAllowInto);
+                assert typeLeft.isVirtualChild() && typeRight.isVirtualChild();
 
-            case IsConst:
-            case IsEnum:
-            case IsModule:
-            case IsPackage:
-            case IsClass:
-                return calculateRelationImpl(pool,
-                        ((KeywordConstant) constIdLeft).getBaseType(), typeRight, fAllowInto);
+                // for virtual child we need to repeat the check for the parent types
+                TypeConstant typeParentLeft  = typeLeft.getParentType();
+                TypeConstant typeParentRight = typeRight.getParentType();
 
-            default:
-                throw new IllegalStateException("unexpected constant: " + constIdLeft);
+                // similar to the algorithm at TypeConstant.calculateRelationToContribution()
+                // for auto-narrowing constants, without any additional context auto-narrowing
+                // virtual children of the same name are assignable if the parents are
+                // assignable in any direction
+                if (typeParentRight.isA(typeParentLeft) ||
+                        typeRight.containsAutoNarrowing(true) && typeParentLeft.isA(typeParentRight)) {
+                    return relation;
+                }
+
+                return Relation.INCOMPATIBLE;
             }
+
+            // similar to the comment above, without any additional context auto-narrowing virtual
+            // children of the same name are assignable if the parents are assignable in any direction
+            IdentityConstant idClzLeft = (IdentityConstant) constIdLeft;
+            if (typeLeft.isVirtualChild() && typeRight.isVirtualChild() &&
+                    idClzLeft.getName().equals(idClzRight.getName())) {
+                TypeConstant typeParentLeft  = typeLeft.getParentType();
+                TypeConstant typeParentRight = typeRight.getParentType();
+
+                if (typeParentRight.isA(typeParentLeft)) {
+                    return calculateAssignability(pool, typeLeft.getParamTypes(),
+                                typeLeft.getAccess(), typeRight.getParamTypes());
+                }
+
+                if (typeRight.containsAutoNarrowing(true) && typeParentLeft.isA(typeParentRight)) {
+                    return ((ClassStructure) idClzLeft.getComponent()).
+                            calculateAssignability(pool, typeLeft.getParamTypes(),
+                                typeLeft.getAccess(), typeRight.getParamTypes());
+                }
+
+                return Relation.INCOMPATIBLE;
+            }
+
+            TypeConstant typeRebase = getRebaseType();
+            if (typeRebase != null) {
+                ClassStructure clzRebase = (ClassStructure)
+                    typeRebase.getSingleUnderlyingClass(true).getComponent();
+
+                // rebase types are never parameterized and therefore cannot be "weak"
+                if (clzRebase.calculateRelationImpl(pool, typeLeft,
+                        clzRebase.getCanonicalType(), fAllowInto) == Relation.IS_A) {
+                    return Relation.IS_A;
+                }
+            }
+            break;
+
+        case Property:
+        case TypeParameter:
+        case FormalTypeChild:
+            // r-value (this) is a real type; it cannot be assigned to a formal type
+        case UnresolvedName:
+            return Relation.INCOMPATIBLE;
+
+        case ThisClass:
+        case ParentClass:
+        case ChildClass: {
+            assert typeLeft.containsAutoNarrowing(false);
+            Relation relation = calculateRelationImpl(pool,
+                    typeLeft.removeAutoNarrowing(), typeRight, fAllowInto);
+            if (relation != Relation.INCOMPATIBLE) {
+                return relation;
+            }
+            // TODO GG explain
+            break;
+        }
+
+        case Typedef:
+            return calculateRelationImpl(pool,
+                    ((TypedefConstant) constIdLeft).getReferredToType(), typeRight, fAllowInto);
+
+        case IsConst:
+        case IsEnum:
+        case IsModule:
+        case IsPackage:
+        case IsClass:
+            return calculateRelationImpl(pool,
+                    ((KeywordConstant) constIdLeft).getBaseType(), typeRight, fAllowInto);
+
+        default:
+            throw new IllegalStateException("unexpected constant: " + constIdLeft);
+        }
 
         Relation relation = Relation.INCOMPATIBLE;
 
-        for (Contribution contrib : getContributionsAsList())
-            {
+        for (Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib = contrib.getTypeConstant();
             Composition  composition = contrib.getComposition();
-            switch (composition)
-                {
-                case Into:
-                    if (!fAllowInto)
-                        {
-                        break;
-                        }
-                    // fall through
-                case Delegates:
-                case Implements:
-                    if (typeContrib.equals(pool.typeObject()))
-                        {
-                        // ignore trivial "implement Object" contribution
-                        continue;
-                        }
-
-                    typeContrib = typeContrib.resolveGenerics(pool, typeRight.normalizeParameters());
-                    if (typeRight.isAutoNarrowing() && typeContrib.isSingleUnderlyingClass(true))
-                        {
-                        typeContrib = typeContrib.ensureAutoNarrowing();
-                        }
-                    relation = relation.bestOf(typeContrib.calculateRelation(typeLeft));
-                    if (relation == Relation.IS_A)
-                        {
-                        return Relation.IS_A;
-                        }
+            switch (composition) {
+            case Into:
+                if (!fAllowInto) {
                     break;
-
-                case Annotation:
-                    if (isIntoClassAnnotation(typeContrib))
-                        {
-                        break;
-                        }
-                    // break through
-                case Incorporates:
-                    fAllowInto = false;
-                case Extends:
-                    {
-                    // the identity constant for those contributions is always a class
-                    assert typeContrib.isExplicitClassIdentity(true);
-
-                    // the "resolveType()" method, which accounts for conditional incorporates,
-                    // does not deal with virtual parent's formal types parameters, so we use it
-                    // only to filter out inapplicable conditional incorporates
-                    if (composition == Composition.Incorporates &&
-                            contrib.resolveType(pool, this, typeRight) == null)
-                        {
-                        break;
-                        }
-
-                    typeContrib = typeContrib.resolveGenerics(pool, typeRight.normalizeParameters());
-
-                    IdentityConstant idContrib = typeContrib.getSingleUnderlyingClass(true);
-                    ClassStructure   clzBase   = (ClassStructure) idContrib.getComponent();
-                    if (typeContrib.isVirtualChild())
-                        {
-                        if (!typeRight.isVirtualChild())
-                            {
-                            // something is amiss, but it's not our responsibility to report an error
-                            return Relation.INCOMPATIBLE;
-                            }
-                        TypeConstant typeParent = typeRight.getOriginParentType();
-                        if (typeParent.isA(typeContrib.getParentType()))
-                            {
-                            // see the doc for "ensureVirtualParent" for the explanation
-                            typeContrib = typeContrib.ensureVirtualParent(typeParent,
-                                                !getName().equals(clzBase.getName()));
-                            clzBase = (ClassStructure) typeContrib.getSingleUnderlyingClass(true).
-                                                getComponent();
-                            }
-                        }
-                    relation = relation.bestOf(
-                                    clzBase.calculateRelationImpl(pool, typeLeft, typeContrib, fAllowInto));
-                    if (relation == Relation.IS_A)
-                        {
-                        return Relation.IS_A;
-                        }
-                    break;
-                    }
-
-                case Import:
-                    // this represents a module import, e.g.: "package web import web.xtclang.org;"
-                    // the identity constant for those contributions is always a module
-                    assert typeContrib.isSingleUnderlyingClass(false);
-
-                    IdentityConstant idContrib = typeContrib.getSingleUnderlyingClass(false);
-                    ModuleStructure  clzModule = (ModuleStructure) idContrib.getComponent();
-                    if (!clzModule.getContributionsAsList().isEmpty())
-                        {
-                        relation = relation.bestOf(
-                            clzModule.calculateRelationImpl(pool, typeLeft, typeContrib, false));
-                        if (relation == Relation.IS_A)
-                            {
-                            return Relation.IS_A;
-                            }
-                        }
-                    break;
-
-                default:
-                    throw new IllegalStateException();
                 }
+                // fall through
+            case Delegates:
+            case Implements:
+                if (typeContrib.equals(pool.typeObject())) {
+                    // ignore trivial "implement Object" contribution
+                    continue;
+                }
+
+                typeContrib = typeContrib.resolveGenerics(pool, typeRight.normalizeParameters());
+                if (typeRight.isAutoNarrowing() && typeContrib.isSingleUnderlyingClass(true)) {
+                    typeContrib = typeContrib.ensureAutoNarrowing();
+                }
+                relation = relation.bestOf(typeContrib.calculateRelation(typeLeft));
+                if (relation == Relation.IS_A) {
+                    return Relation.IS_A;
+                }
+                break;
+
+            case Annotation:
+                if (isIntoClassAnnotation(typeContrib)) {
+                    break;
+                }
+                // break through
+            case Incorporates:
+                fAllowInto = false;
+            case Extends: {
+                // the identity constant for those contributions is always a class
+                assert typeContrib.isExplicitClassIdentity(true);
+
+                // the "resolveType()" method, which accounts for conditional incorporates,
+                // does not deal with virtual parent's formal types parameters, so we use it
+                // only to filter out inapplicable conditional incorporates
+                if (composition == Composition.Incorporates &&
+                        contrib.resolveType(pool, this, typeRight) == null) {
+                    break;
+                }
+
+                typeContrib = typeContrib.resolveGenerics(pool, typeRight.normalizeParameters());
+
+                IdentityConstant idContrib = typeContrib.getSingleUnderlyingClass(true);
+                ClassStructure   clzBase   = (ClassStructure) idContrib.getComponent();
+                if (typeContrib.isVirtualChild()) {
+                    if (!typeRight.isVirtualChild()) {
+                        // something is amiss, but it's not our responsibility to report an error
+                        return Relation.INCOMPATIBLE;
+                    }
+                    TypeConstant typeParent = typeRight.getOriginParentType();
+                    if (typeParent.isA(typeContrib.getParentType())) {
+                        // see the doc for "ensureVirtualParent" for the explanation
+                        typeContrib = typeContrib.ensureVirtualParent(typeParent,
+                                            !getName().equals(clzBase.getName()));
+                        clzBase = (ClassStructure) typeContrib.getSingleUnderlyingClass(true).
+                                            getComponent();
+                    }
+                }
+                relation = relation.bestOf(
+                                clzBase.calculateRelationImpl(pool, typeLeft, typeContrib, fAllowInto));
+                if (relation == Relation.IS_A) {
+                    return Relation.IS_A;
+                }
+                break;
             }
 
-        return relation;
+            case Import:
+                // this represents a module import, e.g.: "package web import web.xtclang.org;"
+                // the identity constant for those contributions is always a module
+                assert typeContrib.isSingleUnderlyingClass(false);
+
+                IdentityConstant idContrib = typeContrib.getSingleUnderlyingClass(false);
+                ModuleStructure  clzModule = (ModuleStructure) idContrib.getComponent();
+                if (!clzModule.getContributionsAsList().isEmpty()) {
+                    relation = relation.bestOf(
+                        clzModule.calculateRelationImpl(pool, typeLeft, typeContrib, false));
+                    if (relation == Relation.IS_A) {
+                        return Relation.IS_A;
+                    }
+                }
+                break;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
+
+        return relation;
+    }
 
     /**
      * For this class structure representing an R-Value, find a contribution assignable to the
@@ -2573,172 +2260,145 @@ public class ClassStructure
      * @return the relation
      */
     public Relation findUnionContribution(ConstantPool pool, UnionTypeConstant typeLeft,
-                                          List<TypeConstant> listRight)
-        {
+                                          List<TypeConstant> listRight) {
         Relation relation = Relation.INCOMPATIBLE;
 
-        for (Contribution contrib : getContributionsAsList())
-            {
+        for (Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib = contrib.getTypeConstant();
-            switch (contrib.getComposition())
-                {
-                case Extends:
-                    {
-                    // the identity constant for extension is always a class
-                    assert typeContrib.isExplicitClassIdentity(true);
+            switch (contrib.getComposition()) {
+            case Extends: {
+                // the identity constant for extension is always a class
+                assert typeContrib.isExplicitClassIdentity(true);
 
-                    ClassConstant constContrib = (ClassConstant)
-                            typeContrib.getSingleUnderlyingClass(true);
+                ClassConstant constContrib = (ClassConstant)
+                        typeContrib.getSingleUnderlyingClass(true);
 
-                    TypeConstant typeResolved = contrib.resolveType(pool, this, listRight);
+                TypeConstant typeResolved = contrib.resolveType(pool, this, listRight);
 
-                    relation = relation.bestOf(((ClassStructure) constContrib.getComponent()).
-                            findUnionContribution(pool, typeLeft, typeResolved.getParamTypes()));
-                    if (relation == Relation.IS_A)
-                        {
-                        return Relation.IS_A;
-                        }
-                    break;
+                relation = relation.bestOf(((ClassStructure) constContrib.getComponent()).
+                        findUnionContribution(pool, typeLeft, typeResolved.getParamTypes()));
+                if (relation == Relation.IS_A) {
+                    return Relation.IS_A;
+                }
+                break;
+            }
+
+            case Into:
+            case Implements:
+                typeContrib = typeContrib.resolveGenerics(pool,
+                                    new SimpleTypeResolver(pool, listRight));
+                if (typeContrib != null) {
+                    if (typeContrib.equals(pool.typeObject())) {
+                        return Relation.INCOMPATIBLE;
                     }
 
-                case Into:
-                case Implements:
-                    typeContrib = typeContrib.resolveGenerics(pool,
-                                        new SimpleTypeResolver(pool, listRight));
-                    if (typeContrib != null)
-                        {
-                        if (typeContrib.equals(pool.typeObject()))
-                            {
-                            return Relation.INCOMPATIBLE;
-                            }
-
-                        relation = relation.bestOf(typeContrib.calculateRelation(typeLeft));
-                        if (relation == Relation.IS_A)
-                            {
-                            return Relation.IS_A;
-                            }
-                        }
-                    break;
-
-                case Delegates:
-                case Annotation:
-                case Incorporates:
-                    // delegation, annotation and incorporation cannot be of a union type
-                    return Relation.INCOMPATIBLE;
-
-                default:
-                    throw new IllegalStateException();
+                    relation = relation.bestOf(typeContrib.calculateRelation(typeLeft));
+                    if (relation == Relation.IS_A) {
+                        return Relation.IS_A;
+                    }
                 }
+                break;
+
+            case Delegates:
+            case Annotation:
+            case Incorporates:
+                // delegation, annotation and incorporation cannot be of a union type
+                return Relation.INCOMPATIBLE;
+
+            default:
+                throw new IllegalStateException();
             }
-        return relation;
         }
+        return relation;
+    }
 
     /**
      * Determine if this template consumes a formal type with the specified name for the specified
      * access policy.
      */
     public boolean consumesFormalType(ConstantPool pool,
-                                      String sName, Access access, List<TypeConstant> listActual)
-        {
+                                      String sName, Access access, List<TypeConstant> listActual) {
         return consumesFormalTypeImpl(pool, sName, access, listActual, true);
-        }
+    }
 
     protected boolean consumesFormalTypeImpl(ConstantPool pool, String sName, Access access,
-                                             List<TypeConstant> listActual, boolean fAllowInto)
-        {
+                                             List<TypeConstant> listActual, boolean fAllowInto) {
         assert indexOfGenericParameter(sName) >= 0;
 
-        for (Component child : children())
-            {
-            if (child instanceof MultiMethodStructure mms)
-                {
-                for (MethodStructure method : mms.methods())
-                    {
+        for (Component child : children()) {
+            if (child instanceof MultiMethodStructure mms) {
+                for (MethodStructure method : mms.methods()) {
                     if (!method.isStatic() && method.isAccessible(access)
-                            && method.consumesFormalType(sName))
-                        {
+                            && method.consumesFormalType(sName)) {
                         return true;
-                        }
                     }
                 }
-            else if (child instanceof PropertyStructure property)
-                {
-                if (property.isGenericTypeParameter())
-                    {
+            } else if (child instanceof PropertyStructure property) {
+                if (property.isGenericTypeParameter()) {
                     // generic types don't consume
                     continue;
-                    }
+                }
 
                 TypeConstant constType = property.getType();
-                if (!listActual.isEmpty())
-                    {
+                if (!listActual.isEmpty()) {
                     constType = constType.resolveGenerics(pool, new SimpleTypeResolver(pool, listActual));
-                    }
+                }
 
                 if (property.isRefAccessible(access)
-                        && constType.consumesFormalType(sName, Access.PUBLIC))
-                    {
+                        && constType.consumesFormalType(sName, Access.PUBLIC)) {
                     return true;
-                    }
+                }
 
-                if (property.isExplicitReadOnly())
-                    {
+                if (property.isExplicitReadOnly()) {
                     // read-only; skip the setter's check
                     continue;
-                    }
+                }
 
                 if (property.isVarAccessible(access)
-                        && constType.producesFormalType(sName, Access.PUBLIC))
-                    {
+                        && constType.producesFormalType(sName, Access.PUBLIC)) {
                     return true;
-                    }
                 }
             }
+        }
 
         // check the contributions
-        for (Contribution contrib : getContributionsAsList())
-            {
+        for (Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib = contrib.getTypeConstant();
-            switch (contrib.getComposition())
-                {
-                case Delegates:
-                case Implements:
-                    break;
+            switch (contrib.getComposition()) {
+            case Delegates:
+            case Implements:
+                break;
 
-                case Into:
-                    if (!fAllowInto)
-                        {
-                        continue;
-                        }
-                    break;
-
-                case Annotation:
-                    if (isIntoClassAnnotation(typeContrib))
-                        {
-                        continue;
-                        }
-                    // break through
-                case Incorporates:
-                    fAllowInto = false;
-                    // break through
-                case Extends:
-                    // the identity constant for those contributions is always a class
-                    assert typeContrib.isExplicitClassIdentity(true);
-                    break;
-
-                default:
-                    throw new IllegalStateException();
+            case Into:
+                if (!fAllowInto) {
+                    continue;
                 }
+                break;
 
-            if (typeContrib.isExplicitClassIdentity(true))
-                {
+            case Annotation:
+                if (isIntoClassAnnotation(typeContrib)) {
+                    continue;
+                }
+                // break through
+            case Incorporates:
+                fAllowInto = false;
+                // break through
+            case Extends:
+                // the identity constant for those contributions is always a class
+                assert typeContrib.isExplicitClassIdentity(true);
+                break;
+
+            default:
+                throw new IllegalStateException();
+            }
+
+            if (typeContrib.isExplicitClassIdentity(true)) {
                 TypeConstant typeResolved = contrib.resolveType(pool, this, listActual);
-                if (typeResolved == null || !typeResolved.isParamsSpecified())
-                    {
+                if (typeResolved == null || !typeResolved.isParamsSpecified()) {
                     // conditional incorporation didn't apply to the actual type
                     // or the contribution is not parameterized
                     continue;
-                    }
+                }
 
                 ClassStructure clzContrib = (ClassStructure)
                     typeContrib.getSingleUnderlyingClass(true).getComponent();
@@ -2751,8 +2411,7 @@ public class ClassStructure
                 Iterator<TypeConstant> iterParams = listContribParams.iterator();
                 Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
 
-                while (iterParams.hasNext())
-                    {
+                while (iterParams.hasNext()) {
                     TypeConstant constParam = iterParams.next();
                     String sFormal = iterNames.next().getValue();
 
@@ -2762,133 +2421,110 @@ public class ClassStructure
                         ||
                         constParam.consumesFormalType(sName, access)
                             && clzContrib.producesFormalTypeImpl(
-                                    pool, sFormal, access, listContribActual, fAllowInto))
-                        {
+                                    pool, sFormal, access, listContribActual, fAllowInto)) {
                         return true;
-                        }
                     }
                 }
-            else
-                {
+            } else {
                 // the only contributions of relation type could be delegations and implementations
                 // and since they cannot be conditional at any level, the actual types won't matter
                 // for further recursion
-                if (typeContrib.consumesFormalType(sName, access))
-                    {
+                if (typeContrib.consumesFormalType(sName, access)) {
                     return true;
-                    }
                 }
             }
+        }
 
         return false;
-        }
+    }
 
     /**
      * Determine if this template produces a formal type with the specified name for the
      * specified access policy.
      */
     public boolean producesFormalType(ConstantPool pool, String sName, Access access,
-                                      List<TypeConstant> listActual)
-        {
+                                      List<TypeConstant> listActual) {
         return producesFormalTypeImpl(pool, sName, access, listActual, true);
-        }
+    }
 
     protected boolean producesFormalTypeImpl(ConstantPool pool, String sName, Access access,
-                                             List<TypeConstant> listActual, boolean fAllowInto)
-        {
+                                             List<TypeConstant> listActual, boolean fAllowInto) {
         assert indexOfGenericParameter(sName) >= 0;
 
-        for (Component child : children())
-            {
-            if (child instanceof MultiMethodStructure mms)
-                {
-                for (MethodStructure method : mms.methods())
-                    {
+        for (Component child : children()) {
+            if (child instanceof MultiMethodStructure mms) {
+                for (MethodStructure method : mms.methods()) {
                     if (!method.isStatic() && method.isAccessible(access)
-                            && method.producesFormalType(sName))
-                        {
+                            && method.producesFormalType(sName)) {
                         return true;
-                        }
                     }
                 }
-            else if (child instanceof PropertyStructure property)
-                {
-                if (property.isGenericTypeParameter())
-                    {
+            } else if (child instanceof PropertyStructure property) {
+                if (property.isGenericTypeParameter()) {
                     // generic types don't produce
                     continue;
-                    }
+                }
 
                 TypeConstant constType = property.getType();
-                if (!listActual.isEmpty())
-                    {
+                if (!listActual.isEmpty()) {
                     constType = constType.resolveGenerics(pool, new SimpleTypeResolver(pool, listActual));
-                    }
+                }
 
                 if (property.isRefAccessible(access)
-                        && constType.producesFormalType(sName, Access.PUBLIC))
-                    {
+                        && constType.producesFormalType(sName, Access.PUBLIC)) {
                     return true;
-                    }
+                }
 
-                if (property.isExplicitReadOnly())
-                    {
+                if (property.isExplicitReadOnly()) {
                     // read-only; skip the setter's check
                     continue;
-                    }
+                }
 
                 if (property.isVarAccessible(access)
-                        && constType.consumesFormalType(sName, Access.PUBLIC))
-                    {
+                        && constType.consumesFormalType(sName, Access.PUBLIC)) {
                     return true;
-                    }
                 }
             }
+        }
 
         // check the contributions
-        for (Contribution contrib : getContributionsAsList())
-            {
+        for (Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib = contrib.getTypeConstant();
-            switch (contrib.getComposition())
-                {
-                case Delegates:
-                case Implements:
-                    break;
+            switch (contrib.getComposition()) {
+            case Delegates:
+            case Implements:
+                break;
 
-                case Into:
-                    if (!fAllowInto)
-                        {
-                        continue;
-                        }
-                    break;
-
-                case Annotation:
-                    if (isIntoClassAnnotation(typeContrib))
-                        {
-                        continue;
-                        }
-                    // break through
-                case Incorporates:
-                    fAllowInto = false;
-                    // break through
-                case Extends:
-                    // the identity constant for those contributions is always a class
-                    assert typeContrib.isExplicitClassIdentity(true);
-                    break;
-
-                default:
-                    throw new IllegalStateException();
+            case Into:
+                if (!fAllowInto) {
+                    continue;
                 }
+                break;
 
-            if (typeContrib.isExplicitClassIdentity(true))
-                {
+            case Annotation:
+                if (isIntoClassAnnotation(typeContrib)) {
+                    continue;
+                }
+                // break through
+            case Incorporates:
+                fAllowInto = false;
+                // break through
+            case Extends:
+                // the identity constant for those contributions is always a class
+                assert typeContrib.isExplicitClassIdentity(true);
+                break;
+
+            default:
+                throw new IllegalStateException();
+            }
+
+            if (typeContrib.isExplicitClassIdentity(true)) {
                 TypeConstant typeResolved = contrib.resolveType(pool, this, listActual);
-                if (typeResolved == null || !typeResolved.isParamsSpecified())
-                    {
+                if (typeResolved == null || !typeResolved.isParamsSpecified()) {
                     // conditional incorporation didn't apply to the actual type
                     // or the contribution is not parameterized
                     continue;
-                    }
+                }
 
                 ClassStructure clzContrib = (ClassStructure)
                     typeContrib.getSingleUnderlyingClass(true).getComponent();
@@ -2901,8 +2537,7 @@ public class ClassStructure
                 Iterator<TypeConstant> iterParams = listContribParams.iterator();
                 Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
 
-                while (iterParams.hasNext())
-                    {
+                while (iterParams.hasNext()) {
                     TypeConstant constParam = iterParams.next();
                     String sFormal = iterNames.next().getValue();
 
@@ -2912,26 +2547,22 @@ public class ClassStructure
                         ||
                         constParam.consumesFormalType(sName, access)
                             && clzContrib.consumesFormalTypeImpl(
-                                    pool, sFormal, access, listContribActual, fAllowInto))
-                        {
+                                    pool, sFormal, access, listContribActual, fAllowInto)) {
                         return true;
-                        }
                     }
                 }
-            else
-                {
+            } else {
                 // the only contributions of relation type could be delegations and implementations
                 // and since they cannot be conditional at any level, the actual types won't matter
                 // for further recursion
-                if (typeContrib.producesFormalType(sName, access))
-                    {
+                if (typeContrib.producesFormalType(sName, access)) {
                     return true;
-                    }
                 }
             }
+        }
 
         return false;
-        }
+    }
 
     /**
      * For this class structure representing an L-Value interface, check recursively if all properties
@@ -2944,109 +2575,81 @@ public class ClassStructure
      * @return a set of method/property signatures that don't have a match
      */
     public Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessRight,
-                                                            List<TypeConstant> listLeft)
-        {
+                                                            List<TypeConstant> listLeft) {
         ConstantPool           pool     = typeRight.getConstantPool();
         Set<SignatureConstant> setMiss  = new HashSet<>();
         GenericTypeResolver    resolver = null;
 
-        for (Component child : children())
-            {
-            if (child instanceof PropertyStructure prop)
-                {
-                if (prop.isGenericTypeParameter())
-                    {
-                    if (!typeRight.containsGenericParam(prop.getName()))
-                        {
+        for (Component child : children()) {
+            if (child instanceof PropertyStructure prop) {
+                if (prop.isGenericTypeParameter()) {
+                    if (!typeRight.containsGenericParam(prop.getName())) {
                         setMiss.add(prop.getIdentityConstant().getSignature());
-                        }
                     }
-                else
-                    {
+                } else {
                     // TODO: should we check the "Var" access?
-                    if (!prop.isRefAccessible(accessRight) || prop.isStatic())
-                        {
+                    if (!prop.isRefAccessible(accessRight) || prop.isStatic()) {
                         continue;
-                        }
+                    }
 
                     SignatureConstant sig = prop.getIdentityConstant().getSignature();
-                    if (!listLeft.isEmpty())
-                        {
-                        if (resolver == null)
-                            {
+                    if (!listLeft.isEmpty()) {
+                        if (resolver == null) {
                             resolver = new SimpleTypeResolver(pool, listLeft);
-                            }
-                        sig = sig.resolveGenericTypes(pool, resolver);
                         }
+                        sig = sig.resolveGenericTypes(pool, resolver);
+                    }
 
                     if (!typeRight.containsSubstitutableMethod(sig,
-                            accessRight, false, Collections.emptyList()))
-                        {
+                            accessRight, false, Collections.emptyList())) {
                         setMiss.add(sig);
-                        }
                     }
                 }
-            else if (child instanceof MultiMethodStructure mms)
-                {
-                for (MethodStructure method : mms.methods())
-                    {
-                    if (!method.isAccessible(accessRight))
-                        {
+            } else if (child instanceof MultiMethodStructure mms) {
+                for (MethodStructure method : mms.methods()) {
+                    if (!method.isAccessible(accessRight)) {
                         continue;
-                        }
+                    }
 
                     SignatureConstant sig = method.getIdentityConstant().getSignature();
 
-                    if (method.isVirtualConstructor())
-                        {
+                    if (method.isVirtualConstructor()) {
                         // a constructor cannot be duck-typed, because even if a base class has it,
                         // a derived class may not, which would break transitivity of "isA"
                         setMiss.add(sig);
-                        }
-                    else if (method.isFunction())
-                        {
-                        if (method.hasCode())
-                            {
+                    } else if (method.isFunction()) {
+                        if (method.hasCode()) {
                             continue;
-                            }
+                        }
 
                         // funky interface scenario
                         if (!typeRight.containsSubstitutableMethod(sig,
-                                accessRight, true, Collections.emptyList()))
-                            {
+                                accessRight, true, Collections.emptyList())) {
                             setMiss.add(sig);
-                            }
                         }
-                    else
-                        {
-                        if (!listLeft.isEmpty())
-                            {
-                            if (resolver == null)
-                                {
+                    } else {
+                        if (!listLeft.isEmpty()) {
+                            if (resolver == null) {
                                 resolver = new SimpleTypeResolver(pool, listLeft);
-                                }
-                            sig = sig.resolveGenericTypes(pool, resolver);
                             }
+                            sig = sig.resolveGenericTypes(pool, resolver);
+                        }
 
                         if (!typeRight.containsSubstitutableMethod(sig,
-                                accessRight, false, Collections.emptyList()))
-                            {
+                                accessRight, false, Collections.emptyList())) {
                             setMiss.add(sig);
-                            }
                         }
                     }
                 }
             }
+        }
 
-        for (Contribution contrib : getContributionsAsList())
-            {
-            if (contrib.getComposition() == Composition.Implements)
-                {
+        for (Contribution contrib : getContributionsAsList()) {
+            if (contrib.getComposition() == Composition.Implements) {
                 TypeConstant typeResolved = contrib.resolveType(pool, this, listLeft);
-                if (typeResolved.containsUnresolved())
-                    {
+                if (typeResolved.containsUnresolved()) {
                     continue;
-                    }
+                }
 
                 ClassStructure clzSuper = (ClassStructure)
                     typeResolved.getSingleUnderlyingClass(true).getComponent();
@@ -3055,10 +2658,10 @@ public class ClassStructure
 
                 setMiss.addAll(clzSuper.isInterfaceAssignableFrom(
                         typeRight, accessRight, typeResolved.getParamTypes()));
-                }
             }
-        return setMiss;
         }
+        return setMiss;
+    }
 
     /**
      * Check recursively if this class contains a matching (substitutable) method or property.
@@ -3073,131 +2676,108 @@ public class ClassStructure
      */
     public boolean containsSubstitutableMethod(ConstantPool pool, SignatureConstant signature,
                                                Access access, boolean fFunction,
-                                               List<TypeConstant> listParams)
-        {
+                                               List<TypeConstant> listParams) {
         return containsSubstitutableMethodImpl(pool, signature, access, fFunction,
                 listParams, getIdentityConstant(), true);
-        }
+    }
 
     protected boolean containsSubstitutableMethodImpl(ConstantPool pool, SignatureConstant signature,
                                                       Access access, boolean fFunction,
                                                       List<TypeConstant> listParams,
-                                                      IdentityConstant idClass, boolean fAllowInto)
-        {
+                                                      IdentityConstant idClass, boolean fAllowInto) {
         Component child = getChild(signature.getName());
 
-        if (signature.isProperty())
-            {
-            if (child instanceof PropertyStructure prop)
-                {
+        if (signature.isProperty()) {
+            if (child instanceof PropertyStructure prop) {
                 // TODO: should we check the "Var" access?
                 if (!prop.isStatic() &&
                         prop.isRefAccessible(access) &&
-                        prop.isSubstitutableFor(pool, signature, listParams))
-                    {
+                        prop.isSubstitutableFor(pool, signature, listParams)) {
                     return true;
-                    }
                 }
             }
-        else
-            {
-            if (child instanceof MultiMethodStructure mms)
-                {
+        } else {
+            if (child instanceof MultiMethodStructure mms) {
                 GenericTypeResolver resolver = listParams.isEmpty()
                         ? null
                         : new SimpleTypeResolver(pool, listParams);
 
-                for (MethodStructure method : mms.methods())
-                    {
+                for (MethodStructure method : mms.methods()) {
                     SignatureConstant sigMethod = method.getIdentityConstant().getSignature();
-                    if (method.isAccessible(access) && method.isFunction() == fFunction)
-                        {
-                        if (!fFunction)
-                            {
+                    if (method.isAccessible(access) && method.isFunction() == fFunction) {
+                        if (!fFunction) {
                             sigMethod = sigMethod.resolveGenericTypes(pool, resolver);
-                            }
-                        if (sigMethod.isSubstitutableFor(signature, idClass.getType()))
-                            {
+                        }
+                        if (sigMethod.isSubstitutableFor(signature, idClass.getType())) {
                             return true;
-                            }
                         }
                     }
                 }
             }
+        }
 
         // check the contributions
-        for (Contribution contrib : getContributionsAsList())
-            {
+        for (Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib = contrib.getTypeConstant();
-            if (typeContrib.containsUnresolved())
-                {
+            if (typeContrib.containsUnresolved()) {
                 continue;
+            }
+
+            switch (contrib.getComposition()) {
+            case Delegates:
+            case Implements:
+            case Import:
+                break;
+
+            case Into:
+                if (!fAllowInto) {
+                    continue;
                 }
+                break;
 
-            switch (contrib.getComposition())
-                {
-                case Delegates:
-                case Implements:
-                case Import:
-                    break;
-
-                case Into:
-                    if (!fAllowInto)
-                        {
-                        continue;
-                        }
-                    break;
-
-                case Annotation:
-                    if (isIntoClassAnnotation(typeContrib))
-                        {
-                        continue;
-                        }
-                    // break through
-                case Incorporates:
-                    fAllowInto = false;
-                    // break through
-                case Extends:
-                    // the identity constant for these contributions is always a class
-                    assert typeContrib.isExplicitClassIdentity(true);
-                    break;
-
-                default:
-                    throw new IllegalStateException();
+            case Annotation:
+                if (isIntoClassAnnotation(typeContrib)) {
+                    continue;
                 }
+                // break through
+            case Incorporates:
+                fAllowInto = false;
+                // break through
+            case Extends:
+                // the identity constant for these contributions is always a class
+                assert typeContrib.isExplicitClassIdentity(true);
+                break;
 
-            if (typeContrib.isExplicitClassIdentity(true))
-                {
+            default:
+                throw new IllegalStateException();
+            }
+
+            if (typeContrib.isExplicitClassIdentity(true)) {
                 TypeConstant typeResolved = contrib.resolveType(pool, this, listParams);
-                if (typeResolved != null)
-                    {
+                if (typeResolved != null) {
                     ClassStructure clzContrib = (ClassStructure)
                         typeResolved.getSingleUnderlyingClass(true).getComponent();
 
                     if (clzContrib.containsSubstitutableMethodImpl(pool, signature, access, fFunction,
-                            typeResolved.getParamTypes(), idClass, fAllowInto))
-                        {
+                            typeResolved.getParamTypes(), idClass, fAllowInto)) {
                         return true;
-                        }
                     }
                 }
-            else
-                {
+            } else {
                 typeContrib = contrib.resolveGenerics(pool, new SimpleTypeResolver(pool, listParams));
 
                 if (typeContrib.containsSubstitutableMethod(signature, access, fFunction,
-                        Collections.emptyList()))
-                    {
+                        Collections.emptyList())) {
                     return true;
-                    }
                 }
             }
+        }
 
         // finally check for Object methods (since Object is always an implicit contribution)
         IdentityConstant idObject = pool.clzObject();
         return !idClass.equals(idObject) && ((ClassStructure) idObject.getComponent()).
                 containsSubstitutableMethod(pool, signature, access, fFunction, Collections.emptyList());
-        }
+    }
 
 
     // ----- run-time support ----------------------------------------------------------------------
@@ -3214,8 +2794,7 @@ public class ClassStructure
      * @return the [synthetic] MethodStructure for the corresponding default constructor
      */
     public MethodStructure createInitializer(ConstantPool pool, TypeConstant typeStruct,
-                                             Map<Object, FieldInfo> mapFields)
-        {
+                                             Map<Object, FieldInfo> mapFields) {
         int nFlags = Format.METHOD.ordinal() | Access.PUBLIC.FLAGS | STATIC_BIT | SYNTHETIC_BIT;
 
         // create a transient MethodStructure (without an intermediate MultiMethodStructure)
@@ -3233,105 +2812,83 @@ public class ClassStructure
         assert typeStruct.getAccess() == Access.STRUCT;
 
         TypeInfo infoStruct = typeStruct.ensureTypeInfo();
-        for (Map.Entry<Object, FieldInfo> entry : mapFields.entrySet())
-            {
+        for (Map.Entry<Object, FieldInfo> entry : mapFields.entrySet()) {
             Object       nid      = entry.getKey();
             PropertyInfo infoProp = nid instanceof PropertyConstant idProp
                     ? infoStruct.findProperty(idProp)
                     : infoStruct.findPropertyByNid(nid);
 
-            if (infoProp == null || infoProp.isInjected())
-                {
+            if (infoProp == null || infoProp.isInjected()) {
                 // synthetic field; skip
                 continue;
-                }
+            }
 
             FieldInfo        field     = entry.getValue();
             PropertyConstant idField   = infoProp.getFieldIdentity();
             MethodConstant   idInit    = null;
             Constant         constInit = null;
 
-            if (infoProp.isInitialized())
-                {
+            if (infoProp.isInitialized()) {
                 constInit = infoProp.getInitialValue();
-                if (constInit == null)
-                    {
+                if (constInit == null) {
                     idInit = infoProp.getInitializer();
-                    }
                 }
-            else
-                {
-                if (!infoProp.isImplicitlyAssigned())
-                    {
+            } else {
+                if (!infoProp.isImplicitlyAssigned()) {
                     constInit = infoProp.getType().getDefaultValue();
-                    }
                 }
+            }
 
-            if (constInit != null)
-                {
+            if (constInit != null) {
                 code.add(new L_Set(idField, constInit));
-                if (field.isTransient())
-                    {
+                if (field.isTransient()) {
                     field.constInit = constInit;
-                    }
                 }
-            else if (idInit != null)
-                {
+            } else if (idInit != null) {
                 MethodStructure methodInit = (MethodStructure) idInit.getComponent();
-                if (methodInit.isFunction())
-                    {
+                if (methodInit.isFunction()) {
                     code.add(new Call_01(idInit, idField));
-                    }
-                else
-                    {
+                } else {
                     code.add(new Invoke_01(new Register(typeStruct, "this", Op.A_THIS), idInit, idField));
-                    }
+                }
 
                 // TODO: transient field initializer is not currently supported
                 //  (non-static initializer would need a struct, which by that time is frozen)
-                }
+            }
 
-            if (field.isInflated())
-                {
+            if (field.isInflated()) {
                 // assign the ref's OUTER property; the auto-initializer will be called
                 // by the constructor (see ClassTemplate#proceedConstruction)
-                code.add(new Op()
-                    {
+                code.add(new Op() {
                     @Override
-                    public int process(Frame frame, int iPC)
-                        {
+                    public int process(Frame frame, int iPC) {
                         GenericHandle hStruct = (GenericHandle) frame.getThis();
                         RefHandle     hRef    = (RefHandle) hStruct.getField(frame, idField);
 
                         hRef.setField(frame, GenericHandle.OUTER, hStruct);
                         return iPC + 1;
-                        }
+                    }
 
                     @Override
-                    public void write(DataOutput out, ConstantRegistry registry)
-                        {
-                        }
+                    public void write(DataOutput out, ConstantRegistry registry) {
+                    }
 
                     @Override
-                    public String toString()
-                        {
+                    public String toString() {
                         return "initRef: " + idField;
-                        }
-                    });
-                }
+                    }
+                });
             }
+        }
 
-        if (code.hasOps())
-            {
+        if (code.hasOps()) {
             code.add(new Return_0());
             method.forceAssembly(pool);
-            }
-        else
-            {
+        } else {
             method.setAbstract(true);
-            }
-        return method;
         }
+        return method;
+    }
 
     /**
      * Create a synthetic "delegating" method for this class that delegates to the specified
@@ -3344,40 +2901,34 @@ public class ClassStructure
      * @return a synthetic MethodStructure that has the auto-generated delegating code
      */
     public MethodStructure ensurePropertyDelegation(
-            PropertyStructure prop, PropertyStructure propTarget, SignatureConstant sigAccessor)
-        {
+            PropertyStructure prop, PropertyStructure propTarget, SignatureConstant sigAccessor) {
         PropertyStructure propHost = (PropertyStructure) getChild(prop.getName());
-        if (propHost == null)
-            {
+        if (propHost == null) {
             assert !prop.isStatic();
             propHost = createProperty(false, prop.getAccess(), prop.getVarAccess(),
                     prop.getType(), prop.getName());
             propHost.setSynthetic(true);
-            }
+        }
 
         MethodStructure methodDelegate = propHost.findMethod(sigAccessor);
-        if (methodDelegate == null)
-            {
+        if (methodDelegate == null) {
             ConstantPool pool     = getConstantPool();
             TypeConstant typeProp = prop.getType();
 
             boolean      fGet;
             Parameter[]  aParams;
             Parameter[]  aReturns;
-            if ("get".equals(sigAccessor.getName()))
-                {
+            if ("get".equals(sigAccessor.getName())) {
                 fGet     = true;
                 aParams  = Parameter.NO_PARAMS;
                 aReturns = new Parameter[] {new Parameter(pool, typeProp,
                                 null, null, true, 0, false)};
-                }
-            else
-                {
+            } else {
                 fGet     = false;
                 aParams  = new Parameter[] {new Parameter(pool, typeProp,
                                 prop.getName(), null, false, 0, false)};
                 aReturns = Parameter.NO_PARAMS;
-                }
+            }
 
             methodDelegate = propHost.createMethod(false, prop.getAccess(), null,
                     aReturns, sigAccessor.getName(), aParams, true, false);
@@ -3389,25 +2940,22 @@ public class ClassStructure
             Register regTarget = code.createRegister(propTarget.getType());
             code.add(new L_Get(propTarget.getIdentityConstant(), regTarget));
 
-            if (fGet)
-                {
+            if (fGet) {
                 Register regReturn = new Register(typeProp, prop.getIdentityConstant().getName(), Op.A_STACK);
 
                 code.add(new P_Get(idDelegate, regTarget, regReturn));
                 code.add(new Return_1(regReturn));
-                }
-            else // "set"
-                {
+            } else { // "set"
                 Register regArg = new Register(typeProp, prop.getIdentityConstant().getName(), 0);
 
                 code.add(new P_Set(idDelegate, regTarget, regArg));
                 code.add(new Return_0());
-                }
+            }
 
             methodDelegate.forceAssembly(pool);
-            }
-        return methodDelegate;
         }
+        return methodDelegate;
+    }
 
     /**
      * Create a synthetic "delegating" method for this class that delegates to the specified
@@ -3418,12 +2966,10 @@ public class ClassStructure
      *
      * @return a synthetic MethodStructure that has the auto-generated delegating code
      */
-    public MethodStructure ensureMethodDelegation(MethodStructure method, String sDelegate)
-        {
+    public MethodStructure ensureMethodDelegation(MethodStructure method, String sDelegate) {
         SignatureConstant sig            = method.getIdentityConstant().getSignature();
         MethodStructure   methodDelegate = findMethod(sig);
-        if (methodDelegate == null)
-            {
+        if (methodDelegate == null) {
             ConstantPool pool         = getConstantPool();
             TypeConstant typeFormal   = getFormalType();
             TypeConstant typePrivate  = typeFormal.ensureAccess(Access.PRIVATE);
@@ -3447,145 +2993,124 @@ public class ClassStructure
             Register[]     aregParam  = cParams  == 0 ? null : new Register[cParams];
             boolean        fAtomic    = infoDelegate.isAtomic();
 
-            for (int i = 0; i < cParams; i++)
-                {
+            for (int i = 0; i < cParams; i++) {
                 aregParam[i] = new Register(aParams[i].getType(), aParams[i].getName(), i);
-                }
+            }
 
             Register regProp;
-            if (infoDelegate.isConstant())
-                {
+            if (infoDelegate.isConstant()) {
                 Constant constValue = infoDelegate.getInitialValue();
 
                 regProp = code.createRegister(typeDelegate);
                 code.add(new Var_I(regProp, constValue == null
                         ? pool.ensureSingletonConstConstant(infoDelegate.getIdentity())
                         : constValue));
-                }
-            else
-                {
+            } else {
                 regProp = code.createRegister(typeDelegate);
                 code.add(new L_Get(infoDelegate.getIdentity(), regProp));
+            }
+
+            switch (cReturns) {
+            case 0:
+                if (fAtomic) {
+                    Register regReturn = code.createRegister(pool.ensureFutureVar(pool.typeTuple()));
+                    code.add(new Var_D(regReturn));
+
+                    switch (cParams) {
+                    case 0:
+                        code.add(new Invoke_01(regProp, idMethod, regReturn));
+                        break;
+
+                    case 1:
+                        code.add(new Invoke_11(regProp, idMethod, aregParam[0], regReturn));
+                        break;
+
+                    default:
+                        code.add(new Invoke_N1(regProp, idMethod, aregParam, regReturn));
+                        break;
+                    }
+                    code.add(new Return_1(regReturn));
+                } else {
+                    switch (cParams) {
+                    case 0:
+                        code.add(new Invoke_00(regProp, idMethod));
+                        break;
+
+                    case 1:
+                        code.add(new Invoke_10(regProp, idMethod, aregParam[0]));
+                        break;
+
+                    default:
+                        code.add(new Invoke_N0(regProp, idMethod, aregParam));
+                        break;
+                    }
+                    code.add(new Return_0());
+                }
+                break;
+
+            case 1: {
+                TypeConstant typeReturn = aReturns[0].getType();
+                Register     regReturn;
+                if (fAtomic) {
+                    regReturn = code.createRegister(pool.ensureFutureVar(typeReturn));
+                    code.add(new Var_D(regReturn));
+                } else {
+                    regReturn = new Register(typeReturn, "result", Op.A_STACK);
                 }
 
-            switch (cReturns)
-                {
+                switch (cParams) {
                 case 0:
-                    if (fAtomic)
-                        {
-                        Register regReturn = code.createRegister(pool.ensureFutureVar(pool.typeTuple()));
-                        code.add(new Var_D(regReturn));
-
-                        switch (cParams)
-                            {
-                            case 0:
-                                code.add(new Invoke_01(regProp, idMethod, regReturn));
-                                break;
-
-                            case 1:
-                                code.add(new Invoke_11(regProp, idMethod, aregParam[0], regReturn));
-                                break;
-
-                            default:
-                                code.add(new Invoke_N1(regProp, idMethod, aregParam, regReturn));
-                                break;
-                            }
-                        code.add(new Return_1(regReturn));
-                        }
-                    else
-                        {
-                        switch (cParams)
-                            {
-                            case 0:
-                                code.add(new Invoke_00(regProp, idMethod));
-                                break;
-
-                            case 1:
-                                code.add(new Invoke_10(regProp, idMethod, aregParam[0]));
-                                break;
-
-                            default:
-                                code.add(new Invoke_N0(regProp, idMethod, aregParam));
-                                break;
-                            }
-                        code.add(new Return_0());
-                        }
+                    code.add(new Invoke_01(regProp, idMethod, regReturn));
                     break;
 
                 case 1:
-                    {
-                    TypeConstant typeReturn = aReturns[0].getType();
-                    Register     regReturn;
-                    if (fAtomic)
-                        {
-                        regReturn = code.createRegister(pool.ensureFutureVar(typeReturn));
-                        code.add(new Var_D(regReturn));
-                        }
-                    else
-                        {
-                        regReturn = new Register(typeReturn, "result", Op.A_STACK);
-                        }
-
-                    switch (cParams)
-                        {
-                        case 0:
-                            code.add(new Invoke_01(regProp, idMethod, regReturn));
-                            break;
-
-                        case 1:
-                            code.add(new Invoke_11(regProp, idMethod, aregParam[0], regReturn));
-                            break;
-
-                        default:
-                            code.add(new Invoke_N1(regProp, idMethod, aregParam, regReturn));
-                            break;
-                        }
-                    code.add(new Return_1(regReturn));
+                    code.add(new Invoke_11(regProp, idMethod, aregParam[0], regReturn));
                     break;
-                    }
 
                 default:
-                    {
-                    Register[] aregReturn = new Register[cReturns];
-
-                    for (int i = 0; i < cReturns; i++)
-                        {
-                        TypeConstant typeReturn = aReturns[i].getType();
-                        if (fAtomic)
-                            {
-                            Register regReturn = code.createRegister(pool.ensureFutureVar(typeReturn));
-                            code.add(new Var_D(regReturn));
-                            aregReturn[i] = regReturn;
-                            }
-                        else
-                            {
-                            aregReturn[i] = code.createRegister(typeReturn);
-                            }
-                        }
-
-                    switch (cParams)
-                        {
-                        case 0:
-                            code.add(new Invoke_0N(regProp, idMethod, aregReturn));
-                            break;
-
-                        case 1:
-                            code.add(new Invoke_1N(regProp, idMethod, aregParam[0], aregReturn));
-                            break;
-
-                        default:
-                            code.add(new Invoke_NN(regProp, idMethod, aregParam, aregReturn));
-                            break;
-                        }
-                    code.add(new Return_N(aregReturn));
+                    code.add(new Invoke_N1(regProp, idMethod, aregParam, regReturn));
                     break;
+                }
+                code.add(new Return_1(regReturn));
+                break;
+            }
+
+            default: {
+                Register[] aregReturn = new Register[cReturns];
+
+                for (int i = 0; i < cReturns; i++) {
+                    TypeConstant typeReturn = aReturns[i].getType();
+                    if (fAtomic) {
+                        Register regReturn = code.createRegister(pool.ensureFutureVar(typeReturn));
+                        code.add(new Var_D(regReturn));
+                        aregReturn[i] = regReturn;
+                    } else {
+                        aregReturn[i] = code.createRegister(typeReturn);
                     }
                 }
 
-            methodDelegate.forceAssembly(pool);
+                switch (cParams) {
+                case 0:
+                    code.add(new Invoke_0N(regProp, idMethod, aregReturn));
+                    break;
+
+                case 1:
+                    code.add(new Invoke_1N(regProp, idMethod, aregParam[0], aregReturn));
+                    break;
+
+                default:
+                    code.add(new Invoke_NN(regProp, idMethod, aregParam, aregReturn));
+                    break;
+                }
+                code.add(new Return_N(aregReturn));
+                break;
             }
-        return methodDelegate;
+            }
+
+            methodDelegate.forceAssembly(pool);
         }
+        return methodDelegate;
+    }
 
     /**
      * Create necessary method structures for the Const interface functions and methods.
@@ -3603,8 +3128,7 @@ public class ClassStructure
      *                  created from the source code, at which point only the pertinent structures
      *                  need to be created
      */
-    public void synthesizeConstInterface(boolean fRuntime)
-        {
+    public void synthesizeConstInterface(boolean fRuntime) {
         assert getFormat() == Format.CONST;
 
         ConstantPool pool = getConstantPool();
@@ -3613,33 +3137,29 @@ public class ClassStructure
         synthesizeConstFunction("compare",  2, pool.typeOrdered());
         synthesizeConstFunction("hashCode", 1, pool.typeInt64());
         synthesizeAppendTo(fRuntime);
-        }
+    }
 
     /**
      * Synthesize the function if it doesn't exist.
      */
-    private void synthesizeConstFunction(String sName, int cParams, TypeConstant typeReturn)
-        {
-        Predicate<MethodStructure> test = method ->
-            {
+    private void synthesizeConstFunction(String sName, int cParams, TypeConstant typeReturn) {
+        Predicate<MethodStructure> test = method -> {
             if (    method.getTypeParamCount() != 1
                  || method.getParamCount()     != 1  + cParams
                  || !method.getParam(0).isTypeParameter()
                  || method.getReturnCount()    != 1
-                 || !method.getReturn(0).getType().equals(typeReturn))
-                {
+                 || !method.getReturn(0).getType().equals(typeReturn)) {
                 return false;
-                }
+            }
 
             // abstract or synthesized functions don't count and neither do the Object methods
             return method.hasCode() && !method.isTransient() &&
                 !method.getIdentityConstant().getNamespace().equals(getConstantPool().clzObject());
-            };
+        };
 
         MethodStructure fnThis = findMethodDeep(sName, test);
 
-        if (fnThis == null)
-            {
+        if (fnThis == null) {
             // 1) build parameters;
             //  note that to instantiate type parameters we need to have the method constant,
             //  which needs to be created UnresolvedTypeConstant first and resolved later
@@ -3651,26 +3171,21 @@ public class ClassStructure
 
             aParam[0] = new Parameter(pool, typeType, "CompileType", null, false, 0, true);
 
-            if (cParams == 1)
-                {
+            if (cParams == 1) {
                 aParam[1] = new Parameter(pool, new UnresolvedTypeConstant(pool,
                         new UnresolvedNameConstant(pool, "CompileType")),
                         "value", null, false, 1, false);
-                }
-            else
-                {
-                for (int i = 1; i <= cParams; i++)
-                    {
+            } else {
+                for (int i = 1; i <= cParams; i++) {
                     aParam[i] = new Parameter(pool, new UnresolvedTypeConstant(pool,
                             new UnresolvedNameConstant(pool, "CompileType")),
                             "value" + i, null, false, i, false);
-                    }
                 }
+            }
 
-            Parameter[] aReturn = new Parameter[]
-                {
+            Parameter[] aReturn = new Parameter[] {
                 new Parameter(pool, typeReturn, null, null, true, 0, false)
-                };
+            };
 
             // 2) create the method structure and [yet unresolved] identity
             fnThis = createMethod(/*function*/ true, Constants.Access.PUBLIC, null,
@@ -3685,57 +3200,49 @@ public class ClassStructure
             TypeParameterConstant constParam = pool.ensureRegisterConstant(idMethod, 0, "CompileType");
             TypeConstant          typeFormal = constParam.getType();
 
-            for (int i = 1, c = atypeParams.length; i < c; i++)
-                {
+            for (int i = 1, c = atypeParams.length; i < c; i++) {
                 ((UnresolvedTypeConstant) atypeParams[i]).resolve(typeFormal);
-                }
+            }
 
             // 4) get rid of the unresolved constants
             fnThis.resolveTypedefs();
-            }
         }
+    }
 
     /**
      * If explicit "toString()" exists, not using the "super()", and "appendTo()" does not exist,
      * generate "appendTo()" to route to "toString" and a trivial "estimateStringLength".
      */
-    private void synthesizeAppendTo(boolean fGenerateCode)
-        {
+    private void synthesizeAppendTo(boolean fGenerateCode) {
         MethodStructure methToString = findMethod("toString", 0);
-        if (methToString != null && !methToString.usesSuper())
-            {
+        if (methToString != null && !methToString.usesSuper()) {
             ConstantPool pool         = getConstantPool();
             TypeConstant typeAppender = pool.ensureParameterizedTypeConstant(
                 pool.ensureEcstasyTypeConstant("Appender"), pool.typeChar());
 
             MethodStructure methAppendTo = findMethod("appendTo", 1, typeAppender);
-            if (methAppendTo == null)
-                {
-                Parameter[] aRet = new Parameter[]
-                    {
+            if (methAppendTo == null) {
+                Parameter[] aRet = new Parameter[] {
                     new Parameter(pool, typeAppender, null, null, true, 0, false)
-                    };
-                Parameter[] aParam = new Parameter[]
-                    {
+                };
+                Parameter[] aParam = new Parameter[] {
                     new Parameter(pool, typeAppender, "appender", null, false, 0, false)
-                    };
-                Annotation[] aAnno = new Annotation[]
-                    {
+                };
+                Annotation[] aAnno = new Annotation[] {
                     pool.ensureAnnotation(pool.clzOverride())
-                    };
+                };
 
                 methAppendTo = createMethod(/*function*/ false, Constants.Access.PUBLIC, aAnno,
                         aRet, "appendTo", aParam, /*hasCode*/ true, /*usesSuper*/ false);
                 methAppendTo.markTransient();
 
-                if (fGenerateCode)
-                    {
+                if (fGenerateCode) {
                     Code code = methAppendTo.ensureCode();
 
                     // Appender<Char> appendTo(Appender<Char> appender)
                     //    {
                     //    return this.toString().appendTo(appender);
-                    //    }
+                    //}
                     Register regThis     = new Register(typeAppender, "this"    , Op.A_THIS);
                     Register regAppender = new Register(typeAppender, "appender", 0);
                     Register regString   = new Register(typeAppender, "toString", Op.A_STACK);
@@ -3748,8 +3255,7 @@ public class ClassStructure
                     code.add(new Invoke_11(regString, idAppendTo, regAppender, regResult));
                     code.add(new Return_1(regResult));
 
-                    RegisterAST[] aAstReg = new RegisterAST[]
-                            {(RegisterAST) regAppender.getRegisterAST()};
+                    RegisterAST[] aAstReg = new RegisterAST[] {(RegisterAST) regAppender.getRegisterAST()};
                     ExprAST astToString = new InvokeExprAST(
                             idToString, new TypeConstant[]{regString.getType()},
                             regThis.getRegisterAST(), ExprAST.NO_EXPRS, false);
@@ -3759,22 +3265,19 @@ public class ClassStructure
 
                     methAppendTo.setAst(new ReturnStmtAST(astAppend), aAstReg);
                     methAppendTo.forceAssembly(pool);
-                    }
+                }
 
                 MethodStructure methEstimate = findMethod("estimateStringLength", 0);
-                if (methEstimate == null)
-                    {
-                    Parameter[] aReturn = new Parameter[]
-                        {
+                if (methEstimate == null) {
+                    Parameter[] aReturn = new Parameter[] {
                         new Parameter(pool, pool.typeInt64(), null, null, true, 0, false)
-                        };
+                    };
                     methEstimate = createMethod(/*function*/ false, Constants.Access.PUBLIC, aAnno,
                             aReturn, "estimateStringLength", Parameter.NO_PARAMS,
                             /*hasCode*/ true, /*usesSuper*/ false);
                     methEstimate.markTransient();
 
-                    if (fGenerateCode)
-                        {
+                    if (fGenerateCode) {
                         Code code = methEstimate.ensureCode();
 
                         // return 0;
@@ -3783,40 +3286,36 @@ public class ClassStructure
                         methEstimate.setAst(
                                 new ReturnStmtAST(new ConstantExprAST(pool.val0())), BinaryAST.NO_REGS);
                         methEstimate.forceAssembly(pool);
-                        }
                     }
                 }
             }
         }
+    }
 
 
     // ----- XvmStructure/Component methods --------------------------------------------------------
 
     @Override
     protected void disassemble(DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super.disassemble(in);
 
         // read in the type parameters
         m_mapParams = disassembleTypeParams(in);
         m_constPath = (LiteralConstant) getConstantPool().getConstant(readIndex(in));
-        }
+    }
 
     @Override
-    protected void synthesizeChildren()
-        {
-        if (getFormat() == Format.CONST)
-            {
+    protected void synthesizeChildren() {
+        if (getFormat() == Format.CONST) {
             synthesizeConstInterface(true);
-            }
+        }
 
         super.synthesizeChildren();
-        }
+    }
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 
         // register the type parameters
@@ -3826,90 +3325,76 @@ public class ClassStructure
         // invalidate cached types
         m_typeCanonical = null;
         m_typeFormal    = null;
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         super.assemble(out);
 
         // write out the type parameters
         assembleTypeParams(m_mapParams, out);
         writePackedLong(out, Constant.indexOf(m_constPath));
-        }
+    }
 
     @Override
-    public Iterator<? extends XvmStructure> getContained()
-        {
+    public Iterator<? extends XvmStructure> getContained() {
         // we cannot use the "collectAnnotations" API at this time, since our module may not yet
         // be linked
         List<Annotation> listAnno = null;
-        for (Contribution contrib : getContributionsAsList())
-            {
-            if (contrib.getComposition() == Composition.Annotation)
-                {
-                if (listAnno == null)
-                    {
+        for (Contribution contrib : getContributionsAsList()) {
+            if (contrib.getComposition() == Composition.Annotation) {
+                if (listAnno == null) {
                     listAnno = new ArrayList<>();
-                    }
-                listAnno.add(contrib.getAnnotation());
                 }
+                listAnno.add(contrib.getAnnotation());
             }
+        }
 
         return listAnno == null
                 ? super.getContained()
                 : new LinkedIterator(
                         super.getContained(),
                         listAnno.iterator());
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         StringBuilder sb = new StringBuilder();
         sb.append(super.getDescription())
           .append(", type-params=");
 
         final ListMap<StringConstant, TypeConstant> map = m_mapParams;
-        if (map == null || map.isEmpty())
-            {
+        if (map == null || map.isEmpty()) {
             sb.append("none");
-            }
-        else
-            {
+        } else {
             sb.append('<');
             boolean fFirst = true;
-            for (Map.Entry<StringConstant, TypeConstant> entry : map.entrySet())
-                {
-                if (fFirst)
-                    {
+            for (Map.Entry<StringConstant, TypeConstant> entry : map.entrySet()) {
+                if (fFirst) {
                     fFirst = false;
-                    }
-                else
-                    {
+                } else {
                     sb.append(", ");
-                    }
+                }
 
                 sb.append(entry.getKey().getValue());
 
                 TypeConstant constType = entry.getValue();
 
                 // if constType is unresolved, we cannot call constType.isEcstasy("Object")
-                if (!"ecstasy:Object".equals(constType.getValueString()))
-                    {
+                if (!"ecstasy:Object".equals(constType.getValueString())) {
                     sb.append(" extends ")
                       .append(constType);
-                    }
                 }
-            sb.append('>');
             }
+            sb.append('>');
+        }
 
         sb.append(", source-path=")
           .append(m_constPath == null ? "none" : m_constPath.getValueString());
 
         return sb.toString();
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -3926,26 +3411,23 @@ public class ClassStructure
      *                      DataInput stream, or if there is invalid data in the stream
      */
     protected ListMap<StringConstant, TypeConstant> disassembleTypeParams(DataInput in)
-        throws IOException
-        {
+        throws IOException {
         int c = readMagnitude(in);
-        if (c <= 0)
-            {
+        if (c <= 0) {
             assert c == 0;
             return null;
-            }
+        }
 
         ListMap<StringConstant, TypeConstant> map = new ListMap<>();
         ConstantPool pool = getConstantPool();
-        for (int i = 0; i < c; ++i)
-            {
+        for (int i = 0; i < c; ++i) {
             StringConstant constName = (StringConstant) pool.getConstant(readIndex(in));
             TypeConstant   constType = (TypeConstant)   pool.getConstant(readIndex(in));
             assert !map.containsKey(constName);
             map.put(constName, constType);
-            }
-        return map;
         }
+        return map;
+    }
 
     /**
      * Register all the constants associated with a list of type parameters.
@@ -3954,51 +3436,42 @@ public class ClassStructure
      *
      * @return the map of registered type parameters (might be different from the map passed in)
      */
-    protected ListMap<StringConstant, TypeConstant> registerTypeParams(ListMap<StringConstant, TypeConstant> mapOld)
-        {
-        if (mapOld == null || mapOld.isEmpty())
-            {
+    protected ListMap<StringConstant, TypeConstant> registerTypeParams(ListMap<StringConstant, TypeConstant> mapOld) {
+        if (mapOld == null || mapOld.isEmpty()) {
             return mapOld;
-            }
+        }
 
         ConstantPool                          pool   = getConstantPool();
         ListMap<StringConstant, TypeConstant> mapNew = mapOld;
-        for (Map.Entry<StringConstant, TypeConstant> entry : mapOld.entrySet())
-            {
+        for (Map.Entry<StringConstant, TypeConstant> entry : mapOld.entrySet()) {
             StringConstant constOldKey = entry.getKey();
             StringConstant constNewKey = (StringConstant) pool.register(constOldKey);
 
             TypeConstant   constOldVal = entry.getValue();
             TypeConstant   constNewVal = (TypeConstant) pool.register(constOldVal);
 
-            if (mapNew != mapOld || constOldKey != constNewKey)
-                {
-                if (mapNew == mapOld)
-                    {
+            if (mapNew != mapOld || constOldKey != constNewKey) {
+                if (mapNew == mapOld) {
                     // up to this point, we've been using the old map, but now we need to change a
                     // key (which map does not support), so create a new map, and copy the old map
                     // to the new map, but only up to (but not including!) the current entry
                     mapNew = new ListMap<>();
-                    for (Map.Entry<StringConstant, TypeConstant> entryCopy : mapOld.entrySet())
-                        {
-                        if (entryCopy.getKey() == constOldKey)
-                            {
+                    for (Map.Entry<StringConstant, TypeConstant> entryCopy : mapOld.entrySet()) {
+                        if (entryCopy.getKey() == constOldKey) {
                             break;
-                            }
+                        }
 
                         mapNew.put(entryCopy.getKey(), entryCopy.getValue());
-                        }
                     }
+                }
 
                 mapNew.put(constNewKey, constNewVal);
-                }
-            else if (constOldVal != constNewVal)
-                {
+            } else if (constOldVal != constNewVal) {
                 entry.setValue(constNewVal);
-                }
             }
-        return mapNew;
         }
+        return mapNew;
+    }
 
     /**
      * Helper method to write type parameters to the DataOutput stream.
@@ -4010,22 +3483,19 @@ public class ClassStructure
      *                      stream
      */
     protected void assembleTypeParams(ListMap<StringConstant, TypeConstant> map, DataOutput out)
-        throws IOException
-        {
+        throws IOException {
         int c = map == null ? 0 : map.size();
         writePackedLong(out, c);
 
-        if (c == 0)
-            {
+        if (c == 0) {
             return;
-            }
+        }
 
-        for (Map.Entry<StringConstant, TypeConstant> entry : map.entrySet())
-            {
+        for (Map.Entry<StringConstant, TypeConstant> entry : map.entrySet()) {
             writePackedLong(out, entry.getKey().getPosition());
             writePackedLong(out, entry.getValue().getPosition());
-            }
         }
+    }
 
     /**
      * Assuming that this component is a class containing nested members, and using a value
@@ -4037,10 +3507,8 @@ public class ClassStructure
      *
      * @return the specified component, or null
      */
-    public Component getNestedChild(Object id)
-        {
-        return switch (id)
-            {
+    public Component getNestedChild(Object id) {
+        return switch (id) {
             // a null identity indicates the class itself
             case null -> this;
 
@@ -4051,8 +3519,8 @@ public class ClassStructure
             case SignatureConstant sig -> findMethod(sig);
 
             default -> ((NestedIdentity) id).getIdentityConstant().relocateNestedIdentity(this);
-            };
-        }
+        };
+    }
 
     /**
      * Create (if necessary) a synthetic method for the specified signature at this synthetic class.
@@ -4061,13 +3529,11 @@ public class ClassStructure
      *
      * @return the corresponding method
      */
-    public MethodStructure ensureSyntheticMethod(SignatureConstant sig)
-        {
+    public MethodStructure ensureSyntheticMethod(SignatureConstant sig) {
         assert isSynthetic();
 
         MethodStructure method = findMethod(sig);
-        if (method == null)
-            {
+        if (method == null) {
             ConstantPool   pool        = getConstantPool();
             TypeConstant[] atypeParam  = sig.getRawParams();
             TypeConstant[] atypeReturn = sig.getRawReturns();
@@ -4075,22 +3541,20 @@ public class ClassStructure
             int            cReturns    = atypeReturn.length;
 
             Parameter[] aParam = new Parameter[cParams];
-            for (int i = 0; i < cParams; i++)
-                {
+            for (int i = 0; i < cParams; i++) {
                 aParam[i] = new Parameter(pool, atypeParam[i], "p"+i, null, false, i, false);
-                }
+            }
 
             Parameter[] aReturn = new Parameter[cReturns];
-            for (int i = 0; i < cReturns; i++)
-                {
+            for (int i = 0; i < cReturns; i++) {
                 aReturn[i] = new Parameter(pool, atypeReturn[i], null, null, true, i, false);
-                }
+            }
             method = createMethod(/*function*/ false, Access.PUBLIC, null, aReturn,
                             sig.getName(), aParam, /*hasCode*/ false, /*usesSuper*/ false);
             method.setSynthetic(true);
-            }
-        return method;
         }
+        return method;
+    }
 
     /**
      * Create (if necessary) a synthetic property for the specified name and type.
@@ -4100,33 +3564,28 @@ public class ClassStructure
      *
      * @return the corresponding property
      */
-    public PropertyStructure ensureSyntheticProperty(String sName, TypeConstant type)
-        {
+    public PropertyStructure ensureSyntheticProperty(String sName, TypeConstant type) {
         assert isSynthetic();
 
         PropertyStructure prop = (PropertyStructure) getChild(sName);
-        if (prop == null)
-            {
+        if (prop == null) {
             prop = createProperty(false, Access.PUBLIC, Access.PUBLIC, type, sName);
-            }
-        return prop;
         }
+        return prop;
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public boolean equals(Object obj)
-        {
-        if (obj == this)
-            {
+    public boolean equals(Object obj) {
+        if (obj == this) {
             return true;
-            }
+        }
 
-        if (!(obj instanceof ClassStructure that) || !super.equals(obj))
-            {
+        if (!(obj instanceof ClassStructure that) || !super.equals(obj)) {
             return false;
-            }
+        }
 
         // type parameters
         Map mapThisParams = this.m_mapParams;
@@ -4137,7 +3596,7 @@ public class ClassStructure
         return cThisParams == cThatParams
             && (cThisParams == 0 || mapThisParams.equals(mapThatParams))
             && Handy.equals(this.m_constPath, that.m_constPath);
-        }
+    }
 
     /**
      * If there are any undeclared formal parameters for the "extend", "implement" or "into"
@@ -4146,70 +3605,58 @@ public class ClassStructure
      * @param pool  the ConstantPool to use
      * @param errs  the error listener
      */
-    public void addImplicitTypeParameters(ConstantPool pool, ErrorListener errs)
-        {
+    public void addImplicitTypeParameters(ConstantPool pool, ErrorListener errs) {
         assert getFormat() == Format.MIXIN || getFormat() == Format.ANNOTATION;
 
         ListMap<String, TypeConstant> mapTypeParams = null;
-        for (Contribution contrib : getContributionsAsList())
-            {
-            switch (contrib.getComposition())
-                {
-                case Extends:
-                case Implements:
-                case Incorporates:
-                case Into:
-                    break;
+        for (Contribution contrib : getContributionsAsList()) {
+            switch (contrib.getComposition()) {
+            case Extends:
+            case Implements:
+            case Incorporates:
+            case Into:
+                break;
 
-                default:
-                    // disregard any other contribution
-                    continue;
-                }
+            default:
+                // disregard any other contribution
+                continue;
+            }
 
             TypeConstant typeContrib = contrib.getTypeConstant();
-            if (typeContrib.isParamsSpecified())
-                {
+            if (typeContrib.isParamsSpecified()) {
                 continue;
-                }
+            }
 
             TypeConstant[] atypeGeneric = typeContrib.collectGenericParameters();
-            if (atypeGeneric == null)
-                {
+            if (atypeGeneric == null) {
                 continue;
-                }
+            }
 
-            if (atypeGeneric.length == 0)
-                {
+            if (atypeGeneric.length == 0) {
                 // there is a possibility that we have not yet had a chance to add implicit
                 // parameters for the underlying mixin; do it now
                 if (typeContrib.isSingleUnderlyingClass(false) &&
-                        typeContrib.getExplicitClassFormat() == Format.MIXIN)
-                    {
+                        typeContrib.getExplicitClassFormat() == Format.MIXIN) {
                     ClassStructure clzContrib = (ClassStructure)
                             typeContrib.getSingleUnderlyingClass(false).getComponent();
                     clzContrib.addImplicitTypeParameters(pool, errs);
 
                     atypeGeneric = typeContrib.collectGenericParameters();
-                    if (atypeGeneric.length == 0)
-                        {
+                    if (atypeGeneric.length == 0) {
                         continue;
-                        }
+                    }
                     // implicit parameters were added to the contribution type; proceed
-                    }
-                else
-                    {
+                } else {
                     continue;
-                    }
                 }
+            }
 
-            if (mapTypeParams == null)
-                {
+            if (mapTypeParams == null) {
                 mapTypeParams = new ListMap<>();
-                }
+            }
 
             // collect the formal types and verify that there are no collisions
-            for (TypeConstant typeParam : atypeGeneric)
-                {
+            for (TypeConstant typeParam : atypeGeneric) {
                 assert typeParam.isGenericType();
 
                 PropertyConstant idParam        = (PropertyConstant) typeParam.getDefiningConstant();
@@ -4217,33 +3664,28 @@ public class ClassStructure
                 TypeConstant     typeConstraint = idParam.getConstraintType();
 
                 TypeConstant typeOld = mapTypeParams.get(sName);
-                if (typeOld == null)
-                    {
+                if (typeOld == null) {
                     mapTypeParams.put(sName, typeConstraint);
-                    }
-                else if (!typeOld.equals(typeConstraint))
-                    {
+                } else if (!typeOld.equals(typeConstraint)) {
                     // {0} type parameter {1} must be of type {2}, but has been specified as {3} by {4}
                     log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_TYPE,
                         getName(), typeOld.getValueString(),
                         typeConstraint.getValueString(), contrib.getTypeConstant().getValueString());
                     return;
-                    }
                 }
+            }
 
             // update the contribution
             contrib.narrowType(typeContrib.adoptParameters(pool, atypeGeneric));
-            }
+        }
 
-        if (mapTypeParams != null)
-            {
-            for (Map.Entry<String, TypeConstant> entry : mapTypeParams.entrySet())
-                {
+        if (mapTypeParams != null) {
+            for (Map.Entry<String, TypeConstant> entry : mapTypeParams.entrySet()) {
                 addTypeParam(entry.getKey(), entry.getValue())
                          .setSynthetic(true);
-                }
             }
         }
+    }
 
 
     // ----- inner class: SimpleTypeResolver -------------------------------------------------------
@@ -4252,22 +3694,19 @@ public class ClassStructure
      * Generic type resolver based on the actual parameter list.
      */
     public class SimpleTypeResolver
-            implements GenericTypeResolver
-        {
+            implements GenericTypeResolver {
         /**
          * Create a TypeResolver based on the actual type list.
          *
          * @param pool        the ConstantPool to use
          * @param listActual  the actual type list
          */
-        public SimpleTypeResolver(ConstantPool pool, List<TypeConstant> listActual)
-            {
+        public SimpleTypeResolver(ConstantPool pool, List<TypeConstant> listActual) {
             f_pool       = pool;
             m_listActual = listActual;
 
             IdentityConstant id = getIdentityConstant();
-            if (!id.equals(pool.clzTuple()) && !id.equals(pool.clzCondTuple()))
-                {
+            if (!id.equals(pool.clzTuple()) && !id.equals(pool.clzCondTuple())) {
                 int cFormal = getTypeParamCount();
                 int cActual = listActual.size();
 
@@ -4275,44 +3714,37 @@ public class ClassStructure
                 //      Max<Element> implements Aggregator<Element, Element?>
                 // and a call to "normalizeParameters" would pass a list of "Int, Int?" to the
                 // SimpleTypeResolver for Max; there is not much we can do at this point
-                if (cFormal > cActual)
-                    {
+                if (cFormal > cActual) {
                     m_listActual = listActual = new ArrayList<>(listActual); // clone
                     List<Map.Entry<StringConstant, TypeConstant>> entries = getTypeParamsAsList();
 
-                    if (id.equals(pool.clzClass()) && cActual > 0)
-                        {
+                    if (id.equals(pool.clzClass()) && cActual > 0) {
                         TypeConstant typePublic = listActual.get(0);
-                        if (typePublic.isSingleUnderlyingClass(false) && !typePublic.isFormalType())
-                            {
+                        if (typePublic.isSingleUnderlyingClass(false) && !typePublic.isFormalType()) {
                             // we know a bit more about the relationship between Class formal types;
                             // prime them accordingly
-                            for (int i = cActual; i < cFormal; i++)
-                                {
+                            for (int i = cActual; i < cFormal; i++) {
                                 listActual.add(pool.ensureAccessTypeConstant(typePublic,
-                                    switch (i)
-                                        {
+                                    switch (i) {
                                         case 1  -> Access.PROTECTED;
                                         case 2  -> Access.PRIVATE;
                                         case 3  -> Access.STRUCT;
                                         default -> throw new IllegalStateException();
-                                        }));
-                                }
-                            return;
+                                    }));
                             }
+                            return;
                         }
+                    }
 
                     // fill the missing actual parameters with the canonical constraint types
                     // Note: since there is a possibility of Tuple self-reference
                     // (e.g. Tuple<ElementTypes extends Tuple<ElementTypes...>>)
                     // we'll prime each args with Object for now
-                    for (int i = cActual; i < cFormal; i++)
-                        {
+                    for (int i = cActual; i < cFormal; i++) {
                         listActual.add(pool.typeObject());
-                        }
+                    }
 
-                    for (int i = cActual; i < cFormal; i++)
-                        {
+                    for (int i = cActual; i < cFormal; i++) {
                         // the constraint type itself could be formal, depending on another parameter
                         TypeConstant typeConstraint = entries.get(i).getValue();
                         listActual.set(i,  typeConstraint.containsUnresolved()   ||
@@ -4321,20 +3753,19 @@ public class ClassStructure
                                 : typeConstraint.isFormalTypeSequence()
                                     ? pool.typeTuple0()
                                     : typeConstraint.resolveGenerics(pool, this));
-                        }
                     }
                 }
             }
+        }
 
         @Override
-        public TypeConstant resolveGenericType(String sFormalName)
-            {
+        public TypeConstant resolveGenericType(String sFormalName) {
             return extractGenericType(f_pool, sFormalName, m_listActual);
-            }
+        }
 
         private final ConstantPool f_pool;
         private List<TypeConstant> m_listActual;
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -4377,4 +3808,4 @@ public class ClassStructure
      * class functionality.
      */
     private transient Annotation[] m_aAnnoMixin;
-    }
+}

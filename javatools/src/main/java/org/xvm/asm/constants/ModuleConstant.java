@@ -16,6 +16,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
+import org.xvm.javajit.TypeSystem;
+
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readIndex;
@@ -30,8 +32,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * qualified module name of "ecstasy.xtclang.org".
  */
 public class ModuleConstant
-        extends IdentityConstant
-    {
+        extends IdentityConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -40,10 +41,9 @@ public class ModuleConstant
      * @param pool     the ConstantPool that will contain this Constant
      * @param sName    the qualified module name
      */
-    public ModuleConstant(ConstantPool pool, String sName)
-        {
+    public ModuleConstant(ConstantPool pool, String sName) {
         this(pool, sName, null);
-        }
+    }
 
     /**
      * Construct a constant whose value is a module identifier.
@@ -52,13 +52,12 @@ public class ModuleConstant
      * @param sName    the qualified module name
      * @param version  the module version
      */
-    public ModuleConstant(ConstantPool pool, String sName, Version version)
-        {
+    public ModuleConstant(ConstantPool pool, String sName, Version version) {
         super(pool);
 
         m_constName    = pool.ensureStringConstant(sName);
         m_constVersion = version == null ? null : pool.ensureVersionConstant(version);
-        }
+    }
 
     /**
      * Constructor used for deserialization.
@@ -70,22 +69,20 @@ public class ModuleConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public ModuleConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
 
         m_iName    = readMagnitude(in);
         m_iVersion = readIndex(in);
-        }
+    }
 
     @Override
-    protected void resolveConstants()
-        {
+    protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
         m_constName    = (StringConstant)  pool.getConstant(m_iName);
         m_constVersion = (VersionConstant) pool.getConstant(m_iVersion);
-        }
+    }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
@@ -95,12 +92,11 @@ public class ModuleConstant
      *
      * @return the unqualified module name
      */
-    public String getUnqualifiedName()
-        {
+    public String getUnqualifiedName() {
         String sName = getName();
         int ofDot = sName.indexOf('.');
         return ofDot < 0 ? sName : sName.substring(0, ofDot);
-        }
+    }
 
     /**
      * Get the domain name for the Module constant.
@@ -108,23 +104,21 @@ public class ModuleConstant
      * @return the constant's domain information as a {@code String}, or {@code null} if the module
      *         name is not qualified (i.e. does not contain a domain name)
      */
-    public String getDomainName()
-        {
+    public String getDomainName() {
         String sName = getName();
         int ofDot = sName.indexOf('.');
         return ofDot < 0 ? null : sName.substring(ofDot + 1);
-        }
+    }
 
     /**
      * Extract the module version.
      *
      * @return the unqualified module name
      */
-    public Version getVersion()
-        {
+    public Version getVersion() {
         VersionConstant constVersion = m_constVersion;
         return constVersion == null ? null : constVersion.getVersion();
-        }
+    }
 
     /**
      * Determine if this ModuleConstant is the Ecstasy core module.
@@ -132,37 +126,33 @@ public class ModuleConstant
      * @return true iff this ModuleConstant represents the module containing the Ecstasy class
      *         library
      */
-    public boolean isEcstasyModule()
-        {
+    public boolean isEcstasyModule() {
         return getName().equals(ECSTASY_MODULE);
-        }
+    }
 
     /**
      * @return true iff this ModuleConstant represents the module containing the Ecstasy class
      *         library or a native (prototype) module
      */
-    public boolean isCoreModule()
-        {
+    public boolean isCoreModule() {
         String sName = getName();
         return sName.equals(ECSTASY_MODULE)
             || sName.equals(TURTLE_MODULE)
             || sName.equals(NATIVE_MODULE);
-        }
+    }
 
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
-    public IdentityConstant getParentConstant()
-        {
+    public IdentityConstant getParentConstant() {
         return null;
-        }
+    }
 
     @Override
-    public IdentityConstant replaceParentConstant(IdentityConstant idParent)
-        {
+    public IdentityConstant replaceParentConstant(IdentityConstant idParent) {
         return this;
-        }
+    }
 
     /**
      * Get the qualified name of the Module.
@@ -173,104 +163,101 @@ public class ModuleConstant
      * @return the qualified Module name
      */
     @Override
-    public String getName()
-        {
+    public String getName() {
         return m_constName.getValue();
-        }
+    }
 
     @Override
-    public ModuleConstant getModuleConstant()
-        {
+    public ModuleConstant getModuleConstant() {
         return this;
-        }
+    }
 
     @Override
-    public List<IdentityConstant> getPath()
-        {
+    public List<IdentityConstant> getPath() {
         List<IdentityConstant> list = new ArrayList<>();
         list.add(this);
         return list;
-        }
+    }
 
     @Override
-    public Component getComponent()
-        {
+    public Component getComponent() {
         ModuleStructure struct = getFileStructure().getModule(this);
-        if (struct == null)
-            {
+        if (struct == null) {
             return null;
-            }
+        }
 
         ModuleStructure structOrigin = struct.getFingerprintOrigin();
         return structOrigin == null
                 ? struct
                 : structOrigin;
-        }
+    }
 
     @Override
-    public String getPathString()
-        {
+    public String getPathString() {
         return "";
-        }
+    }
 
     @Override
-    protected StringBuilder buildPath()
-        {
+    protected StringBuilder buildPath() {
         return new StringBuilder();
-        }
+    }
 
     @Override
-    public boolean trailingPathEquals(IdentityConstant that, int cSegments)
-        {
+    public boolean trailingPathEquals(IdentityConstant that, int cSegments) {
         return trailingSegmentEquals(that);
-        }
+    }
 
     @Override
-    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)
-        {
+    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that) {
         throw new IllegalStateException(this.toString());
-        }
+    }
 
     @Override
-    public String getNestedName()
-        {
+    public String getNestedName() {
         return null;
-        }
+    }
+
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public String getJitName(TypeSystem ts) {
+        return "$module";
+    }
+
+    @Override
+    protected StringBuilder buildJitName(TypeSystem ts) {
+        return new StringBuilder();
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.Module;
-        }
+    }
 
     @Override
-    public boolean isClass()
-        {
+    public boolean isClass() {
         return true;
-        }
+    }
 
     @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
+    public void forEachUnderlying(Consumer<Constant> visitor) {
         visitor.accept(m_constName);
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof ModuleConstant idThat))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof ModuleConstant idThat)) {
             return -1;
-            }
+        }
 
         int n = this.m_constName.compareTo(idThat.m_constName);
-        if (n != 0)
-            {
+        if (n != 0) {
             return n;
-            }
+        }
 
         return this.m_constVersion == null
             ? idThat.m_constVersion == null
@@ -279,55 +266,49 @@ public class ModuleConstant
             : idThat.m_constVersion == null
                 ? 1
                 : this.m_constVersion.compareDetails(idThat.m_constVersion);
-        }
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         StringBuilder sb = new StringBuilder();
         sb.append(m_constName.getValue());
-        if (m_constVersion != null)
-            {
+        if (m_constVersion != null) {
             sb.append(" v:")
               .append(m_constVersion.getVersion());
-            }
-        return sb.toString();
         }
+        return sb.toString();
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         m_constName    = (StringConstant)  pool.register(m_constName);
         m_constVersion = (VersionConstant) pool.register(m_constVersion);
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constName.getPosition());
         writePackedLong(out, Constant.indexOf(m_constVersion));
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "module=" + getValueString();
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_constName,
                Hash.of(m_constVersion));
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -351,4 +332,4 @@ public class ModuleConstant
      * The constant that holds the version of the module (optional).
      */
     private VersionConstant m_constVersion;
-    }
+}

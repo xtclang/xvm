@@ -16,17 +16,15 @@ import org.xvm.asm.Op;
  * A TypeCollector is used to collect a number of types, such as would occur from return statements
  * within a lambda, in order to infer a type from that collection of types.
  */
-public class TypeCollector
-    {
+public class TypeCollector {
     /**
      * Construct a TypeCollector.
      *
      * @param pool  the ConstantPool to use
      */
-    public TypeCollector(ConstantPool pool)
-        {
+    public TypeCollector(ConstantPool pool) {
         f_pool = pool;
-        }
+    }
 
     /**
      * Add a specified type to the collection.
@@ -34,17 +32,13 @@ public class TypeCollector
      * @param type  a TypeConstant to add to the collection, or null to specify that a type could
      *              not be determined
      */
-    public void add(TypeConstant type)
-        {
-        if (isMulti())
-            {
+    public void add(TypeConstant type) {
+        if (isMulti()) {
             add(new TypeConstant[] {type});
-            }
-        else
-            {
+        } else {
             ensureSingle().add(type);
-            }
         }
+    }
 
     /**
      * Add a specified array of types (indicating a multi-value) to the collection.
@@ -52,130 +46,111 @@ public class TypeCollector
      * @param aTypes  an array of zero or more TypeConstants to add (as a unit) to the collection,
      *                or null to specify that a type could not be determined
      */
-    public void add(TypeConstant[] aTypes)
-        {
-        if (!isMulti() && (aTypes == null || aTypes.length == 1))
-            {
+    public void add(TypeConstant[] aTypes) {
+        if (!isMulti() && (aTypes == null || aTypes.length == 1)) {
             add(aTypes == null ? null : aTypes[0]);
-            }
-        else
-            {
+        } else {
             ensureMulti().add(aTypes);
-            }
         }
+    }
 
     /**
      * @return the size of the type collection, which is the number of times that add() has been
      *         called
      */
-    public int size()
-        {
+    public int size() {
         ArrayList<TypeConstant> listSingle = m_listSingle;
-        if (listSingle != null)
-            {
+        if (listSingle != null) {
             return listSingle.size();
-            }
+        }
 
         ArrayList<TypeConstant[]> listMulti = m_listMulti;
-        if (listMulti != null)
-            {
+        if (listMulti != null) {
             return listMulti.size();
-            }
+        }
 
         return 0;
-        }
+    }
 
     /**
      * @return true iff all of the collected type information thus far has had exactly one type (or
      *         was unknown)
      */
-    public boolean isSingle()
-        {
+    public boolean isSingle() {
         return m_listMulti == null;
-        }
+    }
 
     /**
      * @return the read-only list of collected type information in single format
      */
-    public List<TypeConstant> getSingle()
-        {
+    public List<TypeConstant> getSingle() {
         ArrayList<TypeConstant> listSingle = m_listSingle;
-        if (listSingle != null)
-            {
+        if (listSingle != null) {
             return listSingle;
-            }
+        }
 
         assert m_listMulti == null;
         return Collections.emptyList();
-        }
+    }
 
     /**
      * @return the read/write list of collected types in a single-format
      */
-    private ArrayList<TypeConstant> ensureSingle()
-        {
+    private ArrayList<TypeConstant> ensureSingle() {
         ArrayList<TypeConstant> listSingle = m_listSingle;
-        if (listSingle == null)
-            {
+        if (listSingle == null) {
             assert m_listMulti == null;
             m_listSingle = listSingle = new ArrayList<>();
-            }
+        }
 
         return listSingle;
-        }
+    }
 
     /**
      * @return true iff any of the collected type information has had more than one type
      */
-    public boolean isMulti()
-        {
+    public boolean isMulti() {
         return m_listMulti != null;
-        }
+    }
 
     /**
      * @return the read-only list of collected type information in multi-format
      */
-    public List<TypeConstant[]> getMulti()
-        {
+    public List<TypeConstant[]> getMulti() {
         ArrayList<TypeConstant[]> list = m_listMulti;
-        if (list != null)
-            {
+        if (list != null) {
             return list;
-            }
+        }
 
         return m_listSingle == null
                 ? Collections.emptyList()
                 : ensureMulti();
-        }
+    }
 
     /**
      * @return the list of collected types in a multi-format
      */
-    private ArrayList<TypeConstant[]> ensureMulti()
-        {
+    private ArrayList<TypeConstant[]> ensureMulti() {
         ArrayList<TypeConstant[]> listMulti = m_listMulti;
-        if (listMulti != null)
-            {
+        if (listMulti != null) {
             return listMulti;
-            }
+        }
 
         m_listMulti = listMulti = new ArrayList<>();
 
         // convert any existing data in the "single" format to the "multi" format
         ArrayList<TypeConstant> listSingle = m_listSingle;
-        if (listSingle != null)
-            {
-            for (TypeConstant type : listSingle)
-                {
+        if (listSingle != null) {
+            for (TypeConstant type : listSingle) {
                 listMulti.add(type == null
                         ? null
                         : new TypeConstant[] {type});
-                }
-            m_listSingle = null;
             }
+            m_listSingle = null;
+        }
 
         return listMulti;
-        }
+    }
 
     /**
      * Determine if the types collected by the TypeConstant indicates a particular common type.
@@ -185,42 +160,36 @@ public class TypeCollector
      * @return the inferred common type (including potentially requiring conversion), or null if no
      *         common type can be determined
      */
-    public TypeConstant inferSingle(TypeConstant typeRequired)
-        {
+    public TypeConstant inferSingle(TypeConstant typeRequired) {
         assert !isMulti();
 
         List<TypeConstant> listTypes = getSingle();
         int cTypes = listTypes.size();
-        if (cTypes == 0 || listTypes.stream().anyMatch(Objects::isNull))
-            {
+        if (cTypes == 0 || listTypes.stream().anyMatch(Objects::isNull)) {
             return null;
-            }
+        }
 
         TypeConstant typeCommon = inferFrom(listTypes.toArray(new TypeConstant[cTypes]), f_pool);
 
-        if (typeRequired != null && typeRequired.containsFormalType(true))
-            {
+        if (typeRequired != null && typeRequired.containsFormalType(true)) {
             typeCommon = typeRequired.resolvePending(f_pool, typeCommon);
-            }
+        }
         typeCommon = Op.selectCommonType(typeCommon, typeRequired, ErrorListener.BLACKHOLE);
 
         if (typeRequired != null &&
-                (typeCommon == null || !typeCommon.isAssignableTo(typeRequired)))
-            {
+                (typeCommon == null || !typeCommon.isAssignableTo(typeRequired))) {
             // approach above didn't quite work; try to match with individual types one-by-one
             TypeConstant typeAlt = Op.selectCommonType(typeRequired, listTypes.get(0), ErrorListener.BLACKHOLE);
-            for (int i = 1; i < cTypes; i++)
-                {
+            for (int i = 1; i < cTypes; i++) {
                 typeAlt = Op.selectCommonType(typeAlt, listTypes.get(i), ErrorListener.BLACKHOLE);
-                }
-
-            if (typeAlt != null)
-                {
-                typeCommon = typeAlt;
-                }
             }
-        return typeCommon;
+
+            if (typeAlt != null) {
+                typeCommon = typeAlt;
+            }
         }
+        return typeCommon;
+    }
 
     /**
      * Determine if the types collected by the TypeConstant indicates a particular common type.
@@ -232,35 +201,29 @@ public class TypeCollector
      * @return the inferred common type (including potentially requiring conversion), or null if no
      *         common type can be determined
      */
-    public TypeConstant[] inferMulti(TypeConstant[] atypeRequired)
-        {
-        if (!isMulti())
-            {
+    public TypeConstant[] inferMulti(TypeConstant[] atypeRequired) {
+        if (!isMulti()) {
             TypeConstant typeRequired = null;
             int          cRequired    = atypeRequired == null ? 0 : atypeRequired.length;
             boolean      fPacked      = false;
-            switch (cRequired)
-                {
-                case 0:
-                    break;
+            switch (cRequired) {
+            case 0:
+                break;
 
-                case 1:
+            case 1:
+                typeRequired = atypeRequired[0];
+                break;
+
+            default:
+                List<TypeConstant> listTypes = getSingle();
+                if (listTypes.size() == 1 && listTypes.get(0).isTuple()) {
+                    fPacked      = true;
+                    typeRequired = f_pool.ensureTupleType(atypeRequired);
+                } else {
                     typeRequired = atypeRequired[0];
-                    break;
-
-                default:
-                    List<TypeConstant> listTypes = getSingle();
-                    if (listTypes.size() == 1 && listTypes.get(0).isTuple())
-                        {
-                        fPacked      = true;
-                        typeRequired = f_pool.ensureTupleType(atypeRequired);
-                        }
-                    else
-                        {
-                        typeRequired = atypeRequired[0];
-                        }
-                    break;
                 }
+                break;
+            }
 
             TypeConstant type = inferSingle(typeRequired);
             return type == null
@@ -268,181 +231,151 @@ public class TypeCollector
                     : fPacked
                         ? type.getParamTypesArray()
                         : new TypeConstant[] {type};
-            }
+        }
 
         // assume that it's not a conditional result until we prove otherwise
         m_FConditional = false;
 
         List<TypeConstant[]> listTypes = getMulti();
         int                  cHeight   = listTypes.size();
-        if (cHeight == 0)
-            {
+        if (cHeight == 0) {
             return TypeConstant.NO_TYPES;
-            }
+        }
 
         // do a quick scan to determine the "shape" of the result, keeping in mind that some of the
         // values may represent a "conditional False" value
         int     cWidth       = -1;
         boolean fConditional = true;
         int     cCondFalse   = 0;
-        for (TypeConstant[] aTypes : m_listMulti)
-            {
-            if (aTypes == null)
-                {
+        for (TypeConstant[] aTypes : m_listMulti) {
+            if (aTypes == null) {
                 return TypeConstant.NO_TYPES;
-                }
+            }
 
             // it is permissible for a single "False" value to be returned if the multi-type is
             // a "conditional" type
             int cTypes = aTypes.length;
-            if (cTypes == 1)
-                {
-                if (aTypes[0].equals(f_pool.typeFalse()))
-                    {
+            if (cTypes == 1) {
+                if (aTypes[0].equals(f_pool.typeFalse())) {
                     ++cCondFalse;
-                    }
-                else
-                    {
+                } else {
                     fConditional = false;
-                    }
                 }
-            else
-                {
+            } else {
                 // since this isn't a "conditional false", anything less than two elements
                 // automatically means that this cannot be a conditional result
-                if (cTypes == 0 || !aTypes[0].isA(f_pool.typeBoolean()))
-                    {
+                if (cTypes == 0 || !aTypes[0].isA(f_pool.typeBoolean())) {
                     fConditional = false;
-                    }
+                }
 
                 // the width of the results is the smallest number of results present guaranteed to
                 // be available
-                if (cWidth < 0 || cWidth > cTypes)
-                    {
+                if (cWidth < 0 || cWidth > cTypes) {
                     cWidth = cTypes;
-                    }
                 }
             }
+        }
 
         // check for void
-        if (cWidth == 0 && cCondFalse < cHeight)
-            {
+        if (cWidth == 0 && cCondFalse < cHeight) {
             return TypeConstant.NO_TYPES;
-            }
+        }
 
         TypeConstant[] aResult;
         int            cReqTypes = atypeRequired == null ? 0 : atypeRequired.length;
-        if (cHeight == cCondFalse)
-            {
+        if (cHeight == cCondFalse) {
             // all of the return values were conditional false
             aResult = new TypeConstant[] {f_pool.typeBoolean()};
-            }
-        else
-            {
+        } else {
             // determine if the result is conditional
             boolean fDone = false;
             aResult = new TypeConstant[cWidth];
-            if (fConditional)
-                {
+            if (fConditional) {
                 // determine the types of each column
                 int            cNonFalse = cHeight - cCondFalse;
                 TypeConstant[] aColType  = new TypeConstant[cNonFalse];
-                for (int iCol = 0; iCol < cWidth; ++iCol)
-                    {
+                for (int iCol = 0; iCol < cWidth; ++iCol) {
                     int iRow = 0;
-                    for (TypeConstant[] aRowType : listTypes)
-                        {
-                        if (aRowType.length > 1)
-                            {
+                    for (TypeConstant[] aRowType : listTypes) {
+                        if (aRowType.length > 1) {
                             aColType[iRow++] = aRowType[iCol];
-                            }
                         }
+                    }
                     assert iRow == cNonFalse;
 
                     // infer the column type
                     TypeConstant typeResult = inferFrom(aColType, f_pool);
-                    if (typeResult == null)
-                        {
+                    if (typeResult == null) {
                         return null;
-                        }
+                    }
 
                     // the first column type must be boolean for this to be conditional
-                    if (iCol == 0 && !typeResult.equals(f_pool.typeBoolean()))
-                        {
+                    if (iCol == 0 && !typeResult.equals(f_pool.typeBoolean())) {
                         // it's not a conditional result; it's just a one-column result
                         cWidth = 1;
                         break;
-                        }
-
-                    aResult[iCol] = typeResult;
                     }
 
-                fDone = true;
+                    aResult[iCol] = typeResult;
                 }
 
+                fDone = true;
+            }
+
             // handle the non-conditional case
-            if (!fDone)
-                {
+            if (!fDone) {
                 fConditional = false;
 
                 // determine the types for each column
                 TypeConstant[] aColType = new TypeConstant[cHeight];
-                for (int iCol = 0; iCol < cWidth; ++iCol)
-                    {
-                    for (int iRow = 0; iRow < cHeight; ++iRow)
-                        {
+                for (int iCol = 0; iCol < cWidth; ++iCol) {
+                    for (int iRow = 0; iRow < cHeight; ++iRow) {
                         aColType[iRow] = listTypes.get(iRow)[iCol];
-                        }
+                    }
                     TypeConstant typeResult = inferFrom(aColType, f_pool);
-                    if (typeResult == null)
-                        {
+                    if (typeResult == null) {
                         return TypeConstant.NO_TYPES;
-                        }
+                    }
                     aResult[iCol] = typeResult;
-                    }
-                }
-
-            // apply knowledge or required types
-            for (int iCol = 0; iCol < cWidth; ++iCol)
-                {
-                TypeConstant typeRequired = iCol < cReqTypes ? atypeRequired[iCol] : null;
-                if (typeRequired != null)
-                    {
-                    aResult[iCol] = Op.selectCommonType(aResult[iCol], typeRequired,
-                            ErrorListener.BLACKHOLE);
-                    }
                 }
             }
 
+            // apply knowledge or required types
+            for (int iCol = 0; iCol < cWidth; ++iCol) {
+                TypeConstant typeRequired = iCol < cReqTypes ? atypeRequired[iCol] : null;
+                if (typeRequired != null) {
+                    aResult[iCol] = Op.selectCommonType(aResult[iCol], typeRequired,
+                            ErrorListener.BLACKHOLE);
+                }
+            }
+        }
+
         m_FConditional = fConditional;
         return aResult;
-        }
+    }
 
     /**
      * @return true iff the resulting type is determinable, has more than one type, the first is
      *         a boolean, and the additional types are not guaranteed to be present when the first
      *         is false
      */
-    public boolean isConditional()
-        {
-        if (m_FConditional == null)
-            {
+    public boolean isConditional() {
+        if (m_FConditional == null) {
             inferMulti(null);
             assert m_FConditional != null;
-            }
+        }
 
         return m_FConditional;
-        }
+    }
 
     /**
      * @param fCond  if true, the resulting type is determinable, has more than one type, the first is
      *         a boolean, and the additional types are not guaranteed to be present when the first
      *         is false
      */
-    public void setConditional(boolean fCond)
-        {
+    public void setConditional(boolean fCond) {
         m_FConditional = fCond;
-        }
+    }
 
     /**
      * Determine if the passed array of types indicates a particular common type.
@@ -453,81 +386,68 @@ public class TypeCollector
      * @return the inferred common type (including potentially requiring conversion), or null if no
      *         common type can be determined
      */
-    public static TypeConstant inferFrom(TypeConstant[] aTypes, ConstantPool pool)
-        {
-        if (aTypes == null)
-            {
+    public static TypeConstant inferFrom(TypeConstant[] aTypes, ConstantPool pool) {
+        if (aTypes == null) {
             return null;
-            }
+        }
 
         int cTypes = aTypes.length;
-        if (cTypes == 0)
-            {
+        if (cTypes == 0) {
             return null;
-            }
+        }
 
         TypeConstant typeCommon = aTypes[0];
-        if (typeCommon == null || typeCommon.containsUnresolved())
-            {
+        if (typeCommon == null || typeCommon.containsUnresolved()) {
             return null;
-            }
+        }
 
         boolean fConvApplied = false;
         boolean fImmutable   = typeCommon.isImmutable();
-        for (int i = 1; i < cTypes; ++i)
-            {
+        for (int i = 1; i < cTypes; ++i) {
             TypeConstant type = aTypes[i];
-            if (type == null)
-                {
+            if (type == null) {
                 return null;
-                }
+            }
 
-            if (!type.isA(typeCommon))
-                {
-                if (typeCommon.isA(type))
-                    {
+            if (!type.isA(typeCommon)) {
+                if (typeCommon.isA(type)) {
                     typeCommon = type;
                     fImmutable = fImmutable && type.isImmutable();
                     continue;
-                    }
+                }
 
-                if (type.getConverterTo(typeCommon) != null)
-                    {
+                if (type.getConverterTo(typeCommon) != null) {
                     fConvApplied = true;
                     continue;
-                    }
+                }
 
-                if (!fConvApplied)
-                    {
+                if (!fConvApplied) {
                     MethodConstant idConv = typeCommon.getConverterTo(type);
-                    if (idConv != null)
-                        {
+                    if (idConv != null) {
                         fConvApplied = true;
                         typeCommon   = type;
                         fImmutable   = fImmutable && type.isImmutable();
                         continue;
-                        }
-                    }
-
-                typeCommon = Op.selectCommonType(type, typeCommon, ErrorListener.BLACKHOLE);
-                if (typeCommon == null)
-                    {
-                    // no obvious common type
-                    return null;
                     }
                 }
+
+                typeCommon = Op.selectCommonType(type, typeCommon, ErrorListener.BLACKHOLE);
+                if (typeCommon == null) {
+                    // no obvious common type
+                    return null;
+                }
             }
+        }
 
         // an enum value type is replaced with the type of the enum; see Op.selectCommonType()
         TypeInfo info = typeCommon.ensureTypeInfo();
-        if (info.getFormat() == Format.ENUMVALUE)
-            {
+        if (info.getFormat() == Format.ENUMVALUE) {
             typeCommon = info.getExtends();
             assert typeCommon != null;
-            }
+        }
 
         return fImmutable ? typeCommon.freeze() : typeCommon;
-        }
+    }
 
 
     // ----- data members --------------------------------------------------------------------------
@@ -553,4 +473,4 @@ public class TypeCollector
      * This is a cached result of analyzing the collector for a common type.
      */
     private transient Boolean m_FConditional;
-    }
+}

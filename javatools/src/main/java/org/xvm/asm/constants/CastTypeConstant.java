@@ -21,50 +21,42 @@ import org.xvm.asm.ConstantPool;
  * ConstantPool.
  */
 public class CastTypeConstant
-        extends IntersectionTypeConstant
-    {
-    public CastTypeConstant(ConstantPool pool, TypeConstant constType1, TypeConstant constType2)
-        {
+        extends IntersectionTypeConstant {
+    public CastTypeConstant(ConstantPool pool, TypeConstant constType1, TypeConstant constType2) {
         super(pool, constType2.combine(pool, constType1), constType2);
 
         m_constType1Orig = constType1;
-        }
+    }
 
     @Override
-    public TypeConstant resolveTypedefs()
-        {
+    public TypeConstant resolveTypedefs() {
         return getUnderlyingType();
-        }
+    }
 
     @Override
-    protected Relation calculateRelationToLeft(TypeConstant typeLeft)
-        {
+    protected Relation calculateRelationToLeft(TypeConstant typeLeft) {
         return getUnderlyingType().calculateRelationToLeft(typeLeft);
-        }
+    }
 
     @Override
-    protected Relation calculateRelationToRight(TypeConstant typeRight)
-        {
+    protected Relation calculateRelationToRight(TypeConstant typeRight) {
         return getUnderlyingType().calculateRelationToRight(typeRight);
-        }
+    }
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.CastType;
-        }
+    }
 
     @Override
-    protected void assemble(DataOutput out)
-        {
+    protected void assemble(DataOutput out) {
         throw new IllegalStateException();
-        }
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return m_constType1Orig.getValueString() + ".as(" + m_constType2.getValueString() + ")";
-        }
+    }
 
     private final TypeConstant m_constType1Orig;
-    }
+}

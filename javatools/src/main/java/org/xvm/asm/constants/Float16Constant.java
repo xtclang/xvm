@@ -16,8 +16,7 @@ import org.xvm.util.Hash;
  * Represent a 16-bit binary floating point constant.
  */
 public class Float16Constant
-        extends FloatConstant
-    {
+        extends FloatConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -30,11 +29,10 @@ public class Float16Constant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public Float16Constant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
         m_flVal = toFloat(in.readUnsignedShort());
-        }
+    }
 
     /**
      * Construct a constant whose value is a 16-bit binary floating point.
@@ -42,18 +40,16 @@ public class Float16Constant
      * @param pool   the ConstantPool that will contain this Constant
      * @param flVal  the floating point value
      */
-    public Float16Constant(ConstantPool pool, float flVal)
-        {
+    public Float16Constant(ConstantPool pool, float flVal) {
         super(pool);
 
         float flVal16 = toFloat(toHalf(flVal));
 
-        if (Float.isFinite(flVal) && !Float.isFinite(flVal16))
-            {
+        if (Float.isFinite(flVal) && !Float.isFinite(flVal16)) {
             throw new IllegalArgumentException("value out of range: " + flVal);
-            }
-        m_flVal = flVal16;
         }
+        m_flVal = flVal16;
+    }
 
 
     // ----- type-specific methods -----------------------------------------------------------------
@@ -65,10 +61,9 @@ public class Float16Constant
      *
      * @return the sum, as a Float16Constant
      */
-    public Float16Constant add(Float16Constant that)
-        {
+    public Float16Constant add(Float16Constant that) {
         return getConstantPool().ensureFloat16Constant(this.m_flVal + that.m_flVal);
-        }
+    }
 
 
     // ----- ValueConstant methods -----------------------------------------------------------------
@@ -78,67 +73,58 @@ public class Float16Constant
      * @return  the constant's value as a Java Float
      */
     @Override
-    public Float getValue()
-        {
+    public Float getValue() {
         return Float.valueOf(m_flVal);
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.Float16;
-        }
+    }
 
     @Override
-    protected Object getLocator()
-        {
+    protected Object getLocator() {
         return getValue();
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof Float16Constant))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof Float16Constant)) {
             return -1;
-            }
-        return Float.compare(this.m_flVal, ((Float16Constant) that).m_flVal);
         }
+        return Float.compare(this.m_flVal, ((Float16Constant) that).m_flVal);
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return Float.toString(m_flVal);
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         out.writeShort(toHalf(m_flVal));
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "value=" + getValueString();
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_flVal);
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -151,8 +137,7 @@ public class Float16Constant
      *
      * @return a 32-bit float
      */
-    public static float toFloat(int nHalf)
-        {
+    public static float toFloat(int nHalf) {
         // notes from the IEEE-754 specification:
 
         // left to right bits of a binary floating point number:
@@ -208,33 +193,25 @@ public class Float16Constant
         // from: https://stackoverflow.com/questions/6162651/half-precision-floating-point-in-java
         int mant = nHalf & 0x03ff;                      // 10 bits mantissa
         int exp  = nHalf & 0x7c00;                      // 5 bits exponent
-        if (exp == 0x7c00)                              // NaN/Inf
-            {
+        if (exp == 0x7c00) {                            // NaN/Inf
             exp = 0x3fc00;                              // -> NaN/Inf
-            }
-        else if (exp != 0)                              // normalized value
-            {
+        } else if (exp != 0) {                          // normalized value
             exp += 0x1c000;                             // exp - 15 + 127
-            if (mant == 0 && exp > 0x1c400)             // smooth transition
-                {
+            if (mant == 0 && exp > 0x1c400) {           // smooth transition
                 return Float.intBitsToFloat((nHalf & 0x8000) << 16 | exp << 13 | 0x3ff);
-                }
             }
-        else if (mant != 0)                             // && exp==0 -> subnormal
-            {
+        } else if (mant != 0) {                         // && exp==0 -> subnormal
             exp = 0x1c400;                              // make it normal
-            do
-                {
+            do {
                 mant <<= 1;                             // mantissa * 2
                 exp   -= 0x400;                         // decrease exp by 1
-                }
-            while ((mant & 0x400) == 0);                // while not normal
+            } while ((mant & 0x400) == 0);              // while not normal
             mant &= 0x3ff;                              // discard subnormal bit
-            }                                           // else +/-0 -> +/-0
+        }                                               // else +/-0 -> +/-0
         return Float.intBitsToFloat(                    // combine all parts
                 (nHalf & 0x8000) << 16                  // sign  << ( 31 - 15 )
                 | (exp | mant) << 13);                  // value << ( 23 - 10 )
-        }
+    }
 
     /**
      * Convert a "full precision" 32-bit float to a 16-bit "half precision" floating point value.
@@ -244,40 +221,36 @@ public class Float16Constant
      * @return a 16-bit floating point value stored in a 16-bit Java int, whose bits are encoded
      *         using the IEEE-754 binary-radix floating point format
      */
-    public static int toHalf(float flVal)
-        {
+    public static int toHalf(float flVal) {
         // from: https://stackoverflow.com/questions/6162651/half-precision-floating-point-in-java
         int fbits = Float.floatToIntBits(flVal);
         int sign  = fbits >>> 16 & 0x8000;              // sign only
         int val   = (fbits & 0x7fffffff) + 0x1000;      // rounded value
 
-        if (val >= 0x47800000)                          // might be or become NaN/Inf
-            {                                           // avoid Inf due to rounding
-            if ((fbits & 0x7fffffff) >= 0x47800000)     // is or must become NaN/Inf
-                {
+        if (val >= 0x47800000) {                        // might be or become NaN/Inf
+                                                        // avoid Inf due to rounding
+            if ((fbits & 0x7fffffff) >= 0x47800000) {   // is or must become NaN/Inf
                 return val < 0x7f800000                 // was value but too large
                         ? sign | 0x7c00                 // make it +/-Inf
                         : sign | 0x7c00 |               // remains +/-Inf or NaN
                           (fbits & 0x007fffff) >>> 13;  // keep NaN (and Inf) bits
-                }
+            }
             return sign | 0x7bff;                       // unrounded not quite Inf
-            }
+        }
 
-        if (val >= 0x38800000)                          // remains normalized value
-            {
+        if (val >= 0x38800000) {                        // remains normalized value
             return sign | val - 0x38000000 >>> 13;      // exp - 127 + 15
-            }
+        }
 
-        if (val < 0x33000000)                           // too small for subnormal
-            {
+        if (val < 0x33000000) {                         // too small for subnormal
             return sign;                                // becomes +/-0
-            }
+        }
 
         val = (fbits & 0x7fffffff) >>> 23;              // tmp exp for subnormal calc
         return sign | ((fbits & 0x7fffff | 0x800000)    // add subnormal bit
                 + (0x800000 >>> val - 102)              // round depending on cut off
                 >>> 126 - val );                        // div by 2^(1-(exp-127+15)) and >> 13 | exp=0
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -286,4 +259,4 @@ public class Float16Constant
      * The constant value, stored as a 32-bit float.
      */
     private final float m_flVal;
-    }
+}

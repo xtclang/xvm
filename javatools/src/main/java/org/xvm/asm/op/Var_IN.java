@@ -1,9 +1,10 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import java.lang.classfile.CodeBuilder;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -12,13 +13,15 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
 
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Slot;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * VAR_IN TYPE, STRING, rvalue-src ; (next register is an initialized named variable)
@@ -108,6 +111,17 @@ public class Var_IN
     public String getName(Constant[] aconst) {
         return getName(aconst, m_constName, m_nNameId);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        Slot slot = bctx.introduceVar(code, m_nVar, m_nType, m_nNameId);
+        bctx.loadArgument(code, m_nValueId);
+        bctx.storeValue(code, slot);
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int m_nNameId;
     private int m_nValueId;
