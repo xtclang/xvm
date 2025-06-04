@@ -95,7 +95,7 @@ service Dispatcher {
             ProcessRequest: if (serviceInfo == Null) {
                 RequestIn request = new Http1Request(requestInfo, sessionBroker);
                 handlePlainTextSecrets(tls, requestInfo, request);
-                response = catalog.webApp.handleUnhandledError^(request, HttpStatus.NotFound);
+                response = catalog.webApp.handleUnhandledError^(request, NotFound);
             } else {
                 // split what's left of the URI into a path, a query, and a fragment
                 String? query    = Null;
@@ -145,7 +145,7 @@ service Dispatcher {
                         bundle = bundlePool.allocateBundle(errorWsid);
                         if (ErrorHandler onError ?= bundle.ensureErrorHandler(errorWsid)) {
                             handlePlainTextSecrets(tls, requestInfo, request, bundle=bundle);
-                            response = onError^(request, HttpStatus.NotFound);
+                            response = onError^(request, NotFound);
                             break ProcessRequest;
                         } else {
                             bundlePool.releaseBundle(bundle);
@@ -153,7 +153,7 @@ service Dispatcher {
                         }
                     }
                     handlePlainTextSecrets(tls, requestInfo, request);
-                    response = catalog.webApp.handleUnhandledError^(request, HttpStatus.NotFound);
+                    response = catalog.webApp.handleUnhandledError^(request, NotFound);
                     break ProcessRequest;
                 }
 

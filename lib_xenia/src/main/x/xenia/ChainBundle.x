@@ -8,6 +8,9 @@ import convert.Format;
 
 import ecstasy.collections.CollectArray;
 
+import ecstasy.io.BinaryInput;
+import ecstasy.io.FileInputStream;
+
 import net.UriTemplate;
 
 import sec.Credential;
@@ -31,6 +34,7 @@ import web.TrustLevel;
 import web.UriParam;
 
 import web.responses.SimpleResponse;
+import web.responses.StreamResponse;
 
 import web.security.Authenticator;
 import web.security.Authenticator.Attempt;
@@ -767,7 +771,7 @@ service ChainBundle {
             return (request, result) ->
                 (result[0].as(Boolean)
                     ? result[1].as(ResponseOut)
-                    : new SimpleResponse(HttpStatus.NotFound));
+                    : new SimpleResponse(NotFound));
 
         case (Type<HttpStatus>, False):
             return (request, result) ->
@@ -777,7 +781,7 @@ service ChainBundle {
             return (request, result) ->
                 new SimpleResponse(result[0].as(Boolean)
                                     ? result[1].as(HttpStatus)
-                                    : HttpStatus.NotFound);
+                                    : NotFound);
         }
 
         // check for a union type where one type is `ResponseOut`
@@ -802,6 +806,48 @@ service ChainBundle {
             }
         }
 
+        MediaType|MediaType[] produces = endpoint.produces;
+
+        // "@StreamingResponse" endpoints allow `File` or `BinaryInput` to be returned
+        if (endpoint.allowResponseStreaming) {
+            MediaType mediaType;
+            if (produces == []) {
+                mediaType = Binary;
+            } else if (produces.is(MediaType)) {
+                mediaType = produces;
+            } else {
+                throw new IllegalState($|Method "{endpoint.method}": \
+                                        |multiple "StreamingResponse" mediaTypes are not supported
+                                        );
+            }
+
+            switch (type.is(_), cond) {
+            case (Type<File>, False):
+                return (request, result) ->
+                    createFileResponse(result[0].as(File), mediaType, union);
+
+            case (Type<File>, True):
+                return (request, result) ->
+                    (result[0].as(Boolean)
+                        ? createFileResponse(result[1].as(File), mediaType, union)
+                        : new SimpleResponse(NotFound));
+
+            case (Type<BinaryInput>, False):
+                return (request, result) ->
+                    createBinaryResponse(result[0].as(BinaryInput), mediaType, union);
+
+            case (Type<BinaryInput>, True):
+                return (request, result) ->
+                    (result[0].as(Boolean)
+                        ? createBinaryResponse(result[1].as(BinaryInput), mediaType, union)
+                        : new SimpleResponse(NotFound));
+            default:
+                throw new IllegalState($|Method "{endpoint.method}": \
+                                        |unsupported "StreamingResponse" return type "{type}"
+                                        );
+            }
+        }
+
         // helper function to look up a Codec based on the result type and the MediaType
         Codec findCodec(EndpointInfo endpoint, MediaType mediaType, Type type) {
             if (Codec codec := registry.findCodec(mediaType, type)) {
@@ -812,78 +858,107 @@ service ChainBundle {
                                     );
         }
 
-        MediaType|MediaType[] produces = endpoint.produces;
         if (produces == []) {
             produces = Json;
         }
         if (produces.is(MediaType)) {
-            MediaType mediaType = produces;
-            Codec     codec     = findCodec(endpoint, mediaType, type);
+            MediaType media = produces;
+            Codec     codec = findCodec(endpoint, media, type);
 
             if (cond) {
                 return (request, result) ->
                     result[0].as(Boolean)
-                       ? createSimpleResponse(mediaType, codec, request, result[1])
-                       : new SimpleResponse(HttpStatus.NotFound);
-            } else if (union) {
-                return (request, result) -> {
-                    Object response = result[0];
-                    if (response.is(ResponseOut)) {
-                        return response;
-                    } else if (response.is(HttpStatus)) {
-                        return new SimpleResponse(response);
-                    } else {
-                        return createSimpleResponse(mediaType, codec, request, response);
-                    }};
+                       ? createSimpleResponse(media, codec, request, result[1], union)
+                       : new SimpleResponse(NotFound);
             } else {
                 return (request, result) ->
-                    createSimpleResponse(mediaType, codec, request, result[0]);
+                    createSimpleResponse(media, codec, request, result[0], union);
             }
 
         } else {
-            MediaType[] mediaTypes = produces;
-            Codec[]     codecs     = new Codec[mediaTypes.size](i -> findCodec(endpoint, mediaTypes[i], type));
+            MediaType[] medias = produces;
+            Codec[]     codecs = new Codec[medias.size](i -> findCodec(endpoint, medias[i], type));
 
             if (cond) {
                 return (request, result) ->
                     result[0].as(Boolean)
-                       ? createSimpleResponse(mediaTypes, codecs, request, result[1])
-                       : new SimpleResponse(HttpStatus.NotFound);
-            } else if (union) {
-                return (request, result) -> {
-                    Object response = result[0];
-                    if (response.is(ResponseOut)) {
-                        return response;
-                    } else if (response.is(HttpStatus)) {
-                        return new SimpleResponse(response);
-                    } else {
-                        return createSimpleResponse(mediaTypes, codecs, request, response);
-                    }};
+                       ? createSimpleResponse(medias, codecs, request, result[1], union)
+                       : new SimpleResponse(NotFound);
             } else {
                 return (request, result) ->
-                    createSimpleResponse(mediaTypes, codecs, request, result[0]);
+                    createSimpleResponse(medias, codecs, request, result[0], union);
             }
         }
+    }
+
+    /**
+     * Create a streaming response for a file.
+     */
+    private static ResponseOut createFileResponse(Object result, MediaType mediaType, Boolean union) {
+        if (union) {
+            if (result.is(ResponseOut)) {
+                return result;
+            } else if (result.is(HttpStatus)) {
+                return new SimpleResponse(result);
+            }
+        }
+
+        File file = result.as(File);
+        return file.exists
+                ? new StreamResponse(OK, mediaType, new FileInputStream(file))
+                : new SimpleResponse(NotFound);
+    }
+
+    /**
+     * Create a streaming response for a BinaryInput.
+     */
+    private static ResponseOut createBinaryResponse(Object result, MediaType mediaType, Boolean union) {
+        if (union) {
+            if (result.is(ResponseOut)) {
+                return result;
+            } else if (result.is(HttpStatus)) {
+                return new SimpleResponse(result);
+            }
+        }
+
+        BinaryInput bin = result.as(BinaryInput);
+        return new StreamResponse(OK, mediaType, bin);
     }
 
     /**
      * Create an HTTP response for a single-media producer.
      */
     private static ResponseOut createSimpleResponse(
-            MediaType mediaType, Codec codec, RequestIn request, Object result) {
+            MediaType mediaType, Codec codec, RequestIn request, Object result, Boolean union) {
+
+        if (union) {
+            if (result.is(ResponseOut)) {
+                return result;
+            } else if (result.is(HttpStatus)) {
+                return new SimpleResponse(result);
+            }
+        }
 
         if (!request.accepts.matches(mediaType)) {
             TODO find a converter and convert
         }
 
-        return new SimpleResponse(HttpStatus.OK, mediaType, codec.encode(result));
+        return new SimpleResponse(OK, mediaType, codec.encode(result));
     }
 
     /**
      * Create an HTTP response for a multi-media producer.
      */
     private static ResponseOut createSimpleResponse(
-            MediaType[] mediaTypes, Codec[] codecs, RequestIn request, Object result) {
+            MediaType[] mediaTypes, Codec[] codecs, RequestIn request, Object result, Boolean union) {
+
+        if (union) {
+            if (result.is(ResponseOut)) {
+                return result;
+            } else if (result.is(HttpStatus)) {
+                return new SimpleResponse(result);
+            }
+        }
 
         (MediaType, Codec) resolveContentType(
                 MediaType[] mediaTypes, Codec[] codecs, AcceptList accepts) {
@@ -899,6 +974,6 @@ service ChainBundle {
 
         (MediaType mediaType, Codec codec) = resolveContentType(mediaTypes, codecs, request.accepts);
 
-        return new SimpleResponse(HttpStatus.OK, mediaType, codec.encode(result));
+        return new SimpleResponse(OK, mediaType, codec.encode(result));
     }
 }

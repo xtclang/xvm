@@ -196,15 +196,15 @@ module Hello {
                     : NotFound;
             }
 
-            @StreamingResponse // TODO not yet implemented
-            @Get("streamF{/name}")
+            @StreamingResponse
+            @Get("streamFile{/name}")
             File streamOutFile(String name) {
                 @Inject Directory curDir;
                 return curDir.fileFor(name);
             }
 
-            @StreamingResponse // TODO not yet implemented
-            @Get("streamS{/name}")
+            @StreamingResponse
+            @Get("streamStream{/name}")
             BinaryInput|HttpStatus streamOutStream(String name) {
                 @Inject Directory curDir;
                 File file = curDir.fileFor(name);

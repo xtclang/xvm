@@ -110,7 +110,7 @@ annotation WebService(String path, Version? currentVer = Null, Version? defaultV
         assert this.request == Null;
         this.request = request;
         try {
-            return handle(request).freeze(True); // TODO GG move ".freeze()" into the "handle" and add support for streaming there
+            return handle(request).freeze(True);
         } catch (RequestAborted e) {
             return e.makeResponse();
         } catch (Exception e) {

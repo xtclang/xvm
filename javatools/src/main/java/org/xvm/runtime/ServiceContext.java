@@ -1096,10 +1096,10 @@ public class ServiceContext
 
             if (hArg.isPassThrough(container))
                 {
-                if (hArg instanceof FunctionHandle hFn)
+                if (hArg instanceof FunctionHandle hFn && container != null)
                     {
-                    // this service is returning a function; any call to that function will be
-                    // executed in the context of this service
+                    // this service is passing a function to another container; any call to that
+                    // function should be executed in the context of this container
                     ahArg[i] = xRTFunction.makeAsyncDelegatingHandle(getService(), hFn);
                     }
                 }

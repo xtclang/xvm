@@ -27,7 +27,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
      *  - a user defined method called at request time
      */
     typedef Permission? | function Permission(RequestIn) | Method<WebService, <>, <Boolean>>
-        as Restriction;
+            as Restriction;
 
     /**
      * The list of [WebServiceInfo] objects describing the [WebService] classes discovered within
@@ -43,16 +43,13 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
     /**
      * The total number of WebServices.
      */
-    Int serviceCount.get() {
-        return services.size;
-    }
+    Int serviceCount.get() = services.size;
 
     /**
      * The total number of endpoints.
      */
-    @Lazy Int endpointCount.calc() {
-        return services.map(WebServiceInfo.endpointCount).reduce(new aggregate.Sum<Int>());
-    }
+    @Lazy Int endpointCount.calc() =
+            services.map(WebServiceInfo.endpointCount).reduce(new aggregate.Sum<Int>());
 
     /**
      * Find the most specific "onError" MethodInfo for the specified service.
@@ -86,9 +83,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
         /**
          * The number of endpoints for this WebService.
          */
-        Int endpointCount.get() {
-            return endpoints.size + (defaultGet == Null ? 0 : 1);
-        }
+        Int endpointCount.get() = endpoints.size + (defaultGet == Null ? 0 : 1);
     }
 
     /**
@@ -98,11 +93,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
         /**
          * The HTTP Method.
          */
-        HttpMethod? httpMethod.get() {
-            return method.is(Observe|Intercept)
-                    ? method.httpMethod
-                    : Null;
-        }
+        HttpMethod? httpMethod.get() = method.is(Observe|Intercept) ? method.httpMethod : Null;
     }
 
     /**
@@ -120,7 +111,6 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
                  MediaType|MediaType[] serviceConsumes,
                  Restriction           serviceRestriction,
                  Boolean               serviceStreamRequest,
-                 Boolean               serviceStreamResponse
                  ) {
             this.id = id;
             construct MethodInfo(method, wsid);
@@ -183,6 +173,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
                     requiredParamCount++;
                 }
             }
+
             if (!optionalVars.empty) {
                 this.template = template.withOptionalVariables(optionalVars);
             }
@@ -230,24 +221,20 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
                                 : servicePath + templateString)
                         : serviceRestriction;
 
-            this.allowRequestStreaming  = method.is(StreamingRequest)  || serviceStreamRequest;
-            this.allowResponseStreaming = method.is(StreamingResponse) || serviceStreamResponse;
+            this.allowRequestStreaming  = method.is(StreamingRequest) || serviceStreamRequest;
+            this.allowResponseStreaming = method.is(StreamingResponse);
         }
 
         @Override
         Endpoint method;
 
         @Override
-        HttpMethod httpMethod.get() {
-            return method.httpMethod;
-        }
+        HttpMethod httpMethod.get() = method.httpMethod;
 
         /**
          * Indicates if the endpoint return value is a _conditional return_.
          */
-        Boolean conditionalResult.get() {
-            return method.conditionalResult;
-        }
+        Boolean conditionalResult.get() = method.conditionalResult;
 
         /**
          * The endpoint id.
@@ -325,7 +312,6 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
             return False;
         }
     }
-
 
     // ----- Catalog building ----------------------------------------------------------------------
 
@@ -554,11 +540,10 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
                 serviceRequiresSession &= !clz.is(SessionOptional);
             }
 
-            MediaTypes  serviceProduces       = clz.is(Produces) ? clz.produces : appProduces;
-            MediaTypes  serviceConsumes       = clz.is(Consumes) ? clz.consumes : appConsumes;
-            Restriction serviceRestriction    = clz.is(Restrict) ? computeRestriction(clz) : appRestriction;
-            Boolean     serviceStreamRequest  = clz.is(StreamingRequest)  || appStreamRequest;
-            Boolean     serviceStreamResponse = clz.is(StreamingResponse) || appStreamResponse;
+            MediaTypes  serviceProduces      = clz.is(Produces) ? clz.produces : appProduces;
+            MediaTypes  serviceConsumes      = clz.is(Consumes) ? clz.consumes : appConsumes;
+            Restriction serviceRestriction   = clz.is(Restrict) ? computeRestriction(clz) : appRestriction;
+            Boolean     serviceStreamRequest = clz.is(StreamingRequest)  || appStreamRequest;
 
             EndpointInfo[] endpoints    = new EndpointInfo[];
             EndpointInfo?  defaultGet   = Null;
@@ -593,7 +578,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
                                         serviceTls, serviceRedirectTls,
                                         serviceRequiresSession, serviceTrust,
                                         serviceProduces, serviceConsumes, serviceRestriction,
-                                        serviceStreamRequest, serviceStreamResponse);
+                                        serviceStreamRequest);
                     } else {
                         throw new IllegalState($|Multiple "Default" endpoints on "{clz}"
                                                 );
@@ -607,7 +592,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
                                         serviceTls, serviceRedirectTls,
                                         serviceRequiresSession, serviceTrust,
                                         serviceProduces, serviceConsumes, serviceRestriction,
-                                        serviceStreamRequest, serviceStreamResponse);
+                                        serviceStreamRequest);
                     if (templates.addIfAbsent($"{info.httpMethod.name} {info.template}")) {
                         endpoints.add(info);
                     } else {
