@@ -250,7 +250,7 @@ service Catalog<Schema extends RootSchema>
     @Concurrent
     @Lazy json.Schema internalJsonSchema.calc() {
         return new json.Schema(
-            randomAccess     = True, // TODO GG: test without this (fails)
+            randomAccess     = True,
             enableMetadata   = True,
             enablePointers   = True,
             enableReflection = True,
