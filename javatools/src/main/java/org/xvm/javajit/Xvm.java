@@ -502,6 +502,7 @@ public class Xvm {
                 unique = pkg + ".alt" + (++count);
             }
 
+            // TODO CP can we defer this?
             ModuleLoader loader   = new ModuleLoader(tsl, module, unique);
             String[]     packages = packagesByModule.get(moduleName);
             String[]     original = packages;
