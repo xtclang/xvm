@@ -3,7 +3,12 @@ package org.xvm.asm;
 
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+
+import java.security.DigestOutputStream;
+import java.security.MessageDigest;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -216,15 +221,35 @@ public class ModuleStructure
 
     /**
      * Produce a strong, repeatable hash of the module. This value is intended to show that two
-     * modules with the same name, version, etc. are truly the same by hashing every constituent  or are not the same.
+     * modules with the same name, version, etc. are truly the same by hashing every constituent
+     * or are not the same.
      *
      * @return a digest value that acts as strong hash of the module
      */
     public byte[] getDigest()
         {
-        // TODO GG
-        return (getName() + '/' + getVersions().toString() + '/' + getConditionalNames().toString()
-                + '/' + getDependencies().toString()).getBytes();
+        assert !isFingerprint();
+
+        byte[] abDigest = m_abDigest;
+        if (abDigest == null)
+            {
+            try
+                {
+                DigestOutputStream dos = new DigestOutputStream(OutputStream.nullOutputStream(),
+                                            MessageDigest.getInstance("SHA-256"));
+                DataOutputStream   out = new DataOutputStream(dos);
+                assemble(out);
+                assembleChildren(out);
+                out.close();
+
+                abDigest = m_abDigest = dos.getMessageDigest().digest();
+                }
+            catch (Exception e)
+                {
+                throw new RuntimeException(e);
+                }
+            }
+        return abDigest;
         }
 
     /**
@@ -555,6 +580,14 @@ public class ModuleStructure
         return pkg;
         }
 
+    @Override
+    protected void markModified()
+        {
+        super.markModified();
+
+        m_abDigest = null;
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -854,4 +887,9 @@ public class ModuleStructure
      * this module.
      */
     private transient PackageStructure m_pkgImport;
+
+    /**
+     * Cached crypto-digest of this module structure.
+     */
+    private transient byte[] m_abDigest;
     }
