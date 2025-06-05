@@ -136,7 +136,7 @@ public class Connector
     /**
      * The module repository.
      */
-    private final ModuleRepository f_repository;
+    protected final ModuleRepository f_repository;
 
     /**
      * The runtime associated with this Connector.
