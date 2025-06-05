@@ -3,6 +3,7 @@ package org.xvm.javajit;
 
 import java.lang.ref.WeakReference;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
@@ -159,7 +160,7 @@ public class Xvm {
     /**
      * Used to sort ModuleLoaders by their ModuleStructure's ModuleConstant identities.
      */
-    static final Comparator<ModuleLoader> LoaderByModuleId = 
+    static final Comparator<ModuleLoader> LoaderByModuleId =
             Comparator.comparing(l -> l.module.getIdentityConstant());
 
     /**
@@ -336,7 +337,7 @@ public class Xvm {
         // makes comparison of type systems much simpler and more efficient
         shared = sorted(shared, LoaderByModuleId);
         owned  = sorted(owned, StructureByModuleId);
-        
+
         // given the requested shape of the TypeSystem, make sure no other thread is simultaneously
         // racing us to build the same TypeSystem; note: this method will deadlock if it recurses
         synchronized (mutex(typeSystemKey(owned.length > 0 ? owned : modulesOf(shared)))) {
@@ -459,7 +460,7 @@ public class Xvm {
     boolean sameModule(ModuleStructure module1, ModuleStructure module2) {
         return module1.isRefined() && module2.isRefined()
             && module1.getName().equals(module2.getName())
-            && module1.equals(module2); // TODO GG optimize using hash, defines, version, optional deps
+            && Arrays.equals(module1.getDigest(), module2.getDigest());
     }
 
     /**
