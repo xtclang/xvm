@@ -124,7 +124,6 @@ public class TypeSystem {
         }
 
         // build a list of modules that will compose the core aka native TypeSystem
-        // note: use children() because ensureChildByNameMap() is always empty (TODO GG?)
         ArrayList<ModuleStructure> list = new ArrayList<>(fs.children());
         list.sort(StructureByModuleId);
         ModuleLoader[]    shared = new ModuleLoader[0];
