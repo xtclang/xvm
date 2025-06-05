@@ -123,6 +123,20 @@ public class MultiMethodStructure
         }
 
     @Override
+    public Map<String, Component> getChildByNameMap()
+        {
+        // there could be number of child modules with the same name;
+        // "Use f_moduleById or children() instead"
+        throw new UnsupportedOperationException();
+        }
+
+    @Override
+    public Map<String, Component> ensureChildByNameMap()
+        {
+        return getChildByNameMap();
+        }
+
+    @Override
     protected boolean addChild(Component child)
         {
         // MultiMethodStructure can only hold MethodStructures

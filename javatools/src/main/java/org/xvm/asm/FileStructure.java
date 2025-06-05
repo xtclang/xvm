@@ -198,9 +198,8 @@ public class FileStructure
         try (var ignore = ConstantPool.withPool(pool))
             {
             // add fingerprints
-            for (Component child : module.getFileStructure().children())
+            for (ModuleStructure moduleChild : module.getFileStructure().children())
                 {
-                ModuleStructure moduleChild = (ModuleStructure) child;
                 if (moduleChild.isFingerprint() && getModule(moduleChild.getIdentityConstant()) == null)
                     {
                     ModuleStructure moduleChildClone = moduleChild.cloneBody();
@@ -1129,6 +1128,20 @@ public class FileStructure
         }
 
     @Override
+    public Map<String, Component> getChildByNameMap()
+        {
+        // there could be number of child modules with the same name;
+        // "Use f_moduleById or children() instead"
+        throw new UnsupportedOperationException();
+        }
+
+    @Override
+    public Map<String, Component> ensureChildByNameMap()
+        {
+        return getChildByNameMap();
+        }
+
+    @Override
     public boolean addChild(Component child)
         {
         // FileStructure can only hold ModuleStructures
@@ -1233,7 +1246,7 @@ public class FileStructure
         {
         return new LinkedIterator(
                 Collections.singleton(m_pool).iterator(),
-                getChildByNameMap().values().iterator());
+                children().iterator());
         }
 
     @Override
