@@ -9,12 +9,13 @@ public class Ctx {
         this.xvm = xvm;
     }
 
-    public static final ScopedValue<Ctx> $Context = ScopedValue.newInstance();
+//    public static final ScopedValue<Ctx> $Context = ScopedValue.newInstance();
 
     public final Xvm xvm;
 
     public static Ctx get() {
-        return $Context.get();
+//        return $Context.get();
+        return null;
     }
 
     // xCnt container;
