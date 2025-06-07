@@ -260,13 +260,16 @@ public class ModuleStructure
             }
 
         Map<ModuleConstant, ModuleType> mapModuleTypes = new HashMap<>();
-        for (ModuleStructure module : getFileStructure().children())
+        Consumer<Component> visitor = component ->
             {
-            if (module.isFingerprint())
+            if (component instanceof PackageStructure pkg && pkg.isModuleImport())
                 {
+                ModuleStructure module = pkg.getImportedModule();
+                assert module != null;
                 mapModuleTypes.put(module.getIdentityConstant(), module.getModuleType());
                 }
-            }
+            };
+        visitChildren(visitor, true, true);
         return mapModuleTypes;
         }
 
