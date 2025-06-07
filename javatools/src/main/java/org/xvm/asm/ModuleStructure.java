@@ -13,14 +13,17 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import java.util.function.Consumer;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.NamedCondition;
 import org.xvm.asm.constants.VersionConstant;
+import org.xvm.asm.constants.VersionedCondition;
 
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
@@ -137,12 +140,41 @@ public class ModuleStructure
             }
         else
             {
-            // TODO GG
+            // REVIEW CP: doesn't look right; how does the FileStructure's tree gets computed
             if (isMainModule())
                 {
                 tree.putAll(getFileStructure().getVersionTree());
                 }
+            else
+                {
+                tree = collectVersions();
+                }
             }
+        return tree;
+        }
+
+    /**
+     * An implementation for {@link #getVersions()}
+     */
+    protected VersionTree collectVersions()
+        {
+        VersionTree tree = new VersionTree();
+        Consumer<Component> visitor = component ->
+            {
+            ConditionalConstant constCond = component.getCondition();
+            if (constCond != null)
+                {
+                for (ConditionalConstant condTerminal : constCond.terminals())
+                    {
+                    if (condTerminal instanceof VersionedCondition condVersioned)
+                        {
+                        tree.put(condVersioned.getVersion(), null);
+                        }
+                    }
+                }
+            };
+        visitor.accept(this);
+        visitChildren(visitor, true, true);
         return tree;
         }
 
@@ -162,12 +194,44 @@ public class ModuleStructure
      * indicate that the name was explicitly NOT defined, and `TRUE` to indicate that the name was
      * explicitly defined.
      *
+     * Note: once the map is collected, it will be retained and allowed to be mutated by the
+     *       "refining" process.
+     *
      * @return a Map containing the conditional names known within this module
      */
     public Map<String, Boolean> getConditionalNames()
         {
-        // TODO GG
-        return Collections.emptyMap();
+        Map<String, Boolean> mapCondNames = m_mapCondNames;
+        if (mapCondNames == null)
+            {
+            mapCondNames = m_mapCondNames = collectConditionalNames();
+            }
+        return mapCondNames;
+        }
+
+    /**
+     * An implementation for {@link #getConditionalNames()}
+     */
+    protected Map<String, Boolean> collectConditionalNames()
+        {
+        Map<String, Boolean> mapConditions = new HashMap<>();
+        Consumer<Component> visitor = component ->
+            {
+            ConditionalConstant constCond = component.getCondition();
+            if (constCond != null)
+                {
+                for (ConditionalConstant condTerminal : constCond.terminals())
+                    {
+                    if (condTerminal instanceof NamedCondition condName)
+                        {
+                        mapConditions.put(condName.getName(), null);
+                        }
+                    }
+                }
+            };
+        visitor.accept(this);
+        visitChildren(visitor, true, true);
+        return mapConditions;
         }
 
     /**
@@ -195,8 +259,15 @@ public class ModuleStructure
                 }
             }
 
-        // TODO GG
-        return Collections.emptyMap();
+        Map<ModuleConstant, ModuleType> mapModuleTypes = new HashMap<>();
+        for (ModuleStructure module : getFileStructure().children())
+            {
+            if (module.isFingerprint())
+                {
+                mapModuleTypes.put(module.getIdentityConstant(), module.getModuleType());
+                }
+            }
+        return mapModuleTypes;
         }
 
     /**
@@ -208,13 +279,29 @@ public class ModuleStructure
      */
     public Map<ModuleConstant, Boolean> getDependencies()
         {
-        Map<ModuleConstant, Boolean> map = new ListMap<>();
-        for (Iterator<Map.Entry<ModuleConstant, ModuleType>> iter = getDependencyTypes().entrySet().iterator();
-                iter.hasNext(); )
+        Map<ModuleConstant, Boolean> mapDependencies = m_mapDependencies;
+        if (mapDependencies == null)
             {
-            var entry = iter.next();
-            // TODO GG
-            map.put(entry.getKey(), entry.getValue() == ModuleType.Required ? Boolean.TRUE : Boolean.FALSE);
+            mapDependencies = m_mapDependencies = collectModuleDependencies();
+            }
+        return mapDependencies;
+        }
+
+    /**
+     * An implementation for {@link #getDependencies()}
+     */
+    protected Map<ModuleConstant, Boolean> collectModuleDependencies()
+        {
+        Map<ModuleConstant, Boolean> map = new ListMap<>();
+        for (Map.Entry<ModuleConstant, ModuleType> entry : getDependencyTypes().entrySet())
+            {
+            map.put(entry.getKey(),
+                switch (entry.getValue())
+                    {
+                    case Required, Embedded -> Boolean.TRUE;
+                    case Optional, Desired  -> null;
+                    case Primary -> throw new IllegalStateException();
+                    });
             }
         return map;
         }
@@ -494,7 +581,7 @@ public class ModuleStructure
         ClassStructure clzInterface = (ClassStructure) getChild(sName);
         if (clzInterface == null)
             {
-            clzInterface = createClass(Access.PUBLIC, Component.Format.INTERFACE, sName, null);
+            clzInterface = createClass(Access.PUBLIC, Format.INTERFACE, sName, null);
             clzInterface.setSynthetic(true);
             }
         return clzInterface;
@@ -892,4 +979,14 @@ public class ModuleStructure
      * Cached crypto-digest of this module structure.
      */
     private transient byte[] m_abDigest;
+
+    /**
+     * @see {@link #getConditionalNames()}
+     */
+    private transient Map<String, Boolean> m_mapCondNames;
+
+    /**
+     * @see {@link #getDependencies()}
+     */
+    private transient Map<ModuleConstant, Boolean> m_mapDependencies;
     }
