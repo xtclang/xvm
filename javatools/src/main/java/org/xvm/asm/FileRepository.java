@@ -117,7 +117,7 @@ public class FileRepository
             }
 
         this.name      = module.getIdentityConstant().getName();
-        this.versions  = module.getFileStructure().getVersionTree();
+        this.versions  = module.getVersions();
         this.timestamp = file.lastModified();
         this.size      = file.length();
         this.module    = module;
@@ -180,7 +180,7 @@ public class FileRepository
         else
             {
             this.name     = module.getIdentityConstant().getName();
-            this.versions = module.getFileStructure().getVersionTree();
+            this.versions = module.getVersions();
             }
 
         this.module   = null;
