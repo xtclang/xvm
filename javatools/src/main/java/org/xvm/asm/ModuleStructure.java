@@ -23,7 +23,6 @@ import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.NamedCondition;
 import org.xvm.asm.constants.VersionConstant;
-import org.xvm.asm.constants.VersionedCondition;
 
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
@@ -122,116 +121,6 @@ public class ModuleStructure
             case Optional, Desired, Required -> true;
             case Primary, Embedded           -> false;
             };
-        }
-
-    /**
-     * @return a VersionTree that provides a catalog of all versions of this module that are present
-     */
-    public VersionTree getVersions()
-        {
-        VersionTree tree = new VersionTree();
-        if (isRefined())
-            {
-            Version ver = getVersion();
-            if (ver != null)
-                {
-                tree.put(ver, null);
-                }
-            }
-        else
-            {
-            // REVIEW CP: doesn't look right; how does the FileStructure's tree gets computed
-            if (isMainModule())
-                {
-                tree.putAll(getFileStructure().getVersionTree());
-                }
-            else
-                {
-                tree = collectVersions();
-                }
-            }
-        return tree;
-        }
-
-    /**
-     * An implementation for {@link #getVersions()}
-     */
-    protected VersionTree collectVersions()
-        {
-        VersionTree tree = new VersionTree();
-        Consumer<Component> visitor = component ->
-            {
-            ConditionalConstant constCond = component.getCondition();
-            if (constCond != null)
-                {
-                for (ConditionalConstant condTerminal : constCond.terminals())
-                    {
-                    if (condTerminal instanceof VersionedCondition condVersioned)
-                        {
-                        tree.put(condVersioned.getVersion(), null);
-                        }
-                    }
-                }
-            };
-        visitor.accept(this);
-        visitChildren(visitor, true, true);
-        return tree;
-        }
-
-    /**
-     * @return the Version of this module, or null if there is no version (or more than one version)
-     */
-    public Version getVersion()
-        {
-        VersionConstant constant = getVersionConstant();
-        return constant == null ? null : constant.getVersion();
-        }
-
-    /**
-     * Obtain all the _conditional_ names that this module is aware of, and whether the names are
-     * defined (if that is known). The keys are the conditional names. For each name, the value is
-     * `null` to indicate that the condition is unknown (no choice has been made), `FALSE` to
-     * indicate that the name was explicitly NOT defined, and `TRUE` to indicate that the name was
-     * explicitly defined.
-     *
-     * Note: once the map is collected, it will be retained and allowed to be mutated by the
-     *       "refining" process.
-     *
-     * @return a Map containing the conditional names known within this module
-     */
-    public Map<String, Boolean> getConditionalNames()
-        {
-        Map<String, Boolean> mapCondNames = m_mapCondNames;
-        if (mapCondNames == null)
-            {
-            mapCondNames = m_mapCondNames = collectConditionalNames();
-            }
-        return mapCondNames;
-        }
-
-    /**
-     * An implementation for {@link #getConditionalNames()}
-     */
-    protected Map<String, Boolean> collectConditionalNames()
-        {
-        Map<String, Boolean> mapConditions = new HashMap<>();
-        Consumer<Component> visitor = component ->
-            {
-            ConditionalConstant constCond = component.getCondition();
-            if (constCond != null)
-                {
-                for (ConditionalConstant condTerminal : constCond.terminals())
-                    {
-                    if (condTerminal instanceof NamedCondition condName)
-                        {
-                        mapConditions.put(condName.getName(), null);
-                        }
-                    }
-                }
-            };
-        visitor.accept(this);
-        visitChildren(visitor, true, true);
-        return mapConditions;
         }
 
     /**
@@ -588,6 +477,216 @@ public class ModuleStructure
             clzInterface.setSynthetic(true);
             }
         return clzInterface;
+        }
+
+
+    // ----- Version management --------------------------------------------------------------------
+
+    /**
+     * @return a VersionTree that provides a catalog of all versions of this module that are present
+     */
+    public VersionTree<Boolean> getVersions()
+        {
+        VersionTree vtree = m_vtree;
+        if (vtree == null)
+            {
+            collectVersions(m_vtree = vtree = new VersionTree());
+            }
+        return vtree;
+        }
+
+    /**
+     * An implementation for {@link #getVersions()}
+     */
+    protected void collectVersions(VersionTree vtree)
+        {
+        ModuleStructure module = this;
+        do
+            {
+            Version version = module.getVersion();
+            if (version != null)
+                {
+                vtree.put(version, Boolean.TRUE);
+                }
+            module = (ModuleStructure) module.getNextSibling();
+            }
+        while (module != null);
+        }
+
+    /**
+     * Determine if this module version contains the specified version.
+     *
+     * @param ver  a version number
+     *
+     * @return true iff the specified version label is present
+     */
+    public boolean containsVersion(Version ver)
+        {
+        return getVersions().contains(ver);
+        }
+
+    /**
+     * @return the Version of this module, or null if there is no version (or more than one version)
+     */
+    public Version getVersion()
+        {
+        VersionConstant constant = getVersionConstant();
+        return constant == null ? null : constant.getVersion();
+        }
+
+    /**
+     * Obtain all the _conditional_ names that this module is aware of, and whether the names are
+     * defined (if that is known). The keys are the conditional names. For each name, the value is
+     * `null` to indicate that the condition is unknown (no choice has been made), `FALSE` to
+     * indicate that the name was explicitly NOT defined, and `TRUE` to indicate that the name was
+     * explicitly defined.
+     *
+     * Note: once the map is collected, it will be retained and allowed to be mutated by the
+     *       "refining" process.
+     *
+     * @return a Map containing the conditional names known within this module
+     */
+    public Map<String, Boolean> getConditionalNames()
+        {
+        Map<String, Boolean> mapCondNames = m_mapCondNames;
+        if (mapCondNames == null)
+            {
+            mapCondNames = m_mapCondNames = collectConditionalNames();
+            }
+        return mapCondNames;
+        }
+
+    /**
+     * An implementation for {@link #getConditionalNames()}
+     */
+    protected Map<String, Boolean> collectConditionalNames()
+        {
+        Map<String, Boolean> mapConditions = new HashMap<>();
+        Consumer<Component> visitor = component ->
+            {
+            ConditionalConstant constCond = component.getCondition();
+            if (constCond != null)
+                {
+                for (ConditionalConstant condTerminal : constCond.terminals())
+                    {
+                    if (condTerminal instanceof NamedCondition condName)
+                        {
+                        mapConditions.put(condName.getName(), null);
+                        }
+                    }
+                }
+            };
+        visitor.accept(this);
+        visitChildren(visitor, true, true);
+        return mapConditions;
+        }
+
+
+    /**
+     * Determine if the specified version is supported, either by that exact version, or by a
+     * subsequent version.
+     *
+     * @param ver     a version number
+     * @param fExact  true if the version has to match exactly
+     *
+     * @return true if this module supports the specified version
+     */
+    public boolean supportsVersion(Version ver, boolean fExact)
+        {
+        if (containsVersion(ver))
+            {
+            return true;
+            }
+
+        if (!fExact)
+            {
+            return getVersions().findHighestVersion(ver) != null;
+            }
+
+        return false;
+        }
+
+    /**
+     * Remove a version label from this ModuleStructure. If there are multiple versions within this
+     * module, then only the specified version label is removed. If there is only one version
+     * within this module, then the structure is left unchanged, but the version label is removed.
+     *
+     * @param ver  the version label to remove from this module structure
+     */
+    public void purgeVersion(Version ver)
+        {
+        if (ver == null)
+            {
+            throw new IllegalArgumentException("version required");
+            }
+
+        VersionTree<Boolean> vtree = getVersions();
+        if (!vtree.contains(ver))
+            {
+            return;
+            }
+
+        // this has to find just the components that have the specified version label, and
+        // remove it from just those components, and then remove those components if they no
+        // longer have any version label
+        // TODO
+        markModified();
+        }
+
+    public void purgeVersionsExcept(Version ver)
+        {
+        if (ver == null)
+            {
+            throw new IllegalArgumentException("version required");
+            }
+
+        VersionTree<Boolean> vtree = getVersions();
+        ver = ver.normalize();
+        if (!vtree.contains(ver))
+            {
+            throw new IllegalArgumentException("version " + ver  + " does not exist in this module");
+            }
+
+        if (vtree.size() == 1)
+            {
+            // already done
+            return;
+            }
+
+        // this has to go to every component, and remove every version except the specified version,
+        // and then remove those components if they no longer have any version label
+        // TODO
+
+        markModified();
+        }
+
+    /**
+     * Create a copy of this main module and replace all occurrences of this module's id
+     * (versionless) with the specified (versioned) module id. This method is called when a
+     * versioned module fingerprint needs to be bound to an actual module.
+     *
+     * @param version   the version to extract
+     *
+     * @return a "versioned" ModuleStructure
+     */
+    public ModuleStructure extractVersion(Version version)
+        {
+        assert isMainModule() && containsVersion(version);
+
+        String          sName    = getName();
+        ModuleConstant  idModule = getConstantPool().ensureModuleConstant(sName, version);
+
+        FileStructure fileClone = new FileStructure(sName);
+        fileClone.removeChild(fileClone.getModule());
+        fileClone.merge(this, false, true);
+
+        ConstantPool    pool        = fileClone.getConstantPool();
+        ModuleStructure moduleClone = fileClone.replaceModuleId(idModule);
+        moduleClone.registerConstants(pool);
+        moduleClone.registerChildrenConstants(pool);
+
+        moduleClone.purgeVersionsExcept(version);
+        return moduleClone;
         }
 
 
@@ -992,4 +1091,19 @@ public class ModuleStructure
      * @see {@link #getDependencies()}
      */
     private transient Map<ModuleConstant, Boolean> m_mapDependencies;
+
+    /**
+     * Tree of versions held by this ModuleStructure.
+     * <ul>
+     * <li>If the tree is empty, that indicates that the module structure does not contain version
+     * information (the module information is not version labeled.)</li>
+     * <li>If the tree contains one version, that indicates that the module structure contains a
+     * single version label, i.e. there is a single version of the module inside of the module
+     * structure.</li>
+     * <li>If the tree contains more than one version, that indicates that the module structure
+     * contains multiple different versions of the module, and must be resolved in order to link the
+     * module.</li>
+     * </ul>
+     */
+    private transient VersionTree<Boolean> m_vtree;
     }
