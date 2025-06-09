@@ -54,7 +54,7 @@ interface FileNode
      * example, instead of deleting the node that is linked-to.
      *
      * Normally, applications can ignore the detail of whether or not a node is a link (such as a
-     * _symbolic link_), because the `Directory` qnd `File` interfaces represent the node that is
+     * _symbolic link_), because the `Directory` and `File` interfaces represent the node that is
      * _linked to_. For example, opening a node linked to a file will open the file that is _linked
      * to_, so the application can read and write data directly from that linked-to file without
      * any knowledge that it is doing so via a link.

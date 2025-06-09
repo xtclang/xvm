@@ -108,8 +108,16 @@ public class xOSFileNode
             case "size":
                 try
                     {
-                    BasicFileAttributes attr = Files.readAttributes(hNode.f_path, BasicFileAttributes.class);
-                    return frame.assignValue(iReturn, xInt64.makeHandle(attr.size()));
+                    Path path = hNode.f_path;
+                    if (Files.exists(path))
+                        {
+                        BasicFileAttributes attr = Files.readAttributes(path, BasicFileAttributes.class);
+                        return frame.assignValue(iReturn, xInt64.makeHandle(attr.size()));
+                        }
+                    else
+                        {
+                        return frame.assignValue(iReturn, xInt64.makeHandle(0));
+                        }
                     }
                 catch (IOException e)
                     {
