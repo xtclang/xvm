@@ -223,7 +223,7 @@ public class DirRepository
             else
                 {
                 this.name     = module.getIdentityConstant().getName();
-                this.versions = module.getFileStructure().getVersionTree();
+                this.versions = module.getVersions();
                 this.err      = false;
                 }
             }
