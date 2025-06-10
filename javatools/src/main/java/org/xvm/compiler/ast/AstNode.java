@@ -61,7 +61,6 @@ import org.xvm.compiler.ast.NameExpression.Meaning;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
-import static org.xvm.util.Handy.dup;
 import static org.xvm.util.Handy.indentLines;
 
 
@@ -376,12 +375,12 @@ public abstract class AstNode
             {
             long   lStart = getStartPosition();
             long   lEnd   = getEndPosition();
-            String sSrc   = getSource().toString(lStart, lEnd);
             int    iLine  = Source.calculateLine(lStart);
-            int    of     = Source.calculateOffset(lStart);
-            if (of > 0)
+            String sSrc   = getSource().toString(lStart, lEnd);
+
+            if (sSrc.startsWith("{") && sSrc.endsWith("}"))
                 {
-                sSrc = dup(' ', of) + sSrc;
+                sSrc = sSrc.substring(1, sSrc.length()-1);
                 }
             method.configureSource(sSrc, iLine);
             }
