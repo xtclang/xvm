@@ -309,8 +309,8 @@ const IPAddress(Byte[] bytes)
                         return False;
                     }
                 } else if (ch == ':') {
-                    bytes[cell*2  ] = (n >> 8 ).toUInt8();
-                    bytes[cell*2+1] = (n & 0xF).toUInt8();
+                    bytes[cell*2  ] = (n >> 8  ).toUInt8();
+                    bytes[cell*2+1] = (n & 0xFF).toUInt8();
                     ++offset;
 
                     // check for "::"
