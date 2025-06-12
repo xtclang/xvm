@@ -2,32 +2,12 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        new Test().run();
+        console.print(strings1[42]);    // used to throw a CCE
+        console.print(strings2[index]); // ditto
     }
 
-    service Test {
-        annotation Data into Session {
+    static String[] strings1 = new String[1024] (i -> "" + i);
+    static String[] strings2 = ["Hello", "World"];
+    static Int      index    = strings1.size.notGreaterThan(strings2.size) - 1;
 
-            const InsideConst(Int i);
-
-            void foo() {
-                val c = new InsideConst(0); // this used to blow up at runtime
-                console.print(c);
-            }
-        }
-
-        class SessionImpl(String name) implements Session;
-
-        void run() {
-            for (Int i : 0..3) {
-                Data d = new @Data SessionImpl($"Test {i}");
-                d.foo();
-            }
-        }
-    }
-
-    // we used to allow having the mixed-in class outside; now it would be a compiler error
-    // class SessionImpl(String name) implements Session;
-
-    interface Session {}
 }

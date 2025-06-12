@@ -864,11 +864,10 @@ public class ForEachStatement
      */
     private boolean emitRange(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        // code simplification for intrinsic sequential types
-        boolean      fConstant   = m_exprRValue.isConstant();
         TypeConstant typeElement = getElementType().removeAutoNarrowing();
-        if (fConstant)
+        if (m_exprRValue.toConstant() instanceof RangeConstant)
             {
+            // code simplification for intrinsic sequential types
             switch (m_exprRValue.getType().getParamType(0).removeAutoNarrowing().getEcstasyClassName())
                 {
                 case "numbers.Bit":

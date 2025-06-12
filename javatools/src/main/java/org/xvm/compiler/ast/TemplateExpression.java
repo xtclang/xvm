@@ -308,7 +308,7 @@ public class TemplateExpression
             {
             if (isStringConst(expr))
                 {
-                for (char ch : ((StringConstant) expr.toConstant()).getValue().toCharArray())
+                for (char ch : getStringConst(expr).toCharArray())
                     {
                     Handy.appendChar(sb, ch);
                     }
@@ -337,7 +337,7 @@ public class TemplateExpression
 
     boolean isStringConst(Expression expr)
         {
-        return expr.isConstant() && expr.getTypes().length > 0 && expr.toConstant() instanceof StringConstant;
+        return expr.getTypes().length > 0 && expr.toConstant() instanceof StringConstant;
         }
 
     String getStringConst(Expression expr)

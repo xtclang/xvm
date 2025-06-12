@@ -607,30 +607,36 @@ public class ArrayAccessExpression
         // the expression yields a constant value iff the sub-expressions are all constants and the
         // evaluation of the element access is legal
         Constant constVal = null;
-        if (exprArray.isConstant() && aexprIndexes[0].isConstant() &&
+        if (exprArray.toConstant() instanceof ArrayConstant constArray &&
+                aexprIndexes[0].isConstant() &&
                 (cIndexes == 1 || aexprIndexes[1].isConstant()))
             {
             if ((typeArray.isTuple() || typeArray.isA(pool.typeList()) && cIndexes == 1))
                 {
+                Constant constIndex = aexprIndexes[0].toConstant();
                 if (fSlice)
                     {
-                    constVal = evalConst((ArrayConstant) exprArray.toConstant(),
-                            (RangeConstant) aexprIndexes[0].toConstant(), typeResult, errs);
+                    if (constIndex instanceof RangeConstant constRange)
+                        {
+                        constVal = evalConst(constArray, constRange, typeResult, errs);
+                        }
                     }
                 else
                     {
-                    IntConstant constIndex = (IntConstant)
-                            validateAndConvertConstant(aexprIndexes[0].toConstant(), pool.typeInt64(), errs);
-                    constVal = evalConst((ArrayConstant) exprArray.toConstant(), constIndex, errs);
+                    constIndex = validateAndConvertConstant(constIndex, pool.typeInt64(), errs);
+                    if (constIndex instanceof IntConstant constInt)
+                        {
+                        constVal = evalConst(constArray, constInt, errs);
+                        }
                     }
                 }
             else if (typeArray.isA(pool.typeIndexed()))
                 {
-                if (!fSlice && typeArray.isA(pool.typeMap()))
+                if (!fSlice && typeArray.isA(pool.typeMap()) &&
+                        exprArray.toConstant() instanceof MapConstant constMap)
                     {
-                    MapConstant constMap = (MapConstant) exprArray.toConstant();
-                    Constant    constKey = aexprIndexes[0].toConstant();
-                                constVal = constMap.getValue().get(constKey);
+                    Constant constKey = aexprIndexes[0].toConstant();
+                             constVal = constMap.getValue().get(constKey);
                     }
                 }
             else if (typeArray.isA(pool.typeMatrix()))
