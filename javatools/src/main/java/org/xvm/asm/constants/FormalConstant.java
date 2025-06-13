@@ -61,7 +61,10 @@ public abstract class FormalConstant
      *
      * @return a resolved type or null if this constant cannot be resolved
      */
-    public abstract TypeConstant resolve(GenericTypeResolver resolver);
+    public TypeConstant resolve(GenericTypeResolver resolver)
+        {
+        return resolver.resolveFormalType(this);
+        }
 
     /**
      * Convert this formal constant to a {@link ExprAST binary expression AST}.

@@ -19,6 +19,7 @@ import org.xvm.asm.PackageStructure;
 import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -1058,7 +1059,7 @@ public class Frame
                         case Op.R_CALL:
                             int iNext = i+1;
                             m_frameNext.addContinuation(
-                                frameCaller -> assignValues(anVar, ahValue, iNext, c));
+                                frameCaller -> frameCaller.assignValues(anVar, ahValue, iNext, c));
                             return Op.R_CALL;
 
                         case Op.R_EXCEPTION:
@@ -2107,16 +2108,17 @@ public class Frame
     @Override
     public TypeConstant resolveFormalType(FormalConstant constFormal)
         {
-        MethodStructure method = f_function;
-        int             nRegister;
+        Frame frame = this;
+        int   nRegister;
 
         FindRegister:
         switch (constFormal.getFormat())
             {
             case Property:
                 {
-                String sFormalName = constFormal.getName();
-                if (method != null && method.isLambda() && method.isStatic())
+                MethodStructure method      = f_function;
+                String          sFormalName = constFormal.getName();
+                if (method.isLambda() && method.isStatic())
                     {
                     // generic types are passed to "static" lambdas as type parameters
                     for (int i = 0, c = method.getTypeParamCount(); i < c; i++)
@@ -2138,15 +2140,42 @@ public class Frame
                 {
                 // look for a match only amongst the method's formal type parameters
                 TypeParameterConstant constParam = (TypeParameterConstant) constFormal;
+                MethodConstant        idMethod   = constParam.getMethod();
 
-                if (method == null ||
-                        !constParam.getMethod().equals(method.getIdentityConstant()))
+                // there are some rare instances (e.g. lambdas), when this FTC refers to a register
+                // from a caller's frame, in which case we need to follow the call chain
+                do
                     {
-                    return null;
+                    if (idMethod.equals(frame.f_function.getIdentityConstant()))
+                        {
+                        nRegister = constParam.getRegister();
+                        break FindRegister;
+                        }
+                    frame = frame.f_framePrev;
                     }
+                while (frame != null && !frame.isNative());
 
-                nRegister = constParam.getRegister();
-                break;
+                return poolContext().typeObject();
+                }
+
+            case DynamicFormal:
+                {
+                DynamicFormalConstant constDynamic = (DynamicFormalConstant) constFormal;
+                MethodConstant        idMethod     = constDynamic.getMethod();
+                do
+                    {
+                    if (idMethod.equals(frame.f_function.getIdentityConstant()))
+                        {
+                        TypeConstant typeTarget = frame.f_ahVar[constDynamic.getRegisterIndex()].getType();
+                        return typeTarget.isShared(frame.poolContext())
+                                ? constDynamic.getFormalConstant().resolve(typeTarget)
+                                : poolContext().typeObject();
+                        }
+                    frame = frame.f_framePrev;
+                    }
+                while (frame != null && !frame.isNative());
+
+                return poolContext().typeObject();
                 }
 
             case FormalTypeChild:
@@ -2158,7 +2187,7 @@ public class Frame
                 throw new IllegalStateException();
             }
 
-        TypeConstant typeType = f_ahVar[nRegister].getType();
+        TypeConstant typeType = frame.f_ahVar[nRegister].getType();
 
         // type parameter's type must be of Type<DataType, OuterType>
         assert typeType.isTypeOfType() && typeType.getParamsCount() >= 1;

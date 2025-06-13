@@ -12,15 +12,10 @@ import java.util.function.Consumer;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.GenericTypeResolver;
-import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.compiler.ast.Context;
-
-import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.util.Hash;
 import org.xvm.util.TransientThreadLocal;
@@ -151,36 +146,6 @@ public class TypeParameterConstant
                 }
             }
         return m_typeConstraint = typeConstraint;
-        }
-
-    @Override
-    public TypeConstant resolve(GenericTypeResolver resolver)
-        {
-        if (resolver instanceof Frame frame)
-            {
-            try
-                {
-                // there are some rare instances (e.g. lambdas), when this FTC refers to a register
-                // from a caller's frame, in which case we need to follow the call chain
-                do
-                    {
-                    if (getMethod().equals(frame.f_function.getIdentityConstant()))
-                        {
-                        return frame.getArgument(getRegister()).getType().getParamType(0);
-                        }
-                    frame = frame.f_framePrev;
-                    }
-                while (frame != null && !frame.isNative());
-                }
-            catch (ExceptionHandle.WrapperException ignore)
-                {
-                }
-            }
-
-        MethodStructure method = (MethodStructure) getMethod().getComponent();
-        return method == null
-                ? null
-                : resolver.resolveFormalType(this);
         }
 
     @Override

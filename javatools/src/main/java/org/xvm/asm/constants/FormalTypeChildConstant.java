@@ -129,7 +129,7 @@ public class FormalTypeChildConstant
     @Override
     public TypeConstant resolve(GenericTypeResolver resolver)
         {
-        TypeConstant typeResolved = resolver.resolveFormalType(this);
+        TypeConstant typeResolved = super.resolve(resolver);
         if (typeResolved == null)
             {
             FormalConstant idParent   = getParentConstant();

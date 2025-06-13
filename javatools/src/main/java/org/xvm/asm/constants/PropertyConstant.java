@@ -144,7 +144,7 @@ public class PropertyConstant
                 }
             }
 
-        return resolver.resolveFormalType(this);
+        return super.resolve(resolver);
         }
 
     @Override
