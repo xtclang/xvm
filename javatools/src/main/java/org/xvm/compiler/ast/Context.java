@@ -2972,9 +2972,11 @@ public class Context
                     case TypeParameter:
                         {
                         String   sName = constFormal.getName();
-                        Argument arg   = resolveName(sName, null, errs);
-                        assert arg != null;
-                        ensureFormalMap().putIfAbsent(sName, arg);
+                        Argument arg   = resolveName(sName, null, ErrorListener.BLACKHOLE);
+                        if (arg != null)
+                            {
+                            ensureFormalMap().putIfAbsent(sName, arg);
+                            }
                         break;
                         }
 

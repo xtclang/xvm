@@ -944,6 +944,21 @@ public class StatementBlock
             }
 
         @Override
+        public void useFormalType(TypeConstant type, ErrorListener errs)
+            {
+            super.useFormalType(type, errs);
+
+            if (isAnonInnerClass())
+                {
+                Context ctx = getAnonymousInnerClassExpression().getCaptureContext();
+                if (ctx != null)
+                    {
+                    ctx.useFormalType(type, errs);
+                    }
+                }
+            }
+
+        @Override
         public boolean isVarWritable(String sName)
             {
             Argument arg = ensureNameMap().get(sName);

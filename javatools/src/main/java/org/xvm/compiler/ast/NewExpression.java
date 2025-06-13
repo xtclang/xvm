@@ -36,7 +36,6 @@ import org.xvm.asm.ast.RegisterAST;
 import org.xvm.asm.ast.StmtBlockAST;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.ExpressionConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -597,15 +596,10 @@ public class NewExpression
                             fNestMate ? Access.PRIVATE : Access.PROTECTED);
 
                     ClassStructure clzAnon = (ClassStructure) anon.getComponent();
-                    ClassConstant  idAnon  = (ClassConstant) clzAnon.getIdentityConstant();
 
-                    if (ctx.isFunction())
+                    typeResult = clzAnon.getIdentityConstant().getType();
+                    if (!ctx.isFunction())
                         {
-                        typeResult = pool.ensureAnonymousClassTypeConstant(pool.typeObject(), idAnon);
-                        }
-                    else
-                        {
-                        typeResult = pool.ensureAnonymousClassTypeConstant(ctx.getThisType(), idAnon);
                         typeResult = typeResult.adoptParameters(pool, clzAnon.getFormalType());
                         typeResult = typeResult.resolveGenerics(pool, typeTarget);
 

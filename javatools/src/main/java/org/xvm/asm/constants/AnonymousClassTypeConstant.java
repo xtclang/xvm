@@ -103,6 +103,14 @@ public class AnonymousClassTypeConstant
         m_iAnon = readIndex(in);
         }
 
+    /**
+     * @return the anonymous class id
+     */
+    public ClassConstant getChildClass()
+        {
+        return m_idAnon;
+        }
+
     @Override
     protected void resolveConstants()
         {
@@ -182,6 +190,25 @@ public class AnonymousClassTypeConstant
     public boolean isSingleUnderlyingClass(boolean fAllowInterface)
         {
         return true;
+        }
+
+    @Override
+    public TypeConstant resolveFormalType(FormalConstant constFormal)
+        {
+        if (constFormal instanceof TypeParameterConstant constParam &&
+                getChildClass().getParentConstant() instanceof MethodConstant idMethod &&
+                constParam.getParentConstant().equals(idMethod))
+            {
+            TypeConstant typeFormal   = idMethod.getType();
+            TypeConstant typeActual   = getParentType();
+            TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, constParam.getName());
+            if (typeResolved != null)
+                {
+                return typeResolved;
+                }
+            }
+
+        return super.resolveFormalType(constFormal);
         }
 
 
