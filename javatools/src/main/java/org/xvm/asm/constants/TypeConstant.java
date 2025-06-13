@@ -5082,11 +5082,16 @@ public abstract class TypeConstant
                 {
                 for (MethodStructure method : mms.methods())
                     {
-                    if (!method.isLambda() && !method.isConstructorFinalizer())
+                    if (!method.isLambda())
                         {
-                        fComplete &= createMemberInfo(constId, fInterface, method, mapTypeParams,
-                                        mapProps, mapMethods, mapChildren, listExplode,
-                                        nBasePropRank, nBaseMethRank, errs);
+                        // a finalizer is not a stand-alone method, but its children are
+                        fComplete &= method.isConstructorFinalizer()
+                            ? collectChildInfo(constId, fInterface, method, mapTypeParams,
+                                    mapProps, mapMethods, mapChildren, listExplode,
+                                    nBasePropRank, nBaseMethRank, errs)
+                            : createMemberInfo(constId, fInterface, method, mapTypeParams,
+                                    mapProps, mapMethods, mapChildren, listExplode,
+                                    nBasePropRank, nBaseMethRank, errs);
                         }
                     }
                 }
@@ -5119,7 +5124,7 @@ public abstract class TypeConstant
      *
      * @param constId        the identity of the class (used for logging error information)
      * @param fInterface     if the class is an interface type
-     * @param structContrib  the class structure, property structure, or method structure REVIEW or typedef?
+     * @param structContrib  the class structure, property structure, or method structure
      * @param mapTypeParams  the map of type parameters
      * @param mapProps       the properties of the class
      * @param mapMethods     the methods of the class

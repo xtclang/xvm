@@ -60,38 +60,37 @@ const DBRealm
         this.name = name;
         this.db   = db;
     } finally {
+        void applyConfig(Configuration cfg, String realmName) {
+            // create the user records
+            function Credential(String, String) createCredential;
+
+            if (cfg.credScheme == DigestCredential.Scheme) {
+                createCredential = (userName, pwd) -> new DigestCredential(realmName, userName, pwd);
+            } else if (cfg.credScheme == PlainTextCredential.Scheme) {
+                createCredential = (userName, pwd) -> new PlainTextCredential(userName, pwd);
+            } else {
+                throw new IllegalState("Unsupported credential scheme: {cfg.credScheme.quoted}");
+            }
+
+            Map<String, String> initUserNoPass = new ListMap();
+            for ((String userName, String password) : cfg.initUserPass) {
+                Credential credential = createCredential(userName, password);
+                Principal  principal  = createPrincipal(
+                        new Principal(0, userName, permissions=[AllowAll], credentials=[credential]));
+                initUserNoPass.put(userName, "");
+            }
+
+            // store the configuration (but remove the passwords), and specify that the database
+            // has now been configured (so we don't repeat the db configuration the next time)
+            db.config.set(cfg.with(initUserPass = initUserNoPass,
+                                   configured   = True));
+        }
+
         if (Configuration cfg ?= this.createCfg) {
             using (db.connection.createTransaction()) {
-                applyConfig(cfg);
+                applyConfig(cfg, name);
             }
         }
-    }
-
-    // TODO GG: moving this inside "finally" block doesn't compile
-    private void applyConfig(Configuration cfg) {
-        // create the user records
-        function Credential(String, String) createCredential;
-
-        if (cfg.credScheme == DigestCredential.Scheme) {
-            createCredential = (userName, pwd) -> new DigestCredential(name, userName, pwd);
-        } else if (cfg.credScheme == PlainTextCredential.Scheme) {
-            createCredential = (userName, pwd) -> new PlainTextCredential(userName, pwd);
-        } else {
-            throw new IllegalState("Unsupported credential scheme: {cfg.credScheme.quoted}");
-        }
-
-        Map<String, String> initUserNoPass = new ListMap();
-        for ((String userName, String password) : cfg.initUserPass) {
-            Credential credential = createCredential(userName, password);
-            Principal  principal  = createPrincipal(
-                    new Principal(0, userName, permissions=[AllowAll], credentials=[credential]));
-            initUserNoPass.put(userName, "");
-        }
-
-        // store the configuration (but remove the passwords), and specify that the database
-        // has now been configured (so we don't repeat the db configuration the next time)
-        db.config.set(cfg.with(initUserPass = initUserNoPass,
-                               configured   = True));
     }
 
     @Override
