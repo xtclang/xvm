@@ -337,7 +337,7 @@ public class TemplateExpression
 
     boolean isStringConst(Expression expr)
         {
-        return expr.getTypes().length > 0 && expr.toConstant() instanceof StringConstant;
+        return expr.toConstant() instanceof StringConstant && expr.getTypes().length > 0;
         }
 
     String getStringConst(Expression expr)
