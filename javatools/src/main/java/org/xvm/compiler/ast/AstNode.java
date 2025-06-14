@@ -1342,6 +1342,7 @@ public abstract class AstNode
 
             TypeConstant[] atypeParam = sigMethod.getRawParams();
             TypeFit        fit        = TypeFit.Fit;
+            boolean        fExact     = true;
             for (int i = 0; i < cArgs; ++i)
                 {
                 Expression   exprArg   = listArgs.get(i);
@@ -1361,12 +1362,14 @@ public abstract class AstNode
                         : exprArg.getImplicitType(ctx);
                 if (typeExpr != null && typeExpr.isA(typeParam))
                     {
-                    fit = TypeFit.Fit;
+                    fit    = TypeFit.Fit;
+                    fExact = typeExpr.equals(typeParam);
                     }
                 else
                     {
                     // if *all* tests fail, report the errors from the first unsuccessful attempt
-                    fit = exprArg.testFit(ctx, typeParam, true, errsTemp);
+                    fit    = exprArg.testFit(ctx, typeParam, true, errsTemp);
+                    fExact = false;
                     }
                 if (fit.isFit())
                     {
@@ -1463,6 +1466,13 @@ public abstract class AstNode
                 continue; // NextMethod
                 }
 
+            if (fExact)
+                {
+                setConvert.clear();
+                setIs.clear();
+                mapMethods.clear();
+                }
+
             if (fit.isConverting())
                 {
                 setConvert.add(idMethod);
@@ -1472,6 +1482,11 @@ public abstract class AstNode
                 setIs.add(idMethod);
                 }
             mapMethods.put(idMethod, method);
+
+            if (fExact)
+                {
+                return;
+                }
             }
 
         // if there is any ambiguity, don't report anything; the caller will log a generic

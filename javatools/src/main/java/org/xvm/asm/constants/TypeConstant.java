@@ -6260,13 +6260,12 @@ public abstract class TypeConstant
                     {
                     TypeParameterConstant idLeft = (TypeParameterConstant) constIdLeft;
                     if (idLeft.getName().equals(idRight.getName()) ||
-                        idLeft.getRegister() == idRight.getRegister())
+                        idLeft.equals(idRight))
                         {
-                        // Note: it's quite opportunistic to assume that type parameters with the same
-                        // register are compatible regardless of the enclosing method, but we need to
-                        // assume that the caller has already (or will have) checked for the compatibility
-                        // all other elements of the containing method and the only thing left is the
-                        // register itself
+                        // Note: it's quite opportunistic to assume that type parameters with the
+                        // same name are compatible regardless of the enclosing method, but we need
+                        // to assume that the caller has already (or will have) checked for the
+                        // compatibility all other elements of the containing method
                         return Relation.IS_A;
                         }
                     }
