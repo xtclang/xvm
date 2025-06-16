@@ -1,9 +1,23 @@
 package org.xvm.javajit.intrinsic;
 
 
+import org.xvm.javajit.Xvm;
+
+
 public abstract class xObj {
+
+    /**
+     * @return the current context object
+     */
     public static Ctx $ctx() {
         return Ctx.get();
+    }
+
+    /**
+     * @return the XVM that this object exists within
+     */
+    public static Xvm $xvm() {
+        return $ctx().xvm;
     }
 
     /**

@@ -526,6 +526,9 @@ public class ModuleStructure
         }
 
     /**
+     * Obtain the Version of this module. Do not use this method with a ModuleStructure for a
+     * fingerprint module, or an actual module that contains more than one version.
+     *
      * @return the Version of this module, or null if there is no version (or more than one version)
      */
     public Version getVersion()
