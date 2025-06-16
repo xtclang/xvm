@@ -29,14 +29,6 @@ public class TypeCollector
         }
 
     /**
-     * Add a void (an absence of any types) to the collection.
-     */
-    public void addVoid()
-        {
-        add((TypeConstant) null);
-        }
-
-    /**
      * Add a specified type to the collection.
      *
      * @param type  a TypeConstant to add to the collection, or null to specify that a type could
@@ -91,82 +83,6 @@ public class TypeCollector
             }
 
         return 0;
-        }
-
-    /**
-     * @return true if any of the calls to add() specified a null, which indicates an unknown type
-     */
-    public boolean containsUnknown()
-        {
-        ArrayList list = m_listMulti;
-        if (list == null)
-            {
-            list = m_listSingle;
-            }
-
-        if (list != null)
-            {
-            for (Object o : list)
-                {
-                if (o == null)
-                    {
-                    return true;
-                    }
-                }
-            }
-
-        return false;
-        }
-
-    /**
-     * @return true iff all of the collected types are of the same arity, and none is unknown
-     */
-    public boolean isUniform()
-        {
-        ArrayList<TypeConstant> listSingle = m_listSingle;
-        if (listSingle != null)
-            {
-            // this is just the opposite of containsUnknown(), since we know that otherwise the
-            // single-format list is uniform
-            for (TypeConstant type : listSingle)
-                {
-                if (type == null)
-                    {
-                    return false;
-                    }
-                }
-
-            return true;
-            }
-
-        ArrayList<TypeConstant[]> listMulti = m_listMulti;
-        if (listMulti != null)
-            {
-            int cTypes   = -1;
-            for (TypeConstant[] aTypes : listMulti)
-                {
-                if (aTypes == null)
-                    {
-                    return false;
-                    }
-
-                if (cTypes != aTypes.length)
-                    {
-                    if (cTypes < 0)
-                        {
-                        // first time in the loop
-                        cTypes = aTypes.length;
-                        }
-                    else
-                        {
-                        // not uniform
-                        return false;
-                        }
-                    }
-                }
-            }
-
-        return true;
         }
 
     /**
@@ -282,6 +198,10 @@ public class TypeCollector
 
         TypeConstant typeCommon = inferFrom(listTypes.toArray(new TypeConstant[cTypes]), f_pool);
 
+        if (typeRequired != null && typeRequired.containsFormalType(true))
+            {
+            typeCommon = typeRequired.resolvePending(f_pool, typeCommon);
+            }
         typeCommon = Op.selectCommonType(typeCommon, typeRequired, ErrorListener.BLACKHOLE);
 
         if (typeRequired != null &&

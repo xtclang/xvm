@@ -780,6 +780,45 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public TypeConstant resolvePending(ConstantPool pool, TypeConstant typeActual)
+        {
+        if (typeActual instanceof ParameterizedTypeConstant that)
+            {
+            TypeConstant   constUnderlyingThis = this.m_constType;
+            TypeConstant   constUnderlyingThat = that.m_constType;
+            if (constUnderlyingThat.isA(constUnderlyingThis))
+                {
+                TypeConstant[] aconstThis = this.m_atypeParams;
+                TypeConstant[] aconstThat = that.m_atypeParams;
+                TypeConstant[] aconstResolved = aconstThis;
+
+                for (int i = 0, c = Math.min(aconstThis.length, aconstThat.length); i < c; ++i)
+                    {
+                    TypeConstant constParamOriginal = aconstThis[i];
+                    TypeConstant constParamResolved = constParamOriginal.
+                            resolvePending(pool, aconstThat[i]);
+                    if (constParamOriginal != constParamResolved)
+                        {
+                        if (aconstResolved == aconstThis)
+                            {
+                            aconstResolved = aconstThis.clone();
+                            }
+                        aconstResolved[i] = constParamResolved;
+                        }
+                    }
+
+                return aconstResolved == aconstThis
+                        ? this
+                        : getConstantPool().ensureParameterizedTypeConstant(
+                                constUnderlyingThis, aconstResolved);
+
+                }
+            }
+
+        return super.resolvePending(pool, typeActual);
+        }
+
+    @Override
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
         return pool.ensureParameterizedTypeConstant(type, m_atypeParams);

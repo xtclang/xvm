@@ -174,6 +174,12 @@ public class PendingTypeConstant
         }
 
     @Override
+    public TypeConstant resolvePending(ConstantPool pool, TypeConstant typeActual)
+        {
+        return typeActual;
+        }
+
+    @Override
     public boolean containsDynamicType(Register register)
         {
         return false;

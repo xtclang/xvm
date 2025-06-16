@@ -1519,6 +1519,22 @@ public abstract class TypeConstant
         }
 
     /**
+     * Given this (formal) type A<P> that may contain a pending type "P" and an actual
+     * type B<X>, return a type that:
+     * <ul>
+     *  <li> is a semantically equivalent type with resolved {@link PendingTypeConstant} parameters
+     *  <li> is known to be assignable to this type {@code B.isA(A)}
+     * </ul>
+     *
+     * @return a semantically equivalent type with resolved {@link PendingTypeConstant} parameters
+     *         if possible
+     */
+    public TypeConstant resolvePending(ConstantPool pool, TypeConstant typeActual)
+        {
+        return this;
+        }
+
+    /**
      * @return true iff the type is a Tuple type
      */
     public boolean isTuple()

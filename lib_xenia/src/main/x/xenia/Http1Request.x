@@ -278,7 +278,7 @@ const Http1Request(RequestInfo   info,
         if (String[] values := info.getHeaderValuesForName(name)) {
             return expandDelim == Null || values.all(s -> !s.indexOf(expandDelim))
                     ? values
-                    : values.flatMap((String s) -> s.split(expandDelim)) // TODO GG shouldn't need "String"
+                    : values.flatMap(s -> s.split(expandDelim))
                             .map(s -> s.trim(), ToStringArray);
         }
         return [];
