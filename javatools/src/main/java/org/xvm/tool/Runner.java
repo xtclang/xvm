@@ -22,14 +22,7 @@ import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.javajit.Container;
 import org.xvm.javajit.JitConnector;
-import org.xvm.javajit.TypeSystem;
-import org.xvm.javajit.Xvm;
-import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.Utils;
-
-import org.xvm.runtime.template.text.xString;
 
 import org.xvm.util.Handy;
 import org.xvm.util.ListSet;
@@ -331,16 +324,16 @@ public class Runner
             out(sName + " version " + sVer);
             }
 
-        boolean jit = options.isJit();
-        if (jit && Runtime.version().compareTo(Runtime.Version.parse("24")) < 0) {
+        boolean fJit = options.isJit();
+        if (fJit && Runtime.version().compareTo(Runtime.Version.parse("24")) < 0) {
             log(Severity.WARNING, "JIT requires Java version 24 or later; switching to interpreter");
-            jit = false;
+            fJit = false;
         }
 
         log(Severity.INFO, "Executing " + sName + " from " + binLocDesc);
         try
             {
-            Connector connector = jit ? new JitConnector(repo) : new Connector(repo);
+            Connector connector = fJit ? new JitConnector(repo) : new Connector(repo);
             connector.loadModule(module.getName());
             connector.start(options.getInjections());
 
@@ -348,7 +341,7 @@ public class Runner
             try (var ignore = ConstantPool.withPool(pool))
                 {
                 String               sMethod    = options().getMethodName();
-                Set<MethodStructure> setMethods = connector.getContainer().findMethods(sMethod);
+                Set<MethodStructure> setMethods = connector.findMethods(sMethod);
                 if (setMethods.size() != 1)
                     {
                     if (setMethods.isEmpty())
@@ -363,7 +356,6 @@ public class Runner
                     }
 
                 String[]        asArg       = options().getMethodArgs();
-                ObjectHandle[]  ahArg       = Utils.OBJECTS_NONE;
                 MethodStructure method      = setMethods.iterator().next();
                 TypeConstant    typeStrings = pool.ensureArrayType(pool.typeString());
 
@@ -376,11 +368,7 @@ public class Runner
                             if (method.getParamCount() > 0)
                                 {
                                 TypeConstant typeArg = method.getParam(0).getType();
-                                if (typeStrings.isA(typeArg))
-                                    {
-                                    ahArg = new ObjectHandle[]{xString.makeArrayHandle(asArg)};
-                                    }
-                                else
+                                if (!typeStrings.isA(typeArg))
                                     {
                                     log(Severity.ERROR, "Unsupported argument type \"" +
                                         typeArg.getValueString() + "\" for method \"" + sMethod + "\"");
@@ -398,15 +386,7 @@ public class Runner
                     case 1:
                         {
                         TypeConstant typeArg = method.getParam(0).getType();
-                        if (typeStrings.isA(typeArg))
-                            {
-                            // the method requires an array that we can supply
-                            ahArg = new ObjectHandle[]{
-                                asArg == null
-                                    ? xString.ensureEmptyArray()
-                                    : xString.makeArrayHandle(asArg)};
-                            }
-                        else
+                        if (!typeStrings.isA(typeArg))
                             {
                             log(Severity.ERROR, "Unsupported argument type \"" +
                                 typeArg.getValueString() + "\" for method \"" + sMethod + "\"");
@@ -421,7 +401,7 @@ public class Runner
                         abort(true);
                     }
 
-                connector.invoke0(sMethod, ahArg);
+                connector.invoke0(method, asArg);
 
                 connector.join();
                 }
@@ -449,7 +429,7 @@ public class Runner
             Usage:
 
                 xec <options> <modulename>
-                
+            
             Also supports any of:
             
                 xec <options> <filename>
