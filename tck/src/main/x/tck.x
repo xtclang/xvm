@@ -4,6 +4,11 @@ module tck.xtclang.org {
      * This is temporary, for manual testing only; will be replaced by the xUint framework.
      */
     void run() {
+        @Inject Console console;
+        Module tck = this:module;
+
+        console.print($"Started {tck}");
+
         new clazz.Basic().run();
         new array.Basic().run();
         new comparison.Compare().run();
@@ -26,5 +31,6 @@ module tck.xtclang.org {
 //        new constructors.Medium().run();
 //        new constructors.Reflect().run();
 //        new inner.Basic().run();
+        console.print("Done");
     }
 }

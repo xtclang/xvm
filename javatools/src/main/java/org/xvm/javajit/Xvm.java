@@ -590,7 +590,8 @@ public class Xvm {
         if (parts.length <= 1) {
             buf.append("anon");
         }
-        for (String part : parts) {
+        for (int i = parts.length - 1; i >= 0; --i) {
+            String part = parts[i];
             if (part.isEmpty()) {
                 throw new IllegalArgumentException();
             }

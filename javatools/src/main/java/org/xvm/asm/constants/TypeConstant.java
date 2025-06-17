@@ -51,6 +51,7 @@ import org.xvm.asm.constants.TypeInfo.Progress;
 
 import org.xvm.compiler.Compiler;
 
+import org.xvm.javajit.intrinsic.xType;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
@@ -7712,6 +7713,23 @@ public abstract class TypeConstant
         return atype;
         }
 
+    /**
+     * Obtain a run-time object representing this type.
+     *
+     * @param container  the Container to make the xType for
+     *
+     * @return an xType object represented by this TypeConstant
+     */
+    public xType ensureXType(org.xvm.javajit.Container container)
+        {
+        xType type = m_xType;
+        if (type == null)
+            {
+            // TODO: type = m_xType = container.makeType(this);
+            }
+        return type;
+        }
+
 
     // ----- inner class: Origin -------------------------------------------------------------------
 
@@ -7854,6 +7872,11 @@ public abstract class TypeConstant
      * Cached TypeHandle.
      */
     private transient xRTType.TypeHandle m_handle;
+
+    /**
+     * Cached xType object.
+     */
+    private transient xType m_xType;
 
     /**
      * Cached normalized representation.

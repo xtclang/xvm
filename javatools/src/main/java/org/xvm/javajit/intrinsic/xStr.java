@@ -1,6 +1,5 @@
 package org.xvm.javajit.intrinsic;
 
-
 /**
  * TODO
  *
@@ -30,7 +29,11 @@ package org.xvm.javajit.intrinsic;
  * Also, a String can be larger than the Java 2GB limit.
  */
 public class xStr
-        extends xObj {
+        extends xConst {
+
+    public xStr(long containerId) {
+        super(containerId);
+    }
 
     byte[]  bytes;
     int     offset;
@@ -57,23 +60,6 @@ public class xStr
 
 
     @Override public xType $type() {
-
-        return null;
-    }
-
-    @Override public boolean $isImmut() {
-        return false;
-    }
-
-    @Override public void $makeImmut() {
-
-    }
-
-    @Override public boolean $isA(xType t) {
-        return false;
-    }
-
-    @Override public xContainer $container() {
         return null;
     }
 }

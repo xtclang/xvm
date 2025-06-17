@@ -1,6 +1,7 @@
 package org.xvm.javajit.intrinsic;
 
 
+import org.xvm.javajit.Container;
 import org.xvm.javajit.Xvm;
 
 
@@ -9,7 +10,7 @@ public class Ctx {
         this.xvm = xvm;
     }
 
-//    public static final ScopedValue<Ctx> $Context = ScopedValue.newInstance();
+    // public static final ScopedValue<Ctx> $Context = ScopedValue.newInstance();
 
     public final Xvm xvm;
 
@@ -18,26 +19,29 @@ public class Ctx {
         return null;
     }
 
-    // xCnt container;
+    public void debit(int size) {}
+
+    public Container container;
+
     // xSvc service;
     // etc.
-    int depth;    // call depth
-    int ra;
-    int ca;
+    public int depth;    // call depth
+    public int ra;
+    public int ca;
 
     // multi return values
-    Object   o0;
-    Object   o1;
-    Object   o2;
-    Object   o3;
-    Object   o4;
-    Object   o5;
-    Object   o6;
-    Object   o7;
-    long     i0;
-    long     i1;
-    long     i2;
-    long     i3;
-    long[]   iN;
-    Object[] oN;
+    public Object   o0;
+    public Object   o1;
+    public Object   o2;
+    public Object   o3;
+    public Object   o4;
+    public Object   o5;
+    public Object   o6;
+    public Object   o7;
+    public long     i0;
+    public long     i1;
+    public long     i2;
+    public long     i3;
+    public long[]   iN;
+    public Object[] oN;
 }
