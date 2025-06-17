@@ -86,7 +86,7 @@ class Reflect {
                 this.s = s + "-BA";
             }
         }
-        static mixin M
+        static annotation M
                 into Base {
             construct() {
                 this.s = s + "-MC";
