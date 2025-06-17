@@ -1,20 +1,16 @@
 package org.xvm.runtime;
 
 
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
-import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.constants.UnionTypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
@@ -150,25 +146,6 @@ public class MainContainer
             }
 
         ensureServiceContext();
-        }
-
-    /**
-     * Helper method to find any possible entry points for a given name.
-     */
-    public Set<MethodStructure> findMethods(String sMethodName)
-        {
-        try (var ignore = ConstantPool.withPool(f_idModule.getConstantPool()))
-            {
-            TypeInfo             infoModule = getModule().getType().ensureTypeInfo();
-            Set<MethodConstant>  setIds     = infoModule.findMethods(sMethodName, -1, MethodKind.Any);
-            Set<MethodStructure> setMethods = new HashSet<>();
-            for (MethodConstant idMethod : setIds)
-                {
-                setMethods.add(infoModule.getMethodById(idMethod).
-                        getTopmostMethodStructure(infoModule));
-                }
-            return setMethods;
-            }
         }
 
     /**

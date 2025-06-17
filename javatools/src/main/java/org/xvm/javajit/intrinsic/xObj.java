@@ -1,10 +1,15 @@
 package org.xvm.javajit.intrinsic;
 
 
+import org.xvm.javajit.Container;
 import org.xvm.javajit.Xvm;
 
 
 public abstract class xObj {
+    public xObj(long containerId) {
+        super();
+        // $meta |= TODO containerId
+    }
 
     /**
      * @return the current context object
@@ -29,11 +34,21 @@ public abstract class xObj {
      */
     public long $meta;
 
+    public Container $container() {
+        // return $xvm().getContainer($meta & TODO)
+        return null;
+    }
+
     public abstract xType $type();
     public abstract boolean $isImmut();
     public abstract void $makeImmut();
-    public abstract boolean $isA(xType t);
-    public abstract xContainer $container();
+
+    /**
+     * This should be overridden by duck-type wrappers.
+     */
+    public boolean $isA(xType t) {
+        return $type().$type.isA(t.$type);
+    }
 
     // ----- static helpers for when references may be non-xObj classes ----------------------------
 
