@@ -21,6 +21,7 @@ xtc-plugin = "0.4.4-SNAPSHOT"
 group-xdk = "org.xtclang"
 group-xtc-plugin = "org.xtclang"
 
+kotlin = "2.1.20"  # Kotlin 2.1.20+ required for Java 23 support
 download = "5.5.0"
 versions = "0.50.0"
 tasktree = "2.1.1"
@@ -38,6 +39,7 @@ xdk-build-java = { id = "org.xtclang.build.java", version.ref = "xdk" }
 xdk-build-publish = { id = "org.xtclang.build.publish", version.ref = "xdk" }
 xdk-build-versioning = { id = "org.xtclang.build.xdk.versioning", version.ref = "xdk" }
 
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 download = { id = "de.undercouch.download", version.ref = "download" }
 versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
 tasktree = { id = "com.dorongold.task-tree", version.ref = "tasktree" }
