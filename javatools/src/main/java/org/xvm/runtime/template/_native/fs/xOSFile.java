@@ -53,6 +53,7 @@ import org.xvm.util.Handy;
 /**
  * Native OSFile implementation.
  */
+@SuppressWarnings({"sunapi", "removal"}) // Suppresses internal proprietary API warnings
 public class xOSFile
         extends xOSFileNode
     {

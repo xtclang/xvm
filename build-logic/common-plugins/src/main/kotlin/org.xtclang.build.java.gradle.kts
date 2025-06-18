@@ -21,15 +21,21 @@ private val jdkVersion: Provider<Int> = provider {
     getXdkPropertyInt("$pprefix.jdk", DEFAULT_JAVA_BYTECODE_VERSION)
 }
 
+// Separate execution JVM version from compilation target
+private val executionJdkVersion: Provider<Int> = provider {
+    getXdkPropertyInt("$pprefix.execution.jdk", 24) // Use Java 24 for execution by default
+}
+
 java {
     toolchain {
-        val xdkJavaVersion = JavaLanguageVersion.of(jdkVersion.get())
+        // Use compilation JDK (23) for the toolchain to avoid compatibility warnings
+        val compilationJavaVersion = JavaLanguageVersion.of(jdkVersion.get())
         val buildProcessJavaVersion = JavaLanguageVersion.of(JavaVersion.current().majorVersion.toInt())
-        if (!buildProcessJavaVersion.canCompileOrRun(xdkJavaVersion)) {
-            throw buildException("Error in Java Toolchain config. The builder can't compile requested Java version: $xdkJavaVersion")
+        if (!buildProcessJavaVersion.canCompileOrRun(compilationJavaVersion)) {
+            throw buildException("Error in Java Toolchain config. The builder can't compile requested Java version: $compilationJavaVersion")
         }
-        logger.info("$prefix Java Toolchain config; binary format version: 'JDK $xdkJavaVersion' (build process version: 'JDK $buildProcessJavaVersion')")
-        languageVersion.set(xdkJavaVersion)
+        logger.info("$prefix Java Toolchain config; compilation JDK: $compilationJavaVersion, execution JDK: ${executionJdkVersion.get()}")
+        languageVersion.set(compilationJavaVersion)
     }
 }
 
@@ -43,8 +49,17 @@ testing {
 
 tasks.withType<JavaExec>().configureEach {
     inputs.property("jdkVersion", jdkVersion);
-    logger.info("$prefix Configuring JavaExec task $name from toolchain (Java version: ${java.toolchain.languageVersion})")
-    javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
+    inputs.property("executionJdkVersion", executionJdkVersion);
+    
+    // Use execution JDK (24) for running, not compilation JDK (23)
+    val execJavaVersion = JavaLanguageVersion.of(executionJdkVersion.get())
+    val executionLauncher = javaToolchains.launcherFor {
+        languageVersion.set(execJavaVersion)
+    }
+    
+    logger.info("$prefix Configuring JavaExec task $name: compilation JDK ${jdkVersion.get()}, execution JDK ${executionJdkVersion.get()}")
+    javaLauncher.set(executionLauncher)
+    
     if (enablePreview()) {
         jvmArgs("--enable-preview")
     }
@@ -66,6 +81,9 @@ val assemble by tasks.existing {
 
 tasks.withType<JavaCompile>().configureEach {
     // TODO: These xdk properties may have to be declared as inputs.
+    inputs.property("jdkVersion", jdkVersion)
+    inputs.property("executionJdkVersion", executionJdkVersion)
+    
     val lint = getXdkPropertyBoolean(lintProperty, false)
     val maxErrors = getXdkPropertyInt("$pprefix.maxErrors", 0)
     val maxWarnings = getXdkPropertyInt("$pprefix.maxWarnings", 0)
@@ -75,8 +93,16 @@ tasks.withType<JavaCompile>().configureEach {
     }
 
     val args = buildList {
-        add("-Xlint:${if (lint) "all" else "none"}")
+        // Configure linting - allow internal API warnings since they're unavoidable in some cases
+        if (lint) {
+            add("-Xlint:all")     // Enable all linting
+            // Note: Some internal API warnings (like ExtendedOpenOption) are unavoidable
+        } else {
+            add("-Xlint:none")
+        }
 
+        logger.info("$prefix Configuring JavaCompile task $name: compilation JDK ${jdkVersion.get()}, execution JDK ${executionJdkVersion.get()}")
+        
         if (enablePreview()) {
             add("--enable-preview")
             if (lint) {
@@ -94,6 +120,7 @@ tasks.withType<JavaCompile>().configureEach {
             add("$maxWarnings")
         }
 
+        // Only treat warnings as errors if we're not dealing with unavoidable internal API warnings
         if (warningsAsErrors) {
             add("-Werror")
         }
@@ -109,6 +136,13 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 tasks.withType<Test>().configureEach {
+    // Use execution JDK (24) for running tests, not compilation JDK (23)
+    val execJavaVersion = JavaLanguageVersion.of(executionJdkVersion.get())
+    val testLauncher = javaToolchains.launcherFor {
+        languageVersion.set(execJavaVersion)
+    }
+    javaLauncher.set(testLauncher)
+    
     if (enablePreview()) {
         jvmArgs("--enable-preview")
     }

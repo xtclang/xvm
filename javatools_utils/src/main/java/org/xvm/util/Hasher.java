@@ -49,11 +49,9 @@ public interface Hasher<T>
                 {
                 return Objects.equals(a, b);
                 }
-
-            static final Hasher<Object> INSTANCE = new Natural();
             }
 
-        return (Hasher<T>) Natural.INSTANCE;
+        return (Hasher<T>) new Natural();
         }
 
     /**
@@ -76,11 +74,9 @@ public interface Hasher<T>
                 {
                 return a == b;
                 }
-
-            static final Hasher<Object> INSTANCE = new Identity();
             }
 
-        return (Hasher<T>) Identity.INSTANCE;
+        return (Hasher<T>) new Identity();
         }
 
     /**
