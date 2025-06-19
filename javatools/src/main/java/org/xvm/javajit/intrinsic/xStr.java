@@ -1,9 +1,7 @@
 package org.xvm.javajit.intrinsic;
 
-
 import static java.lang.Character.toCodePoint;
 import static org.xvm.util.Handy.require;
-
 
 /**
  * An implementation of an arbitrarily-sized character string data type, using a 64-bit index and

@@ -3,10 +3,10 @@ package org.xvm.javajit.intrinsic;
 import org.xvm.asm.constants.TypeConstant;
 
 public abstract class xType
-        extends xObj {
+        extends xConst {
 
-    public xType(long coontainerId, TypeConstant type) {
-        super(coontainerId);
+    public xType(long containerId, TypeConstant type) {
+        super(containerId);
         $type = type;
     }
 
@@ -17,12 +17,6 @@ public abstract class xType
     @Override public xType $type() {
         return $type.ensureXType($ctx().container);
     }
-
-    @Override public boolean $isImmut() {
-        return true;
-    }
-
-    @Override public void $makeImmut() {}
 
     @Override public boolean $isA(xType t) {
         return $type.isA(t.$type);

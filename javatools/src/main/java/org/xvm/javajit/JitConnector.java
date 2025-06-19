@@ -14,6 +14,9 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
+import org.xvm.asm.constants.ModuleConstant;
+
+import org.xvm.javajit.intrinsic.Ctx;
 import org.xvm.javajit.intrinsic.xObj;
 
 
@@ -35,7 +38,7 @@ public class JitConnector
         ts = xvm.createLinker().addModule(module).link();
         // TODO add error reporting
 
-        container = xvm.createContainer(ts, xvm.DefaultMainInjector);
+        container = xvm.createContainer(ts, xvm.mainInjector);
         // TODO reflect on container to get the main module and find the appropriate run() (or other) method
 
     }
@@ -57,16 +60,22 @@ public class JitConnector
 
     @Override
     public void invoke0(MethodStructure methodStructure, String... asArg) {
+        ScopedValue.where(Ctx.$Context, new Ctx(xvm, container)).run(
+            () -> invoke0Impl(methodStructure, asArg));
+    }
+
+    public void invoke0Impl(MethodStructure methodStructure, String... asArg) {
         String typeName = "jit." + ts.owned[0].pkg + ".$module";
         try {
-            Class        typeClz    = Class.forName(typeName);
-            xObj module = (xObj) typeClz.getDeclaredConstructor(Long.TYPE).newInstance(-1L);
+            Class typeClz = Class.forName(typeName);
+            xObj module = (xObj) typeClz.getDeclaredConstructor(Long.TYPE, ModuleConstant.class).
+                    newInstance(-1L, xvm.ecstasyLoader.module.getIdentityConstant());
             if (asArg == null || asArg.length == 0) {
-                Method method = typeClz.getMethod("run");
-                method.invoke(module);
+                Method method = typeClz.getMethod("run", Ctx.class);
+                method.invoke(module, Ctx.get());
             } else {
-                Method method = typeClz.getMethod("run", String.class.arrayType());
-                method.invoke(module); // TODO create xStr args
+                Method method = typeClz.getMethod("run", String.class.arrayType(), Ctx.class);
+                method.invoke(module, Ctx.get()); // TODO create xStr args
             }
         } catch (ClassNotFoundException e) {
             throw new RuntimeException("Failed to load class \"" + typeName + '"', e);

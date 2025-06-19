@@ -27,7 +27,7 @@ public class Injector {
      * @param type  the type of the resource to inject
      * @param name  the name of the resource to inject
      */
-    record Resource(TypeConstant type, String name) {}
+    public record Resource(TypeConstant type, String name) {}
 
     /**
      * Obtain a Supplier for the specified Resource

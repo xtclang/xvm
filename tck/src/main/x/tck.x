@@ -5,8 +5,9 @@ module tck.xtclang.org {
      */
     void run() {
         @Inject Console console;
-        Module tck = this:module;
+        console.print("Hello");
 
+        Module tck = this:module;
         console.print($"Started {tck}");
 
         new clazz.Basic().run();

@@ -1,8 +1,6 @@
 package org.xvm.javajit;
 
-
 import static org.xvm.util.Handy.require;
-
 
 /**
  * Represents an Ecstasy `Container`.
