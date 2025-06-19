@@ -12,9 +12,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
+import org.xvm.javajit.intrinsic.MainInjector;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.NATIVE_MODULE;
@@ -59,6 +61,8 @@ public class Xvm {
         assert ecstasy != null && _native != null;
         this.ecstasyLoader = ecstasy;
         this.nativeLoader  = _native;
+        this.ecstasyPool   = ecstasy.module.getConstantPool();
+        this.mainInjector  = new MainInjector(this);
     }
 
     /**
@@ -70,29 +74,39 @@ public class Xvm {
     /**
      * The ModuleRepository that the system modules are loaded from.
      */
-    final ModuleRepository systemRepo;
+    public final ModuleRepository systemRepo;
 
     /**
      * The TypeSystem for the invisible "Container -1", which is the only TypeSystem allowed to
      * contain native code.
      */
-    final TypeSystem nativeTypeSystem;
+    public final TypeSystem nativeTypeSystem;
 
     /**
      * The invisible "Container -1", which provides the interface to the "native" world and loads
      * all the Ecstasy system modules that require any native support.
      */
-    final Container nativeContainer;
+    public final Container nativeContainer;
 
     /**
      * The ModuleLoader for the core Ecstasy library.
      */
-    final ModuleLoader ecstasyLoader;
+    public final ModuleLoader ecstasyLoader;
 
     /**
      * The ModuleLoader for the "native" library (the module that interfaces directly with the JVM).
      */
-    final ModuleLoader nativeLoader;
+    public final ModuleLoader nativeLoader;
+
+    /**
+     * The ConstantPool of the Ecstasy module loader.
+     */
+    public final ConstantPool ecstasyPool;
+
+    /**
+     * The default inject instance used for "main" containers.
+     */
+    public final Injector mainInjector;
 
     /**
      * All Containers (held only by a weak reference) keyed by id.
@@ -231,13 +245,6 @@ public class Xvm {
     }
 
     /**
-     * The default inject instance used for "main" containers.
-     */
-    public final Injector DefaultMainInjector = new Injector() {
-        // TODO implement "native" injector
-    };
-
-    /**
      * Create a new "main" Container around the specified TypeSystem.
      *
      * @param typeSystem  the {@link TypeSystem} to use to form the Container
@@ -290,7 +297,7 @@ public class Xvm {
         assert typeSystem != null;
 
         if (injector == null) {
-            injector = DefaultMainInjector;
+            injector = mainInjector;
         }
 
         long id = containerCount.getAndIncrement();

@@ -8,10 +8,12 @@ import org.xvm.javajit.Xvm;
 public abstract class xObj {
     public xObj(long containerId) {
         super();
-        // $meta |= TODO containerId
+        $meta = containerId;
     }
 
     /**
+     * (Helper)
+     *
      * @return the current context object
      */
     public static Ctx $ctx() {
@@ -19,6 +21,8 @@ public abstract class xObj {
     }
 
     /**
+     * (Helper)
+     *
      * @return the XVM that this object exists within
      */
     public static Xvm $xvm() {
@@ -34,9 +38,20 @@ public abstract class xObj {
      */
     public long $meta;
 
-    public Container $container() {
-        // return $xvm().getContainer($meta & TODO)
-        return null;
+    /**
+     * (Helper)
+     *
+     * @return the container that "pays for" this object
+     */
+    public Container $owner() {
+        return $xvm().getContainer($ownerId());
+    }
+
+    /**
+     * @return container ID that "pays for" this object
+     */
+    public long $ownerId() {
+        return $meta; // TODO: ($meta & ID_MASK)
     }
 
     public abstract xType $type();
