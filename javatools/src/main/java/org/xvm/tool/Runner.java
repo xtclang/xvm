@@ -325,10 +325,10 @@ public class Runner
             }
 
         boolean fJit = options.isJit();
-        if (fJit && Runtime.version().compareTo(Runtime.Version.parse("24")) < 0) {
-            log(Severity.WARNING, "JIT requires Java version 24 or later; switching to interpreter");
-            fJit = false;
-        }
+//        if (fJit && Runtime.version().compareTo(Runtime.Version.parse("24")) < 0) {
+//            log(Severity.WARNING, "JIT requires Java version 24 or later; switching to interpreter");
+//            fJit = false;
+//        }
 
         log(Severity.INFO, "Executing " + sName + " from " + binLocDesc);
         try
