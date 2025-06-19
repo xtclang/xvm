@@ -1,27 +1,25 @@
 package org.xvm.javajit.intrinsic;
 
-
 import org.xvm.javajit.Container;
 import org.xvm.javajit.Xvm;
 
-
 public class Ctx {
-    public Ctx(Xvm xvm) {
+    public Ctx(Xvm xvm, Container container) {
         this.xvm = xvm;
+        this.container = container;
     }
 
-    // public static final ScopedValue<Ctx> $Context = ScopedValue.newInstance();
+    public static final ScopedValue<Ctx> $Context = ScopedValue.newInstance();
 
     public final Xvm xvm;
 
+    public final Container container;
+
     public static Ctx get() {
-//        return $Context.get();
-        return null;
+        return $Context.get();
     }
 
     public void debit(int size) {}
-
-    public Container container;
 
     // xSvc service;
     // etc.
