@@ -7,18 +7,22 @@ import org.xvm.javajit.intrinsic.xObj;
 import org.xvm.javajit.intrinsic.xType;
 
 /**
- * Type<tck.xtclang.org>
+ * AUTOGEN: Type<tck.xtclang.org>
  */
-public class $moduleType extends xType {
-    public $moduleType(long containerId, TypeConstant type) {
+public class t$module extends xType {
+    public t$module(long containerId, TypeConstant type) {
         super(containerId, type);
+
+        $instance = this;
     }
 
     @Override
     public xObj alloc(Ctx ctx) {
         ctx.debit($size);
-        return null; // $container().ensureSingleton($type);
+        return null; // ctx.container.ensureSingleton($type);
     }
+
+    public static xType $instance;
 
     public static int $size = 8;
 }
