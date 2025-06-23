@@ -474,7 +474,7 @@ public class xOSFile
                     break;
 
                 case Exclusive:
-                    aOpenOpt = new OpenOption[] {ExtendedOpenOption.NOSHARE_READ, StandardOpenOption.WRITE};
+                    aOpenOpt = new OpenOption[] {ExtendedOpenOption.NOSHARE_WRITE, StandardOpenOption.WRITE};
                     break;
                 }
             }

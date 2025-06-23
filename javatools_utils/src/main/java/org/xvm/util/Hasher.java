@@ -1,7 +1,5 @@
 package org.xvm.util;
 
-import java.lang.ref.Reference;
-import java.lang.ref.WeakReference;
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -86,7 +84,7 @@ public interface Hasher<T>
     /**
      * Return a hasher which operates on just a portion of the supplied object.
      *
-     * @param extractor a funciton used to extract from the source object
+     * @param extractor a function used to extract from the source object
      * @param <U>       the outer type to extract from
      * @return the hasher
      */

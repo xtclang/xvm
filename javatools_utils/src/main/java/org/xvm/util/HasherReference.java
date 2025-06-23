@@ -10,7 +10,7 @@ import java.util.function.Supplier;
 public class HasherReference<T> implements Supplier<T>
     {
     /**
-     * The hasher being used to compare refrents.
+     * The hasher being used to compare referents.
      */
     private Hasher<? super T> hasher;
 
@@ -43,7 +43,7 @@ public class HasherReference<T> implements Supplier<T>
         }
 
     /**
-     * @return the referant
+     * @return the referent
      */
     public T get()
         {
