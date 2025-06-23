@@ -3,12 +3,15 @@ package org.xvm.javajit;
 
 import java.util.ArrayList;
 
+import java.util.Set;
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
@@ -207,5 +210,43 @@ public class TypeSystem {
         // TODO
         return null;
     }
+
+    enum ClassfileShape {
+        Impl,
+        Pure,       // i$
+        Proxy,      // p$
+        Duck,       // d$
+        Mask,       // m$
+        Future,     // f$
+    }
+
+    record Artifact(IdentityConstant id, ClassfileShape shape) {};
+
+    Artifact deduceArtifact(String name) {
+        // TODO
+        return null;
+    }
+
+    Artifact deduceArtifact(ModuleStructure module, String prefix, String name) {
+        // TODO
+        return null;
+    }
+
+    Set<ClassfileShape> expectedClassfileShape(Component component) {
+        // TODO
+        return null;
+    }
+
+    ModuleLoader loaderForComponent(IdentityConstant id) {
+        // TODO
+        return null;
+    }
+
+    String classfileNameForComponent(IdentityConstant id, ClassfileShape shape) {
+        // TODO
+        return null;
+    }
 }
+
+
 
