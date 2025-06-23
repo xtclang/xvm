@@ -1,4 +1,4 @@
-import XdkBuildLogic.Companion.DEFAULT_JAVA_BYTECODE_VERSION
+
 import org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_OUT
 import org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_ERROR
 import org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED
@@ -18,12 +18,12 @@ private val pprefix = "org.xtclang.java"
 private val lintProperty = "$pprefix.lint"
 
 private val jdkVersion: Provider<Int> = provider {
-    getXdkPropertyInt("$pprefix.jdk", DEFAULT_JAVA_BYTECODE_VERSION)
+    getXdkPropertyInt("$pprefix.jdk")
 }
 
 // Separate execution JVM version from compilation target
 private val executionJdkVersion: Provider<Int> = provider {
-    getXdkPropertyInt("$pprefix.execution.jdk", 24) // Use Java 24 for execution by default
+    getXdkPropertyInt("$pprefix.execution.jdk")
 }
 
 java {

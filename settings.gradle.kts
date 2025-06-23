@@ -7,6 +7,9 @@ pluginManagement {
     includeBuild("build-logic/aggregator")
     includeBuild("build-logic/settings-plugins")
     includeBuild("build-logic/common-plugins")
+    repositories {
+        gradlePluginPortal()
+    }
 }
 
 plugins {

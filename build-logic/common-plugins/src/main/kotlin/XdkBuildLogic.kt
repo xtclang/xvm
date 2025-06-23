@@ -54,7 +54,6 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
     }
 
     companion object {
-        const val DEFAULT_JAVA_BYTECODE_VERSION = 23 // Updated to Java 23 - requires Kotlin 2.0+
         const val XDK_TASK_GROUP_DEBUG = "debug"
         const val XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE = "xdk-distribution-archive"
         const val XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR = "javatools-fatjar"
