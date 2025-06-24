@@ -9,6 +9,9 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.compiler.Token;
+
+import org.xvm.javajit.intrinsic.xStr;
+
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.quotedString;
@@ -187,6 +190,21 @@ public class StringConstant
     public int computeHashCode()
         {
         return Hash.of(m_sVal);
+        }
+
+
+    // ----- run-time support -----------------------------------------------------------------------
+
+    @Override
+    public org.xvm.javajit.intrinsic.xStr ensureValue()
+        {
+        return (org.xvm.javajit.intrinsic.xStr) super.ensureValue();
+        }
+
+    @Override
+    protected Object makeValue()
+        {
+        return new xStr(-1, m_sVal);
         }
 
 

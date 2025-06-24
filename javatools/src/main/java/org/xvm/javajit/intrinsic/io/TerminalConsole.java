@@ -44,15 +44,12 @@ public class TerminalConsole
         }
 
         try {
-            if (suppressEcho)
-                {
+            if (suppressEcho) {
                 return new xStr($ctx.container.id,  xTerminalConsole.CONSOLE_IN.readLine());
-                }
-            else
-                {
+            } else {
                 char[] achLine = xTerminalConsole.CONSOLE.readPassword();
                 return new xStr($ctx.container.id, new String(achLine));
-                }
+            }
         } catch (IOException e) {
             throw new xException(e); // TODO: IOException
         }
