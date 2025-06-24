@@ -27,8 +27,7 @@ public class Ctx {
     public int ra;
     public int ca;
 
-    // multi return values
-    public Object   o0;
+    // multi return values (value "zero" is returned naturally)
     public Object   o1;
     public Object   o2;
     public Object   o3;
@@ -36,7 +35,6 @@ public class Ctx {
     public Object   o5;
     public Object   o6;
     public Object   o7;
-    public long     i0;
     public long     i1;
     public long     i2;
     public long     i3;
