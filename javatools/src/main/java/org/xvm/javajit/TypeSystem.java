@@ -187,6 +187,13 @@ public class TypeSystem {
     public final ModuleLoader[] owned;
 
     /**
+     * @return a ConstantPool associated with this TypeSystem
+     */
+    public ConstantPool pool() {
+        return owned.length == 0 ? xvm.ecstasyPool : owned[0].module.getConstantPool();
+    }
+
+    /**
      * Create a Linker in order to create a new TypeSystem that is an extension of this type system.
      *
      * @return a new Linker, primed with the contents of this TypeSystem
