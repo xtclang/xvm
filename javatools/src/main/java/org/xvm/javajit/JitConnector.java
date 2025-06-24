@@ -14,8 +14,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
-import org.xvm.asm.constants.ModuleConstant;
-
 import org.xvm.javajit.intrinsic.Ctx;
 import org.xvm.javajit.intrinsic.xObj;
 
@@ -68,8 +66,8 @@ public class JitConnector
         String typeName = "jit." + ts.owned[0].pkg + ".$module";
         try {
             Class typeClz = Class.forName(typeName);
-            xObj module = (xObj) typeClz.getDeclaredConstructor(Long.TYPE, ModuleConstant.class).
-                    newInstance(-1L, xvm.ecstasyLoader.module.getIdentityConstant());
+
+            xObj module = (xObj) typeClz.getDeclaredConstructor(Long.TYPE).newInstance(-1L);
             if (asArg == null || asArg.length == 0) {
                 Method method = typeClz.getMethod("run", Ctx.class);
                 method.invoke(module, Ctx.get());
