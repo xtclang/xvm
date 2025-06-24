@@ -1,4 +1,4 @@
-package jit.org.xtclang.tck;
+package jit.org.xtclang.test0;
 
 import org.xvm.asm.constants.TypeConstant;
 
