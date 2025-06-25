@@ -46,6 +46,7 @@ public class NativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends 
         throw buildException("Could not resolve " + commandName + " from system path: " + path);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public ExecResult apply(final CommandLine cmd) {
         logger.info("{} Launching task: {}}", prefix, this);

@@ -43,7 +43,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     @SuppressWarnings("this-escape")
     protected XtcSourceTask(final Project project) {
         super(project, XtcProjectDelegate.resolveXtcCompileExtension(project));
-        this.patternSet = getPatternSetFactory().create();
+        this.patternSet = objects.newInstance(PatternSet.class);
         this.sourceFiles = objects.fileCollection();
     }
 
