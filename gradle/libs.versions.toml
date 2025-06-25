@@ -13,10 +13,11 @@
 # libs.versions.xdkVersion version number.
 #
 [versions]
-xdk = "unspecified"
-xtc-plugin = "unspecified"
-group-xdk = "unspecified"
-group-xtc-plugin = "unspecified"
+# Direct values - simple and reliable (update when VERSION/GROUP files change)
+xdk = "0.4.4-SNAPSHOT"
+xtc-plugin = "0.4.4-SNAPSHOT"
+group-xdk = "org.xtclang"
+group-xtc-plugin = "org.xtclang"
 
 download = "5.5.0"
 versions = "0.50.0"

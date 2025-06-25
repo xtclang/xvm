@@ -12,7 +12,7 @@ import org.xtclang.plugin.tasks.XtcCompileTask
 
 plugins {
     id("org.xtclang.build.xdk.versioning")
-    alias(libs.plugins.xtc)
+    id("org.xtclang.xtc-plugin")
 }
 
 val xdkTurtleConsumer by configurations.registering {

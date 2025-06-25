@@ -10,10 +10,11 @@ pluginManagement {
 }
 
 plugins {
-    id("com.gradle.develocity").version("3.17.4")
+    //id("com.gradle.develocity").version("latest.version")
     id("org.gradle.toolchains.foojay-resolver-convention").version("latest.release")
 }
 
+/*
 develocity {
     projectId = "xvm"
     buildScan {
@@ -27,7 +28,7 @@ develocity {
             fileFingerprints = true
         }
     }
-}
+}*/
 
 val xvmBuilds = listOf(
     "javatools",
