@@ -28,6 +28,46 @@ public interface Hasher<T>
     boolean equals(T a, T b);
 
     /**
+     * Static nested class for natural hashing.
+     */
+    class Natural implements Hasher<Object>
+        {
+        @Override
+        public int hash(Object object)
+            {
+            return Objects.hashCode(object);
+            }
+
+        @Override
+        public boolean equals(Object a, Object b)
+            {
+            return Objects.equals(a, b);
+            }
+
+        static final Hasher<Object> INSTANCE = new Natural();
+        }
+
+    /**
+     * Static nested class for identity hashing.
+     */
+    class Identity implements Hasher<Object>
+        {
+        @Override
+        public int hash(Object object)
+            {
+            return System.identityHashCode(object);
+            }
+
+        @Override
+        public boolean equals(Object a, Object b)
+            {
+            return a == b;
+            }
+
+        static final Hasher<Object> INSTANCE = new Identity();
+        }
+
+    /**
      * @param <T> the object type
      * @return a hasher which delegates to {@link Objects#hashCode} and {@link Objects#hashCode}.
      */
