@@ -1,8 +1,6 @@
 package org.xvm.runtime.template._native.fs;
 
 
-import com.sun.nio.file.ExtendedOpenOption;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -474,8 +472,8 @@ public class xOSFile
                     break;
 
                 case Exclusive:
-                    aOpenOpt = new OpenOption[] {ExtendedOpenOption.NOSHARE_WRITE, StandardOpenOption.WRITE};
-                    break;
+                    return frame.raiseException(
+                        xException.notImplemented(frame, "ReadOption.Exclusive"));
                 }
             }
         else
@@ -490,8 +488,8 @@ public class xOSFile
                 {
                 return frame.raiseException(e);
                 }
-            int cWriteOpts = ahWriteOpt.length;
 
+            int cWriteOpts = ahWriteOpt.length;
             if (cWriteOpts == 0)
                 {
                 switch (optRead)
@@ -504,8 +502,8 @@ public class xOSFile
                         break;
 
                     case Exclusive:
-                        aOpenOpt = new OpenOption[] {ExtendedOpenOption.NOSHARE_READ};
-                        break;
+                        return frame.raiseException(
+                            xException.notImplemented(frame, "ReadOption.Exclusive"));
                     }
                 }
             else
@@ -521,15 +519,15 @@ public class xOSFile
                         break;
 
                     case Exclusive:
-                        listOpt.add(ExtendedOpenOption.NOSHARE_READ);
-                        break;
+                        return frame.raiseException(
+                            xException.notImplemented(frame, "ReadOption.Exclusive"));
                     }
 
                 listOpt.add(StandardOpenOption.WRITE);
 
-                for (int i = 0; i < cWriteOpts; i++)
+                for (ObjectHandle objectHandle : ahWriteOpt)
                     {
-                    EnumHandle  hWrite   = (EnumHandle) ahWriteOpt[i];
+                    EnumHandle hWrite = (EnumHandle) objectHandle;
                     WriteOption optWrite = WriteOption.values()[hWrite.getOrdinal()];
                     switch (optWrite)
                         {
@@ -554,8 +552,8 @@ public class xOSFile
                             listOpt.add(StandardOpenOption.APPEND);
                             break;
                         case Exclusive:
-                            aOpenOpt[i] = ExtendedOpenOption.NOSHARE_WRITE;
-                            break;
+                            return frame.raiseException(
+                                xException.notImplemented(frame, "WriteOption.Exclusive"));
                         case SyncData:
                             listOpt.add(StandardOpenOption.DSYNC);
                             break;

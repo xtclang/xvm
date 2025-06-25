@@ -34,23 +34,6 @@ public interface Hasher<T>
     @SuppressWarnings("unchecked")
     static <T> Hasher<T> natural()
         {
-        class Natural implements Hasher<Object>
-            {
-            @Override
-            public int hash(Object object)
-                {
-                return Objects.hashCode(object);
-                }
-
-            @Override
-            public boolean equals(Object a, Object b)
-                {
-                return Objects.equals(a, b);
-                }
-
-            static final Hasher<Object> INSTANCE = new Natural();
-            }
-
         return (Hasher<T>) Natural.INSTANCE;
         }
 
@@ -61,23 +44,6 @@ public interface Hasher<T>
     @SuppressWarnings("unchecked")
     static <T> Hasher<T> identity()
         {
-        class Identity implements Hasher<Object>
-            {
-            @Override
-            public int hash(Object object)
-                {
-                return System.identityHashCode(object);
-                }
-
-            @Override
-            public boolean equals(Object a, Object b)
-                {
-                return a == b;
-                }
-
-            static final Hasher<Object> INSTANCE = new Identity();
-            }
-
         return (Hasher<T>) Identity.INSTANCE;
         }
 
@@ -105,5 +71,51 @@ public interface Hasher<T>
                 return outer.equals(extractor.apply(a), extractor.apply(b));
                 }
             };
+        }
+
+    // ----- internal ------------------------------------------------------------------------------
+
+    final class Natural implements Hasher<Object>
+        {
+        private Natural()
+            {
+            super();
+            }
+
+        @Override
+        public int hash(Object object)
+            {
+            return Objects.hashCode(object);
+            }
+
+        @Override
+        public boolean equals(Object a, Object b)
+            {
+            return Objects.equals(a, b);
+            }
+
+        static final Hasher<Object> INSTANCE = new Natural();
+        }
+
+    final class Identity implements Hasher<Object>
+        {
+        private Identity()
+            {
+            super();
+            }
+
+        @Override
+        public int hash(Object object)
+            {
+            return System.identityHashCode(object);
+            }
+
+        @Override
+        public boolean equals(Object a, Object b)
+            {
+            return a == b;
+            }
+
+        static final Hasher<Object> INSTANCE = new Identity();
         }
     }
