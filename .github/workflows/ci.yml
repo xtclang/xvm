@@ -52,7 +52,6 @@ env:
   skip_manual_tests_parallel: ${{ github.event.inputs.skip_manual_tests_parallel || 'false' }}
 
   java_version: 24
-  gradle_version: 8.14.2
 
   # Build environment and build workflow debug flags.
   # ACTIONS_RUNNER_DEBUG: true
@@ -90,7 +89,7 @@ jobs:
         with:
           cache-disabled: ${{ github.ref == 'refs/heads/master' }}
           cache-read-only: false
-          gradle-version: ${{ env.gradle_version }}
+          gradle-version: "8.9"
 
       - name: Validate Gradle Wrapper
         uses: gradle/actions/wrapper-validation@v4
@@ -171,7 +170,7 @@ jobs:
         with:
           cache-disabled: ${{ github.ref == 'refs/heads/master' }}
           cache-read-only: false
-          gradle-version: ${{ env.gradle_version }}
+          gradle-version: "8.9"
 
       - name: Dump environment info
         shell: bash
