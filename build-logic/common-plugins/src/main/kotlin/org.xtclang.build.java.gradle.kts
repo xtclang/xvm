@@ -41,7 +41,7 @@ testing {
 }
 
 tasks.withType<JavaExec>().configureEach {
-    inputs.property("jdkVersion", jdkVersion);
+    inputs.property("jdkVersion", jdkVersion)
     logger.info("$prefix Configuring JavaExec task $name from toolchain (Java version: ${java.toolchain.languageVersion})")
     javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
     if (enablePreview()) {
