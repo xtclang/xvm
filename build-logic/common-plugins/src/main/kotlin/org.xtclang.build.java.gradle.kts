@@ -1,4 +1,3 @@
-import XdkBuildLogic.Companion.DEFAULT_JAVA_BYTECODE_VERSION
 import org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_OUT
 import org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_ERROR
 import org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED
@@ -18,7 +17,7 @@ private val pprefix = "org.xtclang.java"
 private val lintProperty = "$pprefix.lint"
 
 private val jdkVersion: Provider<Int> = provider {
-    getXdkPropertyInt("$pprefix.jdk", DEFAULT_JAVA_BYTECODE_VERSION)
+    getXdkPropertyInt("$pprefix.jdk")
 }
 
 java {
@@ -26,7 +25,7 @@ java {
         val xdkJavaVersion = JavaLanguageVersion.of(jdkVersion.get())
         val buildProcessJavaVersion = JavaLanguageVersion.of(JavaVersion.current().majorVersion.toInt())
         if (!buildProcessJavaVersion.canCompileOrRun(xdkJavaVersion)) {
-            throw buildException("Error in Java Toolchain config. The builder can't compile requested Java version: $xdkJavaVersion")
+            logger.warn("We are using a more modern Java tool chain than the build process. $buildProcessJavaVersion < $xdkJavaVersion")
         }
         logger.info("$prefix Java Toolchain config; binary format version: 'JDK $xdkJavaVersion' (build process version: 'JDK $buildProcessJavaVersion')")
         languageVersion.set(xdkJavaVersion)
