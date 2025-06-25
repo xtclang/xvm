@@ -51,6 +51,8 @@ env:
   skip_manual_tests: ${{ github.event.inputs.skip_manual_tests || 'false' }}
   skip_manual_tests_parallel: ${{ github.event.inputs.skip_manual_tests_parallel || 'false' }}
 
+  java_version: 24
+
   # Build environment and build workflow debug flags.
   # ACTIONS_RUNNER_DEBUG: true
   # ACTIONS_STEP_DEBUG: true
@@ -80,7 +82,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: zulu
-          java-version: 21
+          java-version: ${{ env.java_version }}
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -161,7 +163,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: zulu
-          java-version: 21
+          java-version: ${{ env.java_version }}
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
