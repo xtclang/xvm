@@ -25,7 +25,7 @@ java {
         val xdkJavaVersion = JavaLanguageVersion.of(jdkVersion.get())
         val buildProcessJavaVersion = JavaLanguageVersion.of(JavaVersion.current().majorVersion.toInt())
         if (!buildProcessJavaVersion.canCompileOrRun(xdkJavaVersion)) {
-            logger.warn("We are using a more modern Java tool chain than the build process. $buildProcessJavaVersion < $xdkJavaVersion")
+            logger.warn("NOTE: We are using a more modern Java tool chain than the build process. $buildProcessJavaVersion < $xdkJavaVersion")
         }
         logger.info("$prefix Java Toolchain config; binary format version: 'JDK $xdkJavaVersion' (build process version: 'JDK $buildProcessJavaVersion')")
         languageVersion.set(xdkJavaVersion)
