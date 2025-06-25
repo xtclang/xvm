@@ -10,16 +10,17 @@ pluginManagement {
 }
 
 plugins {
-    //id("com.gradle.develocity").version("latest.version")
+    id("com.gradle.develocity").version("3.19.2")
     id("org.gradle.toolchains.foojay-resolver-convention").version("latest.release")
 }
 
-/*
 develocity {
     projectId = "xvm"
     buildScan {
         val isCi = System.getenv("CI") != null
-        publishing.onlyIf { isCi }
+        publishing.onlyIf {
+            isCi
+        }
         termsOfUseUrl = "https://gradle.com/help/legal-terms-of-use"
         termsOfUseAgree = "yes"
         uploadInBackground = isCi
@@ -28,7 +29,7 @@ develocity {
             fileFingerprints = true
         }
     }
-}*/
+}
 
 val xvmBuilds = listOf(
     "javatools",
