@@ -14,7 +14,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
-import org.xvm.javajit.intrinsic.Ctx;
 import org.xvm.javajit.intrinsic.xObj;
 
 
@@ -63,9 +62,13 @@ public class JitConnector
     }
 
     public void invoke0Impl(MethodStructure methodStructure, String... asArg) {
-        String typeName = "jit." + ts.owned[0].pkg + ".$module";
+        String typeName = ts.owned[0].pkg + ".$module";
+        // uncomment for testing
+        // typeName = "jit." + typeName;
+
         try {
-            Class typeClz = Class.forName(typeName);
+            ClassLoader loader  = Ctx.get().container.typeSystem.loader;
+            Class       typeClz = Class.forName(typeName, true, loader);
 
             xObj module = (xObj) typeClz.getDeclaredConstructor(Long.TYPE).newInstance(-1L);
             if (asArg == null || asArg.length == 0) {
@@ -75,7 +78,7 @@ public class JitConnector
                 Method method = typeClz.getMethod("run", String.class.arrayType(), Ctx.class);
                 method.invoke(module, Ctx.get()); // TODO create xStr args
             }
-        } catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException | NoClassDefFoundError e) {
             throw new RuntimeException("Failed to load class \"" + typeName + '"', e);
         } catch (NoSuchMethodException e) {
             throw new RuntimeException("No \"run()\" method", e);
