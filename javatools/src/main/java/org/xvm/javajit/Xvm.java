@@ -415,7 +415,7 @@ public class Xvm {
         }
 
         ModuleStructure module = owned[0];
-        String          pkg    = moduleToPackageName(module.getName(), module.getVersion());
+        String          pkg    = moduleToPackageName(module);
         String          name   = pkg;
         int             count  = 1;
         while (typeSystems.containsKey(name) && typeSystems.get(name).get() != null) {
@@ -542,11 +542,9 @@ public class Xvm {
      */
     private void loadersGc() {
         synchronized (moduleLoaders) {
-            for (Iterator<Map.Entry<String, WeakReference<ModuleLoader>>> iter
-                    = moduleLoaders.entrySet().iterator(); iter.hasNext(); ) {
-                var    entry = iter.next();
-                String pkg   = entry.getKey();
-                var    ref   = entry.getValue();
+            for (Map.Entry<String, WeakReference<ModuleLoader>> entry : moduleLoaders.entrySet()) {
+                String pkg = entry.getKey();
+                var ref = entry.getValue();
                 if (ref != null && ref.get() == null) {
                     // this weak reference has been dropped and needs to be cleaned out
                     moduleLoaders.remove(pkg, ref);
@@ -616,6 +614,17 @@ public class Xvm {
             buf.append(s);
         }
         return buf.toString();
+    }
+
+    /**
+     * Convert Ecstasy module name to a dot-delimited Java package name.
+     *
+     * @param module  the module
+     *
+     * @return a dot-delimited Java package name
+     */
+    static String moduleToPackageName(ModuleStructure module) {
+        return moduleToPackageName(module.getName(), module.getVersion());
     }
 
     /**

@@ -63,9 +63,13 @@ public class JitConnector
     }
 
     public void invoke0Impl(MethodStructure methodStructure, String... asArg) {
-        String typeName = "jit." + ts.owned[0].pkg + ".$module";
+        String typeName = ts.owned[0].pkg + ".$module";
+        // uncomment for testing
+        // typeName = "jit." + typeName;
+
         try {
-            Class typeClz = Class.forName(typeName);
+            ClassLoader loader = Ctx.get().container.typeSystem.loader;
+            Class typeClz = Class.forName(typeName, true, loader);
 
             xObj module = (xObj) typeClz.getDeclaredConstructor(Long.TYPE).newInstance(-1L);
             if (asArg == null || asArg.length == 0) {
