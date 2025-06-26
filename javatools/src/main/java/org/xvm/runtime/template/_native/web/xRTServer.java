@@ -41,6 +41,7 @@ import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.X509ExtendedKeyManager;
 
@@ -335,13 +336,15 @@ public class xRTServer
                 {
                 try
                     {
-                    SSLContext ctxSSL = getSSLContext();
-                    SSLEngine  engine = ctxSSL.createSSLEngine();
+                    SSLContext    ctxSSL    = getSSLContext();
+                    SSLEngine     engine    = ctxSSL.createSSLEngine();
+                    SSLParameters paramsSSL = ctxSSL.getSupportedSSLParameters();
 
-                    params.setNeedClientAuth(false);
-                    params.setCipherSuites(engine.getEnabledCipherSuites());
-                    params.setProtocols(engine.getEnabledProtocols());
-                    params.setSSLParameters(ctxSSL.getSupportedSSLParameters());
+                    paramsSSL.setNeedClientAuth(false);
+                    paramsSSL.setCipherSuites(engine.getEnabledCipherSuites());
+                    paramsSSL.setProtocols(engine.getEnabledProtocols());
+
+                    params.setSSLParameters(paramsSSL);
                     }
                 catch (Exception ex)
                     {
