@@ -1,4 +1,4 @@
-package org.xvm.javajit.intrinsic;
+package org.xvm.javajit;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -7,10 +7,8 @@ import java.util.function.Supplier;
 
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.javajit.Injector;
-import org.xvm.javajit.Xvm;
-
 import org.xvm.javajit.intrinsic.io.TerminalConsole;
+import org.xvm.javajit.intrinsic.xException;
 
 /**
  * The Injector used for "main" containers.

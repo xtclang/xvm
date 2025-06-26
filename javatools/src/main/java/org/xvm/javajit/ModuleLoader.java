@@ -36,7 +36,7 @@ public class ModuleLoader
 
         this.module     = module;
         this.pkg        = pkg;
-        this.prefix     = pkg.replace('.', '/') + '/';
+        this.prefix     = pkg + '.';
         this.typeSystem = parent.typeSystem;
     }
 
@@ -51,9 +51,9 @@ public class ModuleLoader
     public final String pkg;
 
     /**
-     * The '/'-delimited package prefix (as used in the JVM ClassFile Specification) assigned to
+     * The '.'-delimited package prefix (as used in the JVM ClassFile Specification) assigned to
      * this loader to create all of its class names beginning with. The prefix will always end with
-     * a '/' character. This is the same name as {@link #pkg}, but in the JVM's internal format.
+     * a '.' character. This is the same name as {@link #pkg}.
      */
     public final String prefix;
 
@@ -67,7 +67,8 @@ public class ModuleLoader
     protected Class<?> findClass(String name)
             throws ClassNotFoundException {
         if (name.startsWith(prefix)) {
-            byte[] classBytes = typeSystem.genClass(module, prefix, name);
+            String suffix     = name.substring(prefix.length());
+            byte[] classBytes = typeSystem.genClass(this, suffix);
             if (classBytes == null) {
                 throw new ClassNotFoundException(name);
             }
@@ -77,5 +78,10 @@ public class ModuleLoader
         } else {
             throw new ClassNotFoundException(name);
         }
+    }
+
+    @Override
+    public String toString() {
+        return module.toString();
     }
 }
