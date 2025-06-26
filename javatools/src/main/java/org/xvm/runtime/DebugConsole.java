@@ -1690,7 +1690,7 @@ public final class DebugConsole
 
     private void resizeTerminal()
         {
-        if (TERMINAL != null)
+        if (TERMINAL != null && TERMINAL.getWidth() > 0)
             {
             m_cWidth  = TERMINAL.getWidth();
             m_cHeight = TERMINAL.getHeight();
@@ -2383,7 +2383,6 @@ public final class DebugConsole
         {
         int cOld    = s.length();
         int cSpaces = cch - cOld;
-        assert cSpaces >= 0;
         return cSpaces > 0
                 ? s + dup(' ', cSpaces)
                 : s;
