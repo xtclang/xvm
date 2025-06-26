@@ -2,6 +2,8 @@ package org.xvm.javajit.intrinsic;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.javajit.Ctx;
+
 public abstract class xType
         extends xConst {
 

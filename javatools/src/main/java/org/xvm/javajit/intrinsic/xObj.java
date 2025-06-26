@@ -1,9 +1,8 @@
 package org.xvm.javajit.intrinsic;
 
-
 import org.xvm.javajit.Container;
+import org.xvm.javajit.Ctx;
 import org.xvm.javajit.Xvm;
-
 
 public abstract class xObj {
     public xObj(long containerId) {

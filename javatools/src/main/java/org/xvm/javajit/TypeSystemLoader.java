@@ -62,15 +62,13 @@ public class TypeSystemLoader
     @Override
     protected Class<?> findClass(String name)
             throws ClassNotFoundException {
-        for (int i = 0; i < owned.length; ++i) {
-            ModuleLoader loader = owned[i];
+        for (ModuleLoader loader : owned) {
             if (name.startsWith(loader.prefix)) {
                 return loader.findClass(name);
             }
         }
 
-        for (int i = 0; i < shared.length; ++i) {
-            ModuleLoader loader = shared[i];
+        for (ModuleLoader loader : shared) {
             if (name.startsWith(loader.prefix)) {
                 return loader.findClass(name);
             }

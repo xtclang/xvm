@@ -1,7 +1,4 @@
-package org.xvm.javajit.intrinsic;
-
-import org.xvm.javajit.Container;
-import org.xvm.javajit.Xvm;
+package org.xvm.javajit;
 
 public class Ctx {
     public Ctx(Xvm xvm, Container container) {

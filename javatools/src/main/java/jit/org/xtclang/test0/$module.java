@@ -3,9 +3,9 @@ package jit.org.xtclang.test0;
 /**
  * AUTOGEN: module tck.xtclang.org
  */
-public class $module extends org.xvm.javajit.intrinsic.xConst {
+public class $module extends org.xvm.javajit.intrinsic.xModule {
     public $module(long containerId) {
-        super(containerId);
+        super(containerId, org.xvm.javajit.Ctx.get().container.typeSystem.mainModule());
     }
 
     @Override
@@ -16,7 +16,7 @@ public class $module extends org.xvm.javajit.intrinsic.xConst {
     // constants
     public static final org.xvm.javajit.intrinsic.xStr c$0;
     static {
-        org.xvm.javajit.intrinsic.Ctx ctx = org.xvm.javajit.intrinsic.Ctx.get();
+        org.xvm.javajit.Ctx ctx = org.xvm.javajit.Ctx.get();
         org.xvm.asm.ConstantPool pool = ctx.container.typeSystem.pool();
 
         c$0 = pool.ensureStringConstant("hello").ensureValue();
@@ -24,10 +24,11 @@ public class $module extends org.xvm.javajit.intrinsic.xConst {
 
     // injections
     private static final org.xvm.javajit.Injector.Resource $io_console =
-        new org.xvm.javajit.Injector.Resource($xvm().ecstasyPool.ensureEcstasyTypeConstant("io.Console"), "console");
+        new org.xvm.javajit.Injector.Resource(
+            $xvm().ecstasyPool.ensureEcstasyTypeConstant("io.Console"), "console");
 
     // methods
-    public void run(org.xvm.javajit.intrinsic.Ctx $ctx) {
+    public void run(org.xvm.javajit.Ctx $ctx) {
         // @Inject Console console;
         jit.org.xtclang.ecstasy.io.Console console = $ctx.container.injector.valueOf($io_console);
 

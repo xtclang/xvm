@@ -1,5 +1,7 @@
 package org.xvm.javajit.intrinsic;
 
+import org.xvm.javajit.Ctx;
+
 /**
  * Native implementation for ecstasy.Exception
  */

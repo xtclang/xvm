@@ -204,7 +204,7 @@ public class StringConstant
     @Override
     protected Object makeValue()
         {
-        return new xStr(-1, m_sVal);
+        return m_sVal.isEmpty() ? xStr.EmptyString : new xStr(-1, m_sVal);
         }
 
 
