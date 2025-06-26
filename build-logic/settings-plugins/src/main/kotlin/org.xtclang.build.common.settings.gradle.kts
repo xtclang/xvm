@@ -19,38 +19,20 @@ fun compositeRootRelativeFile(path: String): File? {
 
 val libsVersionCatalog = compositeRootRelativeFile("gradle/libs.versions.toml")!!
 
-// If we can read properties here, we can also patch the catalog files.
+// Standard dependency resolution - no version patching needed
 dependencyResolutionManagement {
     @Suppress("UnstableApiUsage")
     repositories {
         mavenCentral()
     }
 
-    // For bootstrapping reasons, we manually load the properties file, instead of falling back to the build logic automatic property handler.
-    val prefix = "[${rootProject.name}]"
-    val xdkGroup = compositeRootRelativeFile("GROUP")!!.readText().trim()
-    val xdkVersionFromFile = compositeRootRelativeFile("VERSION")!!.readText().trim()
-    val xdkVersion = System.getenv("XDK_OVERRIDE_VERSION") ?: xdkVersionFromFile
-    if (xdkVersion != xdkVersionFromFile) {
-        logger.warn("$prefix WARNING: XDK_OVERRIDE_VERSION found. Using '$xdkVersion' (VERSION file specifies: '$xdkVersionFromFile').")
-    }
-    logger.info("$prefix Configuring and versioning artifact: '$xdkGroup:${rootProject.name}:$xdkVersion'")
-    logger.info(
-        """
-        $prefix XDK VERSION INFO:
-        $prefix     Project : '${rootProject.name}' 
-        $prefix     Group   : '$xdkGroup' (plugin: '$xdkGroup)')
-        $prefix     Version : '$xdkVersion' (plugin: '$xdkVersion') ${if (xdkVersion != xdkVersionFromFile) "[OVERRIDDEN VERSION]" else ""}
-    """.trimIndent()
-    )
-
     versionCatalogs {
         val libs by creating {
-            from(files(libsVersionCatalog)) // load versions
-            version("xdk", xdkVersion)
-            version("xtc-plugin", xdkVersion)
-            version("group-xdk", xdkGroup)
-            version("group-xtc-plugin", xdkGroup)
+            from(files(libsVersionCatalog)) // Versions are directly specified in catalog
         }
     }
 }
+
+// Optional: Log version info for debugging (read from catalog)
+val prefix = "[${rootProject.name}]"
+logger.info("$prefix Using version catalog from: $libsVersionCatalog")

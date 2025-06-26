@@ -13,10 +13,13 @@
 # libs.versions.xdkVersion version number.
 #
 [versions]
-xdk = "unspecified"
-xtc-plugin = "unspecified"
-group-xdk = "unspecified"
-group-xtc-plugin = "unspecified"
+# TODO: It was too brittle to dynamically hot patch these during startup. We should remove VERSION and GROUP
+# and use the version catalog as a single source of truth if we can. Note that the various bump version schemes
+# and methods won't work then, but we will figure it out.
+xdk = "0.4.4-SNAPSHOT"
+xtc-plugin = "0.4.4-SNAPSHOT"
+group-xdk = "org.xtclang"
+group-xtc-plugin = "org.xtclang"
 
 download = "5.5.0"
 versions = "0.50.0"

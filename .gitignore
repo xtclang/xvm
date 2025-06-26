@@ -87,5 +87,8 @@ prj/
 gradle-user-home/
 profile-out/
 
+# Kotlin build
+.kotlin
+
 # Any file named TODO
 TODO

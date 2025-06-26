@@ -30,6 +30,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
         super(project, task);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public ExecResult apply(final CommandLine cmd) {
         logger.info("{} Launching task: {}}", prefix, this);

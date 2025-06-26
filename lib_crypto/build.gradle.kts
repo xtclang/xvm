@@ -1,6 +1,6 @@
 plugins {
-    id("org.xtclang.build.xdk.versioning")
-    alias(libs.plugins.xtc)
+    id("org.xtclang.build.xdk.versioning")    
+    id("org.xtclang.xtc-plugin")
 }
 
 dependencies {
