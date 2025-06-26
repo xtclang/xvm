@@ -2,7 +2,8 @@ package org.xvm.javajit.intrinsic.io;
 
 import java.io.IOException;
 
-import org.xvm.javajit.intrinsic.Ctx;
+import org.xvm.javajit.Ctx;
+
 import org.xvm.javajit.intrinsic.xException;
 import org.xvm.javajit.intrinsic.xObj;
 import org.xvm.javajit.intrinsic.xService;
