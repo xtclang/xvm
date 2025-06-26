@@ -51,7 +51,7 @@ env:
   skip_manual_tests: ${{ github.event.inputs.skip_manual_tests || 'false' }}
   skip_manual_tests_parallel: ${{ github.event.inputs.skip_manual_tests_parallel || 'false' }}
 
-  java_version: 24
+  java_version: 21
   gradle_version: 8.14.2
 
   # Build environment and build workflow debug flags.
