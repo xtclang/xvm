@@ -10,12 +10,10 @@ import java.io.IOException;
 
 import java.util.zip.ZipFile;
 
-import org.gradle.api.Project;
 import org.gradle.process.ExecResult;
 
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcPluginUtils.FileUtils;
-import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 
 // TODO: Add more info to the LauncherException, and if we can reflect it out for the "javatools bundled with
@@ -26,8 +24,8 @@ import org.xtclang.plugin.tasks.XtcLauncherTask;
  * Launcher logic that runs the XTC launchers from classes on the classpath.
  */
 public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends XtcLauncher<E, T> {
-    public JavaExecLauncher(final Project project, final T task) {
-        super(project, task);
+    public JavaExecLauncher(final LauncherConfiguration config, final T task) {
+        super(config, task);
     }
 
     @SuppressWarnings("deprecation")
@@ -42,14 +40,14 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
 
         logger.info("{} {} (launcher: {}); Using '{}' in classpath from: {}", prefix, cmd.getIdentifier(), cmd.getClass(), JAVATOOLS_JAR_NAME, javaToolsJar);
 
-        if (task.hasVerboseLogging()) {
+        if (config.isVerboseLogging()) {
             final var launchLine = cmd.toString(javaToolsJar);
             logger.lifecycle("{} JavaExec command (launcher {}):", prefix, getClass().getSimpleName());
             logger.lifecycle("{}     {}", prefix, launchLine);
         }
 
         final var builder = resultBuilder(cmd);
-        return createExecResult(builder.execResult(project.getProject().javaexec(spec -> {
+        return createExecResult(builder.execResult(config.getJavaExecInterface().javaexec(spec -> {
             redirectIo(builder, spec);
             spec.classpath(javaToolsJar);
             spec.getMainClass().set(cmd.getMainClassName());
@@ -86,8 +84,8 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
          * we keep this code here for now. It will very likely go away in the future, and assume and assert that
          * there is only one configuration available to consume, containing the javatools.jar.
          */
-        final var javaToolsFromConfig = task.filesFromConfigs(true, XDK_CONFIG_NAME_JAVATOOLS_INCOMING).filter(FileUtils::isValidJavaToolsArtifact);
-        final var javaToolsFromXdk = project.fileTree(XtcProjectDelegate.getXdkContentsDir(project)).filter(FileUtils::isValidJavaToolsArtifact);
+        final var javaToolsFromConfig = config.getFileOperations().files(config.getJavaToolsConfigFiles().toArray()).filter(FileUtils::isValidJavaToolsArtifact);
+        final var javaToolsFromXdk = config.getFileOperations().fileTree(config.getXdkContentsDir()).filter(FileUtils::isValidJavaToolsArtifact);
 
         logger.info("""            
                 {} javaToolsFromConfig files: {}

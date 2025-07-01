@@ -2,22 +2,29 @@ package org.xtclang.plugin.launchers;
 
 import static org.xtclang.plugin.launchers.XtcExecResult.XtcExecResultBuilder;
 
-import org.gradle.api.Project;
+import java.util.function.Function;
+
+import org.gradle.api.GradleException;
+import org.gradle.api.logging.Logger;
 import org.gradle.process.BaseExecSpec;
 import org.gradle.process.ExecResult;
 
-import org.xtclang.plugin.ProjectDelegate;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 
-public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends ProjectDelegate<CommandLine, ExecResult> {
+public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> implements Function<CommandLine, ExecResult> {
+    protected final LauncherConfiguration config;
     protected final T task;
     protected final String taskName;
+    protected final Logger logger;
+    protected final String prefix;
 
-    protected XtcLauncher(final Project project, final T task) {
-        super(project);
+    protected XtcLauncher(final LauncherConfiguration config, final T task) {
+        this.config = config;
         this.task = task;
         this.taskName = task.getName();
+        this.logger = config.getLogger();
+        this.prefix = config.getLogPrefix();
     }
 
     @Override
@@ -25,6 +32,9 @@ public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends 
         return String.format("%s (launcher='%s', task='%s', fork=%s, native=%s).",
                 prefix, getClass().getSimpleName(), taskName, shouldFork(), isNativeLauncher());
     }
+
+    @Override
+    public abstract ExecResult apply(CommandLine cmd);
 
     protected boolean shouldFork() {
         return task.getFork().get();
@@ -62,5 +72,19 @@ public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends 
     @SuppressWarnings("UnusedReturnValue")
     protected boolean validateCommandLine(final CommandLine cmd) {
         return true;
+    }
+
+    protected final GradleException buildException(final String msg, final Object... args) {
+        return buildException(null, msg, args);
+    }
+
+    protected final GradleException buildException(final Throwable t, final String msg, final Object... args) {
+        String formattedMsg = String.format(msg.replace("{}", "%s"), args);
+        logger.error(formattedMsg, t);
+        return new GradleException(prefix + ": " + formattedMsg, t);
+    }
+
+    public boolean hasVerboseLogging() {
+        return config.isVerboseLogging();
     }
 }

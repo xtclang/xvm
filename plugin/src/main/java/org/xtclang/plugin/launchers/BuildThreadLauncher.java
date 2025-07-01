@@ -13,7 +13,6 @@ import java.net.URLClassLoader;
 
 import java.util.Objects;
 
-import org.gradle.api.Project;
 import org.gradle.process.ExecResult;
 
 import org.xtclang.plugin.XtcLauncherTaskExtension;
@@ -31,9 +30,9 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
 
     private final Method main;
 
-    public BuildThreadLauncher(final Project project, final T task) {
-        super(project, task);
-        this.main = resolveMethod(task);
+    public BuildThreadLauncher(final LauncherConfiguration config, final T task) {
+        super(config, task);
+        this.main = resolveMethod(config, task);
     }
 
     @Override
@@ -64,7 +63,7 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
         final var oldErr = System.err;
         final var builder = resultBuilder(cmd);
         try {
-            if (task.hasVerboseLogging()) {
+            if (config.isVerboseLogging()) {
                 logger.lifecycle("{} WARNING: (equivalent to what we are executing without forking in current thread) JavaExec command: {}",
                     prefix, cmd.toString());
             }
@@ -128,12 +127,12 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
     }
 
     @SuppressWarnings("SameParameterValue")
-    private static Method resolveMethod(final XtcLauncherTask<?> task) {
+    private static Method resolveMethod(final LauncherConfiguration config, final XtcLauncherTask<?> task) {
         try {
-            return Class.forName(task.getJavaLauncherClassName()).getMethod(LAUNCH_METHOD_NAME, LAUNCH_METHOD_PARAMS);
+            return Class.forName(config.getJavaLauncherClassName()).getMethod(LAUNCH_METHOD_NAME, LAUNCH_METHOD_PARAMS);
         } catch (final ClassNotFoundException | NoSuchMethodException e) {
             throw task.buildException(e, "Failed to resolve method '{}' in class '{}': {}.",
-                LAUNCH_METHOD_NAME, task.getJavaLauncherClassName(), e.getMessage());
+                LAUNCH_METHOD_NAME, config.getJavaLauncherClassName(), e.getMessage());
         }
     }
 }

@@ -40,11 +40,15 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.process.ExecResult;
+import org.gradle.process.ExecOperations;
+
+import javax.inject.Inject;
 
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.launchers.BuildThreadLauncher;
 import org.xtclang.plugin.launchers.JavaExecLauncher;
+import org.xtclang.plugin.launchers.LauncherConfiguration;
 import org.xtclang.plugin.launchers.NativeBinaryLauncher;
 import org.xtclang.plugin.launchers.XtcLauncher;
 
@@ -53,6 +57,9 @@ import org.xtclang.plugin.launchers.XtcLauncher;
  * anything that goes through the XTC Launcher to spawn or call different processes
  */
 public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extends XtcDefaultTask implements XtcLauncherTaskExtension {
+    
+    @Inject
+    public abstract ExecOperations getExecOperations();
 
     // All inherited from launcher task extension and turned into input
     protected Property<InputStream> stdin;
@@ -68,14 +75,21 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected Property<Boolean> useNativeLauncher;
 
     protected transient E ext; // transient to avoid configuration cache issues
+    
+    // Cached project information for launchers (configuration cache compatible)
+    private String cachedProjectName;
+    private Provider<Directory> cachedXdkContentsDir;
 
     @SuppressWarnings("this-escape")
     protected XtcLauncherTask(final E ext) {
         super();
         this.ext = ext;
+        // Cache project name to avoid calling getProject() during execution
+        if (getProject() != null) {
+            this.cachedProjectName = getProject().getName();
+            this.cachedXdkContentsDir = getLayout().getBuildDirectory().dir("xtc/xdk/lib");
+        }
     }
-    
-    // Removed initializeProperties - now using lazy initialization in getters
     
     @Override
     public void executeTask() {
@@ -280,17 +294,64 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected XtcLauncher<E, ? extends XtcLauncherTask<E>> createLauncher() {
         final String taskName = getName();
         final var prefix = "[" + taskName + "]";
+        
+        // Create the launcher configuration
+        final LauncherConfiguration config = createLauncherConfiguration();
+        
         if (getUseNativeLauncher().get()) {
             getLogger().info("{} Created XTC launcher: native executable.", prefix);
-            return new NativeBinaryLauncher<>(getProject(), this);
+            return new NativeBinaryLauncher<>(config, this);
         } else if (getFork().get()) {
             getLogger().info("{} Created XTC launcher: Java process forked from build.", prefix);
-            return new JavaExecLauncher<>(getProject(), this);
+            return new JavaExecLauncher<>(config, this);
         } else {
             getLogger().warn("{} WARNING: Created XTC launcher: Running launcher in the same thread as the build process. This is not recommended for production",
                     prefix);
-            return new BuildThreadLauncher<>(getProject(), this);
+            return new BuildThreadLauncher<>(config, this);
         }
+    }
+    
+    @SuppressWarnings("deprecation")
+    private LauncherConfiguration createLauncherConfiguration() {
+        // Use cached values instead of getProject()
+        final Set<File> javaToolsConfigFiles = getInputXtcJavaToolsConfig().getFiles();
+        final File xdkContentsDir = cachedXdkContentsDir != null ? cachedXdkContentsDir.get().getAsFile() : getInputXdkContents().get().getAsFile();
+        
+        // Create configuration
+        final LauncherConfiguration config = new LauncherConfiguration(
+            cachedProjectName != null ? cachedProjectName : "unknown",
+            getName(),
+            xdkContentsDir,
+            javaToolsConfigFiles,
+            getJavaLauncherClassName(),
+            getNativeLauncherCommandName(),
+            getVerbose().get()  // Cache verbose logging state
+        );
+        
+        // Set runtime interfaces
+        config.setLogger(getLogger());
+        // Set the execution interfaces using ExecOperations injection
+        config.setJavaExecInterface(action -> {
+            // Use ExecOperations for Java execution
+            return getExecOperations().javaexec(action);
+        });
+        config.setExecInterface(action -> {
+            // Use ExecOperations for native execution  
+            return getExecOperations().exec(action);
+        });
+        config.setFileOperations(new LauncherConfiguration.FileOperations() {
+            @Override
+            public FileCollection fileTree(File dir) {
+                return getObjects().fileTree().from(dir).getAsFileTree();
+            }
+            
+            @Override
+            public FileCollection files(Object... paths) {
+                return getObjects().fileCollection().from(paths);
+            }
+        });
+        
+        return config;
     }
 
     protected List<File> resolveFullModulePath() {
@@ -417,11 +478,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @SuppressWarnings("unused")
     protected Set<File> resolveFiles(final Provider<Directory> dirProvider) {
-        return resolveFiles(getProject().files(dirProvider));
+        return resolveFiles(getObjects().fileCollection().from(dirProvider));
     }
 
     protected Set<File> resolveDirectories(final Provider<Directory> dirProvider) {
-        return resolveDirectories(resolveFiles(getProject().files(dirProvider)));
+        return resolveDirectories(resolveFiles(getObjects().fileCollection().from(dirProvider)));
     }
 
     private static char yesOrNo(final boolean value) {

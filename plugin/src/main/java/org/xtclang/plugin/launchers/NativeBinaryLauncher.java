@@ -5,7 +5,6 @@ import java.io.File;
 import java.util.Objects;
 import java.util.StringTokenizer;
 
-import org.gradle.api.Project;
 import org.gradle.process.ExecResult;
 
 import org.xtclang.plugin.XtcLauncherTaskExtension;
@@ -17,9 +16,9 @@ public class NativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends 
 
     private final String commandName;
 
-    public NativeBinaryLauncher(final Project project, final T task) {
-        super(project, task);
-        this.commandName = task.getNativeLauncherCommandName();
+    public NativeBinaryLauncher(final LauncherConfiguration config, final T task) {
+        super(config, task);
+        this.commandName = config.getNativeLauncherCommandName();
     }
 
     @Override
@@ -55,7 +54,7 @@ public class NativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends 
             logger.lifecycle("{} NativeExec command: {}", prefix, cmd.toString());
         }
         final var builder = resultBuilder(cmd);
-        return createExecResult(builder.execResult(project.exec(spec -> {
+        return createExecResult(builder.execResult(config.getExecInterface().exec(spec -> {
             redirectIo(builder, spec);
             spec.setExecutable(findOnPath(commandName));
             spec.setArgs(cmd.toList());
