@@ -12,7 +12,7 @@ import java.io.File;
 
 import javax.inject.Inject;
 
-import org.gradle.api.Project;
+import org.gradle.api.file.ArchiveOperations;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.RelativePath;
@@ -31,9 +31,7 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
     private static final String XDK_ARCHIVE_DEFAULT_EXTENSION = "zip";
 
     @Inject
-    public XtcExtractXdkTask(final Project project) {
-        super(project);
-    }
+    public abstract ArchiveOperations getArchiveOperations();
 
     private static boolean isXdkArchive(final File file) {
         return XDK_ARCHIVE_DEFAULT_EXTENSION.equals(getFileExtension(file));
@@ -47,7 +45,7 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
 
     @OutputDirectory
     Provider<Directory> getOutputXtcModules() {
-        return XtcProjectDelegate.getXdkContentsDir(project);
+        return XtcProjectDelegate.getXdkContentsDir(getProject());
     }
 
     @TaskAction
@@ -58,7 +56,7 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
         final var archives = filesFromConfigs(true, XDK_CONFIG_NAME_INCOMING_ZIP, XDK_CONFIG_NAME_INCOMING).filter(XtcExtractXdkTask::isXdkArchive);
 
         if (archives.isEmpty()) {
-            logger.info("{} Project does NOT depend on the XDK; {} is a nop.", prefix(), getName());
+            getLogger().info("{} Project does NOT depend on the XDK; {} is a nop.", prefix(), getName());
             return;
         }
 
@@ -66,9 +64,9 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
         final var archiveFile = archives.getSingleFile();
         final var prefix = prefix();
 
-        project.copy(config -> {
-            logger.info("{} CopySpec: XDK archive file dependency: {}", prefix, archiveFile);
-            config.from(project.zipTree(archiveFile));
+        getFileOperations().copy(config -> {
+            getLogger().info("{} CopySpec: XDK archive file dependency: {}", prefix, archiveFile);
+            config.from(getArchiveOperations().zipTree(archiveFile));
             config.include(
                     "**/*." + XTC_MODULE_FILE_EXTENSION,
                     "**/" + XDK_JAVATOOLS_ARTIFACT_ID + '*' + XDK_JAVATOOLS_ARTIFACT_SUFFIX,
@@ -78,6 +76,6 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
             config.into(getOutputXtcModules());
         });
 
-        logger.info("{} Finished unpacking XDK archive: {} -> {}.", prefix, archiveFile.getAbsolutePath(), getOutputXtcModules().get());
+        getLogger().info("{} Finished unpacking XDK archive: {} -> {}.", prefix, archiveFile.getAbsolutePath(), getOutputXtcModules().get());
     }
 }

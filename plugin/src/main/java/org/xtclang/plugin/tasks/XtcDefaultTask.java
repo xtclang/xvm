@@ -7,9 +7,16 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.FileCollection;
+import org.gradle.api.file.FileSystemOperations;
+import org.gradle.api.file.ProjectLayout;
 import org.gradle.api.logging.Logger;
+import org.gradle.api.logging.Logging;
 import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.provider.Property;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Internal;
+
+import javax.inject.Inject;
 
 import org.xtclang.plugin.ProjectDelegate;
 import org.xtclang.plugin.XtcBuildRuntimeException;
@@ -29,28 +36,39 @@ public abstract class XtcDefaultTask extends DefaultTask {
      */
 
     // TODO gradually remove the delegate and distribute the logic to its correct places in the "normal" Gradle plugin and DSL APIs and implementations.
-    protected final Project project;
-    protected final String projectName;
-    protected final ObjectFactory objects;
-    protected final Logger logger;
-    protected final boolean overrideVerboseLogging;
-
+    private static final Logger STATIC_LOGGER = Logging.getLogger(XtcDefaultTask.class);
+    
+    @Internal
+    private Property<Boolean> overrideVerboseLogging;
     private boolean isBeingExecuted;
 
-    protected XtcDefaultTask(final Project project) {
-        this(project, ProjectDelegate.hasVerboseLogging(project));
+    @Inject
+    public abstract ObjectFactory getObjects();
+    
+    @Inject
+    public abstract ProjectLayout getLayout();
+    
+    @Inject
+    public abstract FileSystemOperations getFileOperations();
+    
+    protected XtcDefaultTask() {
+        // Initialize in subclass constructors to avoid this-escape
     }
-
-    protected XtcDefaultTask(final Project project, final boolean overrideVerboseLogging) {
-        this.project = project;
-        this.projectName = project.getName();
-        this.objects = project.getObjects();
-        this.logger = project.getLogger();
-        this.overrideVerboseLogging = overrideVerboseLogging;
+    
+    protected Property<Boolean> getOverrideVerboseLogging() {
+        if (overrideVerboseLogging == null) {
+            overrideVerboseLogging = getObjects().property(Boolean.class)
+                .convention(false); // Default to false, will be set properly when project is available
+        }
+        return overrideVerboseLogging;
     }
 
     protected final String prefix() {
-        return ProjectDelegate.prefix(projectName, getName());
+        var project = getProject();
+        if (project == null) {
+            return "[null-project]:" + getName();
+        }
+        return ProjectDelegate.prefix(project.getName(), getName());
     }
 
     /**
@@ -62,7 +80,10 @@ public abstract class XtcDefaultTask extends DefaultTask {
      * @return True of we are running with verbose logging enabled, false otherwise.
      */
     public boolean hasVerboseLogging() {
-        return overrideVerboseLogging || ProjectDelegate.hasVerboseLogging(project);
+        if (getProject() == null) {
+            return false;
+        }
+        return getOverrideVerboseLogging().get() || ProjectDelegate.hasVerboseLogging(getProject());
     }
 
     protected void executeTask() {
@@ -100,16 +121,21 @@ public abstract class XtcDefaultTask extends DefaultTask {
     }
 
     public FileCollection filesFromConfigs(final boolean shouldBeResolved, final List<String> configNames) {
-        final Logger logger = project.getLogger();
+        // Defensive check for early calls during task creation
+        if (getProject() == null || getObjects() == null) {
+            throw new IllegalStateException("filesFromConfigs called before task is initialized");
+        }
+        
+        final Logger logger = getLogger();
         final String prefix = prefix();
         logger.info("{} Resolving filesFrom config: {}", prefix, configNames);
-        FileCollection fc = project.getObjects().fileCollection();
+        FileCollection fc = getObjects().fileCollection();
         for (final var name : configNames) {
-            final Configuration config = project.getConfigurations().getByName(name);
+            final Configuration config = getProject().getConfigurations().getByName(name);
             if (shouldBeResolved && config.getState() != Configuration.State.RESOLVED) {
                 throw buildException("Configuration '{}' is not resolved, which is a requirement from the task execution phase.", name);
             }
-            final var files = project.files(config);
+            final var files = getProject().files(config);
             logger.info("{} Scanning file collection: filesFrom: {} {}, files: {}", prefix, name, config.getState(), files.getFiles());
             fc = fc.plus(files);
         }
@@ -122,6 +148,6 @@ public abstract class XtcDefaultTask extends DefaultTask {
     }
 
     public XtcBuildRuntimeException buildException(final Throwable t, final String msg, final Object... args) {
-        return XtcProjectDelegate.buildException(logger, prefix(), t, msg, args);
+        return XtcProjectDelegate.buildException(getLogger(), prefix(), t, msg, args);
     }
 }

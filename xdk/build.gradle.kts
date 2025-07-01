@@ -121,13 +121,14 @@ distributions {
     }
 }
 
-tasks.filter { XdkDistribution.isDistributionArchiveTask(it) }.forEach {
+// Use lazy configuration to avoid forcing task creation
+tasks.matching { XdkDistribution.isDistributionArchiveTask(it) }.configureEach {
     // Add transitive dependency to the process resource tasks. There might be something brokemn with those dependencies,
     // but it's more likely that since the processXtcResources task needs to be run before compileXtc, and the Java one does
     // not, this somehow confuses the life cycle. TODO: This is another argument to remove and duplicate what is needed of the
     // Java plugin functionality for the XTC Plugin, but we haven't had time to neither do that, nor work on build speedups
     // through configuration caching and other dependencies.
-    it.dependsOn(tasks.compileXtc)
+    dependsOn(tasks.compileXtc)
 }
 
 val cleanXdk by tasks.registering(Delete::class) {

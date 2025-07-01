@@ -41,16 +41,20 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     private ConfigurableFileCollection sourceFiles;
 
     @SuppressWarnings("this-escape")
-    protected XtcSourceTask(final Project project) {
-        super(project, XtcProjectDelegate.resolveXtcCompileExtension(project));
-        this.patternSet = objects.newInstance(PatternSet.class);
-        this.sourceFiles = objects.fileCollection();
+    protected XtcSourceTask() {
+        super(null); // Extension will be resolved lazily
+        this.patternSet = getObjects().newInstance(PatternSet.class);
+        this.sourceFiles = getObjects().fileCollection();
+    }
+    
+    @Override
+    protected XtcCompilerExtension getExtension() {
+        if (ext == null) {
+            ext = XtcProjectDelegate.resolveXtcCompileExtension(getProject());
+        }
+        return ext;
     }
 
-    @Inject
-    protected Factory<PatternSet> getPatternSetFactory() {
-        throw new UnsupportedOperationException("XtcSourceTask.getPatternSetFactory()");
-    }
 
     @SuppressWarnings("unused")
     @Internal
@@ -93,7 +97,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
      * @param source The source.
      */
     public void setSource(final Object source) {
-        sourceFiles = objects.fileCollection().from(source);
+        sourceFiles = getObjects().fileCollection().from(source);
     }
 
     /**
@@ -201,10 +205,10 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
         final var dir = file.getParentFile();
         assert dir != null && dir.isDirectory();
         final var isTopLevelSrc = topLevelSourceDirs.contains(dir);
-        logger.debug("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}",
+        getLogger().debug("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}",
             prefix(), file.getAbsolutePath(), isTopLevelSrc);
         if (isTopLevelSrc || XDK_TURTLE_SOURCE_FILENAME.equalsIgnoreCase(file.getName())) {
-            logger.info("{} Found module definition: {}", prefix(), file.getAbsolutePath());
+            getLogger().info("{} Found module definition: {}", prefix(), file.getAbsolutePath());
             return true;
         }
         return false;

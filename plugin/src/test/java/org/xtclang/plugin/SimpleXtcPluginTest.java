@@ -35,8 +35,8 @@ public class SimpleXtcPluginTest {
         project.getPluginManager().apply(XTC_PLUGIN_ID);
 
         final int tasksAfter = tasks.size();
-        System.out.println("There are " + tasksAfter + " tasks in project '" + project.getName() + "' after plugin application:");
-        tasks.forEach(task -> System.err.println('\t' + task.getName()));
+        System.out.println("There are " + tasksAfter + " tasks in project '" + project.getName() + "' after plugin application.");
+        // Don't iterate through all tasks as it forces their creation
 
         assertTrue(tasksBefore < tasksAfter);
         assertNotNull(tasks.findByName(XDK_VERSION_TASK_NAME));

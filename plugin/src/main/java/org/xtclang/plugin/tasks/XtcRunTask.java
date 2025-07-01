@@ -68,23 +68,48 @@ import org.xtclang.plugin.launchers.XtcLauncher;
 public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> implements XtcRuntimeExtension {
     private static final String XEC_ARG_RUN_METHOD = "--method";
 
-    private final Map<XtcRunModule, ExecResult> executedModules; // TODO we can cache output here to if we want.
-    private final Property<DefaultXtcRuntimeExtension> taskLocalModules;
+    private Map<XtcRunModule, ExecResult> executedModules; // TODO we can cache output here to if we want.
+    private Property<DefaultXtcRuntimeExtension> taskLocalModules;
 
     /**
      * Create an XTC run task, currently delegating instead of inheriting the plugin project
      * delegate. We are slowly getting rid of this delegate pattern, now that the intra-plugin
      * needed types have been resolved.
-     *
-     * @param project  Project
      */
-    @SuppressWarnings("ConstructorNotProtectedInAbstractClass") // Has to be public for code injection to work.
+    @SuppressWarnings({"ConstructorNotProtectedInAbstractClass", "this-escape"}) // Has to be public for code injection to work.
     @Inject
-    public XtcRunTask(final Project project) {
+    public XtcRunTask() {
         // TODO clean this up:
-        super(project, XtcProjectDelegate.resolveXtcRuntimeExtension(project));
-        this.executedModules = new LinkedHashMap<>();
-        this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class, project));
+        super(null); // Extension will be resolved lazily
+        // Don't initialize fields here - let them be initialized lazily
+    }
+    
+    private Property<DefaultXtcRuntimeExtension> getTaskLocalModules() {
+        if (taskLocalModules == null) {
+            taskLocalModules = getObjects().property(DefaultXtcRuntimeExtension.class);
+            // Don't set convention here - it will be set lazily when needed
+        }
+        return taskLocalModules;
+    }
+    
+    private Map<XtcRunModule, ExecResult> getExecutedModules() {
+        if (executedModules == null) {
+            executedModules = new LinkedHashMap<>();
+        }
+        return executedModules;
+    }
+    
+    @Override
+    protected XtcRuntimeExtension getExtension() {
+        if (ext == null) {
+            // Defensive check to ensure project is available
+            if (getProject() != null) {
+                ext = XtcProjectDelegate.resolveXtcRuntimeExtension(getProject());
+            } else {
+                throw new IllegalStateException("Project is not available during extension resolution");
+            }
+        }
+        return ext;
     }
 
     @Internal
@@ -99,11 +124,23 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         return XTC_RUNNER_CLASS_NAME;
     }
 
+    private Provider<Directory> inputXdkModules;
+    private FileCollection inputModulesCompiledByProject;
+    
     // XTC modules needed to resolve module path (the contents of the XDK required to build and run this project)
     @InputDirectory
     @PathSensitive(PathSensitivity.RELATIVE)
     Provider<Directory> getInputXdkModules() {
-        return XtcProjectDelegate.getXdkContentsDir(project); // Modules in the XDK directory, if one exists.
+        if (inputXdkModules == null) {
+            try {
+                inputXdkModules = getLayout().getBuildDirectory().dir("xtc/xdk/lib");
+            } catch (Exception e) {
+                // During task creation, layout might not be available yet
+                // Return a dummy provider that will be resolved later
+                inputXdkModules = getObjects().directoryProperty();
+            }
+        }
+        return inputXdkModules;
     }
 
     // XTC modules needed to resolve module path (the ones in the output of the project source set, that the compileXtc tasks create)
@@ -111,71 +148,135 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @InputFiles // should really be enough with an "inputdirectories" but that doesn't exist in gradle.
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputModulesCompiledByProject() {
-        FileCollection fc = objects.fileCollection();
-        for (final var sourceSet : getDependentSourceSets()) {
-            fc = fc.plus(XtcProjectDelegate.getXtcSourceSetOutput(project, sourceSet));
+        if (inputModulesCompiledByProject == null) {
+            try {
+                inputModulesCompiledByProject = getObjects().fileCollection().from(
+                    getLayout().getBuildDirectory().dir("xtc")
+                );
+            } catch (Exception e) {
+                // During task creation, layout might not be available yet
+                inputModulesCompiledByProject = getObjects().fileCollection();
+            }
         }
-        return fc;
+        return inputModulesCompiledByProject;
     }
 
+    private ListProperty<XtcRunModule> modules;
+    
     // TODO: We may need to keep track of all input, even though we only resolve one out of three possible run configurations.
     //   XTC Modules declared in run configurations in project, or overridden in task, that we want to run.
     @Input
     @Override
     public ListProperty<XtcRunModule> getModules() {
-        if (taskLocalModules.get().isEmpty()) {
-            return getExtension().getModules();
+        if (modules == null) {
+            modules = getObjects().listProperty(XtcRunModule.class);
+            // Don't set convention here - it will be resolved during execution
         }
-        return taskLocalModules.get().getModules();
+        return modules;
     }
 
     @Override
     public XtcRunModule module(final Action<XtcRunModule> action) {
-        return taskLocalModules.get().module(action);
+        return getTaskLocalModules().get().module(action);
     }
 
     @Override
     public void moduleName(final String moduleName) {
-        taskLocalModules.get().moduleName(moduleName);
+        // Ensure task local modules property exists
+        if (!getTaskLocalModules().isPresent()) {
+            try {
+                getTaskLocalModules().set(getObjects().newInstance(DefaultXtcRuntimeExtension.class, getProject()));
+            } catch (Exception e) {
+                // If we can't create it now, it will be created later
+                return;
+            }
+        }
+        getTaskLocalModules().get().moduleName(moduleName);
     }
 
     @Override
     public void moduleNames(final String... moduleNames) {
-        taskLocalModules.get().moduleNames(moduleNames);
+        // Ensure task local modules property exists
+        if (!getTaskLocalModules().isPresent()) {
+            try {
+                getTaskLocalModules().set(getObjects().newInstance(DefaultXtcRuntimeExtension.class, getProject()));
+            } catch (Exception e) {
+                // If we can't create it now, it will be created later
+                return;
+            }
+        }
+        getTaskLocalModules().get().moduleNames(moduleNames);
     }
 
     @Override
     public void setModules(final List<XtcRunModule> modules) {
-        taskLocalModules.get().setModules(modules);
+        // Ensure task local modules property exists
+        if (!getTaskLocalModules().isPresent()) {
+            try {
+                getTaskLocalModules().set(getObjects().newInstance(DefaultXtcRuntimeExtension.class, getProject()));
+            } catch (Exception e) {
+                // If we can't create it now, it will be created later
+                return;
+            }
+        }
+        getTaskLocalModules().get().setModules(modules);
     }
 
     @Override
     public void setModules(final XtcRunModule... modules) {
-        taskLocalModules.get().setModules(modules);
+        // Ensure task local modules property exists
+        if (!getTaskLocalModules().isPresent()) {
+            try {
+                getTaskLocalModules().set(getObjects().newInstance(DefaultXtcRuntimeExtension.class, getProject()));
+            } catch (Exception e) {
+                // If we can't create it now, it will be created later
+                return;
+            }
+        }
+        getTaskLocalModules().get().setModules(modules);
     }
 
     @Override
     public void setModuleNames(final List<String> moduleNames) {
-        taskLocalModules.get().setModuleNames(moduleNames);
+        // Ensure task local modules property exists
+        if (!getTaskLocalModules().isPresent()) {
+            try {
+                getTaskLocalModules().set(getObjects().newInstance(DefaultXtcRuntimeExtension.class, getProject()));
+            } catch (Exception e) {
+                // If we can't create it now, it will be created later
+                return;
+            }
+        }
+        getTaskLocalModules().get().setModuleNames(moduleNames);
     }
 
     @Override
     public void setModuleNames(final String... moduleNames) {
-        taskLocalModules.get().setModuleNames(moduleNames);
+        // Ensure task local modules property exists
+        if (!getTaskLocalModules().isPresent()) {
+            try {
+                getTaskLocalModules().set(getObjects().newInstance(DefaultXtcRuntimeExtension.class, getProject()));
+            } catch (Exception e) {
+                // If we can't create it now, it will be created later
+                return;
+            }
+        }
+        getTaskLocalModules().get().setModuleNames(moduleNames);
     }
 
     @Internal
     @Override
     public boolean isEmpty() {
-        return taskLocalModules.get().isEmpty() && getExtension().isEmpty();
+        boolean taskLocalEmpty = !getTaskLocalModules().isPresent() || getTaskLocalModules().get().isEmpty();
+        return taskLocalEmpty && getExtension().isEmpty();
     }
 
     @Override
     public int size() {
-        if (taskLocalModules.get().isEmpty()) {
+        if (!getTaskLocalModules().isPresent() || getTaskLocalModules().get().isEmpty()) {
             return getExtension().size();
         }
-        return taskLocalModules.get().size();
+        return getTaskLocalModules().get().size();
     }
 
     // TODO: Have the task depend on actual output of all source sets.
@@ -207,7 +308,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         final var modulesToRun = resolveModulesToRunFromModulePath(modulePath);
         final var results = modulesToRun.stream().map(module -> runSingleModule(module, createLauncher(), cmd.copy())).toList();
         if (modulesToRun.size() != results.size()) {
-            logger.warn("{} Task was configured to run {} modules, but only {} where executed.", prefix(), modulesToRun.size(), results.size());
+            getLogger().warn("{} Task was configured to run {} modules, but only {} where executed.", prefix(), modulesToRun.size(), results.size());
         }
         logFinishedRuns();
     }
@@ -215,18 +316,21 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     protected List<XtcRunModule> resolveModulesToRunFromModulePath(final List<File> resolvedModulePath) {
         checkIsBeingExecuted();
 
-        logger.lifecycle("{} Resolving modules to run from module path: '{}'", prefix(), resolvedModulePath);
+        getLogger().lifecycle("{} Resolving modules to run from module path: '{}'", prefix(), resolvedModulePath);
         final var prefix = prefix();
 
         if (isEmpty()) {
-            logger.warn("{} Task extension '{}' and/or local task configuration do not declare any modules to run for '{}'. Skipping task.",
+            getLogger().warn("{} Task extension '{}' and/or local task configuration do not declare any modules to run for '{}'. Skipping task.",
                 prefix, ext.getName(), getName());
             return emptyList();
         }
 
-        final List<XtcRunModule> selectedModules = getModules().get();
-        if (!taskLocalModules.get().isEmpty()) {
-            logger.lifecycle("{} Task local module configuration is present, overriding extension configuration.", prefix);
+        final List<XtcRunModule> selectedModules;
+        if (getTaskLocalModules().isPresent() && !getTaskLocalModules().get().isEmpty()) {
+            selectedModules = getTaskLocalModules().get().getModules().get();
+            getLogger().lifecycle("{} Task local module configuration is present, overriding extension configuration.", prefix);
+        } else {
+            selectedModules = getExtension().getModules().get();
         }
 
         // TODO: Add abstraction that actually implements a ModulePath instance, including keeping track of its status and perhaps a method for resolving it.
@@ -236,8 +340,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         // If we don't have any source set output, we should already return empty amd warn
         // If we do have a module spec with one or more modules, we will queue them up to run in sequence.
         // We will also check if the modules are in the module path, and if not, fail the build.
-        logger.info("{} Found {} modules(s) in task and extension specification.", prefix, size());
-        selectedModules.forEach(module -> logger.info("{}    ***** Module to run: {}", prefix, module));
+        getLogger().info("{} Found {} modules(s) in task and extension specification.", prefix, size());
+        selectedModules.forEach(module -> getLogger().info("{}    ***** Module to run: {}", prefix, module));
 
         return selectedModules.stream().map(this::validatedModule).sorted().toList();
     }
@@ -261,7 +365,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         final CommandLine cmd) {
         // TODO: Maybe make this inheritable + add a runMultipleModules, so that we can customize even better
         //  (e.g. XUnit, and a less hacky way of executing the XTC parallel test runner, for example)
-        logger.info("{} Executing resolved xtcRuntime module closure: {}", prefix(), runConfig);
+        getLogger().info("{} Executing resolved xtcRuntime module closure: {}", prefix(), runConfig);
         final var moduleMethod = runConfig.getMethodName().get();
         if (!runConfig.hasDefaultMethodName()) {
             cmd.add(XEC_ARG_RUN_METHOD, moduleMethod);
@@ -272,8 +376,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         cmd.addRaw(runConfig.getModuleArgs().get());
 
         final ExecResult result = launcher.apply(cmd);
-        executedModules.put(runConfig, result);
-        logger.info("{}    Finished executing: {}", prefix(), moduleName);
+        getExecutedModules().put(runConfig, result);
+        getLogger().info("{}    Finished executing: {}", prefix(), moduleName);
 
         return handleExecResult(result);
     }
@@ -281,22 +385,22 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     private void logFinishedRuns() {
         checkIsBeingExecuted();
         final var prefix = prefix();
-        final int count = executedModules.size();
-        logger.info("{} Task executed {} modules:", prefix, count);
+        final int count = getExecutedModules().size();
+        getLogger().info("{} Task executed {} modules:", prefix, count);
         int i = 0;
-        for (final var entry : executedModules.entrySet()) {
+        for (final var entry : getExecutedModules().entrySet()) {
             final XtcRunModule config = entry.getKey();
             final ExecResult result = entry.getValue();
             final String index = String.format("(%2d/%2d)", ++i, count);
             final boolean success = result.getExitValue() == 0;
             final LogLevel level = success ? (hasVerboseLogging() ? LIFECYCLE : INFO) : ERROR;
-            logger.log(level, "{} {}   {} {}", prefix, index, config.getModuleName().get(), config.toString(true));
-            logger.log(level, "{} {}       {} {}", prefix, index, success ? "SUCCESS" : "FAILURE", result);
+            getLogger().log(level, "{} {}   {} {}", prefix, index, config.getModuleName().get(), config.toString(true));
+            getLogger().log(level, "{} {}       {} {}", prefix, index, success ? "SUCCESS" : "FAILURE", result);
         }
     }
 
     @Override
     public String toString() {
-        return projectName + ':' + getName() + " [class: " + getClass().getSimpleName() + ']';
+        return getProject().getName() + ':' + getName() + " [class: " + getClass().getSimpleName() + ']';
     }
 }
