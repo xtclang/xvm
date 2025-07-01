@@ -37,15 +37,26 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
         return XDK_ARCHIVE_DEFAULT_EXTENSION.equals(getFileExtension(file));
     }
 
+    private FileCollection inputXdkArchive;
+    
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputXdkArchive() {
-        return filesFromConfigs(XDK_CONFIG_NAME_INCOMING_ZIP, XDK_CONFIG_NAME_INCOMING);
+        if (inputXdkArchive == null) {
+            inputXdkArchive = getProject().getConfigurations().getByName(XDK_CONFIG_NAME_INCOMING_ZIP)
+                .plus(getProject().getConfigurations().getByName(XDK_CONFIG_NAME_INCOMING));
+        }
+        return inputXdkArchive;
     }
 
+    private Provider<Directory> outputXtcModules;
+    
     @OutputDirectory
     Provider<Directory> getOutputXtcModules() {
-        return XtcProjectDelegate.getXdkContentsDir(getProject());
+        if (outputXtcModules == null) {
+            outputXtcModules = getLayout().getBuildDirectory().dir("xtc/xdk/lib");
+        }
+        return outputXtcModules;
     }
 
     @TaskAction
@@ -53,7 +64,7 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
         super.executeTask();
 
         // The task is configured at this point. We should indeed have found a zip archive from some xdkDistributionProvider somewhere.
-        final var archives = filesFromConfigs(true, XDK_CONFIG_NAME_INCOMING_ZIP, XDK_CONFIG_NAME_INCOMING).filter(XtcExtractXdkTask::isXdkArchive);
+        final var archives = getInputXdkArchive().filter(XtcExtractXdkTask::isXdkArchive);
 
         if (archives.isEmpty()) {
             getLogger().info("{} Project does NOT depend on the XDK; {} is a nop.", prefix(), getName());

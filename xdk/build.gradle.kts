@@ -231,14 +231,12 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
     val javaToolsPattern = JAVATOOLS_PREFIX_PATTERN
     val javaToolsName = JAVATOOLS_INSTALLATION_NAME
     val versionFile = tasks.xtcVersionFile
+    val processResourcesTask = tasks.processResources
     
     contents {
-        // Use layout directory reference instead of complex task mapping
-        from(layout.buildDirectory.dir("resources/main/xdk")) {
-            eachFile {
-                includeEmptyDirs = false
-            }
-        }
+        // Use task output instead of direct directory reference
+        from(processResourcesTask)
+        includeEmptyDirs = false
         from(launcherBinaries) {
             into("bin")
         }

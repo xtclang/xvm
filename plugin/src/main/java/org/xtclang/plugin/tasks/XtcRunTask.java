@@ -132,13 +132,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @PathSensitive(PathSensitivity.RELATIVE)
     Provider<Directory> getInputXdkModules() {
         if (inputXdkModules == null) {
-            try {
-                inputXdkModules = getLayout().getBuildDirectory().dir("xtc/xdk/lib");
-            } catch (Exception e) {
-                // During task creation, layout might not be available yet
-                // Return a dummy provider that will be resolved later
-                inputXdkModules = getObjects().directoryProperty();
-            }
+            inputXdkModules = XtcProjectDelegate.getXdkContentsDir(getProject());
         }
         return inputXdkModules;
     }
@@ -149,14 +143,11 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputModulesCompiledByProject() {
         if (inputModulesCompiledByProject == null) {
-            try {
-                inputModulesCompiledByProject = getObjects().fileCollection().from(
-                    getLayout().getBuildDirectory().dir("xtc")
-                );
-            } catch (Exception e) {
-                // During task creation, layout might not be available yet
-                inputModulesCompiledByProject = getObjects().fileCollection();
+            FileCollection fc = getObjects().fileCollection();
+            for (final var sourceSet : getDependentSourceSets()) {
+                fc = fc.plus(XtcProjectDelegate.getXtcSourceSetOutput(getProject(), sourceSet));
             }
+            inputModulesCompiledByProject = fc;
         }
         return inputModulesCompiledByProject;
     }

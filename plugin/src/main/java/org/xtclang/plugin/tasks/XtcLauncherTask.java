@@ -103,8 +103,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputXtcJavaToolsConfig() {
         if (inputXtcJavaToolsConfig == null) {
-            inputXtcJavaToolsConfig = getObjects().fileCollection();
-            // Configuration will be added lazily when project is available
+            inputXtcJavaToolsConfig = getProject().getConfigurations().getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING);
         }
         return inputXtcJavaToolsConfig;
     }
@@ -324,8 +323,9 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getXtcModuleDependencies() {
         if (xtcModuleDependencies == null) {
-            xtcModuleDependencies = getObjects().fileCollection();
-            // Dependencies will be configured lazily when project is available
+            final List<SourceSet> sourceSets = getDependentSourceSets();
+            final List<String> xtcDependencyConfigNames = sourceSets.stream().map(XtcProjectDelegate::incomingXtcModuleDependencies).toList();
+            xtcModuleDependencies = filesFromConfigs(xtcDependencyConfigNames);
         }
         return xtcModuleDependencies;
     }

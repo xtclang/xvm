@@ -47,6 +47,11 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
     // Per-task configuration properties only.
     private final ListProperty<String> outputFilenames;
+    
+    // Cached properties to avoid calling getProject() during execution
+    private Provider<Directory> resourceDirectory;
+    private Provider<Directory> outputDirectory;
+    private SourceSet compileSourceSet;
 
     /**
      * Create an XTC Compile task. This goes through the Gradle build script, and task creation through
@@ -93,7 +98,10 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
 
     private SourceSet getCompileSourceSet() {
-        return XtcProjectDelegate.resolveSourceSet(getProject(), getCompileSourceSetName());
+        if (compileSourceSet == null) {
+            compileSourceSet = XtcProjectDelegate.resolveSourceSet(getProject(), getCompileSourceSetName());
+        }
+        return compileSourceSet;
     }
 
     private boolean isMainSourceSetCompileTask() {
@@ -184,15 +192,23 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     Provider<Directory> getResourceDirectory() {
-        // TODO: This is wrong. The compile task should not be the one depending on resources src, but resources build.
-        //   But that is java behavior, so make sure at least we get the resource input dependency.
-        return XtcProjectDelegate.getXtcResourceOutputDirectory(getProject(), getCompileSourceSet());
+        if (resourceDirectory == null) {
+            // TODO: This is wrong. The compile task should not be the one depending on resources src, but resources build.
+            //   But that is java behavior, so make sure at least we get the resource input dependency.
+            String sourceSetName = getCompileSourceSetName();
+            resourceDirectory = getLayout().getBuildDirectory().dir("xtc/" + sourceSetName + "/resources");
+        }
+        return resourceDirectory;
     }
 
     @OutputDirectory
     Provider<Directory> getOutputDirectory() {
-        // TODO We can make this configurable later.
-        return XtcProjectDelegate.getXtcSourceSetOutputDirectory(getProject(), getCompileSourceSet());
+        if (outputDirectory == null) {
+            // TODO We can make this configurable later.
+            String sourceSetName = getCompileSourceSetName();
+            outputDirectory = getLayout().getBuildDirectory().dir("xtc/" + sourceSetName + "/lib");
+        }
+        return outputDirectory;
     }
 
     @TaskAction
@@ -261,7 +277,8 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
      * in the DSL for the compile task (the outputFilenames property with its value pairs).
      */
     private void finalizeOutputs() {
-        getProject().fileTree(getOutputDirectory()).filter(FileUtils::isValidXtcModule).getFiles().forEach(this::renameOutput);
+        File outputDir = getOutputDirectory().get().getAsFile();
+        getObjects().fileTree().from(outputDir).filter(FileUtils::isValidXtcModule).getFiles().forEach(this::renameOutput);
     }
 
     private void renameOutput(final File oldFile) {
