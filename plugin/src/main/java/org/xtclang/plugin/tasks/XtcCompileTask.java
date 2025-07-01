@@ -3,11 +3,15 @@ package org.xtclang.plugin.tasks;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_CLASS_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_LAUNCHER_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILE_MAIN_TASK_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_LANGUAGE_NAME;
+import static org.xtclang.plugin.XtcPluginUtils.capitalize;
 
 import java.io.File;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.inject.Inject;
@@ -51,7 +55,8 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     // Cached properties to avoid calling getProject() during execution
     private Provider<Directory> resourceDirectory;
     private Provider<Directory> outputDirectory;
-    private SourceSet compileSourceSet;
+    private String cachedSourceSetName;
+    private List<Provider<Directory>> dependentSourceSetOutputs;
 
     /**
      * Create an XTC Compile task. This goes through the Gradle build script, and task creation through
@@ -97,12 +102,6 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         return sourceSetName.toLowerCase();
     }
 
-    private SourceSet getCompileSourceSet() {
-        if (compileSourceSet == null) {
-            compileSourceSet = XtcProjectDelegate.resolveSourceSet(getProject(), getCompileSourceSetName());
-        }
-        return compileSourceSet;
-    }
 
     private boolean isMainSourceSetCompileTask() {
         return SourceSet.MAIN_SOURCE_SET_NAME.equals(getCompileSourceSetName());
@@ -216,14 +215,15 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     public void executeTask() {
         super.executeTask();
 
-        final var prefix = prefix();
-        final var sourceSet = getCompileSourceSet();
+        final String taskName = getName();
+        final var prefix = "[" + taskName + "]";
+        final var sourceSetName = getCompileSourceSetName();
         final var args = new CommandLine(XTC_COMPILER_CLASS_NAME, resolveJvmArgs());
 
         final File outputDir = getOutputDirectory().get().getAsFile();
         args.add("-o", outputDir.getAbsolutePath());
 
-        getLogger().info("{} Output directory for {} is : {}", prefix, sourceSet.getName(), outputDir);
+        getLogger().info("{} Output directory for {} is : {}", prefix, sourceSetName, outputDir);
         final var processedResourcesDir = getResourceDirectory().get().getAsFile();
         getLogger().info("{} Resolving resource dir (build): '{}'.", prefix, processedResourcesDir);
         if (processedResourcesDir.exists()) {
@@ -241,15 +241,14 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         // If xtcVersion is set, we stamp that, otherwise we ignore it for now. It may be that we should stamp as xcc version used to compile if not given?
         final String moduleVersion = resolveModuleVersion();
         if (moduleVersion != null) {
-            if (hasVerboseLogging()) {
-                getLogger().lifecycle("{} Stamping XTC module with version: '{}'", prefix, moduleVersion);
-            }
+            // Always log version stamping at lifecycle level for configuration cache compatibility
+            getLogger().lifecycle("{} Stamping XTC module with version: '{}'", prefix, moduleVersion);
             args.add("--set-version", semanticVersion(moduleVersion));
         }
         args.addRepeated("-L", resolveFullModulePath());
         final var sourceFiles = resolveXtcSourceFiles().stream().map(File::getAbsolutePath).sorted().toList();
         if (sourceFiles.isEmpty()) {
-            getLogger().warn("{} No source file found for source set: '{}'", prefix, sourceSet.getName());
+            getLogger().warn("{} No source file found for source set: '{}'", prefix, sourceSetName);
         }
         sourceFiles.forEach(args::addRaw);
 
@@ -268,7 +267,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         if (getXtcVersion().isPresent()) {
             return getXtcVersion().get();
         }
-        getLogger().warn("{} WARNING: No XTC version was resolved. Module will not be versioned.", prefix());
+        getLogger().warn("[{}] WARNING: No XTC version was resolved. Module will not be versioned.", getName());
         return null;
     }
 
@@ -282,7 +281,8 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
 
     private void renameOutput(final File oldFile) {
-        final String prefix = prefix();
+        final String taskName = getName();
+        final String prefix = "[" + taskName + "]";
         final String oldName = oldFile.getName();
         final String newName = resolveOutputFilename(oldName);
         if (oldName.equals(newName)) {
@@ -301,8 +301,10 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
 
     private Set<File> resolveXtcSourceFiles() {
-        final var resolvedSources = getSource().filter(file -> isTopLevelXtcSourceFile(getCompileSourceSet(), file)).getFiles();
-        getLogger().info("{} Resolved top level sources (should be module definitions, or XTC will fail later): {}", prefix(), resolvedSources);
+        // For configuration cache compatibility, we can't use SourceSet during execution
+        // So we'll just filter for .x files in the source files
+        final var resolvedSources = getSource().filter(file -> !file.isDirectory() && file.getName().endsWith(".x")).getFiles();
+        getLogger().info("[{}] Resolved top level sources (should be module definitions, or XTC will fail later): {}", getName(), resolvedSources);
         return resolvedSources;
     }
 
@@ -320,9 +322,29 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
     @Override
     protected List<SourceSet> getDependentSourceSets() {
+        // This method should not be called during task execution
+        // We override addDependentSourceSetOutputsToMap instead
+        if (getProject() == null) {
+            return Collections.emptyList();
+        }
         if (isMainSourceSetCompileTask()) {
-            return List.of(getCompileSourceSet());
+            return List.of(XtcProjectDelegate.resolveSourceSet(getProject(), getCompileSourceSetName()));
         }
         return super.getDependentSourceSets();
+    }
+    
+    @Override
+    protected void addDependentSourceSetOutputsToMap(Map<String, Set<File>> map) {
+        // Add the output directory for this compile task's source set
+        String sourceSetName = getCompileSourceSetName();
+        Set<File> outputDir = resolveDirectories(getOutputDirectory());
+        map.put(XTC_LANGUAGE_NAME + capitalize(sourceSetName), outputDir);
+        
+        // For non-main source sets, also include main output
+        if (!isMainSourceSetCompileTask()) {
+            Provider<Directory> mainOutput = getLayout().getBuildDirectory().dir("xtc/main/lib");
+            Set<File> mainOutputDir = resolveDirectories(mainOutput);
+            map.put(XTC_LANGUAGE_NAME + "Main", mainOutputDir);
+        }
     }
 }

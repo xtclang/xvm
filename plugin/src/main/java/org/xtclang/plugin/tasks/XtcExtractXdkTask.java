@@ -66,14 +66,15 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
         // The task is configured at this point. We should indeed have found a zip archive from some xdkDistributionProvider somewhere.
         final var archives = getInputXdkArchive().filter(XtcExtractXdkTask::isXdkArchive);
 
+        final String taskName = getName();
         if (archives.isEmpty()) {
-            getLogger().info("{} Project does NOT depend on the XDK; {} is a nop.", prefix(), getName());
+            getLogger().info("[{}] Project does NOT depend on the XDK; {} is a nop.", taskName, taskName);
             return;
         }
 
         // If there are no archives, we do not depend on the XDK.
         final var archiveFile = archives.getSingleFile();
-        final var prefix = prefix();
+        final var prefix = "[" + taskName + "]";
 
         getFileOperations().copy(config -> {
             getLogger().info("{} CopySpec: XDK archive file dependency: {}", prefix, archiveFile);

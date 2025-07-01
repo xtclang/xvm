@@ -99,11 +99,17 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     private FileCollection inputXtcJavaToolsConfig;
     
+    @Optional
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputXtcJavaToolsConfig() {
         if (inputXtcJavaToolsConfig == null) {
-            inputXtcJavaToolsConfig = getProject().getConfigurations().getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING);
+            var configs = getProject().getConfigurations();
+            if (configs.findByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING) != null) {
+                inputXtcJavaToolsConfig = configs.getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING);
+            } else {
+                inputXtcJavaToolsConfig = getObjects().fileCollection();
+            }
         }
         return inputXtcJavaToolsConfig;
     }
@@ -264,7 +270,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected <R extends ExecResult> R handleExecResult(final R result) {
         final int exitValue = result.getExitValue();
         if (exitValue != 0) {
-            getLogger().error("{} terminated abnormally (exitValue: {}). Rethrowing exception.", prefix(), exitValue);
+            getLogger().error("[{}] terminated abnormally (exitValue: {}). Rethrowing exception.", getName(), exitValue);
         }
         result.rethrowFailure();
         result.assertNormalExitValue();
@@ -272,7 +278,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     }
 
     protected XtcLauncher<E, ? extends XtcLauncherTask<E>> createLauncher() {
-        final var prefix = prefix();
+        final String taskName = getName();
+        final var prefix = "[" + taskName + "]";
         if (getUseNativeLauncher().get()) {
             getLogger().info("{} Created XTC launcher: native executable.", prefix);
             return new NativeBinaryLauncher<>(getProject(), this);
@@ -289,20 +296,25 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected List<File> resolveFullModulePath() {
         final var map = new HashMap<String, Set<File>>();
 
-        final Set<File> xdkContents = resolveDirectories(XtcProjectDelegate.getXdkContentsDir(getProject()));
+        final Set<File> xdkContents = resolveDirectories(getInputXdkContents());
         map.put(XDK_CONFIG_NAME_CONTENTS, xdkContents);
 
         final Set<File> xtcModuleDeclarations = resolveFiles(getXtcModuleDependencies());
         map.put(XTC_CONFIG_NAME_MODULE_DEPENDENCY, xtcModuleDeclarations);
 
-        for (final var sourceSet : getDependentSourceSets()) {
-            final Set<File> sourceSetOutput = resolveDirectories(XtcProjectDelegate.getXtcSourceSetOutputDirectory(getProject(), sourceSet));
-            map.put(XTC_LANGUAGE_NAME + capitalize(sourceSet.getName()), sourceSetOutput);
-        }
+        // Get source set outputs from cached providers
+        addDependentSourceSetOutputsToMap(map);
 
-        getLogger().info("{} Compilation/runtime full module path resolved as: ", prefix());
-        map.forEach((k, v) -> getLogger().info("{}     Resolved files: {} -> {}", prefix(), k, v));
+        final String taskName = getName();
+        final String prefix = "[" + taskName + "]";
+        getLogger().info("{} Compilation/runtime full module path resolved as: ", prefix);
+        map.forEach((k, v) -> getLogger().info("{}     Resolved files: {} -> {}", prefix, k, v));
         return verifiedModulePath(map);
+    }
+    
+    // Subclasses should override this to add their source set outputs
+    protected void addDependentSourceSetOutputsToMap(Map<String, Set<File>> map) {
+        // Default implementation for tasks that don't have source sets
     }
 
     private Provider<Directory> inputXdkContents;
@@ -339,7 +351,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     }
 
     protected List<File> verifiedModulePath(final Map<String, Set<File>> map) {
-        final var prefix = prefix();
+        final String taskName = getName();
+        final var prefix = "[" + taskName + "]";
         getLogger().info("{} ModulePathMap: [{} keys and {} values]", prefix, map.keySet().size(), map.values().stream().mapToInt(Set::size).sum());
 
         final var modulePathList = new ArrayList<File>();
@@ -419,7 +432,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         final var list = new ArrayList<>(getJvmArgs().get());
         if (getDebug().get()) {
             list.add(String.format("-Xrunjdwp:transport=dt_socket,server=y,suspend=%c,address=%d", yesOrNo(getDebugSuspend().get()), getDebugPort().get()));
-            getLogger().lifecycle("{} Added debug argument: {}", prefix(), getJvmArgs().get());
+            getLogger().lifecycle("[{}] Added debug argument: {}", getName(), getJvmArgs().get());
         }
         return Collections.unmodifiableList(list);
     }
