@@ -9,7 +9,6 @@ import java.nio.charset.StandardCharsets.UTF_8
 
 plugins {
     id("org.xtclang.build.xdk.versioning")
-    id("org.xtclang.build.checkstyle")
     java
 }
 

@@ -139,8 +139,9 @@ val cleanXdk by tasks.registering(Delete::class) {
 
 val clean by tasks.existing {
     dependsOn(cleanXdk)
+    val taskPrefix = "$prefix" // Capture prefix during configuration time
     doLast {
-        logger.info("$prefix WARNING: Note that running 'clean' is often unnecessary with a properly configured build cache.")
+        logger.info("$taskPrefix WARNING: Note that running 'clean' is often unnecessary with a properly configured build cache.")
     }
 }
 
@@ -220,38 +221,45 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
         @Suppress("UnstableApiUsage")
         distributionClassifier = distClassifier
     }
+    // Capture configuration-time values to avoid serialization issues
+    val logPrefix = "$prefix"
+    val projectVer = project.version
+    val launcherBinaries = xtcLauncherBinaries
+    val xtcModules = configurations.xtcModule
+    val javaToolsConfig = configurations.xdkJavaTools
+    val javaToolsPattern = JAVATOOLS_PREFIX_PATTERN
+    val javaToolsName = JAVATOOLS_INSTALLATION_NAME
+    val versionFile = tasks.xtcVersionFile
+    
     contents {
-        val xdkTemplate = tasks.processResources.map {
-            logger.info("$prefix Resolving processResources output (this should be during the execution phase).");
-            File(it.outputs.files.singleFile, "xdk")
-        }
-        from(xdkTemplate) {
+        // Use layout directory reference instead of complex task mapping
+        from(layout.buildDirectory.dir("resources/main/xdk")) {
             eachFile {
                 includeEmptyDirs = false
             }
         }
-        from(xtcLauncherBinaries) {
+        from(launcherBinaries) {
             into("bin")
         }
-        from(configurations.xtcModule) {
+        from(xtcModules) {
             into("lib")
-            exclude(JAVATOOLS_PREFIX_PATTERN) // *.xtc, but not javatools_*.xtc
+            exclude(javaToolsPattern) // *.xtc, but not javatools_*.xtc
         }
-        from(configurations.xtcModule) {
+        from(xtcModules) {
             into("javatools")
-            include(JAVATOOLS_PREFIX_PATTERN) // only javatools_*.xtc
+            include(javaToolsPattern) // only javatools_*.xtc
         }
-        from(configurations.xdkJavaTools) {
-            rename("javatools-${project.version}.jar", JAVATOOLS_INSTALLATION_NAME)
+        from(javaToolsConfig) {
+            rename("javatools-${projectVer}.jar", javaToolsName)
             into("javatools")
         }
-        from(tasks.xtcVersionFile)
+        from(versionFile)
         if (installLaunchers) {
             // Do we want to install launchers that work on the host system?
             assert(distClassifier.isNotEmpty()) { "No distribution given for host specific distribution, OS: ${XdkDistribution.currentOs}" }
+            val launcher = xdkDist.launcherFileName()
             XdkDistribution.binaryLauncherNames.forEach {
-                val launcher = xdkDist.launcherFileName()
-                from(xtcLauncherBinaries) {
+                from(launcherBinaries) {
                     include(launcher)
                     rename(launcher, it)
                     into("bin")
