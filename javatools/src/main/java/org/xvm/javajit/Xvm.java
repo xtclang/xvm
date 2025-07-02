@@ -16,7 +16,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
-import org.xvm.javajit.intrinsic.MainInjector;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.NATIVE_MODULE;

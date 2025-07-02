@@ -79,4 +79,9 @@ public class ModuleLoader
             throw new ClassNotFoundException(name);
         }
     }
+
+    @Override
+    public String toString() {
+        return module.toString();
+    }
 }

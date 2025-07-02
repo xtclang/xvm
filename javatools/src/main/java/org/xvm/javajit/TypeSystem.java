@@ -4,12 +4,17 @@ package org.xvm.javajit;
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassFile;
 
+import java.lang.classfile.attribute.SourceFileAttribute;
 import java.lang.constant.ClassDesc;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Set;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 import java.util.function.Consumer;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
@@ -19,8 +24,7 @@ import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
-import org.xvm.asm.constants.TypeInfo;
-import org.xvm.javajit.intrinsic.ImplBuilder;
+import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.NATIVE_MODULE;
@@ -147,6 +151,8 @@ public class TypeSystem {
         this.loader = new TypeSystemLoader(this, name, shared, owned);
         this.shared = loader.shared;
         this.owned  = loader.owned;
+
+        registerNativeClasses();
     }
 
     /**
@@ -197,10 +203,17 @@ public class TypeSystem {
     public final ModuleLoader[] owned;
 
     /**
-     * @return a ConstantPool associated with this TypeSystem
+     * @return the ConstantPool associated with this TypeSystem
      */
     public ConstantPool pool() {
         return owned.length == 0 ? xvm.ecstasyPool : owned[0].module.getConstantPool();
+    }
+
+    /**
+     * @return the main ModuleStructure associated with this TypeSystem
+     */
+    public ModuleStructure mainModule() {
+        return owned.length == 0 ? null : owned[0].module;
     }
 
     /**
@@ -220,18 +233,21 @@ public class TypeSystem {
      * @param moduleLoader the ModuleLoader that contains the structure information for the
      *                     containing module and all its classes
      * @param name         the suffix of the Java class name to create (sans the module prefix)
+     *
      * @return the bytes of the ClassFile for the specified class name
      */
     public byte[] genClass(ModuleLoader moduleLoader, String name) {
         Artifact art = deduceArtifact(moduleLoader.module, name);
         if (art != null) {
             if (art.id.getComponent() instanceof ClassStructure clz) {
-                TypeInfo typeInfo = clz.getFormalType().ensureTypeInfo();
-
-                Consumer<? super ClassBuilder> handler = builder -> {
+                String       className = moduleLoader.prefix + name;
+                TypeConstant type      = clz.getCanonicalType();
+                Builder      builder   = ensureBuilder(type);
+                Consumer<? super ClassBuilder> handler = cb -> {
+                    cb.with(SourceFileAttribute.of(clz.getSourceFileName()));
                     switch (art.shape) {
                         case Impl:
-                            new ImplBuilder(TypeSystem.this, typeInfo).assemble(builder);
+                            builder.assembleImpl(className, cb);
                             break;
 
                         default:
@@ -239,10 +255,29 @@ public class TypeSystem {
                     }
                 };
 
-                return ClassFile.of().build(ClassDesc.of(name), handler);
+                return ClassFile.of().
+                    build(ClassDesc.of(className), handler);
             }
         }
         return null;
+    }
+
+    /**
+     * @return a builder for the specified type
+     */
+    protected Builder ensureBuilder(TypeConstant type) {
+        for (Map.Entry<TypeConstant, Class> entry : xvm.nativeTypeSystem.buildersByType.entrySet()) {
+            if (type.isA(entry.getKey())) {
+                Class builderClass = entry.getValue();
+                try {
+                    return (Builder) builderClass.getDeclaredConstructor(
+                        TypeSystem.class, TypeConstant.class).newInstance(this, type);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        return new CommonBuilder(this, type);
     }
 
     public enum ClassfileShape {
@@ -254,7 +289,7 @@ public class TypeSystem {
         Future,     // f$
     }
 
-    public record Artifact(IdentityConstant id, ClassfileShape shape) {};
+    public record Artifact(IdentityConstant id, ClassfileShape shape) {}
 
     public Artifact deduceArtifact(ModuleStructure module, String name) {
         if (name.equals("$module")) {
@@ -283,6 +318,24 @@ public class TypeSystem {
         // TODO
         return null;
     }
+
+    private void registerNativeClasses() {
+        ConstantPool pool = pool();
+
+        supersByType.put(pool.typeObject(), org.xvm.javajit.intrinsic.xObj.class);
+
+        buildersByType.put(pool.typeModule(), org.xvm.javajit.builders.ModuleBuilder.class);
+    }
+
+    /**
+     * A cache of super classes keyed by type.
+     */
+    protected final Map<TypeConstant, Class> supersByType = new ConcurrentHashMap<>();
+
+    /**
+     * A cache of builders classes keyed by type.
+     */
+    protected final Map<TypeConstant, Class> buildersByType = new ConcurrentHashMap<>();
 }
 
 

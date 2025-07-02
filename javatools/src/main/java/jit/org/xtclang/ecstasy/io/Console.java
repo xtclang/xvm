@@ -1,6 +1,7 @@
 package jit.org.xtclang.ecstasy.io;
 
-import org.xvm.javajit.intrinsic.Ctx;
+import org.xvm.javajit.Ctx;
+
 import org.xvm.javajit.intrinsic.xObj;
 import org.xvm.javajit.intrinsic.xStr;
 
