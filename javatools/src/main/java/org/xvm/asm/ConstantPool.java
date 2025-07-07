@@ -455,6 +455,25 @@ public class ConstantPool
         return ensureByteConstant(Format.Bit, n);
         }
 
+    /**
+     * Given the specified {@code int} value for a nibble, obtain a ByteConstant that represents it.
+     *
+     * @param n  the {@code int} value of the nibble
+     *
+     * @return an ByteConstant for the passed nibble value
+     */
+    public ByteConstant ensureNibbleConstant(int n)
+        {
+        return ensureByteConstant(Format.Nibble, n);
+        }
+
+    /**
+     * Given the specified {@code int} value for a byte, obtain a ByteConstant that represents it.
+     *
+     * @param n  the {@code int} value of the byte
+     *
+     * @return an ByteConstant for the passed byte value
+     */
     public ByteConstant ensureByteConstant(Format format, int n)
         {
         switch (format)
@@ -2274,18 +2293,6 @@ public class ConstantPool
 
 
     // ----- caching helpers -----------------------------------------------------------------------
-
-    /**
-     * Given the specified {@code int} value for a nibble, obtain a ByteConstant that represents it.
-     *
-     * @param n  the {@code int} value of the nibble
-     *
-     * @return an ByteConstant for the passed nibble value
-     */
-    public ByteConstant ensureNibbleConstant(int n)
-        {
-        return ensureByteConstant(Format.Nibble, n);
-        }
 
     public ModuleConstant    modEcstasy()        {ModuleConstant    c = m_valEcstasy;        if (c == null) {m_valEcstasy        = c = ensureModuleConstant(ECSTASY_MODULE)                             ;} return c;}
     public ClassConstant     clzObject()         {ClassConstant     c = m_clzObject;         if (c == null) {m_clzObject         = c = (ClassConstant) getImplicitlyImportedIdentity("Object"          );} return c;}
@@ -4191,6 +4198,11 @@ public class ConstantPool
      * A cache of TypeInfo for parameterized NakedRef types.
      */
     private final Map<TypeConstant, TypeInfo> f_mapRefTypes = new ConcurrentHashMap<>();
+
+    /**
+     * A registry of unique Java names for distinct Ecstasy signatures.
+     */
+    private final Map<SignatureConstant, String> f_mapJavaNames = new ConcurrentHashMap<>();
 
     /**
      * Thread local allowing to get the "current" ConstantPool without any context.
