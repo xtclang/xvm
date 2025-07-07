@@ -10,8 +10,9 @@ import org.gradle.api.logging.LogLevel.LIFECYCLE
 import java.io.File
 
 abstract class XdkProjectBuildLogic(protected val project: Project) {
-    protected val logger = project.logger
-    protected val prefix = project.prefix
+    protected val logger      = project.logger
+    protected val prefix      = project.prefix
+    protected val projectName = project.name
 
     override fun toString(): String {
         return this::class.simpleName?.let { "$it('${project.name}')" } ?: throw IllegalStateException("Unknown class: ${this::class}")
@@ -19,6 +20,7 @@ abstract class XdkProjectBuildLogic(protected val project: Project) {
 }
 
 class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic(project) {
+
     private val xdkGit: GitHubProtocol by lazy {
         // A semantic version must be resolved when this is called, or we will get an exception.
         GitHubProtocol(project)
@@ -52,6 +54,9 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
     fun gitHubProtocol(): GitHubProtocol {
         return xdkGit
     }
+
+    fun prefix(task: Task): String = "[$projectName:${task.name}]"
+
 
     companion object {
         const val XDK_TASK_GROUP_DEBUG = "debug"
@@ -103,8 +108,6 @@ val Project.xdkBuildLogic: XdkBuildLogic get() = XdkBuildLogic.instanceFor(this)
 
 val Project.prefix: String get() = "[$name]"
 
-val Task.prefix: String get() = "[${project.name}:$name]"
-
 // TODO: A little bit hacky: use a config, but there is a mutual dependency between the lib_xtc and javatools.
 //  Better to add the resource directory as a source set?
 val Project.xdkIconFile: String get() = "$compositeRootProjectDirectory/javatools_launcher/src/main/c/x.ico"
@@ -132,7 +135,7 @@ fun Project.getXdkProperty(key: String, defaultValue: String? = null): String {
 
 private fun <T> registerXdkPropertyInput(task: Task, key: String, value: T): T {
     with(task) {
-        logger.info("$prefix Task tunneling property for $key to project. Can be set as input provider.")
+        logger.info("$task.prefix Task tunneling property for $key to project. Can be set as input provider.")
     }
     return value
 }
