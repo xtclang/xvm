@@ -4200,11 +4200,6 @@ public class ConstantPool
     private final Map<TypeConstant, TypeInfo> f_mapRefTypes = new ConcurrentHashMap<>();
 
     /**
-     * A registry of unique Java names for distinct Ecstasy signatures.
-     */
-    private final Map<SignatureConstant, String> f_mapJavaNames = new ConcurrentHashMap<>();
-
-    /**
      * Thread local allowing to get the "current" ConstantPool without any context.
      */
     private static final ThreadLocal<ConstantPool[]> s_tloPool =
