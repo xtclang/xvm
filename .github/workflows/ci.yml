@@ -113,6 +113,8 @@ jobs:
 
       - name: Build a machine specific XDK installation with native launchers, test run launchers on native platform
         shell: bash
+        env:
+          JAVA_HOME: ${{ steps.setup-java.outputs.jdk-path }}
         run: |
           ./gradlew ${{ env.gradle_options }} xdk:installWithLaunchersDist
           xcc_path=$(find xdk/build/install/ -name xcc)
