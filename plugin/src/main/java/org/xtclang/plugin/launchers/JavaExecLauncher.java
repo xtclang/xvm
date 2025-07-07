@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.zip.ZipFile;
 
 import org.gradle.api.Project;
+import org.gradle.process.ExecOperations;
 import org.gradle.process.ExecResult;
 
 import org.xtclang.plugin.XtcLauncherTaskExtension;
@@ -26,9 +27,13 @@ import org.xtclang.plugin.tasks.XtcLauncherTask;
  * Launcher logic that runs the XTC launchers from classes on the classpath.
  */
 public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends XtcLauncher<E, T> {
-    public JavaExecLauncher(final Project project, final T task) {
+    public JavaExecLauncher(final Project project, final T task, ExecOperations execOps) {
         super(project, task);
+
+        this.execOps = execOps;
     }
+
+    private final ExecOperations execOps;
 
     @SuppressWarnings("deprecation")
     @Override
@@ -49,7 +54,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
         }
 
         final var builder = resultBuilder(cmd);
-        return createExecResult(builder.execResult(project.getProject().javaexec(spec -> {
+        return createExecResult(builder.execResult(execOps.javaexec(spec -> {
             redirectIo(builder, spec);
             spec.classpath(javaToolsJar);
             spec.getMainClass().set(cmd.getMainClassName());
