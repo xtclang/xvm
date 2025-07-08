@@ -61,6 +61,14 @@ val publishLocal by tasks.registering {
     }
 }
 
+val verifyJdk by tasks.registering {
+    doLast {
+        println("Running on Java version: ${System.getProperty("java.version")}")
+        println("Running on Java vendor:  ${System.getProperty("java.vendor")}")
+        println("Running on Java home:    ${System.getProperty("java.home")}")
+    }
+}
+
 /**
  * Publish both local (mavenLocal) and remote (GitHub, and potentially mavenCentral, gradlePluginPortal)
  * packages for the current code.
@@ -95,3 +103,4 @@ publishTaskPrefixes.forEach { prefix ->
         }
     }
 }
+
