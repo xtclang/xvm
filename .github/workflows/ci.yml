@@ -80,6 +80,7 @@ jobs:
           show-progress: true
 
       - name: Setup Java
+        id: setup-java
         uses: actions/setup-java@v4
         with:
           distribution: zulu
