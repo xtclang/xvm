@@ -45,7 +45,7 @@ env:
   MAVEN_CENTRAL_USERNAME: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
   MAVEN_CENTRAL_PASSWORD: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
 
-  gradle_options: "-Dorg.gradle.jvmargs=-Xmx8G -Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false --stacktrace --warning-mode=all --console=plain --no-daemon ${{ inputs.extra_gradle_options }}"
+  gradle_options: "-Dorg.gradle.jvmargs=-Xmx8G -Dorg.gradle.caching=false -Dorg.gradle.vfs.verbose=false --stacktrace --warning-mode=all --console=plain --no-daemon --no-build-cache ${{ inputs.extra_gradle_options }}"
 
   # Optional flags to skip manual tests, or at least some of them.
   skip_manual_tests: ${{ github.event.inputs.skip_manual_tests || 'false' }}
@@ -89,7 +89,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          cache-disabled: ${{ github.ref == 'refs/heads/master' }}
+          cache-disabled: true
           cache-read-only: false
           gradle-version: ${{ env.gradle_version }}
 
