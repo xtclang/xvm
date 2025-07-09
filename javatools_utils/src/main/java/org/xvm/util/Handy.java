@@ -1906,27 +1906,6 @@ public final class Handy {
     }
 
     /**
-     * Resize an array. The elements from the first array will be present in the resized array,
-     * although shrinking the array will cause any elements beyond the new size to be discarded.
-     *
-     * @param array  the array to resize
-     * @param size   the new array size
-     *
-     * @return an array of the specified size
-     */
-    @SuppressWarnings("unused")
-    public static <T> T[] resize(T[] array, int size) {
-        int oldSize = array.length;
-        if (size == oldSize) {
-            return array;
-        }
-
-        T[] newArray = (T[]) Array.newInstance(array.getClass().getComponentType(), size);
-        System.arraycopy(array, 0, newArray, 0, Math.min(size, oldSize));
-        return newArray;
-    }
-
-    /**
      * Glue two arrays together.
      *
      * @param aoBase  the first array
