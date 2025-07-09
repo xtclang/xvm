@@ -43,11 +43,11 @@ public class $module extends org.xvm.javajit.intrinsic.xModule {
 
         // (i1, Int i2) = call2(0);
         i1 = call2(0);
-        long i2 = $ctx().i1;
+        long i2 = $ctx().i0;
 
         // if (Int i3 := call3(0)) {
         if (call3(0)) {
-            long i3 = $ctx().i1;
+            long i3 = $ctx().i0;
             i3++;
         }
     }
@@ -60,8 +60,8 @@ public class $module extends org.xvm.javajit.intrinsic.xModule {
         return i + j;
     }
 
-    public long call1$w(org.xvm.javajit.intrinsic.xInt64 i,
-                        boolean j$default, org.xvm.javajit.intrinsic.xInt64 j) {
+    public long call1$w(org.xvm.javajit.intrinsic.numbers.xInt64 i,
+                        boolean j$default, org.xvm.javajit.intrinsic.numbers.xInt64 j) {
         return call1(i.$value, j$default, j.$value);
     }
 
@@ -69,14 +69,14 @@ public class $module extends org.xvm.javajit.intrinsic.xModule {
     public long call2(long i) {
         // return i++, i;
         long $r = i++;
-        $ctx().i1 = i;
+        $ctx().i0 = i;
         return $r;
     }
 
     // conditional Int call3(Int i)
     public boolean call3(long i) {
         // return True, i;
-        $ctx().i1 = i;
+        $ctx().i0 = i;
         return true;
     }
 }
