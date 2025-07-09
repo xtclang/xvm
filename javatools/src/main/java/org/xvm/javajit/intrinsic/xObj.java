@@ -34,6 +34,7 @@ public abstract class xObj {
      * * Container ID
      * * immutability flag
      * * construction state
+     * * some bits available to native subclasses
      */
     public long $meta;
 

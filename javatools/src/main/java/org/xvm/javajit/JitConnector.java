@@ -57,7 +57,7 @@ public class JitConnector
 
     @Override
     public void invoke0(MethodStructure methodStructure, String... asArg) {
-        ScopedValue.where(Ctx.$Context, new Ctx(xvm, container)).run(
+        ScopedValue.where(Ctx.Current, new Ctx(xvm, container)).run(
             () -> invoke0Impl(methodStructure, asArg));
     }
 

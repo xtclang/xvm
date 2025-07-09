@@ -17,13 +17,13 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
+import static java.util.Arrays.copyOf;
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.NATIVE_MODULE;
 import static org.xvm.util.Handy.checkElementsNonNull;
 import static org.xvm.util.Handy.isDigit;
 import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.require;
-import static org.xvm.util.Handy.resize;
 import static org.xvm.util.Handy.scan;
 import static org.xvm.util.Handy.sorted;
 
@@ -523,7 +523,7 @@ public class Xvm {
                     (index = scan(packages, null  )) < 0) {
                     // replace a full array with a bigger array
                     index    = packages.length;
-                    packages = resize(packages, packages.length * 2);
+                    packages = copyOf(packages, packages.length * 2);
                 }
             }
             packages[index] = unique;
