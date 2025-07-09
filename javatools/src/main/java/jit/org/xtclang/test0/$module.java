@@ -60,8 +60,8 @@ public class $module extends org.xvm.javajit.intrinsic.xModule {
         return i + j;
     }
 
-    public long call1$w(org.xvm.javajit.intrinsic.xInt64 i,
-                        boolean j$default, org.xvm.javajit.intrinsic.xInt64 j) {
+    public long call1$w(org.xvm.javajit.intrinsic.numbers.xInt64 i,
+                        boolean j$default, org.xvm.javajit.intrinsic.numbers.xInt64 j) {
         return call1(i.$value, j$default, j.$value);
     }
 
