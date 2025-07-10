@@ -1,6 +1,8 @@
 package org.xvm.asm.constants;
 
 
+import java.lang.constant.ClassDesc;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -32,6 +34,9 @@ import org.xvm.asm.constants.TypeConstant.Origin;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Constants;
+
+import org.xvm.javajit.JitFlavor;
+import org.xvm.javajit.JitTypeDesc;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -2443,6 +2448,43 @@ public class TypeInfo
         }
 
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    /**
+     * @return the JitTypeDesc
+     */
+    public JitTypeDesc getJitDesc()
+        {
+        JitTypeDesc jtd = m_jtd;
+        if (jtd == null)
+            {
+            TypeConstant type = getType();
+            ClassDesc    cd;
+
+            if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null)
+                {
+                jtd = m_jtd = new JitTypeDesc(type, JitFlavor.Primitive, cd);
+                }
+            else if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null)
+                {
+                jtd = m_jtd = new JitTypeDesc(type, JitFlavor.MultiSlotPrimitive, cd);
+                }
+            else if ((cd = JitTypeDesc.getWidenedClass(type)) != null)
+                {
+                jtd = m_jtd = new JitTypeDesc(type, JitFlavor.Widened, cd);
+                }
+            else
+                {
+                assert type.isSingleUnderlyingClass(true);
+                cd  = ClassDesc.of(type.getSingleUnderlyingClass(true).getPathString());
+                jtd = m_jtd = new JitTypeDesc(type, JitFlavor.Specific, cd);
+                }
+            }
+
+        return jtd;
+        }
+
+
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -2918,6 +2960,11 @@ public class TypeInfo
      * as those nested within a property or method. Lazily initialized
      */
     private transient Map<SignatureConstant, MethodInfo> m_mapMethodsBySignature;
+
+    /**
+     * Cached JitTypeDesc.
+     */
+    private transient JitTypeDesc m_jtd;
 
     private       boolean                         m_fHasErrors;
     private       boolean                         m_fCacheReady;

@@ -51,7 +51,11 @@ import org.xvm.asm.constants.TypeInfo.Progress;
 
 import org.xvm.compiler.Compiler;
 
+import org.xvm.javajit.ModuleLoader;
+import org.xvm.javajit.TypeSystem;
+
 import org.xvm.javajit.intrinsic.xType;
+
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
@@ -7295,6 +7299,42 @@ public abstract class TypeConstant
         }
 
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    /**
+     * Ensure a unique Java class name for this type for the specified TypeSystem.
+     */
+    public String ensureJitClassName(TypeSystem ts)
+        {
+        String sJitName = m_sJitName;
+        if (sJitName == null)
+            {
+            // get the master instance of the type constant
+            ModuleLoader loader = ts.findOwnerLoader(this);
+            TypeConstant type   = (TypeConstant) loader.module.getConstantPool().register(this);
+
+            synchronized (type)
+                {
+                sJitName = type.m_sJitName;
+                if (sJitName == null)
+                    {
+                    if (ts.xvm.nativeTypeSystem.nativeByType.get(type) instanceof String name)
+                        {
+                        sJitName = name;
+                        }
+                    else
+                        {
+                        // TODO: check for collisions, reserved keywords etc.
+                        sJitName = loader.prefix + getSingleUnderlyingClass(true).getPathString();
+                        }
+                    }
+                type.m_sJitName = sJitName;
+                }
+            }
+        return sJitName;
+        }
+
+
     // ----- run-time support ----------------------------------------------------------------------
 
     /**
@@ -7877,6 +7917,11 @@ public abstract class TypeConstant
      * Cached xType object.
      */
     private transient xType m_xType;
+
+    /**
+     * Cached JIT class name.
+     */
+    private transient String m_sJitName;
 
     /**
      * Cached normalized representation.
