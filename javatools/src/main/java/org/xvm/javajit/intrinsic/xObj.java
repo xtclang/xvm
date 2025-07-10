@@ -56,7 +56,12 @@ public abstract class xObj {
 
     public abstract xType $type();
     public abstract boolean $isImmut();
-    public abstract void $makeImmut();
+
+    public void $makeImmut() {
+        if (!$isImmut()) {
+            throw new UnsupportedOperationException();
+        }
+    }
 
     /**
      * This should be overridden by duck-type wrappers.

@@ -976,6 +976,30 @@ public class ClassStructure
             }
         }
 
+    /**
+     * @return a list of conditional incorporates for this class that applies to the specified type;
+     *         null if there are none
+     */
+    public List<Contribution> collectConditionalIncorporates(TypeConstant type)
+        {
+        ConstantPool       pool             = getConstantPool();
+        List<Contribution> listIncorporates = null;
+        for (Contribution contrib : getContributionsAsList())
+            {
+            if (contrib.getComposition() == Composition.Incorporates &&
+                    contrib.isConditional() && contrib.resolveGenerics(pool, type) != null)
+                {
+                if (listIncorporates == null)
+                    {
+                    listIncorporates = new ArrayList<>();
+                    }
+                listIncorporates.add(contrib);
+                }
+            }
+
+        return listIncorporates;
+        }
+
 
     // ----- Tuple support -------------------------------------------------------------------------
 

@@ -12,7 +12,7 @@ public class t$module extends org.xvm.javajit.intrinsic.xType {
 
     @Override
     public org.xvm.javajit.intrinsic.xObj alloc(org.xvm.javajit.Ctx ctx) {
-        ctx.debit($size);
+        ctx.take($size);
         return null; // ctx.container.ensureSingleton($type);
     }
 

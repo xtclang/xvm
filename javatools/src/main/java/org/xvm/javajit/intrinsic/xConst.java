@@ -11,9 +11,6 @@ public abstract class xConst extends xObj {
 
     @Override
     public boolean $isImmut() {
-        return false;
+        return true;
     }
-
-    @Override
-    public void $makeImmut() {}
 }
