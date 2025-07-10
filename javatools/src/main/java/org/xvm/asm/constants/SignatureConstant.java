@@ -15,6 +15,9 @@ import java.util.function.Consumer;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
+
+import org.xvm.javajit.TypeSystem;
+
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -849,6 +852,34 @@ public class SignatureConstant
         }
 
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    /**
+     * Ensure a unique name for this method signature at the specified TypeSystem.
+     */
+    public String ensureJitMethodName(TypeSystem ts)
+        {
+        String sJitName = m_sJitName;
+        if (sJitName == null)
+            {
+            // get the master instance of the signature constant
+            ConstantPool      pool = ts.findOwnerPool(this);
+            SignatureConstant sig  = (SignatureConstant) pool.register(this);
+
+            synchronized (sig)
+                {
+                sJitName = sig.m_sJitName;
+                if (sJitName == null)
+                    {
+                    String sNameOrig = getName();
+                    sig.m_sJitName = sJitName = sNameOrig + ts.xvm.createUniqueSuffix(sNameOrig);
+                    }
+                }
+            }
+        return sJitName;
+        }
+
+
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -1072,7 +1103,6 @@ public class SignatureConstant
      */
     private transient boolean m_fProperty;
 
-
     /**
      * Lock protecting {@link #m_sigPrev} and {@link #m_nCmpPrev}
      */
@@ -1087,4 +1117,9 @@ public class SignatureConstant
      * Cached comparison result.
      */
     private transient int m_nCmpPrev;
+
+    /**
+     * Cached JIT method name.
+     */
+    private transient String m_sJitName;
     }

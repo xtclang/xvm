@@ -411,7 +411,7 @@ public class Runner
             }
         catch (Throwable e)
             {
-            log(Severity.FATAL, e.getMessage());
+            log(Severity.FATAL, e.toString());
             }
         }
 
@@ -429,7 +429,7 @@ public class Runner
             Usage:
 
                 xec <options> <modulename>
-            
+
             Also supports any of:
             
                 xec <options> <filename>

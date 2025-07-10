@@ -1,10 +1,19 @@
 package org.xvm.javajit;
 
+import java.io.IOException;
+import java.io.InputStream;
+
+import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassModel;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.util.Handy.require;
-
 
 /**
  * A ModuleLoader is responsible for loading exactly one module with a specified set of attributes
@@ -63,6 +72,25 @@ public class ModuleLoader
      */
     public final TypeSystem typeSystem;
 
+    // ----- ClassLoader API -----------------------------------------------------------------------
+
+    @Override
+    protected Class<?> loadClass(String name, boolean resolve)
+            throws ClassNotFoundException {
+        if (typeSystem instanceof NativeTypeSystem nativeTS) {
+            byte[] classBytes = nativeTS.loadNativeClass(this, name);
+            if (classBytes != null) {
+                Class clz = defineClass(name, classBytes, 0, classBytes.length);
+                if (resolve) {
+                    resolveClass(clz);
+                }
+                loadedClasses.add(clz);
+                return clz;
+            }
+        }
+        return super.loadClass(name, resolve);
+    }
+
     @Override
     protected Class<?> findClass(String name)
             throws ClassNotFoundException {
@@ -72,7 +100,9 @@ public class ModuleLoader
             if (classBytes == null) {
                 throw new ClassNotFoundException(name);
             }
-            return defineClass(name, classBytes, 0, classBytes.length);
+            Class clz = defineClass(name, classBytes, 0, classBytes.length);
+            loadedClasses.add(clz);
+            return clz;
         } else if (getParent() instanceof TypeSystemLoader tsLoader) {
             return tsLoader.findClass(name);
         } else {
@@ -84,4 +114,27 @@ public class ModuleLoader
     public String toString() {
         return module.toString();
     }
+
+    // ----- debugging -----------------------------------------------------------------------------
+
+    public void dump() {
+        // TODO: REMOVE
+
+        // the "dumping" itself causes the classes to be transitively loaded;
+        // limit the number of cycles
+        int iters = 2;
+        do {
+            List<Class> currentlyLoaded = new ArrayList<>(loadedClasses);
+            loadedClasses.clear();
+            for (Class clz : currentlyLoaded) {
+                System.out.println("\n**** Class " + clz.getName());
+                System.out.println("Fields:");
+                Arrays.stream(clz.getDeclaredFields()).map(s -> "  " + s).forEach(System.out::println);
+                System.out.println("Methods:");
+                Arrays.stream(clz.getDeclaredMethods()).map(s -> "  " + s).forEach(System.out::println);
+            }
+        } while (!loadedClasses.isEmpty() && --iters > 0);
+    }
+
+    private final List<Class> loadedClasses = new ArrayList<>();
 }
