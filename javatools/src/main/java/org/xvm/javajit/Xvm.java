@@ -165,6 +165,11 @@ public class Xvm {
     private final ConcurrentHashMap<String, String[]> packagesByModule = new ConcurrentHashMap<>();
 
     /**
+     * The incremental counter for every method/property name.
+     */
+    private final ConcurrentHashMap<String, Integer> nameCounters = new ConcurrentHashMap<>();
+
+    /**
      * Used to sort ModuleStructures by their ModuleConstant identities.
      */
     static final Comparator<ModuleStructure> StructureByModuleId =
@@ -277,6 +282,15 @@ public class Xvm {
         }
         return null;
     }
+
+    /**
+     * @return a unique suffix for the specified name
+     */
+    public String createUniqueSuffix(String name) {
+        int count = nameCounters.compute(name, (k, v) -> v == null ? 0 : v + 1);
+        return count == 0 ? "" : "$" + count;
+    }
+
 
     // ----- internal ------------------------------------------------------------------------------
 

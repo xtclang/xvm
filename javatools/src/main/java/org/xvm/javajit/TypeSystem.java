@@ -1,13 +1,14 @@
 package org.xvm.javajit;
 
-
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassFile;
 
 import java.lang.classfile.attribute.SourceFileAttribute;
+
 import java.lang.constant.ClassDesc;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -17,6 +18,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
@@ -24,7 +26,10 @@ import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.builders.CommonBuilder;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.NATIVE_MODULE;
@@ -33,7 +38,6 @@ import static org.xvm.asm.Constants.TURTLE_MODULE;
 import static org.xvm.javajit.Xvm.StructureByModuleId;
 
 import static org.xvm.util.Handy.require;
-
 
 /**
  * As part of the Ecstasy JIT implementation targeting the JVM, this class represents an Ecstasy
@@ -206,7 +210,61 @@ public class TypeSystem {
      * @return the ConstantPool associated with this TypeSystem
      */
     public ConstantPool pool() {
-        return owned.length == 0 ? xvm.ecstasyPool : owned[0].module.getConstantPool();
+        // TODO should there be a separate ConstantPool created for this type system when there are only shared modules? i.e. is there a FileStructure?
+        return owned.length == 0 ? xvm.ecstasyPool /* <-- TODO wrong */ : owned[0].module.getConstantPool();
+    }
+
+    /**
+     * Find the ConstantPool that "owns" the specified signature.
+     */
+    public ConstantPool findOwnerPool(SignatureConstant sig) {
+        ConstantPool thisPool = pool();
+
+        // try to go "up" towards the root Ecstasy type system to see if anyone "above" us fully
+        // "knows" about the specified constant
+        for (ModuleLoader loader : shared) {
+            ConstantPool thatPool = loader.module.getConstantPool();
+            if (thatPool != thisPool && sig.isShared(thatPool)) {
+                return loader.typeSystem.findOwnerPool(sig);
+            }
+        }
+
+        // if we can't go up, then we have to fully "know" the constant (i.e. there is no "down")
+        assert sig.isShared(thisPool);
+        return thisPool;
+    }
+
+    /**
+     * Find the ModuleLoader that "owns" (i.e. will assemble the class for) the specified type.
+     *
+     * @param type  a type with {@link TypeConstant#isSingleUnderlyingClass single underlying class}
+     */
+    public ModuleLoader findOwnerLoader(TypeConstant type) {
+        ConstantPool thisPool = pool();
+
+        // try to go "up" towards the root Ecstasy type system to see if anyone "above" us fully
+        // "knows" about the specified constant
+        for (ModuleLoader loader : shared) {
+            ConstantPool thatPool = loader.module.getConstantPool();
+            if (thatPool != thisPool && type.isShared(thatPool)) {
+                return loader.typeSystem.findOwnerLoader(type);
+            }
+        }
+
+        // if we can't go up, then we have to fully "know" the constant (i.e. there is no "down")
+        assert type.isShared(thisPool);
+
+        // select the module which is responsible for assembling the class for the type
+        IdentityConstant id     = type.getSingleUnderlyingClass(true);
+        ModuleConstant   module = id.getModuleConstant();
+
+        for (ModuleLoader loader : owned) {
+            if (loader.module.getIdentityConstant().equals(module)) {
+                return loader;
+            }
+        }
+
+        throw new IllegalStateException("No owner loader for " + type);
     }
 
     /**
@@ -318,6 +376,30 @@ public class TypeSystem {
         // TODO
         return null;
     }
+
+    /**
+     * Ensure a unique Java class name for the specified Ecstasy type.
+     */
+    public String ensureJitClassName(TypeConstant type) {
+        if (type.isSingleUnderlyingClass(true)) {
+            ClassStructure structure = (ClassStructure)
+                type.getSingleUnderlyingClass(true).getComponent();
+
+            List<Contribution> condIncorporates = structure.collectConditionalIncorporates(type);
+            TypeConstant       canonicalType;
+            if (condIncorporates == null) {
+                canonicalType = structure.getCanonicalType();
+            } else {
+                // TODO
+                throw new RuntimeException("Not implemented: conditional incorporates");
+            }
+
+            return canonicalType.ensureJitClassName(this);
+        }
+        throw new IllegalArgumentException("No JIT class fpr " + type.getValueString());
+    }
+
+    // ----- internal ------------------------------------------------------------------------------
 
     private void registerNativeClasses() {
         ConstantPool pool = pool();

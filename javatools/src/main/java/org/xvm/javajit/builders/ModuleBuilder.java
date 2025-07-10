@@ -11,7 +11,6 @@ import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.javajit.CommonBuilder;
 import org.xvm.javajit.TypeSystem;
 
 import static java.lang.constant.ConstantDescs.CD_long;
@@ -34,17 +33,8 @@ public class ModuleBuilder extends CommonBuilder {
     private static final ClassDesc CD_ModuleStructure =
         ClassDesc.of(org.xvm.asm.ModuleStructure.class.getName());
 
-    private static final ClassDesc CD_Ctx =
-        ClassDesc.of(org.xvm.javajit.Ctx.class.getName());
-
-    private static final ClassDesc CD_TypeSystem =
-        ClassDesc.of(org.xvm.javajit.TypeSystem.class.getName());
-
-    private static final ClassDesc CD_Container =
-        ClassDesc.of(org.xvm.javajit.Container.class.getName());
-
     @Override
-    public void assembleImpl(String className, ClassBuilder classBuilder) {
+    public void assembleImplClass(String className, ClassBuilder classBuilder) {
         classBuilder
             .withFlags(ClassFile.ACC_PUBLIC)
             .withSuperclass(CD_super)
@@ -54,8 +44,6 @@ public class ModuleBuilder extends CommonBuilder {
             CD_ModuleStructure,
             ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL
         );
-
-        ClassDesc CD_this = ClassDesc.of(className);
 
         // static initializer
         classBuilder.withMethod(ConstantDescs.CLASS_INIT_NAME,
@@ -108,26 +96,6 @@ public class ModuleBuilder extends CommonBuilder {
                     .labelBinding(endScope)
                     .return_()
                     ;
-            })
-        );
-
-        // public void run(org.xvm.javajit.Ctx $ctx)
-        classBuilder.withMethod("run",
-            MethodTypeDesc.of(CD_void, CD_Ctx),
-            ClassFile.ACC_PUBLIC,
-            methodBuilder -> methodBuilder.withCode(codeBuilder -> {
-                Label startScope = codeBuilder.newLabel();
-                Label endScope   = codeBuilder.newLabel();
-                codeBuilder
-                    .labelBinding(startScope)
-
-                    .lineNumber(1)
-                    .localVariable(0, "ctx", CD_Ctx, startScope, endScope)
-
-                    .lineNumber(2)
-                    .labelBinding(endScope)
-                    .return_()
-                ;
             })
         );
     }
