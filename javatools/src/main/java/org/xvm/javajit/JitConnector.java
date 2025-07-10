@@ -14,9 +14,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
-import org.xvm.javajit.intrinsic.xObj;
-
-
 public class JitConnector
         extends Connector {
     public JitConnector(ModuleRepository repo) {
@@ -36,8 +33,6 @@ public class JitConnector
         // TODO add error reporting
 
         container = xvm.createContainer(ts, xvm.mainInjector);
-        // TODO reflect on container to get the main module and find the appropriate run() (or other) method
-
     }
 
     @Override
@@ -67,17 +62,20 @@ public class JitConnector
         // typeName = "jit." + typeName;
 
         try {
-            ClassLoader loader  = Ctx.get().container.typeSystem.loader;
-            Class       typeClz = Class.forName(typeName, true, loader);
+            xvm.mainInjector.addNativeResources();
 
-            xObj module = (xObj) typeClz.getDeclaredConstructor(Long.TYPE).newInstance(-1L);
+            TypeSystemLoader loader = Ctx.get().container.typeSystem.loader;
+            Class            clz    = Class.forName(typeName, true, loader);
+
+            Object module = clz.getDeclaredConstructor(Long.TYPE).newInstance(-1L);
             if (asArg == null || asArg.length == 0) {
-                Method method = typeClz.getMethod("run", Ctx.class);
+                Method method = clz.getMethod("run", Ctx.class);
                 method.invoke(module, Ctx.get());
             } else {
-                Method method = typeClz.getMethod("run", String.class.arrayType(), Ctx.class);
+                Method method = clz.getMethod("run", String.class.arrayType(), Ctx.class);
                 method.invoke(module, Ctx.get()); // TODO create xStr args
             }
+            loader.dump();
         } catch (ClassNotFoundException | NoClassDefFoundError e) {
             throw new RuntimeException("Failed to load class \"" + typeName + '"', e);
         } catch (NoSuchMethodException e) {

@@ -1,4 +1,4 @@
-package org.xvm.javajit.intrinsic.io;
+package org.xvm.javajit.bridge;
 
 import java.io.IOException;
 
@@ -17,7 +17,8 @@ import org.xvm.runtime.template._native.xTerminalConsole;
  */
 public class TerminalConsole
         extends xService
-        implements jit.org.xtclang.ecstasy.io.Console {
+//        implements jit.org.xtclang.ecstasy.io.Console
+{
 
     public TerminalConsole() {
         super(-1);
@@ -28,7 +29,7 @@ public class TerminalConsole
         return $xvm().ecstasyPool.ensureEcstasyTypeConstant("io.Console").ensureXType($owner());
     }
 
-    @Override
+//    @Override
     public void print(Ctx $ctx, xObj object, boolean suppressNewline) {
         xTerminalConsole.CONSOLE_OUT.print(object.toString());
         if (!suppressNewline) {
@@ -37,7 +38,7 @@ public class TerminalConsole
         xTerminalConsole.CONSOLE_OUT.flush();
     }
 
-    @Override
+//    @Override
     public xStr readLine(Ctx $ctx, xStr prompt, boolean suppressEcho) {
         if (prompt.size() != 0) {
             xTerminalConsole.CONSOLE_OUT.print(prompt);
