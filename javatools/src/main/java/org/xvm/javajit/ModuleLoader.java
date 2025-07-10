@@ -1,10 +1,8 @@
 package org.xvm.javajit;
 
-
 import org.xvm.asm.ModuleStructure;
 
 import static org.xvm.util.Handy.require;
-
 
 /**
  * A ModuleLoader is responsible for loading exactly one module with a specified set of attributes
@@ -62,6 +60,8 @@ public class ModuleLoader
      * ClassFile generation for the module that this ModuleLoader is responsible for loading.
      */
     public final TypeSystem typeSystem;
+
+    // ----- ClassLoader API -----------------------------------------------------------------------
 
     @Override
     protected Class<?> findClass(String name)
