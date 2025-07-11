@@ -1438,10 +1438,10 @@ public class MethodInfo
                     }
                 }
 
-            JitParamDesc[] apdStandardReturn = listParamsStd.toArray(JitParamDesc.NONE);
+            JitParamDesc[] apdStandardReturn  = listParamsStd.toArray(JitParamDesc.NONE);
             JitParamDesc[] apdOptimizedReturn = fOptimized
                     ? listParamsOpt.toArray(JitParamDesc.NONE)
-                    : apdStandardReturn;
+                    : null;
 
             m_jmd = jmd = new JitMethodDesc(
                     apdStandardReturn, apdStandardParam,

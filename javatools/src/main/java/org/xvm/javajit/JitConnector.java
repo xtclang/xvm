@@ -67,15 +67,15 @@ public class JitConnector
         // typeName = "jit." + typeName;
 
         try {
-            ClassLoader loader  = Ctx.get().container.typeSystem.loader;
-            Class       typeClz = Class.forName(typeName, true, loader);
+            ClassLoader loader = Ctx.get().container.typeSystem.loader;
+            Class       clz    = Class.forName(typeName, true, loader);
 
-            xObj module = (xObj) typeClz.getDeclaredConstructor(Long.TYPE).newInstance(-1L);
+            xObj module = (xObj) clz.getDeclaredConstructor(Long.TYPE).newInstance(-1L);
             if (asArg == null || asArg.length == 0) {
-                Method method = typeClz.getMethod("run", Ctx.class);
+                Method method = clz.getMethod("run", Ctx.class);
                 method.invoke(module, Ctx.get());
             } else {
-                Method method = typeClz.getMethod("run", String.class.arrayType(), Ctx.class);
+                Method method = clz.getMethod("run", String.class.arrayType(), Ctx.class);
                 method.invoke(module, Ctx.get()); // TODO create xStr args
             }
         } catch (ClassNotFoundException | NoClassDefFoundError e) {

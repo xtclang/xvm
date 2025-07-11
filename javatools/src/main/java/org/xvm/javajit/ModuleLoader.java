@@ -1,5 +1,7 @@
 package org.xvm.javajit;
 
+import java.util.Arrays;
+
 import org.xvm.asm.ModuleStructure;
 
 import static org.xvm.util.Handy.require;
@@ -72,7 +74,15 @@ public class ModuleLoader
             if (classBytes == null) {
                 throw new ClassNotFoundException(name);
             }
-            return defineClass(name, classBytes, 0, classBytes.length);
+            Class clz = defineClass(name, classBytes, 0, classBytes.length);
+// TODO: REMOVE
+System.err.println("\n**** Class " + name);
+System.err.println("Fields:");
+Arrays.stream(clz.getDeclaredFields()).map(s -> "  " + s).forEach(System.err::println);
+System.err.println("Methods:");
+Arrays.stream(clz.getDeclaredMethods()).map(s -> "  " + s).forEach(System.err::println);
+
+            return clz;
         } else if (getParent() instanceof TypeSystemLoader tsLoader) {
             return tsLoader.findClass(name);
         } else {
