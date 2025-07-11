@@ -27,7 +27,7 @@ public class ModuleBuilder extends CommonBuilder {
         super(typeSystem, type);
     }
 
-    private static final ClassDesc CD_super =
+    private static final ClassDesc CD_xModule =
         ClassDesc.of(org.xvm.javajit.intrinsic.xModule.class.getName());
 
     private static final ClassDesc CD_ModuleStructure =
@@ -37,7 +37,7 @@ public class ModuleBuilder extends CommonBuilder {
     public void assembleImplClass(String className, ClassBuilder classBuilder) {
         classBuilder
             .withFlags(ClassFile.ACC_PUBLIC)
-            .withSuperclass(CD_super)
+            .withSuperclass(CD_xModule)
             ;
 
         classBuilder.withField("module$",
@@ -89,7 +89,7 @@ public class ModuleBuilder extends CommonBuilder {
                     .getfield(CD_Ctx, "container", CD_Container)
                     .getfield(CD_Container, "typeSystem", CD_TypeSystem)
                     .invokevirtual(CD_TypeSystem, "mainModule", MethodTypeDesc.of(CD_ModuleStructure))
-                    .invokespecial(CD_super, INIT_NAME,
+                    .invokespecial(CD_xModule, INIT_NAME,
                         MethodTypeDesc.of(CD_void, CD_long, CD_ModuleStructure))
 
                     .lineNumber(++nLine)

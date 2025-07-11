@@ -27,6 +27,8 @@ import org.xvm.javajit.TypeSystem;
 public class CommonBuilder
         implements Builder {
     public CommonBuilder(TypeSystem typeSystem, TypeConstant type) {
+        assert type.isSingleUnderlyingClass(true);
+
         this.typeSystem = typeSystem;
         this.typeInfo   = type.ensureAccess(Constants.Access.PRIVATE).ensureTypeInfo();
     }
@@ -52,7 +54,25 @@ public class CommonBuilder
      * Assemble the class specific info for the "Impl" shape.
      */
     protected void assembleImplClass(String className, ClassBuilder classBuilder) {
-        classBuilder.withFlags(ClassFile.ACC_PUBLIC);
+        int flags = ClassFile.ACC_PUBLIC;
+        if (typeSystem.supersByType.get(typeInfo.getType()) instanceof Class clz) {
+            classBuilder.withSuperclass(ClassDesc.of(clz.getName()));
+        } else {
+            switch (typeInfo.getClassStructure().getFormat()) {
+                case CLASS:
+                    classBuilder.withSuperclass(CD_xObj);
+                    break;
+
+                case INTERFACE:
+                    flags |= ClassFile.ACC_INTERFACE;
+                    break;
+
+                default:
+                    // TODO
+                    throw new RuntimeException("Not implemented " + typeInfo.getType());
+            }
+        }
+        classBuilder.withFlags(flags);
     }
 
     /**
@@ -85,25 +105,24 @@ public class CommonBuilder
                 }
             }
 
-            String        jitName = method.getSignature().ensureJitMethodName(typeSystem);
-            JitMethodDesc jmDesc  = method.getJitDesc(typeSystem);
-            if (jmDesc == null) {
-                continue;
-            }
+            String jitName = method.getSignature().ensureJitMethodName(typeSystem);
 
             if (router) {
                 MethodInfo targetMethod = typeInfo.getNarrowingMethod(method);
                 assert targetMethod != null;
                 assembleRoutingMethod(className, classBuilder, method, targetMethod);
-            } else if (method.isConstructor()){
-                assembleConstructor(className, classBuilder, method, jitName, jmDesc.standardMD, false);
-                if (jmDesc.optimizedMD != null) {
-                    assembleConstructor(className, classBuilder, method, jitName, jmDesc.standardMD, true);
-                }
             } else {
-                assembleMethod(className, classBuilder, method, jitName, jmDesc.standardMD, false);
-                if (jmDesc.optimizedMD != null) {
-                    assembleMethod(className, classBuilder, method, jitName, jmDesc.optimizedMD, true);
+                JitMethodDesc jmDesc  = method.getJitDesc(typeSystem);
+                if (method.isConstructor()){
+                    assembleConstructor(className, classBuilder, method, jitName, jmDesc.standardMD, false);
+                    if (jmDesc.optimizedMD != null) {
+                        assembleConstructor(className, classBuilder, method, jitName, jmDesc.standardMD, true);
+                    }
+                } else {
+                    assembleMethod(className, classBuilder, method, jitName, jmDesc.standardMD, false);
+                    if (jmDesc.optimizedMD != null) {
+                        assembleMethod(className, classBuilder, method, jitName, jmDesc.optimizedMD, true);
+                    }
                 }
             }
         }
@@ -131,7 +150,7 @@ public class CommonBuilder
     protected void assembleMethod(String className, ClassBuilder classBuilder, MethodInfo method,
                                   String jitName, MethodTypeDesc md, boolean optimized) {
         if (optimized) {
-            jitName += "$o";
+            jitName += "$p";
         }
 
         MethodStructure methodStruct = method.getTopmostMethodStructure(typeInfo);

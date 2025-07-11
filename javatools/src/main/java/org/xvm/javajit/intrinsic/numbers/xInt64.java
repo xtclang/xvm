@@ -12,7 +12,7 @@ public class xInt64 extends xConst {
      *
      * @param value  the 64-bit signed integer vlue
      */
-    xInt64(long value) {
+    public xInt64(long value) {
         super(-1);
         $value = value;
     }

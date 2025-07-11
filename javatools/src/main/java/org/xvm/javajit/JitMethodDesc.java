@@ -17,7 +17,9 @@ public class JitMethodDesc {
         this.optimizedParams  = optimizedParams;
 
         standardMD  = computeMethodDesc(standardReturns, standardParams);
-        optimizedMD = computeMethodDesc(optimizedReturns, optimizedParams);
+        optimizedMD = optimizedParams == null || optimizedReturns == null
+            ? null
+            : computeMethodDesc(optimizedReturns, optimizedParams);
     }
 
     public static MethodTypeDesc computeMethodDesc(JitParamDesc[] returns, JitParamDesc[] params) {

@@ -207,6 +207,16 @@ public class TypeSystem {
     public final ModuleLoader[] owned;
 
     /**
+     * A cache of super classes keyed by type.
+     */
+    public final Map<TypeConstant, Class> supersByType = new ConcurrentHashMap<>();
+
+    /**
+     * A cache of builders classes keyed by type.
+     */
+    public final Map<TypeConstant, Class> buildersByType = new ConcurrentHashMap<>();
+
+    /**
      * @return the ConstantPool associated with this TypeSystem
      */
     public ConstantPool pool() {
@@ -338,13 +348,23 @@ public class TypeSystem {
         return new CommonBuilder(this, type);
     }
 
+    /**
+     * Jit class shapes.
+     */
     public enum ClassfileShape {
-        Impl,
-        Pure,       // i$
-        Proxy,      // p$
-        Duck,       // d$
-        Mask,       // m$
-        Future,     // f$
+        Pure  ("i$"),
+        Proxy ("p$"),
+        Duck  ("d$"),
+        Mask  ("m$"),
+        Future("f$"),
+        Impl  (""), // needs to be last
+        ;
+
+        ClassfileShape(String prefix) {
+            this.prefix = prefix;
+        }
+
+        public final String prefix;
     }
 
     public record Artifact(IdentityConstant id, ClassfileShape shape) {}
@@ -354,6 +374,16 @@ public class TypeSystem {
             return new Artifact(module.getIdentityConstant(), ClassfileShape.Impl);
         }
 
+        for (ClassfileShape shape : ClassfileShape.values()) {
+            if (name.startsWith(shape.prefix)) {
+                if (shape != ClassfileShape.Impl) {
+                    name = name.substring(2); // all other suffixes are of the length 2
+                }
+                if (module.getChildByPath(name) instanceof ClassStructure struct) {
+                    return new Artifact(struct.getIdentityConstant(), shape);
+                }
+            }
+        }
         return null;
     }
 
@@ -406,18 +436,10 @@ public class TypeSystem {
 
         supersByType.put(pool.typeObject(), org.xvm.javajit.intrinsic.xObj.class);
 
+        buildersByType.put(pool.typeBoolean(), org.xvm.javajit.builders.BoolBuilder.class);
+        buildersByType.put(pool.typeInt64(), org.xvm.javajit.builders.Int64Builder.class);
         buildersByType.put(pool.typeModule(), org.xvm.javajit.builders.ModuleBuilder.class);
     }
-
-    /**
-     * A cache of super classes keyed by type.
-     */
-    protected final Map<TypeConstant, Class> supersByType = new ConcurrentHashMap<>();
-
-    /**
-     * A cache of builders classes keyed by type.
-     */
-    protected final Map<TypeConstant, Class> buildersByType = new ConcurrentHashMap<>();
 }
 
 
