@@ -76,4 +76,11 @@ public class TypeSystemLoader
 
         throw new ClassNotFoundException(name);
     }
+
+    // ----- debugging -----------------------------------------------------------------------------
+
+    public void dump() {
+        Arrays.stream(shared).forEach(ModuleLoader::dump);
+        Arrays.stream(owned).forEach(ModuleLoader::dump);
+    }
 }

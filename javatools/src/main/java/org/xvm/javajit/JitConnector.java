@@ -36,8 +36,6 @@ public class JitConnector
         // TODO add error reporting
 
         container = xvm.createContainer(ts, xvm.mainInjector);
-        // TODO reflect on container to get the main module and find the appropriate run() (or other) method
-
     }
 
     @Override
@@ -67,8 +65,10 @@ public class JitConnector
         // typeName = "jit." + typeName;
 
         try {
-            ClassLoader loader = Ctx.get().container.typeSystem.loader;
-            Class       clz    = Class.forName(typeName, true, loader);
+            xvm.mainInjector.addNativeResources();
+
+            TypeSystemLoader loader = Ctx.get().container.typeSystem.loader;
+            Class            clz    = Class.forName(typeName, true, loader);
 
             xObj module = (xObj) clz.getDeclaredConstructor(Long.TYPE).newInstance(-1L);
             if (asArg == null || asArg.length == 0) {
@@ -78,6 +78,7 @@ public class JitConnector
                 Method method = clz.getMethod("run", String.class.arrayType(), Ctx.class);
                 method.invoke(module, Ctx.get()); // TODO create xStr args
             }
+            loader.dump();
         } catch (ClassNotFoundException | NoClassDefFoundError e) {
             throw new RuntimeException("Failed to load class \"" + typeName + '"', e);
         } catch (NoSuchMethodException e) {

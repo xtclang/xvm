@@ -3,6 +3,11 @@ package org.xvm.javajit;
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassFile;
 
+import java.lang.classfile.ClassModel;
+import java.lang.classfile.CodeModel;
+import java.lang.classfile.CodeTransform;
+import java.lang.classfile.MethodBuilder;
+
 import java.lang.classfile.attribute.SourceFileAttribute;
 
 import java.lang.constant.ClassDesc;
@@ -207,9 +212,14 @@ public class TypeSystem {
     public final ModuleLoader[] owned;
 
     /**
-     * A cache of super classes keyed by type.
+     * A cache of native class names keyed by type.
      */
-    public final Map<TypeConstant, Class> supersByType = new ConcurrentHashMap<>();
+    public final Map<TypeConstant, String> nativeByType = new ConcurrentHashMap<>();
+
+    /**
+     * A cache of native types keyed by native class name.
+     */
+    public final Map<String, TypeConstant> nativeByName = new ConcurrentHashMap<>();
 
     /**
      * A cache of builders classes keyed by type.
@@ -331,6 +341,53 @@ public class TypeSystem {
     }
 
     /**
+     * Augment the existing native class with the Ecstasy methods.
+     */
+    public byte[] augmentNativeClass(ModuleLoader moduleLoader, ClassModel model,
+                                     String className, TypeConstant type) {
+
+        ClassStructure  clz     = (ClassStructure) type.getSingleUnderlyingClass(true).getComponent();
+        Builder         builder = ensureBuilder(type);
+        Consumer<? super ClassBuilder> handler = cb -> {
+            cloneClassModel(model, cb);
+
+            // augment the new classfile using the Ecstasy class structure
+            cb.with(SourceFileAttribute.of(clz.getSourceFileName()));
+            builder.assembleImpl(className, cb);
+        };
+
+        return ClassFile.of().build(ClassDesc.of(className), handler);
+    }
+
+    /**
+     * Clone the existing class model into a new Classfile using the specified builder.
+     */
+    public void cloneClassModel(ClassModel model, ClassBuilder cb) {
+        if (model.superclass().isPresent()) {
+            cb.withSuperclass(model.superclass().get().asSymbol());
+        }
+
+        cb.withFlags(model.flags().flagsMask())
+          .withInterfaces(model.interfaces());
+
+        model.fields().forEach(fm ->
+            cb.withField(fm.fieldName().stringValue(), fm.fieldTypeSymbol(), fm.flags().flagsMask()));
+
+        model.methods().forEach(mm -> {
+            Consumer<? super MethodBuilder> methodHandler;
+            if (mm.code().isPresent()) {
+                CodeModel cm = mm.code().get();
+                methodHandler = mb -> mb.transformCode(cm, CodeTransform.ACCEPT_ALL);
+            } else {
+                methodHandler = mb -> {};
+            }
+            cb.withMethod(mm.methodName().stringValue(), mm.methodTypeSymbol(),
+                mm.flags().flagsMask(), methodHandler);
+
+        });
+    }
+
+    /**
      * @return a builder for the specified type
      */
     protected Builder ensureBuilder(TypeConstant type) {
@@ -411,6 +468,7 @@ public class TypeSystem {
      * Ensure a unique Java class name for the specified Ecstasy type.
      */
     public String ensureJitClassName(TypeConstant type) {
+        // TODO RonPhillips: extract into the NativeTypeSystem subclass
         if (type.isSingleUnderlyingClass(true)) {
             ClassStructure structure = (ClassStructure)
                 type.getSingleUnderlyingClass(true).getComponent();
@@ -420,8 +478,9 @@ public class TypeSystem {
             if (condIncorporates == null) {
                 canonicalType = structure.getCanonicalType();
             } else {
-                // TODO
-                throw new RuntimeException("Not implemented: conditional incorporates");
+                // TODO: implement conditional class name computation
+                System.err.println("Not implemented: conditional incorporates for " + type);
+                canonicalType = structure.getCanonicalType();
             }
 
             return canonicalType.ensureJitClassName(this);
@@ -434,11 +493,19 @@ public class TypeSystem {
     private void registerNativeClasses() {
         ConstantPool pool = pool();
 
-        supersByType.put(pool.typeObject(), org.xvm.javajit.intrinsic.xObj.class);
+        nativeByType.put(pool.typeBoolean(), Builder.xBool);
+        nativeByType.put(pool.typeInt64(),   Builder.xInt64);
+        nativeByType.put(pool.typeObject(),  Builder.xObj);
+        nativeByType.put(pool.typeString(),  Builder.xStr);
+
+        for (Map.Entry<TypeConstant, String > entry : nativeByType.entrySet()) {
+            nativeByName.put(entry.getValue(), entry.getKey());
+        }
 
         buildersByType.put(pool.typeBoolean(), org.xvm.javajit.builders.BoolBuilder.class);
-        buildersByType.put(pool.typeInt64(), org.xvm.javajit.builders.Int64Builder.class);
-        buildersByType.put(pool.typeModule(), org.xvm.javajit.builders.ModuleBuilder.class);
+        buildersByType.put(pool.typeInt64(),   org.xvm.javajit.builders.Int64Builder.class);
+        buildersByType.put(pool.typeModule(),  org.xvm.javajit.builders.ModuleBuilder.class);
+        buildersByType.put(pool.typeString(),  org.xvm.javajit.builders.StringBuilder.class);
     }
 }
 

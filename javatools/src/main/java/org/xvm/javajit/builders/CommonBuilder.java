@@ -55,22 +55,22 @@ public class CommonBuilder
      */
     protected void assembleImplClass(String className, ClassBuilder classBuilder) {
         int flags = ClassFile.ACC_PUBLIC;
-        if (typeSystem.supersByType.get(typeInfo.getType()) instanceof Class clz) {
-            classBuilder.withSuperclass(ClassDesc.of(clz.getName()));
-        } else {
-            switch (typeInfo.getClassStructure().getFormat()) {
-                case CLASS:
-                    classBuilder.withSuperclass(CD_xObj);
-                    break;
 
-                case INTERFACE:
-                    flags |= ClassFile.ACC_INTERFACE;
-                    break;
+        switch (typeInfo.getClassStructure().getFormat()) {
+            case CLASS, CONST:
+                TypeConstant superType = typeInfo.getExtends();
+                if (superType != null) {
+                    classBuilder.withSuperclass(ClassDesc.of(typeSystem.ensureJitClassName(superType)));
+                }
+                break;
 
-                default:
-                    // TODO
-                    throw new RuntimeException("Not implemented " + typeInfo.getType());
-            }
+            case INTERFACE:
+                flags |= ClassFile.ACC_INTERFACE & ClassFile.ACC_ABSTRACT;
+                break;
+
+            default:
+                // TODO: support for mixin, annotations, etc
+                throw new RuntimeException("Not implemented " + typeInfo.getType());
         }
         classBuilder.withFlags(flags);
     }
@@ -95,8 +95,14 @@ public class CommonBuilder
                 continue; // not our responsibility
             }
 
-            boolean router = method.isCapped();
-            if (!router) {
+            if (method.getHead().isNative()) {
+                // TODO: validate the presence of the corresponding method?
+                continue;
+            }
+
+            boolean cap    = method.isCapped();
+            boolean router = false;
+            if (!cap) {
                 MethodBody[] chain = method.getChain(); // REVIEW: do we need optimized chain?
                 if (chain.length > 1) {
                     String thisJitName = chain[0].getSignature().ensureJitMethodName(typeSystem);
@@ -107,8 +113,8 @@ public class CommonBuilder
 
             String jitName = method.getSignature().ensureJitMethodName(typeSystem);
 
-            if (router) {
-                MethodInfo targetMethod = typeInfo.getNarrowingMethod(method);
+            if (cap || router) {
+                MethodInfo targetMethod = cap ? typeInfo.getNarrowingMethod(method) : method;
                 assert targetMethod != null;
                 assembleRoutingMethod(className, classBuilder, method, targetMethod);
             } else {
@@ -153,28 +159,45 @@ public class CommonBuilder
             jitName += "$p";
         }
 
-        MethodStructure methodStruct = method.getTopmostMethodStructure(typeInfo);
-        assert methodStruct != null;
+        int flags = ClassFile.ACC_PUBLIC;
+        if (method.isAbstract()) {
+            flags |= ClassFile.ACC_ABSTRACT;
+        }
 
-        classBuilder.withMethod(jitName, md, ClassFile.ACC_PUBLIC,
-            methodBuilder -> methodBuilder.withCode(codeBuilder -> {
-                Label startScope = codeBuilder.newLabel();
-                Label endScope   = codeBuilder.newLabel();
-                int   nLine      = methodStruct.getSourceLineNumber();
-                codeBuilder
-                    .labelBinding(startScope)
-
-                    .lineNumber(nLine)
-                    .localVariable(0, "$ctx", CD_Ctx, startScope, endScope)
-
-                    .lineNumber(++nLine)
-                    .labelBinding(endScope)
-                    ;
-                addDefaultReturn(codeBuilder, md.returnType());
-            })
+        classBuilder.withMethod(jitName, md, flags,
+            methodBuilder -> {
+                if (!method.isAbstract()) {
+                    methodBuilder.withCode(codeBuilder ->
+                        generateCode(className, codeBuilder, method, md, optimized));
+                }
+            }
         );
     }
 
+    protected void generateCode(String className, CodeBuilder codeBuilder,
+                                MethodInfo method, MethodTypeDesc md, boolean optimized) {
+
+        MethodStructure methodStruct = method.getTopmostMethodStructure(typeInfo);
+        assert methodStruct != null;
+
+        Label startScope = codeBuilder.newLabel();
+        Label endScope   = codeBuilder.newLabel();
+        int   nLine      = methodStruct.getSourceLineNumber();
+        codeBuilder
+            .labelBinding(startScope)
+
+            .lineNumber(nLine)
+            .localVariable(0, "$ctx", CD_Ctx, startScope, endScope)
+
+            .lineNumber(++nLine)
+            .labelBinding(endScope)
+            ;
+        addDefaultReturn(codeBuilder, md.returnType());
+    }
+
+    /**
+     * Generate a default return for the specified Java class.
+     */
     private void addDefaultReturn(CodeBuilder codeBuilder, ClassDesc cd) {
         if (cd.isPrimitive()) {
             switch (cd.descriptorString()) {

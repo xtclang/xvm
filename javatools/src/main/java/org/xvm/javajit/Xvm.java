@@ -105,7 +105,7 @@ public class Xvm {
     /**
      * The default inject instance used for "main" containers.
      */
-    public final Injector mainInjector;
+    public final MainInjector mainInjector;
 
     /**
      * All Containers (held only by a weak reference) keyed by id.

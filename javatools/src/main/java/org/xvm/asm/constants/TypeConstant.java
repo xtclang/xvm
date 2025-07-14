@@ -7318,10 +7318,17 @@ public abstract class TypeConstant
                 sJitName = type.m_sJitName;
                 if (sJitName == null)
                     {
-                    // TODO: check for collisions, reserved keywords etc.
-                    type.m_sJitName = sJitName =
-                            loader.prefix + getSingleUnderlyingClass(true).getPathString();
+                    if (loader.typeSystem.nativeByType.get(type) instanceof String name)
+                        {
+                        sJitName = name;
+                        }
+                    else
+                        {
+                        // TODO: check for collisions, reserved keywords etc.
+                        sJitName = loader.prefix + getSingleUnderlyingClass(true).getPathString();
+                        }
                     }
+                type.m_sJitName = sJitName;
                 }
             }
         return sJitName;
