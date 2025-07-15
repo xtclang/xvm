@@ -57,7 +57,7 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
-import org.xvm.runtime.template._native.xTerminalConsole;
+import org.xvm.runtime.template._native.io.xTerminalConsole;
 
 import org.xvm.util.ListMap;
 

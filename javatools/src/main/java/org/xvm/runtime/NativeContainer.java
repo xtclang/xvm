@@ -59,11 +59,11 @@ import org.xvm.runtime.template.reflect.xInjector;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
-import org.xvm.runtime.template._native.xTerminalConsole;
-
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms;
 import org.xvm.runtime.template._native.crypto.xRTCertificateManager;
 import org.xvm.runtime.template._native.crypto.xRTKeyStore;
+
+import org.xvm.runtime.template._native.io.xTerminalConsole;
 
 import org.xvm.runtime.template._native.lang.src.xRTCompiler;
 
