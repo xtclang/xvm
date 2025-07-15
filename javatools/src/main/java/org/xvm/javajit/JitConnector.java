@@ -14,9 +14,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
-import org.xvm.javajit.intrinsic.xObj;
-
-
 public class JitConnector
         extends Connector {
     public JitConnector(ModuleRepository repo) {
@@ -70,7 +67,7 @@ public class JitConnector
             TypeSystemLoader loader = Ctx.get().container.typeSystem.loader;
             Class            clz    = Class.forName(typeName, true, loader);
 
-            xObj module = (xObj) clz.getDeclaredConstructor(Long.TYPE).newInstance(-1L);
+            Object module = clz.getDeclaredConstructor(Long.TYPE).newInstance(-1L);
             if (asArg == null || asArg.length == 0) {
                 Method method = clz.getMethod("run", Ctx.class);
                 method.invoke(module, Ctx.get());

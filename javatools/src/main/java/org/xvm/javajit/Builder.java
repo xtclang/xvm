@@ -24,6 +24,7 @@ public interface Builder {
     String xBool      = "org.xvm.javajit.intrinsic.xBool";
     String xConst     = "org.xvm.javajit.intrinsic.xConst";
     String xContainer = "org.xvm.javajit.intrinsic.xContainer";
+    String xModule    = "org.xvm.javajit.intrinsic.xModule";
     String xStr       = "org.xvm.javajit.intrinsic.xStr";
     String xInt64     = "org.xvm.javajit.intrinsic.numbers.xInt64";
 

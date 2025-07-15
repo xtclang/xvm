@@ -18,8 +18,10 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
 import static java.util.Arrays.copyOf;
+
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.NATIVE_MODULE;
+
 import static org.xvm.util.Handy.checkElementsNonNull;
 import static org.xvm.util.Handy.isDigit;
 import static org.xvm.util.Handy.parseDelimitedString;
@@ -42,7 +44,8 @@ public class Xvm {
             locks[i] = new Object();
         }
         this.systemRepo       = repo;
-        this.nativeTypeSystem = new TypeSystem(this, repo);
+        this.nativeTypeSystem = NativeTypeSystem.create(this, repo);
+
         register(this.nativeTypeSystem);
         this.nativeContainer  = createContainer(null, nativeTypeSystem, FailEverythingInjector);
 
@@ -79,7 +82,7 @@ public class Xvm {
      * The TypeSystem for the invisible "Container -1", which is the only TypeSystem allowed to
      * contain native code.
      */
-    public final TypeSystem nativeTypeSystem;
+    public final NativeTypeSystem nativeTypeSystem;
 
     /**
      * The invisible "Container -1", which provides the interface to the "native" world and loads
@@ -290,7 +293,6 @@ public class Xvm {
         int count = nameCounters.compute(name, (k, v) -> v == null ? 0 : v + 1);
         return count == 0 ? "" : "$" + count;
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 

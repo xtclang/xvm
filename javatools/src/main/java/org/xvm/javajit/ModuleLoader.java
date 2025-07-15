@@ -77,21 +77,15 @@ public class ModuleLoader
     @Override
     protected Class<?> loadClass(String name, boolean resolve)
             throws ClassNotFoundException {
-        // TODO Ron Phillips: create a NativeModuleLoader and implement it there
-        if (this == typeSystem.xvm.ecstasyLoader) {
-            if (typeSystem.nativeByName.get(name) instanceof TypeConstant nativeType) {
-                try {
-                    try (InputStream in = getResourceAsStream(name.replace('.', '/') + ".class")) {
-                        assert in != null;
-                        ClassModel model = ClassFile.of().parse(in.readAllBytes());
-                        byte[] classBytes = typeSystem.augmentNativeClass(this, model, name, nativeType);
-                        Class clz = defineClass(name, classBytes, 0, classBytes.length);
-                        loadedClasses.add(clz);
-                        return clz;
-                    }
-                } catch (IOException e) {
-                    throw new ClassNotFoundException("Missing native class " + name);
+        if (typeSystem instanceof NativeTypeSystem nativeTS) {
+            byte[] classBytes = nativeTS.loadNativeClass(this, name);
+            if (classBytes != null) {
+                Class clz = defineClass(name, classBytes, 0, classBytes.length);
+                if (resolve) {
+                    resolveClass(clz);
                 }
+                loadedClasses.add(clz);
+                return clz;
             }
         }
         return super.loadClass(name, resolve);

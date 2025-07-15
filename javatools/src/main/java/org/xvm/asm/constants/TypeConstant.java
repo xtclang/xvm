@@ -7318,7 +7318,7 @@ public abstract class TypeConstant
                 sJitName = type.m_sJitName;
                 if (sJitName == null)
                     {
-                    if (loader.typeSystem.nativeByType.get(type) instanceof String name)
+                    if (ts.xvm.nativeTypeSystem.nativeByType.get(type) instanceof String name)
                         {
                         sJitName = name;
                         }
