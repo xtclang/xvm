@@ -1,6 +1,7 @@
 package org.xvm.javajit.intrinsic;
 
 import org.xvm.javajit.Ctx;
+import org.xvm.javajit.intrinsic.numbers.xInt64;
 
 /**
  * Supports the primitive form of the `Range<Int>` type.
@@ -21,7 +22,11 @@ public abstract class xRangeInt64 {
     /**
      * Attempt to encode the specified range into a 64-bit Java `long`.
      *
-     * @param ctx  the context in which to return the primitive `Range` as {@link Ctx#i0}
+     * @param ctx             the context in which to return the primitive `Range` as {@link Ctx#i0}
+     * @param first           start of the range/interval
+     * @param last            end of the range/interval
+     * @param firstExclusive  true iff the start value is NOT included in the range/interval
+     * @param lastExclusive   true iff the emd value is NOT included in the range/interval
      *
      * @return `true` iff the `Range` value was encoded into a single Java `long`
      */
@@ -42,6 +47,27 @@ public abstract class xRangeInt64 {
         return true;
     }
 
+    /**
+     * Attempt to encode the specified range into a 64-bit Java `long`.
+     *
+     * @param ctx  the context in which to return the `n` value of the 64-bit primitive `Range` as
+     *             {@link Ctx#i0}
+     * @param n1   the first part of the 128-bit primitive `Range`
+     * @param n2   the second part of the 128-bit primitive `Range`
+     *
+     * @return `true` iff the `Range` value was encoded into a single Java `long`
+     */
+    public static boolean $rangeTo64(Ctx ctx, long n1, long n2) {
+        long lo = $lowerBound(n1, n2);
+        long hi = $upperBound(n1, n2);
+        if (lo < Min30 || lo > Max30 || hi < Min31 || hi > Max31) {
+            return false;
+        }
+        ctx.i0 = ((lo & Max30) << 34) | ($lowerExclusive(n1, n2) ? LE64 : 0) | ($descending(n1, n2) ? D64 : 0)
+               | ((hi & Max31) << 1 ) | ($upperExclusive(n1, n2) ? UE64 : 0);
+        return true;
+    }
+
     // TODO how to do the opposite, i.e. return an xObj reference to an Ecstasy Range+Sequence object from 1 long value
 
     public static long $lowerBound(long n) {
@@ -52,12 +78,20 @@ public abstract class xRangeInt64 {
         return (n & LE64) != 0;
     }
 
+    public static long $effectiveLowerBound(long n) {
+        return $lowerExclusive(n) ? xInt64.$next($lowerBound(n)) : $lowerBound(n);
+    }
+
     public static long $upperBound(long n) {
         return n << 32 >> 33;
     }
 
     public static boolean $upperExclusive(long n) {
         return (n & UE64) != 0;
+    }
+
+    public static long $effectiveUpperBound(long n) {
+        return $upperExclusive(n) ? xInt64.$prev($upperBound(n)) : $upperBound(n);
     }
 
     public static boolean $descending(long n) {
@@ -72,12 +106,35 @@ public abstract class xRangeInt64 {
         return $descending (n) ? $upperExclusive(n) : $lowerExclusive(n);
     }
 
+    public static long $effectiveFirst(long n) {
+        return $descending(n) ? $effectiveUpperBound(n) : $effectiveLowerBound(n);
+    }
+
     public static long $last(long n) {
         return $descending(n) ? $lowerBound(n) : $upperBound(n);
     }
 
     public static boolean $lastExclusive(long n) {
         return $descending (n) ? $lowerExclusive(n) : $upperExclusive(n);
+    }
+
+    public static long $effectiveLast(long n) {
+        return $descending(n) ? $effectiveLowerBound(n) : $effectiveUpperBound(n);
+    }
+
+    public static boolean $empty(long n) {
+        return $effectiveLowerBound(n) > $effectiveUpperBound(n);
+    }
+
+    public static long $size(long n) {
+        long lo = $effectiveLowerBound(n);
+        long hi = $effectiveUpperBound(n);
+        if (hi < lo) {
+            return 0;
+        }
+        long size = hi - lo + 1;
+        return size >= 0 ? size : Long.MAX_VALUE;
+
     }
 
     public static long $asAscending(long n) {
@@ -106,8 +163,12 @@ public abstract class xRangeInt64 {
     /**
      * Attempt to encode the specified range into two 64-bit Java `long` values.
      *
-     * @param ctx  the context in which to return the primitive `Range` as {@link Ctx#i0} and
-     *             {@link Ctx#i1}
+     * @param ctx             the context in which to return the primitive `Range` as {@link Ctx#i0}
+     *                        and {@link Ctx#i1}
+     * @param first           start of the range/interval
+     * @param last            end of the range/interval
+     * @param firstExclusive  true iff the start value is NOT included in the range/interval
+     * @param lastExclusive   true iff the emd value is NOT included in the range/interval
      *
      * @return `true` iff the `Range` value was encoded into two Java `long` values
      */
@@ -128,6 +189,20 @@ public abstract class xRangeInt64 {
         return true;
     }
 
+    /**
+     * Encode the specified range into two 64-bit Java `long` values.
+     *
+     * @param ctx  the context in which to return the `n2` value of the 128-bit primitive `Range` as
+     *             {@link Ctx#i0}
+     * @param n    the primitive 64-bit `Range`
+     *
+     * @return the `n1` value of the primitive 128-bit `Range`
+     */
+    public static long $rangeTo128(Ctx ctx, long n) {
+        ctx.i0 = ($upperBound(n) << 1) | ($upperExclusive(n) ? E128 : 0);
+        return ($lowerBound(n) << 1) | ($lowerExclusive(n) ? E128 : 0) | ($descending(n) ? D128 : 0);
+    }
+
     // TODO how to do the opposite, i.e. return an xObj reference to an Ecstasy Range+Sequence object from 2 long values
 
     public static long $lowerBound(long n1, long n2) {
@@ -138,12 +213,20 @@ public abstract class xRangeInt64 {
         return (n1 & E128) != 0;
     }
 
+    public static long $effectiveLowerBound(long n1, long n2) {
+        return $lowerExclusive(n1, n2) ? xInt64.$next($lowerBound(n1, n2)) : $lowerBound(n1, n2);
+    }
+
     public static long $upperBound(long n1, long n2) {
         return n2 >> 1;
     }
 
     public static boolean $upperExclusive(long n1, long n2) {
         return (n2 & E128) != 0;
+    }
+
+    public static long $effectiveUpperBound(long n1, long n2) {
+        return $upperExclusive(n1, n2) ? xInt64.$prev($upperBound(n1, n2)) : $upperBound(n1, n2);
     }
 
     public static boolean $descending(long n1, long n2) {
@@ -158,12 +241,35 @@ public abstract class xRangeInt64 {
         return $descending(n1, n2) ? $upperExclusive(n1, n2) : $lowerExclusive(n1, n2);
     }
 
+    public static long $effectiveFirst(long n1, long n2) {
+        return $descending(n1, n2) ? $effectiveUpperBound(n1, n2) : $effectiveLowerBound(n1, n2);
+    }
+
     public static long $last(long n1, long n2) {
         return $descending(n1, n2) ? $lowerBound(n1, n2) : $upperBound(n1, n2);
     }
 
     public static boolean $lastExclusive(long n1, long n2) {
         return $descending (n1, n2) ? $lowerExclusive(n1, n2) : $upperExclusive(n1, n2);
+    }
+
+    public static long $effectiveLast(long n1, long n2) {
+        return $descending(n1, n2) ? $effectiveLowerBound(n1, n2) : $effectiveUpperBound(n1, n2);
+    }
+
+    public static boolean $empty(long n1, long n2) {
+        return $effectiveLowerBound(n1, n2) > $effectiveUpperBound(n1, n2);
+    }
+
+    public static long $size(long n1, long n2) {
+        long lo = $effectiveLowerBound(n1, n2);
+        long hi = $effectiveUpperBound(n1, n2);
+        if (hi < lo) {
+            return 0;
+        }
+        long size = hi - lo + 1;
+        return size >= 0 ? size : Long.MAX_VALUE;
+
     }
 
     /**
