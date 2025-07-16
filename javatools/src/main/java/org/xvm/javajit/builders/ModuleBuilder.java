@@ -9,6 +9,7 @@ import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 import java.lang.constant.MethodTypeDesc;
 
+import org.xtclang.ecstasy.xModule;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.TypeSystem;
@@ -28,7 +29,7 @@ public class ModuleBuilder extends CommonBuilder {
     }
 
     private static final ClassDesc CD_xModule =
-        ClassDesc.of(org.xvm.javajit.intrinsic.xModule.class.getName());
+        ClassDesc.of(xModule.class.getName());
 
     private static final ClassDesc CD_ModuleStructure =
         ClassDesc.of(org.xvm.asm.ModuleStructure.class.getName());
@@ -98,9 +99,5 @@ public class ModuleBuilder extends CommonBuilder {
                     ;
             })
         );
-    }
-
-    @Override
-    public void assemblePure(String className, ClassBuilder builder) {
     }
 }

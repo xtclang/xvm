@@ -27,6 +27,8 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.javajit.builders.AugmentingBuilder;
+
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.NATIVE_MODULE;
 import static org.xvm.asm.Constants.TURTLE_MODULE;
@@ -39,10 +41,21 @@ import static org.xvm.util.Handy.require;
 public class NativeTypeSystem
         extends TypeSystem {
     /**
-     * Create the NativeTypeSystem.
+     * Create the NativeTypeSystem, which combines Ecstasy, "bridge" module and modules that the
+     * bridge depends on.
      */
     private NativeTypeSystem(Xvm xvm, ModuleLoader[] shared, ModuleStructure[] owned) {
         super(xvm, shared, owned);
+
+        ModuleLoader bridgeLoader = null;
+        for (ModuleLoader loader : this.loader.owned) {
+            if (loader.module.getName().equals(NATIVE_MODULE)) {
+                bridgeLoader = loader;
+                break;
+            }
+        }
+        assert bridgeLoader != null;
+        this.bridgeLoader = bridgeLoader;
 
         registerNativeClasses();
     }
@@ -96,12 +109,18 @@ public class NativeTypeSystem
     }
 
     /**
+     * The ModuleLoader for the "bridge" (_native.xtclang.org) module.
+     */
+    public final ModuleLoader bridgeLoader;
+
+    /**
      * A cache of native class names keyed by type.
      */
     public final Map<TypeConstant, String> nativeByType = new ConcurrentHashMap<>();
 
     /**
      * A cache of native types keyed by native class name.
+     * TODO: not currently used, remove
      */
     public final Map<String, TypeConstant> nativeByName = new ConcurrentHashMap<>();
 
@@ -110,23 +129,37 @@ public class NativeTypeSystem
      */
     public final Map<TypeConstant, Class> nativeBuilders = new ConcurrentHashMap<>();
 
+    public static String XTC_BRIDGE_PREFIX  = "_native.";
+
     /**
-     * Load the native class for the specifed name.
+     * Load the native class for the specified name.
      *
      * @return the class bytes or null if the name does not represent a native class
      */
     public byte[] loadNativeClass(ModuleLoader loader, String name)
             throws ClassNotFoundException {
-        if (nativeByName.get(name) instanceof TypeConstant nativeType) {
-            try {
-                try (InputStream in = loader.getResourceAsStream(name.replace('.', '/') + ".class")) {
-                    assert in != null;
-                    ClassModel model = ClassFile.of().parse(in.readAllBytes());
-                    return augmentNativeClass(loader, model, name, nativeType);
+        try {
+            try (InputStream in = loader.getResourceAsStream(name.replace('.', '/') + ".class")) {
+                if (in != null) {
+                    byte[] classBytes = in.readAllBytes();
+                    String simpleName = name.substring(name.lastIndexOf('.') + 1);
+                    if (simpleName.startsWith("x")) {
+                        // by convention the classes that start with an "x" are "rebase" classes
+                        // that we take "as is" (they don't need to be augmented)
+                        return classBytes;
+                    }
+
+                    ClassModel     model  = ClassFile.of().parse(classBytes);
+                    String         path   = name.substring(loader.prefix.length());
+                    ClassStructure struct = (ClassStructure) loader.module.getChildByPath(path);
+                    if (struct == null) {
+                        throw new ClassNotFoundException("Cannot find XTC class for " + path);
+                    }
+                    return augmentNativeClass(model, name, struct.getCanonicalType());
                 }
-            } catch (IOException e) {
-                throw new ClassNotFoundException("Missing native class " + name);
             }
+        } catch (IOException e) {
+            throw new ClassNotFoundException("Failed to read native class " + name);
         }
         return null;
     }
@@ -134,11 +167,10 @@ public class NativeTypeSystem
     /**
      * Augment the existing native class with the Ecstasy methods.
      */
-    private byte[] augmentNativeClass(ModuleLoader moduleLoader, ClassModel model,
-                                     String className, TypeConstant type) {
+    private byte[] augmentNativeClass(ClassModel model, String className, TypeConstant type) {
 
         ClassStructure  clz     = (ClassStructure) type.getSingleUnderlyingClass(true).getComponent();
-        Builder         builder = ensureBuilder(type);
+        Builder         builder = ensureBuilder(type, model);
         Consumer<? super ClassBuilder> handler = cb -> {
             cloneClassModel(model, cb);
 
@@ -170,7 +202,7 @@ public class NativeTypeSystem
                 CodeModel cm = mm.code().get();
                 methodHandler = mb -> mb.transformCode(cm, CodeTransform.ACCEPT_ALL);
             } else {
-                methodHandler = mb -> {};
+                methodHandler = _ -> {};
             }
             cb.withMethod(mm.methodName().stringValue(), mm.methodTypeSymbol(),
                 mm.flags().flagsMask(), methodHandler);
@@ -178,17 +210,37 @@ public class NativeTypeSystem
         });
     }
 
-    @Override
-    protected Builder ensureBuilder(TypeConstant type) {
+    /**
+     * @return a ClassStructure for a "bridge" component
+     */
+    public ClassStructure getBridgeClassStructure(String name) {
+        assert name.startsWith(XTC_BRIDGE_PREFIX);
+
+        return (ClassStructure) bridgeLoader.module.getChildByPath(
+                name.substring(XTC_BRIDGE_PREFIX.length()));
+    }
+
+    /**
+     * @return a Java class name for a "bridge" component
+     */
+    public String getBridgeClassName(String name) {
+        return bridgeLoader.prefix +
+            getBridgeClassStructure(name).getIdentityConstant().getPathString();
+    }
+
+    protected Builder ensureBuilder(TypeConstant type, ClassModel model) {
         if (nativeBuilders.get(type) instanceof Class builderClass) {
             try {
                 return (Builder) builderClass.getDeclaredConstructor(
-                    TypeSystem.class, TypeConstant.class).newInstance(this, type);
+                    TypeSystem.class, TypeConstant.class, ClassModel.class).
+                        newInstance(this, type, model);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
-        return super.ensureBuilder(type);
+        return model == null
+            ? super.ensureBuilder(type)
+            : new AugmentingBuilder(this, type, model);
     }
 
     // ----- internal ------------------------------------------------------------------------------
@@ -196,11 +248,11 @@ public class NativeTypeSystem
     private void registerNativeClasses() {
         ConstantPool pool = pool();
 
-        nativeByType.put(pool.typeBoolean(), Builder.xBool);
-        nativeByType.put(pool.typeInt64(),   Builder.xInt64);
+        // only rebased types need to be registered
         nativeByType.put(pool.typeModule(),  Builder.xModule);
         nativeByType.put(pool.typeObject(),  Builder.xObj);
-        nativeByType.put(pool.typeString(),  Builder.xStr);
+        nativeByType.put(pool.typeService(), Builder.xService);
+        nativeByType.put(pool.typeType(),    Builder.xType);
 
         for (Map.Entry<TypeConstant, String > entry : nativeByType.entrySet()) {
             nativeByName.put(entry.getValue(), entry.getKey());
@@ -208,8 +260,9 @@ public class NativeTypeSystem
 
         nativeBuilders.put(pool.typeBoolean(), org.xvm.javajit.builders.BoolBuilder.class);
         nativeBuilders.put(pool.typeInt64(),   org.xvm.javajit.builders.Int64Builder.class);
-        nativeBuilders.put(pool.typeModule(),  org.xvm.javajit.builders.IntrinsicBuilder.class);
-        nativeBuilders.put(pool.typeObject(),  org.xvm.javajit.builders.IntrinsicBuilder.class);
+        nativeBuilders.put(pool.typeModule(),  org.xvm.javajit.builders.AugmentingBuilder.class);
+        nativeBuilders.put(pool.typeObject(),  org.xvm.javajit.builders.AugmentingBuilder.class);
+        nativeBuilders.put(pool.typeService(), org.xvm.javajit.builders.AugmentingBuilder.class);
         nativeBuilders.put(pool.typeString(),  org.xvm.javajit.builders.StringBuilder.class);
     }
 }
