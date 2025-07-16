@@ -20,19 +20,26 @@ public interface Builder {
 
     // ----- native class names --------------------------------------------------------------------
 
-    String xObj       = "org.xvm.javajit.intrinsic.xObj";
-    String xBool      = "org.xvm.javajit.intrinsic.xBool";
-    String xConst     = "org.xvm.javajit.intrinsic.xConst";
-    String xContainer = "org.xvm.javajit.intrinsic.xContainer";
-    String xModule    = "org.xvm.javajit.intrinsic.xModule";
-    String xStr       = "org.xvm.javajit.intrinsic.xStr";
-    String xInt64     = "org.xvm.javajit.intrinsic.numbers.xInt64";
+    String Object     = "org.xtclang.ecstasy.Object";
+    String Boolean    = "org.xtclang.ecstasy.Boolean";
+    String xConst     = "org.xtclang.ecstasy.xConst";
+    String xModule    = "org.xtclang.ecstasy.xModule";
+    String xObj       = "org.xtclang.ecstasy.xObj";
+    String xService   = "org.xtclang.ecstasy.xService";
+    String xType      = "org.xtclang.ecstasy.xType";
+
+    String String     = "org.xtclang.ecstasy.text.String";
+
+    String Int64      = "org.xtclang.ecstasy.numbers.Int64";
+
+    // ----- well-known class suffixes -------------------------------------------------------------
+
+    String OPT = "$p"; // method contains primitive types
 
     // ----- well-known class descriptors ----------------------------------------------------------
 
     ClassDesc CD_xObj       = ClassDesc.of(xObj);
     ClassDesc CD_xConst     = ClassDesc.of(xConst);
-    ClassDesc CD_xContainer = ClassDesc.of(xContainer);
 
     ClassDesc CD_Container  = ClassDesc.of(Container.class.getName());
     ClassDesc CD_Ctx        = ClassDesc.of(Ctx.class.getName());

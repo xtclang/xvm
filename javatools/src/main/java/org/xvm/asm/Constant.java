@@ -701,30 +701,6 @@ public abstract class Constant
         }
 
 
-    // ----- run-time support -----------------------------------------------------------------------
-
-    /**
-     * Ensure an object associated with this constant.
-     */
-    public Object ensureValue()
-        {
-        Object oValue = m_oValue;
-        if (oValue == null)
-            {
-            m_oValue = oValue = makeValue();
-            }
-        return oValue;
-        }
-
-    /**
-     * Create an object associated with this constant.
-     */
-    protected Object makeValue()
-        {
-        return null;
-        }
-
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**

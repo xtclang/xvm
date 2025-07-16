@@ -62,7 +62,7 @@ public class Xvm {
         }
         assert ecstasy != null && _native != null;
         this.ecstasyLoader = ecstasy;
-        this.nativeLoader  = _native;
+        this.bridgeLoader = _native;
         this.ecstasyPool   = ecstasy.module.getConstantPool();
         this.mainInjector  = new MainInjector(this);
     }
@@ -96,9 +96,9 @@ public class Xvm {
     public final ModuleLoader ecstasyLoader;
 
     /**
-     * The ModuleLoader for the "native" library (the module that interfaces directly with the JVM).
+     * The ModuleLoader for the "bridge" library (the module that interfaces directly with the JVM).
      */
-    public final ModuleLoader nativeLoader;
+    public final ModuleLoader bridgeLoader;
 
     /**
      * The ConstantPool of the Ecstasy module loader.
@@ -404,12 +404,13 @@ public class Xvm {
     /**
      * Generate a temporally-unique name for a TypeSystem.
      *
-     * @param shared  the ModuleLoaders shared into the TypeSystem
-     * @param owned   the ModuleStructures to load within the TypeSystem
+     * @param shared    the ModuleLoaders shared into the TypeSystem
+     * @param owned     the ModuleStructures to load within the TypeSystem
+     * @param nativeTS  if true, the type system is the native TS
      *
      * @return a unique TypeSystem name based on the name of the TypeSystem's owned modules
      */
-    String generateTypeSystemName(ModuleLoader[] shared, ModuleStructure[] owned) {
+    String generateTypeSystemName(ModuleLoader[] shared, ModuleStructure[] owned, boolean nativeTS) {
         assert shared != null && owned != null;
 
         // occasionally sweep through the data structure that holds weak references to TypeSystems
@@ -430,7 +431,7 @@ public class Xvm {
         }
 
         ModuleStructure module = owned[0];
-        String          pkg    = moduleToPackageName(module);
+        String          pkg    = moduleToPackageName(module, nativeTS);
         String          name   = pkg;
         int             count  = 1;
         while (typeSystems.containsKey(name) && typeSystems.get(name).get() != null) {
@@ -518,7 +519,8 @@ public class Xvm {
 
         synchronized (moduleLoaders) {
             String moduleName = module.getName();
-            String pkg        = moduleToPackageName(moduleName, module.getVersion());
+            String pkg        = moduleToPackageName(moduleName,
+                tsl.typeSystem instanceof NativeTypeSystem ? null : module.getVersion());
             String unique     = pkg;
             int    count      = 1;
             while (moduleLoaders.containsKey(unique)) {
@@ -638,8 +640,8 @@ public class Xvm {
      *
      * @return a dot-delimited Java package name
      */
-    static String moduleToPackageName(ModuleStructure module) {
-        return moduleToPackageName(module.getName(), module.getVersion());
+    static String moduleToPackageName(ModuleStructure module, boolean nativeTS) {
+        return moduleToPackageName(module.getName(), nativeTS ? null : module.getVersion());
     }
 
     /**
