@@ -1,6 +1,7 @@
 package org.xvm.javajit.intrinsic.numbers;
 
 import org.xvm.javajit.intrinsic.xConst;
+import org.xvm.javajit.intrinsic.xException;
 import org.xvm.javajit.intrinsic.xType;
 
 /**
@@ -52,6 +53,22 @@ public class xInt64 extends xConst {
         }
         // TODO consider using a cache on the context (to avoid CPU cache line collisions)
         return new xInt64(value);
+    }
+
+    // ----- primitive helpers ---------------------------------------------------------------------
+
+    public static long $next(long n) {
+        if (n == Long.MAX_VALUE) {
+            throw xException.$oob("64-bit max value exceeded", null);
+        }
+        return n + 1;
+    }
+
+    public static long $prev(long n) {
+        if (n == Long.MIN_VALUE) {
+            throw xException.$oob("64-bit min value exceeded", null);
+        }
+        return n - 1;
     }
 
     // ----- debugging support ---------------------------------------------------------------------

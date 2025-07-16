@@ -23,13 +23,13 @@ public class xException extends RuntimeException {
 
     public Ctx $ctx;
 
-    public static xException newReadOnly(String text, xException cause) {
+    public static xException $ro(String text, xException cause) {
         // TODO - how to create an Ecstasy ReadOnly exception?
         text = text == null ? ("ReadOnly: " + text) : "ReadOnly";
         return cause == null ? new xException(text) : new xException(text, cause);
     }
 
-    public static xException newOutOfBounds(String text, xException cause) {
+    public static xException $oob(String text, xException cause) {
         // TODO - how to create an Ecstasy OutOfBounds exception?
         text = text == null ? ("OutOfBounds: " + text) : "OutOfBounds";
         return cause == null ? new xException(text) : new xException(text, cause);
