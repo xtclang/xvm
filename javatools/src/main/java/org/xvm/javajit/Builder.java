@@ -25,7 +25,10 @@ public interface Builder {
     String xConst     = "org.xvm.javajit.intrinsic.xConst";
     String xContainer = "org.xvm.javajit.intrinsic.xContainer";
     String xModule    = "org.xvm.javajit.intrinsic.xModule";
+    String xService   = "org.xvm.javajit.intrinsic.xService";
     String xStr       = "org.xvm.javajit.intrinsic.xStr";
+    String xType      = "org.xvm.javajit.intrinsic.xType";
+
     String xInt64     = "org.xvm.javajit.intrinsic.numbers.xInt64";
 
     // ----- well-known class descriptors ----------------------------------------------------------

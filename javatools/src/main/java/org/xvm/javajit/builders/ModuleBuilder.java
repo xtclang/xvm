@@ -99,8 +99,4 @@ public class ModuleBuilder extends CommonBuilder {
             })
         );
     }
-
-    @Override
-    public void assemblePure(String className, ClassBuilder builder) {
-    }
 }

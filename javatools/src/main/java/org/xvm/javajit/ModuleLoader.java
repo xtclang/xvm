@@ -1,17 +1,12 @@
 package org.xvm.javajit;
 
-import java.io.IOException;
-import java.io.InputStream;
-
-import java.lang.classfile.ClassFile;
-import java.lang.classfile.ClassModel;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import org.xvm.asm.ModuleStructure;
-import org.xvm.asm.constants.TypeConstant;
+
+import static org.xvm.asm.Constants.ECSTASY_MODULE;
 
 import static org.xvm.util.Handy.require;
 
@@ -77,15 +72,26 @@ public class ModuleLoader
     @Override
     protected Class<?> loadClass(String name, boolean resolve)
             throws ClassNotFoundException {
-        if (typeSystem instanceof NativeTypeSystem nativeTS) {
-            byte[] classBytes = nativeTS.loadNativeClass(this, name);
-            if (classBytes != null) {
-                Class clz = defineClass(name, classBytes, 0, classBytes.length);
+        // HACK HACK TODO: move all intrinsic classes to resources
+        LoadIntrinsic:
+        if (name.startsWith("org.xvm.javajit.intrinsic.")) {
+            if (module.getName().equals(ECSTASY_MODULE)) {
+                Class clz = findLoadedClass(name);
+                if (clz == null) {
+                    byte[] classBytes = typeSystem.xvm.nativeTypeSystem.loadIntrinsicClass(this, name);
+                    if (classBytes != null) {
+                        clz = defineClass(name, classBytes, 0, classBytes.length);
+                        loadedClasses.add(clz);
+                    } else {
+                        break LoadIntrinsic;
+                    }
+                }
                 if (resolve) {
                     resolveClass(clz);
                 }
-                loadedClasses.add(clz);
                 return clz;
+            } else {
+                return typeSystem.xvm.ecstasyLoader.loadClass(name, resolve);
             }
         }
         return super.loadClass(name, resolve);
@@ -122,12 +128,21 @@ public class ModuleLoader
 
         // the "dumping" itself causes the classes to be transitively loaded;
         // limit the number of cycles
-        int iters = 2;
+        int iters = 1;
         do {
             List<Class> currentlyLoaded = new ArrayList<>(loadedClasses);
             loadedClasses.clear();
             for (Class clz : currentlyLoaded) {
                 System.out.println("\n**** Class " + clz.getName());
+                Class superclass = clz.getSuperclass();
+                if (superclass != null) {
+                    System.out.println("Extends: " + superclass);
+                }
+                Class[] interfaces = clz.getInterfaces();
+                if (interfaces.length > 0) {
+                    System.out.println("Implements:");
+                    Arrays.stream(interfaces).map(s -> "  " + s).forEach(System.out::println);
+                }
                 System.out.println("Fields:");
                 Arrays.stream(clz.getDeclaredFields()).map(s -> "  " + s).forEach(System.out::println);
                 System.out.println("Methods:");

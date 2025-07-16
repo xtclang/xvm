@@ -17,7 +17,7 @@ public abstract class xType
     public abstract xObj alloc(Ctx ctx);
 
     @Override public xType $type() {
-        return $type.ensureXType($ctx().container);
+        return (xType) $type.ensureXType($ctx().container);
     }
 
     @Override public boolean $isA(xType t) {

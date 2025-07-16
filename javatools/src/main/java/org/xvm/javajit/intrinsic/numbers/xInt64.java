@@ -32,7 +32,7 @@ public class xInt64 extends xConst {
 
     @Override
     public xType $type() {
-        return $xvm().ecstasyPool.typeInt64().ensureXType(null);
+        return (xType) $xvm().ecstasyPool.typeInt64().ensureXType(null);
     }
 
     /**

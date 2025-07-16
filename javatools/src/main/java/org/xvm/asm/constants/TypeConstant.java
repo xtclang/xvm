@@ -54,8 +54,6 @@ import org.xvm.compiler.Compiler;
 import org.xvm.javajit.ModuleLoader;
 import org.xvm.javajit.TypeSystem;
 
-import org.xvm.javajit.intrinsic.xType;
-
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
@@ -7760,9 +7758,9 @@ public abstract class TypeConstant
      *
      * @return an xType object represented by this TypeConstant
      */
-    public xType ensureXType(org.xvm.javajit.Container container)
+    public Object ensureXType(org.xvm.javajit.Container container)
         {
-        xType type = m_xType;
+        Object type = m_xType;
         if (type == null)
             {
             // TODO: type = m_xType = container.makeType(this);
@@ -7916,7 +7914,7 @@ public abstract class TypeConstant
     /**
      * Cached xType object.
      */
-    private transient xType m_xType;
+    private transient Object m_xType;
 
     /**
      * Cached JIT class name.

@@ -8,7 +8,7 @@ public class xContainer extends xService {
     public xContainer(long containerId) {
         super(containerId);
 
-        $containerType = $xvm().ecstasyPool.
+        $containerType = (xType) $xvm().ecstasyPool.
             ensureEcstasyTypeConstant("mgmt.Container").ensureXType($ctx().container);
     }
 

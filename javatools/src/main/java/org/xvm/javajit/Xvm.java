@@ -62,7 +62,7 @@ public class Xvm {
         }
         assert ecstasy != null && _native != null;
         this.ecstasyLoader = ecstasy;
-        this.nativeLoader  = _native;
+        this.bridgeLoader = _native;
         this.ecstasyPool   = ecstasy.module.getConstantPool();
         this.mainInjector  = new MainInjector(this);
     }
@@ -96,9 +96,9 @@ public class Xvm {
     public final ModuleLoader ecstasyLoader;
 
     /**
-     * The ModuleLoader for the "native" library (the module that interfaces directly with the JVM).
+     * The ModuleLoader for the "bridge" library (the module that interfaces directly with the JVM).
      */
-    public final ModuleLoader nativeLoader;
+    public final ModuleLoader bridgeLoader;
 
     /**
      * The ConstantPool of the Ecstasy module loader.

@@ -347,7 +347,7 @@ public class TypeSystem {
                 canonicalType = structure.getCanonicalType();
             } else {
                 // TODO: implement conditional class name computation
-                System.err.println("Not implemented: conditional incorporates for " + type);
+                // System.err.println("Not implemented: conditional incorporates for " + type);
                 canonicalType = structure.getCanonicalType();
             }
 

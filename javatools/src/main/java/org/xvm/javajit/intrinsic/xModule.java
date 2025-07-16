@@ -18,6 +18,6 @@ public class xModule extends xConst {
 
     @Override
     public xType $type() {
-        return $module.getIdentityConstant().getType().ensureXType($ctx().container);
+        return (xType) $module.getIdentityConstant().getType().ensureXType($ctx().container);
     }
 }

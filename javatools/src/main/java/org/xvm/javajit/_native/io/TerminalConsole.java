@@ -1,4 +1,4 @@
-package org.xvm.javajit.bridge;
+package org.xvm.javajit._native.io;
 
 import java.io.IOException;
 
@@ -10,15 +10,13 @@ import org.xvm.javajit.intrinsic.xService;
 import org.xvm.javajit.intrinsic.xStr;
 import org.xvm.javajit.intrinsic.xType;
 
-import org.xvm.runtime.template._native.xTerminalConsole;
+import org.xvm.runtime.template._native.io.xTerminalConsole;
 
 /**
- * Native implementation for _native.io.TerminalConsole.
+ * Native implementation for _native.TerminalConsole.
  */
 public class TerminalConsole
-        extends xService
-//        implements jit.org.xtclang.ecstasy.io.Console
-{
+        extends xService {
 
     public TerminalConsole() {
         super(-1);
@@ -26,10 +24,11 @@ public class TerminalConsole
 
     @Override
     public xType $type() {
-        return $xvm().ecstasyPool.ensureEcstasyTypeConstant("io.Console").ensureXType($owner());
+        return null; // TODO: convert all the ops
+//        return (xType) $xvm().ecstasyPool.ensureEcstasyTypeConstant("io.Console").ensureXType($owner());
     }
 
-//    @Override
+    // TODO: use @Bridge annotation to inidicate a natural overwrite?
     public void print(Ctx $ctx, xObj object, boolean suppressNewline) {
         xTerminalConsole.CONSOLE_OUT.print(object.toString());
         if (!suppressNewline) {
@@ -38,7 +37,6 @@ public class TerminalConsole
         xTerminalConsole.CONSOLE_OUT.flush();
     }
 
-//    @Override
     public xStr readLine(Ctx $ctx, xStr prompt, boolean suppressEcho) {
         if (prompt.size() != 0) {
             xTerminalConsole.CONSOLE_OUT.print(prompt);

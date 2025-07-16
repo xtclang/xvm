@@ -8,6 +8,7 @@ import java.lang.classfile.Label;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 
@@ -57,15 +58,16 @@ public class CommonBuilder
         int flags = ClassFile.ACC_PUBLIC;
 
         switch (typeInfo.getClassStructure().getFormat()) {
-            case CLASS, CONST:
+            case CLASS, CONST, SERVICE, MIXIN:
                 TypeConstant superType = typeInfo.getExtends();
                 if (superType != null) {
-                    classBuilder.withSuperclass(ClassDesc.of(typeSystem.ensureJitClassName(superType)));
+                    classBuilder.withSuperclass(
+                        ClassDesc.of(typeSystem.ensureJitClassName(superType)));
                 }
                 break;
 
             case INTERFACE:
-                flags |= ClassFile.ACC_INTERFACE & ClassFile.ACC_ABSTRACT;
+                flags |= ClassFile.ACC_INTERFACE | ClassFile.ACC_ABSTRACT;
                 break;
 
             default:
@@ -73,6 +75,27 @@ public class CommonBuilder
                 throw new RuntimeException("Not implemented " + typeInfo.getType());
         }
         classBuilder.withFlags(flags);
+
+        assembleImplInterfaces(classBuilder);
+    }
+
+    /**
+     * Assemble interfaces for the "Impl" shape.
+     */
+    protected void assembleImplInterfaces(ClassBuilder classBuilder) {
+        for (Contribution contrib : typeInfo.getContributionList()) {
+            switch (contrib.getComposition()) {
+                case Implements:
+                    TypeConstant contribType = contrib.getTypeConstant().removeAccess();
+                    if (contribType.equals(contribType.getConstantPool().typeObject())) {
+                        // ignore "implements Object"
+                        continue;
+                    }
+                    classBuilder.withInterfaceSymbols(
+                        ClassDesc.of(typeSystem.ensureJitClassName(contribType)));
+                    break;
+            }
+        }
     }
 
     /**
@@ -86,8 +109,6 @@ public class CommonBuilder
      * Assemble methods for the "Impl" shape.
      */
     protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
-        // ClassDesc CD_this = ClassDesc.of(className);
-
         IdentityConstant thisId = typeInfo.getClassStructure().getIdentityConstant();
 
         for (MethodInfo method : typeInfo.getMethods().values()) {
@@ -95,40 +116,42 @@ public class CommonBuilder
                 continue; // not our responsibility
             }
 
-            if (method.getHead().isNative()) {
-                // TODO: validate the presence of the corresponding method?
-                continue;
-            }
+            assembleImplMethod(className, classBuilder, method);
+        }
+    }
 
-            boolean cap    = method.isCapped();
-            boolean router = false;
-            if (!cap) {
-                MethodBody[] chain = method.getChain(); // REVIEW: do we need optimized chain?
-                if (chain.length > 1) {
-                    String thisJitName = chain[0].getSignature().ensureJitMethodName(typeSystem);
-                    String nextJitName = chain[1].getSignature().ensureJitMethodName(typeSystem);
-                    router = !thisJitName.equals(nextJitName);
+    /**
+     * Assemble the specified method for the "Impl" shape.
+     */
+    protected void assembleImplMethod(String className, ClassBuilder classBuilder, MethodInfo method) {
+        boolean cap    = method.isCapped();
+        boolean router = false;
+        if (!cap) {
+            MethodBody[] chain = method.getChain(); // REVIEW: do we need optimized chain?
+            if (chain.length > 1) {
+                String thisJitName = chain[0].getSignature().ensureJitMethodName(typeSystem);
+                String nextJitName = chain[1].getSignature().ensureJitMethodName(typeSystem);
+                router = !thisJitName.equals(nextJitName);
+            }
+        }
+
+        String jitName = method.getSignature().ensureJitMethodName(typeSystem);
+
+        if (cap || router) {
+            MethodInfo targetMethod = cap ? typeInfo.getNarrowingMethod(method) : method;
+            assert targetMethod != null;
+            assembleRoutingMethod(className, classBuilder, method, targetMethod);
+        } else {
+            JitMethodDesc jmDesc  = method.getJitDesc(typeSystem);
+            if (method.isConstructor()){
+                assembleConstructor(className, classBuilder, method, jitName, jmDesc.standardMD, false);
+                if (jmDesc.optimizedMD != null) {
+                    assembleConstructor(className, classBuilder, method, jitName, jmDesc.standardMD, true);
                 }
-            }
-
-            String jitName = method.getSignature().ensureJitMethodName(typeSystem);
-
-            if (cap || router) {
-                MethodInfo targetMethod = cap ? typeInfo.getNarrowingMethod(method) : method;
-                assert targetMethod != null;
-                assembleRoutingMethod(className, classBuilder, method, targetMethod);
             } else {
-                JitMethodDesc jmDesc  = method.getJitDesc(typeSystem);
-                if (method.isConstructor()){
-                    assembleConstructor(className, classBuilder, method, jitName, jmDesc.standardMD, false);
-                    if (jmDesc.optimizedMD != null) {
-                        assembleConstructor(className, classBuilder, method, jitName, jmDesc.standardMD, true);
-                    }
-                } else {
-                    assembleMethod(className, classBuilder, method, jitName, jmDesc.standardMD, false);
-                    if (jmDesc.optimizedMD != null) {
-                        assembleMethod(className, classBuilder, method, jitName, jmDesc.optimizedMD, true);
-                    }
+                assembleMethod(className, classBuilder, method, jitName, jmDesc.standardMD, false);
+                if (jmDesc.optimizedMD != null) {
+                    assembleMethod(className, classBuilder, method, jitName, jmDesc.optimizedMD, true);
                 }
             }
         }
