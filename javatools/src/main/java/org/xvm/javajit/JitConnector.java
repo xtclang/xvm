@@ -75,6 +75,7 @@ public class JitConnector
                 Method method = clz.getMethod("run", String.class.arrayType(), Ctx.class);
                 method.invoke(module, Ctx.get()); // TODO create xStr args
             }
+            xvm.nativeTypeSystem.loader.dump();
             loader.dump();
         } catch (ClassNotFoundException | NoClassDefFoundError e) {
             throw new RuntimeException("Failed to load class \"" + typeName + '"', e);

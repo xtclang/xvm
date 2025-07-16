@@ -109,7 +109,7 @@ public class TypeSystem {
         require("owned", owned);
 
         this.xvm    = xvm;
-        this.name   = xvm.generateTypeSystemName(shared, owned);
+        this.name   = xvm.generateTypeSystemName(shared, owned, this instanceof NativeTypeSystem);
         this.loader = new TypeSystemLoader(this, name, shared, owned);
         this.shared = loader.shared;
         this.owned  = loader.owned;
@@ -206,6 +206,24 @@ public class TypeSystem {
         }
 
         throw new IllegalStateException("No owner loader for " + type);
+    }
+
+    /**
+     * Find the ModuleLoader that "owns" (i.e. will assemble the class for) the specified class name.
+     */
+    public ModuleLoader findOwnerLoader(String name) {
+        for (ModuleLoader loader : owned) {
+            if (name.startsWith(loader.prefix)) {
+                return loader;
+            }
+        }
+
+        for (ModuleLoader loader : shared) {
+            if (name.startsWith(loader.prefix)) {
+                return loader;
+            }
+        }
+        return null;
     }
 
     /**
@@ -347,7 +365,7 @@ public class TypeSystem {
                 canonicalType = structure.getCanonicalType();
             } else {
                 // TODO: implement conditional class name computation
-                System.err.println("Not implemented: conditional incorporates for " + type);
+                // System.err.println("Not implemented: conditional incorporates for " + type);
                 canonicalType = structure.getCanonicalType();
             }
 

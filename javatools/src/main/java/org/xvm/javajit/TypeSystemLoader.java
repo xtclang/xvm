@@ -80,7 +80,7 @@ public class TypeSystemLoader
     // ----- debugging -----------------------------------------------------------------------------
 
     public void dump() {
-        Arrays.stream(shared).forEach(ModuleLoader::dump);
+        // Arrays.stream(shared).forEach(ModuleLoader::dump);
         Arrays.stream(owned).forEach(ModuleLoader::dump);
     }
 }

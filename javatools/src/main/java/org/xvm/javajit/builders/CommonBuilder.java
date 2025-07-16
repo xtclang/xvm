@@ -2,17 +2,19 @@ package org.xvm.javajit.builders;
 
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassFile;
-
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
+
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
+import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -57,15 +59,16 @@ public class CommonBuilder
         int flags = ClassFile.ACC_PUBLIC;
 
         switch (typeInfo.getClassStructure().getFormat()) {
-            case CLASS, CONST:
+            case CLASS, CONST, SERVICE, MIXIN, ENUMVALUE:
                 TypeConstant superType = typeInfo.getExtends();
                 if (superType != null) {
-                    classBuilder.withSuperclass(ClassDesc.of(typeSystem.ensureJitClassName(superType)));
+                    classBuilder.withSuperclass(
+                        ClassDesc.of(typeSystem.ensureJitClassName(superType)));
                 }
                 break;
 
-            case INTERFACE:
-                flags |= ClassFile.ACC_INTERFACE & ClassFile.ACC_ABSTRACT;
+            case INTERFACE, ENUM:
+                flags |= ClassFile.ACC_INTERFACE | ClassFile.ACC_ABSTRACT;
                 break;
 
             default:
@@ -73,6 +76,27 @@ public class CommonBuilder
                 throw new RuntimeException("Not implemented " + typeInfo.getType());
         }
         classBuilder.withFlags(flags);
+
+        assembleImplInterfaces(classBuilder);
+    }
+
+    /**
+     * Assemble interfaces for the "Impl" shape.
+     */
+    protected void assembleImplInterfaces(ClassBuilder classBuilder) {
+        for (Contribution contrib : typeInfo.getContributionList()) {
+            switch (contrib.getComposition()) {
+                case Implements:
+                    TypeConstant contribType = contrib.getTypeConstant().removeAccess();
+                    if (contribType.equals(contribType.getConstantPool().typeObject())) {
+                        // ignore "implements Object"
+                        continue;
+                    }
+                    classBuilder.withInterfaceSymbols(
+                        ClassDesc.of(typeSystem.ensureJitClassName(contribType)));
+                    break;
+            }
+        }
     }
 
     /**
@@ -86,8 +110,6 @@ public class CommonBuilder
      * Assemble methods for the "Impl" shape.
      */
     protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
-        // ClassDesc CD_this = ClassDesc.of(className);
-
         IdentityConstant thisId = typeInfo.getClassStructure().getIdentityConstant();
 
         for (MethodInfo method : typeInfo.getMethods().values()) {
@@ -95,43 +117,60 @@ public class CommonBuilder
                 continue; // not our responsibility
             }
 
-            if (method.getHead().isNative()) {
-                // TODO: validate the presence of the corresponding method?
-                continue;
+            assembleImplMethod(className, classBuilder, method);
+        }
+    }
+
+    /**
+     * Assemble the specified method for the "Impl" shape.
+     */
+    protected void assembleImplMethod(String className, ClassBuilder classBuilder, MethodInfo method) {
+        boolean cap    = method.isCapped();
+        boolean router = false;
+        if (!cap) {
+            MethodBody[] chain = method.getChain(); // REVIEW: do we need optimized chain?
+            MethodBody   head  = chain[0];
+            if (head.getImplementation() == Implementation.Delegating) {
+                router = true;
+            } else if (chain.length > 1) {
+                String headJitName = head    .getSignature().ensureJitMethodName(typeSystem);
+                String nextJitName = chain[1].getSignature().ensureJitMethodName(typeSystem);
+                router = !headJitName.equals(nextJitName);
             }
+        }
 
-            boolean cap    = method.isCapped();
-            boolean router = false;
-            if (!cap) {
-                MethodBody[] chain = method.getChain(); // REVIEW: do we need optimized chain?
-                if (chain.length > 1) {
-                    String thisJitName = chain[0].getSignature().ensureJitMethodName(typeSystem);
-                    String nextJitName = chain[1].getSignature().ensureJitMethodName(typeSystem);
-                    router = !thisJitName.equals(nextJitName);
-                }
-            }
+        String jitName = method.getSignature().ensureJitMethodName(typeSystem);
 
-            String jitName = method.getSignature().ensureJitMethodName(typeSystem);
-
-            if (cap || router) {
-                MethodInfo targetMethod = cap ? typeInfo.getNarrowingMethod(method) : method;
-                assert targetMethod != null;
-                assembleRoutingMethod(className, classBuilder, method, targetMethod);
-            } else {
-                JitMethodDesc jmDesc  = method.getJitDesc(typeSystem);
-                if (method.isConstructor()){
+        if (cap || router) {
+            MethodInfo targetMethod = cap ? typeInfo.getNarrowingMethod(method) : method;
+            assert targetMethod != null;
+            assembleRoutingMethod(className, classBuilder, method, targetMethod);
+        } else {
+            JitMethodDesc jmDesc = method.getJitDesc(typeSystem);
+            if (method.isConstructor()){
+                if (jmDesc.optimizedMD == null) {
                     assembleConstructor(className, classBuilder, method, jitName, jmDesc.standardMD, false);
-                    if (jmDesc.optimizedMD != null) {
-                        assembleConstructor(className, classBuilder, method, jitName, jmDesc.standardMD, true);
-                    }
                 } else {
+                    assembleConstructor(className, classBuilder, method, jitName + OPT, jmDesc.standardMD, true);
+                    assembleOptWrapper(className, classBuilder, method, jitName, jmDesc);
+                }
+            } else {
+                if (jmDesc.optimizedMD == null) {
                     assembleMethod(className, classBuilder, method, jitName, jmDesc.standardMD, false);
-                    if (jmDesc.optimizedMD != null) {
-                        assembleMethod(className, classBuilder, method, jitName, jmDesc.optimizedMD, true);
-                    }
+                } else {
+                    assembleMethod(className, classBuilder, method, jitName + OPT, jmDesc.optimizedMD, true);
+                    assembleOptWrapper(className, classBuilder, method, jitName, jmDesc);
                 }
             }
         }
+    }
+
+    /**
+     * Assemble a wrapper method for optimized flavor.
+     */
+    protected void assembleOptWrapper(String className, ClassBuilder classBuilder,
+                                      MethodInfo method, String jitName, JitMethodDesc jmDesc) {
+        // TODO
     }
 
     /**
@@ -155,10 +194,6 @@ public class CommonBuilder
      */
     protected void assembleMethod(String className, ClassBuilder classBuilder, MethodInfo method,
                                   String jitName, MethodTypeDesc md, boolean optimized) {
-        if (optimized) {
-            jitName += "$p";
-        }
-
         int flags = ClassFile.ACC_PUBLIC;
         if (method.isAbstract()) {
             flags |= ClassFile.ACC_ABSTRACT;
