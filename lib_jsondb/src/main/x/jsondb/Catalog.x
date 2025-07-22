@@ -598,8 +598,8 @@ service Catalog<Schema extends RootSchema>
         assert valType.is(Type<immutable Const>);
 
         return new JsonMapStore<keyType.DataType, valType.DataType>(this, info,
-                jsonSchema.ensureMapping(keyType).as(Mapping<keyType.DataType>),
-                jsonSchema.ensureMapping(valType).as(Mapping<valType.DataType>));
+                jsonSchema.ensureMapping(keyType.DataType).as(Mapping<keyType.DataType>),
+                jsonSchema.ensureMapping(valType.DataType).as(Mapping<valType.DataType>));
     }
 
     @Concurrent
@@ -617,7 +617,7 @@ service Catalog<Schema extends RootSchema>
         assert Object initial := info.options.get("initial");
 
         return new JsonValueStore<valueType.DataType>(this, info,
-                jsonSchema.ensureMapping(valueType).as(Mapping<valueType.DataType>),
+                jsonSchema.ensureMapping(valueType.DataType).as(Mapping<valueType.DataType>),
                 initial.as(valueType.DataType));
     }
 
@@ -627,7 +627,7 @@ service Catalog<Schema extends RootSchema>
         assert elementType.is(Type<immutable Const>);
 
         Mapping<elementType.DataType> elementMapping =
-                jsonSchema.ensureMapping(elementType).as(Mapping<elementType.DataType>);
+                jsonSchema.ensureMapping(elementType.DataType).as(Mapping<elementType.DataType>);
 
         Map<String, immutable Object> options = info.options;
 
@@ -648,7 +648,7 @@ service Catalog<Schema extends RootSchema>
         assert messageType.is(Type<immutable Const>);
 
         return new JsonProcessorStore<messageType.DataType>(this, info,
-                jsonSchema.ensureMapping(messageType).as(Mapping<messageType.DataType>));
+                jsonSchema.ensureMapping(messageType.DataType).as(Mapping<messageType.DataType>));
     }
 
     /**
