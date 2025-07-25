@@ -16,6 +16,9 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Parameter;
+
+import org.xvm.javajit.TypeSystem;
+
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -281,6 +284,15 @@ public class MethodConstant
         return m_constSig.asBjarneLambdaType(getConstantPool(), getNamespace().getType());
         }
 
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    protected StringBuilder buildJitName(TypeSystem ts)
+        {
+        return getParentConstant().buildJitName(ts)
+                .append(getSignature().ensureJitMethodName(ts));
+        }
 
     // ----- GenericTypeResolver interface ---------------------------------------------------------
 

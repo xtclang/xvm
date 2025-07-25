@@ -31,11 +31,6 @@ public class Int64 extends xConst {
     public static final Int64 MIN     = $box(Long.MIN_VALUE);
     public static final Int64 MAX     = $box(Long.MAX_VALUE);
 
-    @Override
-    public xType $type() {
-        return (xType) $xvm().ecstasyPool.typeInt64().ensureXType(null);
-    }
-
     /**
      * Obtain an xInt64 for a 64-bit "primitive" int (a Java "long" value).
      *

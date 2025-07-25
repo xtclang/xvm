@@ -14,6 +14,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.XvmStructure;
 
+import org.xvm.javajit.TypeSystem;
+
 import org.xvm.util.Handy;
 
 
@@ -726,7 +728,37 @@ public abstract class IdentityConstant
         }
 
 
-    // ----- constant methods ----------------------------------------------------------------------
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    /**
+     * @return a dot or '$'-delimited string that represents the corresponding Jit class name
+     */
+    public String getJitName(TypeSystem ts)
+        {
+        return buildJitName(ts).substring(1);
+        }
+
+    /**
+     * Support for {@link #getJitName()}; overridden at {@link ModuleConstant}.
+     */
+    protected StringBuilder buildJitName(TypeSystem ts)
+        {
+        IdentityConstant idParent = getParentConstant();
+        char chDelim = switch (idParent.getFormat())
+            {
+            case Module, Package         -> '.';
+            case Class, Property, Method -> '$';
+            default ->
+                throw new IllegalStateException("unexpected parent constant: " + idParent);
+            };
+
+        return getParentConstant().buildJitName(ts)
+                .append(chDelim)
+                .append(getName());
+        }
+
+
+    // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
     public TypeConstant getType()

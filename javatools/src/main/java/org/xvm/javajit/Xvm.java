@@ -290,8 +290,8 @@ public class Xvm {
      * @return a unique suffix for the specified name
      */
     public String createUniqueSuffix(String name) {
-        int count = nameCounters.compute(name, (k, v) -> v == null ? 0 : v + 1);
-        return count == 0 ? "" : "$" + count;
+        int count = nameCounters.compute(name, (k, v) -> v == null ? -1 : v + 1);
+        return count == -1 ? "" : "$" + count;
     }
 
     // ----- internal ------------------------------------------------------------------------------

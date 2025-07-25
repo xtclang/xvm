@@ -15,11 +15,6 @@ public class Range<Element extends xObj> extends xConst {
         super(containerId);
     }
 
-    @Override
-    public xType $type() {
-        return null;
-    }
-
     // ----- primitive single-long encoding --------------------------------------------------------
 
     private static final long Max30 = 0x3FFFFFFF;

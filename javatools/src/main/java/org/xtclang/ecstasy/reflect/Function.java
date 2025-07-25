@@ -9,7 +9,7 @@ import org.xvm.javajit.Ctx;
  */
 public interface Function {
     /**
-     * {@code }ReturnTypes invoke(ParamTypes args)}
+     * {@code ReturnTypes invoke(ParamTypes args)}
      */
     Tuple invoke(Ctx ctx, Tuple args);
 }

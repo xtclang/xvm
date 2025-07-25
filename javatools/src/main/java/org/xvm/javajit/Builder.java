@@ -23,6 +23,7 @@ public interface Builder {
     String Object     = "org.xtclang.ecstasy.Object";
     String Boolean    = "org.xtclang.ecstasy.Boolean";
     String xConst     = "org.xtclang.ecstasy.xConst";
+    String xFunction  = "org.xtclang.ecstasy.xFunction";
     String xModule    = "org.xtclang.ecstasy.xModule";
     String xObj       = "org.xtclang.ecstasy.xObj";
     String xService   = "org.xtclang.ecstasy.xService";

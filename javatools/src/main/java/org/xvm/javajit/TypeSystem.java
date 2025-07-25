@@ -143,9 +143,9 @@ public class TypeSystem {
     public final ModuleLoader[] owned;
 
     /**
-     * A cache of builders classes keyed by type.
+     * A cache of function jit class names keyed by the function type.
      */
-    protected final Map<TypeConstant, Class> buildersByType = new ConcurrentHashMap<>();
+    protected final Map<TypeConstant, String> functionClasses = new ConcurrentHashMap<>();
 
     /**
      * @return the ConstantPool associated with this TypeSystem
@@ -356,6 +356,12 @@ public class TypeSystem {
      */
     public String ensureJitClassName(TypeConstant type) {
         if (type.isSingleUnderlyingClass(true)) {
+            if (type.isA(pool().typeFunction())) {
+                // Jit class name for functions has format of "xFunction.$n"
+                return functionClasses.computeIfAbsent(type, t ->
+                    Builder.xFunction + '$' + xvm.createUniqueSuffix(""));
+            }
+
             ClassStructure structure = (ClassStructure)
                 type.getSingleUnderlyingClass(true).getComponent();
 

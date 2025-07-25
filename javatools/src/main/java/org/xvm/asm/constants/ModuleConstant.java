@@ -16,6 +16,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
+import org.xvm.javajit.TypeSystem;
+
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readIndex;
@@ -235,6 +237,21 @@ public class ModuleConstant
     public String getNestedName()
         {
         return null;
+        }
+
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public String getJitName(TypeSystem ts)
+        {
+        return "";
+        }
+
+    @Override
+    protected StringBuilder buildJitName(TypeSystem ts)
+        {
+        return new StringBuilder();
         }
 
 

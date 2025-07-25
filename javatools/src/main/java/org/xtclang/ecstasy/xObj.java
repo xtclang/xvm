@@ -54,7 +54,10 @@ public abstract class xObj implements Object {
         return $meta; // TODO: ($meta & ID_MASK)
     }
 
-    public abstract xType $type();
+    public xType $type() {
+        throw new UnsupportedOperationException("Must be generated");
+    }
+
     public abstract boolean $isImmut();
 
     public void $makeImmut() {

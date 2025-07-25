@@ -750,6 +750,14 @@ public class MethodInfo
         }
 
     /**
+     * @return true iff this method is native
+     */
+    public boolean isNative()
+        {
+        return getHead().isNative();
+        }
+
+    /**
      * @return true iff this is a function (not a method)
      */
     public boolean isFunction()

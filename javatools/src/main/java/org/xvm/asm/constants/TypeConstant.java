@@ -7320,7 +7320,7 @@ public abstract class TypeConstant
                     if (name == null)
                         {
                         // TODO: check for collisions, reserved keywords etc.
-                        sJitName = loader.prefix + getSingleUnderlyingClass(true).getPathString();
+                        sJitName = loader.prefix + getSingleUnderlyingClass(true).getJitName(ts);
                         }
                     else
                         {

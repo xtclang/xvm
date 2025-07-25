@@ -1,5 +1,7 @@
 package org.xtclang.ecstasy;
 
+import org.xtclang.ecstasy.reflect.Type;
+
 import org.xvm.javajit.Ctx;
 
 /**
@@ -33,4 +35,23 @@ public abstract class xService extends xObj implements Service {
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    public xObj findContextToken(Ctx ctx, Type t$Value, SharedContext sharedContext) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void registerContextToken(Ctx ctx, SharedContext.Token token) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void unregisterContextToken(Ctx ctx, SharedContext.Token token) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void registerTimeout(Ctx ctx, xObj timeout) {
+        throw new UnsupportedOperationException();
+    }
 }

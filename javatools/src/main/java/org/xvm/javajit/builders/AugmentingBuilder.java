@@ -1,6 +1,7 @@
 package org.xvm.javajit.builders;
 
 import java.lang.classfile.ClassBuilder;
+import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.MethodModel;
 
@@ -30,23 +31,29 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     public void assembleImplClass(String className, ClassBuilder classBuilder) {
-        // AugmentingBuilder uses the native class attributes
+        // AugmentingBuilder uses the native class attributes except of the "ABSTRACT" flag
+        // that is driven by the type
+        int flags = model.flags().flagsMask();
 
-        assembleImplInterfaces(classBuilder);
+        if ((flags & ClassFile.ACC_ABSTRACT) != 0 && !typeInfo.isAbstract()) {
+            classBuilder.withFlags(flags & ~ClassFile.ACC_ABSTRACT);
+        }
     }
 
     @Override
     protected void assembleMethod(String className, ClassBuilder classBuilder, MethodInfo method,
                                   String jitName, MethodTypeDesc md, boolean optimized) {
-        // TODO: only add methods that don't exist at the native class
-
-        if (isMethodPresent(jitName, md, optimized)) {
-            System.err.println("*** Found native implementation " + className + "#" + jitName);
-            return;
+        MethodModel mm = findMethodModel(jitName, md, optimized);
+        if (mm != null) {
+            if ((mm.flags().flagsMask() & ClassFile.ACC_ABSTRACT) == 0 ||
+                method.isAbstract() || method.isNative()) {
+                return;
+            }
+            // the native method is marked as "abstract" and needs to be generated
         }
 
         if (method.getHead().isNative()) {
-//            throw new IllegalStateException(...);
+            // throw new IllegalStateException(...);
             System.err.println("*** Native implementation is missing " + className + "#" + jitName +
                 " for " + method.getSignature().getValueString());
             return;
@@ -55,13 +62,16 @@ public class AugmentingBuilder extends CommonBuilder {
         super.assembleMethod(className, classBuilder, method, jitName, md, optimized);
     }
 
-    protected boolean isMethodPresent(String jitName, MethodTypeDesc md, boolean optimized) {
+    /**
+     * Find the MethodModel for the specified method.
+     */
+    protected MethodModel findMethodModel(String jitName, MethodTypeDesc md, boolean optimized) {
         for (MethodModel mm : model.methods()) {
             if (mm.methodName().equalsString(jitName) &&
                     mm.methodTypeSymbol().descriptorString().equals(md.descriptorString())) {
-                return true;
+                return mm;
             }
         }
-        return false;
+        return null;
     }
 }
