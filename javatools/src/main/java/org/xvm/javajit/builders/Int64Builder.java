@@ -5,6 +5,7 @@ import java.lang.classfile.ClassModel;
 import java.lang.constant.ClassDesc;
 
 import org.xtclang.ecstasy.numbers.Int64;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.TypeSystem;
