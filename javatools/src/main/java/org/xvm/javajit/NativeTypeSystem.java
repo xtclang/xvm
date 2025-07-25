@@ -264,6 +264,16 @@ public class NativeTypeSystem
         nativeBuilders.put(pool.typeObject(),  org.xvm.javajit.builders.AugmentingBuilder.class);
         nativeBuilders.put(pool.typeService(), org.xvm.javajit.builders.AugmentingBuilder.class);
         nativeBuilders.put(pool.typeString(),  org.xvm.javajit.builders.StringBuilder.class);
+
+        // pre-register functions used by the native classes
+
+        // prime the function name counter
+        ensureJitClassName(pool.typeFunction());
+
+        // xFunction.$0: function void()
+        String f0 = ensureJitClassName(
+            pool.buildFunctionType(TypeConstant.NO_TYPES, TypeConstant.NO_TYPES));
+        assert f0.equals(Builder.xFunction + "$$0");
     }
 }
 

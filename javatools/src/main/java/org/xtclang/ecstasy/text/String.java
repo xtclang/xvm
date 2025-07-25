@@ -345,11 +345,4 @@ public class String
         }
         throw new StringIndexOutOfBoundsException(java.lang.String.valueOf(index));
     }
-
-    // ----- xObj methods --------------------------------------------------------------------------
-
-    @Override public xType $type() {
-        // TODO
-        return null;
-    }
 }
