@@ -249,10 +249,10 @@ public class NativeTypeSystem
         ConstantPool pool = pool();
 
         // only rebased types need to be registered
-        nativeByType.put(pool.typeModule(),  Builder.xModule);
-        nativeByType.put(pool.typeObject(),  Builder.xObj);
-        nativeByType.put(pool.typeService(), Builder.xService);
-        nativeByType.put(pool.typeType(),    Builder.xType);
+        nativeByType.put(pool.typeModule(),  Builder.N_xModule);
+        nativeByType.put(pool.typeObject(),  Builder.N_xObj);
+        nativeByType.put(pool.typeService(), Builder.N_xService);
+        nativeByType.put(pool.typeType(),    Builder.N_xType);
 
         for (Map.Entry<TypeConstant, String > entry : nativeByType.entrySet()) {
             nativeByName.put(entry.getValue(), entry.getKey());
@@ -273,7 +273,7 @@ public class NativeTypeSystem
         // xFunction.$0: function void()
         String f0 = ensureJitClassName(
             pool.buildFunctionType(TypeConstant.NO_TYPES, TypeConstant.NO_TYPES));
-        assert f0.equals(Builder.xFunction + "$$0");
+        assert f0.equals(Builder.N_xFunction + "$$0");
     }
 }
 

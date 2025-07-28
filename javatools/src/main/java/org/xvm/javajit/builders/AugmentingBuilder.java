@@ -38,6 +38,9 @@ public class AugmentingBuilder extends CommonBuilder {
         if ((flags & ClassFile.ACC_ABSTRACT) != 0 && !typeInfo.isAbstract()) {
             classBuilder.withFlags(flags & ~ClassFile.ACC_ABSTRACT);
         }
+
+        // implemented interfaces may not be native; add them if necessary
+        assembleImplInterfaces(classBuilder);
     }
 
     @Override

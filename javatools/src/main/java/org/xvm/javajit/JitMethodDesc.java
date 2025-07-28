@@ -6,7 +6,7 @@ import java.lang.constant.MethodTypeDesc;
 import static java.lang.constant.ConstantDescs.CD_void;
 
 /**
- * TODO:
+ * JIT specific information for a method.
  */
 public class JitMethodDesc {
     public JitMethodDesc(JitParamDesc[] standardReturns,  JitParamDesc[] standardParams,
@@ -41,6 +41,6 @@ public class JitMethodDesc {
     public final JitParamDesc[] optimizedParams;
 
     public final MethodTypeDesc standardMD;  // the generic "xObj" flavor
-    public final MethodTypeDesc optimizedMD; // (optional) optimized; "$o"
+    public final MethodTypeDesc optimizedMD; // (optional) optimized primitive
 
 }

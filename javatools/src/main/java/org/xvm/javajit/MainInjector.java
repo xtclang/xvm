@@ -9,6 +9,8 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xtclang._native.io.TerminalConsole;
+
 /**
  * The Injector used for "main" containers.
  */
@@ -49,6 +51,6 @@ public class MainInjector
         Class pureClass = Class.forName(pureName, true, typeSystem.loader);
         Class implClass = Class.forName(implName, true, typeSystem.bridgeLoader);
 
-        // suppliers.put(type, new Resource(, "console"), TerminalConsole::new);
+        suppliers.put(new Resource(pureType, "console"), TerminalConsole::new);
     }
 }
