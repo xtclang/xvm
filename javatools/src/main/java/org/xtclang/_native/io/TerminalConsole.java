@@ -2,8 +2,7 @@ package org.xtclang._native.io;
 
 import java.io.IOException;
 
-import org.xvm.javajit.Ctx;
-
+import org.xtclang.ecstasy.io.Console;
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.xObj;
 import org.xtclang.ecstasy.xService;
@@ -11,13 +10,16 @@ import org.xtclang.ecstasy.xType;
 
 import org.xtclang.ecstasy.text.String;
 
+import org.xvm.javajit.Ctx;
+
 import org.xvm.runtime.template._native.io.xTerminalConsole;
 
 /**
  * Native implementation for _native.TerminalConsole.
  */
 public class TerminalConsole
-        extends xService {
+        extends xService
+        implements Console {
 
     public TerminalConsole() {
         super(-1);
@@ -70,5 +72,14 @@ public class TerminalConsole
         } catch (IOException e) {
             throw new Exception(e); // TODO: IOException
         }
+    }
+
+    // ------ injection support --------------------------------------------------------------------
+
+    /**
+     * Create a TerminalConsole.
+     */
+    public static Console $create(Object opts) {
+        return new TerminalConsole();
     }
 }
