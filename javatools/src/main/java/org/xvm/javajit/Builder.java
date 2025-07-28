@@ -20,18 +20,20 @@ public interface Builder {
 
     // ----- native class names --------------------------------------------------------------------
 
-    String Object     = "org.xtclang.ecstasy.Object";
-    String Boolean    = "org.xtclang.ecstasy.Boolean";
-    String xConst     = "org.xtclang.ecstasy.xConst";
-    String xFunction  = "org.xtclang.ecstasy.xFunction";
-    String xModule    = "org.xtclang.ecstasy.xModule";
-    String xObj       = "org.xtclang.ecstasy.xObj";
-    String xService   = "org.xtclang.ecstasy.xService";
-    String xType      = "org.xtclang.ecstasy.xType";
+    String N_Object    = "org.xtclang.ecstasy.Object";
+    String N_Boolean   = "org.xtclang.ecstasy.Boolean";
+    String N_Null      = "org.xtclang.ecstasy.Null";
+    String N_xConst    = "org.xtclang.ecstasy.xConst";
+    String N_xFunction = "org.xtclang.ecstasy.xFunction";
+    String N_xModule   = "org.xtclang.ecstasy.xModule";
+    String N_xObj      = "org.xtclang.ecstasy.xObj";
+    String N_xService  = "org.xtclang.ecstasy.xService";
+    String N_xType     = "org.xtclang.ecstasy.xType";
 
-    String String     = "org.xtclang.ecstasy.text.String";
+    String N_Char      = "org.xtclang.ecstasy.text.Char";
+    String N_String    = "org.xtclang.ecstasy.text.String";
 
-    String Int64      = "org.xtclang.ecstasy.numbers.Int64";
+    String N_Int64     = "org.xtclang.ecstasy.numbers.Int64";
 
     // ----- well-known class suffixes -------------------------------------------------------------
 
@@ -39,8 +41,15 @@ public interface Builder {
 
     // ----- well-known class descriptors ----------------------------------------------------------
 
-    ClassDesc CD_xObj       = ClassDesc.of(xObj);
-    ClassDesc CD_xConst     = ClassDesc.of(xConst);
+    ClassDesc CD_xObj       = ClassDesc.of(N_xObj);
+    ClassDesc CD_xConst     = ClassDesc.of(N_xConst);
+
+    ClassDesc CD_Boolean    = ClassDesc.of(N_Boolean);
+    ClassDesc CD_Char       = ClassDesc.of(N_Char);
+    ClassDesc CD_Int64      = ClassDesc.of(N_Int64);
+    ClassDesc CD_Null       = ClassDesc.of(N_Null);
+    ClassDesc CD_Object     = ClassDesc.of(N_Object);
+    ClassDesc CD_String     = ClassDesc.of(N_String);
 
     ClassDesc CD_Container  = ClassDesc.of(Container.class.getName());
     ClassDesc CD_Ctx        = ClassDesc.of(Ctx.class.getName());

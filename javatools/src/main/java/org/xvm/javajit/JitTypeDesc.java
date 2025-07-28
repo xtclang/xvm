@@ -8,6 +8,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 
 import static org.xvm.javajit.Builder.CD_xObj;
@@ -51,6 +52,9 @@ public class JitTypeDesc {
             } else if (type.equals(pool.typeBoolean())) {
 
                 return CD_boolean;
+            } else if (type.equals(pool.typeChar())) {
+
+                return CD_int;
             }
         }
         return null;

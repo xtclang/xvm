@@ -1327,12 +1327,12 @@ public class MethodInfo
             List<JitParamDesc> listParamsStd = new ArrayList<>();
             List<JitParamDesc> listParamsOpt = new ArrayList<>();
             boolean            fOptimized    = false;
+            SignatureConstant  signature     = getSignature();
             MethodStructure    method        = getHead().getMethodStructure();
             for (int i = 0, c = method.getParamCount(); i < c; i++)
                 {
-                Parameter    param = method.getParam(i);
-                TypeConstant type  = param.getType();
-                boolean      fDflt = param.hasDefaultValue();
+                TypeConstant type  = signature.getRawParams()[i];
+                boolean      fDflt = method.getParam(i).hasDefaultValue();
                 ClassDesc    cd;
 
                 if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null)
@@ -1363,7 +1363,7 @@ public class MethodInfo
 
                     if (fDflt)
                         {
-                        // TODO: we can further optimize to a three-slot (multi-primitive wiht default)
+                        // TODO: we can further optimize to a three-slot (multi-primitive with default)
                         listParamsOpt.add(pdStd);
                         }
                     else
@@ -1406,29 +1406,33 @@ public class MethodInfo
             listParamsStd.clear();
             listParamsOpt.clear();
 
+            int ixLong = -1; // an index of the long return value in the Ctx
+            int ixObj  = -1; // an index of the Object return value in the Ctx
             for (int i = 0, c = method.getReturnCount(); i < c; i++)
                 {
-                Parameter    ret  = method.getReturn(i);
-                TypeConstant type = ret.getType();
+                TypeConstant type = signature.getRawReturns()[i];
                 ClassDesc    cd;
 
                 if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null)
                     {
                     ClassDesc cdStd = ClassDesc.of(ts.ensureJitClassName(type));
 
-                    listParamsStd.add(new JitParamDesc(type, JitFlavor.Specific, cdStd, i, false));
-                    listParamsOpt.add(new JitParamDesc(type, JitFlavor.Primitive, cd, i, false));
+                    listParamsStd.add(new JitParamDesc(type, JitFlavor.Specific, cdStd, ixObj++, false));
+                    listParamsOpt.add(new JitParamDesc(type, JitFlavor.Primitive, cd, ixLong++, false));
                     fOptimized = true;
                     }
                 else if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null)
                     {
-                    listParamsStd.add(new JitParamDesc(type, JitFlavor.Widened, CD_xObj, i, false));
-                    listParamsOpt.add(new JitParamDesc(type, JitFlavor.MultiSlotPrimitive, cd, i, false));
+                    TypeConstant typePrimitive = type.removeNullable();
+                    listParamsStd.add(new JitParamDesc(type, JitFlavor.Widened, CD_xObj, ixObj++, false));
+                    listParamsOpt.add(new JitParamDesc(typePrimitive, JitFlavor.MultiSlotPrimitive, cd, ixLong++, false));
+                    listParamsOpt.add(new JitParamDesc(pool().typeBoolean(), JitFlavor.MultiSlotPrimitive,
+                                                        CD_boolean, ixLong++, true));
                     fOptimized = true;
                     }
                 else if ((cd = JitTypeDesc.getWidenedClass(type)) != null)
                     {
-                    JitParamDesc pd = new JitParamDesc(type, JitFlavor.Widened, cd, i, false);
+                    JitParamDesc pd = new JitParamDesc(type, JitFlavor.Widened, cd, ixObj++, false);
 
                     listParamsStd.add(pd);
                     listParamsOpt.add(pd);
@@ -1439,7 +1443,7 @@ public class MethodInfo
 
                     cd = ClassDesc.of(ts.ensureJitClassName(type));
 
-                    JitParamDesc pd = new JitParamDesc(type, JitFlavor.Specific, cd, i, false);
+                    JitParamDesc pd = new JitParamDesc(type, JitFlavor.Specific, cd, ixObj++, false);
 
                     listParamsStd.add(pd);
                     listParamsOpt.add(pd);

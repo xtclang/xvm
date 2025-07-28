@@ -1,9 +1,12 @@
 package org.xtclang.ecstasy.numbers;
 
+import java.lang.constant.MethodTypeDesc;
+
 import org.xtclang.ecstasy.xConst;
 import org.xtclang.ecstasy.Exception;
 
-import org.xtclang.ecstasy.xType;
+import static java.lang.constant.ConstantDescs.CD_long;
+import static org.xvm.javajit.Builder.CD_Int64;
 
 /**
  * Native Int64 wrapper.
@@ -12,7 +15,7 @@ public class Int64 extends xConst {
     /**
      * Construct an Ecstasy Int64 object.
      *
-     * @param value  the 64-bit signed integer vlue
+     * @param value  the 64-bit signed integer value
      */
     public Int64(long value) {
         super(-1);
@@ -21,8 +24,8 @@ public class Int64 extends xConst {
 
     public final long $value;
 
-    private static final int      SMALL_CACHE_OFFSET = 512;  // number of cached negative values
-    private static final int      SMALL_CACHE_SIZE   = 8192; // must be power of 2
+    private static final int     SMALL_CACHE_OFFSET = 512;  // number of cached negative values
+    private static final int     SMALL_CACHE_SIZE   = 8192; // must be power of 2
     private static final Int64[] SMALL_CACHE        = new Int64[SMALL_CACHE_SIZE];
 
     public static final Int64 ZERO    = $box(0);
@@ -30,6 +33,8 @@ public class Int64 extends xConst {
     public static final Int64 NEG_ONE = $box(-1);
     public static final Int64 MIN     = $box(Long.MIN_VALUE);
     public static final Int64 MAX     = $box(Long.MAX_VALUE);
+
+    public static final MethodTypeDesc MD_box = MethodTypeDesc.of(CD_Int64, CD_long);
 
     /**
      * Obtain an xInt64 for a 64-bit "primitive" int (a Java "long" value).
