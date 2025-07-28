@@ -572,12 +572,12 @@ public class CommonBuilder
 
         if (cd.isPrimitive()) {
             if (returnIndex < 8) {
-                codeBuilder // r = ctx.i"i"
+                codeBuilder // r = $ctx.i"returnIndex"
                     .getfield(CD_Ctx, "i" + (returnIndex), CD_long);
             } else {
-                codeBuilder // r = ctx.iN[i-7]
+                codeBuilder // r = $ctx.iN[returnIndex-8]
                     .getfield(CD_Ctx, "iN", CD_long.arrayType())
-                    .loadConstant(returnIndex-7)
+                    .loadConstant(returnIndex-8)
                     .aaload();
             }
 
@@ -599,10 +599,10 @@ public class CommonBuilder
             }
         } else {
             if (returnIndex < 8) {
-                codeBuilder // r = ctx.o"i-1"
+                codeBuilder // r = $ctx.o"returnIndex"
                     .getfield(CD_Ctx, "o" + (returnIndex-1), CD_Object);
             } else {
-                codeBuilder // r = ctx.oN[i-8]
+                codeBuilder // r = $ctx.oN[returnIndex-8]
                     .getfield(CD_Ctx, "oN", CD_Object.arrayType())
                     .loadConstant(returnIndex-8)
                     .aaload();
@@ -618,7 +618,7 @@ public class CommonBuilder
         assert returnIndex >= 0;
 
         codeBuilder.aload(ctxIndex)
-                   .swap(); // stack: (ctx, value)
+                   .swap(); // stack: ($ctx, value)
 
         if (cd.isPrimitive()) {
             // all primitives are stored into "long" fields; convert
@@ -639,22 +639,22 @@ public class CommonBuilder
             }
 
             if (returnIndex < 8) {
-                codeBuilder
-                    .putfield(CD_Ctx, "i" + (returnIndex-1), CD_long);
+                codeBuilder // $ctx.i"returnIndex" = r
+                    .putfield(CD_Ctx, "i" + returnIndex, CD_long);
             } else {
-                // TODO: replace with a helper "Ctx.storeLong(i-7, value)"
-                codeBuilder // ctx.iN[i-7] = r
+                // TODO: replace with a helper "Ctx.storeLong(i-8, value)"
+                codeBuilder // $ctx.iN[returnIndex-8] = r
                     .getfield(CD_Ctx, "iN", CD_long.arrayType())
                     .loadConstant(returnIndex-8)
                     .aastore();
             }
         } else {
             if (returnIndex < 8) {
-                codeBuilder
-                    .putfield(CD_Ctx, "o" + (returnIndex-1), CD_Object);
+                codeBuilder // $ctx.o"returnIndex" = r
+                    .putfield(CD_Ctx, "o" + (returnIndex), CD_Object);
             } else {
-                // TODO: replace with a helper "Ctx.storeRef(i-7, value)"
-                codeBuilder // ctx.oN[i-7] = r
+                // TODO: replace with a helper "Ctx.storeRef(i-8, value)"
+                codeBuilder // $ctx.oN[returnIndex-8] = r
                     .getfield(CD_Ctx, "oN", CD_Object.arrayType())
                     .loadConstant(returnIndex-8)
                     .aastore();
