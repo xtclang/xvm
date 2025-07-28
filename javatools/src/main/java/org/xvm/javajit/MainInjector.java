@@ -3,7 +3,7 @@ package org.xvm.javajit;
 import java.util.HashMap;
 import java.util.Map;
 
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 import org.xvm.asm.ConstantPool;
 
@@ -23,16 +23,16 @@ public class MainInjector
 
     private final Xvm xvm;
 
-    private final Map<Resource, Supplier> suppliers = new HashMap<>();
+    private final Map<Resource, Function> suppliers = new HashMap<>();
 
     @Override
-    public <T> Supplier<T> supplierOf(Resource res) {
+    public Function supplierOf(Resource res) {
         return suppliers.get(res);
     }
 
     @Override
-    public <T> T valueOf(Resource res) {
-        T resource = super.valueOf(res);
+    public Object valueOf(Resource res, Object opts) {
+        Object resource = super.valueOf(res, opts);
         if (resource == null) {
             throw new RuntimeException("Unknown resource: " + res);
         }
@@ -51,6 +51,6 @@ public class MainInjector
         Class pureClass = Class.forName(pureName, true, typeSystem.loader);
         Class implClass = Class.forName(implName, true, typeSystem.bridgeLoader);
 
-        suppliers.put(new Resource(pureType, "console"), TerminalConsole::new);
+        suppliers.put(new Resource(pureType, "console"), TerminalConsole::$create);
     }
 }
