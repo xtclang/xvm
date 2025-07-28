@@ -359,7 +359,16 @@ public class TypeSystem {
             if (type.isA(pool().typeFunction())) {
                 // Jit class name for functions has format of "xFunction.$n"
                 return functionClasses.computeIfAbsent(type, t ->
-                    Builder.xFunction + '$' + xvm.createUniqueSuffix(""));
+                    Builder.N_xFunction + '$' + xvm.createUniqueSuffix(""));
+            }
+
+            ConstantPool pool = pool();
+            if (type.isTypeOfType()) {
+                return pool.typeType().ensureJitClassName(this);
+            }
+
+            if (type.isA(pool.typeClass())) {
+                return pool.typeClass().ensureJitClassName(this);
             }
 
             ClassStructure structure = (ClassStructure)

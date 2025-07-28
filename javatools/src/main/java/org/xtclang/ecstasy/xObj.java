@@ -4,7 +4,7 @@ import org.xvm.javajit.Container;
 import org.xvm.javajit.Ctx;
 import org.xvm.javajit.Xvm;
 
-public abstract class xObj implements Object {
+public abstract class xObj implements org.xtclang.ecstasy.Object {
     public xObj(long containerId) {
         super();
         $meta = containerId;

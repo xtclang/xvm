@@ -1,12 +1,27 @@
 package org.xtclang.ecstasy;
 
 
+import java.lang.constant.MethodTypeDesc;
+
+import static java.lang.constant.ConstantDescs.CD_boolean;
+
+import static org.xvm.javajit.Builder.CD_Boolean;
+
 public class Boolean
         extends xEnum {
-    public Boolean(boolean value) {
+    private Boolean(boolean value) {
         super(-1);
         $value = value;
     }
 
     public final boolean $value;
+
+    public static Boolean True  = new Boolean(true);
+    public static Boolean False = new Boolean(false);
+
+    public static Boolean $box(boolean value) {
+        return value ? True : False;
+    }
+
+    public static final MethodTypeDesc MD_box = MethodTypeDesc.of(CD_Boolean, CD_boolean);
 }

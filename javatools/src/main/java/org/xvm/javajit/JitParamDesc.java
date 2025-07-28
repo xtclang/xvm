@@ -5,18 +5,20 @@ import java.lang.constant.ClassDesc;
 import org.xvm.asm.constants.TypeConstant;
 
 /**
- * TODO:
+ * JIT specific information for a method parameter or return value
  */
 public class JitParamDesc extends JitTypeDesc {
     public JitParamDesc(TypeConstant type, JitFlavor flavor, ClassDesc cd,
-                        int origin, boolean extension) {
+                        int index, boolean extension) {
         super(type, flavor, cd);
 
-        this.origin    = origin;
+        this.index     = index;
         this.extension = extension;
     }
 
-    public final int origin;        // an index of the parameter/return in the method signature
+    public final int index;         // for parameter: the corresponding index in the Ecstasy method
+                                    // signature; for return: an index of the "long" or "Object"
+                                    // return value in the Ctx object; -1 indicates a natural return
     public final boolean extension; // is this an additional Java parameter
 
     public static final JitParamDesc[] NONE = new JitParamDesc[0];

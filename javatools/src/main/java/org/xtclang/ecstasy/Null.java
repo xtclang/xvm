@@ -6,7 +6,7 @@ package org.xtclang.ecstasy;
 public class Null
         extends xEnum {
 
-    public Null() {
+    private Null() {
         super(-1);
     }
 
