@@ -31,7 +31,7 @@ on:
 
 env:
   # TODO: Default should be disabled; we only want to be bothered by tagging and publishing for the master branch.
-  always_publish_snapshot: ${{ github.event.inputs.always_publish_snapshot || 'false' }}
+  always_publish_snapshot: ${{ github.event.inputs.always_publish_snapshot == 'true' }}
 
   # Add manual tests as an included build to the composite build configuration, and also build them.
   ORG_GRADLE_PROJECT_includeBuildManualTests: true
@@ -159,7 +159,7 @@ jobs:
     name: Publish to GitHub packages iff snapshot + non-redundant build platform + branch is master
     needs: build-verify
     runs-on: ubuntu-latest
-    if: ${{ (github.ref == 'refs/heads/master') }}
+    if: ${{ (env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
     steps:
       # Check out current repository
       - name: Fetch Sources
@@ -185,6 +185,9 @@ jobs:
           echo "*** Branch (github.ref)    : ${{ github.ref }}"
           echo "*** Commit (github.sha)    : ${{ github.sha }}"
           echo "*** Runner OS              : ${{ runner.os }}"
+          echo "*** Workflow inputs:"
+          echo "    always_publish_snapshot (raw): '${{ github.event.inputs.always_publish_snapshot }}'"
+          echo "    always_publish_snapshot (env): '${{ env.always_publish_snapshot }}'"
           echo "*** Java system properties :" 
           java -XshowSettings:properties --version
 
