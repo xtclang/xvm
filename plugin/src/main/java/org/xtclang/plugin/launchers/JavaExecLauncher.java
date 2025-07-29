@@ -56,6 +56,18 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
             spec.args(cmd.toList());
             spec.jvmArgs(cmd.getJvmArgs());
             spec.setIgnoreExitValue(true);
+            
+            // Use the project's configured Java toolchain instead of current JVM
+            final var javaExtension = project.getProject().getExtensions().findByType(org.gradle.api.plugins.JavaPluginExtension.class);
+            if (javaExtension != null) {
+                final var toolchains = project.getProject().getExtensions().getByType(org.gradle.jvm.toolchain.JavaToolchainService.class);
+                final var launcher = toolchains.launcherFor(javaExtension.getToolchain());
+                final var toolchainExecutable = launcher.get().getExecutablePath().toString();
+                logger.info("{} Using Java toolchain executable: {}", prefix, toolchainExecutable);
+                spec.setExecutable(toolchainExecutable);
+            } else {
+                logger.warn("{} No Java extension found, using default JVM", prefix);
+            }
         })));
     }
 
