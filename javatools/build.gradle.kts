@@ -62,13 +62,14 @@ sourceSets {
  * still being in the build output, as we have not cleaned.
  */
 val syncDependencies by tasks.registering(Sync::class) {
+    val taskPrefix = "[${project.name}:syncDependencies]"
     from(configurations.compileClasspath) {
         include("**/*.jar")
     }
     into(layout.buildDirectory.dir("javatools-dependencies"))
     doLast {
         outputs.files.asFileTree.forEach {
-            logger.info("$prefix Resolved javatools dependency file: $it")
+            logger.info("$taskPrefix Resolved javatools dependency file: $it")
         }
     }
 }
