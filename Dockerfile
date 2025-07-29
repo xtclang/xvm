@@ -1,48 +1,8 @@
 # syntax=docker/dockerfile:1
 #
 # XDK Docker Container - Native multi-platform support
+# See DOCKER.md for complete build and usage instructions
 #
-# DEFAULTS:
-#   - VERSION=local (builds from local source)
-#   - JAVA_VERSION=21 (uses Java 21 JDK/JRE)
-#   - Platform matches host architecture (linux/amd64 on x86, linux/arm64 on ARM)
-#   - Compiles native launchers from C source for target platform
-#   - Creates architecture-specific xcc/xec executables
-#
-# BUILDING:
-#   Native platform build: docker buildx build -t xvm:latest .
-#   With VERSION override: docker buildx build --build-arg VERSION=local -t xvm:latest .
-
-#   With Java version: docker buildx build --build-arg JAVA_VERSION=17 -t xvm:latest .
-#   Specific commit: docker buildx build --build-arg VERSION=abc123 -t xvm:latest .
-#   GitHub release: docker buildx build --build-arg VERSION=v1.0.0 -t xvm:latest .
-#
-# CROSS-PLATFORM BUILDS:
-#   Force Linux AMD64: docker buildx build --platform linux/amd64 -t xvm:amd64 --load .
-#   Force Linux ARM64: docker buildx build --platform linux/arm64 -t xvm:arm64 --load .
-#   
-#   Multi-platform manifest (creates separate images for each arch):
-#   docker buildx build --platform linux/amd64,linux/arm64 -t xvm:latest --push .
-#   
-#   How multi-platform works:
-#   - Docker builds SEPARATE images for each architecture specified
-#   - Each build compiles its own native launcher (amd64 gets x86_64, arm64 gets aarch64)
-#   - Results in a manifest with architecture-specific images
-#   - Docker automatically pulls the correct image for the runtime platform
-#
-#   Extract architecture-specific launcher to host:
-#   docker buildx build --target launcher-export --platform linux/arm64 -o . .
-#
-
-# RUNNING:
-#   Interactive shell: docker run -it --rm xvm:latest /bin/bash
-#   Run xec directly: docker run --rm xvm:latest
-#   Run xcc: docker run --rm xvm:latest xcc
-#   Mount local files: docker run -v $(pwd):/workspace -w /workspace --rm xvm:latest xcc myfile.x
-#
-# ADVANCED:
-#   With caching: docker buildx build --cache-from type=gha --cache-to type=gha,mode=max -t xvm:latest .
-#   Push to registry: docker buildx build --platform linux/amd64,linux/arm64 -t myregistry/xvm:latest --push .
 
 # Build arguments
 ARG JAVA_VERSION=21
