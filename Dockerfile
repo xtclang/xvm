@@ -13,26 +13,24 @@ FROM gcc:latest AS launcher-builder
 ARG TARGETARCH
 ARG TARGETOS
 
-# Copy launcher C source files
+# Copy launcher C source files  
 COPY javatools_launcher/src/main/c/ /launcher-src/
 
 WORKDIR /launcher-src
 
-# Build launcher for target architecture
-RUN set -e && \
+# Build launcher for target architecture with mount cache for compilation artifacts
+RUN --mount=type=cache,target=/tmp/gcc-cache \
+    set -e && \
     echo "Building launcher for ${TARGETOS}/${TARGETARCH}" && \
     case "${TARGETARCH}" in \
         amd64) ARCH_FLAGS="" ;; \
         arm64) ARCH_FLAGS="-march=armv8-a" ;; \
         *) ARCH_FLAGS="" ;; \
     esac && \
-    mkdir -p /launcher-output && \
+    mkdir -p /launcher-output /tmp/gcc-cache && \
+    export TMPDIR=/tmp/gcc-cache && \
     gcc -g -Wall -std=gnu11 -DlinuxLauncher -O0 ${ARCH_FLAGS} \
         launcher.c os_linux.c os_unux.c -o /launcher-output/linux_launcher_${TARGETARCH}
-
-# Export stage to copy launcher to host filesystem  
-FROM scratch AS launcher-export
-COPY --from=launcher-builder /launcher-output/ /
 
 FROM eclipse-temurin:${JAVA_VERSION}-jdk AS builder
 
@@ -86,6 +84,10 @@ RUN --mount=type=cache,target=/root/.gradle/caches \
         echo "Available launcher files:" && \
         ls -la javatools_launcher/src/main/resources/exe/ || true; \
     fi
+
+# Export stage to copy launcher to host filesystem  
+FROM scratch AS launcher-export
+COPY --from=builder /workspace/javatools_launcher/src/main/resources/exe/linux_launcher_* /
 
 FROM eclipse-temurin:${JAVA_VERSION}-jre
 

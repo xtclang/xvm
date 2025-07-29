@@ -192,6 +192,20 @@ services:
 - Authentication to GitHub Container Registry (`docker login ghcr.io`)
 - For multi-platform builds: Docker buildx builder with multi-platform support
 
+## Automated Builds (GitHub Actions)
+
+Docker images are automatically built and pushed to GitHub Container Registry when:
+- Code is pushed to the `master` branch
+- Manual workflow dispatch is triggered
+
+The CI workflow (`ci.yml`) will:
+1. Build the XDK using Gradle
+2. Build AMD64 Docker image using `dockerPushAmd64` task  
+3. Push to `ghcr.io/xtclang/xvm:latest-amd64` and `ghcr.io/xtclang/xvm:VERSION-amd64`
+4. Images automatically appear in the repository's Packages section
+
+No manual authentication needed - GitHub Actions uses `GITHUB_TOKEN` automatically.
+
 ## Notes
 
 - Multi-platform builds (`dockerBuildMultiPlatform`) cannot use `--load` and will push directly to the registry

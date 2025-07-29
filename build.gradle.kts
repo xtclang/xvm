@@ -102,8 +102,8 @@ val dockerBuildAmd64 by tasks.registering(Exec::class) {
     workingDir = rootProject.projectDir
     
     doFirst {
-        println("Building Docker image for linux/amd64 platform with VERSION=local...")
-        println("Tags: ghcr.io/xtclang/xvm:latest-amd64, ghcr.io/xtclang/xvm:${project.version}-amd64")
+        logger.lifecycle("Building Docker image for linux/amd64 platform with VERSION=local...")
+        logger.lifecycle("Tags: ghcr.io/xtclang/xvm:latest-amd64, ghcr.io/xtclang/xvm:${project.version}-amd64")
     }
 }
 
@@ -127,8 +127,8 @@ val dockerBuildArm64 by tasks.registering(Exec::class) {
     workingDir = rootProject.projectDir
     
     doFirst {
-        println("Building Docker image for linux/arm64 platform with VERSION=local...")
-        println("Tags: ghcr.io/xtclang/xvm:latest-arm64, ghcr.io/xtclang/xvm:${project.version}-arm64")
+        logger.lifecycle("Building Docker image for linux/arm64 platform with VERSION=local...")
+        logger.lifecycle("Tags: ghcr.io/xtclang/xvm:latest-arm64, ghcr.io/xtclang/xvm:${project.version}-arm64")
     }
 }
 
@@ -156,10 +156,10 @@ val dockerBuildMultiPlatform by tasks.registering(Exec::class) {
     workingDir = rootProject.projectDir
     
     doFirst {
-        println("Building multi-platform Docker images for linux/amd64 and linux/arm64 with VERSION=local...")
-        println("Tags: ghcr.io/xtclang/xvm:latest, ghcr.io/xtclang/xvm:${project.version}")
-        println("Platform-specific tags: -amd64, -arm64 suffixes")
-        println("Images will be pushed directly to registry (multi-platform builds cannot use --load)")
+        logger.lifecycle("Building multi-platform Docker images for linux/amd64 and linux/arm64 with VERSION=local...")
+        logger.lifecycle("Tags: ghcr.io/xtclang/xvm:latest, ghcr.io/xtclang/xvm:${project.version}")
+        logger.lifecycle("Platform-specific tags: -amd64, -arm64 suffixes")
+        logger.lifecycle("Images will be pushed directly to registry (multi-platform builds cannot use --load)")
     }
 }
 
@@ -180,8 +180,8 @@ val dockerPushAmd64 by tasks.registering(Exec::class) {
     }
     
     doFirst {
-        println("Pushing AMD64 Docker image to GitHub Container Registry...")
-        println("Make sure you're logged in with: docker login ghcr.io")
+        logger.lifecycle("Pushing AMD64 Docker image to GitHub Container Registry...")
+        logger.lifecycle("Make sure you're logged in with: docker login ghcr.io")
     }
 }
 
@@ -202,8 +202,8 @@ val dockerPushArm64 by tasks.registering(Exec::class) {
     }
     
     doFirst {
-        println("Pushing ARM64 Docker image to GitHub Container Registry...")
-        println("Make sure you're logged in with: docker login ghcr.io")
+        logger.lifecycle("Pushing ARM64 Docker image to GitHub Container Registry...")
+        logger.lifecycle("Make sure you're logged in with: docker login ghcr.io")
     }
 }
 
