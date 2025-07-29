@@ -1,13 +1,6 @@
 #
 # GitHub runner workflow for building, verifying and testing the XVM repo.
 #
-# TODO: Add periodic workflows (that can be manually triggered /w workflow_disspatch and also run through a cron file)
-#   1) Cleans out old workflows that have finished but not succeeded.
-#   2) Cleans Gradle and other build caches, maybe one every 24 h
-#   3) Cleans ...
-#
-# Check if "pull-request" makes it possible to add a branch protection status check requirement on master.
-# gh auth switch --hostname enterprise.internal --user monalisa  (switch auth)
 name: XVM Verification and Package Updates
 
 on:

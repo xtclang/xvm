@@ -24,6 +24,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.inject.Inject;
+
 import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
@@ -38,6 +40,7 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
+import org.gradle.process.ExecOperations;
 import org.gradle.process.ExecResult;
 
 import org.xtclang.plugin.XtcLauncherTaskExtension;
@@ -99,6 +102,9 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         this.showVersion = objects.property(Boolean.class).convention(ext.getShowVersion());
         this.useNativeLauncher = objects.property(Boolean.class).convention(ext.getUseNativeLauncher());
     }
+
+    @Inject
+    public abstract ExecOperations getExecOperations();
 
     @Override
     public void executeTask() {
@@ -253,7 +259,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             return new NativeBinaryLauncher<>(project, this);
         } else if (getFork().get()) {
             logger.info("{} Created XTC launcher: Java process forked from build.", prefix);
-            return new JavaExecLauncher<>(project, this);
+            return new JavaExecLauncher<>(project, this, getExecOperations());
         } else {
             logger.warn("{} WARNING: Created XTC launcher: Running launcher in the same thread as the build process. This is not recommended for production",
                     prefix);

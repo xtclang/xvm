@@ -174,7 +174,7 @@ val dockerPushAmd64 by tasks.registering(Exec::class) {
     )
     
     doLast {
-        exec {
+        project.providers.exec {
             commandLine("docker", "push", "ghcr.io/xtclang/xvm:${project.version}-amd64")
         }
     }
@@ -196,7 +196,7 @@ val dockerPushArm64 by tasks.registering(Exec::class) {
     )
     
     doLast {
-        exec {
+        project.providers.exec {
             commandLine("docker", "push", "ghcr.io/xtclang/xvm:${project.version}-arm64")
         }
     }
