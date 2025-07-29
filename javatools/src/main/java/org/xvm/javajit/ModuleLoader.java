@@ -130,7 +130,7 @@ public class ModuleLoader
 
         // the "dumping" itself causes the classes to be transitively loaded;
         // limit the number of cycles
-        int iters = 1;
+        int iters = 2;
         do {
             List<Class> currentlyLoaded = new ArrayList<>(loadedClasses);
             loadedClasses.clear();

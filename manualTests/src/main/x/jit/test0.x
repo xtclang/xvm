@@ -1,4 +1,4 @@
-module test0.xtclang.org {
+module test0.examples.org {
 
     void run() {
         @Inject Console console;
