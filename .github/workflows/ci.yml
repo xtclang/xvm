@@ -14,6 +14,11 @@ on:
   push:
   workflow_dispatch:
     inputs:
+      always_publish_snapshot:
+        description: 'Always publish snapshot regardless of branch'
+        type: boolean
+        required: false
+        default: false
       extra_gradle_options:
         description: 'Extra Gradle options to pass to the build'
         required: false
@@ -26,7 +31,7 @@ on:
 
 env:
   # TODO: Default should be disabled; we only want to be bothered by tagging and publishing for the master branch.
-  always_publish_snapshot: false
+  always_publish_snapshot: ${{ github.event.inputs.always_publish_snapshot || 'false' }}
 
   # Add manual tests as an included build to the composite build configuration, and also build them.
   ORG_GRADLE_PROJECT_includeBuildManualTests: true
@@ -154,7 +159,7 @@ jobs:
     name: Publish to GitHub packages iff snapshot + non-redundant build platform + branch is master
     needs: build-verify
     runs-on: ubuntu-latest
-    if: ${{ (github.ref == 'refs/heads/master') || (github.ref == 'refs/heads/lagergren/ci2') }}
+    if: ${{ (github.ref == 'refs/heads/master') }}
     steps:
       # Check out current repository
       - name: Fetch Sources
