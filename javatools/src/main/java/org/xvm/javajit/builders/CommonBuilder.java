@@ -226,7 +226,7 @@ public class CommonBuilder
                            .aconst_null()
                            .if_acmpne(ifNotNull);
                         // the value is `null`
-                        defaultLoad(codeBuilder, thatParamDesc.cd);          // default primitive
+                        Builder.defaultLoad(codeBuilder, thatParamDesc.cd);          // default primitive
                         codeBuilder.iconst_1();                              // true
 
                         codeBuilder
@@ -254,7 +254,7 @@ public class CommonBuilder
                            .getstatic(CD_Null, "Null", CD_Null)
                            .if_acmpne(ifNotNull);
                         // the value is `Null`
-                        defaultLoad(codeBuilder, thatParamDesc.cd);          // default primitive
+                        Builder.defaultLoad(codeBuilder, thatParamDesc.cd);          // default primitive
                         codeBuilder.iconst_1();                              // true
 
                         codeBuilder
@@ -427,8 +427,8 @@ public class CommonBuilder
             .lineNumber(++nLine)
             .labelBinding(endScope)
             ;
-        defaultLoad(codeBuilder, md.returnType());
-        defaultReturn(codeBuilder, md.returnType());
+        Builder.defaultLoad(codeBuilder, md.returnType());
+        Builder.defaultReturn(codeBuilder, md.returnType());
     }
 
     /**
@@ -506,59 +506,6 @@ public class CommonBuilder
 
             default:
                 throw new UnsupportedOperationException();
-        }
-    }
-
-    /**
-     * Generate a default value "load" for the specified Java class.
-     */
-    private void defaultLoad(CodeBuilder codeBuilder, ClassDesc cd) {
-        if (cd.isPrimitive()) {
-            switch (cd.descriptorString()) {
-                case "I", "S", "B", "C", "Z":
-                    codeBuilder.iconst_0();
-                    break;
-                case "J":
-                    codeBuilder.lconst_0();
-                    break;
-                case "F":
-                    codeBuilder.fconst_0();
-                    break;
-                case "D":
-                    codeBuilder.dconst_0();
-                    break;
-                case "V":
-                    break;
-            }
-        } else {
-            codeBuilder.aconst_null();
-        }
-    }
-
-    /**
-     * Generate a default return for the specified Java class.
-     */
-    private void defaultReturn(CodeBuilder codeBuilder, ClassDesc cd) {
-        if (cd.isPrimitive()) {
-            switch (cd.descriptorString()) {
-                case "I", "S", "B", "C", "Z":
-                    codeBuilder.ireturn();
-                    break;
-                case "J":
-                    codeBuilder.lreturn();
-                    break;
-                case "F":
-                    codeBuilder.freturn();
-                    break;
-                case "D":
-                    codeBuilder.dreturn();
-                    break;
-                case "V":
-                    codeBuilder.return_();
-                    break;
-            }
-        } else {
-            codeBuilder.aconst_null().areturn();
         }
     }
 

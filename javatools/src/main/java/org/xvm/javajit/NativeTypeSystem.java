@@ -267,7 +267,7 @@ public class NativeTypeSystem
         // pre-register functions used by the native classes
 
         // prime the function name counter
-        ensureJitClassName(pool.typeFunction());
+        xvm.createUniqueSuffix("");
 
         // xFunction.$0: function void()
         String f0 = ensureJitClassName(

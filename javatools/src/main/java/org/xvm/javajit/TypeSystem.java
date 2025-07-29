@@ -25,6 +25,7 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.builders.CommonBuilder;
+import org.xvm.javajit.builders.FunctionBuilder;
 import org.xvm.javajit.builders.ModuleBuilder;
 
 import static org.xvm.util.Handy.require;
@@ -143,9 +144,14 @@ public class TypeSystem {
     public final ModuleLoader[] owned;
 
     /**
-     * A cache of function jit class names keyed by the function type.
+     * A cache of function JIT class names keyed by the function types.
      */
     protected final Map<TypeConstant, String> functionClasses = new ConcurrentHashMap<>();
+
+    /**
+     * A cache of function types keyed by the corresponding JIT function class suffix ("$N").
+     */
+    protected final Map<String, TypeConstant> functionTypes = new ConcurrentHashMap<>();
 
     /**
      * @return the ConstantPool associated with this TypeSystem
@@ -254,17 +260,25 @@ public class TypeSystem {
      * @return the bytes of the ClassFile for the specified class name
      */
     public byte[] genClass(ModuleLoader moduleLoader, String name) {
+        String className = moduleLoader.prefix + name;
+        if (className.startsWith(Builder.N_xFunction)) {
+            TypeConstant fnType = functionTypes.get(className.substring(Builder.N_xFunction.length() + 1));
+            assert fnType != null;
+            return ClassFile.of().
+                build(ClassDesc.of(className), classBuilder ->
+                    new FunctionBuilder(this, fnType).assembleImpl(className, classBuilder));
+        }
+
         Artifact art = deduceArtifact(moduleLoader.module, name);
         if (art != null) {
             if (art.id.getComponent() instanceof ClassStructure clz) {
-                String       className = moduleLoader.prefix + name;
                 TypeConstant type      = clz.getCanonicalType();
                 Builder      builder   = ensureBuilder(type);
-                Consumer<? super ClassBuilder> handler = cb -> {
-                    cb.with(SourceFileAttribute.of(clz.getSourceFileName()));
+                Consumer<? super ClassBuilder> handler = classBuilder -> {
+                    classBuilder.with(SourceFileAttribute.of(clz.getSourceFileName()));
                     switch (art.shape) {
                         case Impl:
-                            builder.assembleImpl(className, cb);
+                            builder.assembleImpl(className, classBuilder);
                             break;
 
                         default:
@@ -272,8 +286,7 @@ public class TypeSystem {
                     }
                 };
 
-                return ClassFile.of().
-                    build(ClassDesc.of(className), handler);
+                return ClassFile.of().build(ClassDesc.of(className), handler);
             }
         }
         return null;
@@ -358,8 +371,16 @@ public class TypeSystem {
         if (type.isSingleUnderlyingClass(true)) {
             if (type.isA(pool().typeFunction())) {
                 // Jit class name for functions has format of "xFunction.$n"
-                return functionClasses.computeIfAbsent(type, t ->
-                    Builder.N_xFunction + '$' + xvm.createUniqueSuffix(""));
+
+                String name = functionClasses.computeIfAbsent(type, t -> {
+                    String suffix =
+                        (t.getParamTypesArray().length == 0 // degenerated "function void()"
+                            ? "$0"
+                            : xvm.createUniqueSuffix(""));
+                    functionTypes.putIfAbsent(suffix, type);
+                    return Builder.N_xFunction + '$' + suffix;
+                });
+                return name;
             }
 
             ConstantPool pool = pool();
