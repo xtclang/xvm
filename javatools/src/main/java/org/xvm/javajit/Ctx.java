@@ -67,7 +67,7 @@ public final class Ctx {
      *
      * @param size  the size (in bytes) of memory desired
      */
-    public void take(long size) {
+    public void alloc(long size) {
         // TODO
     }
 
@@ -79,23 +79,23 @@ public final class Ctx {
      *
      * @param size  the size (in bytes) of memory that was taken without asking
      */
-    public void took(long size) {
+    public void allocated(long size) {
         // TODO
     }
 
     /**
      * Used when a copy is being made, such that some old memory is still (temporarily) required
      * to perform the copy, while the new memory (which could be larger or smaller) needs to be
-     * allocated. Like {@link #take(long)}, this call may return immediately, wait indefinitely
-     * (i.e. park this virtual thread and schedule a different fiber to run), or even kill the
-     * current container. It is expected that the algorithm behind this differs slightly from
-     * {@link #take(long)}, in that this method will permit the memory limits to be exceeded on a
-     * temporary basis as long as the result does not imperil the health of the xvm.
+     * allocated. Like {@link #alloc(long)}, this call may return immediately, wait
+     * indefinitely (i.e. park this virtual thread and schedule a different fiber to run), or even
+     * kill the current container. It is expected that the algorithm behind this differs slightly
+     * from {@link #alloc(long)}, in that this method will permit the memory limits to be
+     * exceeded on a temporary basis as long as the result does not imperil the health of the xvm.
      *
      * @param oldSize  the memory still being held onto temporarily that will be freed in a moment
      * @param newSize  the new memory being requested (the full amount, not just the delta amount)
      */
-    public void copy(long oldSize, long newSize) {
+    public void realloc(long oldSize, long newSize) {
         // TODO
     }
 
