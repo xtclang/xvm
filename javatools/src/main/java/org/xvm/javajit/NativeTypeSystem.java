@@ -150,7 +150,7 @@ public class NativeTypeSystem
                     }
 
                     ClassModel     model  = ClassFile.of().parse(classBytes);
-                    String         path   = name.substring(loader.prefix.length());
+                    String         path   = name.substring(loader.prefix.length()).replace('$', '.');
                     ClassStructure struct = (ClassStructure) loader.module.getChildByPath(path);
                     if (struct == null) {
                         throw new ClassNotFoundException("Cannot find XTC class for " + path);
@@ -168,7 +168,6 @@ public class NativeTypeSystem
      * Augment the existing native class with the Ecstasy methods.
      */
     private byte[] augmentNativeClass(ClassModel model, String className, TypeConstant type) {
-
         ClassStructure  clz     = (ClassStructure) type.getSingleUnderlyingClass(true).getComponent();
         Builder         builder = ensureBuilder(type, model);
         Consumer<? super ClassBuilder> handler = cb -> {

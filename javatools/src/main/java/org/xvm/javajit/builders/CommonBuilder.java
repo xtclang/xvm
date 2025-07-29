@@ -452,8 +452,9 @@ public class CommonBuilder
                 if (type.equals(pool.typeInt64())) {
                     codeBuilder.getfield(CD_Int64, "$value", cd);
                 } else {
-                    // TODO: THIS IS WRONG; add support all other Int types
-                    codeBuilder.getfield(CD_Int64, "$value", cd);
+                    // TODO: does this cover all types?
+                    ClassDesc boxCD = ClassDesc.of(type.ensureJitClassName(typeSystem));
+                    codeBuilder.getfield(boxCD, "$value", cd);
                 }
                 break;
 
@@ -488,8 +489,10 @@ public class CommonBuilder
                 if (type.equals(pool.typeInt64())) {
                     codeBuilder.invokestatic(CD_Int64, "$box", Int64.MD_box);
                 } else {
-                    // TODO: THIS IS WRONG; add support all other Int types
-                    codeBuilder.invokestatic(CD_Int64, "$box", Int64.MD_box);
+                    // TODO: does this cover all types?
+                    ClassDesc      boxCD = ClassDesc.of(type.ensureJitClassName(typeSystem));
+                    MethodTypeDesc boxMD = MethodTypeDesc.of(boxCD, cd);
+                    codeBuilder.invokestatic(boxCD, "$box", boxMD);
                 }
                 break;
 
