@@ -323,7 +323,7 @@ public class TypeSystem {
                 if (shape != ClassfileShape.Impl) {
                     name = name.substring(2); // all other suffixes are of the length 2
                 }
-                if (module.getChildByPath(name) instanceof ClassStructure struct) {
+                if (module.getChildByPath(name.replace('$', '.')) instanceof ClassStructure struct) {
                     return new Artifact(struct.getIdentityConstant(), shape);
                 }
             }

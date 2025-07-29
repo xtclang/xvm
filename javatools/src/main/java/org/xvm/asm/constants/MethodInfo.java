@@ -1413,6 +1413,12 @@ public class MethodInfo
                 TypeConstant type = signature.getRawReturns()[i];
                 ClassDesc    cd;
 
+                if (i == 1) {
+                    // prime the indexes for all returns beyond the first one
+                    ixLong = 0;
+                    ixObj  = 0;
+                }
+
                 if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null)
                     {
                     ClassDesc cdStd = ClassDesc.of(ts.ensureJitClassName(type));

@@ -23,16 +23,16 @@ public class JitMethodDesc {
     }
 
     public static MethodTypeDesc computeMethodDesc(JitParamDesc[] returns, JitParamDesc[] params) {
-        int         cParams   = params.length;
-        ClassDesc[] acdParams = new ClassDesc[cParams + 1];
+        int         paramCount = params.length;
+        ClassDesc[] paramCDs   = new ClassDesc[paramCount + 1];
 
-        acdParams[0] = ClassDesc.of(org.xvm.javajit.Ctx.class.getName());
+        paramCDs[0] = ClassDesc.of(org.xvm.javajit.Ctx.class.getName());
 
-        for (int i = 0; i < cParams; i++)
+        for (int i = 0; i < paramCount; i++)
             {
-            acdParams[i+1] = params[i].cd;
+            paramCDs[i+1] = params[i].cd;
             }
-        return MethodTypeDesc.of(returns.length == 0 ? CD_void : returns[0].cd, acdParams);
+        return MethodTypeDesc.of(returns.length == 0 ? CD_void : returns[0].cd, paramCDs);
         }
 
     public final JitParamDesc[] standardReturns;
