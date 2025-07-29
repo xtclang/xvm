@@ -159,7 +159,7 @@ jobs:
     name: Publish to GitHub packages iff snapshot + non-redundant build platform + branch is master
     needs: build-verify
     runs-on: ubuntu-latest
-    if: ${{ (env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
+    if: ${{ (github.event.inputs.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
     steps:
       # Check out current repository
       - name: Fetch Sources
