@@ -11,32 +11,41 @@ ARG JAVA_VERSION=21
 FROM gcc:latest AS launcher-builder
 
 ARG TARGETARCH
-ARG TARGETOS
+ARG TARGETOS  
+ARG VERSION
 
-# Copy launcher C source files  
-COPY javatools_launcher/src/main/c/ /launcher-src/
+# Download source code first
+WORKDIR /source
+RUN if [ -z "$VERSION" ]; then \
+        echo "Downloading latest master" && \
+        curl -L "https://github.com/xtclang/xvm/archive/refs/heads/master.tar.gz" | tar -xz --strip-components=1; \
+    else \
+        echo "Downloading commit/ref: $VERSION" && \
+        curl -L "https://github.com/xtclang/xvm/archive/$VERSION.tar.gz" | tar -xz --strip-components=1; \
+    fi
 
-WORKDIR /launcher-src
-
-# Build launcher for target architecture with mount cache for compilation artifacts
+# Build launcher for target architecture
+WORKDIR /source/javatools_launcher/src/main/c
 RUN --mount=type=cache,target=/tmp/gcc-cache \
     set -e && \
     echo "Building launcher for ${TARGETOS}/${TARGETARCH}" && \
     case "${TARGETARCH}" in \
-        amd64) ARCH_FLAGS="" ;; \
-        arm64) ARCH_FLAGS="-march=armv8-a" ;; \
-        *) ARCH_FLAGS="" ;; \
+        amd64) ARCH_FLAGS="" && LAUNCHER_NAME="linux_launcher_x86_64" ;; \
+        arm64) ARCH_FLAGS="-march=armv8-a" && LAUNCHER_NAME="linux_launcher_aarch64" ;; \
+        *) ARCH_FLAGS="" && LAUNCHER_NAME="linux_launcher_${TARGETARCH}" ;; \
     esac && \
     mkdir -p /launcher-output /tmp/gcc-cache && \
     export TMPDIR=/tmp/gcc-cache && \
-    gcc -g -Wall -std=gnu11 -DlinuxLauncher -O0 ${ARCH_FLAGS} \
-        launcher.c os_linux.c os_unux.c -o /launcher-output/linux_launcher_${TARGETARCH}
+    gcc -static -g -Wall -std=gnu11 -DlinuxLauncher -O2 ${ARCH_FLAGS} \
+        launcher.c os_linux.c os_unux.c -o /launcher-output/${LAUNCHER_NAME}
 
 FROM eclipse-temurin:${JAVA_VERSION}-jdk AS builder
 
-ARG VERSION=local
+ARG VERSION
 ARG TARGETARCH
 ARG TARGETOS
+ARG BUILD_DATE
+ARG VCS_REF
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
@@ -46,57 +55,93 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /workspace
 
-# For local builds, only copy git-tracked files to avoid build artifacts and IDE files
-COPY --link .git .git/
-RUN git archive HEAD | tar -x && rm -rf .git
+# Download the same source code as launcher-builder
+RUN if [ -z "$VERSION" ]; then \
+        echo "Downloading latest master" && \
+        curl -L "https://github.com/xtclang/xvm/archive/refs/heads/master.tar.gz" | tar -xz --strip-components=1; \
+    else \
+        echo "Downloading commit/ref: $VERSION" && \
+        curl -L "https://github.com/xtclang/xvm/archive/$VERSION.tar.gz" | tar -xz --strip-components=1; \
+    fi
 
-# Copy the compiled launcher from launcher-builder stage
-COPY --from=launcher-builder /launcher-output/linux_launcher_${TARGETARCH} javatools_launcher/src/main/resources/exe/linux_launcher_${TARGETARCH}
+# Copy the compiled launcher from launcher-builder stage  
+COPY --from=launcher-builder /launcher-output/ javatools_launcher/src/main/resources/exe/
+
+COPY <<EOF /tmp/build_xdk.sh
+#!/bin/bash
+set -e
+
+arch_map() {
+    case "\$1" in
+        amd64) echo "x86_64" ;;
+        arm64) echo "aarch64" ;;
+        *) echo "\$1" ;;
+    esac
+}
+
+echo "Building XDK for \${TARGETOS}/\${TARGETARCH}"
+echo "Source already downloaded, starting build..."
+
+# Make gradle wrapper executable and build
+chmod +x ./gradlew
+./gradlew --no-daemon xdk:installDist
+
+echo "Build completed successfully"
+
+echo "Setting up native launchers for \${TARGETOS}/\${TARGETARCH}"
+ARCH_NAME=\$(arch_map \${TARGETARCH})
+LAUNCHER_BINARY="javatools_launcher/src/main/resources/exe/linux_launcher_\${ARCH_NAME}"
+
+if [ -f "\$LAUNCHER_BINARY" ]; then
+    echo "Using compiled launcher: \$LAUNCHER_BINARY"
+    cp "\$LAUNCHER_BINARY" "xdk/build/install/xdk/bin/xec"
+    cp "\$LAUNCHER_BINARY" "xdk/build/install/xdk/bin/xcc"
+    chmod +x "xdk/build/install/xdk/bin/xec" "xdk/build/install/xdk/bin/xcc"
+    echo "Native launchers installed successfully"
+else
+    echo "Warning: Launcher binary not found at \$LAUNCHER_BINARY"
+    echo "Available launcher files:"
+    ls -la javatools_launcher/src/main/resources/exe/ || true
+fi
+
+echo "Creating build info file..."
+BUILD_DATE_VAL="\${BUILD_DATE:-\$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"
+
+# Get actual commit hash if VERSION is empty (latest master)
+if [ -z "\$VERSION" ]; then
+    ACTUAL_COMMIT=\$(curl -s https://api.github.com/repos/xtclang/xvm/commits/master | grep "\"sha\":" | head -1 | cut -d'"' -f4)
+    VERSION_TO_USE="master-\${ACTUAL_COMMIT:0:8}"
+    GIT_COMMIT="\${VCS_REF:-\$ACTUAL_COMMIT}"
+else
+    VERSION_TO_USE="\$VERSION"
+    GIT_COMMIT="\${VCS_REF:-\$VERSION}"
+fi
+
+cat > "xdk/build/install/xdk/xvm.json" << JSONEOF
+{
+  "buildDate": "\$BUILD_DATE_VAL",
+  "gitCommit": "\$GIT_COMMIT",
+  "version": "\$VERSION_TO_USE",
+  "platform": "\${TARGETOS}/\${TARGETARCH}"
+}
+JSONEOF
+
+echo "Build info file created successfully"
+EOF
 
 RUN --mount=type=cache,target=/root/.gradle/caches \
     --mount=type=cache,target=/root/.gradle/wrapper \
-    set -e && \
-    REPO_URL="https://github.com/xtclang/xvm" && \
-    GRADLE_CMD="./gradlew --no-daemon xdk:installDist" && \
-    arch_map() { case "$1" in amd64) echo "x86_64";; arm64) echo "aarch64";; *) echo "$1";; esac; } && \
-    clean_workspace() { rm -rf ./* ./.??* 2>/dev/null || true; } && \
-    setup_gradle() { chmod +x ./gradlew; } && \
-    build_gradle() { setup_gradle && eval "$GRADLE_CMD"; } && \
-    download_and_build() { curl -L "$1" | tar -xz --strip-components=1 && build_gradle; } && \
-    echo "Building XDK for ${TARGETOS}/${TARGETARCH}" && \
-    case "$VERSION" in \
-        "local") echo "Using local source" && build_gradle ;; \
-        "latest") echo "Downloading latest master" && clean_workspace && download_and_build "$REPO_URL/archive/refs/heads/master.tar.gz" ;; \
-        v[0-9]*) echo "Using GitHub release: $VERSION" && clean_workspace && curl -L "$REPO_URL/releases/download/$VERSION/xdk.tar.gz" | tar -xz ;; \
-        *) echo "Downloading commit: $VERSION" && clean_workspace && download_and_build "$REPO_URL/archive/$VERSION.tar.gz" ;; \
-    esac && \
-    echo "Build completed successfully" && \
-    echo "Setting up native launchers for ${TARGETOS}/${TARGETARCH}" && \
-    LAUNCHER_BINARY="javatools_launcher/src/main/resources/exe/linux_launcher_${TARGETARCH}" && \
-    if [ -f "$LAUNCHER_BINARY" ]; then \
-        echo "Using compiled launcher: $LAUNCHER_BINARY" && \
-        cp "$LAUNCHER_BINARY" "xdk/build/install/xdk/bin/xec" && \
-        cp "$LAUNCHER_BINARY" "xdk/build/install/xdk/bin/xcc" && \
-        chmod +x "xdk/build/install/xdk/bin/xec" "xdk/build/install/xdk/bin/xcc" && \
-        echo "Native launchers installed successfully"; \
-    else \
-        echo "Warning: Launcher binary not found at $LAUNCHER_BINARY" && \
-        echo "Available launcher files:" && \
-        ls -la javatools_launcher/src/main/resources/exe/ || true; \
-    fi
+    chmod +x /tmp/build_xdk.sh && /tmp/build_xdk.sh
 
 # Export stage to copy launcher to host filesystem  
 FROM scratch AS launcher-export
 COPY --from=builder /workspace/javatools_launcher/src/main/resources/exe/linux_launcher_* /
 
-FROM eclipse-temurin:${JAVA_VERSION}-jre
+FROM eclipse-temurin:21-jre-alpine
 
-RUN groupadd -r xtclang && useradd -r -g xtclang -d /home/xtclang -m xtclang
 ENV XDK_HOME=/opt/xdk
-RUN mkdir -p /opt/xdk && chown xtclang:xtclang /opt/xdk
-COPY --from=builder --chown=xtclang:xtclang /workspace/xdk/build/install/xdk*/ /opt/xdk/
 ENV PATH="${XDK_HOME}/bin:${PATH}"
-USER xtclang
-WORKDIR /home/xtclang
+
+COPY --from=builder /workspace/xdk/build/install/xdk*/ /opt/xdk/
 
 CMD ["xec"]
