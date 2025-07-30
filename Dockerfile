@@ -137,7 +137,7 @@ RUN --mount=type=cache,target=/root/.gradle/caches \
 FROM scratch AS launcher-export
 COPY --from=builder /workspace/javatools_launcher/src/main/resources/exe/linux_launcher_* /
 
-FROM eclipse-temurin:21-jre-alpine
+FROM bellsoft/liberica-runtime-container:jre-21-slim-musl
 
 ENV XDK_HOME=/opt/xdk
 ENV PATH="${XDK_HOME}/bin:${PATH}"
