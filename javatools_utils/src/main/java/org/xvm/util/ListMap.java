@@ -85,6 +85,18 @@ public class ListMap<K,V>
         }
 
     /**
+     * Obtain an entry at the specified index.
+     *
+     * @param index  the entry index
+     *
+     * @return an entry
+     */
+    public Entry<K,V> entryAt(int index)
+        {
+        return m_list.get(index);
+        }
+
+    /**
      * Internal: Obtain the entry that corresponds to the specified key.
      *
      * @param key  the key

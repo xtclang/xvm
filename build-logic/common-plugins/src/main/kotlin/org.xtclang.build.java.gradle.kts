@@ -131,7 +131,7 @@ tasks.withType<Test>().configureEach {
 private fun enablePreview(): Boolean {
     val enablePreview = getXdkPropertyBoolean("$pprefix.enablePreview")
     if (enablePreview) {
-        logger.warn("$prefix WARNING: Project has Java preview features enabled.")
+        logger.info("$prefix WARNING: Project has Java preview features enabled.")
     }
     return enablePreview
 }
