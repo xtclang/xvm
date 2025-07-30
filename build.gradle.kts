@@ -79,6 +79,155 @@ private val publishTaskPrefixes = listOf("list", "delete")
 private val publishTaskSuffixesRemote = listOf("RemotePublications")
 private val publishTaskSuffixesLocal = listOf("LocalPublications")
 
+/**
+ * Docker tasks for building and pushing multi-platform container images
+ */
+val dockerBuildAmd64 by tasks.registering(Exec::class) {
+    group = "docker"
+    description = "Build Docker image for linux/amd64 platform"
+    
+    // Ensure XDK is built first
+    dependsOn(installDist)
+    
+    commandLine(
+        "docker", "buildx", "build",
+        "--platform", "linux/amd64",
+        "--build-arg", "VERSION=local",
+        "--tag", "ghcr.io/xtclang/xvm:latest-amd64",
+        "--tag", "ghcr.io/xtclang/xvm:${project.version}-amd64",
+        "--load",
+        "."
+    )
+    
+    workingDir = rootProject.projectDir
+    
+    doFirst {
+        logger.lifecycle("Building Docker image for linux/amd64 platform with VERSION=local...")
+        logger.lifecycle("Tags: ghcr.io/xtclang/xvm:latest-amd64, ghcr.io/xtclang/xvm:${project.version}-amd64")
+    }
+}
+
+val dockerBuildArm64 by tasks.registering(Exec::class) {
+    group = "docker"
+    description = "Build Docker image for linux/arm64 platform"
+    
+    // Ensure XDK is built first
+    dependsOn(installDist)
+    
+    commandLine(
+        "docker", "buildx", "build",
+        "--platform", "linux/arm64",
+        "--build-arg", "VERSION=local",
+        "--tag", "ghcr.io/xtclang/xvm:latest-arm64",
+        "--tag", "ghcr.io/xtclang/xvm:${project.version}-arm64",
+        "--load",
+        "."
+    )
+    
+    workingDir = rootProject.projectDir
+    
+    doFirst {
+        logger.lifecycle("Building Docker image for linux/arm64 platform with VERSION=local...")
+        logger.lifecycle("Tags: ghcr.io/xtclang/xvm:latest-arm64, ghcr.io/xtclang/xvm:${project.version}-arm64")
+    }
+}
+
+val dockerBuildMultiPlatform by tasks.registering(Exec::class) {
+    group = "docker"
+    description = "Build multi-platform Docker images for both amd64 and arm64"
+    
+    // Ensure XDK is built first
+    dependsOn(installDist)
+    
+    commandLine(
+        "docker", "buildx", "build",
+        "--platform", "linux/amd64,linux/arm64",
+        "--build-arg", "VERSION=local",
+        "--tag", "ghcr.io/xtclang/xvm:latest",
+        "--tag", "ghcr.io/xtclang/xvm:${project.version}",
+        "--tag", "ghcr.io/xtclang/xvm:latest-amd64",
+        "--tag", "ghcr.io/xtclang/xvm:${project.version}-amd64",
+        "--tag", "ghcr.io/xtclang/xvm:latest-arm64",
+        "--tag", "ghcr.io/xtclang/xvm:${project.version}-arm64",
+        "--push",
+        "."
+    )
+    
+    workingDir = rootProject.projectDir
+    
+    doFirst {
+        logger.lifecycle("Building multi-platform Docker images for linux/amd64 and linux/arm64 with VERSION=local...")
+        logger.lifecycle("Tags: ghcr.io/xtclang/xvm:latest, ghcr.io/xtclang/xvm:${project.version}")
+        logger.lifecycle("Platform-specific tags: -amd64, -arm64 suffixes")
+        logger.lifecycle("Images will be pushed directly to registry (multi-platform builds cannot use --load)")
+    }
+}
+
+val dockerPushAmd64 by tasks.registering(Exec::class) {
+    group = "docker"
+    description = "Push AMD64 Docker image to GitHub Container Registry"
+    
+    dependsOn(dockerBuildAmd64)
+    
+    commandLine(
+        "docker", "push", "ghcr.io/xtclang/xvm:latest-amd64"
+    )
+    
+    doLast {
+        project.providers.exec {
+            commandLine("docker", "push", "ghcr.io/xtclang/xvm:${project.version}-amd64")
+        }
+    }
+    
+    doFirst {
+        logger.lifecycle("Pushing AMD64 Docker image to GitHub Container Registry...")
+        logger.lifecycle("Make sure you're logged in with: docker login ghcr.io")
+    }
+}
+
+val dockerPushArm64 by tasks.registering(Exec::class) {
+    group = "docker"
+    description = "Push ARM64 Docker image to GitHub Container Registry"
+    
+    dependsOn(dockerBuildArm64)
+    
+    commandLine(
+        "docker", "push", "ghcr.io/xtclang/xvm:latest-arm64"
+    )
+    
+    doLast {
+        project.providers.exec {
+            commandLine("docker", "push", "ghcr.io/xtclang/xvm:${project.version}-arm64")
+        }
+    }
+    
+    doFirst {
+        logger.lifecycle("Pushing ARM64 Docker image to GitHub Container Registry...")
+        logger.lifecycle("Make sure you're logged in with: docker login ghcr.io")
+    }
+}
+
+val dockerPushAll by tasks.registering {
+    group = "docker"
+    description = "Push all platform-specific Docker images to GitHub Container Registry"
+    
+    dependsOn(dockerPushAmd64, dockerPushArm64)
+}
+
+val dockerBuild by tasks.registering {
+    group = "docker"
+    description = "Build Docker images for both platforms (amd64 and arm64)"
+    
+    dependsOn(dockerBuildAmd64, dockerBuildArm64)
+}
+
+val dockerBuildAndPush by tasks.registering {
+    group = "docker"
+    description = "Build and push Docker images for both platforms"
+    
+    dependsOn(dockerPushAll)
+}
+
 // list|deleteLocalPublicatiopns/remotePublications.
 publishTaskPrefixes.forEach { prefix ->
     buildList {

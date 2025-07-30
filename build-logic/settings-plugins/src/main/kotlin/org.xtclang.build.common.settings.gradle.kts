@@ -7,6 +7,10 @@
  * e.g. the JDK, through the Foojay Resolver plugin, which needs to come in at the settings level.
  */
 
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
+
 fun compositeRootRelativeFile(path: String): File? {
     var dir = file(".")
     var file = File(dir, path)

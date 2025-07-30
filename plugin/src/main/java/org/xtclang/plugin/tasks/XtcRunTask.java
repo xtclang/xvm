@@ -87,6 +87,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class, project));
     }
 
+
     @Internal
     @Override
     public final String getNativeLauncherCommandName() {

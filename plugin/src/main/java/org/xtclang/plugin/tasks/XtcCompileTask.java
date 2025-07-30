@@ -36,7 +36,7 @@ import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.launchers.CommandLine;
 
 @CacheableTask
-public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtension {
+public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtension {
     // Default values for inputs and outputs below are inherited from extension, can be reset per task
     protected final Property<Boolean> disableWarnings;
     protected final Property<Boolean> strict;
@@ -75,6 +75,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         this.rebuild = objects.property(Boolean.class).convention(ext.getRebuild());
         this.xtcVersion = objects.property(String.class).convention(ext.getXtcVersion());
     }
+
 
     private String getCompileSourceSetName() {
         final String taskName = getName();

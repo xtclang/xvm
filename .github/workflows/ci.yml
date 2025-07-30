@@ -1,19 +1,17 @@
 #
 # GitHub runner workflow for building, verifying and testing the XVM repo.
 #
-# TODO: Add periodic workflows (that can be manually triggered /w workflow_disspatch and also run through a cron file)
-#   1) Cleans out old workflows that have finished but not succeeded.
-#   2) Cleans Gradle and other build caches, maybe one every 24 h
-#   3) Cleans ...
-#
-# Check if "pull-request" makes it possible to add a branch protection status check requirement on master.
-# gh auth switch --hostname enterprise.internal --user monalisa  (switch auth)
 name: XVM Verification and Package Updates
 
 on:
   push:
   workflow_dispatch:
     inputs:
+      always_publish_snapshot:
+        description: 'Always publish snapshot regardless of branch'
+        type: boolean
+        required: false
+        default: false
       extra_gradle_options:
         description: 'Extra Gradle options to pass to the build'
         required: false
@@ -26,7 +24,7 @@ on:
 
 env:
   # TODO: Default should be disabled; we only want to be bothered by tagging and publishing for the master branch.
-  always_publish_snapshot: false
+  always_publish_snapshot: ${{ github.event.inputs.always_publish_snapshot == 'true' }}
 
   # Add manual tests as an included build to the composite build configuration, and also build them.
   ORG_GRADLE_PROJECT_includeBuildManualTests: true
@@ -52,6 +50,7 @@ env:
   skip_manual_tests_parallel: ${{ github.event.inputs.skip_manual_tests_parallel || 'false' }}
 
   java_version: 21
+  java_distribution: temurin
   gradle_version: 8.14.2
 
   # Build environment and build workflow debug flags.
@@ -82,7 +81,7 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: zulu
+          distribution: ${{ env.java_distribution }}
           java-version: ${{ env.java_version }}
 
       - name: Setup Gradle
@@ -149,44 +148,77 @@ jobs:
         run: |
           ./gradlew ${{ env.gradle_options }} manualTests:runParallel
 
-# TODO Marcus: this fails intermittently 
-#  publish-snapshot:
-#    name: Publish to GitHub packages iff snapshot + non-redundant build platform + branch is master
-#    needs: build-verify
-#    runs-on: ubuntu-latest
-#    #if: ${{ (github.ref == 'refs/heads/master') }}
-#    steps:
-#      # Check out current repository
-#      - name: Fetch Sources
-#        uses: actions/checkout@v4
-#
-#      # Set up Java environment for the next steps
-#      - name: Setup Java
-#        uses: actions/setup-java@v4
-#        with:
-#          distribution: zulu
-#          java-version: ${{ env.java_version }}
-#
-#      - name: Setup Gradle
-#        uses: gradle/actions/setup-gradle@v4
-#        with:
-#          cache-disabled: ${{ github.ref == 'refs/heads/master' }}
-#          cache-read-only: false
-#          gradle-version: ${{ env.gradle_version }}
-#
-#      - name: Dump environment info
-#        shell: bash
-#        run: |
-#          echo "*** Branch (github.ref)    : ${{ github.ref }}"
-#          echo "*** Commit (github.sha)    : ${{ github.sha }}"
-#          echo "*** Runner OS              : ${{ runner.os }}"
-#          echo "*** Java system properties :" 
-#          java -XshowSettings:properties --version
-#
-#      - name: Create or Update Snapshot (if pushed to 'master', or env.always_publish_snapshot is true)
-#        if: ${{ (env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
-#        shell: bash
-#        run: |
-#          ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true
-#          ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true
-#
+  publish-snapshot:
+    name: Publish to GitHub packages iff snapshot + non-redundant build platform + branch is master
+    needs: build-verify
+    runs-on: ubuntu-latest
+    if: ${{ (github.event.inputs.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
+    steps:
+      # Check out current repository
+      - name: Fetch Sources
+        uses: actions/checkout@v4
+
+      # Set up Java environment for the next steps
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: ${{ env.java_distribution }}
+          java-version: ${{ env.java_version }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: ${{ github.ref == 'refs/heads/master' }}
+          cache-read-only: false
+          gradle-version: ${{ env.gradle_version }}
+
+      - name: Dump environment info
+        shell: bash
+        run: |
+          echo "*** Branch (github.ref)    : ${{ github.ref }}"
+          echo "*** Commit (github.sha)    : ${{ github.sha }}"
+          echo "*** Runner OS              : ${{ runner.os }}"
+          echo "*** Workflow inputs:"
+          echo "    always_publish_snapshot (raw): '${{ github.event.inputs.always_publish_snapshot }}'"
+          echo "    always_publish_snapshot (env): '${{ env.always_publish_snapshot }}'"
+          echo "*** Java system properties :" 
+          java -XshowSettings:properties --version
+
+      - name: Create or Update Snapshot (if pushed to 'master', or env.always_publish_snapshot is true)
+        if: ${{ (env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
+        shell: bash
+        run: |
+          ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true
+          ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true
+
+      - name: Set up Docker Buildx
+        if: ${{ (env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: ${{ (env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}  
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        if: ${{ (env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/xtclang/xvm
+          tags: |
+            type=ref,event=branch,suffix=-amd64
+            type=sha,suffix=-amd64
+            type=raw,value=latest-amd64,enable={{is_default_branch}}
+
+      - name: Build and push Docker image (AMD64)
+        if: ${{ (env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
+        shell: bash
+        run: |
+          echo "Building and pushing Docker image for linux/amd64 platform..."
+          echo "Docker metadata: ${{ steps.meta.outputs.tags }}"
+          echo "Docker labels: ${{ steps.meta.outputs.labels }}"
+          ./gradlew ${{ env.gradle_options }} dockerPushAmd64

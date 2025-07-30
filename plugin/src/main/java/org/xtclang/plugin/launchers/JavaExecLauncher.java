@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.zip.ZipFile;
 
 import org.gradle.api.Project;
+import org.gradle.process.ExecOperations;
 import org.gradle.process.ExecResult;
 
 import org.xtclang.plugin.XtcLauncherTaskExtension;
@@ -26,11 +27,13 @@ import org.xtclang.plugin.tasks.XtcLauncherTask;
  * Launcher logic that runs the XTC launchers from classes on the classpath.
  */
 public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends XtcLauncher<E, T> {
-    public JavaExecLauncher(final Project project, final T task) {
+    private final ExecOperations execOperations;
+    
+    public JavaExecLauncher(final Project project, final T task, final ExecOperations execOperations) {
         super(project, task);
+        this.execOperations = execOperations;
     }
 
-    @SuppressWarnings("deprecation")
     @Override
     public ExecResult apply(final CommandLine cmd) {
         logger.info("{} Launching task: {}}", prefix, this);
@@ -49,13 +52,25 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
         }
 
         final var builder = resultBuilder(cmd);
-        return createExecResult(builder.execResult(project.getProject().javaexec(spec -> {
+        return createExecResult(builder.execResult(execOperations.javaexec(spec -> {
             redirectIo(builder, spec);
             spec.classpath(javaToolsJar);
             spec.getMainClass().set(cmd.getMainClassName());
             spec.args(cmd.toList());
             spec.jvmArgs(cmd.getJvmArgs());
             spec.setIgnoreExitValue(true);
+            
+            // Use the project's configured Java toolchain instead of current JVM
+            final var javaExtension = project.getProject().getExtensions().findByType(org.gradle.api.plugins.JavaPluginExtension.class);
+            if (javaExtension != null) {
+                final var toolchains = project.getProject().getExtensions().getByType(org.gradle.jvm.toolchain.JavaToolchainService.class);
+                final var launcher = toolchains.launcherFor(javaExtension.getToolchain());
+                final var toolchainExecutable = launcher.get().getExecutablePath().toString();
+                logger.info("{} Using Java toolchain executable: {}", prefix, toolchainExecutable);
+                spec.setExecutable(toolchainExecutable);
+            } else {
+                logger.warn("{} No Java extension found, using default JVM", prefix);
+            }
         })));
     }
 
