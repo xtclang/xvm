@@ -100,7 +100,7 @@ publishing {
                 description = "XTC Language Software Development Kit (XDK) Distribution Archive"
                 url = "https://xtclang.org"
             }
-            logger.info("$prefix Publication '$name' configured for '$groupId:$artifactId:$version'")
+            logger.info("Publication '$name' configured for '$groupId:$artifactId:$version'")
             artifact(tasks.distZip) {
                 extension = "zip"
             }
@@ -140,7 +140,7 @@ val cleanXdk by tasks.registering(Delete::class) {
 val clean by tasks.existing {
     dependsOn(cleanXdk)
     doLast {
-        logger.info("$prefix WARNING: Note that running 'clean' is often unnecessary with a properly configured build cache.")
+        logger.info("WARNING: Note that running 'clean' is often unnecessary with a properly configured build cache.")
     }
 }
 
@@ -152,7 +152,7 @@ tasks.withType<Sign>().configureEach {
     val sign = getXdkPropertyBoolean("org.xtclang.signing.enabled", isRelease())
     // TODO: Before mavenCentral access tokens are sorted, signing should never be enabled:
     require(!sign) { "Signing is not enabled, and should not be enabled until we are sure default configs work." }
-    logger.info("$prefix Publication for project '${project.name}' will ${if (sign) "" else "NOT "}be signed.")
+    logger.info("Publication for project '${project.name}' will ${if (sign) "" else "NOT "}be signed.")
     onlyIf {
         sign
     }
@@ -187,7 +187,7 @@ val ensureTags by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Ensure that the current commit is tagged with the current version."
     if (!allowPublication()) {
-        logger.lifecycle("$prefix Skipping publication task, snapshotOnly=${snapshotOnly()} for version: '$semanticVersion")
+        logger.lifecycle("Skipping publication task, snapshotOnly=${snapshotOnly()} for version: '$semanticVersion")
     }
     onlyIf {
         allowPublication()
@@ -195,13 +195,13 @@ val ensureTags by tasks.registering {
     doLast {
         val snapshotOnly = snapshotOnly()
         logger.lifecycle("""
-            $prefix Ensuring that the current commit is tagged with version.
-            $prefix     version: $semanticVersion
-            $prefix     snapshotOnly: $snapshotOnly
+            Ensuring that the current commit is tagged with version.
+                version: $semanticVersion
+                snapshotOnly: $snapshotOnly
         """.trimIndent())
         val tag = xdkBuildLogic.gitHubProtocol().ensureTags(snapshotOnly)
         if (GitHubProtocol.tagCreated(tag)) {
-            logger.lifecycle("$prefix Created or updated tag '$tag' for version: '$semanticVersion'")
+            logger.lifecycle("Created or updated tag '$tag' for version: '$semanticVersion'")
         }
     }
 }
@@ -222,7 +222,7 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
     }
     contents {
         val xdkTemplate = tasks.processResources.map {
-            logger.info("$prefix Resolving processResources output (this should be during the execution phase).");
+            logger.info("Resolving processResources output (this should be during the execution phase).");
             File(it.outputs.files.singleFile, "xdk")
         }
         from(xdkTemplate) {
@@ -262,5 +262,5 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
 }
 
 val installDist by tasks.existing {
-    dependsOn(tasks.compileXtc)
+    dependsOn(tasks.assemble)
 }

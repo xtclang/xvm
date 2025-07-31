@@ -55,8 +55,8 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
 
     init {
         this.properties = resolve()
-        toString().lines().forEach { logger.info("$prefix $it") }
-        logger.info("$prefix Resolved ${properties.size} properties for project.")
+        toString().lines().forEach { logger.info(it) }
+        logger.info("Resolved ${properties.size} properties for project.")
     }
 
     /**
@@ -78,14 +78,14 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
      * build breaks.
      */
     override fun get(key: String, defaultValue: String?): String {
-        logger.info("$prefix get($key) invoked (props: ${System.identityHashCode(this)})")
+        logger.info("get($key) invoked (props: ${System.identityHashCode(this)})")
         if (!key.startsWith("org.xtclang")) {
             // TODO: Remove this artificial limitation.
             throw project.buildException("ERROR: XdkProperties are currently expected to start with org.xtclang. Remove this artificial limitation.")
         }
         if (!has(key)) {
             return defaultValue?.also {
-                logger.info("$prefix XdkProperties; resolved property '$key' to its default value.")
+                logger.info("XdkProperties; resolved property '$key' to its default value.")
             } ?: throw project.buildException("ERROR: XdkProperty '$key' has no value, and no default was given.")
         }
 
@@ -93,17 +93,17 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
         val envKey = toSystemEnvKey(key)
         val envValue = System.getenv(envKey)
         if (envValue != null) {
-            logger.info("$prefix XdkProperties; resolved System ENV property '$key' (${envKey}).")
+            logger.info("XdkProperties; resolved System ENV property '$key' (${envKey}).")
             return envValue.toString()
         }
 
         val sysPropValue = System.getProperty(key)
         if (sysPropValue != null) {
-            logger.info("$prefix XdkProperties; resolved Java System property '$key'.")
+            logger.info("XdkProperties; resolved Java System property '$key'.")
             return sysPropValue.toString()
         }
 
-        logger.info("$prefix XdkProperties; resolved property '$key' from properties table.")
+        logger.info("XdkProperties; resolved property '$key' from properties table.")
         return properties[key]!!.toString()
     }
 
@@ -142,7 +142,7 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
             resolveExternalDirs().forEach { mergeFromDir(ext, it) }
             ext.keys.map { it.toString() }.forEach(secrets::add)
         }
-        logger.info("$prefix Internals; loaded properties (${all.size} internal, ${ext.size} external).")
+        logger.info("Internals; loaded properties (${all.size} internal, ${ext.size} external).")
         return merge(all, ext)
     }
 
@@ -185,11 +185,11 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
         from.forEach { key, value ->
             val old = to.putIfAbsent(key, value)
             if (old == null) {
-                logger.info("$prefix Defined new property: '$key'")
+                logger.info("Defined new property: '$key'")
             } else {
-                logger.info("$prefix Property '$key' already defined, not overwriting.")
+                logger.info("Property '$key' already defined, not overwriting.")
                 if (old != value) {
-                    logger.info("$prefix     WARNING: Property '$key' has different values at different levels.")
+                    logger.info("    WARNING: Property '$key' has different values at different levels.")
                 }
             }
         }
@@ -206,7 +206,7 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
         for (f in files) {
             assert(f.exists() && f.isFile)
             FileInputStream(f).use { local.load(it) }
-            logger.info("$prefix Loaded ${local.size} properties from ${f.absolutePath}")
+            logger.info("Loaded ${local.size} properties from ${f.absolutePath}")
         }
         return merge(to, local)
     }

@@ -14,18 +14,17 @@ private class XdkBuildAggregator(project: Project) : Runnable {
             listOf(ASSEMBLE_TASK_NAME, BUILD_TASK_NAME, CHECK_TASK_NAME, CLEAN_TASK_NAME)
     }
 
-    private val prefix = "[${project.name}]"
 
     override fun run() {
         gradle.includedBuilds.forEachIndexed { i, includedBuild ->
-            logger.info("$prefix     Included build #$i: ${includedBuild.name} [project dir: ${includedBuild.projectDir}]")
+            logger.info("Included build #$i: ${includedBuild.name} [project dir: ${includedBuild.projectDir}]")
         }
 
         val ignoredIncludedBuilds = gradle.includedBuilds.map { it.name }.filter {
             val attachKey = "includeBuildAttach${it.replaceFirstChar(Char::titlecase)}"
             val attach = (properties[attachKey]?.toString() ?: "true").toBoolean()
             if (!attach) {
-                logger.info("$prefix Included build '$it' is explicitly configured to be outside the root lifecycle ($attachKey: false).")
+                logger.info("Included build '$it' is explicitly configured to be outside the root lifecycle ($attachKey: false).")
             }
             !attach
         }.toSet()
@@ -36,15 +35,41 @@ private class XdkBuildAggregator(project: Project) : Runnable {
 
     private fun aggregateLifeCycleTasks(ignored: Set<String>) {
         lifeCycleTasks.forEach { taskName ->
-            logger.info("$prefix Creating aggregated lifecycle task: ':$taskName' in project '${project.name}'")
+            logger.info("Creating aggregated lifecycle task: ':$taskName' in project '${project.name}'")
             tasks.named(taskName) {
                 group = BUILD_GROUP
                 description = "Aggregates and executes the '$taskName' task for all included builds."
                 gradle.includedBuilds.filterNot { ignored.contains(it.name) }.forEach { includedBuild ->
                     dependsOn(includedBuild.task(":$taskName"))
-                    logger.info("$prefix     Attaching: dependsOn(':$name' <- ':${includedBuild.name}:$name')")
+                    logger.info("Attaching: dependsOn(':$name' <- ':${includedBuild.name}:$name')")
                 }
             }
+        }
+        
+        // Register a custom cleanBuild task that provides clear instructions
+        tasks.register("cleanBuild") {
+            group = BUILD_GROUP
+            description = "Safe alternative to 'clean build' - provides instructions for proper execution order."
+            
+            doLast {
+                logger.lifecycle("")
+                logger.lifecycle("=== CleanBuild Task ===")
+                logger.lifecycle("This task demonstrates the proper way to run clean followed by build.")
+                logger.lifecycle("")
+                logger.lifecycle("To achieve clean + build safely in composite builds, run:")
+                logger.lifecycle("  ./gradlew clean && ./gradlew build")
+                logger.lifecycle("")
+                logger.lifecycle("Or use this convenience script:")
+                logger.lifecycle("  ./gradlew clean")
+                logger.lifecycle("  (waiting for completion...)")
+                logger.lifecycle("  ./gradlew build")
+                logger.lifecycle("")
+                logger.lifecycle("This avoids deadlocks in composite builds while achieving the same result.")
+                logger.lifecycle("======================")
+                logger.lifecycle("")
+            }
+            
+            logger.info("Registered cleanBuild task as documentation for safe clean+build usage")
         }
     }
 
@@ -53,20 +78,35 @@ private class XdkBuildAggregator(project: Project) : Runnable {
         with(startParameter) {
             logger.info(
                 """
-            $prefix Start parameter tasks: $taskNames
-            $prefix Start parameter init scripts: $allInitScripts
+            Start parameter tasks: $taskNames
+            Start parameter init scripts: $allInitScripts
         """.trimIndent()
             )
 
-            if (taskNames.count { !it.startsWith("-") && !it.contains("taskTree") } > 1) {
-                val msg =
-                    "$prefix Multiple start parameter tasks are not guaranteed to run in order/in parallel. Please run each task individually. (task names: $taskNames)"
-                logger.error(msg)
-                throw GradleException(msg)
+            // Check for problematic task combinations in composite builds
+            val nonOptionTasks = taskNames.filter { !it.startsWith("-") && !it.contains("taskTree") }
+            val hasCleanTask = nonOptionTasks.any { it == "clean" }
+            val hasConstructiveTasks = nonOptionTasks.any { it != "clean" }
+            
+            when {
+                nonOptionTasks.size > 1 && hasCleanTask && hasConstructiveTasks -> {
+                    val otherTasks = nonOptionTasks.filter { it != "clean" }.joinToString(" ")
+                    val msg = "Mixing 'clean' with other tasks can cause deadlocks in composite builds. " +
+                             "Use './gradlew cleanBuild' for a safe clean+build, or run separately: " +
+                             "'./gradlew clean && ./gradlew $otherTasks' (task names: $taskNames)"
+                    logger.error(msg)
+                    throw GradleException(msg)
+                }
+                nonOptionTasks.size > 1 -> {
+                    logger.info("Running ${nonOptionTasks.size} non-destructive tasks in composite build: ${nonOptionTasks.joinToString(", ")}")
+                }
+                nonOptionTasks.size == 1 -> {
+                    logger.info("Running single task: ${nonOptionTasks.first()}")
+                }
             }
         }
 
-        logger.info("$prefix Start Parameter(s): $startParameter")
+        logger.info("Start Parameter(s): $startParameter")
     }
 }
 

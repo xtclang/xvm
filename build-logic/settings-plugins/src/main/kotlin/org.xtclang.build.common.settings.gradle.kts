@@ -38,5 +38,4 @@ dependencyResolutionManagement {
 }
 
 // Optional: Log version info for debugging (read from catalog)
-val prefix = "[${rootProject.name}]"
-logger.info("$prefix Using version catalog from: $libsVersionCatalog")
+logger.info("Using version catalog from: $libsVersionCatalog")
