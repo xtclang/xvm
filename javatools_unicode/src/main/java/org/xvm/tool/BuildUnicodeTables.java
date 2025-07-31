@@ -85,9 +85,7 @@ public class BuildUnicodeTables {
         Arrays.fill(cats, new CharData().cat());
         // String[] labels = new String[cAll];
         final int[] decs = new int[cAll];
-        //CHECKSTYLE:OFF
         Arrays.fill(decs, 10); // 10 is illegal; use as "null"
-        //CHECKSTYLE:ON
         final String[] nums = new String[cAll];
         final int[] cccs = new int[cAll];
         Arrays.fill(cccs, 255); // 255 is illegal; use as "null"
@@ -372,7 +370,6 @@ public class BuildUnicodeTables {
         @XmlAttribute(name = "blk")
         String blk;
 
-        @SuppressWarnings("checkstyle:MagicNumber")
         int cat() {
             if (null == gc) {
                 return 29;
