@@ -52,7 +52,6 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
         return out instanceof PrintStream ? (PrintStream)out : new PrintStream(out);
     }
 
-    // CHECKSTYLE: OFF
     @Override
     public ExecResult apply(final CommandLine cmd) {
         logger.info("{} Launching task {}}", prefix, this);
@@ -92,7 +91,6 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
         }
         return createExecResult(builder);
     }
-    // CHECKSTYLE: ON
 
     private void handleThrowable(final XtcExecResultBuilder builder, final Throwable t) {
         final var cause = t.getCause();
