@@ -1321,6 +1321,9 @@ public abstract class Op {
         case OP_MBIND:       return new MBind       (in, aconst);
         case OP_FBIND:       return new FBind       (in, aconst);
 
+        case OP_LOOP:        return new Loop        ();
+        case OP_LOOP_END:    return new LoopEnd     ();
+
         case OP_JMP:         return new Jump        (in, aconst);
         case OP_JMP_TRUE:    return new JumpTrue    (in, aconst);
         case OP_JMP_FALSE:   return new JumpFalse   (in, aconst);
@@ -1556,6 +1559,8 @@ public abstract class Op {
         case OP_RETURN_T:    return "RETURN_T";
         case OP_MBIND:       return "BIND_M";
         case OP_FBIND:       return "BIND_F";
+        case OP_LOOP:        return "LOOP";
+        case OP_LOOP_END:    return "LOOP_END";
         case OP_JMP:         return "JMP";
         case OP_JMP_TRUE:    return "JMP_TRUE";
         case OP_JMP_FALSE:   return "JMP_FALSE";
@@ -1906,8 +1911,9 @@ public abstract class Op {
     public static final int OP_IS_TYPE      = 0x74;
     public static final int OP_IS_NTYPE     = 0x75;
     public static final int OP_RSVD_76      = 0x76;
-    public static final int OP_RSVD_77      = 0x77;
-    public static final int OP_RSVD_78      = 0x78;
+
+    public static final int OP_LOOP         = 0x77;
+    public static final int OP_LOOP_END     = 0x78;
 
     public static final int OP_JMP          = 0x79;
     public static final int OP_JMP_TRUE     = 0x7A;
