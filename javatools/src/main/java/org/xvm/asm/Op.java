@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -29,6 +31,8 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.ast.BinaryAST;
 
 import org.xvm.asm.op.*;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -412,6 +416,17 @@ public abstract class Op {
     protected int calcExits(Op opDest) {
         return Math.abs(opDest.getDepth() - getDepth() - (isEnter() ? 1 : 0) + (isExit() ? 1 : 0));
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    /**
+     * Build the Java code for this op.
+     */
+    public void build(BuildContext bctx, CodeBuilder code) {
+        throw new UnsupportedOperationException(toString());
+    }
+
+    // ----- debugging support ---------------------------------------------------------------------
 
     @Override
     public String toString() {

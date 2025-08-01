@@ -2,29 +2,35 @@ package org.xvm.javajit;
 
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.TypeKind;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import org.xvm.asm.ConstantPool;
+
 import org.xvm.asm.constants.TypeConstant;
 
+import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_int;
+import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 
 /**
- * Java class builder.
+ * Base class for JIT class builders.
  */
-public interface Builder {
+public abstract class Builder {
     /**
      * Assemble the java class for an "impl" shape.
      */
-    default void assembleImpl(String className, ClassBuilder classBuilder) {
+    public void assembleImpl(String className, ClassBuilder classBuilder) {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Assemble the java class for a "pure" shape.
      */
-    default void assemblePure(String className, ClassBuilder classBuilder) {
+    public void assemblePure(String className, ClassBuilder classBuilder) {
         throw new UnsupportedOperationException();
     }
 
@@ -33,7 +39,7 @@ public interface Builder {
     /**
      * Compute a MethodTypeDesc for a Java method with the specified parameter and return types.
      */
-    static MethodTypeDesc computeMethodDesc(TypeSystem typeSystem, TypeConstant[] paramTypes,
+    public static MethodTypeDesc computeMethodDesc(TypeSystem typeSystem, TypeConstant[] paramTypes,
                                             TypeConstant[] returnTypes) {
         int         paramCount = paramTypes.length;
         ClassDesc[] paramCDs   = new ClassDesc[paramCount + 1];
@@ -51,91 +57,204 @@ public interface Builder {
     /**
      * Generate a default value "load" for the specified Java class.
      */
-    static void defaultLoad(CodeBuilder codeBuilder, ClassDesc cd) {
+    public static void defaultLoad(CodeBuilder code, ClassDesc cd) {
         if (cd.isPrimitive()) {
             switch (cd.descriptorString()) {
                 case "I", "S", "B", "C", "Z":
-                    codeBuilder.iconst_0();
+                    code.iconst_0();
                     break;
                 case "J":
-                    codeBuilder.lconst_0();
+                    code.lconst_0();
                     break;
                 case "F":
-                    codeBuilder.fconst_0();
+                    code.fconst_0();
                     break;
                 case "D":
-                    codeBuilder.dconst_0();
+                    code.dconst_0();
                     break;
                 case "V":
                     break;
             }
         } else {
-            codeBuilder.aconst_null();
+            code.aconst_null();
         }
     }
 
     /**
      * Generate a default return for the specified Java class.
      */
-    static void defaultReturn(CodeBuilder codeBuilder, ClassDesc cd) {
+    public static void defaultReturn(CodeBuilder code, ClassDesc cd) {
         if (cd.isPrimitive()) {
             switch (cd.descriptorString()) {
                 case "I", "S", "B", "C", "Z":
-                    codeBuilder.ireturn();
+                    code.ireturn();
                     break;
                 case "J":
-                    codeBuilder.lreturn();
+                    code.lreturn();
                     break;
                 case "F":
-                    codeBuilder.freturn();
+                    code.freturn();
                     break;
                 case "D":
-                    codeBuilder.dreturn();
+                    code.dreturn();
                     break;
                 case "V":
-                    codeBuilder.return_();
+                    code.return_();
                     break;
             }
         } else {
-            codeBuilder.aconst_null().areturn();
+            code.aconst_null().areturn();
         }
+    }
+
+    /**
+     * Generate unboxing opcodes for a wrapper reference on the stack and the specified primitive class.
+     * In: the boxed reference
+     * Out: unboxed primitive value
+     *
+     * @param type  the primitive type
+     * @param cd    the corresponding ClassDesc
+     */
+    public static void unbox(CodeBuilder code, TypeSystem ts, TypeConstant type, ClassDesc cd) {
+        assert cd.isPrimitive() && type.isPrimitive();
+
+        ConstantPool pool = type.getConstantPool();
+        switch (cd.descriptorString()) {
+            case "Z": // boolean
+                assert type.equals(pool.typeBoolean());
+                code.getfield(CD_Boolean, "$value", cd);
+                break;
+
+            case "J": // long
+                if (type.equals(pool.typeInt64())) {
+                    code.getfield(CD_Int64, "$value", cd);
+                } else {
+                    // TODO: does this cover all types?
+                    ClassDesc boxCD = ClassDesc.of(type.ensureJitClassName(ts));
+                    code.getfield(boxCD, "$value", cd);
+                }
+                break;
+
+            case "I": // int
+                if (type.equals(pool.typeChar())) {
+                     // REVIEW: what Java type is the prop of UInt32? what's the name?
+                    code.getfield(CD_Char, "codepoint", cd);
+                } else {
+                    throw new UnsupportedOperationException();
+                }
+                break;
+
+            default:
+                throw new UnsupportedOperationException();
+        }
+    }
+
+    /**
+     * Generate boxing opcodes for a primitive value of the specified primitive class on the stack.
+     * In: unboxed primitive value
+     * Out: the boxed reference
+     */
+    public static void box(CodeBuilder code, TypeSystem ts, TypeConstant type, ClassDesc cd) {
+        assert cd.isPrimitive() && type.isPrimitive();
+
+        ConstantPool pool = type.getConstantPool();
+        switch (cd.descriptorString()) {
+            case "Z": // boolean
+                assert type.equals(pool.typeBoolean());
+                code.invokestatic(CD_Boolean, "$box", MD_Boolean_box);
+                break;
+
+            case "J": // long
+                if (type.equals(pool.typeInt64())) {
+                    code.invokestatic(CD_Int64, "$box", MD_Int64_box);
+                } else {
+                    // TODO: does this cover all types?
+                    ClassDesc      boxCD = ClassDesc.of(type.ensureJitClassName(ts));
+                    MethodTypeDesc boxMD = MethodTypeDesc.of(boxCD, cd);
+                    code.invokestatic(boxCD, "$box", boxMD);
+                }
+                break;
+
+            case "I": // int
+                if (type.equals(pool.typeChar())) {
+                    code.invokestatic(CD_Char, "$box", MD_Char_box);
+                } else {
+                    throw new UnsupportedOperationException();
+                }
+                break;
+
+            default:
+                throw new UnsupportedOperationException();
+        }
+    }
+
+
+    /**
+     * Compute the TypeKind based on the ClassDesc.
+     */
+    public static TypeKind toTypeKind(ClassDesc cd) {
+        return switch (cd.descriptorString()) {
+            case "B" -> TypeKind.BYTE;
+            case "C" -> TypeKind.CHAR;
+            case "D" -> TypeKind.DOUBLE;
+            case "F" -> TypeKind.FLOAT;
+            case "I" -> TypeKind.INT;
+            case "J" -> TypeKind.LONG;
+            case "S" -> TypeKind.SHORT;
+            case "Z" -> TypeKind.BOOLEAN;
+            case "V" -> TypeKind.VOID;
+            default  -> TypeKind.REFERENCE;
+        };
     }
 
     // ----- native class names --------------------------------------------------------------------
 
-    String N_Object    = "org.xtclang.ecstasy.Object";
-    String N_Boolean   = "org.xtclang.ecstasy.Boolean";
-    String N_Null      = "org.xtclang.ecstasy.Null";
-    String N_xConst    = "org.xtclang.ecstasy.xConst";
-    String N_xFunction = "org.xtclang.ecstasy.xFunction";
-    String N_xModule   = "org.xtclang.ecstasy.xModule";
-    String N_xObj      = "org.xtclang.ecstasy.xObj";
-    String N_xService  = "org.xtclang.ecstasy.xService";
-    String N_xType     = "org.xtclang.ecstasy.xType";
+    public static final String N_Object      = "org.xtclang.ecstasy.Object";
+    public static final String N_Boolean     = "org.xtclang.ecstasy.Boolean";
+    public static final String N_Null        = "org.xtclang.ecstasy.Null";
+    public static final String N_xConst      = "org.xtclang.ecstasy.xConst";
+    public static final String N_xFunction   = "org.xtclang.ecstasy.xFunction";
+    public static final String N_xModule     = "org.xtclang.ecstasy.xModule";
+    public static final String N_xObj        = "org.xtclang.ecstasy.xObj";
+    public static final String N_xService    = "org.xtclang.ecstasy.xService";
+    public static final String N_xType       = "org.xtclang.ecstasy.xType";
 
-    String N_Char      = "org.xtclang.ecstasy.text.Char";
-    String N_String    = "org.xtclang.ecstasy.text.String";
+    public static final String N_Char        = "org.xtclang.ecstasy.text.Char";
+    public static final String N_String      = "org.xtclang.ecstasy.text.String";
 
-    String N_Int64     = "org.xtclang.ecstasy.numbers.Int64";
+    public static final String N_Int64       = "org.xtclang.ecstasy.numbers.Int64";
 
     // ----- well-known class suffixes -------------------------------------------------------------
 
-    String OPT = "$p"; // method contains primitive types
+    public static final String OPT = "$p"; // method contains primitive types
 
     // ----- well-known class descriptors ----------------------------------------------------------
 
-    ClassDesc CD_xObj       = ClassDesc.of(N_xObj);
-    ClassDesc CD_xConst     = ClassDesc.of(N_xConst);
-    ClassDesc CD_xFunction  = ClassDesc.of(N_xFunction);
+    public static final ClassDesc CD_xConst        = ClassDesc.of(N_xConst);
+    public static final ClassDesc CD_xFunction     = ClassDesc.of(N_xFunction);
+    public static final ClassDesc CD_xModule       = ClassDesc.of(N_xModule);
 
-    ClassDesc CD_Boolean    = ClassDesc.of(N_Boolean);
-    ClassDesc CD_Char       = ClassDesc.of(N_Char);
-    ClassDesc CD_Int64      = ClassDesc.of(N_Int64);
-    ClassDesc CD_Null       = ClassDesc.of(N_Null);
-    ClassDesc CD_Object     = ClassDesc.of(N_Object);
-    ClassDesc CD_String     = ClassDesc.of(N_String);
 
-    ClassDesc CD_Container  = ClassDesc.of(Container.class.getName());
-    ClassDesc CD_Ctx        = ClassDesc.of(Ctx.class.getName());
-    ClassDesc CD_TypeSystem = ClassDesc.of(TypeSystem.class.getName());
+    public static final ClassDesc CD_xObj          = ClassDesc.of(N_xObj);
+
+    public static final ClassDesc CD_Boolean       = ClassDesc.of(N_Boolean);
+    public static final ClassDesc CD_Char          = ClassDesc.of(N_Char);
+    public static final ClassDesc CD_Int64         = ClassDesc.of(N_Int64);
+    public static final ClassDesc CD_Null          = ClassDesc.of(N_Null);
+    public static final ClassDesc CD_Object        = ClassDesc.of(N_Object);
+    public static final ClassDesc CD_String        = ClassDesc.of(N_String);
+
+    public static final ClassDesc CD_Container     = ClassDesc.of(Container.class.getName());
+    public static final ClassDesc CD_Ctx           = ClassDesc.of(Ctx.class.getName());
+    public static final ClassDesc CD_TypeConstant  = ClassDesc.of(TypeConstant.class.getName());
+    public static final ClassDesc CD_TypeSystem    = ClassDesc.of(TypeSystem.class.getName());
+
+    public static final ClassDesc CD_JavaString    = ClassDesc.of(java.lang.String.class.getName());
+    public static final ClassDesc CD_JavaObject    = ClassDesc.of(java.lang.Object.class.getName());
+
+    // ----- well-known methods --------------------------------------------------------------------
+
+    public static final MethodTypeDesc MD_Char_box    = MethodTypeDesc.of(CD_Char, CD_int);
+    public static final MethodTypeDesc MD_Boolean_box = MethodTypeDesc.of(CD_Boolean, CD_boolean);
+    public static final MethodTypeDesc MD_Int64_box   = MethodTypeDesc.of(CD_Int64, CD_long);
 }
