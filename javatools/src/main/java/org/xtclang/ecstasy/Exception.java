@@ -34,4 +34,10 @@ public class Exception extends RuntimeException implements Object {
         text = text == null ? ("OutOfBounds: " + text) : "OutOfBounds";
         return cause == null ? new Exception(text) : new Exception(text, cause);
     }
+
+    public static Exception $unassigned(java.lang.String text, Exception cause) {
+        // TODO - ditto
+        text = text == null ? ("Unassigned: " + text) : "Unassigned";
+        return cause == null ? new Exception(text) : new Exception(text, cause);
+    }
 }

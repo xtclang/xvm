@@ -40,7 +40,7 @@ public class JitTypeDesc {
             if (id.getName().startsWith("Int")) {
                 if (type.equals(pool.typeInt64()) || type.equals(pool.typeInt32()) ||
                     type.equals(pool.typeInt16()) || type.equals(pool.typeInt8())) {
-
+                    // TODO: use "int" and "byte" for lower arity types
                     return CD_long;
                 }
             } else if (id.getName().startsWith("UInt")) {

@@ -7333,6 +7333,14 @@ public abstract class TypeConstant
         return sJitName;
         }
 
+    /**
+     * @return true iff this type may represent a primitive JIT type
+     */
+    public boolean isPrimitive()
+        {
+        return false;
+        }
+
 
     // ----- run-time support ----------------------------------------------------------------------
 

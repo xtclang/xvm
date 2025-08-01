@@ -1,5 +1,19 @@
 package org.xvm.javajit;
 
+import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
+
+import java.util.function.Function;
+
+import org.xvm.asm.Constant;
+import org.xvm.asm.constants.TypeConstant;
+
+import static java.lang.constant.ConstantDescs.CD_int;
+
+import static org.xvm.javajit.Builder.CD_JavaObject;
+import static org.xvm.javajit.Builder.CD_JavaString;
+import static org.xvm.javajit.Builder.CD_TypeConstant;
+
 /**
  * The runtime context of a logical thread of execution. Enables multiple returns, tuple
  * return functionality, etc.
@@ -110,6 +124,30 @@ public final class Ctx {
     }
 
     // ----- Container and Service support ---------------------------------------------------------
-
     // TODO
+
+
+    /**
+     * Helper method to retrieve a constant at the specified index.
+     */
+    public Constant getConstant(int index) {
+        return container.typeSystem.getConstant(index);
+    }
+
+    /**
+     * Injection helper.
+     */
+    public Object inject(TypeConstant resourceType, String resourceName, Object opts) {
+        Function supplier = container.injector.supplierOf(resourceType, resourceName);
+
+        return supplier == null ? null : supplier.apply(opts);
+    }
+
+    public static final MethodTypeDesc MD_getConstant = MethodTypeDesc.of(
+        ClassDesc.of(Constant.class.getName()), CD_int);
+
+    public static MethodTypeDesc MD_inject = MethodTypeDesc.of(
+        CD_JavaObject, CD_TypeConstant, CD_JavaString, CD_JavaObject);
+
+
 }

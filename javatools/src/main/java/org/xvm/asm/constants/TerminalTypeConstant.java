@@ -2163,6 +2163,30 @@ public class TerminalTypeConstant
             }
         }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public boolean isPrimitive()
+        {
+        if (isSingleDefiningConstant() && getDefiningConstant() instanceof ClassConstant id
+                && id.getModuleConstant().isEcstasyModule())
+            {
+            return switch (id.getName())
+                {
+                case "Int8",  "Int16",  "Int32",  "Int64",  "Int128",
+                     "UInt8", "UInt16", "UInt32", "UInt64", "UInt128",
+                     "Float16", "Float32", "Float64",
+                     "Dec32", "Dec64",
+                     "Boolean",
+                     "Char"
+                        -> true;
+                default -> false;
+                };
+            }
+        return false;
+        }
+
+
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override

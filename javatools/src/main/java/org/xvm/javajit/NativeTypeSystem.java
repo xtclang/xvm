@@ -129,7 +129,7 @@ public class NativeTypeSystem
      */
     public final Map<TypeConstant, Class> nativeBuilders = new ConcurrentHashMap<>();
 
-    public static String XTC_BRIDGE_PREFIX  = "_native.";
+    public static String XTC_BRIDGE_PREFIX = "org.xtclang._native.";
 
     /**
      * Load the native class for the specified name.
@@ -207,24 +207,6 @@ public class NativeTypeSystem
                 mm.flags().flagsMask(), methodHandler);
 
         });
-    }
-
-    /**
-     * @return a ClassStructure for a "bridge" component
-     */
-    public ClassStructure getBridgeClassStructure(String name) {
-        assert name.startsWith(XTC_BRIDGE_PREFIX);
-
-        return (ClassStructure) bridgeLoader.module.getChildByPath(
-                name.substring(XTC_BRIDGE_PREFIX.length()));
-    }
-
-    /**
-     * @return a Java class name for a "bridge" component
-     */
-    public String getBridgeClassName(String name) {
-        return bridgeLoader.prefix +
-            getBridgeClassStructure(name).getIdentityConstant().getPathString();
     }
 
     protected Builder ensureBuilder(TypeConstant type, ClassModel model) {

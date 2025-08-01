@@ -60,6 +60,20 @@ public class TypeSystemLoader
     public final ModuleLoader[] owned;
 
     @Override
+    protected Class<?> loadClass(String name, boolean resolve)
+            throws ClassNotFoundException {
+        // HACK HACK TODO: move all native classes to resources
+        if (name.startsWith(NativeTypeSystem.XTC_BRIDGE_PREFIX)) {
+            for (ModuleLoader loader : owned) {
+                if (name.startsWith(loader.prefix)) {
+                    return loader.loadClass(name, resolve);
+                }
+            }
+        }
+        return super.loadClass(name, resolve);
+    }
+
+    @Override
     protected Class<?> findClass(String name)
             throws ClassNotFoundException {
         for (ModuleLoader loader : owned) {

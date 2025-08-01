@@ -1,7 +1,8 @@
 package org.xtclang.ecstasy.text;
 
 import org.xtclang.ecstasy.xConst;
-import org.xtclang.ecstasy.xType;
+
+import org.xvm.javajit.Ctx;
 
 import static java.lang.Character.toCodePoint;
 import static org.xvm.util.Handy.require;
@@ -301,6 +302,16 @@ public class String
 
         // one-byte (ISO 8859-1) format is simple
         return toStringContinued(new StringBuilder((int) utf16Size())).toString();
+    }
+
+    /**
+     * Create a new Ecstasy `String` based on the specified Java `String`
+     *
+     * @return a new String object
+     */
+    public static String of(Ctx ctx, java.lang.String s) {
+        // TODO: intern Java style?
+        return new String(ctx.container.id, s);
     }
 
     private StringBuilder toStringContinued(StringBuilder buf) {

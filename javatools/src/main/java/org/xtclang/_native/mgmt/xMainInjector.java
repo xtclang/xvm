@@ -1,4 +1,4 @@
-package org.xvm.javajit;
+package org.xtclang._native.mgmt;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -11,13 +11,16 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xtclang._native.io.TerminalConsole;
 
+import org.xvm.javajit.Injector;
+import org.xvm.javajit.Xvm;
+
 /**
  * The Injector used for "main" containers.
  */
-public class MainInjector
+public class xMainInjector
         extends Injector {
 
-    public MainInjector(Xvm xvm) {
+    public xMainInjector(Xvm xvm) {
         this.xvm = xvm;
     }
 
@@ -39,17 +42,12 @@ public class MainInjector
         return resource;
     }
 
-    public void addNativeResources()
-            throws  ClassNotFoundException {
-        NativeTypeSystem typeSystem = xvm.nativeTypeSystem;
-        ConstantPool     pool       = xvm.ecstasyPool;
-        TypeConstant     pureType   = pool.ensureEcstasyTypeConstant("io.Console");
-        String           pureName   = typeSystem.ensureJitClassName(pureType);
-        String           implName   = typeSystem.getBridgeClassName("_native.io.TerminalConsole");
-
-        // load the pure type class
-        Class pureClass = Class.forName(pureName, true, typeSystem.loader);
-        Class implClass = Class.forName(implName, true, typeSystem.bridgeLoader);
+    /**
+     * This method is called by the JitConnector via reflection.
+     */
+    public void addNativeResources() {
+        ConstantPool pool       = xvm.ecstasyPool;
+        TypeConstant pureType   = pool.ensureEcstasyTypeConstant("io.Console");
 
         suppliers.put(new Resource(pureType, "console"), TerminalConsole::$create);
     }

@@ -8,12 +8,10 @@ import java.lang.classfile.Label;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
-import org.xtclang.ecstasy.numbers.Int64;
-
 import org.xvm.asm.Component.Contribution;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
@@ -22,6 +20,7 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
@@ -35,7 +34,7 @@ import static java.lang.constant.ConstantDescs.CD_long;
  * Generic Java class builder.
  */
 public class CommonBuilder
-        implements Builder {
+        extends Builder {
     public CommonBuilder(TypeSystem typeSystem, TypeConstant type) {
         assert type.isSingleUnderlyingClass(true);
 
@@ -186,14 +185,14 @@ public class CommonBuilder
             flags |= ClassFile.ACC_STATIC;
         }
 
-        classBuilder.withMethodBody(jitName, jmDesc.standardMD, flags, codeBuilder -> {
+        classBuilder.withMethodBody(jitName, jmDesc.standardMD, flags, code -> {
 
             int argOffset = 0;
             if (!method.isFunction()) {
-                codeBuilder.aload(argOffset++); // stack: this
+                code.aload(argOffset++); // stack: this
             }
             int ctxIndex = argOffset;
-            codeBuilder.aload(argOffset++);     // stack: Ctx
+            code.aload(argOffset++);     // stack: Ctx
 
             JitParamDesc[] optimizedParams = jmDesc.optimizedParams;
             for (int i = 0, c = optimizedParams.length; i < c; i++) {
@@ -202,41 +201,41 @@ public class CommonBuilder
                 TypeConstant thisParamType  = thatParamDesc.type;
                 switch (thatParamDesc.flavor) {
                     case Specific, Widened:
-                        codeBuilder.aload(thisParamIndex);
+                        code.aload(thisParamIndex);
                         break;
 
                     case SpecificWithDefault, WidenedWithDefault:
                         // null indicates "default" value; pass it along regardless
-                        codeBuilder.aload(thisParamIndex);
+                        code.aload(thisParamIndex);
                         break;
 
                     case Primitive:
-                        codeBuilder.aload(thisParamIndex);
-                        unbox(codeBuilder, thisParamType, thatParamDesc.cd);
+                        code.aload(thisParamIndex);
+                        unbox(code, typeSystem, thisParamType, thatParamDesc.cd);
                         break;
 
                     case PrimitiveWithDefault: {
                         // if the argument is Java `null`, pass the default value for the type and
                         // `true`; otherwise the unboxed primitive value and `false`
-                        Label ifNotNull = codeBuilder.newLabel();
-                        Label endIf     = codeBuilder.newLabel();
+                        Label ifNotNull = code.newLabel();
+                        Label endIf     = code.newLabel();
 
-                        codeBuilder
+                        code
                            .aload(thisParamIndex)
                            .aconst_null()
                            .if_acmpne(ifNotNull);
                         // the value is `null`
-                        Builder.defaultLoad(codeBuilder, thatParamDesc.cd);          // default primitive
-                        codeBuilder.iconst_1();                              // true
+                        Builder.defaultLoad(code, thatParamDesc.cd); // default primitive
+                        code.iconst_1();                             // true
 
-                        codeBuilder
+                        code
                             .goto_(endIf)
                             .labelBinding(ifNotNull)
                             .aload(thisParamIndex);
-                        unbox(codeBuilder, thisParamType, thatParamDesc.cd); // unwrapped primitive
-                        codeBuilder.iconst_0();                              // false
+                        unbox(code, typeSystem, thisParamType, thatParamDesc.cd); // unwrapped primitive
+                        code.iconst_0();                                          // false
 
-                        codeBuilder.labelBinding(endIf);
+                        code.labelBinding(endIf);
                         i++; // skip over the next "that" parameter
                         break;
                     }
@@ -246,25 +245,25 @@ public class CommonBuilder
                         TypeConstant primitiveType = thisParamType.getUnderlyingType();
                         // if the argument is Ecstasy `Null`, pass the default value for the type
                         // and `true`; otherwise the unboxed primitive value and `false`
-                        Label ifNotNull = codeBuilder.newLabel();
-                        Label endIf  = codeBuilder.newLabel();
+                        Label ifNotNull = code.newLabel();
+                        Label endIf  = code.newLabel();
 
-                        codeBuilder
+                        code
                            .aload(thisParamIndex)
                            .getstatic(CD_Null, "Null", CD_Null)
                            .if_acmpne(ifNotNull);
                         // the value is `Null`
-                        Builder.defaultLoad(codeBuilder, thatParamDesc.cd);          // default primitive
-                        codeBuilder.iconst_1();                              // true
+                        Builder.defaultLoad(code, thatParamDesc.cd);  // default primitive
+                        code.iconst_1();                              // true
 
-                        codeBuilder
+                        code
                             .goto_(endIf)
                             .labelBinding(ifNotNull)
                             .aload(thisParamIndex);
-                        unbox(codeBuilder, primitiveType, thatParamDesc.cd); // unwrapped primitive
-                        codeBuilder.iconst_0();                              // false
+                        unbox(code, typeSystem, primitiveType, thatParamDesc.cd); // unboxed primitive
+                        code.iconst_0();                                          // false
 
-                        codeBuilder.labelBinding(endIf);
+                        code.labelBinding(endIf);
                         i++; // skip over the next "that" parameter
                         break;
                     }
@@ -274,9 +273,9 @@ public class CommonBuilder
                 }
             }
             if (method.isFunction()) {
-                codeBuilder.invokestatic(CD_this, jitName + OPT, jmDesc.optimizedMD);
+                code.invokestatic(CD_this, jitName + OPT, jmDesc.optimizedMD);
             } else {
-                codeBuilder.invokevirtual(CD_this, jitName + OPT, jmDesc.optimizedMD);
+                code.invokevirtual(CD_this, jitName + OPT, jmDesc.optimizedMD);
             }
 
             JitParamDesc[] optimizedReturns = jmDesc.optimizedReturns;
@@ -284,7 +283,7 @@ public class CommonBuilder
             JitParamDesc[] standardReturns  = jmDesc.standardReturns;
             int            thisReturnCount  = standardReturns.length;
             if (thatReturnCount == 0) {
-                codeBuilder.return_();
+                code.return_();
                 return;
             }
 
@@ -307,11 +306,11 @@ public class CommonBuilder
                     case Specific, Widened:
                         if (thatIx == 0) {
                             // natural return
-                            codeBuilder.areturn();
+                            code.areturn();
                         } else {
                             if (thatReturnIx != thisReturnIx) {
-                                loadFromContext(codeBuilder, thatCD, ctxIndex, thatReturnIx);
-                                storeToContext(codeBuilder, thisCD, ctxIndex, thisReturnIx);
+                                loadFromContext(code, thatCD, ctxIndex, thatReturnIx);
+                                storeToContext(code, thisCD, ctxIndex, thisReturnIx);
                             }
                         }
                         break;
@@ -319,12 +318,12 @@ public class CommonBuilder
                     case Primitive:
                         if (thatIx == 0) {
                             // natural return
-                            box(codeBuilder, thatType, thatCD);
-                            codeBuilder.areturn();
+                            box(code, typeSystem, thatType, thatCD);
+                            code.areturn();
                         } else {
-                            loadFromContext(codeBuilder, thatCD, ctxIndex, thatReturnIx);
-                            box(codeBuilder, thatType, thatCD);
-                            storeToContext(codeBuilder, thisCD, ctxIndex, thisReturnIx);
+                            loadFromContext(code, thatCD, ctxIndex, thatReturnIx);
+                            box(code, typeSystem, thatType, thatCD);
+                            storeToContext(code, thisCD, ctxIndex, thisReturnIx);
                         }
                         break;
 
@@ -334,33 +333,33 @@ public class CommonBuilder
 
                         // if the extension is 'true', return is "Null", otherwise the unboxed
                         // primitive value
-                        Label ifNull = codeBuilder.newLabel();
-                        Label endIf  = codeBuilder.newLabel();
+                        Label ifNull = code.newLabel();
+                        Label endIf  = code.newLabel();
 
-                        loadFromContext(codeBuilder, CD_boolean, ctxIndex, thatIx+1);
-                        codeBuilder
+                        loadFromContext(code, CD_boolean, ctxIndex, thatIx+1);
+                        code
                             .iconst_1()
                             .if_icmpeq(ifNull)  // if true, go to Null
                             ;
 
-                        box(codeBuilder, primitiveType, thatCD);
+                        box(code, typeSystem, primitiveType, thatCD);
                         if (thatIx == 0) {
-                            codeBuilder.areturn();
+                            code.areturn();
                         } else {
-                            storeToContext(codeBuilder, thisCD, ctxIndex, thisIx);
+                            storeToContext(code, thisCD, ctxIndex, thisIx);
                         }
-                        codeBuilder
+                        code
                             .goto_(endIf)
                             .labelBinding(ifNull)
                             .getstatic(CD_Null, "Null", CD_Null);
 
                         if (thatIx == 0) {
-                            codeBuilder.areturn();
+                            code.areturn();
                         } else {
-                            storeToContext(codeBuilder, thisCD, ctxIndex, thisIx);
+                            storeToContext(code, thisCD, ctxIndex, thisIx);
                         }
 
-                        codeBuilder.labelBinding(endIf);
+                        code.labelBinding(endIf);
                         break;
 
                     case SpecificWithDefault:
@@ -402,111 +401,40 @@ public class CommonBuilder
         classBuilder.withMethod(jitName, md, flags,
             methodBuilder -> {
                 if (!method.isAbstract()) {
-                    methodBuilder.withCode(codeBuilder ->
-                        generateCode(className, codeBuilder, method, md, optimized));
+                    methodBuilder.withCode(code ->
+                        generateCode(className, code, method, md, optimized));
                 }
             }
         );
     }
 
-    protected void generateCode(String className, CodeBuilder codeBuilder,
+    protected void generateCode(String className, CodeBuilder code,
                                 MethodInfo method, MethodTypeDesc md, boolean optimized) {
 
         MethodStructure methodStruct = method.getTopmostMethodStructure(typeInfo);
         assert methodStruct != null;
 
-        Label startScope = codeBuilder.newLabel();
-        Label endScope   = codeBuilder.newLabel();
-        int   nLine      = methodStruct.getSourceLineNumber();
-        codeBuilder
+        Label startScope = code.newLabel();
+        Label endScope   = code.newLabel();
+        code
             .labelBinding(startScope)
-
-            .lineNumber(nLine)
-            .localVariable(0, "$ctx", CD_Ctx, startScope, endScope)
-
-            .lineNumber(++nLine)
-            .labelBinding(endScope)
+            .localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, startScope, endScope)
             ;
-        Builder.defaultLoad(codeBuilder, md.returnType());
-        Builder.defaultReturn(codeBuilder, md.returnType());
-    }
 
-    /**
-     * Generate unboxing opcodes for a wrapper reference on the stack and the specified primitive class.
-     * In: the boxed reference.
-     *
-     * @param type  the primitive type
-     * @param cd    the corresponding ClassDesc
-     */
-    private void unbox(CodeBuilder codeBuilder, TypeConstant type, ClassDesc cd) {
-        assert cd.isPrimitive();
+        if (className.contains("test0") && method.getSignature().getName().equals("run")) {
+            BuildContext bctx = new BuildContext(typeSystem, method);
 
-        ConstantPool pool = type.getConstantPool();
-        switch (cd.descriptorString()) {
-            case "Z": // boolean
-                assert type.equals(pool.typeBoolean());
-                codeBuilder.getfield(CD_Boolean, "$value", cd);
-                break;
+            bctx.enterMethod(code);
+            for (Op op : methodStruct.getOps()){
+                op.build(bctx, code);
+            }
+        } else {
+            code.lineNumber(methodStruct.getSourceLineNumber());
 
-            case "J": // long
-                if (type.equals(pool.typeInt64())) {
-                    codeBuilder.getfield(CD_Int64, "$value", cd);
-                } else {
-                    // TODO: does this cover all types?
-                    ClassDesc boxCD = ClassDesc.of(type.ensureJitClassName(typeSystem));
-                    codeBuilder.getfield(boxCD, "$value", cd);
-                }
-                break;
-
-            case "I": // int
-                if (type.equals(pool.typeChar())) {
-                     // REVIEW: what Java type is the prop of UInt32? what's the name?
-                    codeBuilder.getfield(CD_Char, "codepoint", cd);
-                } else {
-                    throw new UnsupportedOperationException();
-                }
-                break;
-
-            default:
-                throw new UnsupportedOperationException();
+            defaultLoad(code, md.returnType());
+            defaultReturn(code, md.returnType());
         }
-    }
-
-    /**
-     * Generate boxing opcodes for a primitive value of the specified primitive class on the stack.
-     */
-    private void box(CodeBuilder codeBuilder, TypeConstant type, ClassDesc cd) {
-        assert cd.isPrimitive();
-
-        ConstantPool pool = type.getConstantPool();
-        switch (cd.descriptorString()) {
-            case "Z": // boolean
-                assert type.equals(pool.typeBoolean());
-                codeBuilder.invokestatic(CD_Boolean, "$box", org.xtclang.ecstasy.Boolean.MD_box);
-                break;
-
-            case "J": // long
-                if (type.equals(pool.typeInt64())) {
-                    codeBuilder.invokestatic(CD_Int64, "$box", Int64.MD_box);
-                } else {
-                    // TODO: does this cover all types?
-                    ClassDesc      boxCD = ClassDesc.of(type.ensureJitClassName(typeSystem));
-                    MethodTypeDesc boxMD = MethodTypeDesc.of(boxCD, cd);
-                    codeBuilder.invokestatic(boxCD, "$box", boxMD);
-                }
-                break;
-
-            case "I": // int
-                if (type.equals(pool.typeChar())) {
-                    codeBuilder.invokestatic(CD_Char, "$box", org.xtclang.ecstasy.text.Char.MD_box);
-                } else {
-                    throw new UnsupportedOperationException();
-                }
-                break;
-
-            default:
-                throw new UnsupportedOperationException();
-        }
+        code.labelBinding(endScope);
     }
 
     /**
@@ -515,17 +443,17 @@ public class CommonBuilder
      *
      * @param returnIndex  the index of the value in the Ctx object
      */
-    private void loadFromContext(CodeBuilder codeBuilder, ClassDesc cd, int ctxIndex, int returnIndex) {
+    protected void loadFromContext(CodeBuilder code, ClassDesc cd, int ctxIndex, int returnIndex) {
         assert returnIndex >= 0;
 
-        codeBuilder.aload(ctxIndex);
+        code.aload(ctxIndex);
 
         if (cd.isPrimitive()) {
             if (returnIndex < 8) {
-                codeBuilder // r = $ctx.i"returnIndex"
+                code // r = $ctx.i"returnIndex"
                     .getfield(CD_Ctx, "i" + (returnIndex), CD_long);
             } else {
-                codeBuilder // r = $ctx.iN[returnIndex-8]
+                code // r = $ctx.iN[returnIndex-8]
                     .getfield(CD_Ctx, "iN", CD_long.arrayType())
                     .loadConstant(returnIndex-8)
                     .aaload();
@@ -534,25 +462,25 @@ public class CommonBuilder
             // convert the long to the corresponding Java primitive
             switch (cd.descriptorString()) {
                 case "I", "S", "B", "C", "Z":
-                    codeBuilder.l2i();
+                    code.l2i();
                     break;
                 case "J":
                     break;
                 case "F":
-                    codeBuilder.l2f();
+                    code.l2f();
                     break;
                 case "D":
-                    codeBuilder.l2d();
+                    code.l2d();
                     break;
                 default:
                     throw new IllegalStateException();
             }
         } else {
             if (returnIndex < 8) {
-                codeBuilder // r = $ctx.o"returnIndex"
+                code // r = $ctx.o"returnIndex"
                     .getfield(CD_Ctx, "o" + (returnIndex-1), CD_Object);
             } else {
-                codeBuilder // r = $ctx.oN[returnIndex-8]
+                code // r = $ctx.oN[returnIndex-8]
                     .getfield(CD_Ctx, "oN", CD_Object.arrayType())
                     .loadConstant(returnIndex-8)
                     .aaload();
@@ -564,47 +492,47 @@ public class CommonBuilder
      * Generate a "store the return value to the context" for the specified Java class.
      * In: The value to store is at the stack top.
      */
-    private void storeToContext(CodeBuilder codeBuilder, ClassDesc cd, int ctxIndex, int returnIndex) {
+    protected void storeToContext(CodeBuilder code, ClassDesc cd, int ctxIndex, int returnIndex) {
         assert returnIndex >= 0;
 
-        codeBuilder.aload(ctxIndex)
+        code.aload(ctxIndex)
                    .swap(); // stack: ($ctx, value)
 
         if (cd.isPrimitive()) {
             // all primitives are stored into "long" fields; convert
             switch (cd.descriptorString()) {
                 case "I", "S", "B", "C", "Z":
-                    codeBuilder.i2l();
+                    code.i2l();
                     break;
                 case "J":
                     break;
                 case "F":
-                    codeBuilder.f2l();
+                    code.f2l();
                     break;
                 case "D":
-                    codeBuilder.d2l();
+                    code.d2l();
                     break;
                 default:
                     throw new IllegalStateException();
             }
 
             if (returnIndex < 8) {
-                codeBuilder // $ctx.i"returnIndex" = r
+                code // $ctx.i"returnIndex" = r
                     .putfield(CD_Ctx, "i" + returnIndex, CD_long);
             } else {
                 // TODO: replace with a helper "Ctx.storeLong(i-8, value)"
-                codeBuilder // $ctx.iN[returnIndex-8] = r
+                code // $ctx.iN[returnIndex-8] = r
                     .getfield(CD_Ctx, "iN", CD_long.arrayType())
                     .loadConstant(returnIndex-8)
                     .aastore();
             }
         } else {
             if (returnIndex < 8) {
-                codeBuilder // $ctx.o"returnIndex" = r
+                code // $ctx.o"returnIndex" = r
                     .putfield(CD_Ctx, "o" + (returnIndex), CD_Object);
             } else {
                 // TODO: replace with a helper "Ctx.storeRef(i-8, value)"
-                codeBuilder // $ctx.oN[returnIndex-8] = r
+                code // $ctx.oN[returnIndex-8] = r
                     .getfield(CD_Ctx, "oN", CD_Object.arrayType())
                     .loadConstant(returnIndex-8)
                     .aastore();
