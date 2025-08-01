@@ -31,6 +31,8 @@ import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
+import org.xvm.asm.op.Loop;
+import org.xvm.asm.op.LoopEnd;
 import org.xvm.asm.op.Move;
 import org.xvm.asm.op.Var_IN;
 
@@ -657,8 +659,7 @@ public class ForStatement
                 }
             }
 
-        Label labelRepeat = new Label("loop_for_" + getLabelId());
-        code.add(labelRepeat);
+        code.add(new Loop());
 
         // any condition of false results in false (as long as all conditions up to that point are
         // constant); all condition of true results in true (as long as all conditions are constant)
@@ -782,11 +783,9 @@ public class ForStatement
             // the block didn't add any ops; this is just an infinite loop
             log(errs, Severity.ERROR, Compiler.INFINITE_LOOP);
             }
-        else
-            {
-            code.add(new Jump(labelRepeat));
-            code.add(new Exit());
-            }
+
+        code.add(new LoopEnd());
+        code.add(new Exit());
 
         if (!fAlwaysFalse)
             {

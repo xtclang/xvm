@@ -54,6 +54,14 @@ public class Scope
         }
 
     /**
+     * @return the op that caused the scope to be created
+     */
+    public Op getEnter()
+        {
+        return m_opEnter;
+        }
+
+    /**
      * Indicate that the current scope is being exited.
      *
      * @param op  the op causing the scope to be exited
@@ -65,9 +73,9 @@ public class Scope
             // shut down this scope, but first transfer all of its statistics up to its parent
             validate();
 
-            if (m_cVars == 0 && op instanceof Exit)
+            if (m_cVars == 0 && op.getOpCode() == Op.OP_EXIT)
                 {
-                assert m_opEnter instanceof Enter;
+                assert m_opEnter.getOpCode() == Op.OP_ENTER;
                 m_opEnter.markRedundant();
                 op.markRedundant();
                 }

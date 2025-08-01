@@ -38,6 +38,7 @@ public abstract class OpJump
     protected OpJump(DataInput in, Constant[] aconst)
             throws IOException {
         m_ofJmp = readPackedInt(in);
+        assert m_ofJmp > 0;
     }
 
     @Override
@@ -55,6 +56,7 @@ public abstract class OpJump
         } else {
             m_ofJmp = calcRelativeAddress(m_opDest);
         }
+        assert m_ofJmp > 0 || !isReachable() && m_ofJmp == 0;
         m_cExits = calcExits(m_opDest);
     }
 
@@ -69,6 +71,7 @@ public abstract class OpJump
 
         m_opDest = findDestinationOp(aop, m_ofJmp);
         m_ofJmp  = calcRelativeAddress(m_opDest);
+        assert m_ofJmp > 0;
     }
 
     @Override
