@@ -31,8 +31,6 @@ public class JitConnector
 
         ts = xvm.createLinker().addModule(module).link();
         // TODO add error reporting
-
-        container = xvm.createContainer(ts, xvm.mainInjector);
     }
 
     @Override
@@ -43,6 +41,21 @@ public class JitConnector
 
     @Override
     public void start(Map<String, String> mapInjections) {
+        try {
+            ClassLoader loader = xvm.nativeTypeSystem.loader;
+            Class       clz    = Class.forName("org.xtclang._native.mgmt.xMainInjector", true, loader);
+
+            Injector injector = (Injector) clz.getDeclaredConstructor(Xvm.class).newInstance(xvm);
+            try (var ignore = ConstantPool.withPool(xvm.nativeTypeSystem.pool())) {
+                clz.getMethod("addNativeResources").invoke(injector);
+            }
+
+            container = xvm.createContainer(ts, injector);
+        } catch (ClassNotFoundException | NoClassDefFoundError e) {
+            throw new RuntimeException("Failed to load xMainInjector", e);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException("Failed to invoke \"addNativeResources()\" method", e);
+        }
     }
 
     @Override
@@ -58,25 +71,24 @@ public class JitConnector
 
     public void invoke0Impl(MethodStructure methodStructure, String... asArg) {
         String typeName = ts.owned[0].pkg + ".$module";
-        // uncomment for testing
-        // typeName = "jit." + typeName;
 
         try {
-            xvm.mainInjector.addNativeResources();
-
-            TypeSystemLoader loader = Ctx.get().container.typeSystem.loader;
+            TypeSystemLoader loader = ts.loader;
             Class            clz    = Class.forName(typeName, true, loader);
 
             Object module = clz.getDeclaredConstructor(Long.TYPE).newInstance(-1L);
+
+            // dump the generated classes
+            // xvm.nativeTypeSystem.loader.dump();
+            loader.dump();
+
             if (asArg == null || asArg.length == 0) {
                 Method method = clz.getMethod("run", Ctx.class);
                 method.invoke(module, Ctx.get());
             } else {
-                Method method = clz.getMethod("run", String.class.arrayType(), Ctx.class);
-                method.invoke(module, Ctx.get()); // TODO create xStr args
+                Method method = clz.getMethod("run", Ctx.class, String.class.arrayType());
+                method.invoke(module, Ctx.get(), asArg); // TODO create xStr args
             }
-            xvm.nativeTypeSystem.loader.dump();
-            loader.dump();
         } catch (ClassNotFoundException | NoClassDefFoundError e) {
             throw new RuntimeException("Failed to load class \"" + typeName + '"', e);
         } catch (NoSuchMethodException e) {

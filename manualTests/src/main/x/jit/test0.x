@@ -2,7 +2,7 @@ module test0.examples.org {
 
     void run() {
         @Inject Console console;
-        console.print("Hello");
+        console.print("Hello World");
 
 //        Int i1 = call1(0);
 //        i1 = call1(0, 5);

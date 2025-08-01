@@ -5,8 +5,12 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 
@@ -126,6 +130,15 @@ public class Nop extends Op {
     public String toString() {
         return m_nOp == OP_LINE_N ? toName(m_nOp) + ' ' + m_cLines : toName(m_nOp);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        code.lineNumber(bctx.lineNumber += getLineCount());
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int m_nOp;
     private int m_cLines;

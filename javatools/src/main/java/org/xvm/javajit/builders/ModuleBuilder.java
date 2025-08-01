@@ -9,7 +9,6 @@ import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 import java.lang.constant.MethodTypeDesc;
 
-import org.xtclang.ecstasy.xModule;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.TypeSystem;
@@ -27,9 +26,6 @@ public class ModuleBuilder extends CommonBuilder {
     public ModuleBuilder(TypeSystem typeSystem, TypeConstant type) {
         super(typeSystem, type);
     }
-
-    private static final ClassDesc CD_xModule =
-        ClassDesc.of(xModule.class.getName());
 
     private static final ClassDesc CD_ModuleStructure =
         ClassDesc.of(org.xvm.asm.ModuleStructure.class.getName());
@@ -50,11 +46,11 @@ public class ModuleBuilder extends CommonBuilder {
         classBuilder.withMethod(ConstantDescs.CLASS_INIT_NAME,
             MethodTypeDesc.of(CD_void),
             ClassFile.ACC_STATIC,
-            methodBuilder -> methodBuilder.withCode(codeBuilder -> {
-                Label startScope = codeBuilder.newLabel();
-                Label endScope   = codeBuilder.newLabel();
+            methodBuilder -> methodBuilder.withCode(code -> {
+                Label startScope = code.newLabel();
+                Label endScope   = code.newLabel();
                 int   nLine      = 0;
-                codeBuilder
+                code
                     .labelBinding(startScope)
 
                     .lineNumber(++nLine)
@@ -75,11 +71,11 @@ public class ModuleBuilder extends CommonBuilder {
         classBuilder.withMethod(INIT_NAME,
             MethodTypeDesc.of(CD_void, CD_long),
             ClassFile.ACC_PUBLIC,
-            methodBuilder -> methodBuilder.withCode(codeBuilder -> {
-                Label startScope = codeBuilder.newLabel();
-                Label endScope   = codeBuilder.newLabel();
+            methodBuilder -> methodBuilder.withCode(code -> {
+                Label startScope = code.newLabel();
+                Label endScope   = code.newLabel();
                 int   nLine      = 0;
-                codeBuilder
+                code
                     .localVariable(1, "containerId", CD_long, startScope, endScope)
 
                     .labelBinding(startScope)

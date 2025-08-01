@@ -16,6 +16,7 @@ import java.util.function.Consumer;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
 
@@ -27,6 +28,8 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.builders.CommonBuilder;
 import org.xvm.javajit.builders.FunctionBuilder;
 import org.xvm.javajit.builders.ModuleBuilder;
+
+import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.require;
 
@@ -154,6 +157,11 @@ public class TypeSystem {
     protected final Map<String, TypeConstant> functionTypes = new ConcurrentHashMap<>();
 
     /**
+     * A list of constants that are registered by the JIT compiler to be accessed by the run-time.
+     */
+    protected final ListMap<Constant, Integer> constantsRegistry = new ListMap<>(1024);
+
+    /**
      * @return the ConstantPool associated with this TypeSystem
      */
     public ConstantPool pool() {
@@ -266,7 +274,7 @@ public class TypeSystem {
             assert fnType != null;
             return ClassFile.of().
                 build(ClassDesc.of(className), classBuilder ->
-                    new FunctionBuilder(this, fnType).assembleImpl(className, classBuilder));
+                    new FunctionBuilder(this, fnType).assemblePure(className, classBuilder));
         }
 
         Artifact art = deduceArtifact(moduleLoader.module, name);
@@ -408,6 +416,36 @@ public class TypeSystem {
             return canonicalType.ensureJitClassName(this);
         }
         throw new IllegalArgumentException("No JIT class for " + type.getValueString());
+    }
+
+    /**
+     * Register a constant to be used by the runtime. The returned index is going to be stable for
+     * the lifetime of the TypeSystem.
+     *
+     * @param constant  the constant to register
+     *
+     * @return the index of the constant
+     */
+    public synchronized int registerConstant(Constant constant) {
+        ListMap<Constant, Integer> registry = constantsRegistry;
+        Integer                    index    = registry.get(constant);
+        if (index == null) {
+            int size = registry.size();
+            registry.put(constant, size);
+            return size;
+        } else {
+            return index;
+        }
+    }
+
+    /**
+     * Retrieve a constant at the specified index.
+     *
+     * Note: this operation doesn't have to be synchronized since even when the underlying array
+     * growth occurs, the old list still contains the corresponding entry at the right place.
+     */
+    public Constant getConstant(int index) {
+        return constantsRegistry.entryAt(index).getKey();
     }
 }
 

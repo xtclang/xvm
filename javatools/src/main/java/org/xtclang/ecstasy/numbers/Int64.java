@@ -1,12 +1,7 @@
 package org.xtclang.ecstasy.numbers;
 
-import java.lang.constant.MethodTypeDesc;
-
 import org.xtclang.ecstasy.xConst;
 import org.xtclang.ecstasy.Exception;
-
-import static java.lang.constant.ConstantDescs.CD_long;
-import static org.xvm.javajit.Builder.CD_Int64;
 
 /**
  * Native Int64 wrapper.
@@ -33,8 +28,6 @@ public class Int64 extends xConst {
     public static final Int64 NEG_ONE = $box(-1);
     public static final Int64 MIN     = $box(Long.MIN_VALUE);
     public static final Int64 MAX     = $box(Long.MAX_VALUE);
-
-    public static final MethodTypeDesc MD_box = MethodTypeDesc.of(CD_Int64, CD_long);
 
     /**
      * Obtain an xInt64 for a 64-bit "primitive" int (a Java "long" value).

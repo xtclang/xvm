@@ -41,6 +41,17 @@ public class Injector {
     }
 
     /**
+     * Obtain a supplier for the specified Resource.
+     *
+     * @param res  the Resource that is required for dependency injection
+     *
+     * @return a supplier Function, or null if that Resource cannot be supplied
+     */
+    public Function supplierOf(TypeConstant resoureType, String resourceName) {
+        return supplierOf(new Resource(resoureType, resourceName));
+    }
+
+    /**
      * Obtain the value of the specified Resource. Some Resources have a single value, such as a
      * constant value or a singleton service. Other Resources may provide a different value each
      * time it is requested.

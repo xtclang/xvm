@@ -1,6 +1,5 @@
 package org.xvm.javajit;
 
-
 import java.lang.ref.WeakReference;
 
 import java.util.Arrays;
@@ -28,7 +27,6 @@ import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.require;
 import static org.xvm.util.Handy.scan;
 import static org.xvm.util.Handy.sorted;
-
 
 /**
  * The Ecstasy-to-Java "just-in-time" (JIT) compiler implementation of the XVM specification.
@@ -64,7 +62,6 @@ public class Xvm {
         this.ecstasyLoader = ecstasy;
         this.bridgeLoader = _native;
         this.ecstasyPool   = ecstasy.module.getConstantPool();
-        this.mainInjector  = new MainInjector(this);
     }
 
     /**
@@ -104,11 +101,6 @@ public class Xvm {
      * The ConstantPool of the Ecstasy module loader.
      */
     public final ConstantPool ecstasyPool;
-
-    /**
-     * The default inject instance used for "main" containers.
-     */
-    public final MainInjector mainInjector;
 
     /**
      * All Containers (held only by a weak reference) keyed by id.
@@ -256,7 +248,7 @@ public class Xvm {
      *
      * @param typeSystem  the {@link TypeSystem} to use to form the Container
      * @param injector    the {@link Injector} to use to provide for dependency injection into the
-     *                    new Container
+     *                    new "main" Container
      *
      * @return a new Container
      */
@@ -309,11 +301,7 @@ public class Xvm {
      * @return the new Container
      */
     Container createContainer(Container parent, TypeSystem typeSystem, Injector injector) {
-        assert typeSystem != null;
-
-        if (injector == null) {
-            injector = mainInjector;
-        }
+        assert typeSystem != null && injector != null;
 
         long id = containerCount.getAndIncrement();
         assert id >= 0 && parent != null || id == -1 && parent == null;
