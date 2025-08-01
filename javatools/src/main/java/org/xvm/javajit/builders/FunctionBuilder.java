@@ -15,7 +15,8 @@ import org.xvm.javajit.TypeSystem;
 /**
  * The builder for Function types.
  */
-public class FunctionBuilder implements Builder {
+public class FunctionBuilder
+        extends Builder {
 
     public FunctionBuilder(TypeSystem typeSystem, TypeConstant functionType) {
         this.typeSystem   = typeSystem;
@@ -40,21 +41,21 @@ public class FunctionBuilder implements Builder {
      * </code></pre>
      */
     @Override
-    public void assembleImpl(String className, ClassBuilder classBuilder) {
+    public void assemblePure(String className, ClassBuilder classBuilder) {
         ConstantPool   pool        = typeSystem.pool();
         TypeConstant[] paramTypes  = pool.extractFunctionParams(functionType);
         TypeConstant[] returnTypes = pool.extractFunctionReturns(functionType);
 
-        MethodTypeDesc callMD   = Builder.computeMethodDesc(typeSystem, paramTypes, returnTypes);
-        MethodTypeDesc invokeMD = Builder.computeMethodDesc(typeSystem, paramTypes, returnTypes);
+        MethodTypeDesc callMD   = computeMethodDesc(typeSystem, paramTypes, returnTypes);
+        MethodTypeDesc invokeMD = computeMethodDesc(typeSystem, paramTypes, returnTypes);
 
         classBuilder
             .withSuperclass(CD_xFunction)
             .withMethod("$call", callMD, ClassFile.ACC_PUBLIC | ClassFile.ACC_ABSTRACT, methodBuilder -> {})
-            .withMethodBody("$invoke", invokeMD, ClassFile.ACC_PUBLIC, codeBuilder -> {
+            .withMethodBody("$invoke", invokeMD, ClassFile.ACC_PUBLIC, code -> {
                 // TODO: implement the wrapper
-                Builder.defaultLoad(codeBuilder, callMD.returnType());
-                Builder.defaultReturn(codeBuilder, callMD.returnType());
+                Builder.defaultLoad(code, callMD.returnType());
+                Builder.defaultReturn(code, callMD.returnType());
             }
         );
     }

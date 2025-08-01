@@ -79,7 +79,7 @@ public class ModuleLoader
                     byte[] classBytes = typeSystem.xvm.nativeTypeSystem.loadNativeClass(this, name);
                     if (classBytes != null) {
                         clz = defineClass(name, classBytes, 0, classBytes.length);
-                        // loadedClasses.add(clz);
+                        loadedClasses.add(clz);
                     } else {
                         break LoadNative;
                     }
