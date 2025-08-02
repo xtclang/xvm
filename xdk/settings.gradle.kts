@@ -36,6 +36,7 @@ listOf(
     "lib_xml",
     "javatools_turtle",
     "javatools_launcher",
+    "javatools_jitbridge",
     "javatools_bridge"
 ).forEach { p ->
     fun projectName(name: String): String {

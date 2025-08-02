@@ -46,6 +46,7 @@ val xdkProvider by configurations.registering {
 
 dependencies {
     xdkJavaTools(libs.javatools)
+    xdkJavaTools(libs.javatools.jitbridge)
     xtcModule(libs.xdk.ecstasy)
     xtcModule(libs.xdk.aggregate)
     xtcModule(libs.xdk.cli)
