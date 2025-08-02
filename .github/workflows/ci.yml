@@ -47,7 +47,7 @@ env:
   MAVEN_CENTRAL_USERNAME: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
   MAVEN_CENTRAL_PASSWORD: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
 
-  gradle_options: "-Dorg.gradle.jvmargs=-Xmx3G -Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false --stacktrace --warning-mode=all --console=plain ${{ inputs.extra_gradle_options }}"
+  gradle_options: "-Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false --stacktrace --warning-mode=all --console=plain ${{ inputs.extra_gradle_options }}"
 
   # Optional flags to skip manual tests, or at least some of them.
   skip_manual_tests: ${{ github.event.inputs.skip_manual_tests == 'true' }}
@@ -263,6 +263,26 @@ jobs:
       - name: Build and push Docker images (Multi-platform)
         shell: bash
         run: |
-          echo "Building and pushing multi-platform Docker images using Gradle..."
-          ./gradlew clean
-          ./gradlew dockerPushMultiPlatform
+          echo "Building and pushing multi-platform Docker images directly with Docker..."
+          
+          # Get current version for tagging
+          VERSION=$(grep -E '^version\s*=' gradle.properties | cut -d'=' -f2 | tr -d ' ')
+          COMMIT_SHA=${GITHUB_SHA::8}
+          
+          # Build and push multi-platform image directly
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag ghcr.io/xtclang/xvm:latest \
+            --tag ghcr.io/xtclang/xvm:latest-amd64 \
+            --tag ghcr.io/xtclang/xvm:latest-arm64 \
+            --tag ghcr.io/xtclang/xvm:${VERSION} \
+            --tag ghcr.io/xtclang/xvm:${VERSION}-amd64 \
+            --tag ghcr.io/xtclang/xvm:${VERSION}-arm64 \
+            --tag ghcr.io/xtclang/xvm:${COMMIT_SHA} \
+            --build-arg VERSION=${GITHUB_SHA} \
+            --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+            --build-arg VCS_REF=${GITHUB_SHA} \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --push \
+            .

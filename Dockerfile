@@ -26,17 +26,19 @@ RUN if [ -z "$VERSION" ]; then \
 
 # Build launcher for target architecture
 WORKDIR /source/javatools_launcher/src/main/c
-RUN --mount=type=cache,target=/tmp/gcc-cache \
+RUN --mount=type=cache,target=/tmp/gcc-cache,sharing=locked \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     set -e && \
     echo "Building launcher for ${TARGETOS}/${TARGETARCH}" && \
     case "${TARGETARCH}" in \
-        amd64) ARCH_FLAGS="" && LAUNCHER_NAME="linux_launcher_x86_64" ;; \
-        arm64) ARCH_FLAGS="-march=armv8-a" && LAUNCHER_NAME="linux_launcher_aarch64" ;; \
-        *) ARCH_FLAGS="" && LAUNCHER_NAME="linux_launcher_${TARGETARCH}" ;; \
+        amd64) ARCH_FLAGS="-O3 -mtune=generic" && LAUNCHER_NAME="linux_launcher_x86_64" ;; \
+        arm64) ARCH_FLAGS="-O3 -march=armv8-a -mtune=cortex-a72" && LAUNCHER_NAME="linux_launcher_aarch64" ;; \
+        *) ARCH_FLAGS="-O3" && LAUNCHER_NAME="linux_launcher_${TARGETARCH}" ;; \
     esac && \
     mkdir -p /launcher-output /tmp/gcc-cache && \
     export TMPDIR=/tmp/gcc-cache && \
-    gcc -static -g -Wall -std=gnu11 -DlinuxLauncher -O2 ${ARCH_FLAGS} \
+    gcc -static -g -Wall -std=gnu11 -DlinuxLauncher ${ARCH_FLAGS} \
         launcher.c os_linux.c os_unux.c -o /launcher-output/${LAUNCHER_NAME}
 
 FROM eclipse-temurin:${JAVA_VERSION}-jdk AS builder
@@ -67,6 +69,15 @@ RUN if [ -z "$VERSION" ]; then \
 # Copy the compiled launcher from launcher-builder stage  
 COPY --from=launcher-builder /launcher-output/ javatools_launcher/src/main/resources/exe/
 
+# Pre-cache Gradle wrapper and dependencies in separate layer
+RUN --mount=type=cache,target=/root/.gradle/caches,sharing=locked \
+    --mount=type=cache,target=/root/.gradle/wrapper,sharing=locked \
+    --mount=type=cache,target=/root/.gradle/build-cache,sharing=locked \
+    chmod +x ./gradlew && \
+    export GRADLE_OPTS="-Dorg.gradle.daemon=false" && \
+    ./gradlew --version && \
+    ./gradlew --no-daemon --build-cache dependencies || true
+
 COPY <<EOF /tmp/build_xdk.sh
 #!/bin/bash
 set -e
@@ -82,9 +93,12 @@ arch_map() {
 echo "Building XDK for \${TARGETOS}/\${TARGETARCH}"
 echo "Source already downloaded, starting build..."
 
+# Configure Gradle for faster builds in containers
+export GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.caching=true -Dorg.gradle.parallel=true -Dorg.gradle.configureondemand=true"
+
 # Make gradle wrapper executable and build
 chmod +x ./gradlew
-./gradlew --no-daemon xdk:installDist
+./gradlew --no-daemon --parallel --build-cache --configuration-cache xdk:installDist
 
 echo "Build completed successfully"
 
@@ -129,8 +143,9 @@ JSONEOF
 echo "Build info file created successfully"
 EOF
 
-RUN --mount=type=cache,target=/root/.gradle/caches \
-    --mount=type=cache,target=/root/.gradle/wrapper \
+RUN --mount=type=cache,target=/root/.gradle/caches,sharing=locked \
+    --mount=type=cache,target=/root/.gradle/wrapper,sharing=locked \
+    --mount=type=cache,target=/root/.gradle/build-cache,sharing=locked \
     chmod +x /tmp/build_xdk.sh && /tmp/build_xdk.sh
 
 # Export stage to copy launcher to host filesystem  
