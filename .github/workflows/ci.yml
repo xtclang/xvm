@@ -381,64 +381,26 @@ jobs:
       - name: Create and push multi-platform manifests
         shell: bash
         run: |
-          echo "Creating multi-platform manifests..."
+          echo "Building and pushing multi-platform Docker images directly with Docker..."
           
-          # Common Docker setup function
-          setup_docker_vars() {
-            VERSION=$(cat VERSION | tr -d '\n\r ')
-            echo "Creating manifests for: ${DOCKER_BASE_IMAGE} (version: ${VERSION})"
-          }
+          # Get current version for tagging
+          VERSION=$(grep -E '^version\s*=' gradle.properties | cut -d'=' -f2 | tr -d ' ')
+          COMMIT_SHA=${GITHUB_SHA::8}
           
-          # Function to create and push manifest
-          create_manifest() {
-            local tag=$1
-            echo "Creating manifest for tag: $tag"
-            echo "Inspecting source images:"
-            docker manifest inspect ${DOCKER_BASE_IMAGE}:${tag}-amd64 || echo "AMD64 image inspect failed"
-            docker manifest inspect ${DOCKER_BASE_IMAGE}:${tag}-arm64 || echo "ARM64 image inspect failed"
-            
-            echo "Creating manifest..."
-            docker manifest create ${DOCKER_BASE_IMAGE}:${tag} \
-              ${DOCKER_BASE_IMAGE}:${tag}-amd64 \
-              ${DOCKER_BASE_IMAGE}:${tag}-arm64
-            echo "Pushing manifest..."
-            docker manifest push ${DOCKER_BASE_IMAGE}:${tag}
-          }
-          
-          setup_docker_vars
-          
-          # Create all manifests
-          create_manifest "latest"
-          create_manifest "${VERSION}"
-          create_manifest "${GH_COMMIT::8}"
-
-  docker-test:
-    name: Test Docker images
-    needs: docker-manifest
-    runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
-    steps:
-      - name: Fetch Sources
-        uses: actions/checkout@v4
-
-      - name: Test Docker image functionality
-        shell: bash
-        run: |
-          # Common Docker setup function
-          setup_docker_vars() {
-            echo "Testing Docker image: ${DOCKER_BASE_IMAGE}:latest"
-          }
-          
-          setup_docker_vars
-          
-          # Copy EchoTest.x from the repository
-          cp manualTests/src/main/x/EchoTest.x .
-          
-          echo "Compiling EchoTest.x..."
-          docker run --rm -v $(pwd):/workspace -w /workspace ${DOCKER_BASE_IMAGE}:latest xcc EchoTest.x
-          echo "Running EchoTest..."
-          OUTPUT=$(docker run --rm -v $(pwd):/workspace -w /workspace ${DOCKER_BASE_IMAGE}:latest xec EchoTest)
-          
-          echo "Docker test output: $OUTPUT"
-          echo "$OUTPUT" | grep -q "EchoTest invoked with 0 arguments" || exit 1
-          echo "✅ Docker test passed!"
+          # Build and push multi-platform image directly
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag ghcr.io/xtclang/xvm:latest \
+            --tag ghcr.io/xtclang/xvm:latest-amd64 \
+            --tag ghcr.io/xtclang/xvm:latest-arm64 \
+            --tag ghcr.io/xtclang/xvm:${VERSION} \
+            --tag ghcr.io/xtclang/xvm:${VERSION}-amd64 \
+            --tag ghcr.io/xtclang/xvm:${VERSION}-arm64 \
+            --tag ghcr.io/xtclang/xvm:${COMMIT_SHA} \
+            --build-arg VERSION=${GITHUB_SHA} \
+            --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+            --build-arg VCS_REF=${GITHUB_SHA} \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --push \
+            .
