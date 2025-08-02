@@ -219,20 +219,14 @@ jobs:
           ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true
           ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true
 
-  docker-build-and-push:
-    name: Build and push Docker images
-    # Only run if ALL build-verify matrix jobs succeed (both ubuntu-latest and windows-latest)
+  docker-build-amd64:
+    name: Build and push Docker images (AMD64)
     needs: build-verify
     runs-on: ubuntu-latest
     if: ${{ success() && ((github.event.inputs.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
       - name: Fetch Sources
         uses: actions/checkout@v4
-
-      - name: Verify all tests passed
-        run: |
-          echo "✅ All build-verify matrix jobs (Ubuntu + Windows) completed successfully"
-          echo "✅ All tests passed - proceeding with Docker build"
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -250,39 +244,111 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/xtclang/xvm
-          tags: |
-            type=ref,event=branch,suffix=-amd64
-            type=sha,suffix=-amd64
-            type=raw,value=latest-amd64,enable={{is_default_branch}}
-
-      - name: Build and push Docker images (Multi-platform)
+      - name: Build and push Docker image (AMD64)
         shell: bash
         run: |
-          echo "Building and pushing multi-platform Docker images directly with Docker..."
+          echo "Building and pushing AMD64 Docker image on native hardware..."
           
-          # Get current version for tagging
           VERSION=$(grep -E '^version\s*=' gradle.properties | cut -d'=' -f2 | tr -d ' ')
           COMMIT_SHA=${GITHUB_SHA::8}
           
-          # Build and push multi-platform image directly
           docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --tag ghcr.io/xtclang/xvm:latest \
+            --platform linux/amd64 \
             --tag ghcr.io/xtclang/xvm:latest-amd64 \
-            --tag ghcr.io/xtclang/xvm:latest-arm64 \
-            --tag ghcr.io/xtclang/xvm:${VERSION} \
             --tag ghcr.io/xtclang/xvm:${VERSION}-amd64 \
-            --tag ghcr.io/xtclang/xvm:${VERSION}-arm64 \
-            --tag ghcr.io/xtclang/xvm:${COMMIT_SHA} \
+            --tag ghcr.io/xtclang/xvm:${COMMIT_SHA}-amd64 \
             --build-arg VERSION=${GITHUB_SHA} \
             --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
             --build-arg VCS_REF=${GITHUB_SHA} \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
+            --cache-from type=gha,scope=amd64 \
+            --cache-to type=gha,mode=max,scope=amd64 \
             --push \
             .
+
+  docker-build-arm64:
+    name: Build and push Docker images (ARM64)
+    needs: build-verify
+    runs-on: ubuntu-24.04-arm
+    if: ${{ success() && ((github.event.inputs.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master')) }}
+    steps:
+      - name: Fetch Sources
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: xdk-distribution
+          path: .
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image (ARM64)
+        shell: bash
+        run: |
+          echo "Building and pushing ARM64 Docker image on native ARM64 hardware..."
+          
+          VERSION=$(grep -E '^version\s*=' gradle.properties | cut -d'=' -f2 | tr -d ' ')
+          COMMIT_SHA=${GITHUB_SHA::8}
+          
+          docker buildx build \
+            --platform linux/arm64 \
+            --tag ghcr.io/xtclang/xvm:latest-arm64 \
+            --tag ghcr.io/xtclang/xvm:${VERSION}-arm64 \
+            --tag ghcr.io/xtclang/xvm:${COMMIT_SHA}-arm64 \
+            --build-arg VERSION=${GITHUB_SHA} \
+            --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+            --build-arg VCS_REF=${GITHUB_SHA} \
+            --cache-from type=gha,scope=arm64 \
+            --cache-to type=gha,mode=max,scope=arm64 \
+            --push \
+            .
+
+  docker-manifest:
+    name: Create multi-platform manifest
+    needs: [docker-build-amd64, docker-build-arm64]
+    runs-on: ubuntu-latest
+    if: ${{ success() && ((github.event.inputs.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master')) }}
+    steps:
+      - name: Fetch Sources
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push multi-platform manifests
+        shell: bash
+        run: |
+          echo "Creating multi-platform manifests..."
+          
+          VERSION=$(grep -E '^version\s*=' gradle.properties | cut -d'=' -f2 | tr -d ' ') || VERSION="0.4.4-SNAPSHOT"
+          COMMIT_SHA=${GITHUB_SHA::8}
+          
+          # Create latest manifest
+          docker manifest create ghcr.io/xtclang/xvm:latest \
+            ghcr.io/xtclang/xvm:latest-amd64 \
+            ghcr.io/xtclang/xvm:latest-arm64
+          docker manifest push ghcr.io/xtclang/xvm:latest
+          
+          # Create version manifest
+          docker manifest create ghcr.io/xtclang/xvm:${VERSION} \
+            ghcr.io/xtclang/xvm:${VERSION}-amd64 \
+            ghcr.io/xtclang/xvm:${VERSION}-arm64
+          docker manifest push ghcr.io/xtclang/xvm:${VERSION}
+          
+          # Create commit manifest
+          docker manifest create ghcr.io/xtclang/xvm:${COMMIT_SHA} \
+            ghcr.io/xtclang/xvm:${COMMIT_SHA}-amd64 \
+            ghcr.io/xtclang/xvm:${COMMIT_SHA}-arm64
+          docker manifest push ghcr.io/xtclang/xvm:${COMMIT_SHA}
