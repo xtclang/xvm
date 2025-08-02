@@ -17,10 +17,14 @@ on:
         required: false
       skip_manual_tests:
         description: 'Skip manual tests'
+        type: boolean
         required: false
+        default: false
       skip_manual_tests_parallel:
         description: 'Skip parallel manual tests'
+        type: boolean
         required: false
+        default: false
 
 env:
   # TODO: Default should be disabled; we only want to be bothered by tagging and publishing for the master branch.
@@ -43,11 +47,11 @@ env:
   MAVEN_CENTRAL_USERNAME: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
   MAVEN_CENTRAL_PASSWORD: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
 
-  gradle_options: "-Dorg.gradle.jvmargs=-Xmx8G -Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false --stacktrace --warning-mode=all --console=plain ${{ inputs.extra_gradle_options }}"
+  gradle_options: "-Dorg.gradle.jvmargs=-Xmx3G -Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false --stacktrace --warning-mode=all --console=plain ${{ inputs.extra_gradle_options }}"
 
   # Optional flags to skip manual tests, or at least some of them.
-  skip_manual_tests: ${{ github.event.inputs.skip_manual_tests || 'false' }}
-  skip_manual_tests_parallel: ${{ github.event.inputs.skip_manual_tests_parallel || 'false' }}
+  skip_manual_tests: ${{ github.event.inputs.skip_manual_tests == 'true' }}
+  skip_manual_tests_parallel: ${{ github.event.inputs.skip_manual_tests_parallel == 'true' }}
 
   java_version: 21
   java_distribution: temurin
@@ -87,7 +91,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          cache-disabled: ${{ github.ref == 'refs/heads/master' }}
+          cache-disabled: false
           cache-read-only: false
           gradle-version: ${{ env.gradle_version }}
 
@@ -108,6 +112,7 @@ jobs:
         run: |
           cwd_path=$(pwd)
           echo "Executing Gradle 'installDist' task from path: '$cwd_path'"
+          ./gradlew clean
           ./gradlew ${{ env.gradle_options }} installDist 
 
       - name: Build a machine specific XDK installation with native launchers, test run launchers on native platform
@@ -132,7 +137,7 @@ jobs:
           echo "*** Native launchers work."
 
       - name: Default manualTest tasks
-        if: ${{ env.skip_manual_tests != 'true' }}
+        if: ${{ env.skip_manual_tests == 'false' }}
         timeout-minutes: 5
         shell: bash
         run: |
@@ -143,16 +148,27 @@ jobs:
 
       - name: Parallel manualTest task
         timeout-minutes: 5
-        if: ${{ env.skip_manual_tests_parallel != 'true' }}
+        if: ${{ env.skip_manual_tests_parallel == 'false' }}
         shell: bash
         run: |
           ./gradlew ${{ env.gradle_options }} manualTests:runParallel
 
+      - name: Upload build artifacts
+        if: ${{ success() && matrix.os == 'ubuntu-latest' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: xdk-distribution
+          path: |
+            xdk/build/distributions/
+            xdk/build/install/
+          retention-days: 1
+
   publish-snapshot:
     name: Publish to GitHub packages iff snapshot + non-redundant build platform + branch is master
+    # Only run if ALL build-verify matrix jobs succeed (both ubuntu-latest and windows-latest)
     needs: build-verify
     runs-on: ubuntu-latest
-    if: ${{ (github.event.inputs.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
+    if: ${{ success() && ((github.event.inputs.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
       # Check out current repository
       - name: Fetch Sources
@@ -168,9 +184,20 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          cache-disabled: ${{ github.ref == 'refs/heads/master' }}
+          cache-disabled: false
           cache-read-only: false
           gradle-version: ${{ env.gradle_version }}
+
+      - name: Verify all tests passed
+        run: |
+          echo "✅ All build-verify matrix jobs (Ubuntu + Windows) completed successfully"
+          echo "✅ All tests passed - proceeding with publication"
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: xdk-distribution
+          path: .
 
       - name: Dump environment info
         shell: bash
@@ -188,15 +215,35 @@ jobs:
         if: ${{ (env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
         shell: bash
         run: |
+          ./gradlew clean
           ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true
           ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true
 
+  docker-build-and-push:
+    name: Build and push Docker images
+    # Only run if ALL build-verify matrix jobs succeed (both ubuntu-latest and windows-latest)
+    needs: build-verify
+    runs-on: ubuntu-latest
+    if: ${{ success() && ((github.event.inputs.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master')) }}
+    steps:
+      - name: Fetch Sources
+        uses: actions/checkout@v4
+
+      - name: Verify all tests passed
+        run: |
+          echo "✅ All build-verify matrix jobs (Ubuntu + Windows) completed successfully"
+          echo "✅ All tests passed - proceeding with Docker build"
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: xdk-distribution
+          path: .
+
       - name: Set up Docker Buildx
-        if: ${{ (env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GitHub Container Registry
-        if: ${{ (env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}  
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -204,7 +251,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata for Docker
-        if: ${{ (env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -214,11 +260,9 @@ jobs:
             type=sha,suffix=-amd64
             type=raw,value=latest-amd64,enable={{is_default_branch}}
 
-      - name: Build and push Docker image (AMD64)
-        if: ${{ (env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
+      - name: Build and push Docker images (Multi-platform)
         shell: bash
         run: |
-          echo "Building and pushing Docker image for linux/amd64 platform..."
-          echo "Docker metadata: ${{ steps.meta.outputs.tags }}"
-          echo "Docker labels: ${{ steps.meta.outputs.labels }}"
-          ./gradlew ${{ env.gradle_options }} dockerPushAmd64
+          echo "Building and pushing multi-platform Docker images using Gradle..."
+          ./gradlew clean
+          ./gradlew dockerPushMultiPlatform
