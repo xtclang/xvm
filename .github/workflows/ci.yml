@@ -105,7 +105,7 @@ jobs:
           echo "*** Commit (github.sha)    : ${{ github.sha }}"
           echo "*** Runner OS              : ${{ runner.os }}"
           echo "*** Input always_publish_snapshot: '${{ github.event.inputs.always_publish_snapshot }}'"
-          echo "*** Input type: ${{ type(github.event.inputs.always_publish_snapshot) }}"
+          echo "*** Input type: (not available in GitHub Actions)"
           echo "*** Comparison result: ${{ github.event.inputs.always_publish_snapshot }}"
           echo "*** String comparison: ${{ github.event.inputs.always_publish_snapshot == 'true' }}"
           echo "*** Java system properties :" 
