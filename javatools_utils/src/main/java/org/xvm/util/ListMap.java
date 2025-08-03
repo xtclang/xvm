@@ -35,7 +35,7 @@ public class ListMap<K,V>
         {
         m_list = cInitSize >= 0
             ? new ArrayList<>(cInitSize)
-            : (ArrayList<SimpleEntry<K,V>>) EMPTY_ARRAY_LIST;
+            : createEmptyList();
         }
 
     /**
@@ -79,9 +79,7 @@ public class ListMap<K,V>
      */
     public List<Entry<K,V>> asList()
         {
-        List<Entry<K,V>> list = (List) m_list;
-        assert (list = Collections.unmodifiableList(list)) != null;
-        return list;
+        return Collections.unmodifiableList(m_list);
         }
 
     /**
@@ -138,9 +136,10 @@ public class ListMap<K,V>
     private final Set<Entry<K, V>> m_setEntries = new AbstractSet<>()
         {
         @Override
+        @SuppressWarnings("unchecked")
         public Iterator<Entry<K, V>> iterator()
             {
-            return (Iterator) m_list.iterator();
+            return (Iterator<Entry<K, V>>) (Iterator<?>) m_list.iterator();
             }
 
         @Override
@@ -154,9 +153,19 @@ public class ListMap<K,V>
      * An empty ArrayList.
      */
     private static final ArrayList<?> EMPTY_ARRAY_LIST = new ArrayList<>(0);
+    
+    /**
+     * Create an empty typed list for this ListMap.
+     */
+    @SuppressWarnings("unchecked")
+    private ArrayList<SimpleEntry<K,V>> createEmptyList()
+        {
+        return (ArrayList<SimpleEntry<K,V>>) EMPTY_ARRAY_LIST;
+        }
 
     /**
      * An empty ListMap.
      */
+    @SuppressWarnings("rawtypes")
     public static final ListMap EMPTY = new ListMap<>(-1);
     }

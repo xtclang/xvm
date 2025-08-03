@@ -265,7 +265,7 @@ public class ServiceContext
      */
     public void setOpInfo(Op op, Enum category, Object info)
         {
-        f_mapOpInfo.computeIfAbsent(op, (op_) -> new EnumMap(category.getClass()))
+        f_mapOpInfo.computeIfAbsent(op, (op_) -> new EnumMap<>(category.getClass()))
                    .put(category, new WeakReference(info));
         }
 
@@ -493,7 +493,7 @@ public class ServiceContext
     /**
      * Add a response to the service response queue.
      */
-    private void respond(Response response)
+    private void respond(Response<?> response)
         {
         f_queueResponse.add(response);
         ensureScheduled(true);
@@ -504,7 +504,7 @@ public class ServiceContext
      */
     private void processResponses()
         {
-        Response response;
+        Response<?> response;
         while ((response = f_queueResponse.poll()) != null)
             {
             response.run();
@@ -2402,7 +2402,7 @@ public class ServiceContext
     /**
      * The queue of responses.
      */
-    private final Queue<Response> f_queueResponse = new ConcurrentLinkedQueue<>();
+    private final Queue<Response<?>> f_queueResponse = new ConcurrentLinkedQueue<>();
 
     /**
      * The set of active fibers. It can be [read] accessed by outside threads.

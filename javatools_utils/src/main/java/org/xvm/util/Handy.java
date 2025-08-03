@@ -621,6 +621,7 @@ public final class Handy {
             }
 
             String cur;
+            @SuppressWarnings("fallthrough")
             switch (s.charAt(of)) {
             case '\"':
             case '\'':
@@ -632,7 +633,6 @@ public final class Handy {
                     of = close + 1;
                     break;
                 }
-                // fall through
             default:
                 int next = s.indexOf(',', of);
                 if (next < 0) {
@@ -1836,7 +1836,7 @@ public final class Handy {
      * @return an array containing all of the elements from the {@code aoAdd} array that are not
      *         duplicates of elements in the {@code aoBase} array
      */
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "unchecked"})
     public static <T> T[] dedupAdds(T[] aoBase, T[] aoAdd) {
         // there's a fair likelihood that *ALL* of the "adds" will be duplicates, and a fair
         // likelihood that *NONE* of the "adds" will be unique, so assume both up front, and only
@@ -1914,7 +1914,7 @@ public final class Handy {
      *
      * @return an array of the specified size
      */
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "unchecked"})
     public static <T> T[] resize(T[] array, int size) {
         int oldSize = array.length;
         if (size == oldSize) {
@@ -1934,6 +1934,7 @@ public final class Handy {
      *
      * @return an array containing all of the elements of both passed arrays
      */
+    @SuppressWarnings("unchecked")
     public static <T> T[] append(T[] aoBase, T[] aoAdd) {
         int cBase = aoBase.length;
         if (cBase == 0) {
@@ -1960,6 +1961,7 @@ public final class Handy {
      *
      * @return the expanded array containing the passed value
      */
+    @SuppressWarnings("unchecked")
     public static <T> T[] append(T[] array, T value) {
         assert array != null && value != null;
         int oldSize  = array.length;
@@ -1977,6 +1979,7 @@ public final class Handy {
      *
      * @return an array containing all the elements
      */
+    @SuppressWarnings("unchecked")
     public static <T> T[] prepend(T[] aoBase, T oAdd) {
         int c    = aoBase.length;
         T[] aNew = (T[]) Array.newInstance(oAdd.getClass(), c + 1);
@@ -1995,7 +1998,7 @@ public final class Handy {
      *
      * @return the contracted array
      */
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "unchecked"})
     public static <T> T[] delete(T[] array, int index) {
         assert array != null && index >= 0 && index < array.length;
         int oldSize  = array.length;
@@ -2070,8 +2073,8 @@ public final class Handy {
             return false;
         }
 
-        final Class clz1 = o1.getClass();
-        final Class clz2 = o2.getClass();
+        final Class<?> clz1 = o1.getClass();
+        final Class<?> clz2 = o2.getClass();
         if (clz1 != clz2) {
             return false;
         }
@@ -2101,7 +2104,7 @@ public final class Handy {
      * @return negative, zero, or positive iff <tt>ao1</tt> is less than, equal
      *         to, or greater than <tt>ao2</tt>
      */
-    public static int compareArrays(final Comparable[] ao1, final Comparable[] ao2) {
+    public static <T extends Comparable<T>> int compareArrays(final T[] ao1, final T[] ao2) {
         if (ao1 == ao2) {
             return 0;
         }

@@ -9,6 +9,7 @@ import java.util.ListIterator;
 /**
  * An ArrayList using identity for equality comparison.
  */
+@SuppressWarnings("serial")
 public class IdentityArrayList<E>
         extends ArrayList<E>
     {
@@ -78,7 +79,7 @@ public class IdentityArrayList<E>
             return true;
             }
 
-        if (!(o instanceof List that))
+        if (!(o instanceof List<?> that))
             {
             return false;
             }
@@ -88,8 +89,11 @@ public class IdentityArrayList<E>
             return false;
             }
 
-        for (ListIterator iterThis = this.listIterator(), iterThat = that.listIterator();
-                iterThis.hasNext() && iterThat.hasNext(); )
+        @SuppressWarnings("unchecked")
+        ListIterator<E> iterThat = (ListIterator<E>) that.listIterator();
+        ListIterator<E> iterThis = this.listIterator();
+        
+        while (iterThis.hasNext() && iterThat.hasNext())
             {
             if (iterThis.next() != iterThat.next())
                 {
@@ -97,6 +101,6 @@ public class IdentityArrayList<E>
                 }
             }
 
-        return true;
+        return !iterThis.hasNext() && !iterThat.hasNext();
         }
     }

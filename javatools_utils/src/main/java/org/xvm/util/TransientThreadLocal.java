@@ -47,6 +47,7 @@ public class TransientThreadLocal<T>
     public T get()
         {
         var map   = TRANSIENT_MAP.get();
+        @SuppressWarnings("unchecked")
         T   value = (T) map.get(this);
 
         if (value == null)
@@ -80,6 +81,7 @@ public class TransientThreadLocal<T>
     public T compute(Function<? super T, ? extends T> fn)
         {
         var map      = TRANSIENT_MAP.get();
+        @SuppressWarnings("unchecked")
         T   valueOld = (T) map.get(this);
         T   valueNew = fn.apply(valueOld == null ? initialValue() : valueOld);
 
@@ -106,6 +108,7 @@ public class TransientThreadLocal<T>
     public T computeIfAbsent(Supplier<? extends T> fn)
         {
         var map      = TRANSIENT_MAP.get();
+        @SuppressWarnings("unchecked")
         T   valueOld = (T) map.get(this);
 
         if (valueOld == null)
@@ -132,6 +135,7 @@ public class TransientThreadLocal<T>
     public Sentry<T> push(T value)
         {
         var map          = TRANSIENT_MAP.get();
+        @SuppressWarnings("unchecked")
         T   valuePrev    = (T) map.put(this, value);
         T   valueRestore = valuePrev == null ? initialValue() : valuePrev;
 

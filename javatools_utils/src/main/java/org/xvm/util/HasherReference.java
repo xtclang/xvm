@@ -27,7 +27,8 @@ public class HasherReference<T> implements Supplier<T>
      */
     public HasherReference(T referent, Hasher<? super T> hasher)
         {
-        reset(referent, hasher);
+        this.referent = referent;
+        this.hasher = hasher;
         }
 
     /**

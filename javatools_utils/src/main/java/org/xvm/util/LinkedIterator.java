@@ -21,9 +21,11 @@ public class LinkedIterator<E>
      *
      * @param aIter  the Iterators containing the elements to iterate over
      */
+    @SafeVarargs
+    @SuppressWarnings("varargs")
     public LinkedIterator(Iterator<E>... aIter)
         {
-        f_aIter = Objects.requireNonNullElse(aIter, NO_ITERATORS);
+        f_aIter = aIter == null ? createEmptyArray() : aIter;
         }
 
 
@@ -165,5 +167,14 @@ public class LinkedIterator<E>
     /**
      * Empty array of Iterators (to avoid unnecessary allocation).
      */
-    private static final Iterator[] NO_ITERATORS = new Iterator[0];
+    private static final Iterator<?>[] NO_ITERATORS = new Iterator<?>[0];
+    
+    /**
+     * Create an empty typed array for this LinkedIterator.
+     */
+    @SuppressWarnings("unchecked")
+    private Iterator<E>[] createEmptyArray()
+        {
+        return (Iterator<E>[]) NO_ITERATORS;
+        }
     }

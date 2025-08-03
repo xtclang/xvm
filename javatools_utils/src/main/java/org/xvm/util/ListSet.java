@@ -44,6 +44,7 @@ public class ListSet<E>
      *
      * @param that  a collection of compatible elements
      */
+    @SuppressWarnings("this-escape")
     public ListSet(Collection<? extends E> that)
         {
         this(that.size());
@@ -308,7 +309,9 @@ public class ListSet<E>
     private static <E> E toExternal(Object o)
         {
         assert o != null && !(o instanceof Stop);
-        return o == NULL ? null : (E) o;
+        @SuppressWarnings("unchecked")
+        E result = o == NULL ? null : (E) o;
+        return result;
         }
 
     /**

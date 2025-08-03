@@ -59,7 +59,8 @@ public class PackedInteger
      */
     public PackedInteger(long lVal)
         {
-        setLong(lVal);
+        m_lValue       = lVal;
+        m_fInitialized = true;
         }
 
     /**
@@ -69,7 +70,29 @@ public class PackedInteger
      */
     public PackedInteger(BigInteger bigint)
         {
-        setBigInteger(bigint);
+        if (bigint == null)
+            {
+            throw new IllegalArgumentException("big integer value required");
+            }
+
+        // determine if the number of bytes allows the BigInteger value to be
+        // stored in a long value
+        if (!(m_fBig = calculateSignedByteCount(bigint) > 8))
+            {
+            m_lValue = bigint.longValue();
+            }
+        else if (calculateUnsignedByteCount(bigint) <= 8)
+            {
+            // the unsigned value still fits the long
+            m_lValue = bigint.longValue();
+            }
+        else
+            {
+            m_lValue = 0;
+            }
+
+        m_bigint       = bigint;
+        m_fInitialized = true;
         }
 
     /**
@@ -80,6 +103,7 @@ public class PackedInteger
      *
      * @throws IOException  if an I/O exception occurs while reading the data
      */
+    @SuppressWarnings("this-escape")
     public PackedInteger(DataInput in)
             throws IOException
         {

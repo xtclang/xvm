@@ -38,6 +38,7 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V>
      *
      * @param storage the backing store
      */
+    @SuppressWarnings("this-escape")
     protected AbstractConverterMap(Map<SK, SV> storage)
         {
         this.storage = storage;

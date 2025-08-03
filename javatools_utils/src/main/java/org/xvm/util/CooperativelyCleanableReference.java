@@ -49,7 +49,7 @@ public class CooperativelyCleanableReference<V> extends WeakReference<V> {
     /**
      * Queues of unreachable references with unreachable referents.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private static final ReferenceQueue<Object>[] QUEUE = new ReferenceQueue[
             Integer.highestOneBit(Runtime.getRuntime().availableProcessors() << 1)];
 
@@ -75,6 +75,7 @@ public class CooperativelyCleanableReference<V> extends WeakReference<V> {
      * @param referent the referent to manage
      * @param cleaner  the function to run once the referent is unreachable, this function must not reference the referent
      */
+    @SuppressWarnings("this-escape")
     public CooperativelyCleanableReference(V referent, AutoCloseable cleaner) {
         super(referent, clean(QUEUE[ThreadLocalRandom.current().nextInt(QUEUE.length)]));
         this.cleaner = Objects.requireNonNull(cleaner, "null cleaner");
