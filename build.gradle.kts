@@ -82,9 +82,11 @@ private val publishTaskSuffixesLocal = listOf("LocalPublications")
 /**
  * Docker tasks for building and pushing multi-platform container images
  */
-val dockerBuildAmd64 by tasks.registering(Exec::class) {
+
+// Helper function to create platform-specific Docker build tasks
+fun createDockerBuildTask(platform: String, arch: String) = tasks.registering(Exec::class) {
     group = "docker"
-    description = "Build Docker image for linux/amd64 platform"
+    description = "Build Docker image for linux/$arch platform"
     
     // Ensure XDK is built first
     dependsOn(installDist)
@@ -93,9 +95,9 @@ val dockerBuildAmd64 by tasks.registering(Exec::class) {
     
     commandLine(
         "docker", "buildx", "build",
-        "--platform", "linux/amd64",
-        "--tag", "ghcr.io/xtclang/xvm:latest-amd64",
-        "--tag", "ghcr.io/xtclang/xvm:${currentVersion}-amd64",
+        "--platform", platform,
+        "--tag", "ghcr.io/xtclang/xvm:latest-$arch",
+        "--tag", "ghcr.io/xtclang/xvm:${currentVersion}-$arch",
         "--load",
         "."
     )
@@ -103,36 +105,13 @@ val dockerBuildAmd64 by tasks.registering(Exec::class) {
     workingDir = rootProject.projectDir
     
     doFirst {
-        logger.lifecycle("Building Docker image for linux/amd64 platform (using latest master)...")
-        logger.lifecycle("Tags: ghcr.io/xtclang/xvm:latest-amd64, ghcr.io/xtclang/xvm:${currentVersion}-amd64")
+        logger.lifecycle("Building Docker image for $platform platform (using latest master)...")
+        logger.lifecycle("Tags: ghcr.io/xtclang/xvm:latest-$arch, ghcr.io/xtclang/xvm:${currentVersion}-$arch")
     }
 }
 
-val dockerBuildArm64 by tasks.registering(Exec::class) {
-    group = "docker"
-    description = "Build Docker image for linux/arm64 platform"
-    
-    // Ensure XDK is built first
-    dependsOn(installDist)
-    
-    val currentVersion = project.version.toString()
-    
-    commandLine(
-        "docker", "buildx", "build",
-        "--platform", "linux/arm64",
-        "--tag", "ghcr.io/xtclang/xvm:latest-arm64",
-        "--tag", "ghcr.io/xtclang/xvm:${currentVersion}-arm64",
-        "--load",
-        "."
-    )
-    
-    workingDir = rootProject.projectDir
-    
-    doFirst {
-        logger.lifecycle("Building Docker image for linux/arm64 platform (using latest master)...")
-        logger.lifecycle("Tags: ghcr.io/xtclang/xvm:latest-arm64, ghcr.io/xtclang/xvm:${currentVersion}-arm64")
-    }
-}
+val dockerBuildAmd64 by createDockerBuildTask("linux/amd64", "amd64")
+val dockerBuildArm64 by createDockerBuildTask("linux/arm64", "arm64")
 
 val dockerBuildMultiPlatform by tasks.registering(Exec::class) {
     group = "docker"
@@ -251,53 +230,33 @@ val dockerPushMultiPlatform by tasks.registering(Exec::class) {
     workingDir = rootProject.projectDir
 }
 
-val dockerPushAmd64 by tasks.registering(Exec::class) {
+// Helper function to create platform-specific Docker push tasks
+fun createDockerPushTask(arch: String, buildTask: TaskProvider<Exec>) = tasks.registering(Exec::class) {
     group = "docker"
-    description = "Push AMD64 Docker image to GitHub Container Registry"
+    description = "Push $arch Docker image to GitHub Container Registry"
     
-    dependsOn(dockerBuildAmd64)
-    
-    commandLine(
-        "docker", "push", "ghcr.io/xtclang/xvm:latest-amd64"
-    )
+    dependsOn(buildTask)
     
     val currentVersion = project.version.toString()
     
+    commandLine(
+        "docker", "push", "ghcr.io/xtclang/xvm:latest-$arch"
+    )
+    
     doLast {
         project.providers.exec {
-            commandLine("docker", "push", "ghcr.io/xtclang/xvm:${currentVersion}-amd64")
+            commandLine("docker", "push", "ghcr.io/xtclang/xvm:${currentVersion}-$arch")
         }
     }
     
     doFirst {
-        logger.lifecycle("Pushing AMD64 Docker image to GitHub Container Registry...")
+        logger.lifecycle("Pushing $arch Docker image to GitHub Container Registry...")
         logger.lifecycle("Make sure you're logged in with: docker login ghcr.io")
     }
 }
 
-val dockerPushArm64 by tasks.registering(Exec::class) {
-    group = "docker"
-    description = "Push ARM64 Docker image to GitHub Container Registry"
-    
-    dependsOn(dockerBuildArm64)
-    
-    commandLine(
-        "docker", "push", "ghcr.io/xtclang/xvm:latest-arm64"
-    )
-    
-    val currentVersion = project.version.toString()
-    
-    doLast {
-        project.providers.exec {
-            commandLine("docker", "push", "ghcr.io/xtclang/xvm:${currentVersion}-arm64")
-        }
-    }
-    
-    doFirst {
-        logger.lifecycle("Pushing ARM64 Docker image to GitHub Container Registry...")
-        logger.lifecycle("Make sure you're logged in with: docker login ghcr.io")
-    }
-}
+val dockerPushAmd64 by createDockerPushTask("amd64", dockerBuildAmd64)
+val dockerPushArm64 by createDockerPushTask("arm64", dockerBuildArm64)
 
 val dockerPushAll by tasks.registering {
     group = "docker"
