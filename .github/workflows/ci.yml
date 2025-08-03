@@ -28,7 +28,7 @@ on:
 
 env:
   # TODO: Default should be disabled; we only want to be bothered by tagging and publishing for the master branch.
-  always_publish_snapshot: ${{ github.event.inputs.always_publish_snapshot == true }}
+  always_publish_snapshot: ${{ github.event.inputs.always_publish_snapshot }}
 
   # Add manual tests as an included build to the composite build configuration, and also build them.
   ORG_GRADLE_PROJECT_includeBuildManualTests: true
@@ -106,7 +106,7 @@ jobs:
           echo "*** Runner OS              : ${{ runner.os }}"
           echo "*** Input always_publish_snapshot: '${{ github.event.inputs.always_publish_snapshot }}'"
           echo "*** Input type: ${{ type(github.event.inputs.always_publish_snapshot) }}"
-          echo "*** Comparison result: ${{ github.event.inputs.always_publish_snapshot == true }}"
+          echo "*** Comparison result: ${{ github.event.inputs.always_publish_snapshot }}"
           echo "*** String comparison: ${{ github.event.inputs.always_publish_snapshot == 'true' }}"
           echo "*** Java system properties :" 
           java -XshowSettings:properties --version
@@ -172,7 +172,7 @@ jobs:
     # Only run if ALL build-verify matrix jobs succeed (both ubuntu-latest and windows-latest)
     needs: build-verify
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_publish_snapshot == true) || (github.ref == 'refs/heads/master')) }}
+    if: ${{ success() && ((github.event.inputs.always_publish_snapshot) || (github.ref == 'refs/heads/master')) }}
     steps:
       # Check out current repository
       - name: Fetch Sources
@@ -216,7 +216,7 @@ jobs:
           java -XshowSettings:properties --version
 
       - name: Create or Update Snapshot (if pushed to 'master', or env.always_publish_snapshot is true)
-        if: ${{ (github.event.inputs.always_publish_snapshot == true) || (github.ref == 'refs/heads/master') }}
+        if: ${{ (github.event.inputs.always_publish_snapshot) || (github.ref == 'refs/heads/master') }}
         shell: bash
         run: |
           ./gradlew clean
@@ -227,7 +227,7 @@ jobs:
     name: Build and push Docker images
     needs: build-verify
     runs-on: ${{ matrix.runner }}
-    if: ${{ success() && ((github.event.inputs.always_publish_snapshot == true) || (github.ref == 'refs/heads/master')) }}
+    if: ${{ success() && ((github.event.inputs.always_publish_snapshot) || (github.ref == 'refs/heads/master')) }}
     strategy:
       matrix:
         include:
@@ -282,7 +282,7 @@ jobs:
     name: Create multi-platform manifest
     needs: docker-build
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_publish_snapshot == true) || (github.ref == 'refs/heads/master')) }}
+    if: ${{ success() && ((github.event.inputs.always_publish_snapshot) || (github.ref == 'refs/heads/master')) }}
     steps:
       - name: Fetch Sources
         uses: actions/checkout@v4
