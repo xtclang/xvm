@@ -267,7 +267,7 @@ jobs:
             --tag ghcr.io/xtclang/xvm:latest-${{ matrix.arch }} \
             --tag ghcr.io/xtclang/xvm:${VERSION}-${{ matrix.arch }} \
             --tag ghcr.io/xtclang/xvm:${COMMIT_SHA}-${{ matrix.arch }} \
-            --build-arg VERSION=${GITHUB_SHA} \
+            --build-arg VERSION=${GITHUB_REF#refs/heads/} \
             --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
             --build-arg VCS_REF=${GITHUB_SHA} \
             --cache-from type=gha,scope=${{ matrix.arch }} \
