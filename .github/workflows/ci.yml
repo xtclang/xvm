@@ -259,14 +259,14 @@ jobs:
         run: |
           echo "Building and pushing ${{ matrix.arch }} Docker image on native hardware..."
           
-          VERSION=$(grep -E '^version\s*=' gradle.properties | cut -d'=' -f2 | tr -d ' ')
+          # Get version from VERSION file
+          VERSION=$(cat VERSION | tr -d '\n\r ')
           COMMIT_SHA=${GITHUB_SHA::8}
           BRANCH_NAME=${GITHUB_REF#refs/heads/}
           
           echo "DEBUG: VERSION=$VERSION"
-          echo "DEBUG: COMMIT_SHA=$COMMIT_SHA" 
+          echo "DEBUG: COMMIT_SHA=$COMMIT_SHA"
           echo "DEBUG: BRANCH_NAME=$BRANCH_NAME"
-          echo "DEBUG: GITHUB_REF=$GITHUB_REF"
           
           # Set base image name based on branch
           if [ "$BRANCH_NAME" = "master" ]; then
@@ -278,6 +278,8 @@ jobs:
           docker buildx build \
             --platform ${{ matrix.platform }} \
             --tag ${BASE_IMAGE}:latest-${{ matrix.arch }} \
+            --tag ${BASE_IMAGE}:${VERSION}-${{ matrix.arch }} \
+            --tag ${BASE_IMAGE}:${COMMIT_SHA}-${{ matrix.arch }} \
             --build-arg VERSION=$BRANCH_NAME \
             --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
             --build-arg VCS_REF=${GITHUB_SHA} \
