@@ -309,6 +309,9 @@ jobs:
         run: |
           echo "Creating multi-platform manifests..."
           
+          # Get version from VERSION file
+          VERSION=$(cat VERSION | tr -d '\n\r ')
+          COMMIT_SHA=${GITHUB_SHA::8}
           BRANCH_NAME=${GITHUB_REF#refs/heads/}
           
           # Set base image name based on branch
@@ -318,7 +321,7 @@ jobs:
             BASE_IMAGE="ghcr.io/xtclang/xvm_${BRANCH_NAME}"
           fi
           
-          echo "Creating manifest for: ${BASE_IMAGE}:latest"
+          echo "Creating manifests for: ${BASE_IMAGE} (version: ${VERSION})"
           
           # Create latest manifest
           docker manifest create ${BASE_IMAGE}:latest \
@@ -326,14 +329,14 @@ jobs:
             ${BASE_IMAGE}:latest-arm64
           docker manifest push ${BASE_IMAGE}:latest
           
-          # Create version manifest
-          docker manifest create ghcr.io/xtclang/xvm:${VERSION} \
-            ghcr.io/xtclang/xvm:${VERSION}-amd64 \
-            ghcr.io/xtclang/xvm:${VERSION}-arm64
-          docker manifest push ghcr.io/xtclang/xvm:${VERSION}
+          # Create version manifest (also branch-aware)
+          docker manifest create ${BASE_IMAGE}:${VERSION} \
+            ${BASE_IMAGE}:${VERSION}-amd64 \
+            ${BASE_IMAGE}:${VERSION}-arm64
+          docker manifest push ${BASE_IMAGE}:${VERSION}
           
-          # Create commit manifest
-          docker manifest create ghcr.io/xtclang/xvm:${COMMIT_SHA} \
-            ghcr.io/xtclang/xvm:${COMMIT_SHA}-amd64 \
-            ghcr.io/xtclang/xvm:${COMMIT_SHA}-arm64
-          docker manifest push ghcr.io/xtclang/xvm:${COMMIT_SHA}
+          # Create commit manifest (also branch-aware)
+          docker manifest create ${BASE_IMAGE}:${COMMIT_SHA} \
+            ${BASE_IMAGE}:${COMMIT_SHA}-amd64 \
+            ${BASE_IMAGE}:${COMMIT_SHA}-arm64
+          docker manifest push ${BASE_IMAGE}:${COMMIT_SHA}
