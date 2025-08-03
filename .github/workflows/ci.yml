@@ -141,7 +141,7 @@ jobs:
           echo "*** Native launchers work."
 
       - name: Default manualTest tasks
-        if: ${{ env.skip_manual_tests == 'false' }}
+        if: ${{ !github.event.inputs.skip_manual_tests }}
         timeout-minutes: 5
         shell: bash
         run: |
@@ -152,7 +152,7 @@ jobs:
 
       - name: Parallel manualTest task
         timeout-minutes: 5
-        if: ${{ env.skip_manual_tests_parallel == 'false' }}
+        if: ${{ !github.event.inputs.skip_manual_tests_parallel }}
         shell: bash
         run: |
           ./gradlew ${{ env.gradle_options }} manualTests:runParallel
