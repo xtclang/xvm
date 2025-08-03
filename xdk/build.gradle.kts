@@ -121,14 +121,8 @@ distributions {
     }
 }
 
-tasks.filter { XdkDistribution.isDistributionArchiveTask(it) }.forEach {
-    // Add transitive dependency to the process resource tasks. There might be something brokemn with those dependencies,
-    // but it's more likely that since the processXtcResources task needs to be run before compileXtc, and the Java one does
-    // not, this somehow confuses the life cycle. TODO: This is another argument to remove and duplicate what is needed of the
-    // Java plugin functionality for the XTC Plugin, but we haven't had time to neither do that, nor work on build speedups
-    // through configuration caching and other dependencies.
-    it.dependsOn(tasks.compileXtc)
-}
+// Let the Distribution plugin handle dependencies properly through the standard lifecycle
+// Distribution tasks should automatically depend on processResources and other build outputs
 
 val cleanXdk by tasks.registering(Delete::class) {
     subprojects.forEach {
@@ -158,13 +152,14 @@ tasks.withType<Sign>().configureEach {
     }
 }
 
+// Restore the proper distribution task dependencies using the existing utility
+tasks.filter { XdkDistribution.isDistributionArchiveTask(it) }.forEach {
+    it.dependsOn(tasks.named("processXtcResources"))
+}
+
 tasks.withType<Tar>().configureEach {
     compression = Compression.GZIP
     archiveExtension = "tar.gz"
-}
-
-val distZip by tasks.existing(Zip::class) {
-    dependsOn(tasks.compileXtc) // And by transitive dependency, processResources
 }
 
 val test by tasks.existing {
@@ -261,6 +256,4 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
     }
 }
 
-val installDist by tasks.existing {
-    dependsOn(tasks.compileXtc)
-}
+// Let the Distribution plugin handle installDist dependencies according to Gradle standards

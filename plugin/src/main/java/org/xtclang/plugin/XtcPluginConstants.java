@@ -52,8 +52,8 @@ public final class XtcPluginConstants {
     public static final String XDK_CONFIG_NAME_JAVATOOLS_INCOMING = "xdkJavaTools";
     public static final String XDK_CONFIG_NAME_JAVATOOLS_OUTGOING = XDK_CONFIG_NAME_JAVATOOLS_INCOMING + "Provider";
 
-    // Config artifacts from the XDK build:
-    public static final String XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR = "javatools-fatjar";
+    // Config artifacts from the XDK build (any javatools-jar uses this config tag, like both javatools.jar and javatools-jitbridge.jar)
+    public static final String XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_JAR = "javatools-jar";
 
     // Default "empty" values for collections and Gradle API classes.
     public static final Set<File> EMPTY_FILE_COLLECTION = Collections.emptySet();

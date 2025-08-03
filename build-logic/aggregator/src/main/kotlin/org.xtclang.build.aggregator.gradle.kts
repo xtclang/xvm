@@ -41,10 +41,21 @@ private class XdkBuildAggregator(project: Project) : Runnable {
                 group = BUILD_GROUP
                 description = "Aggregates and executes the '$taskName' task for all included builds."
                 gradle.includedBuilds.filterNot { ignored.contains(it.name) }.forEach { includedBuild ->
-                    dependsOn(includedBuild.task(":$taskName"))
-                    logger.info("$prefix     Attaching: dependsOn(':$name' <- ':${includedBuild.name}:$name')")
+                    try {
+                        dependsOn(includedBuild.task(":$taskName"))
+                        logger.info("$prefix     Attaching: dependsOn(':$name' <- ':${includedBuild.name}:$name')")
+                    } catch (_: Exception) {
+                        logger.warn("$prefix     Skipping task ':${includedBuild.name}:$taskName' - task may not exist in included build")
+                    }
                 }
             }
+        }
+        
+        // Establish proper Gradle lifecycle dependencies
+        tasks.named(BUILD_TASK_NAME) {
+            dependsOn(tasks.named(ASSEMBLE_TASK_NAME))
+            dependsOn(tasks.named(CHECK_TASK_NAME))
+            logger.info("$prefix Establishing lifecycle: build depends on assemble + check")
         }
     }
 
@@ -58,9 +69,11 @@ private class XdkBuildAggregator(project: Project) : Runnable {
         """.trimIndent()
             )
 
-            if (taskNames.count { !it.startsWith("-") && !it.contains("taskTree") } > 1) {
+            val hasCleanTask = taskNames.any { it == "clean" || it.endsWith(":clean") }
+            
+            if (taskNames.size > 1 && hasCleanTask) {
                 val msg =
-                    "$prefix Multiple start parameter tasks are not guaranteed to run in order/in parallel. Please run each task individually. (task names: $taskNames)"
+                    "$prefix Multiple start parameter tasks with 'clean' are not allowed due to potential deadlocks. Please run 'clean' separately from other tasks. (task names: $taskNames)"
                 logger.error(msg)
                 throw GradleException(msg)
             }
