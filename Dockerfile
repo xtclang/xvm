@@ -74,9 +74,9 @@ RUN --mount=type=cache,target=/root/.gradle/caches,sharing=locked \
     --mount=type=cache,target=/root/.gradle/wrapper,sharing=locked \
     --mount=type=cache,target=/root/.gradle/build-cache,sharing=locked \
     chmod +x ./gradlew && \
-    export GRADLE_OPTS="-Dorg.gradle.daemon=false" && \
+    export GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true" && \
     ./gradlew --version && \
-    ./gradlew --no-daemon --build-cache dependencies || true
+    ./gradlew --no-daemon --parallel --build-cache --max-workers=4 dependencies || true
 
 COPY <<EOF /tmp/build_xdk.sh
 #!/bin/bash
@@ -94,11 +94,16 @@ echo "Building XDK for \${TARGETOS}/\${TARGETARCH}"
 echo "Source already downloaded, starting build..."
 
 # Configure Gradle for faster builds in containers
-export GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.caching=true -Dorg.gradle.parallel=true -Dorg.gradle.configureondemand=true"
+export GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.caching=true -Dorg.gradle.parallel=true -Dorg.gradle.configureondemand=true -Dorg.gradle.workers.max=4"
 
 # Make gradle wrapper executable and build
 chmod +x ./gradlew
-./gradlew --no-daemon --parallel --build-cache --configuration-cache xdk:installDist
+
+# Use more aggressive parallel options and skip tests (since this is just packaging)
+./gradlew --no-daemon --parallel --build-cache --max-workers=4 \
+  --gradle-user-home=/root/.gradle \
+  -x test -x check \
+  xdk:installDist
 
 echo "Build completed successfully"
 
