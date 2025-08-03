@@ -219,7 +219,7 @@ jobs:
         if: ${{ (github.event.inputs.always_publish_snapshot) || (github.ref == 'refs/heads/master') }}
         shell: bash
         run: |
-          ./gradlew clean
+          echo "Reusing build cache from build-verify job..."
           ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true
           ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true
 

@@ -99,6 +99,9 @@ export GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.caching=true -Dorg.gr
 # Make gradle wrapper executable and build
 chmod +x ./gradlew
 
+# Ensure gradle user home exists
+mkdir -p /root/.gradle
+
 # Use more aggressive parallel options and skip tests (since this is just packaging)
 ./gradlew --no-daemon --parallel --build-cache --max-workers=4 \
   --gradle-user-home=/root/.gradle \
