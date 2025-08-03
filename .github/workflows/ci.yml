@@ -261,13 +261,24 @@ jobs:
           
           VERSION=$(grep -E '^version\s*=' gradle.properties | cut -d'=' -f2 | tr -d ' ')
           COMMIT_SHA=${GITHUB_SHA::8}
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          
+          echo "DEBUG: VERSION=$VERSION"
+          echo "DEBUG: COMMIT_SHA=$COMMIT_SHA" 
+          echo "DEBUG: BRANCH_NAME=$BRANCH_NAME"
+          echo "DEBUG: GITHUB_REF=$GITHUB_REF"
+          
+          # Set base image name based on branch
+          if [ "$BRANCH_NAME" = "master" ]; then
+            BASE_IMAGE="ghcr.io/xtclang/xvm"
+          else
+            BASE_IMAGE="ghcr.io/xtclang/xvm_${BRANCH_NAME}"
+          fi
           
           docker buildx build \
             --platform ${{ matrix.platform }} \
-            --tag ghcr.io/xtclang/xvm:latest-${{ matrix.arch }} \
-            --tag ghcr.io/xtclang/xvm:${VERSION}-${{ matrix.arch }} \
-            --tag ghcr.io/xtclang/xvm:${COMMIT_SHA}-${{ matrix.arch }} \
-            --build-arg VERSION=${GITHUB_REF#refs/heads/} \
+            --tag ${BASE_IMAGE}:latest-${{ matrix.arch }} \
+            --build-arg VERSION=$BRANCH_NAME \
             --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
             --build-arg VCS_REF=${GITHUB_SHA} \
             --cache-from type=gha,scope=${{ matrix.arch }} \
@@ -296,14 +307,22 @@ jobs:
         run: |
           echo "Creating multi-platform manifests..."
           
-          VERSION=$(grep -E '^version\s*=' gradle.properties | cut -d'=' -f2 | tr -d ' ') || VERSION="0.4.4-SNAPSHOT"
-          COMMIT_SHA=${GITHUB_SHA::8}
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          
+          # Set base image name based on branch
+          if [ "$BRANCH_NAME" = "master" ]; then
+            BASE_IMAGE="ghcr.io/xtclang/xvm"
+          else
+            BASE_IMAGE="ghcr.io/xtclang/xvm_${BRANCH_NAME}"
+          fi
+          
+          echo "Creating manifest for: ${BASE_IMAGE}:latest"
           
           # Create latest manifest
-          docker manifest create ghcr.io/xtclang/xvm:latest \
-            ghcr.io/xtclang/xvm:latest-amd64 \
-            ghcr.io/xtclang/xvm:latest-arm64
-          docker manifest push ghcr.io/xtclang/xvm:latest
+          docker manifest create ${BASE_IMAGE}:latest \
+            ${BASE_IMAGE}:latest-amd64 \
+            ${BASE_IMAGE}:latest-arm64
+          docker manifest push ${BASE_IMAGE}:latest
           
           # Create version manifest
           docker manifest create ghcr.io/xtclang/xvm:${VERSION} \

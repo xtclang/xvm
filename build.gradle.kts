@@ -93,11 +93,22 @@ fun createDockerBuildTask(platform: String, arch: String) = tasks.registering(Ex
     
     val currentVersion = project.version.toString()
     
+    // Get current branch name
+    val branchName = providers.exec {
+        commandLine("git", "branch", "--show-current")
+    }.standardOutput.asText.get().trim()
+    
+    // Set base image name based on branch
+    val baseImage = if (branchName == "master") {
+        "ghcr.io/xtclang/xvm"
+    } else {
+        "ghcr.io/xtclang/xvm_${branchName}"
+    }
+    
     commandLine(
         "docker", "buildx", "build",
         "--platform", platform,
-        "--tag", "ghcr.io/xtclang/xvm:latest-$arch",
-        "--tag", "ghcr.io/xtclang/xvm:${currentVersion}-$arch",
+        "--tag", "${baseImage}:latest-$arch",
         "--load",
         "."
     )
@@ -105,8 +116,8 @@ fun createDockerBuildTask(platform: String, arch: String) = tasks.registering(Ex
     workingDir = rootProject.projectDir
     
     doFirst {
-        logger.lifecycle("Building Docker image for $platform platform (using latest master)...")
-        logger.lifecycle("Tags: ghcr.io/xtclang/xvm:latest-$arch, ghcr.io/xtclang/xvm:${currentVersion}-$arch")
+        logger.lifecycle("Building Docker image for $platform platform (branch: $branchName)...")
+        logger.lifecycle("Tags: ${baseImage}:latest-$arch")
     }
 }
 
@@ -237,20 +248,25 @@ fun createDockerPushTask(arch: String, buildTask: TaskProvider<Exec>) = tasks.re
     
     dependsOn(buildTask)
     
-    val currentVersion = project.version.toString()
+    // Get current branch name
+    val branchName = providers.exec {
+        commandLine("git", "branch", "--show-current")
+    }.standardOutput.asText.get().trim()
+    
+    // Set base image name based on branch
+    val baseImage = if (branchName == "master") {
+        "ghcr.io/xtclang/xvm"
+    } else {
+        "ghcr.io/xtclang/xvm_${branchName}"
+    }
     
     commandLine(
-        "docker", "push", "ghcr.io/xtclang/xvm:latest-$arch"
+        "docker", "push", "${baseImage}:latest-$arch"
     )
-    
-    doLast {
-        project.providers.exec {
-            commandLine("docker", "push", "ghcr.io/xtclang/xvm:${currentVersion}-$arch")
-        }
-    }
     
     doFirst {
         logger.lifecycle("Pushing $arch Docker image to GitHub Container Registry...")
+        logger.lifecycle("Branch: $branchName, Image: ${baseImage}:latest-$arch")
         logger.lifecycle("Make sure you're logged in with: docker login ghcr.io")
     }
 }
