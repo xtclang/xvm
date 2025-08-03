@@ -7,7 +7,7 @@ import static org.gradle.api.plugins.ApplicationPlugin.APPLICATION_GROUP;
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME;
 
 import static org.xtclang.plugin.XtcPluginConstants.UNSPECIFIED;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_JAR;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_CONTENTS;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING_ZIP;
@@ -431,7 +431,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
     private void addJavaToolsContentsAttributes(final Configuration config) {
         config.attributes(it -> {
             it.attribute(CATEGORY_ATTRIBUTE, objects.named(Category.class, LIBRARY));
-            it.attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR));
+            it.attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_JAR));
         });
     }
 
@@ -473,8 +473,10 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             // and get the build directory (also forcing it to be built since it depends on the compileTask)
             final var location = getXtcSourceSetOutputDirectory(project, sourceSet);
             artifactHandler.add(xtcModuleProvider.getName(), location, artifact -> {
-                logger.info("{} Adding outgoing artifact {}; builtBy {}.", prefix, location.get(), compileTask.getName());
-                artifact.builtBy(compileTask);
+                logger.info("{} Adding outgoing artifact {}; builtBy {}.", prefix, location.get(), "build task");
+                // Make XTC module artifacts depend on the full build lifecycle (including tests)
+                // rather than just compilation, so distributions trigger complete builds
+                artifact.builtBy(project.getTasks().named("build"));
                 artifact.setType(ArtifactTypeDefinition.DIRECTORY_TYPE);
             });
         });
