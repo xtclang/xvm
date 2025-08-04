@@ -428,16 +428,10 @@ jobs:
           
           setup_docker_vars
           
-          cat > hello.x << 'EOF'
-          module HelloWorld {
-              void run() {
-                  @Inject Console console;
-                  console.print("Hello, World from Docker!");
-              }
-          }
-          EOF
+          # Copy EchoTest.x from the repository
+          cp manualTests/src/main/x/EchoTest.x .
           
-          docker run --rm -v $(pwd):/workspace -w /workspace ${DOCKER_BASE_IMAGE}:latest xcc hello.x
-          OUTPUT=$(docker run --rm -v $(pwd):/workspace -w /workspace ${DOCKER_BASE_IMAGE}:latest xec HelloWorld)
+          docker run --rm -v $(pwd):/workspace -w /workspace ${DOCKER_BASE_IMAGE}:latest xcc EchoTest.x
+          OUTPUT=$(docker run --rm -v $(pwd):/workspace -w /workspace ${DOCKER_BASE_IMAGE}:latest xec EchoTest)
           
-          echo "$OUTPUT" | grep -q "Hello, World from Docker!" || exit 1
+          echo "$OUTPUT" | grep -q "EchoTest invoked with 0 arguments" || exit 1
