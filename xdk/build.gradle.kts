@@ -191,22 +191,23 @@ val ensureTags by tasks.registering {
     val capturedSnapshotOnly = snapshotOnly()
     val capturedSemanticVersion = semanticVersion
     val capturedGitHubProtocol = xdkBuildLogic.gitHubProtocol()
+    val capturedPrefix = prefix  // Capture prefix to avoid project access during execution
     
     if (!allowPublication()) {
-        logger.lifecycle("$prefix Skipping publication task, snapshotOnly=${capturedSnapshotOnly} for version: '$capturedSemanticVersion")
+        logger.lifecycle("$capturedPrefix Skipping publication task, snapshotOnly=${capturedSnapshotOnly} for version: '$capturedSemanticVersion")
     }
     onlyIf {
         allowPublication()
     }
     doLast {
         logger.lifecycle("""
-            $prefix Ensuring that the current commit is tagged with version.
-            $prefix     version: $capturedSemanticVersion
-            $prefix     snapshotOnly: $capturedSnapshotOnly
+            $capturedPrefix Ensuring that the current commit is tagged with version.
+            $capturedPrefix     version: $capturedSemanticVersion
+            $capturedPrefix     snapshotOnly: $capturedSnapshotOnly
         """.trimIndent())
         val tag = capturedGitHubProtocol.ensureTags(capturedSnapshotOnly)
         if (GitHubProtocol.tagCreated(tag)) {
-            logger.lifecycle("$prefix Created or updated tag '$tag' for version: '$capturedSemanticVersion'")
+            logger.lifecycle("$capturedPrefix Created or updated tag '$tag' for version: '$capturedSemanticVersion'")
         }
     }
 }
