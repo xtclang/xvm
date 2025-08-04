@@ -352,7 +352,9 @@ jobs:
             --build-arg VCS_REF=${GITHUB_SHA} \
             --cache-from type=gha,scope=${{ matrix.arch }} \
             --cache-to type=gha,mode=max,scope=${{ matrix.arch }} \
-            --push \
+            --provenance=false \
+            --attestations=false \
+            --output type=registry \
             .
 
   docker-manifest:
@@ -385,9 +387,16 @@ jobs:
           # Function to create and push manifest
           create_manifest() {
             local tag=$1
+            echo "Creating manifest for tag: $tag"
+            echo "Inspecting source images:"
+            docker manifest inspect ${DOCKER_BASE_IMAGE}:${tag}-amd64 || echo "AMD64 image inspect failed"
+            docker manifest inspect ${DOCKER_BASE_IMAGE}:${tag}-arm64 || echo "ARM64 image inspect failed"
+            
+            echo "Creating manifest..."
             docker manifest create ${DOCKER_BASE_IMAGE}:${tag} \
               ${DOCKER_BASE_IMAGE}:${tag}-amd64 \
               ${DOCKER_BASE_IMAGE}:${tag}-arm64
+            echo "Pushing manifest..."
             docker manifest push ${DOCKER_BASE_IMAGE}:${tag}
           }
           
