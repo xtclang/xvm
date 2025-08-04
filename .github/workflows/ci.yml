@@ -15,16 +15,16 @@ on:
       extra_gradle_options:
         description: 'Extra Gradle options to pass to the build'
         required: false
-      skip_manual_tests:
-        description: 'Skip manual tests'
+      run_manual_tests:
+        description: 'Run manual tests'
         type: boolean
         required: false
-        default: false
-      skip_manual_tests_parallel:
-        description: 'Skip parallel manual tests'
+        default: true
+      parallel_manual_tests:
+        description: 'Run manual tests in parallel mode'
         type: boolean
         required: false
-        default: false
+        default: true
 
 env:
   # TODO: Default should be disabled; we only want to be bothered by tagging and publishing for the master branch.
@@ -49,9 +49,9 @@ env:
 
   gradle_options: "-Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false --stacktrace --warning-mode=all --console=plain ${{ inputs.extra_gradle_options }}"
 
-  # Optional flags to skip manual tests, or at least some of them.
-  skip_manual_tests: ${{ github.event.inputs.skip_manual_tests == 'true' }}
-  skip_manual_tests_parallel: ${{ github.event.inputs.skip_manual_tests_parallel == 'true' }}
+  # Optional flags to control manual tests
+  run_manual_tests: ${{ github.event.inputs.run_manual_tests != false }}
+  parallel_manual_tests: ${{ github.event.inputs.parallel_manual_tests != false }}
 
   java_version: 21
   java_distribution: temurin
@@ -140,22 +140,19 @@ jobs:
           echo "        version: $xec_version"
           echo "*** Native launchers work."
 
-      - name: Default manualTest tasks
-        if: ${{ !github.event.inputs.skip_manual_tests }}
-        timeout-minutes: 5
+      - name: Manual tests
+        if: ${{ env.run_manual_tests == 'true' }}
+        timeout-minutes: 10
         shell: bash
         run: |
+          # Always run basic manual tests
           ./gradlew ${{ env.gradle_options }} manualTests:runXtc
           ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc
           ./gradlew ${{ env.gradle_options }} manualTests:runTwoTestsInSequence
-          echo "*** manualTests:runParallel: ${{ env.skip_manual_tests_parallel }}"
-
-      - name: Parallel manualTest task
-        timeout-minutes: 5
-        if: ${{ !github.event.inputs.skip_manual_tests_parallel }}
-        shell: bash
-        run: |
-          ./gradlew ${{ env.gradle_options }} manualTests:runParallel
+          
+          # Run parallel or sequential tests based on setting
+          MANUAL_TASK=$( [ "${{ env.parallel_manual_tests }}" = "true" ] && echo "runParallel" || echo "runSequential" )
+          ./gradlew ${{ env.gradle_options }} manualTests:$MANUAL_TASK
 
       - name: Upload build artifacts
         if: ${{ success() && matrix.os == 'ubuntu-latest' }}
@@ -256,12 +253,13 @@ jobs:
 
       - name: Build and push Docker image (${{ matrix.arch }})
         shell: bash
+        working-directory: docker
         run: |
           echo "Building and pushing ${{ matrix.arch }} Docker image on native hardware..."
           
           # Get version from VERSION file
-          VERSION=$(cat VERSION | tr -d '\n\r ')
-          COMMIT_SHA=${GITHUB_SHA::8}
+          VERSION=$(cat ../VERSION | tr -d '\n\r ')
+          COMMIT_SHA=${GITHUB_SHA}
           BRANCH_NAME=${GITHUB_REF#refs/heads/}
           
           echo "DEBUG: VERSION=$VERSION"
@@ -279,8 +277,8 @@ jobs:
             --platform ${{ matrix.platform }} \
             --tag ${BASE_IMAGE}:latest-${{ matrix.arch }} \
             --tag ${BASE_IMAGE}:${VERSION}-${{ matrix.arch }} \
-            --tag ${BASE_IMAGE}:${COMMIT_SHA}-${{ matrix.arch }} \
-            --build-arg VERSION=$BRANCH_NAME \
+            --tag ${BASE_IMAGE}:${COMMIT_SHA::8}-${{ matrix.arch }} \
+            --build-arg VERSION=${COMMIT_SHA} \
             --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
             --build-arg VCS_REF=${GITHUB_SHA} \
             --cache-from type=gha,scope=${{ matrix.arch }} \
@@ -311,7 +309,7 @@ jobs:
           
           # Get version from VERSION file
           VERSION=$(cat VERSION | tr -d '\n\r ')
-          COMMIT_SHA=${GITHUB_SHA::8}
+          COMMIT_SHA=${GITHUB_SHA}
           BRANCH_NAME=${GITHUB_REF#refs/heads/}
           
           # Set base image name based on branch
@@ -336,7 +334,7 @@ jobs:
           docker manifest push ${BASE_IMAGE}:${VERSION}
           
           # Create commit manifest (also branch-aware)
-          docker manifest create ${BASE_IMAGE}:${COMMIT_SHA} \
-            ${BASE_IMAGE}:${COMMIT_SHA}-amd64 \
-            ${BASE_IMAGE}:${COMMIT_SHA}-arm64
-          docker manifest push ${BASE_IMAGE}:${COMMIT_SHA}
+          docker manifest create ${BASE_IMAGE}:${COMMIT_SHA::8} \
+            ${BASE_IMAGE}:${COMMIT_SHA::8}-amd64 \
+            ${BASE_IMAGE}:${COMMIT_SHA::8}-arm64
+          docker manifest push ${BASE_IMAGE}:${COMMIT_SHA::8}

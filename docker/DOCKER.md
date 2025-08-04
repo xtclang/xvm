@@ -10,9 +10,11 @@ For developers building the project, see the [Building Images](#building-images)
 
 ## Available Gradle Tasks
 
+All Docker tasks are now organized in the `docker/` subproject. Run from project root:
+
 ### Individual Platform Tasks
 - `dockerBuildAmd64` - Build Docker image for linux/amd64 platform only
-- `dockerBuildArm64` - Build Docker image for linux/arm64 platform only
+- `dockerBuildArm64` - Build Docker image for linux/arm64 platform only  
 - `dockerPushAmd64` - Push AMD64 Docker image to GitHub Container Registry
 - `dockerPushArm64` - Push ARM64 Docker image to GitHub Container Registry
 
@@ -22,7 +24,7 @@ For developers building the project, see the [Building Images](#building-images)
 - `dockerBuildAndPush` - Build and push individual platform images (depends on dockerPushAll)
 
 ### Multi-Platform Tasks
-- `dockerBuildMultiPlatform` - Build multi-platform images locally (may not work on all setups)
+- `dockerBuildMultiPlatform` - Build multi-platform images locally (uses commit SHA as VERSION)
 - `dockerPushMultiPlatform` - Build and push multi-platform manifest to registry
 - `dockerBuildAndPushMultiPlatform` - Alias for dockerPushMultiPlatform
 
@@ -38,7 +40,7 @@ For developers building the project, see the [Building Images](#building-images)
 # AMD64 only
 ./gradlew dockerBuildAmd64
 
-# ARM64 only
+# ARM64 only  
 ./gradlew dockerBuildArm64
 ```
 
@@ -47,11 +49,23 @@ For developers building the project, see the [Building Images](#building-images)
 # Build and push individual platform images
 ./gradlew dockerBuildAndPush
 
-# Build and push multi-platform manifest
+# Build and push multi-platform manifest (recommended)
 ./gradlew dockerPushMultiPlatform
 
-# Just build multi-platform locally (may not work on all Docker setups)
+# Just build multi-platform locally
 ./gradlew dockerBuildMultiPlatform
+```
+
+### Working with Docker Directory
+
+You can also run tasks directly from the `docker/` subdirectory:
+
+```bash
+cd docker/
+../gradlew dockerBuildMultiPlatform
+
+# Or use direct Docker commands
+docker buildx build --platform linux/arm64 --tag test-xvm:latest .
 ```
 
 ## Image Tags
@@ -69,12 +83,12 @@ Generic tags (when using multi-platform builds):
 ## Build Configuration
 
 ### Default Settings
-- Downloads latest master from GitHub (no local source used)
-- `JAVA_VERSION=21` - Uses Java 21 JRE (distroless)
+- Downloads source from GitHub using commit SHA (no local source used)
+- `JAVA_VERSION=21` - Uses Bellsoft Liberica OpenJDK 21 Alpine (consistent across build stages)
 - Platform matches host architecture (linux/amd64 on x86, linux/arm64 on ARM)
 - Compiles native launchers from C source for target platform
 - Creates architecture-specific xcc/xec executables
-- Self-contained images (~101MB) with minimal attack surface
+- Build script: `docker/build-xdk.sh` (clean, non-branchy shell logic)
 
 ### Build Arguments
 You can override default settings using build arguments:

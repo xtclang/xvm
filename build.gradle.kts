@@ -88,7 +88,8 @@ private val dockerTaskNames = listOf(
     "dockerBuildAmd64", "dockerBuildArm64", "dockerBuild",
     "dockerBuildMultiPlatform", "dockerPushMultiPlatform", 
     "dockerPushAmd64", "dockerPushArm64", "dockerPushAll",
-    "dockerBuildAndPush", "dockerBuildAndPushMultiPlatform"
+    "dockerBuildAndPush", "dockerBuildAndPushMultiPlatform",
+    "dockerCreateManifest", "dockerBuildPushAndManifest"
 )
 
 // Forward all docker tasks to the docker subproject

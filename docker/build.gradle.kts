@@ -30,7 +30,7 @@ fun createDockerBuildTask(platform: String, arch: String) = tasks.registering(Ex
         "."
     )
     
-    workingDir = file(".")
+    workingDir = projectDir
     
     doFirst {
         logger.lifecycle("Building Docker image for $platform platform (branch: $branchName)...")
@@ -84,7 +84,7 @@ val dockerBuildMultiPlatform by tasks.registering(Exec::class) {
         logger.lifecycle("Build date: ${buildDate}")
     }
     
-    workingDir = file(".")
+    workingDir = projectDir
 }
 
 val dockerPushMultiPlatform by tasks.registering(Exec::class) {
@@ -136,7 +136,7 @@ val dockerPushMultiPlatform by tasks.registering(Exec::class) {
         logger.lifecycle("Build date: ${buildDate}")
     }
     
-    workingDir = file(".")
+    workingDir = projectDir
 }
 
 // Helper function to create platform-specific Docker push tasks
@@ -193,9 +193,73 @@ val dockerBuildAndPush by tasks.registering {
     dependsOn(dockerPushAll)
 }
 
+val dockerCreateManifest by tasks.registering(Exec::class) {
+    group = "docker"
+    description = "Create and push multi-platform Docker manifests (like CI workflow)"
+    
+    doFirst {
+        val currentVersion = project.version.toString()
+        val gitCommit = providers.exec {
+            commandLine("git", "rev-parse", "HEAD")
+        }.standardOutput.asText.get().trim()
+        
+        val gitShort = providers.exec {
+            commandLine("git", "rev-parse", "--short", "HEAD")
+        }.standardOutput.asText.get().trim()
+        
+        val branchName = providers.exec {
+            commandLine("git", "branch", "--show-current")
+        }.standardOutput.asText.get().trim()
+        
+        val baseImage = if (branchName == "master") {
+            "ghcr.io/xtclang/xvm"
+        } else {
+            "ghcr.io/xtclang/xvm_${branchName}"
+        }
+        
+        logger.lifecycle("Creating manifests for: ${baseImage} (version: ${currentVersion})")
+        
+        // Create and push latest manifest
+        exec {
+            commandLine("docker", "manifest", "create", "${baseImage}:latest", 
+                       "${baseImage}:latest-amd64", "${baseImage}:latest-arm64")
+        }
+        exec {
+            commandLine("docker", "manifest", "push", "${baseImage}:latest")
+        }
+        
+        // Create and push version manifest
+        exec {
+            commandLine("docker", "manifest", "create", "${baseImage}:${currentVersion}",
+                       "${baseImage}:${currentVersion}-amd64", "${baseImage}:${currentVersion}-arm64")
+        }
+        exec {
+            commandLine("docker", "manifest", "push", "${baseImage}:${currentVersion}")
+        }
+        
+        // Create and push commit manifest
+        exec {
+            commandLine("docker", "manifest", "create", "${baseImage}:${gitShort}",
+                       "${baseImage}:${gitShort}-amd64", "${baseImage}:${gitShort}-arm64")
+        }
+        exec {
+            commandLine("docker", "manifest", "push", "${baseImage}:${gitShort}")
+        }
+    }
+    
+    workingDir = projectDir
+}
+
 val dockerBuildAndPushMultiPlatform by tasks.registering {
     group = "docker"
     description = "Build and push multi-platform Docker images"
     
     dependsOn(dockerPushMultiPlatform)
+}
+
+val dockerBuildPushAndManifest by tasks.registering {
+    group = "docker"  
+    description = "Build, push platform images, and create manifests (complete CI-like workflow)"
+    
+    dependsOn(dockerPushAll, dockerCreateManifest)
 }
