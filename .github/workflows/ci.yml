@@ -434,7 +434,11 @@ jobs:
           # Copy EchoTest.x from the repository
           cp manualTests/src/main/x/EchoTest.x .
           
+          echo "Compiling EchoTest.x..."
           docker run --rm -v $(pwd):/workspace -w /workspace ${DOCKER_BASE_IMAGE}:latest xcc EchoTest.x
+          echo "Running EchoTest..."
           OUTPUT=$(docker run --rm -v $(pwd):/workspace -w /workspace ${DOCKER_BASE_IMAGE}:latest xec EchoTest)
           
+          echo "Docker test output: $OUTPUT"
           echo "$OUTPUT" | grep -q "EchoTest invoked with 0 arguments" || exit 1
+          echo "✅ Docker test passed!"
