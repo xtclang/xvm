@@ -58,9 +58,14 @@ private class XdkBuildAggregator(project: Project) : Runnable {
         """.trimIndent()
             )
 
-            if (taskNames.count { !it.startsWith("-") && !it.contains("taskTree") } > 1) {
+            // Allow multiple tasks except for clean and other lifecycle tasks that might conflict
+            val conflictingTasks = taskNames.filter { 
+                !it.startsWith("-") && 
+                (it == "clean" || lifeCycleTasks.contains(it))
+            }
+            if (conflictingTasks.size > 1) {
                 val msg =
-                    "$prefix Multiple start parameter tasks are not guaranteed to run in order/in parallel. Please run each task individually. (task names: $taskNames)"
+                    "$prefix Multiple conflicting lifecycle tasks detected. Please run lifecycle tasks individually: $conflictingTasks"
                 logger.error(msg)
                 throw GradleException(msg)
             }

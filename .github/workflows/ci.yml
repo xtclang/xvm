@@ -12,19 +12,24 @@ on:
         type: boolean
         required: false
         default: false
+      always_build_docker_image:
+        description: 'Always build Docker images regardless of branch'
+        type: boolean
+        required: false
+        default: false
       extra_gradle_options:
         description: 'Extra Gradle options to pass to the build'
         required: false
-      skip_manual_tests:
-        description: 'Skip manual tests'
+      run_manual_tests:
+        description: 'Run manual tests'
         type: boolean
         required: false
-        default: false
-      skip_manual_tests_parallel:
-        description: 'Skip parallel manual tests'
+        default: true
+      run_manual_tests_parallel:
+        description: 'Run manual tests in parallel mode'
         type: boolean
         required: false
-        default: false
+        default: true
 
 env:
   # TODO: Default should be disabled; we only want to be bothered by tagging and publishing for the master branch.
@@ -47,15 +52,43 @@ env:
   MAVEN_CENTRAL_USERNAME: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
   MAVEN_CENTRAL_PASSWORD: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
 
-  gradle_options: "-Dorg.gradle.jvmargs=-Xmx3G -Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false --stacktrace --warning-mode=all --console=plain ${{ inputs.extra_gradle_options }}"
+  gradle_options: "-Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false --stacktrace --warning-mode=all --console=plain ${{ inputs.extra_gradle_options }}"
 
-  # Optional flags to skip manual tests, or at least some of them.
-  skip_manual_tests: ${{ github.event.inputs.skip_manual_tests == 'true' }}
-  skip_manual_tests_parallel: ${{ github.event.inputs.skip_manual_tests_parallel == 'true' }}
+  # Optional flags to control manual tests
+  run_manual_tests: ${{ github.event.inputs.run_manual_tests != 'false' }}
+  run_manual_tests_parallel: ${{ github.event.inputs.run_manual_tests_parallel != 'false' }}
 
   java_version: 21
   java_distribution: temurin
   gradle_version: 8.14.2
+
+  # Docker build variables (DRY approach)
+  GH_COMMIT: ${{ github.sha }}
+  GH_BRANCH: ${{ github.ref_name }}
+  DOCKER_BASE_IMAGE: ${{ github.ref_name == 'master' && 'ghcr.io/xtclang/xvm' || format('ghcr.io/xtclang/xvm-{0}', github.ref_name) }}
+  
+  # Gradle cache inspection function (DRY approach)
+  GRADLE_CACHE_INSPECT: |
+    inspect_gradle_cache() {
+      local label="${1:-}"
+      local gradle_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
+      echo "🔍 Gradle Cache Inspection${label:+ ($label)}:"
+      echo "  Cache location: $gradle_home"
+      if [ -d "$gradle_home" ]; then
+        echo "  Cache exists: ✅"
+        local total_size=$(du -sh "$gradle_home" 2>/dev/null | cut -f1 || echo "unknown")
+        local total_bytes=$(du -sb "$gradle_home" 2>/dev/null | cut -f1 || echo "unknown")
+        echo "  Cache size: $total_size ($total_bytes bytes)"
+        for dir in caches wrapper build-cache; do
+          if [ -d "$gradle_home/$dir" ]; then
+            local dir_size=$(du -sh "$gradle_home/$dir" 2>/dev/null | cut -f1 || echo "unknown")
+            echo "    $dir: $dir_size"
+          fi
+        done
+      else
+        echo "  Cache exists: ❌"
+      fi
+    }
 
   # Build environment and build workflow debug flags.
   # ACTIONS_RUNNER_DEBUG: true
@@ -104,20 +137,38 @@ jobs:
           echo "*** Branch (github.ref)    : ${{ github.ref }}"
           echo "*** Commit (github.sha)    : ${{ github.sha }}"
           echo "*** Runner OS              : ${{ runner.os }}"
+          echo "*** Workflow dispatch inputs:"
+          echo "    always_publish_snapshot: '${{ github.event.inputs.always_publish_snapshot }}'"
+          echo "    always_build_docker_image: '${{ github.event.inputs.always_build_docker_image }}'"
+          echo "    run_manual_tests: '${{ github.event.inputs.run_manual_tests }}'"
+          echo "    run_manual_tests_parallel: '${{ github.event.inputs.run_manual_tests_parallel }}'"
+          echo "    extra_gradle_options: '${{ github.event.inputs.extra_gradle_options }}'"
+          echo "*** Environment variables:"
+          echo "    always_publish_snapshot: '${{ env.always_publish_snapshot }}'"
+          echo "    run_manual_tests: '${{ env.run_manual_tests }}'"
+          echo "    run_manual_tests_parallel: '${{ env.run_manual_tests_parallel }}'"
           echo "*** Java system properties :" 
           java -XshowSettings:properties --version
 
       - name: Build the XDK and create a distribution layout
         shell: bash
         run: |
+          ${{ env.GRADLE_CACHE_INSPECT }}
+          
           cwd_path=$(pwd)
           echo "Executing Gradle 'installDist' task from path: '$cwd_path'"
-          ./gradlew clean
+          echo "Skipping 'gradle clean' - fresh runner + cache integrity guaranteed"
+          ls -la build/ 2>/dev/null && echo "WARNING: build/ directory exists on fresh runner!" || echo "✅ Confirmed: No previous build outputs"
+          
+          inspect_gradle_cache "before installDist"
           ./gradlew ${{ env.gradle_options }} installDist 
 
       - name: Build a machine specific XDK installation with native launchers, test run launchers on native platform
         shell: bash
         run: |
+          ${{ env.GRADLE_CACHE_INSPECT }}
+          
+          inspect_gradle_cache "before native launcher build"
           ./gradlew ${{ env.gradle_options }} xdk:installWithLaunchersDist
           xcc_path=$(find xdk/build/install/ -name xcc)
           xec_path=$(find xdk/build/install/ -name xec)
@@ -136,22 +187,23 @@ jobs:
           echo "        version: $xec_version"
           echo "*** Native launchers work."
 
-      - name: Default manualTest tasks
-        if: ${{ env.skip_manual_tests == 'false' }}
-        timeout-minutes: 5
+      - name: Manual tests
+        if: ${{ env.run_manual_tests == 'true' }}
+        timeout-minutes: 10
         shell: bash
         run: |
+          ${{ env.GRADLE_CACHE_INSPECT }}
+          
+          inspect_gradle_cache "before manual tests"
+          
+          # Always run basic manual tests
           ./gradlew ${{ env.gradle_options }} manualTests:runXtc
           ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc
           ./gradlew ${{ env.gradle_options }} manualTests:runTwoTestsInSequence
-          echo "*** manualTests:runParallel: ${{ env.skip_manual_tests_parallel }}"
-
-      - name: Parallel manualTest task
-        timeout-minutes: 5
-        if: ${{ env.skip_manual_tests_parallel == 'false' }}
-        shell: bash
-        run: |
-          ./gradlew ${{ env.gradle_options }} manualTests:runParallel
+          
+          # Run parallel or sequential tests based on setting
+          MANUAL_TASK=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runSequential" )
+          ./gradlew ${{ env.gradle_options }} manualTests:$MANUAL_TASK
 
       - name: Upload build artifacts
         if: ${{ success() && matrix.os == 'ubuntu-latest' }}
@@ -185,11 +237,17 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-disabled: false
-          cache-read-only: false
+          cache-read-only: true  # Read-only since build-verify already populated cache
           gradle-version: ${{ env.gradle_version }}
 
-      - name: Verify all tests passed
+      - name: Debug publish conditions and verify all tests passed
         run: |
+          echo "🐛 Debug publish job conditions:"
+          echo "  always_publish_snapshot input: '${{ github.event.inputs.always_publish_snapshot }}'"
+          echo "  github.ref: '${{ github.ref }}'"
+          echo "  Condition should be: always_publish_snapshot == 'true' OR github.ref == 'refs/heads/master'"
+          echo "  This job should NOT run on non-master branch without explicit flag!"
+          echo ""
           echo "✅ All build-verify matrix jobs (Ubuntu + Windows) completed successfully"
           echo "✅ All tests passed - proceeding with publication"
 
@@ -212,33 +270,51 @@ jobs:
           java -XshowSettings:properties --version
 
       - name: Create or Update Snapshot (if pushed to 'master', or env.always_publish_snapshot is true)
-        if: ${{ (env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
+        if: ${{ (github.event.inputs.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
         shell: bash
         run: |
-          ./gradlew clean
+          ${{ env.GRADLE_CACHE_INSPECT }}
+          
+          inspect_gradle_cache "before publishing (reused from build-verify)"
+          
+          echo "Reusing build cache from build-verify job..."
           ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true
           ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true
 
-  docker-build-and-push:
+  docker-build:
     name: Build and push Docker images
-    # Only run if ALL build-verify matrix jobs succeed (both ubuntu-latest and windows-latest)
     needs: build-verify
-    runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master')) }}
+    runs-on: ${{ matrix.runner }}
+    if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            arch: amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            arch: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - name: Fetch Sources
         uses: actions/checkout@v4
 
-      - name: Verify all tests passed
-        run: |
-          echo "✅ All build-verify matrix jobs (Ubuntu + Windows) completed successfully"
-          echo "✅ All tests passed - proceeding with Docker build"
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
+      # Set up Java and Gradle to warm cache for Docker build
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
-          name: xdk-distribution
-          path: .
+          distribution: ${{ env.java_distribution }}
+          java-version: ${{ env.java_version }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: false
+          cache-read-only: true  # Read-only since build-verify already populated cache
+          gradle-version: ${{ env.gradle_version }}
+
+      # Note: Dockerfile is self-contained and downloads source itself
+      # But now Docker build can benefit from Gradle cache via GitHub Actions cache
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -250,19 +326,119 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/xtclang/xvm
-          tags: |
-            type=ref,event=branch,suffix=-amd64
-            type=sha,suffix=-amd64
-            type=raw,value=latest-amd64,enable={{is_default_branch}}
+      - name: Build and push Docker image (${{ matrix.arch }})
+        shell: bash
+        working-directory: docker
+        run: |
+          echo "Building and pushing ${{ matrix.arch }} Docker image on native hardware..."
+          
+          # Common Docker setup function
+          setup_docker_vars() {
+            VERSION=$(cat ../VERSION | tr -d '\n\r ')
+            
+            echo "DEBUG: VERSION=$VERSION"
+            echo "DEBUG: GH_COMMIT=$GH_COMMIT" 
+            echo "DEBUG: GH_BRANCH=$GH_BRANCH"
+            echo "DEBUG: DOCKER_BASE_IMAGE=$DOCKER_BASE_IMAGE"
+          }
+          
+          ${{ env.GRADLE_CACHE_INSPECT }}
+          
+          setup_docker_vars
+          inspect_gradle_cache "host cache before Docker build"
+          
+          docker buildx build \
+            --platform ${{ matrix.platform }} \
+            --tag ${DOCKER_BASE_IMAGE}:latest-${{ matrix.arch }} \
+            --tag ${DOCKER_BASE_IMAGE}:${VERSION}-${{ matrix.arch }} \
+            --tag ${DOCKER_BASE_IMAGE}:${GH_COMMIT::8}-${{ matrix.arch }} \
+            --build-arg GH_BRANCH=${GH_BRANCH} \
+            --build-arg GH_COMMIT=${GH_COMMIT} \
+            --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+            --build-arg VCS_REF=${GITHUB_SHA} \
+            --cache-from type=gha,scope=${{ matrix.arch }} \
+            --cache-to type=gha,mode=max,scope=${{ matrix.arch }} \
+            --provenance=false \
+            --output type=registry \
+            .
 
-      - name: Build and push Docker images (Multi-platform)
+  docker-manifest:
+    name: Create multi-platform manifest
+    needs: docker-build
+    runs-on: ubuntu-latest
+    if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
+    steps:
+      - name: Fetch Sources
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push multi-platform manifests
         shell: bash
         run: |
-          echo "Building and pushing multi-platform Docker images using Gradle..."
-          ./gradlew clean
-          ./gradlew dockerPushMultiPlatform
+          echo "Creating multi-platform manifests..."
+          
+          # Common Docker setup function
+          setup_docker_vars() {
+            VERSION=$(cat VERSION | tr -d '\n\r ')
+            echo "Creating manifests for: ${DOCKER_BASE_IMAGE} (version: ${VERSION})"
+          }
+          
+          # Function to create and push manifest
+          create_manifest() {
+            local tag=$1
+            echo "Creating manifest for tag: $tag"
+            echo "Inspecting source images:"
+            docker manifest inspect ${DOCKER_BASE_IMAGE}:${tag}-amd64 || echo "AMD64 image inspect failed"
+            docker manifest inspect ${DOCKER_BASE_IMAGE}:${tag}-arm64 || echo "ARM64 image inspect failed"
+            
+            echo "Creating manifest..."
+            docker manifest create ${DOCKER_BASE_IMAGE}:${tag} \
+              ${DOCKER_BASE_IMAGE}:${tag}-amd64 \
+              ${DOCKER_BASE_IMAGE}:${tag}-arm64
+            echo "Pushing manifest..."
+            docker manifest push ${DOCKER_BASE_IMAGE}:${tag}
+          }
+          
+          setup_docker_vars
+          
+          # Create all manifests
+          create_manifest "latest"
+          create_manifest "${VERSION}"
+          create_manifest "${GH_COMMIT::8}"
+
+  docker-test:
+    name: Test Docker images
+    needs: docker-manifest
+    runs-on: ubuntu-latest
+    if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
+    steps:
+      - name: Fetch Sources
+        uses: actions/checkout@v4
+
+      - name: Test Docker image functionality
+        shell: bash
+        run: |
+          # Common Docker setup function
+          setup_docker_vars() {
+            echo "Testing Docker image: ${DOCKER_BASE_IMAGE}:latest"
+          }
+          
+          setup_docker_vars
+          
+          # Copy EchoTest.x from the repository
+          cp manualTests/src/main/x/EchoTest.x .
+          
+          echo "Compiling EchoTest.x..."
+          docker run --rm -v $(pwd):/workspace -w /workspace ${DOCKER_BASE_IMAGE}:latest xcc EchoTest.x
+          echo "Running EchoTest..."
+          OUTPUT=$(docker run --rm -v $(pwd):/workspace -w /workspace ${DOCKER_BASE_IMAGE}:latest xec EchoTest)
+          
+          echo "Docker test output: $OUTPUT"
+          echo "$OUTPUT" | grep -q "EchoTest invoked with 0 arguments" || exit 1
+          echo "✅ Docker test passed!"

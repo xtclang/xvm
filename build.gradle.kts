@@ -80,251 +80,30 @@ private val publishTaskSuffixesRemote = listOf("RemotePublications")
 private val publishTaskSuffixesLocal = listOf("LocalPublications")
 
 /**
- * Docker tasks for building and pushing multi-platform container images
+ * Docker tasks - forwarded to docker subproject
  */
-val dockerBuildAmd64 by tasks.registering(Exec::class) {
-    group = "docker"
-    description = "Build Docker image for linux/amd64 platform"
-    
-    // Ensure XDK is built first
-    dependsOn(installDist)
-    
-    val currentVersion = project.version.toString()
-    
-    commandLine(
-        "docker", "buildx", "build",
-        "--platform", "linux/amd64",
-        "--tag", "ghcr.io/xtclang/xvm:latest-amd64",
-        "--tag", "ghcr.io/xtclang/xvm:${currentVersion}-amd64",
-        "--load",
-        "."
-    )
-    
-    workingDir = rootProject.projectDir
-    
-    doFirst {
-        logger.lifecycle("Building Docker image for linux/amd64 platform (using latest master)...")
-        logger.lifecycle("Tags: ghcr.io/xtclang/xvm:latest-amd64, ghcr.io/xtclang/xvm:${currentVersion}-amd64")
-    }
-}
 
-val dockerBuildArm64 by tasks.registering(Exec::class) {
-    group = "docker"
-    description = "Build Docker image for linux/arm64 platform"
-    
-    // Ensure XDK is built first
-    dependsOn(installDist)
-    
-    val currentVersion = project.version.toString()
-    
-    commandLine(
-        "docker", "buildx", "build",
-        "--platform", "linux/arm64",
-        "--tag", "ghcr.io/xtclang/xvm:latest-arm64",
-        "--tag", "ghcr.io/xtclang/xvm:${currentVersion}-arm64",
-        "--load",
-        "."
-    )
-    
-    workingDir = rootProject.projectDir
-    
-    doFirst {
-        logger.lifecycle("Building Docker image for linux/arm64 platform (using latest master)...")
-        logger.lifecycle("Tags: ghcr.io/xtclang/xvm:latest-arm64, ghcr.io/xtclang/xvm:${currentVersion}-arm64")
-    }
-}
+private val dockerSubproject = gradle.includedBuild("docker")
+private val dockerTaskNames = listOf(
+    "dockerBuildAmd64", "dockerBuildArm64", "dockerBuild",
+    "dockerBuildMultiPlatform", "dockerPushMultiPlatform", 
+    "dockerPushAmd64", "dockerPushArm64", "dockerPushAll",
+    "dockerBuildAndPush", "dockerBuildAndPushMultiPlatform",
+    "dockerCreateManifest", "dockerBuildPushAndManifest"
+)
 
-val dockerBuildMultiPlatform by tasks.registering(Exec::class) {
-    group = "docker"
-    description = "Build multi-platform Docker images for both amd64 and arm64 (local only)"
-    
-    // Ensure XDK is built first
-    dependsOn(installDist)
-    
-    val currentVersion = project.version.toString()
-    
-    doFirst {
-        val gitCommit = providers.exec {
-            commandLine("git", "rev-parse", "HEAD")
-        }.standardOutput.asText.get().trim()
+// Forward all docker tasks to the docker subproject
+dockerTaskNames.forEach { taskName ->
+    tasks.register(taskName) {
+        group = "docker"
+        description = "Forward to docker subproject task: $taskName"
+        dependsOn(dockerSubproject.task(":$taskName"))
         
-        val gitShort = providers.exec {
-            commandLine("git", "rev-parse", "--short", "HEAD")
-        }.standardOutput.asText.get().trim()
-        
-        val buildDate = java.time.Instant.now().toString()
-        
-        // Always use local cache for build-only tasks
-        java.io.File("/tmp/.buildx-cache").mkdirs()
-        val cacheArgs = listOf("--cache-from", "type=local,src=/tmp/.buildx-cache", "--cache-to", "type=local,dest=/tmp/.buildx-cache,mode=max")
-        
-        commandLine(
-            listOf(
-                "docker", "buildx", "build",
-                "--platform", "linux/amd64,linux/arm64",
-                "--build-arg", "BUILD_DATE=${buildDate}",
-                "--build-arg", "VCS_REF=${gitCommit}"
-            ) + cacheArgs + listOf(
-                "--tag", "ghcr.io/xtclang/xvm:latest",
-                "--tag", "ghcr.io/xtclang/xvm:${currentVersion}",
-                "--tag", "ghcr.io/xtclang/xvm:latest-amd64",
-                "--tag", "ghcr.io/xtclang/xvm:${currentVersion}-amd64",
-                "--tag", "ghcr.io/xtclang/xvm:latest-arm64",
-                "--tag", "ghcr.io/xtclang/xvm:${currentVersion}-arm64",
-                "--tag", "ghcr.io/xtclang/xvm:${gitShort}",
-                "--tag", "ghcr.io/xtclang/xvm:${gitCommit}",
-                "--load",
-                "."
-            )
-        )
-        
-        logger.lifecycle("Building multi-platform Docker images for linux/amd64 and linux/arm64...")
-        logger.lifecycle("Source: Latest master from GitHub (no local code used)")
-        logger.lifecycle("Environment: Local build (will load to Docker)")
-        logger.lifecycle("Cache type: Local filesystem (/tmp/.buildx-cache)")
-        logger.lifecycle("Git commit: ${gitCommit}")
-        logger.lifecycle("Build date: ${buildDate}")
-        logger.lifecycle("Tags include commit-specific: ${gitShort}, ${gitCommit}")
-        logger.lifecycle("Note: Multi-platform builds with --load may not work on all Docker setups")
-    }
-    
-    workingDir = rootProject.projectDir
-}
-
-val dockerPushMultiPlatform by tasks.registering(Exec::class) {
-    group = "docker"
-    description = "Build and push multi-platform Docker images to registry"
-    
-    // Ensure XDK is built first
-    dependsOn(installDist)
-    
-    val currentVersion = project.version.toString()
-    
-    doFirst {
-        val gitCommit = providers.exec {
-            commandLine("git", "rev-parse", "HEAD")
-        }.standardOutput.asText.get().trim()
-        
-        val gitShort = providers.exec {
-            commandLine("git", "rev-parse", "--short", "HEAD")
-        }.standardOutput.asText.get().trim()
-        
-        val buildDate = java.time.Instant.now().toString()
-        
-        val isCI = System.getenv("CI") == "true"
-        val cacheArgs = if (isCI) {
-            listOf("--cache-from", "type=gha", "--cache-to", "type=gha,mode=max")
-        } else {
-            java.io.File("/tmp/.buildx-cache").mkdirs()
-            listOf("--cache-from", "type=local,src=/tmp/.buildx-cache", "--cache-to", "type=local,dest=/tmp/.buildx-cache,mode=max")
-        }
-        
-        commandLine(
-            listOf(
-                "docker", "buildx", "build",
-                "--platform", "linux/amd64,linux/arm64",
-                "--build-arg", "BUILD_DATE=${buildDate}",
-                "--build-arg", "VCS_REF=${gitCommit}"
-            ) + cacheArgs + listOf(
-                "--tag", "ghcr.io/xtclang/xvm:latest",
-                "--tag", "ghcr.io/xtclang/xvm:${currentVersion}",
-                "--tag", "ghcr.io/xtclang/xvm:latest-amd64",
-                "--tag", "ghcr.io/xtclang/xvm:${currentVersion}-amd64",
-                "--tag", "ghcr.io/xtclang/xvm:latest-arm64",
-                "--tag", "ghcr.io/xtclang/xvm:${currentVersion}-arm64",
-                "--tag", "ghcr.io/xtclang/xvm:${gitShort}",
-                "--tag", "ghcr.io/xtclang/xvm:${gitCommit}",
-                "--push",
-                "."
-            )
-        )
-        
-        logger.lifecycle("Building and pushing multi-platform Docker images...")
-        logger.lifecycle("Source: Latest master from GitHub (no local code used)")
-        logger.lifecycle("Environment: ${if (isCI) "CI" else "Local"} (will push to registry)")
-        logger.lifecycle("Cache type: ${if (isCI) "GitHub Actions" else "Local filesystem (/tmp/.buildx-cache)"}")
-        logger.lifecycle("Git commit: ${gitCommit}")
-        logger.lifecycle("Build date: ${buildDate}")
-        logger.lifecycle("Tags include commit-specific: ${gitShort}, ${gitCommit}")
-    }
-    
-    workingDir = rootProject.projectDir
-}
-
-val dockerPushAmd64 by tasks.registering(Exec::class) {
-    group = "docker"
-    description = "Push AMD64 Docker image to GitHub Container Registry"
-    
-    dependsOn(dockerBuildAmd64)
-    
-    commandLine(
-        "docker", "push", "ghcr.io/xtclang/xvm:latest-amd64"
-    )
-    
-    val currentVersion = project.version.toString()
-    
-    doLast {
-        project.providers.exec {
-            commandLine("docker", "push", "ghcr.io/xtclang/xvm:${currentVersion}-amd64")
+        // Ensure XDK is built first for tasks that need it
+        if (taskName.contains("Build") || taskName.contains("Push")) {
+            dependsOn(installDist)
         }
     }
-    
-    doFirst {
-        logger.lifecycle("Pushing AMD64 Docker image to GitHub Container Registry...")
-        logger.lifecycle("Make sure you're logged in with: docker login ghcr.io")
-    }
-}
-
-val dockerPushArm64 by tasks.registering(Exec::class) {
-    group = "docker"
-    description = "Push ARM64 Docker image to GitHub Container Registry"
-    
-    dependsOn(dockerBuildArm64)
-    
-    commandLine(
-        "docker", "push", "ghcr.io/xtclang/xvm:latest-arm64"
-    )
-    
-    val currentVersion = project.version.toString()
-    
-    doLast {
-        project.providers.exec {
-            commandLine("docker", "push", "ghcr.io/xtclang/xvm:${currentVersion}-arm64")
-        }
-    }
-    
-    doFirst {
-        logger.lifecycle("Pushing ARM64 Docker image to GitHub Container Registry...")
-        logger.lifecycle("Make sure you're logged in with: docker login ghcr.io")
-    }
-}
-
-val dockerPushAll by tasks.registering {
-    group = "docker"
-    description = "Push all platform-specific Docker images to GitHub Container Registry"
-    
-    dependsOn(dockerPushAmd64, dockerPushArm64)
-}
-
-val dockerBuild by tasks.registering {
-    group = "docker"
-    description = "Build Docker images for both platforms (amd64 and arm64)"
-    
-    dependsOn(dockerBuildAmd64, dockerBuildArm64)
-}
-
-val dockerBuildAndPush by tasks.registering {
-    group = "docker"
-    description = "Build and push Docker images for both platforms"
-    
-    dependsOn(dockerPushAll)
-}
-
-val dockerBuildAndPushMultiPlatform by tasks.registering {
-    group = "docker"
-    description = "Build and push multi-platform Docker images"
-    
-    dependsOn(dockerPushMultiPlatform)
 }
 
 // list|deleteLocalPublicatiopns/remotePublications.

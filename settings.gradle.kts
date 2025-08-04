@@ -36,7 +36,8 @@ val xvmBuilds = listOf(
     "javatools_utils",
     "javatools_unicode",
     "plugin",
-    "xdk"
+    "xdk",
+    "docker"
 )
 
 xvmBuilds.forEach(::includeBuild)
