@@ -71,6 +71,7 @@ javatools-unicode = { group = "org.xtclang", name = "javatools-unicode", version
 javatools-utils = { group = "org.xtclang", name = "javatools-utils", version.ref = "xdk" }
 javatools-turtle = { group = "org.xtclang", name = "javatools-turtle", version.ref = "xdk" }
 javatools-bridge = { group = "org.xtclang", name = "javatools-bridge", version.ref = "xdk" }
+javatools-jitbridge = { group = "org.xtclang", name = "javatools-jitbridge", version.ref = "xdk" }
 
 javax-activation = { module = "com.sun.activation:javax.activation", version = "1.2.0" }
 jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version.ref = "jakarta" }
