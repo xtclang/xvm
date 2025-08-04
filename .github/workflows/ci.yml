@@ -12,6 +12,11 @@ on:
         type: boolean
         required: false
         default: false
+      always_build_docker_image:
+        description: 'Always build Docker images regardless of branch'
+        type: boolean
+        required: false
+        default: false
       extra_gradle_options:
         description: 'Extra Gradle options to pass to the build'
         required: false
@@ -224,7 +229,7 @@ jobs:
     name: Build and push Docker images
     needs: build-verify
     runs-on: ${{ matrix.runner }}
-    if: ${{ success() && ((github.event.inputs.always_publish_snapshot) || (github.ref == 'refs/heads/master')) }}
+    if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
     strategy:
       matrix:
         include:
@@ -290,7 +295,7 @@ jobs:
     name: Create multi-platform manifest
     needs: docker-build
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_publish_snapshot) || (github.ref == 'refs/heads/master')) }}
+    if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
     steps:
       - name: Fetch Sources
         uses: actions/checkout@v4
