@@ -52,7 +52,8 @@ ARG VCS_REF
 RUN apk add --no-cache \
     unzip \
     curl \
-    git
+    git \
+    bash
 
 WORKDIR /workspace
 
@@ -78,12 +79,12 @@ RUN --mount=type=cache,target=/root/.gradle/caches,sharing=locked \
     ./gradlew --no-daemon --parallel --build-cache --max-workers=4 dependencies || true
 
 # Copy the build script from docker directory
-COPY build-xdk.sh /tmp/build-xdk.sh
+COPY build-xdk.sh /build-xdk.sh
 
 RUN --mount=type=cache,target=/root/.gradle/caches,sharing=locked \
     --mount=type=cache,target=/root/.gradle/wrapper,sharing=locked \
     --mount=type=cache,target=/root/.gradle/build-cache,sharing=locked \
-    chmod +x /tmp/build-xdk.sh && /tmp/build-xdk.sh
+    chmod +x /build-xdk.sh && /build-xdk.sh
 
 # Export stage to copy launcher to host filesystem  
 FROM scratch AS launcher-export
