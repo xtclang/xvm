@@ -219,14 +219,14 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         final var args = new CommandLine(XTC_COMPILER_CLASS_NAME, resolveJvmArgs());
 
         final File outputDir = getOutputDirectory().get().getAsFile();
-        args.add("-o", outputDir.getAbsolutePath());
+        args.add("-o", getProject().getProjectDir().toPath().relativize(outputDir.toPath()).toString());
 
         logger.info("{} Output directory for {} is : {}", prefix, sourceSet.getName(), outputDir);
         final var processedResourcesDir = getResourceDirectory().get().getAsFile();
         logger.info("{} Resolving resource dir (build): '{}'.", prefix, processedResourcesDir);
         if (processedResourcesDir.exists()) {
             logger.info("{} '{}' Added as resource directory for '{}'.", prefix, processedResourcesDir.getAbsolutePath(), getName());
-            args.add("-r", processedResourcesDir.getAbsolutePath());
+            args.add("-r", getProject().getProjectDir().toPath().relativize(processedResourcesDir.toPath()).toString());
         }
 
         args.addBoolean("--version", getShowVersion().get());
@@ -244,8 +244,10 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
             }
             args.add("--set-version", semanticVersion(moduleVersion));
         }
-        args.addRepeated("-L", resolveFullModulePath());
-        final var sourceFiles = resolveXtcSourceFiles().stream().map(File::getAbsolutePath).sorted().toList();
+        args.addRepeatedRelative("-L", resolveFullModulePath(), getProject().getProjectDir());
+        final var sourceFiles = resolveXtcSourceFiles().stream()
+                .map(file -> getProject().getProjectDir().toPath().relativize(file.toPath()).toString())
+                .sorted().toList();
         if (sourceFiles.isEmpty()) {
             logger.warn("{} No source file found for source set: '{}'", prefix, sourceSet.getName());
         }
