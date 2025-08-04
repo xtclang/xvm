@@ -58,6 +58,12 @@ public final class CommandLine {
         }
     }
 
+    public void addRepeatedRelative(final String name, final Collection<File> values, final File basePath) {
+        for (final File arg : values) {
+            add(name, basePath.toPath().relativize(arg.toPath()).toString());
+        }
+    }
+
     public void addRaw(final String arg) {
         args.add(arg);
     }
