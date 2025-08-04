@@ -25,7 +25,7 @@ on:
         type: boolean
         required: false
         default: true
-      parallel_manual_tests:
+      run_manual_tests_parallel:
         description: 'Run manual tests in parallel mode'
         type: boolean
         required: false
@@ -56,7 +56,7 @@ env:
 
   # Optional flags to control manual tests
   run_manual_tests: ${{ github.event.inputs.run_manual_tests != false }}
-  parallel_manual_tests: ${{ github.event.inputs.parallel_manual_tests != false }}
+  run_manual_tests_parallel: ${{ github.event.inputs.run_manual_tests_parallel != false }}
 
   java_version: 21
   java_distribution: temurin
@@ -109,10 +109,16 @@ jobs:
           echo "*** Branch (github.ref)    : ${{ github.ref }}"
           echo "*** Commit (github.sha)    : ${{ github.sha }}"
           echo "*** Runner OS              : ${{ runner.os }}"
-          echo "*** Input always_publish_snapshot: '${{ github.event.inputs.always_publish_snapshot }}'"
-          echo "*** Input type: (not available in GitHub Actions)"
-          echo "*** Comparison result: ${{ github.event.inputs.always_publish_snapshot }}"
-          echo "*** String comparison: ${{ github.event.inputs.always_publish_snapshot == 'true' }}"
+          echo "*** Workflow dispatch inputs:"
+          echo "    always_publish_snapshot: '${{ github.event.inputs.always_publish_snapshot }}'"
+          echo "    always_build_docker_image: '${{ github.event.inputs.always_build_docker_image }}'"
+          echo "    run_manual_tests: '${{ github.event.inputs.run_manual_tests }}'"
+          echo "    run_manual_tests_parallel: '${{ github.event.inputs.run_manual_tests_parallel }}'"
+          echo "    extra_gradle_options: '${{ github.event.inputs.extra_gradle_options }}'"
+          echo "*** Environment variables:"
+          echo "    always_publish_snapshot: '${{ env.always_publish_snapshot }}'"
+          echo "    run_manual_tests: '${{ env.run_manual_tests }}'"
+          echo "    run_manual_tests_parallel: '${{ env.run_manual_tests_parallel }}'"
           echo "*** Java system properties :" 
           java -XshowSettings:properties --version
 
@@ -156,7 +162,7 @@ jobs:
           ./gradlew ${{ env.gradle_options }} manualTests:runTwoTestsInSequence
           
           # Run parallel or sequential tests based on setting
-          MANUAL_TASK=$( [ "${{ env.parallel_manual_tests }}" = "true" ] && echo "runParallel" || echo "runSequential" )
+          MANUAL_TASK=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runSequential" )
           ./gradlew ${{ env.gradle_options }} manualTests:$MANUAL_TASK
 
       - name: Upload build artifacts
