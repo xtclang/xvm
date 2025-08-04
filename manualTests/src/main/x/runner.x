@@ -7,22 +7,9 @@ module Runner {
     @Inject Console console;
 
     void run(String[] modules=[]) {
-        Int batchSize = getBatchSize();
-        console.print($"Running {modules.size} modules in batches of {batchSize}");
-        
-        for (Int start = 0; start < modules.size; start += batchSize) {
-            Int end = (start + batchSize).minOf(modules.size);
-            String[] batch = modules[start..<end];
-            
-            console.print($"Starting batch {start/batchSize + 1}: modules {start+1} to {end}");
-            
-            // Run batch in parallel
-            Tuple<FutureVar, ConsoleBuffer>?[] batchResults = 
-                new Array(batch.size, i -> loadAndRun(batch[i]));
-            
-            // Wait for entire batch to complete before next batch
-            waitForBatchCompletion(batchResults);
-        }
+        Tuple<FutureVar, ConsoleBuffer>?[] results =
+            new Array(modules.size, i -> loadAndRun(modules[i]));
+        reportResults(results, 0);
     }
 
     void reportResults(Tuple<FutureVar, ConsoleBuffer>?[] results, Int index) {
@@ -42,28 +29,6 @@ module Runner {
             }
         } catch (Exception e) {
             console.print($"Failure to report results for module #{index}: {e}");
-        }
-    }
-
-    Int getBatchSize() {
-        // Use conservative batch size that works well on both platforms
-        // TODO: Platform detection not working with @Inject("os.name")
-        return 4;
-    }
-
-    void waitForBatchCompletion(Tuple<FutureVar, ConsoleBuffer>?[] batchResults) {
-        // Process all results in the batch as they complete
-        reportResults(batchResults, 0);
-        
-        // Wait for all futures in this batch to complete
-        for (Tuple<FutureVar, ConsoleBuffer>? result : batchResults) {
-            if (result != Null) {
-                try {
-                    result[0].get(); // Block until this future completes
-                } catch (Exception e) {
-                    console.print($"Batch execution error: {e}");
-                }
-            }
         }
     }
 
