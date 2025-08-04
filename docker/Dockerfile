@@ -41,7 +41,7 @@ RUN --mount=type=cache,target=/tmp/gcc-cache,sharing=locked \
     gcc -static -g -Wall -std=gnu11 -DlinuxLauncher ${ARCH_FLAGS} \
         launcher.c os_linux.c os_unux.c -o /launcher-output/${LAUNCHER_NAME}
 
-FROM eclipse-temurin:${JAVA_VERSION}-jdk AS builder
+FROM bellsoft/liberica-openjdk-alpine:${JAVA_VERSION} AS builder
 
 ARG VERSION
 ARG TARGETARCH
@@ -49,11 +49,10 @@ ARG TARGETOS
 ARG BUILD_DATE
 ARG VCS_REF
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apk add --no-cache \
     unzip \
     curl \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+    git
 
 WORKDIR /workspace
 
@@ -78,83 +77,13 @@ RUN --mount=type=cache,target=/root/.gradle/caches,sharing=locked \
     ./gradlew --version && \
     ./gradlew --no-daemon --parallel --build-cache --max-workers=4 dependencies || true
 
-COPY <<EOF /tmp/build_xdk.sh
-#!/bin/bash
-set -e
-
-arch_map() {
-    case "\$1" in
-        amd64) echo "x86_64" ;;
-        arm64) echo "aarch64" ;;
-        *) echo "\$1" ;;
-    esac
-}
-
-echo "Building XDK for \${TARGETOS}/\${TARGETARCH}"
-echo "Source already downloaded, starting build..."
-
-# Configure Gradle for faster builds in containers
-export GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.caching=true -Dorg.gradle.parallel=true -Dorg.gradle.configureondemand=true -Dorg.gradle.workers.max=4"
-
-# Make gradle wrapper executable and build
-chmod +x ./gradlew
-
-# Ensure gradle user home exists
-mkdir -p /root/.gradle
-
-# Use more aggressive parallel options and skip tests (since this is just packaging)
-./gradlew --no-daemon --parallel --build-cache --max-workers=4 \
-  --gradle-user-home=/root/.gradle \
-  -x test -x check \
-  xdk:installDist
-
-echo "Build completed successfully"
-
-echo "Setting up native launchers for \${TARGETOS}/\${TARGETARCH}"
-ARCH_NAME=\$(arch_map \${TARGETARCH})
-LAUNCHER_BINARY="javatools_launcher/src/main/resources/exe/linux_launcher_\${ARCH_NAME}"
-
-if [ -f "\$LAUNCHER_BINARY" ]; then
-    echo "Using compiled launcher: \$LAUNCHER_BINARY"
-    cp "\$LAUNCHER_BINARY" "xdk/build/install/xdk/bin/xec"
-    cp "\$LAUNCHER_BINARY" "xdk/build/install/xdk/bin/xcc"
-    chmod +x "xdk/build/install/xdk/bin/xec" "xdk/build/install/xdk/bin/xcc"
-    echo "Native launchers installed successfully"
-else
-    echo "Warning: Launcher binary not found at \$LAUNCHER_BINARY"
-    echo "Available launcher files:"
-    ls -la javatools_launcher/src/main/resources/exe/ || true
-fi
-
-echo "Creating build info file..."
-BUILD_DATE_VAL="\${BUILD_DATE:-\$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"
-
-# Get actual commit hash if VERSION is empty (latest master)
-if [ -z "\$VERSION" ]; then
-    ACTUAL_COMMIT=\$(curl -s https://api.github.com/repos/xtclang/xvm/commits/master | grep "\"sha\":" | head -1 | cut -d'"' -f4)
-    VERSION_TO_USE="master-\${ACTUAL_COMMIT:0:8}"
-    GIT_COMMIT="\${VCS_REF:-\$ACTUAL_COMMIT}"
-else
-    VERSION_TO_USE="\$VERSION"
-    GIT_COMMIT="\${VCS_REF:-\$VERSION}"
-fi
-
-cat > "xdk/build/install/xdk/xvm.json" << JSONEOF
-{
-  "buildDate": "\$BUILD_DATE_VAL",
-  "gitCommit": "\$GIT_COMMIT",
-  "version": "\$VERSION_TO_USE",
-  "platform": "\${TARGETOS}/\${TARGETARCH}"
-}
-JSONEOF
-
-echo "Build info file created successfully"
-EOF
+# Copy the build script from docker directory
+COPY build-xdk.sh /tmp/build-xdk.sh
 
 RUN --mount=type=cache,target=/root/.gradle/caches,sharing=locked \
     --mount=type=cache,target=/root/.gradle/wrapper,sharing=locked \
     --mount=type=cache,target=/root/.gradle/build-cache,sharing=locked \
-    chmod +x /tmp/build_xdk.sh && /tmp/build_xdk.sh
+    chmod +x /tmp/build-xdk.sh && /tmp/build-xdk.sh
 
 # Export stage to copy launcher to host filesystem  
 FROM scratch AS launcher-export
