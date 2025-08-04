@@ -418,6 +418,9 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
     steps:
+      - name: Fetch Sources
+        uses: actions/checkout@v4
+
       - name: Test Docker image functionality
         shell: bash
         run: |
