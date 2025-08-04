@@ -22,9 +22,14 @@ inspect_container_cache() {
   echo "🔍 Container Gradle Cache${label:+ ($label)}:"
   echo "  Location: $gradle_home"
   if [ -d "$gradle_home" ]; then
-    echo "  Size: $(du -sh "$gradle_home" 2>/dev/null | cut -f1) ($(du -sb "$gradle_home" 2>/dev/null | cut -f1) bytes)"
+    local total_size=$(du -sh "$gradle_home" 2>/dev/null | cut -f1 || echo "unknown")
+    local total_bytes=$(du -sb "$gradle_home" 2>/dev/null | cut -f1 || echo "unknown")
+    echo "  Size: $total_size ($total_bytes bytes)"
     for dir in caches wrapper build-cache; do
-      [ -d "$gradle_home/$dir" ] && echo "    $dir: $(du -sh "$gradle_home/$dir" 2>/dev/null | cut -f1)"
+      if [ -d "$gradle_home/$dir" ]; then
+        local dir_size=$(du -sh "$gradle_home/$dir" 2>/dev/null | cut -f1 || echo "unknown")
+        echo "    $dir: $dir_size"
+      fi
     done
   else
     echo "  Status: ❌ (will be created)"
