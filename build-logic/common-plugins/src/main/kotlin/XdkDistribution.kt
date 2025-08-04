@@ -14,7 +14,7 @@ import java.io.File
 
 /**
  * Configure all maven publications with some mandatory and helpful information.
- * 
+ *
  * TODO: Add some generic XML point out more information about the build, like maybe
  *   SHA commit etc.
  */
@@ -124,7 +124,6 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     companion object {
         const val DISTRIBUTION_TASK_GROUP = "distribution"
         const val JAVATOOLS_PREFIX_PATTERN = "**/javatools*"
-        const val JAVATOOLS_INSTALLATION_NAME : String = "javatools.jar"
         const val GPGKEY_FILENAME = "xtclang-gpgkey.asc"
 
         private const val CI = "CI"

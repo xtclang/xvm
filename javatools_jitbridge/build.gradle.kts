@@ -13,11 +13,13 @@ plugins {
 // Provider configuration to make this jar available to the XDK distribution
 val xdkJavaToolsProvider by configurations.registering {
     description = "Provider configuration for the javatools-jitbridge jar"
-    isCanBeResolved = false
-    isCanBeConsumed = true
+// Note to ML: the build sill works without these
+//    isCanBeResolved = false
+//    isCanBeConsumed = true
     outgoing.artifact(tasks.jar)
     attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+// Note to ML: the build sill works without this
+//        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
         attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR))
     }
 }
