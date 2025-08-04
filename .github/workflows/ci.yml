@@ -62,6 +62,29 @@ env:
   java_distribution: temurin
   gradle_version: 8.14.2
 
+  # Docker build variables (DRY approach)
+  GH_COMMIT: ${{ github.sha }}
+  GH_BRANCH: ${{ github.ref_name }}
+  DOCKER_BASE_IMAGE: ${{ github.ref_name == 'master' && 'ghcr.io/xtclang/xvm' || format('ghcr.io/xtclang/xvm-{0}', github.ref_name) }}
+  
+  # Gradle cache inspection function (DRY approach)
+  GRADLE_CACHE_INSPECT: |
+    inspect_gradle_cache() {
+      local label="${1:-}"
+      local gradle_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
+      echo "🔍 Gradle Cache Inspection${label:+ ($label)}:"
+      echo "  Cache location: $gradle_home"
+      if [ -d "$gradle_home" ]; then
+        echo "  Cache exists: ✅"
+        echo "  Cache size: $(du -sh "$gradle_home" 2>/dev/null | cut -f1) ($(du -sb "$gradle_home" 2>/dev/null | cut -f1) bytes)"
+        for dir in caches wrapper build-cache; do
+          [ -d "$gradle_home/$dir" ] && echo "    $dir: $(du -sh "$gradle_home/$dir" 2>/dev/null | cut -f1)"
+        done
+      else
+        echo "  Cache exists: ❌"
+      fi
+    }
+
   # Build environment and build workflow debug flags.
   # ACTIONS_RUNNER_DEBUG: true
   # ACTIONS_STEP_DEBUG: true
@@ -125,14 +148,22 @@ jobs:
       - name: Build the XDK and create a distribution layout
         shell: bash
         run: |
+          ${{ env.GRADLE_CACHE_INSPECT }}
+          
           cwd_path=$(pwd)
           echo "Executing Gradle 'installDist' task from path: '$cwd_path'"
-          ./gradlew clean
+          echo "Skipping 'gradle clean' - fresh runner + cache integrity guaranteed"
+          ls -la build/ 2>/dev/null && echo "WARNING: build/ directory exists on fresh runner!" || echo "✅ Confirmed: No previous build outputs"
+          
+          inspect_gradle_cache "before installDist"
           ./gradlew ${{ env.gradle_options }} installDist 
 
       - name: Build a machine specific XDK installation with native launchers, test run launchers on native platform
         shell: bash
         run: |
+          ${{ env.GRADLE_CACHE_INSPECT }}
+          
+          inspect_gradle_cache "before native launcher build"
           ./gradlew ${{ env.gradle_options }} xdk:installWithLaunchersDist
           xcc_path=$(find xdk/build/install/ -name xcc)
           xec_path=$(find xdk/build/install/ -name xec)
@@ -156,6 +187,10 @@ jobs:
         timeout-minutes: 10
         shell: bash
         run: |
+          ${{ env.GRADLE_CACHE_INSPECT }}
+          
+          inspect_gradle_cache "before manual tests"
+          
           # Always run basic manual tests
           ./gradlew ${{ env.gradle_options }} manualTests:runXtc
           ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc
@@ -197,7 +232,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-disabled: false
-          cache-read-only: false
+          cache-read-only: true  # Read-only since build-verify already populated cache
           gradle-version: ${{ env.gradle_version }}
 
       - name: Verify all tests passed
@@ -227,6 +262,10 @@ jobs:
         if: ${{ (github.event.inputs.always_publish_snapshot) || (github.ref == 'refs/heads/master') }}
         shell: bash
         run: |
+          ${{ env.GRADLE_CACHE_INSPECT }}
+          
+          inspect_gradle_cache "before publishing (reused from build-verify)"
+          
           echo "Reusing build cache from build-verify job..."
           ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true
           ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true
@@ -249,8 +288,22 @@ jobs:
       - name: Fetch Sources
         uses: actions/checkout@v4
 
+      # Set up Java and Gradle to warm cache for Docker build
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: ${{ env.java_distribution }}
+          java-version: ${{ env.java_version }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: false
+          cache-read-only: true  # Read-only since build-verify already populated cache
+          gradle-version: ${{ env.gradle_version }}
+
       # Note: Dockerfile is self-contained and downloads source itself
-      # No need to download artifacts since Docker build will fetch source
+      # But now Docker build can benefit from Gradle cache via GitHub Actions cache
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -268,29 +321,28 @@ jobs:
         run: |
           echo "Building and pushing ${{ matrix.arch }} Docker image on native hardware..."
           
-          # Get version from VERSION file
-          VERSION=$(cat ../VERSION | tr -d '\n\r ')
-          COMMIT_SHA=${GITHUB_SHA}
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          # Common Docker setup function
+          setup_docker_vars() {
+            VERSION=$(cat ../VERSION | tr -d '\n\r ')
+            
+            echo "DEBUG: VERSION=$VERSION"
+            echo "DEBUG: GH_COMMIT=$GH_COMMIT" 
+            echo "DEBUG: GH_BRANCH=$GH_BRANCH"
+            echo "DEBUG: DOCKER_BASE_IMAGE=$DOCKER_BASE_IMAGE"
+          }
           
-          echo "DEBUG: VERSION=$VERSION"
-          echo "DEBUG: COMMIT_SHA=$COMMIT_SHA"
-          echo "DEBUG: BRANCH_NAME=$BRANCH_NAME"
+          ${{ env.GRADLE_CACHE_INSPECT }}
           
-          # Set base image name based on branch
-          if [ "$BRANCH_NAME" = "master" ]; then
-            BASE_IMAGE="ghcr.io/xtclang/xvm"
-          else
-            BASE_IMAGE="ghcr.io/xtclang/xvm_${BRANCH_NAME}"
-          fi
+          setup_docker_vars
+          inspect_gradle_cache "host cache before Docker build"
           
           docker buildx build \
             --platform ${{ matrix.platform }} \
-            --tag ${BASE_IMAGE}:latest-${{ matrix.arch }} \
-            --tag ${BASE_IMAGE}:${VERSION}-${{ matrix.arch }} \
-            --tag ${BASE_IMAGE}:${COMMIT_SHA::8}-${{ matrix.arch }} \
-            --build-arg GH_BRANCH=${BRANCH_NAME} \
-            --build-arg GH_COMMIT=${COMMIT_SHA} \
+            --tag ${DOCKER_BASE_IMAGE}:latest-${{ matrix.arch }} \
+            --tag ${DOCKER_BASE_IMAGE}:${VERSION}-${{ matrix.arch }} \
+            --tag ${DOCKER_BASE_IMAGE}:${GH_COMMIT::8}-${{ matrix.arch }} \
+            --build-arg GH_BRANCH=${GH_BRANCH} \
+            --build-arg GH_COMMIT=${GH_COMMIT} \
             --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
             --build-arg VCS_REF=${GITHUB_SHA} \
             --cache-from type=gha,scope=${{ matrix.arch }} \
@@ -319,37 +371,27 @@ jobs:
         run: |
           echo "Creating multi-platform manifests..."
           
-          # Get version from VERSION file
-          VERSION=$(cat VERSION | tr -d '\n\r ')
-          COMMIT_SHA=${GITHUB_SHA}
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          # Common Docker setup function
+          setup_docker_vars() {
+            VERSION=$(cat VERSION | tr -d '\n\r ')
+            echo "Creating manifests for: ${DOCKER_BASE_IMAGE} (version: ${VERSION})"
+          }
           
-          # Set base image name based on branch
-          if [ "$BRANCH_NAME" = "master" ]; then
-            BASE_IMAGE="ghcr.io/xtclang/xvm"
-          else
-            BASE_IMAGE="ghcr.io/xtclang/xvm_${BRANCH_NAME}"
-          fi
+          # Function to create and push manifest
+          create_manifest() {
+            local tag=$1
+            docker manifest create ${DOCKER_BASE_IMAGE}:${tag} \
+              ${DOCKER_BASE_IMAGE}:${tag}-amd64 \
+              ${DOCKER_BASE_IMAGE}:${tag}-arm64
+            docker manifest push ${DOCKER_BASE_IMAGE}:${tag}
+          }
           
-          echo "Creating manifests for: ${BASE_IMAGE} (version: ${VERSION})"
+          setup_docker_vars
           
-          # Create latest manifest
-          docker manifest create ${BASE_IMAGE}:latest \
-            ${BASE_IMAGE}:latest-amd64 \
-            ${BASE_IMAGE}:latest-arm64
-          docker manifest push ${BASE_IMAGE}:latest
-          
-          # Create version manifest (also branch-aware)
-          docker manifest create ${BASE_IMAGE}:${VERSION} \
-            ${BASE_IMAGE}:${VERSION}-amd64 \
-            ${BASE_IMAGE}:${VERSION}-arm64
-          docker manifest push ${BASE_IMAGE}:${VERSION}
-          
-          # Create commit manifest (also branch-aware)
-          docker manifest create ${BASE_IMAGE}:${COMMIT_SHA::8} \
-            ${BASE_IMAGE}:${COMMIT_SHA::8}-amd64 \
-            ${BASE_IMAGE}:${COMMIT_SHA::8}-arm64
-          docker manifest push ${BASE_IMAGE}:${COMMIT_SHA::8}
+          # Create all manifests
+          create_manifest "latest"
+          create_manifest "${VERSION}"
+          create_manifest "${GH_COMMIT::8}"
 
   docker-test:
     name: Test Docker images
@@ -360,9 +402,12 @@ jobs:
       - name: Test Docker image functionality
         shell: bash
         run: |
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
-          BASE_IMAGE="ghcr.io/xtclang/xvm"
-          [ "$BRANCH_NAME" != "master" ] && BASE_IMAGE="ghcr.io/xtclang/xvm_${BRANCH_NAME}"
+          # Common Docker setup function
+          setup_docker_vars() {
+            echo "Testing Docker image: ${DOCKER_BASE_IMAGE}:latest"
+          }
+          
+          setup_docker_vars
           
           cat > hello.x << 'EOF'
           module HelloWorld {
@@ -373,7 +418,7 @@ jobs:
           }
           EOF
           
-          docker run --rm -v $(pwd):/workspace -w /workspace ${BASE_IMAGE}:latest xcc hello.x
-          OUTPUT=$(docker run --rm -v $(pwd):/workspace -w /workspace ${BASE_IMAGE}:latest xec HelloWorld)
+          docker run --rm -v $(pwd):/workspace -w /workspace ${DOCKER_BASE_IMAGE}:latest xcc hello.x
+          OUTPUT=$(docker run --rm -v $(pwd):/workspace -w /workspace ${DOCKER_BASE_IMAGE}:latest xec HelloWorld)
           
           echo "$OUTPUT" | grep -q "Hello, World from Docker!" || exit 1

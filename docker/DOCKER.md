@@ -12,27 +12,30 @@ For developers building the project, see the [Building Images](#building-images)
 
 All Docker tasks are now organized in the `docker/` subproject. Run from project root:
 
-### Individual Platform Tasks
+### Individual Platform Tasks (for debugging)
 - `dockerBuildAmd64` - Build Docker image for linux/amd64 platform only
 - `dockerBuildArm64` - Build Docker image for linux/arm64 platform only  
 - `dockerPushAmd64` - Push AMD64 Docker image to GitHub Container Registry
 - `dockerPushArm64` - Push ARM64 Docker image to GitHub Container Registry
 
-### Combined Tasks
-- `dockerBuild` - Build Docker images locally for both platforms (amd64 and arm64)
+### Main Tasks
+- `dockerBuild` - Build Docker images for both platforms individually (amd64 + arm64)
+- `dockerBuildMultiPlatform` - Build multi-platform images locally (recommended for local builds)
+- `dockerPushMultiPlatform` - Build and push multi-platform manifest to registry (recommended for publishing)
 - `dockerPushAll` - Push all platform-specific Docker images to GitHub Container Registry
-- `dockerBuildAndPush` - Build and push individual platform images (depends on dockerPushAll)
 
-### Multi-Platform Tasks
-- `dockerBuildMultiPlatform` - Build multi-platform images locally (uses commit SHA as VERSION)
-- `dockerPushMultiPlatform` - Build and push multi-platform manifest to registry
-- `dockerBuildAndPushMultiPlatform` - Alias for dockerPushMultiPlatform
+### Workflow Tasks
+- `dockerBuildPushAndManifest` - Complete CI-like workflow: build platforms + create manifests
 
 ## Building Images
 
 ### Build Both Platforms
 ```bash
+# Individual platform builds (useful for local testing)
 ./gradlew dockerBuild
+
+# Multi-platform build (recommended for local development)
+./gradlew dockerBuildMultiPlatform
 ```
 
 ### Build Specific Platform
@@ -46,14 +49,14 @@ All Docker tasks are now organized in the `docker/` subproject. Run from project
 
 ### Build and Push
 ```bash
-# Build and push individual platform images
-./gradlew dockerBuildAndPush
-
 # Build and push multi-platform manifest (recommended)
 ./gradlew dockerPushMultiPlatform
 
-# Just build multi-platform locally
-./gradlew dockerBuildMultiPlatform
+# Build and push individual platform images then create manifests
+./gradlew dockerBuildPushAndManifest
+
+# Push individual platforms only
+./gradlew dockerPushAll
 ```
 
 ### Working with Docker Directory
@@ -70,7 +73,8 @@ docker buildx build --platform linux/arm64 --tag test-xvm:latest .
 
 ## Image Tags
 
-All builds create platform-specific tags:
+### Master Branch Images
+All builds from the master branch create these tags:
 - `ghcr.io/xtclang/xvm:latest-amd64` - Latest AMD64 build
 - `ghcr.io/xtclang/xvm:latest-arm64` - Latest ARM64 build
 - `ghcr.io/xtclang/xvm:VERSION-amd64` - Versioned AMD64 build
@@ -80,10 +84,22 @@ Generic tags (when using multi-platform builds):
 - `ghcr.io/xtclang/xvm:latest` - Multi-platform manifest
 - `ghcr.io/xtclang/xvm:VERSION` - Versioned multi-platform manifest
 
+### Branch-Specific Images
+Non-master branches create separate image repositories with branch suffix:
+- `ghcr.io/xtclang/xvm-BRANCH:latest` - Latest build from specific branch
+- `ghcr.io/xtclang/xvm-BRANCH:latest-amd64` - Branch-specific AMD64 build
+- `ghcr.io/xtclang/xvm-BRANCH:latest-arm64` - Branch-specific ARM64 build
+
+Example for `feature-branch`:
+- `ghcr.io/xtclang/xvm-feature-branch:latest`
+- `ghcr.io/xtclang/xvm-feature-branch:latest-amd64`
+
 ## Build Configuration
 
 ### Default Settings
-- Downloads source from GitHub using commit SHA (no local source used)
+- Downloads source from GitHub using branch/commit (no local source used)
+- `GH_BRANCH=master` - Default branch to build from
+- `GH_COMMIT` - Optional specific commit SHA (defaults to latest from branch)
 - `JAVA_VERSION=21` - Uses Bellsoft Liberica OpenJDK 21 Alpine (consistent across build stages)
 - Platform matches host architecture (linux/amd64 on x86, linux/arm64 on ARM)
 - Compiles native launchers from C source for target platform
@@ -98,16 +114,19 @@ You can override default settings using build arguments:
 docker buildx build --build-arg JAVA_VERSION=17 -t xvm:latest .
 
 # Build from specific commit
-docker buildx build --build-arg VERSION=abc123 -t xvm:latest .
+docker buildx build --build-arg GH_COMMIT=abc123 -t xvm:latest .
 
-# Build from GitHub release
-docker buildx build --build-arg VERSION=v1.0.0 -t xvm:latest .
+# Build from specific branch
+docker buildx build --build-arg GH_BRANCH=feature-branch -t xvm:latest .
+
+# Build from GitHub release tag
+docker buildx build --build-arg GH_BRANCH=v1.0.0 -t xvm:latest .
 ```
 
-### VERSION Options
-- Empty/unset (default) - Downloads latest master branch
-- `abc123` (commit hash) - Downloads specific commit
-- `v1.0.0` (or any git ref) - Downloads specific tag/branch
+### Build Argument Options
+- `GH_BRANCH` (default: master) - Downloads specific branch or tag from GitHub
+- `GH_COMMIT` (default: latest from branch) - Downloads specific commit SHA
+- `JAVA_VERSION` (default: 21) - Java version to use for build and runtime
 
 ## Direct Docker Commands (Alternative to Gradle)
 
@@ -119,7 +138,10 @@ If you prefer using Docker commands directly instead of Gradle tasks:
 docker buildx build -t xvm:latest .
 
 # With specific commit
-docker buildx build --build-arg VERSION=abc123 -t xvm:latest .
+docker buildx build --build-arg GH_COMMIT=abc123 -t xvm:latest .
+
+# With specific branch
+docker buildx build --build-arg GH_BRANCH=feature-branch -t xvm:latest .
 ```
 
 ### Cross-Platform Builds
@@ -290,8 +312,9 @@ Each image includes build metadata at `/opt/xdk/xvm.json`:
 ```json
 {
   "buildDate": "2025-07-30T14:42:57Z",
-  "gitCommit": "d5c6b7c3f8236665037f2c33731419d004195f8a", 
-  "version": "master-d5c6b7c3f",
+  "commit": "d5c6b7c3f8236665037f2c33731419d004195f8a", 
+  "branch": "master",
+  "version": "master",
   "platform": "linux/amd64"
 }
 ```

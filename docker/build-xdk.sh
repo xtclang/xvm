@@ -15,13 +15,33 @@ echo "Building XDK for ${TARGETOS}/${TARGETARCH}"
 # Configure Gradle for container builds
 export GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.caching=true -Dorg.gradle.parallel=true -Dorg.gradle.configureondemand=true -Dorg.gradle.workers.max=4"
 
+# Container cache inspection function
+inspect_container_cache() {
+  local label="${1:-}"
+  local gradle_home="/root/.gradle"
+  echo "🔍 Container Gradle Cache${label:+ ($label)}:"
+  echo "  Location: $gradle_home"
+  if [ -d "$gradle_home" ]; then
+    echo "  Size: $(du -sh "$gradle_home" 2>/dev/null | cut -f1) ($(du -sb "$gradle_home" 2>/dev/null | cut -f1) bytes)"
+    for dir in caches wrapper build-cache; do
+      [ -d "$gradle_home/$dir" ] && echo "    $dir: $(du -sh "$gradle_home/$dir" 2>/dev/null | cut -f1)"
+    done
+  else
+    echo "  Status: ❌ (will be created)"
+  fi
+}
+
 chmod +x ./gradlew
 mkdir -p /root/.gradle
+
+inspect_container_cache "before build"
 
 # Build the XDK (skip tests since this is packaging)
 ./gradlew --no-daemon --parallel --build-cache --max-workers=4 --gradle-user-home=/root/.gradle -x test -x check xdk:installDist
 
 echo "Build completed successfully"
+
+inspect_container_cache "after build"
 
 # Install native launchers
 ARCH_NAME=$(arch_name ${TARGETARCH})
@@ -39,14 +59,15 @@ fi
 
 # Create build info
 BUILD_DATE_VAL="${BUILD_DATE:-$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"
-VERSION_TO_USE="${VERSION:-master}"
-GIT_COMMIT="${VCS_REF:-${VERSION:-unknown}}"
+BRANCH_TO_USE="${GH_BRANCH:-master}"
+GIT_COMMIT="${GH_COMMIT:-${VCS_REF:-unknown}}"
 
 cat > "xdk/build/install/xdk/xvm.json" << JSONEOF
 {
   "buildDate": "$BUILD_DATE_VAL",
-  "gitCommit": "$GIT_COMMIT", 
-  "version": "$VERSION_TO_USE",
+  "commit": "$GIT_COMMIT", 
+  "branch": "$BRANCH_TO_USE",
+  "version": "$BRANCH_TO_USE",
   "platform": "${TARGETOS}/${TARGETARCH}"
 }
 JSONEOF
