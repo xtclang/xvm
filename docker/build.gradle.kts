@@ -199,10 +199,6 @@ val dockerCreateManifest by tasks.registering(Exec::class) {
     
     doFirst {
         val currentVersion = project.version.toString()
-        val gitCommit = providers.exec {
-            commandLine("git", "rev-parse", "HEAD")
-        }.standardOutput.asText.get().trim()
-        
         val gitShort = providers.exec {
             commandLine("git", "rev-parse", "--short", "HEAD")
         }.standardOutput.asText.get().trim()
@@ -220,29 +216,29 @@ val dockerCreateManifest by tasks.registering(Exec::class) {
         logger.lifecycle("Creating manifests for: ${baseImage} (version: ${currentVersion})")
         
         // Create and push latest manifest
-        exec {
+        providers.exec {
             commandLine("docker", "manifest", "create", "${baseImage}:latest", 
                        "${baseImage}:latest-amd64", "${baseImage}:latest-arm64")
         }
-        exec {
+        providers.exec {
             commandLine("docker", "manifest", "push", "${baseImage}:latest")
         }
         
         // Create and push version manifest
-        exec {
+        providers.exec {
             commandLine("docker", "manifest", "create", "${baseImage}:${currentVersion}",
                        "${baseImage}:${currentVersion}-amd64", "${baseImage}:${currentVersion}-arm64")
         }
-        exec {
+        providers.exec {
             commandLine("docker", "manifest", "push", "${baseImage}:${currentVersion}")
         }
         
         // Create and push commit manifest
-        exec {
+        providers.exec {
             commandLine("docker", "manifest", "create", "${baseImage}:${gitShort}",
                        "${baseImage}:${gitShort}-amd64", "${baseImage}:${gitShort}-arm64")
         }
-        exec {
+        providers.exec {
             commandLine("docker", "manifest", "push", "${baseImage}:${gitShort}")
         }
     }
