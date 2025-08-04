@@ -289,7 +289,8 @@ jobs:
             --tag ${BASE_IMAGE}:latest-${{ matrix.arch }} \
             --tag ${BASE_IMAGE}:${VERSION}-${{ matrix.arch }} \
             --tag ${BASE_IMAGE}:${COMMIT_SHA::8}-${{ matrix.arch }} \
-            --build-arg VERSION=${COMMIT_SHA} \
+            --build-arg GH_BRANCH=${BRANCH_NAME} \
+            --build-arg GH_COMMIT=${COMMIT_SHA} \
             --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
             --build-arg VCS_REF=${GITHUB_SHA} \
             --cache-from type=gha,scope=${{ matrix.arch }} \
@@ -349,3 +350,30 @@ jobs:
             ${BASE_IMAGE}:${COMMIT_SHA::8}-amd64 \
             ${BASE_IMAGE}:${COMMIT_SHA::8}-arm64
           docker manifest push ${BASE_IMAGE}:${COMMIT_SHA::8}
+
+  docker-test:
+    name: Test Docker images
+    needs: docker-manifest
+    runs-on: ubuntu-latest
+    if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
+    steps:
+      - name: Test Docker image functionality
+        shell: bash
+        run: |
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          BASE_IMAGE="ghcr.io/xtclang/xvm"
+          [ "$BRANCH_NAME" != "master" ] && BASE_IMAGE="ghcr.io/xtclang/xvm_${BRANCH_NAME}"
+          
+          cat > hello.x << 'EOF'
+          module HelloWorld {
+              void run() {
+                  @Inject Console console;
+                  console.print("Hello, World from Docker!");
+              }
+          }
+          EOF
+          
+          docker run --rm -v $(pwd):/workspace -w /workspace ${BASE_IMAGE}:latest xcc hello.x
+          OUTPUT=$(docker run --rm -v $(pwd):/workspace -w /workspace ${BASE_IMAGE}:latest xec HelloWorld)
+          
+          echo "$OUTPUT" | grep -q "Hello, World from Docker!" || exit 1

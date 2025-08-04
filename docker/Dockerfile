@@ -12,17 +12,14 @@ FROM gcc:latest AS launcher-builder
 
 ARG TARGETARCH
 ARG TARGETOS  
-ARG VERSION
+ARG GH_BRANCH=master
+ARG GH_COMMIT
 
 # Download source code first
 WORKDIR /source
-RUN if [ -z "$VERSION" ]; then \
-        echo "Downloading latest master" && \
-        curl -L "https://github.com/xtclang/xvm/archive/refs/heads/master.tar.gz" | tar -xz --strip-components=1; \
-    else \
-        echo "Downloading commit/ref: $VERSION" && \
-        curl -L "https://github.com/xtclang/xvm/archive/$VERSION.tar.gz" | tar -xz --strip-components=1; \
-    fi
+RUN echo "Building from branch: $GH_BRANCH, commit: ${GH_COMMIT:-latest}" && \
+    REF=${GH_COMMIT:-$GH_BRANCH} && \
+    curl -L "https://github.com/xtclang/xvm/archive/$REF.tar.gz" | tar -xz --strip-components=1
 
 # Build launcher for target architecture
 WORKDIR /source/javatools_launcher/src/main/c
@@ -43,7 +40,8 @@ RUN --mount=type=cache,target=/tmp/gcc-cache,sharing=locked \
 
 FROM bellsoft/liberica-openjdk-alpine:${JAVA_VERSION} AS builder
 
-ARG VERSION
+ARG GH_BRANCH
+ARG GH_COMMIT
 ARG TARGETARCH
 ARG TARGETOS
 ARG BUILD_DATE
@@ -58,13 +56,9 @@ RUN apk add --no-cache \
 WORKDIR /workspace
 
 # Download the same source code as launcher-builder
-RUN if [ -z "$VERSION" ]; then \
-        echo "Downloading latest master" && \
-        curl -L "https://github.com/xtclang/xvm/archive/refs/heads/master.tar.gz" | tar -xz --strip-components=1; \
-    else \
-        echo "Downloading commit/ref: $VERSION" && \
-        curl -L "https://github.com/xtclang/xvm/archive/$VERSION.tar.gz" | tar -xz --strip-components=1; \
-    fi
+RUN echo "Building from branch: $GH_BRANCH, commit: ${GH_COMMIT:-latest}" && \
+    REF=${GH_COMMIT:-$GH_BRANCH} && \
+    curl -L "https://github.com/xtclang/xvm/archive/$REF.tar.gz" | tar -xz --strip-components=1
 
 # Copy the compiled launcher from launcher-builder stage  
 COPY --from=launcher-builder /launcher-output/ javatools_launcher/src/main/resources/exe/

@@ -66,7 +66,8 @@ val dockerBuildMultiPlatform by tasks.registering(Exec::class) {
             listOf(
                 "docker", "buildx", "build",
                 "--platform", "linux/amd64,linux/arm64",
-                "--build-arg", "VERSION=${gitCommit}",
+                "--build-arg", "GH_BRANCH=${branchName}",
+                "--build-arg", "GH_COMMIT=${gitCommit}",
                 "--build-arg", "BUILD_DATE=${buildDate}",
                 "--build-arg", "VCS_REF=${gitCommit}"
             ) + cacheArgs + listOf(
@@ -116,7 +117,8 @@ val dockerPushMultiPlatform by tasks.registering(Exec::class) {
             listOf(
                 "docker", "buildx", "build",
                 "--platform", "linux/amd64,linux/arm64",
-                "--build-arg", "VERSION=${gitCommit}",
+                "--build-arg", "GH_BRANCH=${branchName}",
+                "--build-arg", "GH_COMMIT=${gitCommit}",
                 "--build-arg", "BUILD_DATE=${buildDate}",
                 "--build-arg", "VCS_REF=${gitCommit}"
             ) + cacheArgs + listOf(
