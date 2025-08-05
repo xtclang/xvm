@@ -336,12 +336,16 @@ jobs:
           VERSION=$(cat ../VERSION | tr -d '\n\r ')
           BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           
+          # Sanitize branch name once (replace illegal Docker tag characters with underscores)
+          BRANCH_SANITIZED=$(echo "${GH_BRANCH}" | sed 's/[^a-zA-Z0-9._-]/_/g')
+          echo "Using sanitized branch name: ${BRANCH_SANITIZED} (from: ${GH_BRANCH})"
+          
           # Build tag list for this architecture
           TAGS=(
             "${DOCKER_BASE_IMAGE}:latest-${{ matrix.arch }}"
             "${DOCKER_BASE_IMAGE}:${VERSION}-${{ matrix.arch }}"
             "${DOCKER_BASE_IMAGE}:${GH_COMMIT}-${{ matrix.arch }}"
-            "${DOCKER_BASE_IMAGE}:${GH_BRANCH}-${{ matrix.arch }}"
+            "${DOCKER_BASE_IMAGE}:${BRANCH_SANITIZED}-${{ matrix.arch }}"
           )
           
           # Convert to --tag arguments
@@ -394,12 +398,16 @@ jobs:
           BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           BASE_IMAGE="ghcr.io/xtclang/xvm"
           
+          # Sanitize branch name once (replace illegal Docker tag characters with underscores)
+          BRANCH_SANITIZED=$(echo "${GH_BRANCH}" | sed 's/[^a-zA-Z0-9._-]/_/g')
+          echo "Using sanitized branch name: ${BRANCH_SANITIZED} (from: ${GH_BRANCH})"
+          
           # Build common tag list
           TAGS=(
             "${BASE_IMAGE}:latest"
             "${BASE_IMAGE}:${VERSION}" 
             "${BASE_IMAGE}:${GITHUB_SHA}"
-            "${BASE_IMAGE}:${GH_BRANCH}"
+            "${BASE_IMAGE}:${BRANCH_SANITIZED}"
           )
           
           # Convert array to --tag arguments

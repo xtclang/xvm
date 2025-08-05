@@ -7,6 +7,9 @@ fun gitBranch() = providers.exec { commandLine("git", "branch", "--show-current"
 fun gitCommit() = providers.exec { commandLine("git", "rev-parse", "HEAD") }.standardOutput.asText.get().trim()
 fun gitCommitShort() = providers.exec { commandLine("git", "rev-parse", "HEAD") }.standardOutput.asText.get().trim()
 
+// Sanitize branch name for Docker tags (replace illegal characters with underscores)
+fun sanitizeBranchName(branch: String) = branch.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+
 // Image name logic
 fun baseImageName(branch: String) = "ghcr.io/xtclang/xvm" + if (branch != "master") "-$branch" else ""
 
@@ -34,11 +37,12 @@ fun createDockerBuildTask(platform: String, arch: String) = tasks.registering(Ex
             "GH_COMMIT" to commit
         )
         
+        val sanitizedBranch = sanitizeBranchName(branch)
         val tags = listOf(
             "${baseImage}:latest-$arch",
             "${baseImage}:${version}-$arch", 
             "${baseImage}:${commit}-$arch",
-            "${baseImage}:${branch}-$arch"
+            "${baseImage}:${sanitizedBranch}-$arch"
         )
         
         val cmd = listOf("docker", "buildx", "build", "--platform", platform) +
@@ -79,11 +83,12 @@ val dockerBuildMultiPlatform by tasks.registering(Exec::class) {
             "VCS_REF" to commit
         )
         
+        val sanitizedBranch = sanitizeBranchName(branch)
         val tags = listOf(
             "${baseImage}:latest",
             "${baseImage}:${version}",
             "${baseImage}:${commit}",
-            "${baseImage}:${branch}"
+            "${baseImage}:${sanitizedBranch}"
         )
         
         java.io.File("/tmp/.buildx-cache").mkdirs()
@@ -125,11 +130,12 @@ val dockerPushMultiPlatform by tasks.registering(Exec::class) {
             "VCS_REF" to commit
         )
         
+        val sanitizedBranch = sanitizeBranchName(branch)
         val tags = listOf(
             "${baseImage}:latest",
             "${baseImage}:${version}",
             "${baseImage}:${commit}",
-            "${baseImage}:${branch}"
+            "${baseImage}:${sanitizedBranch}"
         )
         
         val cacheArgs = if (isCI) {
@@ -203,11 +209,12 @@ val dockerCreateManifest by tasks.registering(Exec::class) {
         val commit = gitCommit()
         val baseImage = baseImageName(branch)
         
+        val sanitizedBranch = sanitizeBranchName(branch)
         val manifestTags = listOf(
             "latest" to version,
             version to version,
             commit to commit,
-            branch to branch
+            sanitizedBranch to sanitizedBranch
         )
         
         logger.info("Creating manifests for: $baseImage (version: $version)")
