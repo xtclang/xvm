@@ -205,8 +205,11 @@ ghcr.io/xtclang/xvm:latest
 ghcr.io/xtclang/xvm:0.4.4-SNAPSHOT
 
 # Commit-specific builds  
-ghcr.io/xtclang/xvm:abc1234     # Short commit hash
-ghcr.io/xtclang/xvm:abc1234...  # Full commit hash
+ghcr.io/xtclang/xvm:abc1234567890abcdef1234567890abcdef12  # Full commit hash
+
+# Branch-specific builds
+ghcr.io/xtclang/xvm:master                              # Branch name
+ghcr.io/xtclang/xvm:feature-branch                     # Feature branch
 
 # Platform-specific (if needed)
 ghcr.io/xtclang/xvm:latest-amd64
@@ -231,6 +234,27 @@ docker run -v $(pwd):/workspace -w /workspace --rm ghcr.io/xtclang/xvm:latest xe
 # Check build information
 docker run --rm ghcr.io/xtclang/xvm:latest cat /opt/xdk/xvm.json
 ```
+
+### Inspecting Multi-Platform Images
+
+```bash
+# View the multi-platform manifest list
+docker manifest inspect ghcr.io/xtclang/xvm:latest
+
+# Check which architecture was automatically pulled for your machine
+docker image inspect ghcr.io/xtclang/xvm:latest --format '{{.Architecture}}'
+
+# View complete image details (metadata, layers, config)
+docker image inspect ghcr.io/xtclang/xvm:latest
+
+# Get specific image information
+docker image inspect ghcr.io/xtclang/xvm:latest --format '{{.Config.Env}}'     # Environment variables
+docker image inspect ghcr.io/xtclang/xvm:latest --format '{{.Config.Cmd}}'     # Default command
+docker image inspect ghcr.io/xtclang/xvm:latest --format '{{.Size}}'           # Image size in bytes
+docker image inspect ghcr.io/xtclang/xvm:latest --format '{{.Created}}'        # Build timestamp
+```
+
+The manifest shows available platforms (`linux/amd64` and `linux/arm64`), and Docker automatically selects the correct architecture for your machine without requiring platform specification.
 
 ### Notes
 
@@ -294,8 +318,8 @@ The GitHub Actions workflow (`.github/workflows/ci.yml`) performs:
    ghcr.io/xtclang/xvm:latest-amd64
    ghcr.io/xtclang/xvm:latest-arm64
    ghcr.io/xtclang/xvm:0.4.4-SNAPSHOT
-   ghcr.io/xtclang/xvm:abc1234       # Short commit hash
-   ghcr.io/xtclang/xvm:abc1234...    # Full commit hash
+   ghcr.io/xtclang/xvm:abc1234567890abcdef1234567890abcdef12  # Full commit hash
+   ghcr.io/xtclang/xvm:master                              # Branch name
    ```
 
 ### Key Features
@@ -341,3 +365,105 @@ Each image includes build metadata at `/opt/xdk/xvm.json`:
 - **No shell access**: Images are distroless (use docker exec with external tools if debugging needed)
 - **Multi-platform pushes**: Cannot use `--load` (pushes directly to registry)
 - **Platform emulation**: Cross-platform builds may be slower on some systems
+
+## GitHub Package Repository Management
+
+### Authentication
+
+To interact with GitHub Container Registry packages (listing, deleting, etc.), you need a Personal Access Token with appropriate scopes:
+
+```bash
+# Login to GitHub Container Registry using gh CLI
+gh auth login
+gh auth token | docker login ghcr.io -u $(gh api user --jq .login) --password-stdin
+```
+
+### Required Scopes
+
+For different operations, you need these token scopes:
+- **Pulling public images**: No authentication required
+- **Pulling private images**: `read:packages`
+- **Listing packages**: `read:packages`  
+- **Deleting packages**: `read:packages` + `delete:packages`
+
+To add scopes to your existing GitHub CLI authentication:
+```bash
+gh auth refresh --hostname github.com --scopes read:packages,delete:packages
+```
+
+### Managing Packages
+
+#### List all container packages for the organization:
+```bash
+gh api 'orgs/xtclang/packages?package_type=container' --jq '.[] | {name: .name, visibility: .visibility, updated_at: .updated_at}'
+```
+
+#### Delete a package:
+```bash
+gh api -X DELETE 'orgs/xtclang/packages/container/PACKAGE_NAME'
+```
+
+#### Get package details:
+```bash
+gh api 'orgs/xtclang/packages/container/PACKAGE_NAME'
+```
+
+### Package Naming Strategy
+
+- **Main images**: Use simple names like `xvm` for primary project artifacts
+- **Branch-specific**: Use `xvm-BRANCH` format for development builds (e.g., `xvm-feature-branch`)
+- **Avoid clutter**: Clean up temporary or test images regularly to keep the registry organized
+
+### Visibility Settings
+
+- **Public packages**: Accessible without authentication - preferred for open source
+- **Internal packages**: Only accessible to organization members
+- **Private packages**: Only accessible to specific users/teams
+
+Change visibility in the GitHub web interface under package settings.
+
+### Package Version Retention
+
+**Important**: GitHub Container Registry keeps ALL package versions by default - there's no built-in retention policy.
+
+#### Current Behavior Without Retention Policy
+- Each `docker push` creates a new version stored permanently
+- Tags like `latest` get reassigned but old image data remains under SHA digests
+- Storage grows indefinitely with every CI build
+- Manual cleanup required to prevent unbounded growth
+
+#### Check Current Version Count
+```bash
+# Count total versions stored
+gh api 'orgs/xtclang/packages/container/xvm/versions' --jq 'length'
+
+# List recent versions with creation dates
+gh api 'orgs/xtclang/packages/container/xvm/versions' --jq '.[] | {id: .id, created_at: .created_at}' | head -10
+```
+
+#### Automated Retention Policy (Recommended)
+
+Add this to your GitHub Actions workflow to automatically manage versions:
+
+```yaml
+- name: Clean up old container versions
+  uses: snok/container-retention-policy@v3
+  with:
+    image-names: xvm
+    cut-off: 4 weeks ago UTC
+    keep-n-most-recent: 5          # Maintains exactly 5 versions maximum
+    account-type: org
+    org-name: xtclang
+    token: ${{ secrets.PACKAGE_DELETE_TOKEN }}  # Requires delete:packages scope
+```
+
+#### Manual Version Cleanup
+```bash
+# Delete specific version by ID
+gh api -X DELETE 'orgs/xtclang/packages/container/xvm/versions/VERSION_ID'
+
+# Bulk delete versions older than a date (requires scripting)
+gh api 'orgs/xtclang/packages/container/xvm/versions' --jq '.[] | select(.created_at < "2025-07-01") | .id'
+```
+
+**Note**: Retention policies prevent storage growth by maintaining a rolling window (e.g., 5 most recent versions). Without a policy, versions accumulate indefinitely.

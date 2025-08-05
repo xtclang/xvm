@@ -332,29 +332,35 @@ jobs:
         run: |
           echo "Building and pushing ${{ matrix.arch }} Docker image on native hardware..."
           
-          # Common Docker setup function
-          setup_docker_vars() {
-            VERSION=$(cat ../VERSION | tr -d '\n\r ')
-            
-            echo "DEBUG: VERSION=$VERSION"
-            echo "DEBUG: GH_COMMIT=$GH_COMMIT" 
-            echo "DEBUG: GH_BRANCH=$GH_BRANCH"
-            echo "DEBUG: DOCKER_BASE_IMAGE=$DOCKER_BASE_IMAGE"
-          }
+          # Setup variables
+          VERSION=$(cat ../VERSION | tr -d '\n\r ')
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           
+          # Build tag list for this architecture
+          TAGS=(
+            "${DOCKER_BASE_IMAGE}:latest-${{ matrix.arch }}"
+            "${DOCKER_BASE_IMAGE}:${VERSION}-${{ matrix.arch }}"
+            "${DOCKER_BASE_IMAGE}:${GH_COMMIT}-${{ matrix.arch }}"
+            "${DOCKER_BASE_IMAGE}:${GH_BRANCH}-${{ matrix.arch }}"
+          )
+          
+          # Convert to --tag arguments
+          TAG_ARGS=""
+          for tag in "${TAGS[@]}"; do
+            TAG_ARGS="${TAG_ARGS} --tag ${tag}"
+          done
+          
+          # Cache inspection
           ${{ env.GRADLE_CACHE_INSPECT }}
-          
-          setup_docker_vars
           inspect_gradle_cache "host cache before Docker build"
           
+          # Build and push
           docker buildx build \
             --platform ${{ matrix.platform }} \
-            --tag ${DOCKER_BASE_IMAGE}:latest-${{ matrix.arch }} \
-            --tag ${DOCKER_BASE_IMAGE}:${VERSION}-${{ matrix.arch }} \
-            --tag ${DOCKER_BASE_IMAGE}:${GH_COMMIT::8}-${{ matrix.arch }} \
+            ${TAG_ARGS} \
             --build-arg GH_BRANCH=${GH_BRANCH} \
             --build-arg GH_COMMIT=${GH_COMMIT} \
-            --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+            --build-arg BUILD_DATE=${BUILD_DATE} \
             --build-arg VCS_REF=${GITHUB_SHA} \
             --cache-from type=gha,scope=${{ matrix.arch }} \
             --cache-to type=gha,mode=max,scope=${{ matrix.arch }} \
@@ -381,26 +387,136 @@ jobs:
       - name: Create and push multi-platform manifests
         shell: bash
         run: |
-          echo "Building and pushing multi-platform Docker images directly with Docker..."
+          echo "Building and pushing multi-platform Docker images..."
           
-          # Get current version for tagging
+          # Setup common variables
           VERSION=$(grep -E '^version\s*=' gradle.properties | cut -d'=' -f2 | tr -d ' ')
-          COMMIT_SHA=${GITHUB_SHA::8}
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          BASE_IMAGE="ghcr.io/xtclang/xvm"
           
-          # Build and push multi-platform image directly
+          # Build common tag list
+          TAGS=(
+            "${BASE_IMAGE}:latest"
+            "${BASE_IMAGE}:${VERSION}" 
+            "${BASE_IMAGE}:${GITHUB_SHA}"
+            "${BASE_IMAGE}:${GH_BRANCH}"
+          )
+          
+          # Convert array to --tag arguments
+          TAG_ARGS=""
+          for tag in "${TAGS[@]}"; do
+            TAG_ARGS="${TAG_ARGS} --tag ${tag}"
+          done
+          
+          # Build and push multi-platform image
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
-            --tag ghcr.io/xtclang/xvm:latest \
-            --tag ghcr.io/xtclang/xvm:latest-amd64 \
-            --tag ghcr.io/xtclang/xvm:latest-arm64 \
-            --tag ghcr.io/xtclang/xvm:${VERSION} \
-            --tag ghcr.io/xtclang/xvm:${VERSION}-amd64 \
-            --tag ghcr.io/xtclang/xvm:${VERSION}-arm64 \
-            --tag ghcr.io/xtclang/xvm:${COMMIT_SHA} \
-            --build-arg VERSION=${GITHUB_SHA} \
-            --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+            ${TAG_ARGS} \
+            --build-arg GH_BRANCH=${GH_BRANCH} \
+            --build-arg GH_COMMIT=${GITHUB_SHA} \
+            --build-arg BUILD_DATE=${BUILD_DATE} \
             --build-arg VCS_REF=${GITHUB_SHA} \
             --cache-from type=gha \
             --cache-to type=gha,mode=max \
             --push \
-            .
+            docker/
+
+  docker-test:
+    name: Test Docker image functionality
+    needs: docker-manifest
+    runs-on: ubuntu-latest
+    if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Test Docker image with EchoTest arguments
+        shell: bash
+        run: |
+          echo "Testing Docker image functionality with EchoTest..."
+          
+          IMAGE="${{ env.DOCKER_BASE_IMAGE }}:latest"
+          
+          # Test functions with early exits
+          test_no_args() {
+            echo "🧪 Testing EchoTest with no arguments..."
+            local output=$(docker run --rm ${IMAGE} xec EchoTest 2>&1)
+            echo "Output: $output"
+            
+            if ! echo "$output" | grep -q "EchoTest invoked with 0 arguments\."; then
+              echo "❌ No arguments test failed"
+              exit 1
+            fi
+            echo "✅ No arguments test passed"
+          }
+          
+          test_single_arg() {
+            echo "🧪 Testing EchoTest with single argument..."
+            local output=$(docker run --rm ${IMAGE} xec EchoTest "hello" 2>&1)
+            echo "Output: $output"
+            
+            if ! echo "$output" | grep -q "EchoTest invoked with 1 arguments:"; then
+              echo "❌ Single argument test failed - wrong count"
+              exit 1
+            fi
+            
+            if ! echo "$output" | grep -q '\[1\]="hello"'; then
+              echo "❌ Single argument test failed - wrong content"
+              exit 1
+            fi
+            echo "✅ Single argument test passed"
+          }
+          
+          test_multiple_args() {
+            echo "🧪 Testing EchoTest with multiple arguments..."
+            local output=$(docker run --rm ${IMAGE} xec EchoTest "arg1" "arg with spaces" "arg3" 2>&1)
+            echo "Output: $output"
+            
+            if ! echo "$output" | grep -q "EchoTest invoked with 3 arguments:"; then
+              echo "❌ Multiple arguments test failed - wrong count"
+              exit 1
+            fi
+            
+            if ! echo "$output" | grep -q '\[1\]="arg1"'; then
+              echo "❌ Multiple arguments test failed - missing arg1"
+              exit 1
+            fi
+            
+            if ! echo "$output" | grep -q '\[2\]="arg with spaces"'; then
+              echo "❌ Multiple arguments test failed - missing spaced arg"
+              exit 1
+            fi
+            
+            if ! echo "$output" | grep -q '\[3\]="arg3"'; then
+              echo "❌ Multiple arguments test failed - missing arg3"
+              exit 1
+            fi
+            echo "✅ Multiple arguments test passed"
+          }
+          
+          # Run all tests with early exits
+          test_no_args
+          test_single_arg  
+          test_multiple_args
+          
+          echo "🎉 All Docker image tests passed successfully!"
+
+  docker-cleanup:
+    name: Clean up old Docker package versions
+    needs: docker-test
+    runs-on: ubuntu-latest
+    if: ${{ success() && github.ref == 'refs/heads/master' }}
+    steps:
+      - name: Clean up old container versions
+        uses: snok/container-retention-policy@v3
+        with:
+          image-names: xvm
+          cut-off: 4 weeks ago UTC
+          keep-n-most-recent: 5
+          account-type: org
+          org-name: xtclang
+          token: ${{ secrets.GITHUB_TOKEN }}
