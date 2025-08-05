@@ -104,7 +104,13 @@ Example for `feature-branch`:
 - Platform matches host architecture (linux/amd64 on x86, linux/arm64 on ARM)
 - Compiles native launchers from C source for target platform
 - Creates architecture-specific xcc/xec executables
-- Build script: `docker/build-xdk.sh` (clean, non-branchy shell logic)
+
+### Build Scripts
+The Docker build uses several helper scripts in `docker/scripts/`:
+
+- **`clone-xdk.sh`** - Handles efficient git cloning with smart caching and commit/branch support
+- **`build-launcher.sh`** - Compiles native C launchers for the target platform (amd64/arm64)
+- **`build-xdk.sh`** - Builds the XDK using Gradle with cache optimization and debug output
 
 ### Build Arguments
 You can override default settings using build arguments:

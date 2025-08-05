@@ -17,6 +17,15 @@ on:
         type: boolean
         required: false
         default: false
+      single_platform:
+        description: 'Run only single platform (ubuntu-latest, windows-latest, or full matrix)'
+        type: choice
+        required: false
+        default: 'full'
+        options:
+          - 'full'
+          - 'ubuntu-latest'
+          - 'windows-latest'
       extra_gradle_options:
         description: 'Extra Gradle options to pass to the build'
         required: false
@@ -53,6 +62,9 @@ env:
   MAVEN_CENTRAL_PASSWORD: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
 
   gradle_options: "-Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false --stacktrace --warning-mode=all --console=plain ${{ inputs.extra_gradle_options }}"
+  
+  # JVM configuration for container environments
+  java_opts: "-XX:+UseContainerSupport"
 
   # Optional flags to control manual tests
   run_manual_tests: ${{ github.event.inputs.run_manual_tests != 'false' }}
@@ -105,7 +117,11 @@ jobs:
 
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
+        os: ${{ 
+          github.event.inputs.single_platform == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') ||
+          github.event.inputs.single_platform == 'windows-latest' && fromJSON('["windows-latest"]') ||
+          fromJSON('["ubuntu-latest", "windows-latest"]')
+        }}
 
     runs-on: ${{ matrix.os }}
 
@@ -152,6 +168,8 @@ jobs:
 
       - name: Build the XDK and create a distribution layout
         shell: bash
+        env:
+          JAVA_OPTS: ${{ env.java_opts }}
         run: |
           ${{ env.GRADLE_CACHE_INSPECT }}
           
@@ -160,11 +178,20 @@ jobs:
           echo "Skipping 'gradle clean' - fresh runner + cache integrity guaranteed"
           ls -la build/ 2>/dev/null && echo "WARNING: build/ directory exists on fresh runner!" || echo "✅ Confirmed: No previous build outputs"
           
+          echo "🔧 JVM Configuration:"
+          echo "  JAVA_OPTS: $JAVA_OPTS"
+          
+          # Print JVM flags for debugging  
+          echo "🔍 JVM Flag Information:"
+          java -XX:+UseContainerSupport -XX:+PrintFlagsFinal -version 2>&1 | head -10 || echo "  Flag printing failed (non-fatal)"
+          
           inspect_gradle_cache "before installDist"
           ./gradlew ${{ env.gradle_options }} installDist 
 
       - name: Build a machine specific XDK installation with native launchers, test run launchers on native platform
         shell: bash
+        env:
+          JAVA_OPTS: ${{ env.java_opts }}
         run: |
           ${{ env.GRADLE_CACHE_INSPECT }}
           
@@ -191,6 +218,8 @@ jobs:
         if: ${{ env.run_manual_tests == 'true' }}
         timeout-minutes: 10
         shell: bash
+        env:
+          JAVA_OPTS: ${{ env.java_opts }}
         run: |
           ${{ env.GRADLE_CACHE_INSPECT }}
           

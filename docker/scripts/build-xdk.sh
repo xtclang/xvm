@@ -12,13 +12,20 @@ arch_name() {
 
 echo "Building XDK for ${TARGETOS}/${TARGETARCH}"
 
-# Configure Gradle for container builds
-export GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.caching=true -Dorg.gradle.parallel=true -Dorg.gradle.configureondemand=true -Dorg.gradle.workers.max=4"
+# Show current environment configuration (all set via Dockerfile ENV)
+echo "🔧 JVM Configuration:"
+echo "  JAVA_OPTS: $JAVA_OPTS" 
+echo "  GRADLE_OPTS: $GRADLE_OPTS"
+echo "  GRADLE_USER_HOME: $GRADLE_USER_HOME"
+
+# Print JVM flags for debugging (without causing exit)
+echo "🔍 JVM Flag Information:"
+java -XX:+UseContainerSupport -XX:+PrintFlagsFinal -version 2>&1 | head -10 || echo "  Flag printing failed (non-fatal)"
 
 # Container cache inspection function
 inspect_container_cache() {
   local label="${1:-}"
-  local gradle_home="/root/.gradle"
+  local gradle_home="$GRADLE_USER_HOME"
   echo "🔍 Container Gradle Cache${label:+ ($label)}:"
   echo "  Location: $gradle_home"
   if [ -d "$gradle_home" ]; then
@@ -36,13 +43,25 @@ inspect_container_cache() {
   fi
 }
 
-chmod +x ./gradlew
-mkdir -p /root/.gradle
+mkdir -p "$GRADLE_USER_HOME"
+
+# Show Docker BuildKit cache mount info
+echo "🔍 Gradle Cache Inspection:"
+echo "  BuildKit cache mounts at: /root/.gradle/{caches,wrapper,build-cache}"
+ls -la /root/.gradle/ 2>/dev/null | head -5 || echo "  Cache directories will be created"
 
 inspect_container_cache "before build"
 
-# Build the XDK (skip tests since this is packaging)
-./gradlew --no-daemon --parallel --build-cache --max-workers=4 --gradle-user-home=/root/.gradle -x test -x check xdk:installDist
+# Use NPROC from environment (set via build arg)  
+export GRADLE_OPTS="$GRADLE_OPTS -Dorg.gradle.workers.max=${NPROC}"
+echo "🔧 Final GRADLE_OPTS: $GRADLE_OPTS"
+
+# Show Gradle version
+./gradlew --version
+
+# Build the XDK (skip tests since this is packaging) - use environment variables directly
+echo "Building XDK..."
+./gradlew --gradle-user-home="$GRADLE_USER_HOME" -x test -x check xdk:installDist
 
 echo "Build completed successfully"
 
