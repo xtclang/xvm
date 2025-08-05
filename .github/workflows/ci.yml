@@ -117,7 +117,7 @@ jobs:
 
     strategy:
       matrix:
-        os: ${{ 
+        os: ${{
           github.event.inputs.single_platform == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') ||
           github.event.inputs.single_platform == 'windows-latest' && fromJSON('["windows-latest"]') ||
           fromJSON('["ubuntu-latest", "windows-latest"]')
@@ -393,8 +393,10 @@ jobs:
             ${TAG_ARGS} \
             --build-arg GH_BRANCH=${GH_BRANCH} \
             --build-arg GH_COMMIT=${GH_COMMIT} \
-            --build-arg BUILD_DATE=${BUILD_DATE} \
-            --build-arg VCS_REF=${GITHUB_SHA} \
+            --label org.opencontainers.image.created=${BUILD_DATE} \
+            --label org.opencontainers.image.revision=${GITHUB_SHA} \
+            --label org.opencontainers.image.version=${VERSION} \
+            --label org.opencontainers.image.source=https://github.com/xtclang/xvm/tree/${GH_BRANCH} \
             --cache-from type=gha,scope=${{ matrix.arch }} \
             --cache-to type=gha,mode=max,scope=${{ matrix.arch }} \
             --provenance=false \

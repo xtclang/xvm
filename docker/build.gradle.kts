@@ -1,5 +1,5 @@
 plugins {
-    base
+    id("org.xtclang.build.xdk.versioning")
 }
 
 // Git helpers to avoid repetition
@@ -27,15 +27,22 @@ fun createBuildConfig(project: Project): BuildConfig {
     val commit = gitCommit()
     val baseImage = baseImageName(branch)
     val sanitizedBranch = sanitizeBranchName(branch)
+    // Only build args that actually affect the build process
     val buildArgs = mapOf(
         "GH_BRANCH" to branch,
-        "GH_COMMIT" to commit,
-        "BUILD_DATE" to java.time.Instant.now().toString(),
-        "VCS_REF" to commit
+        "GH_COMMIT" to commit
+    )
+    
+    // Metadata that will be added as Docker labels (doesn't invalidate cache)
+    val metadataLabels = mapOf(
+        "org.opencontainers.image.created" to java.time.Instant.now().toString(),
+        "org.opencontainers.image.revision" to commit,
+        "org.opencontainers.image.version" to version,  
+        "org.opencontainers.image.source" to "https://github.com/xtclang/xvm/tree/$branch"
     )
     val isCI = System.getenv("CI") == "true"
     
-    return BuildConfig(version, branch, commit, baseImage, sanitizedBranch, buildArgs, isCI)
+    return BuildConfig(version, branch, commit, baseImage, sanitizedBranch, buildArgs, metadataLabels, isCI)
 }
 
 data class BuildConfig(
@@ -45,6 +52,7 @@ data class BuildConfig(
     val baseImage: String,
     val sanitizedBranch: String,
     val buildArgs: Map<String, String>,
+    val metadataLabels: Map<String, String>,
     val isCI: Boolean
 ) {
     
@@ -75,24 +83,25 @@ data class BuildConfig(
 fun createPlatformBuildTask(arch: String, platform: String) = tasks.registering(Exec::class) {
     group = "docker"
     description = "Build Docker image for $arch ($platform)"
+    workingDir = projectDir
+    
+    val config = createBuildConfig(project)
+    val tags = config.tagsForArch(arch)
+    
+    val cmd = listOf("docker", "buildx", "build", "--platform", platform) +
+              config.buildArgs.flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
+              config.metadataLabels.flatMap { listOf("--label", "${it.key}=${it.value}") } +
+              tags.flatMap { listOf("--tag", it) } +
+              listOf("--load", ".")
+    
+    commandLine(cmd)
     
     doFirst {
-        val config = createBuildConfig(project)
-        val tags = config.tagsForArch(arch)
-        
-        val cmd = listOf("docker", "buildx", "build", "--platform", platform) +
-                  config.buildArgs.flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
-                  tags.flatMap { listOf("--tag", it) } +
-                  listOf("--load", ".")
-        
-        loggedCommandLine(cmd)
-        
+        logger.lifecycle("Executing command line: ${cmd.joinToString(" ")}")
         logger.info("Building Docker image for $arch...")
         logger.info("Branch: ${config.branch}, Commit: ${config.commit}")
         logger.info("Base image: ${config.baseImage}")
     }
-    
-    workingDir = projectDir
 }
 
 // Helper function to create platform-specific push tasks
