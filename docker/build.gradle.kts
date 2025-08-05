@@ -6,11 +6,14 @@ plugins {
 fun gitBranch() = providers.exec { commandLine("git", "branch", "--show-current") }.standardOutput.asText.get().trim()
 fun gitCommit() = providers.exec { commandLine("git", "rev-parse", "HEAD") }.standardOutput.asText.get().trim()
 
-// Sanitize branch name for Docker tags (replace illegal characters with underscores)
-fun sanitizeBranchName(branch: String) = branch.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+// Extract branch tag from full branch name (everything after last slash, sanitized for Docker)
+fun branchTag(branch: String): String {
+    val tagName = branch.substringAfterLast("/")
+    return tagName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+}
 
-// Image name logic
-fun baseImageName(branch: String) = "ghcr.io/xtclang/xvm" + if (branch != "master") "-$branch" else ""
+// Single image name for all branches
+fun baseImageName() = "ghcr.io/xtclang/xvm"
 
 // Command line execution with logging
 fun Exec.loggedCommandLine(cmd: List<String>) {
@@ -25,8 +28,8 @@ fun createBuildConfig(project: Project): BuildConfig {
     val version = project.version.toString()
     val branch = gitBranch()
     val commit = gitCommit()
-    val baseImage = baseImageName(branch)
-    val sanitizedBranch = sanitizeBranchName(branch)
+    val baseImage = baseImageName()
+    val branchTagName = branchTag(branch)
     // Only build args that actually affect the build process
     val buildArgs = mapOf(
         "GH_BRANCH" to branch,
@@ -42,7 +45,7 @@ fun createBuildConfig(project: Project): BuildConfig {
     )
     val isCI = System.getenv("CI") == "true"
     
-    return BuildConfig(version, branch, commit, baseImage, sanitizedBranch, buildArgs, metadataLabels, isCI)
+    return BuildConfig(version, branch, commit, baseImage, branchTagName, buildArgs, metadataLabels, isCI)
 }
 
 data class BuildConfig(
@@ -50,32 +53,48 @@ data class BuildConfig(
     val branch: String, 
     val commit: String,
     val baseImage: String,
-    val sanitizedBranch: String,
+    val branchTagName: String,
     val buildArgs: Map<String, String>,
     val metadataLabels: Map<String, String>,
     val isCI: Boolean
 ) {
     
-    fun tagsForArch(arch: String) = listOf(
-        "${baseImage}:latest-$arch",
-        "${baseImage}:${version}-$arch",
-        "${baseImage}:${commit}-$arch", 
-        "${baseImage}:${sanitizedBranch}-$arch"
-    )
+    fun tagsForArch(arch: String): List<String> {
+        if (branch == "master") {
+            return listOf(
+                "${baseImage}:latest-$arch",
+                "${baseImage}:${version}-$arch",
+                "${baseImage}:${commit}-$arch"
+            )
+        }
+        return listOf(
+            "${baseImage}:${branchTagName}-$arch",
+            "${baseImage}:${commit}-$arch"
+        )
+    }
     
-    fun multiPlatformTags() = listOf(
-        "${baseImage}:latest",
-        "${baseImage}:${version}",
-        "${baseImage}:${commit}",
-        "${baseImage}:${sanitizedBranch}"
-    )
+    fun multiPlatformTags(): List<String> {
+        if (branch == "master") {
+            return listOf(
+                "${baseImage}:latest",
+                "${baseImage}:${version}",
+                "${baseImage}:${commit}"
+            )
+        }
+        return listOf(
+            "${baseImage}:${branchTagName}",
+            "${baseImage}:${commit}"
+        )
+    }
     
     fun cacheArgs(arch: String? = null) = if (isCI) {
         val scope = arch?.let { ",scope=$it" } ?: ""
         listOf("--cache-from", "type=gha$scope", "--cache-to", "type=gha,mode=max$scope")
     } else {
-        File("/tmp/.buildx-cache").mkdirs()
-        listOf("--cache-from", "type=local,src=/tmp/.buildx-cache", "--cache-to", "type=local,dest=/tmp/.buildx-cache,mode=max")
+        val archSuffix = arch?.let { "-$it" } ?: ""
+        val cacheDir = File(System.getProperty("user.home"), ".cache/docker-buildx$archSuffix")
+        cacheDir.mkdirs()
+        listOf("--cache-from", "type=local,src=${cacheDir.absolutePath}", "--cache-to", "type=local,dest=${cacheDir.absolutePath},mode=max")
     }
 }
 
@@ -91,6 +110,7 @@ fun createPlatformBuildTask(arch: String, platform: String) = tasks.registering(
     val cmd = listOf("docker", "buildx", "build", "--platform", platform) +
               config.buildArgs.flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
               config.metadataLabels.flatMap { listOf("--label", "${it.key}=${it.value}") } +
+              config.cacheArgs(arch) +
               tags.flatMap { listOf("--tag", it) } +
               listOf("--load", ".")
     
@@ -202,21 +222,25 @@ val dockerPush by tasks.registering {
 // MANIFEST TASKS
 //
 
-val createManifest by tasks.registering(Exec::class) {
+val createManifest by tasks.registering {
     group = "docker"
-    description = "Create multi-platform manifest"
+    description = "Create multi-platform manifest (builds both architectures locally)"
     dependsOn(buildAmd64, buildArm64)
     
-    doFirst {
+    doLast {
         val config = createBuildConfig(project)
         
-        commandLine("docker", "manifest", "create", "--amend",
-                   "${config.baseImage}:latest",
-                   "${config.baseImage}:latest-amd64", 
-                   "${config.baseImage}:latest-arm64")
+        println("✅ Built both architecture images locally:")
+        if (config.branch == "master") {
+            println("  📦 ${config.baseImage}:latest-amd64")
+            println("  📦 ${config.baseImage}:latest-arm64")
+            println("💡 To create registry manifest, push images first then use pushManifest task")
+        } else {
+            println("  📦 ${config.baseImage}:${config.branchTagName}-amd64")  
+            println("  📦 ${config.baseImage}:${config.branchTagName}-arm64")
+            println("💡 To create registry manifest, push images first then use pushManifest task")
+        }
     }
-    
-    workingDir = projectDir
 }
 
 val pushManifest by tasks.registering(Exec::class) {

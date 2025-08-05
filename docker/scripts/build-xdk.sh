@@ -20,7 +20,7 @@ echo "  GRADLE_USER_HOME: $GRADLE_USER_HOME"
 
 # Print JVM flags for debugging (without causing exit)
 echo "🔍 JVM Flag Information:"
-java -XX:+UseContainerSupport -XX:+PrintFlagsFinal -version 2>&1 | head -10 || echo "  Flag printing failed (non-fatal)"
+java -XX:+UseContainerSupport -XX:+PrintFlagsFinal -version 2>&1 || echo "  Flag printing failed (non-fatal)"
 
 # Container cache inspection function
 inspect_container_cache() {
@@ -53,7 +53,7 @@ ls -la /root/.gradle/ 2>/dev/null | head -5 || echo "  Cache directories will be
 inspect_container_cache "before build"
 
 # Use NPROC from environment (set via build arg)  
-export GRADLE_OPTS="$GRADLE_OPTS -Dorg.gradle.workers.max=${NPROC}"
+export GRADLE_OPTS="$GRADLE_OPTS -Dorg.gradle.workers.max=${NPROC} -Dorg.gradle.vfs.watch=false"
 echo "🔧 Final GRADLE_OPTS: $GRADLE_OPTS"
 
 # Show Gradle version

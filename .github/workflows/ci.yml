@@ -77,8 +77,62 @@ env:
   # Docker build variables (DRY approach)
   GH_COMMIT: ${{ github.sha }}
   GH_BRANCH: ${{ github.ref_name }}
-  DOCKER_BASE_IMAGE: ${{ github.ref_name == 'master' && 'ghcr.io/xtclang/xvm' || format('ghcr.io/xtclang/xvm-{0}', github.ref_name) }}
+  DOCKER_BASE_IMAGE: ghcr.io/xtclang/xvm
   
+  # Docker tagging logic (DRY approach)
+  DOCKER_TAG_LOGIC: |
+    setup_docker_tags() {
+      local arch_suffix="${1:-}"
+      local version_file="${2:-../VERSION}"
+      
+      # Extract branch tag (everything after last slash, sanitized for Docker)
+      BRANCH_TAG=$(echo "${GH_BRANCH}" | sed 's|.*/||' | sed 's/[^a-zA-Z0-9._-]/_/g')
+      echo "Using branch tag: ${BRANCH_TAG} (from: ${GH_BRANCH})"
+      
+      # Get version
+      VERSION=$(cat "$version_file" | tr -d '\n\r ')
+      
+      # Master branch gets latest, version, commit
+      if [ "${GH_BRANCH}" = "master" ]; then
+        if [ -n "$arch_suffix" ]; then
+          TAGS=(
+            "${DOCKER_BASE_IMAGE}:latest-$arch_suffix"
+            "${DOCKER_BASE_IMAGE}:${VERSION}-$arch_suffix"
+            "${DOCKER_BASE_IMAGE}:${GITHUB_SHA}-$arch_suffix"
+          )
+        else
+          TAGS=(
+            "${DOCKER_BASE_IMAGE}:latest"
+            "${DOCKER_BASE_IMAGE}:${VERSION}"
+            "${DOCKER_BASE_IMAGE}:${GITHUB_SHA}"
+          )
+        fi
+        TAG_ARGS=""
+        for tag in "${TAGS[@]}"; do
+          TAG_ARGS="${TAG_ARGS} --tag ${tag}"
+        done
+        return
+      fi
+      
+      # Branch builds get branch tag and commit only
+      if [ -n "$arch_suffix" ]; then
+        TAGS=(
+          "${DOCKER_BASE_IMAGE}:${BRANCH_TAG}-$arch_suffix"
+          "${DOCKER_BASE_IMAGE}:${GITHUB_SHA}-$arch_suffix"
+        )
+      else
+        TAGS=(
+          "${DOCKER_BASE_IMAGE}:${BRANCH_TAG}"
+          "${DOCKER_BASE_IMAGE}:${GITHUB_SHA}"
+        )
+      fi
+      
+      TAG_ARGS=""
+      for tag in "${TAGS[@]}"; do
+        TAG_ARGS="${TAG_ARGS} --tag ${tag}"
+      done
+    }
+
   # Gradle cache inspection function (DRY approach)
   GRADLE_CACHE_INSPECT: |
     inspect_gradle_cache() {
@@ -179,7 +233,7 @@ jobs:
           
           # Print JVM flags for debugging  
           echo "🔍 JVM Flag Information:"
-          java -XX:+UseContainerSupport -XX:+PrintFlagsFinal -version 2>&1 | head -10 || echo "  Flag printing failed (non-fatal)"
+          java -XX:+UseContainerSupport -XX:+PrintFlagsFinal -version 2>&1 || echo "  Flag printing failed (non-fatal)"
           
           inspect_gradle_cache "before installDist"
           ./gradlew ${{ env.gradle_options }} installDist 
@@ -358,26 +412,11 @@ jobs:
           echo "Building and pushing ${{ matrix.arch }} Docker image on native hardware..."
           
           # Setup variables
-          VERSION=$(cat ../VERSION | tr -d '\n\r ')
           BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           
-          # Sanitize branch name once (replace illegal Docker tag characters with underscores)
-          BRANCH_SANITIZED=$(echo "${GH_BRANCH}" | sed 's/[^a-zA-Z0-9._-]/_/g')
-          echo "Using sanitized branch name: ${BRANCH_SANITIZED} (from: ${GH_BRANCH})"
-          
-          # Build tag list for this architecture
-          TAGS=(
-            "${DOCKER_BASE_IMAGE}:latest-${{ matrix.arch }}"
-            "${DOCKER_BASE_IMAGE}:${VERSION}-${{ matrix.arch }}"
-            "${DOCKER_BASE_IMAGE}:${GH_COMMIT}-${{ matrix.arch }}"
-            "${DOCKER_BASE_IMAGE}:${BRANCH_SANITIZED}-${{ matrix.arch }}"
-          )
-          
-          # Convert to --tag arguments
-          TAG_ARGS=""
-          for tag in "${TAGS[@]}"; do
-            TAG_ARGS="${TAG_ARGS} --tag ${tag}"
-          done
+          # Setup Docker tags using shared logic
+          ${{ env.DOCKER_TAG_LOGIC }}
+          setup_docker_tags "${{ matrix.arch }}"
           
           # Cache inspection
           ${{ env.GRADLE_CACHE_INSPECT }}
@@ -388,7 +427,7 @@ jobs:
             --platform ${{ matrix.platform }} \
             ${TAG_ARGS} \
             --build-arg GH_BRANCH=${GH_BRANCH} \
-            --build-arg GH_COMMIT=${GH_COMMIT} \
+            --build-arg GH_COMMIT=${GITHUB_SHA} \
             --label org.opencontainers.image.created=${BUILD_DATE} \
             --label org.opencontainers.image.revision=${GITHUB_SHA} \
             --label org.opencontainers.image.version=${VERSION} \
@@ -421,28 +460,11 @@ jobs:
           echo "Building and pushing multi-platform Docker images..."
           
           # Setup common variables
-          VERSION=$(grep -E '^version\s*=' gradle.properties | cut -d'=' -f2 | tr -d ' ')
           BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          # Use the correct base image for this branch (same as docker-build jobs)
-          BASE_IMAGE="${DOCKER_BASE_IMAGE}"
           
-          # Sanitize branch name once (replace illegal Docker tag characters with underscores)
-          BRANCH_SANITIZED=$(echo "${GH_BRANCH}" | sed 's/[^a-zA-Z0-9._-]/_/g')
-          echo "Using sanitized branch name: ${BRANCH_SANITIZED} (from: ${GH_BRANCH})"
-          
-          # Build common tag list
-          TAGS=(
-            "${BASE_IMAGE}:latest"
-            "${BASE_IMAGE}:${VERSION}" 
-            "${BASE_IMAGE}:${GITHUB_SHA}"
-            "${BASE_IMAGE}:${BRANCH_SANITIZED}"
-          )
-          
-          # Convert array to --tag arguments
-          TAG_ARGS=""
-          for tag in "${TAGS[@]}"; do
-            TAG_ARGS="${TAG_ARGS} --tag ${tag}"
-          done
+          # Setup Docker tags using shared logic
+          ${{ env.DOCKER_TAG_LOGIC }}
+          setup_docker_tags "" "../VERSION"
           
           # Build and push multi-platform image
           docker buildx build \
@@ -450,8 +472,10 @@ jobs:
             ${TAG_ARGS} \
             --build-arg GH_BRANCH=${GH_BRANCH} \
             --build-arg GH_COMMIT=${GITHUB_SHA} \
-            --build-arg BUILD_DATE=${BUILD_DATE} \
-            --build-arg VCS_REF=${GITHUB_SHA} \
+            --label org.opencontainers.image.created=${BUILD_DATE} \
+            --label org.opencontainers.image.revision=${GITHUB_SHA} \
+            --label org.opencontainers.image.version=${VERSION} \
+            --label org.opencontainers.image.source=https://github.com/xtclang/xvm/tree/${GH_BRANCH} \
             --cache-from type=gha \
             --cache-to type=gha,mode=max \
             --push \
