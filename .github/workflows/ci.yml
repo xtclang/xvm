@@ -358,7 +358,7 @@ jobs:
           ${{ env.GRADLE_CACHE_INSPECT }}
           inspect_gradle_cache "host cache before Docker build"
           
-          # Build and push
+          # Build and push with architecture-specific cache 
           docker buildx build \
             --platform ${{ matrix.platform }} \
             ${TAG_ARGS} \
@@ -396,7 +396,8 @@ jobs:
           # Setup common variables
           VERSION=$(grep -E '^version\s*=' gradle.properties | cut -d'=' -f2 | tr -d ' ')
           BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          BASE_IMAGE="ghcr.io/xtclang/xvm"
+          # Use the correct base image for this branch (same as docker-build jobs)
+          BASE_IMAGE="${DOCKER_BASE_IMAGE}"
           
           # Sanitize branch name once (replace illegal Docker tag characters with underscores)
           BRANCH_SANITIZED=$(echo "${GH_BRANCH}" | sed 's/[^a-zA-Z0-9._-]/_/g')

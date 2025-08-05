@@ -70,20 +70,18 @@ COPY --from=launcher-builder /launcher-output/ javatools_launcher/src/main/resou
 # Copy the build script from docker directory
 COPY build-xdk.sh /build-xdk.sh
 
-# Pre-cache dependencies and build XDK
+# Pre-cache dependencies and build XDK using BuildKit cache mounts
 RUN --mount=type=cache,target=/root/.gradle/caches,sharing=locked \
     --mount=type=cache,target=/root/.gradle/wrapper,sharing=locked \
     --mount=type=cache,target=/root/.gradle/build-cache,sharing=locked \
     set -e && \
-    echo "🔍 Docker Cache Mount Inspection (dependency pre-cache phase):" && \
-    echo "  Gradle cache mounts active: /root/.gradle/{caches,wrapper,build-cache}" && \
-    ls -la /root/.gradle/ 2>/dev/null | head -5 || echo "  Cache mount directory empty (first run)" && \
+    echo "🔍 Gradle Cache Inspection:" && \
+    echo "  BuildKit cache mounts at: /root/.gradle/{caches,wrapper,build-cache}" && \
+    ls -la /root/.gradle/ 2>/dev/null | head -5 || echo "  Cache directories will be created" && \
     chmod +x ./gradlew /build-xdk.sh && \
     export GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true" && \
     ./gradlew --version && \
-    echo "Pre-caching dependencies..." && \
-    ./gradlew --no-daemon --parallel --build-cache --max-workers=4 dependencies || true && \
-    echo "Dependencies cached, now building XDK..." && \
+    echo "Building XDK..." && \
     /build-xdk.sh
 
 # Export stage to copy launcher to host filesystem  
