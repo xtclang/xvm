@@ -187,12 +187,35 @@ jobs:
           distribution: ${{ env.java_distribution }}
           java-version: ${{ env.java_version }}
 
-      - name: Setup Gradle
+      - name: Debug Environment (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          echo "=== Windows Debug Information ==="
+          echo "OS: $RUNNER_OS"
+          echo "Operating System: $(uname -a 2>/dev/null || echo 'N/A')"
+          echo "PowerShell version:"
+          pwsh --version 2>/dev/null || echo "PowerShell not available"
+          echo "Git version:"
+          git --version 2>/dev/null || echo "Git not available"
+          echo "Java version:"
+          java -version 2>&1 || echo "Java not available"
+          echo "Current working directory: $(pwd)"
+          echo "Directory contents:"
+          ls -la . || dir
+          echo "Environment variables:"
+          env | grep -E '^(GRADLE|JAVA|PATH|GH_|GITHUB_)' | sort
+          echo "=== End Debug Information ==="
+
+      - name: Setup Gradle (with debug)
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-disabled: false
           cache-read-only: false
           gradle-version: ${{ env.gradle_version }}
+        env:
+          GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
+          ACTIONS_STEP_DEBUG: true
 
       - name: Validate Gradle Wrapper
         uses: gradle/actions/wrapper-validation@v4
