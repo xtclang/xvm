@@ -13,8 +13,7 @@ import org.xvm.asm.ConstantPool;
  * Represent a Class constant, which identifies a specific class structure.
  */
 public class ClassConstant
-        extends NamedConstant
-    {
+        extends NamedConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -27,10 +26,9 @@ public class ClassConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public ClassConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool, format, in);
-        }
+    }
 
     /**
      * Construct a constant whose value is a class identifier.
@@ -39,23 +37,21 @@ public class ClassConstant
      * @param constParent  the module, package, class, or method that contains this class
      * @param sName        the unqualified class name
      */
-    public ClassConstant(ConstantPool pool, IdentityConstant constParent, String sName)
-        {
+    public ClassConstant(ConstantPool pool, IdentityConstant constParent, String sName) {
         super(pool, constParent, sName);
 
-        switch (constParent.getFormat())
-            {
-            case Module:
-            case Package:
-            case Class:
-            case Method:
-            case Property:
-                break;
+        switch (constParent.getFormat()) {
+        case Module:
+        case Package:
+        case Class:
+        case Method:
+        case Property:
+            break;
 
-            default:
-                throw new IllegalArgumentException("invalid parent format: " + constParent);
-            }
+        default:
+            throw new IllegalArgumentException("invalid parent format: " + constParent);
         }
+    }
 
 
     // ----- ClassConstant methods -----------------------------------------------------------------
@@ -69,93 +65,82 @@ public class ClassConstant
      *
      * @throws IllegalStateException if the constructor cannot be found
      */
-    public MethodConstant findConstructor(TypeConstant... types)
-        {
+    public MethodConstant findConstructor(TypeConstant... types) {
         ClassStructure structClz = (ClassStructure) getComponent();
-        if (structClz == null)
-            {
+        if (structClz == null) {
             throw new IllegalStateException("could not find class " + this);
-            }
-        return structClz.findConstructor(types).getIdentityConstant();
         }
+        return structClz.findConstructor(types).getIdentityConstant();
+    }
 
     /**
      * @return the parent (containing) class or null if this class is the "outermost"
      */
-    public ClassConstant getParentClass()
-        {
+    public ClassConstant getParentClass() {
         IdentityConstant parent = getParentConstant();
-        while (true)
-            {
-            switch (parent.getFormat())
-                {
-                case Class:
-                    return (ClassConstant) parent;
+        while (true) {
+            switch (parent.getFormat()) {
+            case Class:
+                return (ClassConstant) parent;
 
-                case Property:
-                case Method:
-                    // ignored (we'll use its parent)
-                    parent = parent.getNamespace();
-                    continue;
+            case Property:
+            case Method:
+                // ignored (we'll use its parent)
+                parent = parent.getNamespace();
+                continue;
 
-                // packages and modules "terminate" this search
-                default:
-                    return null;
-                }
+            // packages and modules "terminate" this search
+            default:
+                return null;
             }
         }
+    }
 
     /**
      * @return the "outermost" class (including itself) that is not a package or module
      */
-    public ClassConstant getOutermost()
-        {
+    public ClassConstant getOutermost() {
         ClassConstant    outermost = this;
         IdentityConstant parent    = getParentConstant();
-        while (true)
-            {
-            switch (parent.getFormat())
-                {
-                case Class:
-                    outermost = (ClassConstant) parent;
-                    break;
+        while (true) {
+            switch (parent.getFormat()) {
+            case Class:
+                outermost = (ClassConstant) parent;
+                break;
 
-                case Property:
-                case Method:
-                    // ignored (we'll use its parent)
-                    break;
+            case Property:
+            case Method:
+                // ignored (we'll use its parent)
+                break;
 
-                // packages and modules "terminate" this search
-                default:
-                    return outermost;
-                }
+            // packages and modules "terminate" this search
+            default:
+                return outermost;
+            }
 
             parent = parent.getNamespace();
-            }
         }
+    }
 
-    public int getDepthFromOutermost()
-        {
+    public int getDepthFromOutermost() {
         int cLevelsDown = 0;
         IdentityConstant parent = getParentConstant();
-        while (true)
-            {
-            switch (parent.getFormat())
-                {
-                case Class:
-                case Property:
-                case Method:
-                case MultiMethod:
-                    ++cLevelsDown;
-                    parent = parent.getParentConstant();
-                    continue;
+        while (true) {
+            switch (parent.getFormat()) {
+            case Class:
+            case Property:
+            case Method:
+            case MultiMethod:
+                ++cLevelsDown;
+                parent = parent.getParentConstant();
+                continue;
 
-                // packages and modules mean we've passed the outermost
-                default:
-                    return cLevelsDown;
-                }
+            // packages and modules mean we've passed the outermost
+            default:
+                return cLevelsDown;
             }
         }
+    }
 
     /**
      * This method is almost identical to {@link #getOutermost()} except that a method parent
@@ -163,51 +148,45 @@ public class ClassConstant
      *
      * @return the class that represents an auto-narrowing base
      */
-    public ClassConstant getAutoNarrowingBase()
-        {
+    public ClassConstant getAutoNarrowingBase() {
         ClassConstant    outermost = this;
         IdentityConstant parent    = outermost.getParentConstant();
-        while (true)
-            {
-            switch (parent.getFormat())
-                {
-                case Class:
-                    outermost = (ClassConstant) parent;
-                    break;
+        while (true) {
+            switch (parent.getFormat()) {
+            case Class:
+                outermost = (ClassConstant) parent;
+                break;
 
-                case Property:
-                    // ignored (we'll use its parent)
-                    break;
+            case Property:
+                // ignored (we'll use its parent)
+                break;
 
-                // methods, packages, modules all "terminate" this search
-                default:
-                    return outermost;
-                }
+            // methods, packages, modules all "terminate" this search
+            default:
+                return outermost;
+            }
 
             parent = parent.getParentConstant();
-            }
         }
+    }
 
-    public int getDepthFromAutoNarrowingBase()
-        {
+    public int getDepthFromAutoNarrowingBase() {
         int cLevelsDown = 0;
         IdentityConstant parent = getParentConstant();
-        while (true)
-            {
-            switch (parent.getFormat())
-                {
-                case Class:
-                case Property:
-                    ++cLevelsDown;
-                    parent = parent.getParentConstant();
-                    continue;
+        while (true) {
+            switch (parent.getFormat()) {
+            case Class:
+            case Property:
+                ++cLevelsDown;
+                parent = parent.getParentConstant();
+                continue;
 
-                // methods, packages, modules all mean we've passed the outermost
-                default:
-                    return cLevelsDown;
-                }
+            // methods, packages, modules all mean we've passed the outermost
+            default:
+                return cLevelsDown;
             }
         }
+    }
 
     /**
      * Calculate an auto-narrowing constant that describes a "relative path" from this
@@ -218,28 +197,24 @@ public class ClassConstant
      * @return a PseudoConstant representing the path or the specified constant itself if no path
      *         can be found
      */
-    public Constant calculateAutoNarrowingConstant(ClassConstant constThatClass)
-        {
+    public Constant calculateAutoNarrowingConstant(ClassConstant constThatClass) {
         ClassConstant constThisClass = this;
         if (!constThisClass.getComponent().isAutoNarrowingAllowed() ||
-            !constThatClass.getComponent().isAutoNarrowingAllowed())
-            {
+            !constThatClass.getComponent().isAutoNarrowingAllowed()) {
             return constThatClass;
-            }
+        }
 
         // if "this:class" is the same as constId, then use ThisClassConstant(constId)
-        if (constThisClass.equals(constThatClass))
-            {
+        if (constThisClass.equals(constThatClass)) {
             return new ThisClassConstant(getConstantPool(), constThisClass);
-            }
+        }
 
         // check that the "outermost class" for both "this:class" and constId are the same
         ClassConstant constThisOutermost = constThisClass.getAutoNarrowingBase();
         ClassConstant constThatOutermost = constThatClass.getAutoNarrowingBase();
-        if (!constThisOutermost.equals(constThatOutermost))
-            {
+        if (!constThisOutermost.equals(constThatOutermost)) {
             return constThatClass;
-            }
+        }
 
         // the two classes are related, so figure out how to describe "that" in relation
         // to "this"
@@ -250,20 +225,15 @@ public class ClassConstant
         int              cThisDepth = constThisClass.getDepthFromAutoNarrowingBase();
         int              cThatDepth = constThatClass.getDepthFromAutoNarrowingBase();
         int              cReDescend = 0;
-        while (cThisDepth > cThatDepth)
-            {
+        while (cThisDepth > cThatDepth) {
             constPath = pool.ensureParentClassConstant(constPath);
             constThis = constThis.getParentConstant();
             --cThisDepth;
-            }
-        while (cThatDepth > cThisDepth)
-            {
+        } while (cThatDepth > cThisDepth) {
             ++cReDescend;
             constThat = constThat.getParentConstant();
             --cThatDepth;
-            }
-        while (!constThis.equals(constThat))
-            {
+        } while (!constThis.equals(constThat)) {
             assert cThisDepth == cThatDepth && cThisDepth >= 0;
 
             ++cReDescend;
@@ -273,10 +243,10 @@ public class ClassConstant
             constThat = constThat.getParentConstant();
             --cThisDepth;
             --cThatDepth;
-            }
+        }
 
         return redescend(constPath, constThatClass, cReDescend);
-        }
+    }
 
     /**
      * Recursively build onto the passed path to navigate the specified number of levels down to the
@@ -288,59 +258,51 @@ public class ClassConstant
      *
      * @return a PseudoConstant that represents the navigation down to the child
      */
-    private PseudoConstant redescend(PseudoConstant constPath, IdentityConstant constChild, int cLevels)
-        {
-        if (cLevels == 0)
-            {
+    private PseudoConstant redescend(PseudoConstant constPath, IdentityConstant constChild, int cLevels) {
+        if (cLevels == 0) {
             return constPath;
-            }
+        }
 
-        if (cLevels > 1)
-            {
+        if (cLevels > 1) {
             constPath = redescend(constPath, constChild.getParentConstant(), cLevels-1);
-            }
+        }
 
         return getConstantPool().ensureChildClassConstant(constPath, constChild.getName());
-        }
+    }
 
     /**
      * @return if this ClassConstant represents an implicitly imported class return it's
      *         implicit name; null otherwise
      */
-    public String getImplicitImportName()
-        {
+    public String getImplicitImportName() {
         return getModuleConstant().isEcstasyModule()
                 ? ConstantPool.getImplicitImportName("ecstasy." + getPathString())
                 : null;
-        }
+    }
 
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
-    public IdentityConstant replaceParentConstant(IdentityConstant idParent)
-        {
+    public IdentityConstant replaceParentConstant(IdentityConstant idParent) {
         return new ClassConstant(getConstantPool(), idParent, getName());
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.Class;
-        }
+    }
 
     @Override
-    public boolean isClass()
-        {
+    public boolean isClass() {
         return true;
-        }
+    }
 
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         ClassStructure clz = (ClassStructure) getComponent();
 
         return clz.isVirtualChild()   ? getConstantPool().ensureVirtualChildTypeConstant(
@@ -350,35 +312,31 @@ public class ClassConstant
              : clz.isAnonInnerClass() ? getConstantPool().ensureAnonymousClassTypeConstant(
                                             getParentConstant().getType(), this)
              : super.getType();
-        }
+    }
 
     @Override
-    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)
-        {
+    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that) {
         return that.getConstantPool().ensureClassConstant(that, getName());
-        }
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         String sImport = getImplicitImportName();
         return sImport == null
                 ? super.getValueString()
                 : sImport;
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         Constant constParent = getNamespace();
-        while (constParent instanceof ClassConstant idParent)
-            {
+        while (constParent instanceof ClassConstant idParent) {
             constParent = idParent.getNamespace();
-            }
+        }
 
         return "class=" + getValueString() + ", " + constParent.getDescription();
-        }
     }
+}

@@ -20,8 +20,7 @@ import org.xvm.util.IdentityArrayList;
  * A Component representing more than one sibling by the same name or identity constant.
  */
 public class CompositeComponent
-        extends Component
-    {
+        extends Component {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -30,11 +29,10 @@ public class CompositeComponent
      * @param parent    the parent (which may itself be a composite)
      * @param siblings  the siblings
      */
-    protected CompositeComponent(Component parent, List<Component> siblings)
-        {
+    protected CompositeComponent(Component parent, List<Component> siblings) {
         super(parent);
         f_siblings = siblings;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -42,585 +40,463 @@ public class CompositeComponent
     /**
      * @return a read-only list of components that are represented by this composite component
      */
-    public List<Component> components()
-        {
+    public List<Component> components() {
         List<Component> list = f_siblings;
         assert (list = Collections.unmodifiableList(list)) != null;
         return list;
-        }
+    }
 
     // ----- Component methods ---------------------------------------------------------------------
 
     @Override
-    public IdentityConstant getIdentityConstant()
-        {
+    public IdentityConstant getIdentityConstant() {
         // this is a legal request iff all of the siblings have the same identity constant
         IdentityConstant constId = null;
-        for (Component sibling : f_siblings)
-            {
-            if (constId == null)
-                {
+        for (Component sibling : f_siblings) {
+            if (constId == null) {
                 constId = sibling.getIdentityConstant();
-                }
-            else if (!constId.equals(sibling.getIdentityConstant()))
-                {
+            } else if (!constId.equals(sibling.getIdentityConstant())) {
                 throw new UnsupportedOperationException(
                         "can't ask identity constant of a composite with diff identity constants: "
                         + constId + ", " + sibling.getIdentityConstant());
-                }
             }
-        return constId;
         }
+        return constId;
+    }
 
     /**
      * @return true if the composite component refers to more than one identity
      */
-    public boolean isAmbiguous()
-        {
+    public boolean isAmbiguous() {
         IdentityConstant constId = null;
-        for (Component sibling : f_siblings)
-            {
-            if (constId == null)
-                {
+        for (Component sibling : f_siblings) {
+            if (constId == null) {
                 constId = sibling.getIdentityConstant();
-                }
-            else if (!constId.equals(sibling.getIdentityConstant()))
-                {
+            } else if (!constId.equals(sibling.getIdentityConstant())) {
                 return true;
-                }
             }
-        return false;
         }
+        return false;
+    }
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         // this is a legal request iff all of the siblings have the same format
         Format format = null;
-        for (Component sibling : f_siblings)
-            {
-            if (format == null)
-                {
+        for (Component sibling : f_siblings) {
+            if (format == null) {
                 format = sibling.getFormat();
-                }
-            else if (format != sibling.getFormat())
-                {
+            } else if (format != sibling.getFormat()) {
                 throw new UnsupportedOperationException(
                         "can't ask format of a composite with diff formats: "
                                 + format + ", " + sibling.getFormat());
-                }
             }
-        return format;
         }
+        return format;
+    }
 
     @Override
-    public Access getAccess()
-        {
+    public Access getAccess() {
         // this is a legal request iff all of the siblings have the same access
         Access access = null;
-        for (Component sibling : f_siblings)
-            {
-            if (access == null)
-                {
+        for (Component sibling : f_siblings) {
+            if (access == null) {
                 access = sibling.getAccess();
-                }
-            else if (access != sibling.getAccess())
-                {
+            } else if (access != sibling.getAccess()) {
                 throw new UnsupportedOperationException(
                         "can't ask access of a composite with diff access: "
                                 + access + ", " + sibling.getAccess());
-                }
             }
+        }
         return access;
-        }
+    }
 
     @Override
-    public void setAccess(Access access)
-        {
-        for (Component sibling : f_siblings)
-            {
+    public void setAccess(Access access) {
+        for (Component sibling : f_siblings) {
             sibling.setAccess(access);
-            }
         }
+    }
 
     @Override
-    public boolean isAbstract()
-        {
+    public boolean isAbstract() {
         // this is a legal request iff all of the siblings have the same abstract
         boolean fAbstract = false;
         boolean fFirst    = true;
-        for (Component sibling : f_siblings)
-            {
-            if (fFirst)
-                {
+        for (Component sibling : f_siblings) {
+            if (fFirst) {
                 fAbstract = sibling.isAbstract();
                 fFirst    = false;
-                }
-            else if (fAbstract != sibling.isAbstract())
-                {
+            } else if (fAbstract != sibling.isAbstract()) {
                 throw new UnsupportedOperationException(
                         "can't ask abstract of a composite with diff abstract settings");
-                }
             }
+        }
         return fAbstract;
-        }
+    }
 
     @Override
-    public void setAbstract(boolean fAbstract)
-        {
-        for (Component sibling : f_siblings)
-            {
+    public void setAbstract(boolean fAbstract) {
+        for (Component sibling : f_siblings) {
             sibling.setAbstract(fAbstract);
-            }
         }
+    }
 
     @Override
-    public boolean isStatic()
-        {
+    public boolean isStatic() {
         // this is a legal request iff all of the siblings have the same static
         boolean fStatic = false;
         boolean fFirst    = true;
-        for (Component sibling : f_siblings)
-            {
-            if (fFirst)
-                {
+        for (Component sibling : f_siblings) {
+            if (fFirst) {
                 fStatic = sibling.isStatic();
                 fFirst    = false;
-                }
-            else if (fStatic != sibling.isStatic())
-                {
+            } else if (fStatic != sibling.isStatic()) {
                 throw new UnsupportedOperationException(
                         "can't ask static of a composite with diff static settings");
-                }
             }
+        }
         return fStatic;
-        }
+    }
 
     @Override
-    public void setStatic(boolean fStatic)
-        {
-        for (Component sibling : f_siblings)
-            {
+    public void setStatic(boolean fStatic) {
+        for (Component sibling : f_siblings) {
             sibling.setStatic(fStatic);
-            }
         }
+    }
 
     @Override
-    public boolean isSynthetic()
-        {
+    public boolean isSynthetic() {
         // this is a legal request iff all of the siblings have the same synthetic
         boolean fSynthetic = false;
         boolean fFirst    = true;
-        for (Component sibling : f_siblings)
-            {
-            if (fFirst)
-                {
+        for (Component sibling : f_siblings) {
+            if (fFirst) {
                 fSynthetic = sibling.isSynthetic();
                 fFirst    = false;
-                }
-            else if (fSynthetic != sibling.isSynthetic())
-                {
+            } else if (fSynthetic != sibling.isSynthetic()) {
                 throw new UnsupportedOperationException(
                         "can't ask synthetic of a composite with diff synthetic settings");
-                }
             }
+        }
         return fSynthetic;
-        }
+    }
 
     @Override
-    public void setSynthetic(boolean fSynthetic)
-        {
-        for (Component sibling : f_siblings)
-            {
+    public void setSynthetic(boolean fSynthetic) {
+        for (Component sibling : f_siblings) {
             sibling.setSynthetic(fSynthetic);
-            }
         }
+    }
 
     @Override
-    public String getName()
-        {
+    public String getName() {
         // this is a legal request iff all of the siblings have the same name
         String sName = null;
-        for (Component sibling : f_siblings)
-            {
-            if (sName == null)
-                {
+        for (Component sibling : f_siblings) {
+            if (sName == null) {
                 sName = sibling.getName();
-                }
-            else if (!sName.equals(sibling.getName()))
-                {
+            } else if (!sName.equals(sibling.getName())) {
                 throw new UnsupportedOperationException(
                         "can't ask name of a composite with diff names: "
                                 + sName + ", " + sibling.getName());
-                }
             }
-        return sName;
         }
+        return sName;
+    }
 
     @Override
-    public boolean isGloballyVisible()
-        {
+    public boolean isGloballyVisible() {
         boolean fVisible = true;
-        for (Component sibling : f_siblings)
-            {
-            if (!sibling.isGloballyVisible())
-                {
+        for (Component sibling : f_siblings) {
+            if (!sibling.isGloballyVisible()) {
                 fVisible = false;
                 break;
-                }
             }
-        return fVisible;
         }
+        return fVisible;
+    }
 
     @Override
-    protected boolean isChildLessVisible()
-        {
+    protected boolean isChildLessVisible() {
         boolean fAsVisible = true;
-        for (Component sibling : f_siblings)
-            {
-            if (!sibling.isChildLessVisible())
-                {
+        for (Component sibling : f_siblings) {
+            if (!sibling.isChildLessVisible()) {
                 fAsVisible = false;
                 break;
-                }
             }
+        }
         return !fAsVisible;
-        }
+    }
 
     @Override
-    protected Component getEldestSibling()
-        {
+    protected Component getEldestSibling() {
         return f_siblings.get(0).getEldestSibling();
-        }
+    }
 
     @Override
-    public boolean isPackageContainer()
-        {
-        for (Component sibling : f_siblings)
-            {
-            if (!sibling.isPackageContainer())
-                {
+    public boolean isPackageContainer() {
+        for (Component sibling : f_siblings) {
+            if (!sibling.isPackageContainer()) {
                 return false;
-                }
             }
-        return true;
         }
+        return true;
+    }
 
     @Override
-    public boolean isClassContainer()
-        {
-        for (Component sibling : f_siblings)
-            {
-            if (!sibling.isClassContainer())
-                {
+    public boolean isClassContainer() {
+        for (Component sibling : f_siblings) {
+            if (!sibling.isClassContainer()) {
                 return false;
-                }
             }
-        return true;
         }
+        return true;
+    }
 
     @Override
-    public boolean isMethodContainer()
-        {
-        for (Component sibling : f_siblings)
-            {
-            if (!sibling.isMethodContainer())
-                {
+    public boolean isMethodContainer() {
+        for (Component sibling : f_siblings) {
+            if (!sibling.isMethodContainer()) {
                 return false;
-                }
             }
-        return true;
         }
+        return true;
+    }
 
     @Override
-    public Map<String, Component> getChildByNameMap()
-        {
+    public Map<String, Component> getChildByNameMap() {
         return f_siblings.get(0).getChildByNameMap();
-        }
+    }
 
     @Override
-    public Map<String, Component> ensureChildByNameMap()
-        {
+    public Map<String, Component> ensureChildByNameMap() {
         return f_siblings.get(0).ensureChildByNameMap();
-        }
+    }
 
     @Override
-    protected boolean addChild(Component child)
-        {
+    protected boolean addChild(Component child) {
         // TODO - figure out how to add a child to multiple components
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
-    protected void addAndCondition(ConditionalConstant cond)
-        {
-        for (Component sibling : f_siblings)
-            {
+    protected void addAndCondition(ConditionalConstant cond) {
+        for (Component sibling : f_siblings) {
             sibling.addAndCondition(cond);
-            }
         }
+    }
 
     @Override
-    protected void addOrCondition(ConditionalConstant cond)
-        {
-        for (Component sibling : f_siblings)
-            {
+    protected void addOrCondition(ConditionalConstant cond) {
+        for (Component sibling : f_siblings) {
             sibling.addOrCondition(cond);
-            }
         }
+    }
 
     @Override
-    protected boolean isBodyIdentical(Component component)
-        {
-        if (component instanceof CompositeComponent that)
-            {
+    protected boolean isBodyIdentical(Component component) {
+        if (component instanceof CompositeComponent that) {
             List<Component> listThis = this.f_siblings;
             List<Component> listThat = that.f_siblings;
-            if (listThis.size() == listThat.size())
-                {
-                for (int i = 0, c = listThis.size(); i < c; ++i)
-                    {
-                    if (!listThis.get(i).isBodyIdentical(listThat.get(i)))
-                        {
+            if (listThis.size() == listThat.size()) {
+                for (int i = 0, c = listThis.size(); i < c; ++i) {
+                    if (!listThis.get(i).isBodyIdentical(listThat.get(i))) {
                         return false;
-                        }
                     }
-                return true;
                 }
+                return true;
             }
+        }
 
         return false;
-        }
+    }
 
     @Override
-    public Component getChild(Constant constId)
-        {
+    public Component getChild(Constant constId) {
         IdentityArrayList<Component> listChild = new IdentityArrayList<>();
-        for (Component sibling : f_siblings)
-            {
+        for (Component sibling : f_siblings) {
             Component child = sibling.getChild(constId);
-            if (child != null)
-                {
-                if (child instanceof CompositeComponent composite)
-                    {
-                    for (Component eachChild : composite.f_siblings)
-                        {
+            if (child != null) {
+                if (child instanceof CompositeComponent composite) {
+                    for (Component eachChild : composite.f_siblings) {
                         listChild.addIfAbsent(eachChild);
-                        }
                     }
-                else
-                    {
+                } else {
                     listChild.addIfAbsent(child);
-                    }
                 }
             }
-
-        if (listChild.isEmpty())
-            {
-            return null;
-            }
-
-        if (listChild.size() == 1)
-            {
-            return listChild.get(0);
-            }
-
-        return new CompositeComponent(this, listChild);
         }
 
+        if (listChild.isEmpty()) {
+            return null;
+        }
+
+        if (listChild.size() == 1) {
+            return listChild.get(0);
+        }
+
+        return new CompositeComponent(this, listChild);
+    }
+
     @Override
-    public Component getChild(String sName)
-        {
+    public Component getChild(String sName) {
         IdentityArrayList<Component> listChild = new IdentityArrayList<>();
-        for (Component sibling : f_siblings)
-            {
+        for (Component sibling : f_siblings) {
             Component child = sibling.getChild(sName);
-            if (child != null)
-                {
-                if (child instanceof CompositeComponent composite)
-                    {
-                    for (Component eachChild : composite.f_siblings)
-                        {
+            if (child != null) {
+                if (child instanceof CompositeComponent composite) {
+                    for (Component eachChild : composite.f_siblings) {
                         listChild.addIfAbsent(eachChild);
-                        }
                     }
-                else
-                    {
+                } else {
                     listChild.addIfAbsent(child);
-                    }
                 }
             }
+        }
 
-        if (listChild.isEmpty())
-            {
+        if (listChild.isEmpty()) {
             return null;
-            }
+        }
 
-        if (listChild.size() == 1)
-            {
+        if (listChild.size() == 1) {
             return listChild.get(0);
-            }
+        }
 
         return new CompositeComponent(this, listChild);
-        }
+    }
 
     @Override
-    protected void disassembleChildren(DataInput in, boolean fLazy)
-        {
+    protected void disassembleChildren(DataInput in, boolean fLazy) {
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
-    protected void registerChildrenConstants(ConstantPool pool)
-        {
+    protected void registerChildrenConstants(ConstantPool pool) {
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
-    protected void assembleChildren(DataOutput out)
-        {
+    protected void assembleChildren(DataOutput out) {
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
-    protected Component cloneBody()
-        {
+    protected Component cloneBody() {
         // this can be implemented, but it's not immediately clear what would be explicitly shared
         // vs. not shared as the result of the clone
         throw new UnsupportedOperationException();
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public Iterator<? extends XvmStructure> getContained()
-        {
+    public Iterator<? extends XvmStructure> getContained() {
         // TODO this is not correct, if some of the structures have additional "contained" structures, i.e. need Component.getBodyContained()
         return f_siblings.get(0).getContained();
-        }
+    }
 
     @Override
-    public boolean isModified()
-        {
-        for (Component sibling : f_siblings)
-            {
-            if (sibling.isModified())
-                {
+    public boolean isModified() {
+        for (Component sibling : f_siblings) {
+            if (sibling.isModified()) {
                 return true;
-                }
             }
-        return false;
         }
+        return false;
+    }
 
     @Override
-    protected boolean isBodyModified()
-        {
-        for (Component sibling : f_siblings)
-            {
-            if (sibling.isBodyModified())
-                {
+    protected boolean isBodyModified() {
+        for (Component sibling : f_siblings) {
+            if (sibling.isBodyModified()) {
                 return true;
-                }
             }
-        return false;
         }
+        return false;
+    }
 
     @Override
-    protected void markModified()
-        {
-        for (Component sibling : f_siblings)
-            {
+    protected void markModified() {
+        for (Component sibling : f_siblings) {
             sibling.markModified();
-            }
         }
+    }
 
     @Override
-    protected void resetModified()
-        {
-        for (Component sibling : f_siblings)
-            {
+    protected void resetModified() {
+        for (Component sibling : f_siblings) {
             sibling.resetModified();
-            }
         }
+    }
 
     @Override
-    protected void disassemble(DataInput in)
-        {
+    protected void disassemble(DataInput in) {
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
-    protected void assemble(DataOutput out)
-        {
+    protected void assemble(DataOutput out) {
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
-    protected void dump(PrintWriter out, String sIndent)
-        {
+    protected void dump(PrintWriter out, String sIndent) {
         out.print(sIndent);
         out.println(this);
 
-        for (Component sibling : f_siblings)
-            {
+        for (Component sibling : f_siblings) {
             sibling.dump(out, nextIndent(sIndent));
-            }
         }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
-        {
+    public int hashCode() {
         int n = 0;
-        for (Component sibling : f_siblings)
-            {
+        for (Component sibling : f_siblings) {
             n ^= sibling.hashCode();
-            }
+        }
         return n;
-        }
+    }
 
     @Override
-    public boolean equals(Object obj)
-        {
-        if (obj instanceof CompositeComponent that)
-            {
+    public boolean equals(Object obj) {
+        if (obj instanceof CompositeComponent that) {
             return this.f_siblings.equals(that.f_siblings);
-            }
-        return false;
         }
+        return false;
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("CompositeComponent{");
 
         List<Component> list = f_siblings;
-        for (int i = 0, c = list.size(); i < c; ++i)
-            {
-            if (i > 0)
-                {
+        for (int i = 0, c = list.size(); i < c; ++i) {
+            if (i > 0) {
                 sb.append(", ");
-                }
+            }
 
             sb.append('[')
               .append(i)
               .append("]=")
               .append(list.get(i));
-            }
+        }
 
         sb.append('}');
         return sb.toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -629,4 +505,4 @@ public class CompositeComponent
      * The siblings represented by this component.
      */
     private final List<Component> f_siblings;
-    }
+}

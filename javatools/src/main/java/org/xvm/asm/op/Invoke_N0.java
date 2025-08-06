@@ -143,18 +143,18 @@ public class Invoke_N0
             if (iArg == A_DEFAULT) {
                 JitParamDesc pd = jmd.getOptimizedParam(i);
                 switch (pd.flavor) {
-                    case SpecificWithDefault:
-                        code.aconst_null();
-                        break;
+                case SpecificWithDefault:
+                    code.aconst_null();
+                    break;
 
-                    case PrimitiveWithDefault:
-                        // default primitive with an additional `true`
-                        Builder.defaultLoad(code, pd.cd);
-                        code.iconst_1();
-                        break;
+                case PrimitiveWithDefault:
+                    // default primitive with an additional `true`
+                    Builder.defaultLoad(code, pd.cd);
+                    code.iconst_1();
+                    break;
 
-                    default:
-                        throw new IllegalStateException();
+                default:
+                    throw new IllegalStateException();
                 }
             } else {
                 bctx.loadArgument(code, iArg);

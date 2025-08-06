@@ -14,8 +14,7 @@ import org.xvm.asm.constants.TypeConstant;
  * A Register represents a specific, typed, machine register of the XVM.
  */
 public class Register
-        implements Argument
-    {
+        implements Argument {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -25,23 +24,19 @@ public class Register
      * @param sName   the name given to the register, if any; otherwise null
      * @param method  the enclosing method
      */
-    public Register(TypeConstant type, String sName, MethodStructure method)
-        {
-        if (type == null)
-            {
+    public Register(TypeConstant type, String sName, MethodStructure method) {
+        if (type == null) {
             throw new IllegalArgumentException("type required");
-            }
-        else
-            {
+        } else {
             type = type.resolveTypedefs();
-            }
+        }
 
         m_fRO        = false;
         m_type       = type;
         m_sName      = sName;
         m_iArg       = UNKNOWN + (method == null ? 0 : method.getUnassignedRegisterIndex());
         f_nOrigIndex = m_iArg;
-        }
+    }
 
     /**
      * Construct a Register of the specified type.
@@ -51,24 +46,19 @@ public class Register
      * @param iArg   the argument index, which is either a pre-defined argument index, or a
      *               register ID
      */
-    public Register(TypeConstant type, String sName, int iArg)
-        {
-        if (type == null)
-            {
-            switch (iArg)
-                {
-                case Op.A_DEFAULT:
-                case Op.A_IGNORE:
-                case Op.A_IGNORE_ASYNC:
-                    break;
-                default:
-                    throw new IllegalArgumentException("type required");
-                }
+    public Register(TypeConstant type, String sName, int iArg) {
+        if (type == null) {
+            switch (iArg) {
+            case Op.A_DEFAULT:
+            case Op.A_IGNORE:
+            case Op.A_IGNORE_ASYNC:
+                break;
+            default:
+                throw new IllegalArgumentException("type required");
             }
-        else
-            {
+        } else {
             type = type.resolveTypedefs();
-            }
+        }
 
         validateIndex(iArg);
 
@@ -77,23 +67,21 @@ public class Register
         m_sName      = sName;
         m_iArg       = iArg;
         f_nOrigIndex = iArg;
-        }
+    }
 
     /**
      * Mark this register as an in-place replacement of the original.
      */
-    public void markInPlace()
-        {
+    public void markInPlace() {
         throw new IllegalStateException();
-        }
+    }
 
     /**
      * @return true iff this register is an in-place replacement of the original
      */
-    public boolean isInPlace()
-        {
+    public boolean isInPlace() {
         return true;
-        }
+    }
 
 
     // ----- Argument methods ----------------------------------------------------------------------
@@ -104,43 +92,35 @@ public class Register
      * @return the Register's type
      */
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return m_type;
-        }
+    }
 
     @Override
-    public boolean isStack()
-        {
+    public boolean isStack() {
         return m_iArg == Op.A_STACK;
-        }
+    }
 
     @Override
-    public boolean isEffectivelyFinal()
-        {
+    public boolean isEffectivelyFinal() {
         return m_fEffectivelyFinal || isStack();
-        }
+    }
 
     @Override
-    public Register registerConstants(Op.ConstantRegistry registry)
-        {
-        if (m_typeReg != null)
-            {
+    public Register registerConstants(Op.ConstantRegistry registry) {
+        if (m_typeReg != null) {
             m_typeReg = (TypeConstant) registry.register(m_typeReg);
             assert !m_typeReg.containsDynamicType(this);
-            }
-        else if (m_type != null)
-            {
-            if (m_type.containsDynamicType(this))
-                {
+        } else if (m_type != null) {
+            if (m_type.containsDynamicType(this)) {
                 // get rid of the self-referencing type elements
                 m_type = m_type.resolveDynamicConstraints(this);
-                }
+            }
 
             m_type = (TypeConstant) registry.register(m_type);
-            }
-        return this;
         }
+        return this;
+    }
 
 
     // ----- Register methods ----------------------------------------------------------------------
@@ -148,10 +128,9 @@ public class Register
     /**
      * @return true iff this register represents a non-dereferenced value
      */
-    public boolean isVar()
-        {
+    public boolean isVar() {
         return m_typeReg != null;
-        }
+    }
 
     /**
      * Obtain a register type.
@@ -160,26 +139,23 @@ public class Register
      *
      * @return the type of the register
      */
-    public TypeConstant ensureRegType(boolean fRO)
-        {
+    public TypeConstant ensureRegType(boolean fRO) {
         assert fRO | !m_fRO;
 
-        if (m_typeReg != null)
-            {
+        if (m_typeReg != null) {
             return m_typeReg;
-            }
+        }
 
         ConstantPool pool = m_type.getConstantPool();
         return pool.ensureParameterizedTypeConstant(fRO ? pool.typeRef() : pool.typeVar(), m_type);
-        }
+    }
 
     /**
      * Specify the type of the register itself.
      *
      * @param typeReg  the type of the register (something that "is a" Ref)
      */
-    public void specifyRegType(TypeConstant typeReg)
-        {
+    public void specifyRegType(TypeConstant typeReg) {
         ConstantPool pool = typeReg.getConstantPool();
 
         // annotated types may re-resolve the annotation arguments
@@ -187,17 +163,15 @@ public class Register
         assert typeReg.isA(pool.typeRef());
 
         this.m_typeReg = typeReg;
-        if (!typeReg.isA(pool.typeVar()))
-            {
+        if (!typeReg.isA(pool.typeVar())) {
             m_fRO = true;
-            }
         }
+    }
 
-    public void specifyActualType(TypeConstant type)
-        {
+    public void specifyActualType(TypeConstant type) {
         assert type != null && type.isA(m_type);
         m_type = type;
-        }
+    }
 
     /**
      * Create a register that is collocated with this register, but narrows its type.
@@ -210,7 +184,7 @@ public class Register
      *   if (Element.is(Type<Int>))
      *       {
      *       Consumer<Element> consumer2 = new Consumer(Element);
-     *       }
+     *   }
      *   </code></pre>
      *
      * In the enclosed "if" context it's known that the Element is an Int, which makes
@@ -220,102 +194,90 @@ public class Register
      *
      * @return a shadow of the original register reflecting the new type
      */
-    public Register narrowType(TypeConstant typeNarrowed)
-        {
+    public Register narrowType(TypeConstant typeNarrowed) {
         // even when the types are the same, the shadow carries "not-in-place" flag
         ShadowRegister regShadow = new ShadowRegister(typeNarrowed, m_sName, f_nOrigIndex);
         TypeConstant   typeReg   = m_typeReg;
-        if (typeReg != null)
-            {
-            if (typeReg.isAnnotated() && !typeNarrowed.equals(m_type))
-                {
+        if (typeReg != null) {
+            if (typeReg.isAnnotated() && !typeNarrowed.equals(m_type)) {
                 ConstantPool pool = typeReg.getConstantPool();
                 TypeConstant typeNarrowedReg = pool.ensureParameterizedTypeConstant(
                         isVar() ? pool.typeVar() : pool.typeRef(), typeNarrowed);
                 typeReg = typeNarrowedReg.adoptAnnotations(pool, typeReg);
-                }
-            regShadow.specifyRegType(typeReg);
             }
-        return regShadow;
+            regShadow.specifyRegType(typeReg);
         }
+        return regShadow;
+    }
 
     /**
      * Create a shadow register that has the same type as the original register.
      */
-    public Register restoreType()
-        {
+    public Register restoreType() {
         return new ShadowRegister(getOriginalType(), m_sName, f_nOrigIndex);
-        }
+    }
 
     /**
      * @return the original register, which could be different from "this" for narrowed registers
      */
-    public Register getOriginalRegister()
-        {
+    public Register getOriginalRegister() {
         return this;
-        }
+    }
 
     /**
      * @return the original type, which could be different from {@link #getType} for narrowed
      *         registers
      */
-    public TypeConstant getOriginalType()
-        {
+    public TypeConstant getOriginalType() {
         return getType();
-        }
+    }
 
     /**
      * @return the register name, or null
      */
-    public String getName()
-        {
+    public String getName() {
         return m_sName;
-        }
+    }
 
     /**
      * @return the argument index for the Register, which could be in the "unassigned" range
      */
-    public int getIndex()
-        {
+    public int getIndex() {
         return m_iArg;
-        }
+    }
 
     /**
      * Assign an argument index.
      *
      * @param iArg a valid argument index
      */
-    public int assignIndex(int iArg)
-        {
-        if (m_iArg < UNKNOWN && m_iArg != iArg)
-            {
+    public int assignIndex(int iArg) {
+        if (m_iArg < UNKNOWN && m_iArg != iArg) {
             throw new IllegalStateException(
                 "index has already been assigned (old=" + m_iArg + ", new=" + iArg);
-            }
+        }
 
         validateIndex(iArg);
         return m_iArg = iArg;
-        }
+    }
 
     /**
      * Reset the register to an unknown index to allow for a re-run of the simulation that assigns
      * variable indexes.
      */
-    public void resetIndex()
-        {
+    public void resetIndex() {
         m_iArg = f_nOrigIndex;
-        }
+    }
 
     /**
      * @return the unique id for this register which is used to differentiate registers with the
      *         same index, but within different scopes inside of a single method
      */
-    public int getId()
-        {
+    public int getId() {
         assert f_nOrigIndex == m_iArg || f_nOrigIndex >= UNKNOWN;
 
         return f_nOrigIndex < UNKNOWN ? f_nOrigIndex : f_nOrigIndex - UNKNOWN;
-        }
+    }
 
     /**
      * Determine if the specified argument index is for a pre-defined read-only register.
@@ -324,62 +286,41 @@ public class Register
      *
      * @return true iff the index specifies a pre-defined argument that is in a read-only register
      */
-    protected static boolean isPredefinedReadonly(int iArg)
-        {
-        switch (iArg)
-            {
-            case Op.A_DEFAULT:
-            case Op.A_PUBLIC:
-            case Op.A_PROTECTED:
-            case Op.A_PRIVATE:
-            case Op.A_THIS:
-            case Op.A_TARGET:
-            case Op.A_STRUCT:
-            case Op.A_CLASS:
-            case Op.A_SERVICE:
-            case Op.A_SUPER:
-            case Op.A_LABEL:
-                return true;
-
-            default:
-            case Op.A_STACK:
-            case Op.A_IGNORE:
-            case Op.A_IGNORE_ASYNC:
-                return false;
-            }
-        }
+    protected static boolean isPredefinedReadonly(int iArg) {
+        return switch (iArg) {
+            case Op.A_DEFAULT, Op.A_PUBLIC, Op.A_PROTECTED, Op.A_PRIVATE, Op.A_THIS, Op.A_TARGET,
+                 Op.A_STRUCT, Op.A_CLASS, Op.A_SERVICE, Op.A_SUPER, Op.A_LABEL -> true;
+            default -> false;
+        };
+    }
 
     /**
      * @return true iff the register is a pre-defined argument
      */
-    public boolean isPredefined()
-        {
+    public boolean isPredefined() {
         return m_iArg < 0;
-        }
+    }
 
     /**
      * @return true iff the register represents "super" pre-defined argument
      */
-    public boolean isSuper()
-        {
+    public boolean isSuper() {
         return m_iArg == Op.A_SUPER;
-        }
+    }
 
     /**
      * @return true iff the register represents "this:struct" pre-defined argument
      */
-    public boolean isStruct()
-        {
+    public boolean isStruct() {
         return m_iArg == Op.A_STRUCT;
-        }
+    }
 
     /**
      * @return true iff the register represents a label
      */
-    public boolean isLabel()
-        {
+    public boolean isLabel() {
         return m_iArg == Op.A_LABEL;
-        }
+    }
 
     /**
      * Determine if this register has an "unknown" index. This is used to indicate a "next"
@@ -387,10 +328,9 @@ public class Register
      *
      * @return true iff this register has an "unknown" index
      */
-    public boolean isUnknown()
-        {
+    public boolean isUnknown() {
         return m_iArg >= UNKNOWN;
-        }
+    }
 
     /**
      * Determine if this register is readable. This is equivalent to the Ref for the register
@@ -398,14 +338,12 @@ public class Register
      *
      * @return true iff this register is readable
      */
-    public boolean isReadable()
-        {
-        return switch (m_iArg)
-            {
+    public boolean isReadable() {
+        return switch (m_iArg) {
             case Op.A_IGNORE, Op.A_IGNORE_ASYNC, Op.A_LABEL -> false;
             default                                         -> true;
-            };
-        }
+        };
+    }
 
     /**
      * Determine if this register is writable. This is equivalent to the Ref for the register
@@ -413,150 +351,129 @@ public class Register
      *
      * @return true iff this register is writable
      */
-    public boolean isWritable()
-        {
+    public boolean isWritable() {
         return !m_fRO;
-        }
+    }
 
     /**
      * Force the register to be treated as effectively final from this point forward.
      */
-    public void markEffectivelyFinal()
-        {
+    public void markEffectivelyFinal() {
         m_fRO               = true;
         m_fEffectivelyFinal = true;
-        }
+    }
 
     /**
      * @return true iff this is a normal (not D_VAR), readable and writable, local variable (and
      *         not the stack)
      */
-    public boolean isNormal()
-        {
+    public boolean isNormal() {
         return !isPredefined() && isReadable() && isWritable() && !isVar();
-        }
+    }
 
     /**
      * Mark the register as "final", which disallows "set()" unless it's definitely unassigned
      */
-    public void markFinal()
-        {
+    public void markFinal() {
         m_fMarkedFinal = true;
-        }
+    }
 
     /**
      * @return true iff this register has been explicitly marked as "final"
      */
-    public boolean isMarkedFinal()
-        {
+    public boolean isMarkedFinal() {
         return m_fMarkedFinal;
-        }
+    }
 
     /**
      * Mark the register as "allowed to be unassigned", which overrides any access check by the
      * compiler, but may throw an "Unassigned value" exception at run-time.
      */
-    public void markAllowUnassigned()
-        {
+    public void markAllowUnassigned() {
         m_fMarkedUnassigned = true;
-        }
+    }
 
     /**
      * @return true iff this register has been marked as "allow unassigned"
      */
-    public boolean isAllowedUnassigned()
-        {
+    public boolean isAllowedUnassigned() {
         return m_fMarkedUnassigned;
-        }
+    }
 
     /**
      * @return a {@link RegAllocAST} that represents this register
      */
-    public RegAllocAST getRegAllocAST()
-        {
+    public RegAllocAST getRegAllocAST() {
         RegAllocAST astAlloc = m_astAlloc;
-        if (astAlloc == null)
-            {
+        if (astAlloc == null) {
             StringConstant constName = m_sName == null
                     ? null
                     : m_type.getConstantPool().ensureStringConstant(m_sName);
             m_astAlloc = astAlloc = m_typeReg == null
                     ? new RegAllocAST(m_type, constName)
                     : new RegAllocAST(m_typeReg, m_type, constName);
-            }
-        return astAlloc;
         }
+        return astAlloc;
+    }
 
     /**
      * @return a {@link RegisterAST} (or {@link NarrowedExprAST}) that represents this register
      */
-    public ExprAST getRegisterAST()
-        {
+    public ExprAST getRegisterAST() {
         assert !isStack();
 
-        if (isPredefined())
-            {
+        if (isPredefined()) {
             RegisterAST regSpecial = m_astSpecial;
-            if (regSpecial == null)
-                {
+            if (regSpecial == null) {
                 regSpecial = m_astSpecial = new RegisterAST(m_iArg, getType(), null);
-                }
-            return regSpecial;
             }
-
-        return getRegAllocAST().getRegister();
+            return regSpecial;
         }
 
-    @Override
-    public boolean equals(Object obj)
-        {
-        if (this == obj)
-            {
-            return true;
-            }
+        return getRegAllocAST().getRegister();
+    }
 
-        if (obj instanceof Register that)
-            {
-            if (that instanceof ShadowRegister)
-                {
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (obj instanceof Register that) {
+            if (that instanceof ShadowRegister) {
                 // ShadowRegister overrides "equals"
                 assert !(this instanceof ShadowRegister);
                 return false;
-                }
+            }
 
             return this.m_iArg              == that.m_iArg
                 && this.m_fRO               == that.m_fRO
                 && this.m_fEffectivelyFinal == that.m_fEffectivelyFinal
                 && this.isInPlace()         == that.isInPlace()
                 && this.getType().equals(      that.getType());
-            }
-        return false;
         }
+        return false;
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
-        if (m_type != null)
-            {
+        if (m_type != null) {
             sb.append(m_type.getValueString())
               .append(' ');
-            }
+        }
 
-        if (m_fEffectivelyFinal)
-            {
+        if (m_fEffectivelyFinal) {
             sb.append("@Final ");
-            }
-        else if (m_fRO)
-            {
+        } else if (m_fRO) {
             sb.append("@RO ");
-            }
+        }
 
         sb.append(getIdString());
 
         return sb.toString();
-        }
+    }
 
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -564,12 +481,11 @@ public class Register
     /**
      * @return a String that denotes the identity of the register, for debugging purposes
      */
-    public String getIdString()
-        {
+    public String getIdString() {
         return m_iArg >= UNKNOWN
                 ? "#? (@" + System.identityHashCode(this) + ")"
                 : getIdString(m_iArg);
-        }
+    }
 
     /**
      * Verify that the specified argument index is valid.
@@ -578,13 +494,11 @@ public class Register
      *
      * @throws IllegalArgumentException if the index is invalid
      */
-    protected static void validateIndex(int iReg)
-        {
-        if (!(0 <= iReg || iReg < UNKNOWN || isPredefinedRegister(iReg)))
-            {
+    protected static void validateIndex(int iReg) {
+        if (!(0 <= iReg || iReg < UNKNOWN || isPredefinedRegister(iReg))) {
             throw new IllegalArgumentException("invalid register ID: " + iReg);
-            }
         }
+    }
 
     /**
      * Determine if the specified argument index is for a pre-defined register.
@@ -593,34 +507,31 @@ public class Register
      *
      * @return true iff the index specifies a pre-defined argument
      */
-    protected static boolean isPredefinedRegister(int iArg)
-        {
-        switch (iArg)
-            {
-            case Op.A_STACK:
-            case Op.A_IGNORE:
-            case Op.A_IGNORE_ASYNC:
-            case Op.A_DEFAULT:
-            case Op.A_PUBLIC:
-            case Op.A_PROTECTED:
-            case Op.A_PRIVATE:
-            case Op.A_THIS:
-            case Op.A_TARGET:
-            case Op.A_STRUCT:
-            case Op.A_CLASS:
-            case Op.A_SERVICE:
-            case Op.A_SUPER:
-            case Op.A_LABEL:
-                return true;
+    protected static boolean isPredefinedRegister(int iArg) {
+        switch (iArg) {
+        case Op.A_STACK:
+        case Op.A_IGNORE:
+        case Op.A_IGNORE_ASYNC:
+        case Op.A_DEFAULT:
+        case Op.A_PUBLIC:
+        case Op.A_PROTECTED:
+        case Op.A_PRIVATE:
+        case Op.A_THIS:
+        case Op.A_TARGET:
+        case Op.A_STRUCT:
+        case Op.A_CLASS:
+        case Op.A_SERVICE:
+        case Op.A_SUPER:
+        case Op.A_LABEL:
+            return true;
 
-            default:
-                if (iArg < 0)
-                    {
-                    throw new IllegalArgumentException("illegal argument index: " + iArg);
-                    }
-                return false;
+        default:
+            if (iArg < 0) {
+                throw new IllegalArgumentException("illegal argument index: " + iArg);
             }
+            return false;
         }
+    }
 
     /**
      * Format the register identifier into a String
@@ -629,57 +540,55 @@ public class Register
      *
      * @return an identity String, for debugging purposes
      */
-    public static String getIdString(int nReg)
-        {
-        switch (nReg)
-            {
-            case Op.A_STACK:
-                return "this:stack";
+    public static String getIdString(int nReg) {
+        switch (nReg) {
+        case Op.A_STACK:
+            return "this:stack";
 
-            case Op.A_IGNORE:
-            case Op.A_IGNORE_ASYNC:
-                return "_";
+        case Op.A_IGNORE:
+        case Op.A_IGNORE_ASYNC:
+            return "_";
 
-            case Op.A_DEFAULT:
-                return "<default>";
+        case Op.A_DEFAULT:
+            return "<default>";
 
-            case Op.A_THIS:
-                return "this";
+        case Op.A_THIS:
+            return "this";
 
-            case Op.A_TARGET:
-                return "this:target";
+        case Op.A_TARGET:
+            return "this:target";
 
-            case Op.A_PUBLIC:
-                return "this:public";
+        case Op.A_PUBLIC:
+            return "this:public";
 
-            case Op.A_PROTECTED:
-                return "this:protected";
+        case Op.A_PROTECTED:
+            return "this:protected";
 
-            case Op.A_PRIVATE:
-                return "this:private";
+        case Op.A_PRIVATE:
+            return "this:private";
 
-            case Op.A_STRUCT:
-                return "this:struct";
+        case Op.A_STRUCT:
+            return "this:struct";
 
-            case Op.A_CLASS:
-                return "this:class";
+        case Op.A_CLASS:
+            return "this:class";
 
-            case Op.A_SERVICE:
-                return "this:service";
+        case Op.A_SERVICE:
+            return "this:service";
 
-            case Op.A_SUPER:
-                return "super";
+        case Op.A_SUPER:
+            return "super";
 
-            case Op.A_LABEL:
-                return "<label>";
+        case Op.A_LABEL:
+            return "<label>";
 
-            default:
-                return nReg < UNKNOWN
+        default:
+            return nReg < UNKNOWN
                     ? "#" + nReg
                     : "#???"; // this can happen *only* during the compilation, before the registers
                               // get assigned
-            }
         }
+    }
 
 
     // ----- inner classes -------------------------------------------------------------------------
@@ -688,8 +597,7 @@ public class Register
      * A register that represents the underlying (base) register, but overrides its type.
      */
     private class ShadowRegister
-            extends Register
-        {
+            extends Register {
         /**
          * Create a ShadowRegister of the specified type.
          *
@@ -697,193 +605,162 @@ public class Register
          * @param sName   the name of the register being overridden (or null)
          * @param iArg    the original index
          */
-        protected ShadowRegister(TypeConstant typeNew, String sName, int iArg)
-            {
+        protected ShadowRegister(TypeConstant typeNew, String sName, int iArg) {
             super(typeNew, sName, iArg);
-            }
+        }
 
         @Override
-        public TypeConstant getType()
-            {
+        public TypeConstant getType() {
             // the narrowed type
             return super.getType();
-            }
+        }
 
         @Override
-        public Register registerConstants(Op.ConstantRegistry registry)
-            {
+        public Register registerConstants(Op.ConstantRegistry registry) {
             // register the narrowed type
             return super.registerConstants(registry);
-            }
+        }
 
         @Override
-        public void markInPlace()
-            {
+        public void markInPlace() {
             m_fInPlace = true;
-            }
+        }
 
         @Override
-        public boolean isInPlace()
-            {
+        public boolean isInPlace() {
             return m_fInPlace;
-            }
+        }
 
         @Override
-        public boolean isStack()
-            {
+        public boolean isStack() {
             return Register.this.isStack();
-            }
+        }
 
         @Override
-        public boolean isEffectivelyFinal()
-            {
+        public boolean isEffectivelyFinal() {
             return Register.this.isEffectivelyFinal();
-            }
+        }
 
         @Override
-        public boolean isVar()
-            {
+        public boolean isVar() {
             return Register.this.isVar();
-            }
+        }
 
         @Override
-        public TypeConstant ensureRegType(boolean fRO)
-            {
+        public TypeConstant ensureRegType(boolean fRO) {
             // the register type is using against the narrowed type
             return super.ensureRegType(fRO);
-            }
+        }
 
         @Override
-        public void specifyRegType(TypeConstant typeReg)
-            {
+        public void specifyRegType(TypeConstant typeReg) {
             // the "inflated" register for the narrowed type
             super.specifyRegType(typeReg);
-            }
+        }
 
         @Override
-        public void specifyActualType(TypeConstant type)
-            {
+        public void specifyActualType(TypeConstant type) {
             throw new UnsupportedOperationException();
-            }
+        }
 
         @Override
-        public Register narrowType(TypeConstant typeNarrowed)
-            {
+        public Register narrowType(TypeConstant typeNarrowed) {
             // no reason to shadow the shadow
             return Register.this.narrowType(typeNarrowed);
-            }
+        }
 
         @Override
-        public Register restoreType()
-            {
+        public Register restoreType() {
             // no reason to shadow the shadow
             TypeConstant typeOrig = getOriginalType();
             return getType().equals(typeOrig)
                     ? this
                     : Register.this.narrowType(typeOrig);
-            }
+        }
 
         @Override
-        public Register getOriginalRegister()
-            {
+        public Register getOriginalRegister() {
             return Register.this;
-            }
+        }
 
         @Override
-        public TypeConstant getOriginalType()
-            {
+        public TypeConstant getOriginalType() {
             return Register.this.getOriginalType();
-            }
+        }
 
         @Override
-        public int getIndex()
-            {
+        public int getIndex() {
             return Register.this.getIndex();
-            }
+        }
 
         @Override
-        public int assignIndex(int iArg)
-            {
+        public int assignIndex(int iArg) {
             return Register.this.assignIndex(iArg);
-            }
+        }
 
         @Override
-        public boolean isPredefined()
-            {
+        public boolean isPredefined() {
             return Register.this.isPredefined();
-            }
+        }
 
         @Override
-        public boolean isLabel()
-            {
+        public boolean isLabel() {
             return false;
-            }
+        }
 
         @Override
-        public boolean isUnknown()
-            {
+        public boolean isUnknown() {
             return Register.this.isUnknown();
-            }
+        }
 
         @Override
-        public boolean isReadable()
-            {
+        public boolean isReadable() {
             return Register.this.isReadable();
-            }
+        }
 
         @Override
-        public boolean isWritable()
-            {
+        public boolean isWritable() {
             return Register.this.isWritable();
-            }
+        }
 
         @Override
-        public void markEffectivelyFinal()
-            {
+        public void markEffectivelyFinal() {
             Register.this.markEffectivelyFinal();
-            }
+        }
 
         @Override
-        public void markFinal()
-            {
+        public void markFinal() {
             Register.this.markFinal();
-            }
+        }
 
         @Override
-        public boolean isMarkedFinal()
-            {
+        public boolean isMarkedFinal() {
             return Register.this.isMarkedFinal();
-            }
+        }
 
         @Override
-        public void markAllowUnassigned()
-            {
+        public void markAllowUnassigned() {
             Register.this.markAllowUnassigned();
-            }
+        }
 
         @Override
-        public boolean isAllowedUnassigned()
-            {
+        public boolean isAllowedUnassigned() {
             return Register.this.isAllowedUnassigned();
-            }
+        }
 
         @Override
-        public RegAllocAST getRegAllocAST()
-            {
-            if (isInPlace())
-                {
+        public RegAllocAST getRegAllocAST() {
+            if (isInPlace()) {
                 return Register.this.getRegAllocAST();
-                }
+            }
             // shadow doens't have an "alloc" register
             throw new IllegalStateException();
-            }
+        }
 
         @Override
-        public ExprAST getRegisterAST()
-            {
+        public ExprAST getRegisterAST() {
             ExprAST astNarrowed = m_astNarrowed;
-            if (astNarrowed == null)
-                {
+            if (astNarrowed == null) {
                 TypeConstant typeNarrowed = getType();
                 TypeConstant typeOrig     = getOriginalType();
                 ExprAST      astOrig      = Register.this.getRegisterAST();
@@ -891,34 +768,30 @@ public class Register
                 astNarrowed = m_astNarrowed = typeNarrowed.equals(typeOrig)
                     ? astOrig
                     : new NarrowedExprAST(astOrig, typeNarrowed);
-                }
+            }
             return astNarrowed;
-            }
+        }
 
         @Override
-        public boolean isNormal()
-            {
+        public boolean isNormal() {
             return Register.this.isNormal();
-            }
+        }
 
         @Override
-        public String getIdString()
-            {
+        public String getIdString() {
             return "shadow of " + Register.this;
-            }
+        }
 
         @Override
-        public boolean equals(Object obj)
-            {
-            if (this == obj)
-                {
+        public boolean equals(Object obj) {
+            if (this == obj) {
                 return true;
-                }
+            }
 
             return obj instanceof ShadowRegister that
                     && this.getOriginalRegister().equals(that.getOriginalRegister())
                     && this.getType()            .equals(that.getType());
-            }
+        }
 
         /**
          * Indicates that this register is a replacement of the original.
@@ -929,7 +802,7 @@ public class Register
          * Cached ExprAST for shadow register (could be the same as for the original register).
          */
         private ExprAST m_astNarrowed;
-        }
+    }
 
 
     // ----- constants and fields ------------------------------------------------------------------
@@ -1006,4 +879,4 @@ public class Register
      * The Binary AST register for special registers.
      */
     private transient RegisterAST m_astSpecial;
-    }
+}

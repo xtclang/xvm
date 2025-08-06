@@ -270,8 +270,7 @@ public abstract class Op {
             int nOp = op.ensureOp().getOpCode();
             if (nOp == nOpen) {
                 ++cReq;
-            }
-            else if (nOp == nClose) {
+            } else if (nOp == nClose) {
                 if (--cReq == 0) {
                     return op;
                 }
@@ -472,8 +471,7 @@ public abstract class Op {
 
             if (m_op == null) {
                 m_op = op;
-            }
-            else if (m_op instanceof Prefix opPrefix) {
+            } else if (m_op instanceof Prefix opPrefix) {
                 opPrefix.append(op);
             } else {
                 throw new IllegalStateException();
@@ -1063,8 +1061,7 @@ public abstract class Op {
         if (arg == null) {
             // this means we have just loaded the ops from disk
             scope.ensureVar(nArg);
-        }
-        else if (arg instanceof Register reg && reg.isUnknown()) {
+        } else if (arg instanceof Register reg && reg.isUnknown()) {
             reg.assignIndex(scope.allocVar());
         }
     }

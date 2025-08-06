@@ -16,8 +16,7 @@ import org.xvm.util.Hash;
  * Represent an 8-bit "FP8 E4M3" binary floating point constant.
  */
 public class Float8e4Constant
-        extends FloatConstant
-    {
+        extends FloatConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -30,11 +29,10 @@ public class Float8e4Constant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public Float8e4Constant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
         m_nBits = in.readUnsignedByte();
-        }
+    }
 
     /**
      * Construct a constant whose value is a 16-bit binary floating point.
@@ -42,11 +40,10 @@ public class Float8e4Constant
      * @param pool   the ConstantPool that will contain this Constant
      * @param flVal  the floating point value
      */
-    public Float8e4Constant(ConstantPool pool, float flVal)
-        {
+    public Float8e4Constant(ConstantPool pool, float flVal) {
         super(pool);
         m_nBits = toBits(flVal);
-        }
+    }
 
 
     // ----- ValueConstant methods -----------------------------------------------------------------
@@ -56,70 +53,59 @@ public class Float8e4Constant
      * @return  the constant's value as a Java Float
      */
     @Override
-    public Float getValue()
-        {
+    public Float getValue() {
         return Float.valueOf(toFloat(m_nBits));
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.Float8e4;
-        }
+    }
 
     @Override
-    protected Object getLocator()
-        {
+    protected Object getLocator() {
         return getValue();
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (that instanceof Float8e4Constant thatFP8)
-            {
+    protected int compareDetails(Constant that) {
+        if (that instanceof Float8e4Constant thatFP8) {
             return Float.compare(toFloat(this.m_nBits), toFloat(thatFP8.m_nBits));
-            }
-        else
-            {
+        } else {
             return -1;
-            }
         }
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return Float.toString(toFloat(m_nBits));
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         out.writeByte(m_nBits);
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "value=" + getValueString();
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of((byte) m_nBits);
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -132,22 +118,15 @@ public class Float8e4Constant
      *
      * @return a 32-bit float
      */
-    public static float toFloat(int nBits)
-        {
-        switch (nBits)
-            {
-            case 0x00:                          // 0
-                return 0.0f;
-            case 0x80:                          // -0
-                return -0.0f;
-            case 0x7F:                          // NaN
-                return Float.NaN;
-            case 0xFF:                          // -NaN
-                return Float.intBitsToFloat(0xFFC00000);
-            default:
-                throw new UnsupportedOperationException("TODO implement non-zero E4M3 float values");
-            }
-        }
+    public static float toFloat(int nBits) {
+        return switch (nBits) {
+            case 0x00 -> 0.0f;                              // 0
+            case 0x80 -> -0.0f;                             // -0
+            case 0x7F -> Float.NaN;                         // NaN
+            case 0xFF -> Float.intBitsToFloat(0xFFC00000);  // -NaN
+            default   -> throw new UnsupportedOperationException("TODO implement non-zero E4M3 float values");
+        };
+    }
 
     /**
      * Convert a "full precision" 32-bit float to an 8-bit FP8 E4M3 floating point value.
@@ -157,35 +136,25 @@ public class Float8e4Constant
      * @return an 8-bit FP8 E4M3 floating point value stored in a Java int, whose bits are encoded
      *         using the FP8 E4M3 binary-radix floating point format
      */
-    public static int toBits(float flVal)
-        {
+    public static int toBits(float flVal) {
         boolean fNeg = (Float.floatToIntBits(flVal) & 0x80000000) == 0x80000000;
-        if (Float.isFinite(flVal))
-            {
-            if (flVal == 0)
-                {
+        if (Float.isFinite(flVal)) {
+            if (flVal == 0) {
                 return fNeg ? 0x80 : 0x00;
-                }
-            else
-                {
+            } else {
                 // TODO CP implement non-zero E4M3 float values
                 return 0x00;
-                }
             }
-        else
-            {
-            if (Float.isNaN(flVal))
-                {
+        } else {
+            if (Float.isNaN(flVal)) {
                 return fNeg ? 0xFF : 0x7F;
-                }
-            else
-                {
+            } else {
                 // infinity is converted to the largest possible value (448); the spec suggests that
                 // for conversion purposes, it could also be converted to NaN (REVIEW)
                 return fNeg ? 0xFE : 0x7E;
-                }
             }
         }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -194,4 +163,4 @@ public class Float8e4Constant
      * The constant value, stored as a byte.
      */
     private final int m_nBits;
-    }
+}

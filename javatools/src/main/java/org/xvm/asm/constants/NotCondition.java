@@ -26,8 +26,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Implements the logical "not" of a condition.
  */
 public class NotCondition
-        extends ConditionalConstant
-    {
+        extends ConditionalConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -37,17 +36,15 @@ public class NotCondition
      *                   Constant
      * @param constCond  the underlying condition to evaluate
      */
-    public NotCondition(ConstantPool pool, ConditionalConstant constCond)
-        {
+    public NotCondition(ConstantPool pool, ConditionalConstant constCond) {
         super(pool);
 
-        if (constCond == null)
-            {
+        if (constCond == null) {
             throw new IllegalArgumentException("condition required");
-            }
+        }
 
         m_constCond = constCond;
-        }
+    }
 
     /**
      * Constructor used for deserialization.
@@ -61,18 +58,16 @@ public class NotCondition
      *                      value
      */
     public NotCondition(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
 
         m_iCond = readMagnitude(in);
-        }
+    }
 
     @Override
-    protected void resolveConstants()
-        {
+    protected void resolveConstants() {
         m_constCond = (ConditionalConstant) getConstantPool().getConstant(m_iCond);
-        }
+    }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
@@ -80,144 +75,123 @@ public class NotCondition
     /**
      * @return the condition that this condition negates
      */
-    public ConditionalConstant getUnderlyingCondition()
-        {
+    public ConditionalConstant getUnderlyingCondition() {
         return m_constCond;
-        }
+    }
 
 
     // ----- ConditionalConstant methods -----------------------------------------------------------
 
     @Override
-    public boolean evaluate(LinkerContext ctx)
-        {
+    public boolean evaluate(LinkerContext ctx) {
         return !m_constCond.evaluate(ctx);
-        }
+    }
 
     @Override
-    public boolean testEvaluate(long n)
-        {
+    public boolean testEvaluate(long n) {
         return !m_constCond.testEvaluate(n);
-        }
+    }
 
     @Override
-    public void collectTerminals(Set<ConditionalConstant> terminals)
-        {
+    public void collectTerminals(Set<ConditionalConstant> terminals) {
         m_constCond.collectTerminals(terminals);
-        }
+    }
 
     @Override
-    public boolean containsTerminal(ConditionalConstant that)
-        {
+    public boolean containsTerminal(ConditionalConstant that) {
         // while "this" is technically not a terminal, there is nothing that guarantees that "that"
         // is either
-        if (this.equals(that))
-            {
+        if (this.equals(that)) {
             return true;
-            }
+        }
 
         return m_constCond.containsTerminal(that);
-        }
+    }
 
     @Override
-    public boolean isTerminalInfluenceBruteForce()
-        {
+    public boolean isTerminalInfluenceBruteForce() {
         return !isTerminalInfluenceFinessable(true, new HashSet<>(), new HashSet<>());
-        }
+    }
 
     @Override
     protected boolean isTerminalInfluenceFinessable(boolean fInNot,
-            Set<ConditionalConstant> setSimple, Set<ConditionalConstant> setComplex)
-        {
+            Set<ConditionalConstant> setSimple, Set<ConditionalConstant> setComplex) {
         return m_constCond.isTerminalInfluenceFinessable(true, setSimple, setComplex);
-        }
+    }
 
     @Override
-    public Map<ConditionalConstant, Influence> terminalInfluences()
-        {
-        if (isTerminalInfluenceBruteForce())
-            {
+    public Map<ConditionalConstant, Influence> terminalInfluences() {
+        if (isTerminalInfluenceBruteForce()) {
             return super.terminalInfluences();
-            }
+        }
 
         Map<ConditionalConstant, Influence> mapRaw = m_constCond.terminalInfluences();
         Map<ConditionalConstant, Influence> mapInv = new HashMap<>();
-        for (Map.Entry<ConditionalConstant, Influence> entry : mapRaw.entrySet())
-            {
+        for (Map.Entry<ConditionalConstant, Influence> entry : mapRaw.entrySet()) {
             mapInv.put(entry.getKey(), entry.getValue().inverse());
-            }
-        return mapInv;
         }
+        return mapInv;
+    }
 
     @Override
-    public ConditionalConstant negate()
-        {
+    public ConditionalConstant negate() {
         return m_constCond;
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.ConditionNot;
-        }
+    }
 
     @Override
-    public boolean containsUnresolved()
-        {
+    public boolean containsUnresolved() {
         return !isHashCached() && m_constCond.containsUnresolved();
-        }
+    }
 
     @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
+    public void forEachUnderlying(Consumer<Constant> visitor) {
         visitor.accept(m_constCond);
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof NotCondition))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof NotCondition)) {
             return -1;
-            }
-        return m_constCond.compareTo(((NotCondition) that).m_constCond);
         }
+        return m_constCond.compareTo(((NotCondition) that).m_constCond);
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return "!" + m_constCond.getValueString();
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         m_constCond = (ConditionalConstant) pool.register(m_constCond);
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
 
         writePackedLong(out, m_constCond.getPosition());
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_constCond);
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -231,4 +205,4 @@ public class NotCondition
      * The underlying condition to evaluate.
      */
     private ConditionalConstant m_constCond;
-    }
+}

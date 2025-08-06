@@ -20,8 +20,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * supports the array, tuple, and set types.
  */
 public class ArrayConstant
-        extends ValueConstant
-    {
+        extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -32,20 +31,18 @@ public class ArrayConstant
      * @param constType  the data type of the constant
      * @param aconstVal  the value of the constant
      */
-    public ArrayConstant(ConstantPool pool, Format fmt, TypeConstant constType, Constant... aconstVal)
-        {
+    public ArrayConstant(ConstantPool pool, Format fmt, TypeConstant constType, Constant... aconstVal) {
         super(pool);
         validateFormatAndType(fmt, constType);
 
-        if (aconstVal == null)
-            {
+        if (aconstVal == null) {
             throw new IllegalArgumentException("value required");
-            }
+        }
 
         f_fmt       = fmt;
         m_constType = constType;
         m_aconstVal = aconstVal;
-        }
+    }
 
     /**
      * Constructor used for deserialization.
@@ -57,26 +54,23 @@ public class ArrayConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public ArrayConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
 
         int iType = readMagnitude(in);
         int cVals = readMagnitude(in);
         int[] aiVal = new int[cVals];
-        for (int i = 0; i < cVals; ++i)
-            {
+        for (int i = 0; i < cVals; ++i) {
             aiVal[i] = readMagnitude(in);
-            }
+        }
 
         f_fmt   = format;
         m_iType = iType;
         m_aiVal = aiVal;
-        }
+    }
 
     @Override
-    protected void resolveConstants()
-        {
+    protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
         m_constType = (TypeConstant) pool.getConstant(m_iType);
@@ -84,285 +78,237 @@ public class ArrayConstant
         int[]      aiConst = m_aiVal;
         int        cConsts = aiConst.length;
         Constant[] aconst  = new Constant[cConsts];
-        for (int i = 0; i < cConsts; ++i)
-            {
+        for (int i = 0; i < cConsts; ++i) {
             aconst[i] = pool.getConstant(aiConst[i]);
-            }
+        }
         m_aconstVal = aconst;
+    }
+
+    private void validateFormatAndType(Format fmt, TypeConstant constType) {
+        if (fmt == null) {
+            throw new IllegalArgumentException("format required");
+        }
+        if (constType == null) {
+            throw new IllegalArgumentException("type required");
         }
 
-    private void validateFormatAndType(Format fmt, TypeConstant constType)
-        {
-        if (fmt == null)
-            {
-            throw new IllegalArgumentException("format required");
-            }
-        if (constType == null)
-            {
-            throw new IllegalArgumentException("type required");
-            }
-
         // determine what the class must be based on the constant format
-        String sClassName;
-        switch (fmt)
-            {
-            case Array:
-            case Tuple:
-            case Set:
-                sClassName = fmt.name();
-                break;
-
-            default:
-                throw new IllegalArgumentException("unsupported format: " + fmt);
-            }
+        String sClassName = switch (fmt) {
+            case Array, Tuple, Set -> fmt.name();
+            default -> throw new IllegalArgumentException("unsupported format: " + fmt);
+        };
 
         // require that the underlying identity be a class (not an auto-narrowing type for example)
         // and make sure that it matches
-        if (!constType.isEcstasy(sClassName))
-            {
+        if (!constType.isEcstasy(sClassName)) {
             throw new IllegalArgumentException("type for " + fmt + " must be " + sClassName
                     + " (unsupported type: " + constType + ")");
-            }
         }
+    }
 
     @Override
-    public Constant convertTo(TypeConstant typeOut)
-        {
-        if (typeOut.isSingleDefiningConstant())
-            {
+    public Constant convertTo(TypeConstant typeOut) {
+        if (typeOut.isSingleDefiningConstant()) {
             ConstantPool pool = getConstantPool();
 
-            if (typeOut.getDefiningConstant().equals(pool.clzArray()))
-                {
+            if (typeOut.getDefiningConstant().equals(pool.clzArray())) {
                 TypeConstant typeEl = typeOut.getParamType(0);
 
                 Constant[] aconstIn  = getValue();
                 int        cValues   = aconstIn.length;
                 Constant[] aconstOut = new Constant[cValues];
 
-                for (int i = 0; i < cValues; i++)
-                    {
+                for (int i = 0; i < cValues; i++) {
                     Constant constEl = aconstIn[i].convertTo(typeEl);
-                    if (constEl == null)
-                        {
+                    if (constEl == null) {
                         return null;
-                        }
-                    aconstOut[i] = constEl;
                     }
-                return pool.ensureArrayConstant(typeOut, aconstOut);
+                    aconstOut[i] = constEl;
                 }
+                return pool.ensureArrayConstant(typeOut, aconstOut);
             }
-        return null;
         }
+        return null;
+    }
 
 
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return m_constType;
-        }
+    }
 
     /**
      * {@inheritDoc}
      * @return  the constant's contents as an array of constants
      */
     @Override
-    public Constant[] getValue()
-        {
+    public Constant[] getValue() {
         return m_aconstVal;
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return f_fmt;
-        }
+    }
 
     @Override
-    public boolean isValueCacheable()
-        {
+    public boolean isValueCacheable() {
         return !m_constType.containsFormalType(true);
-        }
+    }
 
     @Override
-    public boolean containsUnresolved()
-        {
-        if (isHashCached())
-            {
+    public boolean containsUnresolved() {
+        if (isHashCached()) {
             return false;
-            }
+        }
 
-        if (m_constType.containsUnresolved())
-            {
+        if (m_constType.containsUnresolved()) {
             return true;
-            }
+        }
 
-        for (Constant constant : m_aconstVal)
-            {
-            if (constant.containsUnresolved())
-                {
+        for (Constant constant : m_aconstVal) {
+            if (constant.containsUnresolved()) {
                 return true;
-                }
             }
+        }
 
         return false;
-        }
+    }
 
     @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
+    public void forEachUnderlying(Consumer<Constant> visitor) {
         visitor.accept(m_constType);
-        for (Constant constant : m_aconstVal)
-            {
+        for (Constant constant : m_aconstVal) {
             visitor.accept(constant);
-            }
         }
+    }
 
     @Override
-    public ArrayConstant resolveTypedefs()
-        {
+    public ArrayConstant resolveTypedefs() {
         TypeConstant typeOld = m_constType;
         TypeConstant typeNew = typeOld.resolveTypedefs();
 
         // check values
         Constant[] aconstOld = m_aconstVal;
         Constant[] aconstNew = null;
-        for (int i = 0, c = aconstOld.length; i < c; ++i)
-            {
+        for (int i = 0, c = aconstOld.length; i < c; ++i) {
             Constant constOld = aconstOld[i];
             Constant constNew = constOld.resolveTypedefs();
-            if (constNew != constOld)
-                {
-                if (aconstNew == null)
-                    {
+            if (constNew != constOld) {
+                if (aconstNew == null) {
                     aconstNew = aconstOld.clone();
-                    }
-                aconstNew[i] = constNew;
                 }
+                aconstNew[i] = constNew;
             }
+        }
 
         return typeNew == typeOld && aconstNew == null
                 ? this
                 : (ArrayConstant) getConstantPool().register(
                         new ArrayConstant(getConstantPool(), f_fmt, typeNew, aconstNew));
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof ArrayConstant))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof ArrayConstant)) {
             return -1;
-            }
+        }
         int nResult = this.m_constType.compareTo(((ArrayConstant) that).m_constType);
-        if (nResult != 0)
-            {
+        if (nResult != 0) {
             return nResult;
-            }
+        }
 
         Constant[] aconstThis = this.m_aconstVal;
         Constant[] aconstThat = ((ArrayConstant) that).m_aconstVal;
         int cThis = aconstThis.length;
         int cThat = aconstThat.length;
-        for (int i = 0, c = Math.min(cThis, cThat); i < c; ++i)
-            {
+        for (int i = 0, c = Math.min(cThis, cThat); i < c; ++i) {
             nResult = aconstThis[i].compareTo(aconstThat[i]);
-            if (nResult != 0)
-                {
+            if (nResult != 0) {
                 return nResult;
-                }
             }
-        return cThis - cThat;
         }
+        return cThis - cThat;
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         Constant[] aconst  = m_aconstVal;
         int        cConsts = aconst.length;
 
         String sStart;
         String sEnd;
-        switch (f_fmt)
-            {
-            case Array:
-                sStart = "[";
-                sEnd   = "]";
-                break;
-            case Tuple:
-                sStart = cConsts < 2 ? "Tuple:(" : "(";
-                sEnd   = ")";
-                break;
-            case Set:
-                sStart = "Set:{";
-                sEnd   = "}";
-                break;
-
-            default:
-                throw new IllegalArgumentException("illegal format: " + f_fmt);
-            }
+        switch (f_fmt) {
+        case Array:
+            sStart = "[";
+            sEnd   = "]";
+            break;
+        case Tuple:
+            sStart = cConsts < 2 ? "Tuple:(" : "(";
+            sEnd   = ")";
+            break;
+        case Set:
+            sStart = "Set:{";
+            sEnd   = "}";
+            break;
+        default:
+            throw new IllegalArgumentException("illegal format: " + f_fmt);
+        }
 
         StringBuilder sb = new StringBuilder();
         sb.append(sStart);
 
-        for (int i = 0; i < cConsts; ++i)
-            {
-            if (i > 0)
-                {
+        for (int i = 0; i < cConsts; ++i) {
+            if (i > 0) {
                 sb.append(", ");
-                }
+            }
 
             sb.append(aconst[i]);
-            }
+        }
 
         sb.append(sEnd);
         return sb.toString();
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         m_constType = (TypeConstant) pool.register(m_constType);
         m_aconstVal = registerConstants(pool, m_aconstVal);
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constType.getPosition());
         Constant[] aconst  = m_aconstVal;
         writePackedLong(out, aconst.length);
-        for (Constant constant : aconst)
-            {
+        for (Constant constant : aconst) {
             writePackedLong(out, constant.getPosition());
-            }
         }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "array-length=" + m_aconstVal.length;
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_constType,
                Hash.of(m_aconstVal));
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -392,5 +338,5 @@ public class ArrayConstant
      * The values in the array, tuple, or set.
      */
     private Constant[] m_aconstVal;
-    }
+}
 
