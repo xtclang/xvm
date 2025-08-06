@@ -36,8 +36,8 @@ val xvmBuilds = listOf(
     "javatools_utils",
     "javatools_unicode",
     "plugin",
-    "xdk"
-    // "docker" - temporarily removed to isolate Windows CI issue
+    "xdk",
+    "docker"
 )
 
 xvmBuilds.forEach(::includeBuild)
