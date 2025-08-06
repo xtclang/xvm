@@ -1,3 +1,13 @@
+/**
+ * This is a convenience build that supports our CI / local Docker operations
+ * as Gradle tasks. They can also be used to diagnose and delete old or broken
+ * Docker images from the Github Container Registry.
+ *
+ * TODO: Note, this file is pretty long and has some redundance and boiler plate,
+ *   but we will improve it over time, för example by finding a working Docker plugin
+ *   for Gradle, and a Git plugin.
+ */
+
 plugins {
     id("org.xtclang.build.xdk.versioning")
 }
@@ -262,7 +272,7 @@ val pushManifest by tasks.registering(Exec::class) {
 
 val listImages by tasks.registering {
     group = "docker"
-    description = "List all Docker images with their tags and manifest information"
+    description = "List all Docker images with detailed tags, labels, and metadata"
     
     doLast {
         println("🐳 Docker Images Summary")
@@ -272,44 +282,170 @@ val listImages by tasks.registering {
             providers.exec {
                 commandLine("gh", "api", "orgs/xtclang/packages?package_type=container", "--jq", ".[].name")
             }.standardOutput.asText.get().trim().split("\n").map { it.removeSurrounding("\"") }
+                .filter { it.isNotEmpty() }
         } catch (e: Exception) {
             println("❌ Error: ${e.message}")
             println("💡 Run: gh auth refresh --hostname github.com --scopes read:packages")
             return@doLast
         }
         
+        println("Found ${packages.size} container packages in registry")
+        
         packages.forEach { pkg ->
-            println("\n📦 $pkg")
+            println("\n📦 Package: $pkg")
+            println("   Registry: ghcr.io/xtclang/$pkg")
             
             val versions = try {
-                providers.exec {
+                val result = providers.exec {
                     commandLine("gh", "api", "orgs/xtclang/packages/container/$pkg/versions", 
-                               "--jq", ".[] | {tags: .metadata.container.tags, created: .created_at}")
-                }.standardOutput.asText.get().trim().split("\n")
+                               "--jq", ".[] | {id: .id, tags: .metadata.container.tags, created: .created_at, size: .size}")
+                }
+                result.standardOutput.asText.get().trim().split("\n")
             } catch (e: Exception) {
-                println("  ❌ Could not get versions: ${e.message}")
+                val errorOutput = try {
+                    providers.exec {
+                        commandLine("gh", "api", "orgs/xtclang/packages/container/$pkg/versions")
+                        isIgnoreExitValue = true
+                    }.standardError.asText.get()
+                } catch (ex: Exception) {
+                    "Unable to get detailed error"
+                }
+                println("  ❌ Could not get versions for $pkg")
+                println("     Error: ${e.message}")
+                println("     Details: $errorOutput")
                 return@forEach
             }
             
-            versions.forEachIndexed { i, version ->
-                println("  ${i+1}. $version")
+            println("   Total versions: ${versions.size}")
+            println("   📋 Recent versions with tags:")
+            
+            versions.take(10).forEachIndexed { i, version ->
+                println("     ${i+1}. $version")
+            }
+            
+            if (versions.size > 10) {
+                println("     ... and ${versions.size - 10} more versions")
             }
         }
         
-        if (!packages.contains("xvm")) return@doLast
+        if (!packages.contains("xvm")) {
+            println("\n⚠️  Main 'xvm' package not found")
+            return@doLast
+        }
         
-        println("\n🔍 Full Manifest for xvm:latest")
+        println("\n🔍 Detailed Analysis for xvm Package")
+        println("=".repeat(50))
+        
+        // Get manifest for latest tag
         try {
             val manifest = providers.exec {
                 commandLine("docker", "manifest", "inspect", "ghcr.io/xtclang/xvm:latest")
             }.standardOutput.asText.get()
             
-            println("Raw manifest JSON:")
+            println("📄 Multi-platform Manifest for xvm:latest:")
             println(manifest)
             
         } catch (e: Exception) {
-            println("  ❌ Could not inspect manifest: ${e.message}")
+            val errorOutput = try {
+                providers.exec {
+                    commandLine("docker", "manifest", "inspect", "ghcr.io/xtclang/xvm:latest")
+                    isIgnoreExitValue = true
+                }.standardError.asText.get()
+            } catch (ex: Exception) {
+                "Unable to get detailed error"
+            }
+            println("  ❌ Could not inspect manifest for xvm:latest")
+            println("     Error: ${e.message}")
+            println("     Details: $errorOutput")
         }
+        
+        // Get detailed image metadata for each architecture (only if they exist locally)
+        println("\n🏷️  Local Image Analysis")
+        val availableImages = try {
+            providers.exec {
+                commandLine("docker", "images", "ghcr.io/xtclang/xvm", "--format", "{{.Tag}}")
+            }.standardOutput.asText.get().trim().split("\n")
+                .filter { it.isNotEmpty() && it != "<none>" }
+        } catch (e: Exception) {
+            emptyList<String>()
+        }
+        
+        if (availableImages.isEmpty()) {
+            println("   ❌ No local images found for ghcr.io/xtclang/xvm")
+            println("   💡 Try: docker pull ghcr.io/xtclang/xvm:latest")
+            println("   💡 Or build locally: ./gradlew docker:buildMultiPlatform")
+        } else {
+            println("   Found ${availableImages.size} local images: ${availableImages.joinToString(", ")}")
+        }
+        
+        availableImages.take(3).forEach { tag ->
+            println("\n🏷️  Image Details for xvm:$tag")
+            try {
+                val imageInfo = providers.exec {
+                    commandLine("docker", "image", "inspect", "ghcr.io/xtclang/xvm:$tag", 
+                               "--format", "{{json .}}")
+                }.standardOutput.asText.get()
+                
+                // Parse key metadata from JSON (simplified parsing)
+                val lines = imageInfo.lines()
+                val architecture = lines.find { it.contains("\"Architecture\"") }?.substringAfter("\":\"")?.substringBefore("\"")
+                val size = lines.find { it.contains("\"Size\"") }?.substringAfter("\":\"")?.substringBefore("\"")
+                val created = lines.find { it.contains("\"Created\"") }?.substringAfter("\":\"")?.substringBefore("\"")
+                
+                println("     Architecture: $architecture")
+                println("     Size: $size bytes")
+                println("     Created: $created")
+                
+                // Extract labels
+                val labelsStart = imageInfo.indexOf("\"Labels\":")
+                if (labelsStart != -1) {
+                    val labelsSection = imageInfo.substring(labelsStart).substringBefore("}").substringAfter("{")
+                    println("     🏷️  Labels:")
+                    labelsSection.split(",").forEach { label ->
+                        if (label.contains("\":\"")) {
+                            val key = label.substringAfter("\"").substringBefore("\"")
+                            val value = label.substringAfter("\":\"").substringBefore("\"")
+                            if (key.isNotEmpty() && value.isNotEmpty()) {
+                                println("       $key: $value")
+                            }
+                        }
+                    }
+                }
+                
+                // Extract environment variables
+                val envStart = imageInfo.indexOf("\"Env\":")
+                if (envStart != -1) {
+                    val envSection = imageInfo.substring(envStart).substringBefore("]").substringAfter("[")
+                    println("     🌍 Environment:")
+                    envSection.split(",").forEach { env ->
+                        val cleanEnv = env.trim().removeSurrounding("\"")
+                        if (cleanEnv.contains("=") && !cleanEnv.startsWith("PATH=")) {
+                            println("       $cleanEnv")
+                        }
+                    }
+                }
+                
+            } catch (e: Exception) {
+                val errorOutput = try {
+                    providers.exec {
+                        commandLine("docker", "image", "inspect", "ghcr.io/xtclang/xvm:$tag")
+                        isIgnoreExitValue = true
+                    }.standardError.asText.get()
+                } catch (ex: Exception) {
+                    "Unable to get detailed error"
+                }
+                println("     ❌ Could not inspect image: ghcr.io/xtclang/xvm:$tag")
+                println("        Error: ${e.message}")
+                println("        Details: $errorOutput")
+                println("        💡 Try: docker pull ghcr.io/xtclang/xvm:$tag")
+            }
+        }
+        
+        println("\n📊 Summary")
+        println("   Single package model: ghcr.io/xtclang/xvm")
+        println("   Branch-based tagging for all builds")
+        println("   Multi-platform manifests for AMD64 + ARM64")
+        println("   Metadata includes: build date, commit SHA, version, source URL")
     }
 }
 
@@ -415,7 +551,7 @@ val cleanupVersions by tasks.registering {
     }
 }
 
-val prunePackages by tasks.registering {
+val pruneImages by tasks.registering {
     group = "docker"
     description = "Delete non-master Docker packages from GitHub Container Registry"
     
