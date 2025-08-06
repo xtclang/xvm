@@ -3,20 +3,19 @@ package org.xvm.javajit;
 import java.io.IOException;
 import java.io.InputStream;
 
-import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
-import java.lang.classfile.CodeModel;
-import java.lang.classfile.CodeTransform;
-import java.lang.classfile.MethodBuilder;
-import java.lang.classfile.attribute.SourceFileAttribute;
+import java.lang.classfile.Superclass;
 
-import java.lang.constant.ClassDesc;
+import java.net.URL;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
@@ -47,15 +46,19 @@ public class NativeTypeSystem
     private NativeTypeSystem(Xvm xvm, ModuleLoader[] shared, ModuleStructure[] owned) {
         super(xvm, shared, owned);
 
-        ModuleLoader bridgeLoader = null;
-        for (ModuleLoader loader : this.loader.owned) {
-            if (loader.module.getName().equals(NATIVE_MODULE)) {
-                bridgeLoader = loader;
-                break;
-            }
+        URL  javatoolsURL  = ConstantPool.class.getProtectionDomain().getCodeSource().getLocation();
+        Path javatoolsPath = Paths.get(javatoolsURL.getPath());
+
+        if (Files.isDirectory(javatoolsPath)) {
+            // convert "javatools/build/classes" to "javatools_jitbridge/build/classes"
+            Path bridgePath = Paths.get(
+                javatoolsPath.toString().replace("javatools", "javatools_jitbridge"));
+            assert bridgePath.toFile().isDirectory();
+
+            this.bridgePath = bridgePath;
+        } else {
+            throw new UnsupportedOperationException("JAR?");
         }
-        assert bridgeLoader != null;
-        this.bridgeLoader = bridgeLoader;
 
         registerNativeClasses();
     }
@@ -109,9 +112,9 @@ public class NativeTypeSystem
     }
 
     /**
-     * The ModuleLoader for the "bridge" (_native.xtclang.org) module.
+     * The Path of the "bridge" jar or directory.
      */
-    public final ModuleLoader bridgeLoader;
+    private final Path bridgePath;
 
     /**
      * A cache of native class names keyed by type.
@@ -129,87 +132,52 @@ public class NativeTypeSystem
      */
     public final Map<TypeConstant, Class> nativeBuilders = new ConcurrentHashMap<>();
 
-    public static String XTC_BRIDGE_PREFIX = "org.xtclang._native.";
+    @Override
+    public byte[] genClass(ModuleLoader moduleLoader, String name) {
+        String className = moduleLoader.prefix + name;
+        Path   classPath = bridgePath.resolve(className.replace('.', '/') + ".class");
+        try (InputStream in = Files.newInputStream(classPath)) {
+            if (in != null) {
+                byte[] classBytes = in.readAllBytes();
+                String simpleName = name.substring(name.lastIndexOf('.') + 1);
+                if (simpleName.startsWith("x")) {
+                    // by convention the classes that start with an "x" are "rebase" classes
+                    // that we take "as is" (they don't need to be augmented)
+                    return classBytes;
+                }
 
-    /**
-     * Load the native class for the specified name.
-     *
-     * @return the class bytes or null if the name does not represent a native class
-     */
-    public byte[] loadNativeClass(ModuleLoader loader, String name)
-            throws ClassNotFoundException {
-        try {
-            try (InputStream in = loader.getResourceAsStream(name.replace('.', '/') + ".class")) {
-                if (in != null) {
-                    byte[] classBytes = in.readAllBytes();
-                    String simpleName = name.substring(name.lastIndexOf('.') + 1);
-                    if (simpleName.startsWith("x")) {
-                        // by convention the classes that start with an "x" are "rebase" classes
-                        // that we take "as is" (they don't need to be augmented)
-                        return classBytes;
-                    }
-
-                    ClassModel     model  = ClassFile.of().parse(classBytes);
-                    String         path   = name.substring(loader.prefix.length()).replace('$', '.');
-                    ClassStructure struct = (ClassStructure) loader.module.getChildByPath(path);
-                    if (struct == null) {
-                        throw new ClassNotFoundException("Cannot find XTC class for " + path);
-                    }
-                    return augmentNativeClass(model, name, struct.getCanonicalType());
+                ClassModel     model  = ClassFile.of().parse(classBytes);
+                String         path   = className.substring(moduleLoader.prefix.length()).replace('$', '.');
+                ClassStructure struct = (ClassStructure) moduleLoader.module.getChildByPath(path);
+                if (struct != null) {
+                    return augmentNativeClass(model, className, struct.getCanonicalType());
                 }
             }
-        } catch (IOException e) {
-            throw new ClassNotFoundException("Failed to read native class " + name);
-        }
-        return null;
+        } catch (IOException ignore) {}
+
+        // there is no native class, but there must be a corresponding Ecstasy component
+        return super.genClass(moduleLoader, name);
     }
 
     /**
      * Augment the existing native class with the Ecstasy methods.
      */
     private byte[] augmentNativeClass(ClassModel model, String className, TypeConstant type) {
-        ClassStructure  clz     = (ClassStructure) type.getSingleUnderlyingClass(true).getComponent();
-        Builder         builder = ensureBuilder(type, model);
-        Consumer<? super ClassBuilder> handler = cb -> {
-            cloneClassModel(model, cb);
+        Builder builder = ensureBuilder(type, model);
 
-            // augment the new classfile using the Ecstasy class structure
-            cb.with(SourceFileAttribute.of(clz.getSourceFileName()));
-            builder.assembleImpl(className, cb);
-        };
+        return ClassFile.of().transformClass(model, (classBuilder, element) -> {
+            classBuilder.with(element); // copy everything "as is"
 
-        return ClassFile.of().build(ClassDesc.of(className), handler);
-    }
-
-    /**
-     * Clone the existing class model into a new Classfile using the specified builder.
-     */
-    private void cloneClassModel(ClassModel model, ClassBuilder cb) {
-        if (model.superclass().isPresent()) {
-            cb.withSuperclass(model.superclass().get().asSymbol());
-        }
-
-        cb.withFlags(model.flags().flagsMask())
-          .withInterfaces(model.interfaces());
-
-        model.fields().forEach(fm ->
-            cb.withField(fm.fieldName().stringValue(), fm.fieldTypeSymbol(), fm.flags().flagsMask()));
-
-        model.methods().forEach(mm -> {
-            Consumer<? super MethodBuilder> methodHandler;
-            if (mm.code().isPresent()) {
-                CodeModel cm = mm.code().get();
-                methodHandler = mb -> mb.transformCode(cm, CodeTransform.ACCEPT_ALL);
-            } else {
-                methodHandler = _ -> {};
+            if (element instanceof Superclass) {
+                // augment the new classfile using the Ecstasy class structure (just once!)
+                builder.assembleImpl(className, classBuilder);
             }
-            cb.withMethod(mm.methodName().stringValue(), mm.methodTypeSymbol(),
-                mm.flags().flagsMask(), methodHandler);
-
         });
     }
 
     protected Builder ensureBuilder(TypeConstant type, ClassModel model) {
+        assert model != null;
+
         if (nativeBuilders.get(type) instanceof Class builderClass) {
             try {
                 return (Builder) builderClass.getDeclaredConstructor(
@@ -219,9 +187,7 @@ public class NativeTypeSystem
                 throw new RuntimeException(e);
             }
         }
-        return model == null
-            ? super.ensureBuilder(type)
-            : new AugmentingBuilder(this, type, model);
+        return new AugmentingBuilder(this, type, model);
     }
 
     // ----- internal ------------------------------------------------------------------------------

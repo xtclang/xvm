@@ -49,7 +49,8 @@ public class AugmentingBuilder extends CommonBuilder {
         MethodModel mm = findMethodModel(jitName, md, optimized);
         if (mm != null) {
             if ((mm.flags().flagsMask() & ClassFile.ACC_ABSTRACT) == 0 ||
-                method.isAbstract() || method.isNative()) {
+                    method.isAbstract() || method.isNative()) {
+                // the method is already copied by the NativeTypeSystem
                 return;
             }
             // the native method is marked as "abstract" and needs to be generated

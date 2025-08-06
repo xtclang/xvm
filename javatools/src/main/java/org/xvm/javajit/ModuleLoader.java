@@ -1,5 +1,8 @@
 package org.xvm.javajit;
 
+import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassModel;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -68,47 +71,23 @@ public class ModuleLoader
     // ----- ClassLoader API -----------------------------------------------------------------------
 
     @Override
-    protected Class<?> loadClass(String name, boolean resolve)
-            throws ClassNotFoundException {
-        // HACK HACK TODO: move all native classes to resources
-        LoadNative:
-        if (name.startsWith("org.xtclang.")) {
-            if (name.startsWith(prefix)) {
-                Class clz = findLoadedClass(name);
-                if (clz == null) {
-                    byte[] classBytes = typeSystem.xvm.nativeTypeSystem.loadNativeClass(this, name);
-                    if (classBytes != null) {
-                        clz = defineClass(name, classBytes, 0, classBytes.length);
-                        loadedClasses.add(clz);
-                    } else {
-                        break LoadNative;
-                    }
-                }
-                if (resolve) {
-                    resolveClass(clz);
-                }
-                return clz;
-            } else {
-                ModuleLoader loader = typeSystem.xvm.nativeTypeSystem.findOwnerLoader(name);
-                if (loader != null) {
-                    return loader.loadClass(name, resolve);
-                }
-                throw new ClassNotFoundException(name);
-            }
-        }
-        return super.loadClass(name, resolve);
-    }
-
-    @Override
     protected Class<?> findClass(String name)
             throws ClassNotFoundException {
         if (name.startsWith(prefix)) {
+            Class clz = findLoadedClass(name);
+            if (clz != null) {
+                assert clz.getClassLoader() == this;
+                return clz;
+            }
+
             String suffix     = name.substring(prefix.length());
             byte[] classBytes = typeSystem.genClass(this, suffix);
+            ClassModel model  = ClassFile.of().parse(classBytes);
+            String s = model.toDebugString();
             if (classBytes == null) {
                 throw new ClassNotFoundException(name);
             }
-            Class clz = defineClass(name, classBytes, 0, classBytes.length);
+            clz = defineClass(name, classBytes, 0, classBytes.length);
             loadedClasses.add(clz);
             return clz;
         } else if (getParent() instanceof TypeSystemLoader tsLoader) {
