@@ -12,13 +12,13 @@ plugins {
     id("org.xtclang.build.xdk.versioning")
 }
 
-// Git helpers using lazy providers to defer execution until needed
-val gitBranchProvider = providers.exec {
+// Git helpers as functions to defer execution completely until called
+fun createGitBranchProvider() = providers.exec {
     commandLine("git", "branch", "--show-current")
     workingDir = project.rootDir
 }.standardOutput.asText.map { it.trim().ifBlank { "unknown" } }
 
-val gitCommitProvider = providers.exec {
+fun createGitCommitProvider() = providers.exec {
     commandLine("git", "rev-parse", "HEAD")  
     workingDir = project.rootDir
 }.standardOutput.asText.map { it.trim().ifBlank { "unknown" } }
@@ -39,7 +39,7 @@ fun gitBranch(): String {
         logger.lifecycle("🔍 [DOCKER-DEBUG] Current working directory: ${project.rootDir}")
         logger.lifecycle("🔍 [DOCKER-DEBUG] Operating system: ${System.getProperty("os.name")}")
         
-        val result = gitBranchProvider.get()
+        val result = createGitBranchProvider().get()
         
         val duration = System.currentTimeMillis() - startTime
         logger.lifecycle("🔍 [DOCKER-DEBUG] gitBranch() completed in ${duration}ms, result: '$result'")
@@ -64,7 +64,7 @@ fun gitCommit(): String {
         val startTime = System.currentTimeMillis()
         logger.lifecycle("🔍 [DOCKER-DEBUG] gitCommit() falling back to git command")
         
-        val result = gitCommitProvider.get()
+        val result = createGitCommitProvider().get()
         
         val duration = System.currentTimeMillis() - startTime
         logger.lifecycle("🔍 [DOCKER-DEBUG] gitCommit() completed in ${duration}ms, result: '${result.take(8)}'")
