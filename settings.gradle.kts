@@ -31,22 +31,14 @@ develocity {
     }
 }
 
-val xvmBuilds = mutableListOf(
+val xvmBuilds = listOf(
     "javatools",
     "javatools_utils",
     "javatools_unicode",
     "plugin",
-    "xdk"
+    "xdk",
+    "docker"
 )
-
-// Conditionally include docker subproject - exclude on Windows to avoid git command issues
-val isWindows = System.getProperty("os.name").lowercase().contains("windows")
-if (!isWindows) {
-    xvmBuilds.add("docker")
-    logger.info("[xvm] Including docker subproject (OS: ${System.getProperty("os.name")})")
-} else {
-    logger.info("[xvm] Excluding docker subproject on Windows (OS: ${System.getProperty("os.name")})")
-}
 
 xvmBuilds.forEach(::includeBuild)
 
