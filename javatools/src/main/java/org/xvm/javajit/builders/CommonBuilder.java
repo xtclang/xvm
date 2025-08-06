@@ -8,6 +8,7 @@ import java.lang.classfile.Label;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
@@ -67,6 +68,7 @@ public class CommonBuilder
 
         switch (typeInfo.getClassStructure().getFormat()) {
             case CLASS, CONST, SERVICE, MIXIN, ENUMVALUE:
+                flags |= ClassFile.ACC_SUPER; // see JLS 4.1
                 TypeConstant superType = typeInfo.getExtends();
                 if (superType != null) {
                     classBuilder.withSuperclass(
@@ -91,12 +93,15 @@ public class CommonBuilder
      * Assemble interfaces for the "Impl" shape.
      */
     protected void assembleImplInterfaces(ClassBuilder classBuilder) {
+        boolean isInterface =
+            typeInfo.getClassStructure().getFormat() == Component.Format.INTERFACE;
         for (Contribution contrib : typeInfo.getContributionList()) {
             switch (contrib.getComposition()) {
                 case Implements:
                     TypeConstant contribType = contrib.getTypeConstant().removeAccess();
-                    if (contribType.equals(contribType.getConstantPool().typeObject())) {
-                        // ignore "implements Object"
+                    if  (!isInterface &&
+                            contribType.equals(contribType.getConstantPool().typeObject())) {
+                        // ignore "implements Object" for classes
                         continue;
                     }
                     classBuilder.withInterfaceSymbols(

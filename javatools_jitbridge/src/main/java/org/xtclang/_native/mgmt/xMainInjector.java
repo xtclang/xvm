@@ -5,11 +5,10 @@ import java.util.Map;
 
 import java.util.function.Function;
 
-import org.xvm.asm.ConstantPool;
-
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xtclang._native.io.TerminalConsole;
+
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Injector;
 import org.xvm.javajit.Xvm;
@@ -46,8 +45,8 @@ public class xMainInjector
      * This method is called by the JitConnector via reflection.
      */
     public void addNativeResources() {
-        ConstantPool pool       = xvm.ecstasyPool;
-        TypeConstant pureType   = pool.ensureEcstasyTypeConstant("io.Console");
+        ConstantPool pool     = xvm.ecstasyPool;
+        TypeConstant pureType = pool.ensureEcstasyTypeConstant("io.Console");
 
         suppliers.put(new Resource(pureType, "console"), TerminalConsole::$create);
     }

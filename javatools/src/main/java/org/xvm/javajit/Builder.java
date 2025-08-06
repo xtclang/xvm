@@ -234,7 +234,6 @@ public abstract class Builder {
     public static final ClassDesc CD_xFunction     = ClassDesc.of(N_xFunction);
     public static final ClassDesc CD_xModule       = ClassDesc.of(N_xModule);
 
-
     public static final ClassDesc CD_xObj          = ClassDesc.of(N_xObj);
 
     public static final ClassDesc CD_Boolean       = ClassDesc.of(N_Boolean);

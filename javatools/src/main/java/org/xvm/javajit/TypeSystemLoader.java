@@ -1,12 +1,10 @@
 package org.xvm.javajit;
 
-
 import java.util.Arrays;
 import org.xvm.asm.ModuleStructure;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.util.Handy.require;
-
 
 /**
  * A ClassLoader that represents a collection of modules that form an Ecstasy TypeSystem
@@ -58,20 +56,6 @@ public class TypeSystemLoader
      * The "owned" module ClassLoaders.
      */
     public final ModuleLoader[] owned;
-
-    @Override
-    protected Class<?> loadClass(String name, boolean resolve)
-            throws ClassNotFoundException {
-        // HACK HACK TODO: move all native classes to resources
-        if (name.startsWith(NativeTypeSystem.XTC_BRIDGE_PREFIX)) {
-            for (ModuleLoader loader : owned) {
-                if (name.startsWith(loader.prefix)) {
-                    return loader.loadClass(name, resolve);
-                }
-            }
-        }
-        return super.loadClass(name, resolve);
-    }
 
     @Override
     protected Class<?> findClass(String name)
