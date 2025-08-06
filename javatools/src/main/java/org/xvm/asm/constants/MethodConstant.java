@@ -269,6 +269,43 @@ public class MethodConstant
                 .append(getSignature().ensureJitMethodName(ts));
     }
 
+    /**
+     * Ensure a unique name for this method at the specified TypeSystem.
+     */
+    public String ensureJitMethodName(TypeSystem ts) {
+        String sJitName = m_sJitName;
+        if (sJitName == null) {
+            String            prefix   = "";
+            IdentityConstant  idParent = getNamespace();
+            ComputeName: while (true) {
+                switch (idParent.getFormat()) {
+                case Class, Package, Module:
+                    break ComputeName;
+
+                case Property:
+                    prefix = ((PropertyConstant) idParent).ensureJitPropertyName(ts) + '$' + prefix;
+                    break;
+
+                case Method:
+                    prefix = ((MethodConstant) idParent).ensureJitMethodName(ts) + '$' + prefix;
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+                idParent = idParent.getNamespace();
+            }
+            SignatureConstant sigJit = getSignature();
+            if (!prefix.isEmpty()) {
+                sigJit  = sigJit.getConstantPool().ensureSignatureConstant(
+                    prefix + sigJit.getName(), sigJit.getRawParams(), sigJit.getRawReturns());
+            }
+            m_sJitName = sJitName = sigJit.ensureJitMethodName(ts);
+        }
+        return sJitName;
+    }
+
+
     // ----- GenericTypeResolver interface ---------------------------------------------------------
 
     @Override
@@ -628,4 +665,9 @@ public class MethodConstant
      * Cached type.
      */
     private transient TypeConstant m_type;
+
+    /**
+     * Cached JIT method name.
+     */
+    private transient String m_sJitName;
 }

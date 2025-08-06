@@ -6,21 +6,13 @@ import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
-import java.lang.constant.MethodTypeDesc;
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
 
-import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.MethodInfo;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
-import org.xvm.javajit.Builder;
-import org.xvm.javajit.JitMethodDesc;
-import org.xvm.javajit.JitParamDesc;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -123,48 +115,7 @@ public class Invoke_N0
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        Slot targetSlot = bctx.loadArgument(code, m_nTarget);
-
-        MethodConstant idMethod   = (MethodConstant) bctx.getConstant(m_nMethodId);
-        MethodInfo     infoMethod = targetSlot.type().ensureTypeInfo().getMethodById(idMethod);
-        JitMethodDesc  jmd        = infoMethod.getJitDesc(bctx.typeSystem);
-        MethodTypeDesc md         = jmd.optimizedMD;
-        String         methodName = idMethod.getName();
-
-        if (md == null) {
-            md = jmd.standardMD;
-        } else {
-            methodName += Builder.OPT;
-        }
-
-        bctx.loadCtx(code);
-        for (int i = 0, c = m_anArgValue.length; i < c; i++ ) {
-            int iArg = m_anArgValue[i];
-            if (iArg == A_DEFAULT) {
-                JitParamDesc pd = jmd.getOptimizedParam(i);
-                switch (pd.flavor) {
-                case SpecificWithDefault:
-                    code.aconst_null();
-                    break;
-
-                case PrimitiveWithDefault:
-                    // default primitive with an additional `true`
-                    Builder.defaultLoad(code, pd.cd);
-                    code.iconst_1();
-                    break;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            } else {
-                bctx.loadArgument(code, iArg);
-            }
-        }
-        if (infoMethod.getHead().getImplementation().getExistence() == MethodBody.Existence.Interface) {
-            code.invokeinterface(targetSlot.cd(), methodName, md);
-        } else {
-            code.invokevirtual(targetSlot.cd(), methodName, md);
-        }
+        buildInvoke(bctx, code, m_anArgValue);
     }
 
     // ----- fields --------------------------------------------------------------------------------

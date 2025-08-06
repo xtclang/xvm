@@ -6,7 +6,6 @@ import java.lang.classfile.ClassFile;
 import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
-import java.lang.constant.ConstantDescs;
 import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -40,29 +39,6 @@ public class ModuleBuilder extends CommonBuilder {
         classBuilder.withField("module$",
             CD_ModuleStructure,
             ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL
-        );
-
-        // static initializer
-        classBuilder.withMethod(ConstantDescs.CLASS_INIT_NAME,
-            MethodTypeDesc.of(CD_void),
-            ClassFile.ACC_STATIC,
-            methodBuilder -> methodBuilder.withCode(code -> {
-                Label startScope = code.newLabel();
-                Label endScope   = code.newLabel();
-                int   nLine      = 0;
-                code
-                    .labelBinding(startScope)
-
-                    .lineNumber(++nLine)
-                    .localVariable(0, "ctx", CD_Ctx, startScope, endScope)
-                    .invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
-                    .astore(0)
-
-                    .lineNumber(++nLine)
-                    .labelBinding(endScope)
-                    .return_()
-                    ;
-            })
         );
 
         // public $module(long containerId) {

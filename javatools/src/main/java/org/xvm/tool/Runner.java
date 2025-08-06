@@ -411,6 +411,7 @@ public class Runner
             }
         catch (Throwable e)
             {
+            e.printStackTrace();
             log(Severity.FATAL, e.toString());
             }
         }

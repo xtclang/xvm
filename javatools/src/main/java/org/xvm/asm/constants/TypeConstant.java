@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.constant.ClassDesc;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -51,6 +53,7 @@ import org.xvm.asm.constants.TypeInfo.Progress;
 
 import org.xvm.compiler.Compiler;
 
+import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.ModuleLoader;
 import org.xvm.javajit.TypeSystem;
 
@@ -72,6 +75,11 @@ import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 import org.xvm.util.TransientThreadLocal;
+
+import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
+import static org.xvm.javajit.JitFlavor.Primitive;
+import static org.xvm.javajit.JitFlavor.Specific;
+import static org.xvm.javajit.JitFlavor.Widened;
 
 
 /**
@@ -6394,6 +6402,13 @@ public abstract class TypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
+     * Ensure a unique ClassDesc for this type for the specified TypeSystem.
+     */
+    public ClassDesc ensureClassDesc(TypeSystem ts) {
+        return ClassDesc.of(ensureJitClassName(ts));
+    }
+
+    /**
      * Ensure a unique Java class name for this type for the specified TypeSystem.
      */
     public String ensureJitClassName(TypeSystem ts) {
@@ -6425,6 +6440,25 @@ public abstract class TypeConstant
      */
     public boolean isPrimitive() {
         return false;
+    }
+
+    /**
+     * @return the JitTypeDesc for this type
+     */
+    public JitTypeDesc getJitDesc(TypeSystem ts) {
+        ClassDesc cd;
+        if ((cd = JitTypeDesc.getPrimitiveClass(this)) != null) {
+            return new JitTypeDesc(this, Primitive, cd);
+        }
+        if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(this)) != null) {
+            return new JitTypeDesc(this.removeNullable(), MultiSlotPrimitive, cd);
+        }
+        if ((cd = JitTypeDesc.getWidenedClass(this)) != null) {
+            return new JitTypeDesc(this, Widened, cd);
+        }
+        assert isSingleUnderlyingClass(true);
+
+        return new JitTypeDesc(this, Specific, ClassDesc.of(ts.ensureJitClassName(this)));
     }
 
 

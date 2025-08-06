@@ -2,6 +2,7 @@ package org.xvm.javajit;
 
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassHierarchyResolver;
 
 import java.lang.classfile.attribute.SourceFileAttribute;
 
@@ -294,7 +295,18 @@ public class TypeSystem {
                     }
                 };
 
-                return ClassFile.of().build(ClassDesc.of(className), handler);
+                // There are other options that can be useful:
+                //     StackMapsOption.GENERATE_STACK_MAPS
+                //     DeadCodeOption.PATCH_DEAD_CODE
+                //     DebugElementsOption.DROP_DEBUG
+                //     LineNumbersOption.DROP_LINE_NUMBERS
+                // TODO: force some of them or make configurable
+                ClassFile classFile = ClassFile.of(
+                    ClassFile.ClassHierarchyResolverOption.of(
+                        ClassHierarchyResolver.ofClassLoading(loader))
+                );
+
+                return classFile.build(ClassDesc.of(className), handler);
             }
         }
         return null;

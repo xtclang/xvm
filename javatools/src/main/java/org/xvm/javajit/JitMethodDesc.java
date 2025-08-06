@@ -26,12 +26,38 @@ public class JitMethodDesc {
      * @return an optimized JitParamDesc for the specified standard argument index.
      */
     public JitParamDesc getOptimizedParam(int argIndex) {
-        for (JitParamDesc pd : optimizedParams) {
-            if (pd.index == argIndex) {
-                return pd;
+        return optimizedParams[getOptimizedParamIndex(argIndex)];
+    }
+
+    /**
+     * @return an index of the optimized JitParamDesc for the specified standard argument index.
+     */
+    public int getOptimizedParamIndex(int argIndex) {
+        for (int i = 0, c = optimizedParams.length; i < c; i++) {
+            if (optimizedParams[i].index == argIndex) {
+                return i;
             }
         }
         throw new IllegalArgumentException("Invalid arg index");
+    }
+
+    /**
+     * @return an optimized JitParamDesc for the specified standard return index.
+     */
+    public JitParamDesc getOptimizedReturn(int retIndex) {
+        return optimizedReturns[getOptimizedReturnIndex(retIndex)];
+    }
+
+    /**
+     * @return an index of the optimized JitParamDesc for the specified standard return index.
+     */
+    public int getOptimizedReturnIndex(int retIndex) {
+        for (int i = 0, c = optimizedReturns.length; i < c; i++) {
+            if (optimizedReturns[i].index == retIndex) {
+                return i;
+            }
+        }
+        throw new IllegalArgumentException("Invalid return index");
     }
 
     public static MethodTypeDesc computeMethodDesc(JitParamDesc[] returns, JitParamDesc[] params) {

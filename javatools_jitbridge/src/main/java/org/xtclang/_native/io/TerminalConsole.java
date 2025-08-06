@@ -41,7 +41,7 @@ public class TerminalConsole
         if (dfltSuppressNewline) {
             suppressNewline = false;
         }
-        xTerminalConsole.CONSOLE_OUT.print(object.toString());
+        xTerminalConsole.CONSOLE_OUT.print(object.toString()); // TODO: toString($ctx)
         if (!suppressNewline) {
             xTerminalConsole.CONSOLE_OUT.println();
         }

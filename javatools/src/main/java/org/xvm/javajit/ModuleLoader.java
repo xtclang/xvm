@@ -3,8 +3,9 @@ package org.xvm.javajit;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
 
+import java.lang.classfile.constantpool.ClassEntry;
+
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.xvm.asm.ModuleStructure;
@@ -86,7 +87,7 @@ public class ModuleLoader
                 throw new ClassNotFoundException(name);
             }
             clz = defineClass(name, classBytes, 0, classBytes.length);
-            loadedClasses.add(clz);
+            loadedClasses.add(ClassFile.of().parse(classBytes));
             return clz;
         } else if (getParent() instanceof TypeSystemLoader tsLoader) {
             return tsLoader.findClass(name);
@@ -109,26 +110,33 @@ public class ModuleLoader
         // limit the number of cycles
         int iters = 2;
         do {
-            List<Class> currentlyLoaded = new ArrayList<>(loadedClasses);
+            List<ClassModel> currentlyLoaded = new ArrayList<>(loadedClasses);
             loadedClasses.clear();
-            for (Class clz : currentlyLoaded) {
-                System.out.println("\n**** Class " + clz.getName());
-                Class superclass = clz.getSuperclass();
-                if (superclass != null) {
-                    System.out.println("Extends: " + superclass);
-                }
-                Class[] interfaces = clz.getInterfaces();
-                if (interfaces.length > 0) {
+            for (ClassModel model : currentlyLoaded) {
+                System.out.println("\n**** Class " + model.thisClass().asSymbol().displayName());
+
+                model.superclass().ifPresent(ce ->
+                    System.out.println("Extends: " + ce.asSymbol().displayName()));
+
+                List<ClassEntry> interfaces = model.interfaces();
+                if (!interfaces.isEmpty()) {
                     System.out.println("Implements:");
-                    Arrays.stream(interfaces).map(s -> "  " + s).forEach(System.out::println);
+                    interfaces.stream().map(iface -> "  " + iface.asSymbol().displayName()).
+                        forEach(System.out::println);
                 }
+
                 System.out.println("Fields:");
-                Arrays.stream(clz.getDeclaredFields()).map(s -> "  " + s).forEach(System.out::println);
+                model.fields().stream().map(f -> "  " + f.fieldName() + " " + f.fieldTypeSymbol().descriptorString()).
+                    forEach(System.out::println);
+
                 System.out.println("Methods:");
-                Arrays.stream(clz.getDeclaredMethods()).map(s -> "  " + s).forEach(System.out::println);
+                model.methods().stream().map(m -> "  " + m.methodName() +
+                    m.methodTypeSymbol().displayDescriptor() +
+                        (m.code().isPresent() ? "\n" + m.code().get().toDebugString() : "")).
+                    forEach(System.out::println);
             }
         } while (!loadedClasses.isEmpty() && --iters > 0);
     }
 
-    private final List<Class> loadedClasses = new ArrayList<>();
+    private final List<ClassModel> loadedClasses = new ArrayList<>();
 }

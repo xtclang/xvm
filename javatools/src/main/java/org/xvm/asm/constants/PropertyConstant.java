@@ -19,6 +19,8 @@ import org.xvm.asm.ast.PropertyExprAST;
 
 import org.xvm.compiler.ast.Context;
 
+import org.xvm.javajit.TypeSystem;
+
 
 /**
  * Represent a property constant, which identifies a particular property structure.
@@ -277,6 +279,33 @@ public class PropertyConstant
     }
 
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    /**
+     * Ensure a unique name for this property at the specified TypeSystem.
+     */
+    public String ensureJitPropertyName(TypeSystem ts) {
+        String sJitName = m_sJitName;
+        if (sJitName == null) {
+            synchronized (this) {
+                sJitName = m_sJitName;
+                if (sJitName == null) {
+                    PropertyStructure prop = (PropertyStructure) getComponent();
+                    assert prop != null;
+                    ClassStructure clzParent = prop.getContainingClass();
+                    String         sNameOrig = getName();
+                    sJitName = switch (clzParent.getFormat()) {
+                        case ANNOTATION, MIXIN -> sNameOrig + ts.xvm.createUniqueSuffix(sNameOrig);
+                        default                -> sNameOrig;
+                    };
+                    m_sJitName = sJitName;
+                }
+            }
+        }
+        return sJitName;
+    }
+
+
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -403,4 +432,9 @@ public class PropertyConstant
      * Cached constraint type.
      */
     protected transient TypeConstant m_typeConstraint;
+
+    /**
+     * Cached JIT property name.
+     */
+    private transient volatile String m_sJitName;
 }

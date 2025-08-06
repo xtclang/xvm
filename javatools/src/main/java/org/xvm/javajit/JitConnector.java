@@ -70,7 +70,7 @@ public class JitConnector
     }
 
     public void invoke0Impl(MethodStructure methodStructure, String... asArg) {
-        String typeName = ts.owned[0].pkg + ".$module";
+        String typeName = ts.owned[0].module.getIdentityConstant().getType().ensureJitClassName(ts);
 
         try {
             TypeSystemLoader loader = ts.loader;
@@ -90,10 +90,12 @@ public class JitConnector
                 method.invoke(module, Ctx.get(), asArg); // TODO create xStr args
             }
         } catch (ClassNotFoundException | NoClassDefFoundError e) {
+            e.printStackTrace();
             throw new RuntimeException("Failed to load class \"" + typeName + '"', e);
         } catch (NoSuchMethodException e) {
             throw new RuntimeException("No \"run()\" method", e);
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            e.printStackTrace();
             throw new RuntimeException("Failed to invoke \"run()\" method", e);
         }
     }
