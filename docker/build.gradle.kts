@@ -12,27 +12,68 @@ plugins {
     id("org.xtclang.build.xdk.versioning")
 }
 
-// Git helpers to avoid repetition (safe for all platforms, lazy execution)
-fun gitBranch(): String = try {
-    val result = providers.exec { 
-        commandLine("git", "branch", "--show-current")
-        workingDir = project.rootDir
-    }.standardOutput.asText.get().trim()
-    if (result.isBlank()) "unknown" else result
-} catch (e: Exception) {
-    logger.warn("Could not get git branch: ${e.message}")
-    "unknown"
+// Git helpers using lazy providers to defer execution until needed
+val gitBranchProvider = providers.exec {
+    commandLine("git", "branch", "--show-current")
+    workingDir = project.rootDir
+}.standardOutput.asText.map { it.trim().ifBlank { "unknown" } }
+
+val gitCommitProvider = providers.exec {
+    commandLine("git", "rev-parse", "HEAD")  
+    workingDir = project.rootDir
+}.standardOutput.asText.map { it.trim().ifBlank { "unknown" } }
+
+// Safe git functions that work in both configuration and execution phases
+fun gitBranch(): String {
+    // Try environment variables first (CI environments typically provide these)
+    val ciBranch = System.getenv("GH_BRANCH") ?: System.getenv("GITHUB_HEAD_REF") ?: System.getenv("GITHUB_REF_NAME")
+    if (!ciBranch.isNullOrBlank()) {
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Using CI branch from env: '$ciBranch'")
+        return ciBranch
+    }
+    
+    // Fall back to git command only if needed
+    try {
+        val startTime = System.currentTimeMillis()
+        logger.lifecycle("🔍 [DOCKER-DEBUG] gitBranch() falling back to git command")
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Current working directory: ${project.rootDir}")
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Operating system: ${System.getProperty("os.name")}")
+        
+        val result = gitBranchProvider.get()
+        
+        val duration = System.currentTimeMillis() - startTime
+        logger.lifecycle("🔍 [DOCKER-DEBUG] gitBranch() completed in ${duration}ms, result: '$result'")
+        return result
+    } catch (e: Exception) {
+        logger.error("❌ [DOCKER-DEBUG] gitBranch() FAILED: ${e.javaClass.simpleName}: ${e.message}")
+        logger.error("❌ [DOCKER-DEBUG] Stack trace: ${e.stackTrace.take(5).joinToString("\n")}")
+        return "unknown"
+    }
 }
 
-fun gitCommit(): String = try {
-    val result = providers.exec { 
-        commandLine("git", "rev-parse", "HEAD")
-        workingDir = project.rootDir
-    }.standardOutput.asText.get().trim()
-    if (result.isBlank()) "unknown" else result
-} catch (e: Exception) {
-    logger.warn("Could not get git commit: ${e.message}")
-    "unknown"
+fun gitCommit(): String {
+    // Try environment variables first (CI environments typically provide these)
+    val ciCommit = System.getenv("GH_COMMIT") ?: System.getenv("GITHUB_SHA")
+    if (!ciCommit.isNullOrBlank()) {
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Using CI commit from env: '${ciCommit.take(8)}'")
+        return ciCommit
+    }
+    
+    // Fall back to git command only if needed
+    try {
+        val startTime = System.currentTimeMillis()
+        logger.lifecycle("🔍 [DOCKER-DEBUG] gitCommit() falling back to git command")
+        
+        val result = gitCommitProvider.get()
+        
+        val duration = System.currentTimeMillis() - startTime
+        logger.lifecycle("🔍 [DOCKER-DEBUG] gitCommit() completed in ${duration}ms, result: '${result.take(8)}'")
+        return result
+    } catch (e: Exception) {
+        logger.error("❌ [DOCKER-DEBUG] gitCommit() FAILED: ${e.javaClass.simpleName}: ${e.message}")
+        logger.error("❌ [DOCKER-DEBUG] Stack trace: ${e.stackTrace.take(5).joinToString("\n")}")
+        return "unknown"
+    }
 }
 
 // Extract branch tag from full branch name (everything after last slash, sanitized for Docker)
@@ -52,31 +93,7 @@ fun Exec.loggedCommandLine(cmd: List<String>) {
 
 fun Exec.loggedCommandLine(vararg cmd: String) = loggedCommandLine(cmd.toList())
 
-// Common build configuration factory
-fun createBuildConfig(project: Project): BuildConfig {
-    val version = project.version.toString()
-    val branch = gitBranch()
-    val commit = gitCommit()
-    val baseImage = baseImageName()
-    val branchTagName = branchTag(branch)
-    // Only build args that actually affect the build process
-    val buildArgs = mapOf(
-        "GH_BRANCH" to branch,
-        "GH_COMMIT" to commit
-    )
-    
-    // Metadata that will be added as Docker labels (doesn't invalidate cache)
-    val metadataLabels = mapOf(
-        "org.opencontainers.image.created" to java.time.Instant.now().toString(),
-        "org.opencontainers.image.revision" to commit,
-        "org.opencontainers.image.version" to version,  
-        "org.opencontainers.image.source" to "https://github.com/xtclang/xvm/tree/$branch"
-    )
-    val isCI = System.getenv("CI") == "true"
-    
-    return BuildConfig(version, branch, commit, baseImage, branchTagName, buildArgs, metadataLabels, isCI)
-}
-
+// Build configuration data class
 data class BuildConfig(
     val version: String,
     val branch: String, 
@@ -127,26 +144,65 @@ data class BuildConfig(
     }
 }
 
+// Factory function that can be called from doFirst blocks safely
+fun createBuildConfig(): BuildConfig {
+    val startTime = System.currentTimeMillis()
+    logger.lifecycle("🔍 [DOCKER-DEBUG] createBuildConfig() called - starting configuration")
+    
+    val version = project.version.toString()
+    val branch = gitBranch()
+    val commit = gitCommit()
+    val baseImage = baseImageName()
+    val branchTagName = branchTag(branch)
+    
+    // Only build args that actually affect the build process
+    val buildArgs = mapOf(
+        "GH_BRANCH" to branch,
+        "GH_COMMIT" to commit
+    )
+    
+    // Metadata that will be added as Docker labels (doesn't invalidate cache)
+    val metadataLabels = mapOf(
+        "org.opencontainers.image.created" to java.time.Instant.now().toString(),
+        "org.opencontainers.image.revision" to commit,
+        "org.opencontainers.image.version" to version,  
+        "org.opencontainers.image.source" to "https://github.com/xtclang/xvm/tree/$branch"
+    )
+    val isCI = System.getenv("CI") == "true"
+    
+    val duration = System.currentTimeMillis() - startTime
+    logger.lifecycle("🔍 [DOCKER-DEBUG] createBuildConfig() completed in ${duration}ms total")
+    
+    return BuildConfig(version, branch, commit, baseImage, branchTagName, buildArgs, metadataLabels, isCI)
+}
+
 // Helper function to create platform-specific Docker build tasks
 fun createPlatformBuildTask(arch: String, platform: String) = tasks.registering(Exec::class) {
     group = "docker"
     description = "Build Docker image for $arch ($platform)"
     workingDir = projectDir
     
-    val cmd = listOf("docker", "buildx", "build", "--platform", platform) +
-              config.buildArgs.flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
-              config.metadataLabels.flatMap { listOf("--label", "${it.key}=${it.value}") } +
-              config.cacheArgs(arch) +
-              tags.flatMap { listOf("--tag", it) } +
-              listOf("--load", ".")
-    
-    commandLine(cmd)
-    
     doFirst {
-        logger.lifecycle("Executing command line: ${cmd.joinToString(" ")}")
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Starting $arch build task execution")
+        val config = createBuildConfig()
+        val tags = config.tagsForArch(arch)
+        
+        val cmd = listOf("docker", "buildx", "build", "--platform", platform) +
+                  config.buildArgs.flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
+                  config.metadataLabels.flatMap { listOf("--label", "${it.key}=${it.value}") } +
+                  config.cacheArgs(arch) +
+                  tags.flatMap { listOf("--tag", it) } +
+                  listOf("--load", ".")
+        
+        commandLine(cmd)
+        
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Executing command line: ${cmd.joinToString(" ")}")
         logger.info("Building Docker image for $arch...")
         logger.info("Branch: ${config.branch}, Commit: ${config.commit}")
         logger.info("Base image: ${config.baseImage}")
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Tags: ${tags.joinToString(", ")}")
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Build args: ${config.buildArgs}")
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Cache args: ${config.cacheArgs(arch)}")
     }
 }
 
@@ -157,11 +213,13 @@ fun createPlatformPushTask(arch: String, buildTask: TaskProvider<Exec>) = tasks.
     dependsOn(buildTask)
     
     doFirst {
-        val config = createBuildConfig(project)
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Starting $arch push task execution")
+        val config = createBuildConfig()
         val imageTag = "${config.baseImage}:latest-$arch"
         
-        loggedCommandLine("docker", "push", imageTag)
+        commandLine("docker", "push", imageTag)
         
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Executing: docker push $imageTag")
         logger.info("Pushing $arch Docker image...")
         logger.info("Image: $imageTag")
     }
@@ -177,9 +235,11 @@ val buildArm64 by createPlatformBuildTask("arm64", "linux/arm64")
 val buildMultiPlatform by tasks.registering(Exec::class) {
     group = "docker"
     description = "Build multi-platform Docker images locally"
+    workingDir = projectDir
     
     doFirst {
-        val config = createBuildConfig(project)
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Starting multi-platform build task execution")
+        val config = createBuildConfig()
         val tags = config.multiPlatformTags()
         val cacheArgs = config.cacheArgs()
         
@@ -189,13 +249,15 @@ val buildMultiPlatform by tasks.registering(Exec::class) {
                   tags.flatMap { listOf("--tag", it) } +
                   listOf("--load", ".")
         
-        loggedCommandLine(cmd)
+        commandLine(cmd)
         
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Executing command line: ${cmd.joinToString(" ")}")
         logger.info("Building multi-platform Docker images...")
         logger.info("Branch: ${config.branch}, Commit: ${config.commit}")
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Tags: ${tags.joinToString(", ")}")
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Build args: ${config.buildArgs}")
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Cache args: $cacheArgs")
     }
-    
-    workingDir = projectDir
 }
 
 // Alias for most common build task
@@ -215,9 +277,11 @@ val pushArm64 by createPlatformPushTask("arm64", buildArm64)
 val pushMultiPlatform by tasks.registering(Exec::class) {
     group = "docker"
     description = "Build and push multi-platform Docker images to registry"
+    workingDir = projectDir
     
     doFirst {
-        val config = createBuildConfig(project)
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Starting multi-platform push task execution")
+        val config = createBuildConfig()
         val tags = config.multiPlatformTags()
         val cacheArgs = config.cacheArgs()
         
@@ -227,14 +291,16 @@ val pushMultiPlatform by tasks.registering(Exec::class) {
                   tags.flatMap { listOf("--tag", it) } +
                   listOf("--push", ".")
         
-        loggedCommandLine(cmd)
+        commandLine(cmd)
         
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Executing command line: ${cmd.joinToString(" ")}")
         logger.info("Building and pushing multi-platform Docker images...")
         logger.info("Branch: ${config.branch}, Commit: ${config.commit}")
         logger.info("Environment: ${if (config.isCI) "CI" else "Local"}")
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Tags: ${tags.joinToString(", ")}")
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Build args: ${config.buildArgs}")
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Cache args: $cacheArgs")
     }
-    
-    workingDir = projectDir
 }
 
 // Alias for most common push task
@@ -254,7 +320,8 @@ val createManifest by tasks.registering {
     dependsOn(buildAmd64, buildArm64)
     
     doLast {
-        val config = createBuildConfig(project)
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Starting manifest creation task execution")
+        val config = createBuildConfig()
         
         println("✅ Built both architecture images locally:")
         if (config.branch == "master") {
@@ -275,7 +342,8 @@ val pushManifest by tasks.registering(Exec::class) {
     dependsOn(createManifest)
     
     doFirst {
-        val config = createBuildConfig(project)
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Starting push manifest task execution")
+        val config = createBuildConfig()
         commandLine("docker", "manifest", "push", "${config.baseImage}:latest")
     }
     
