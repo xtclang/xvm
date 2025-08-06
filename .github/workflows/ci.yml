@@ -210,7 +210,7 @@ jobs:
       - name: Setup Gradle (with debug)
         uses: gradle/actions/setup-gradle@v4
         with:
-          cache-disabled: false
+          cache-disabled: ${{ runner.os == 'Windows' }}  # Disable cache on Windows to test if cache contamination is the issue
           cache-read-only: false
           gradle-version: ${{ env.gradle_version }}
         env:
