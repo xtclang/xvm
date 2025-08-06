@@ -12,9 +12,20 @@ plugins {
     id("org.xtclang.build.xdk.versioning")
 }
 
-// Git helpers to avoid repetition
-fun gitBranch() = providers.exec { commandLine("git", "branch", "--show-current") }.standardOutput.asText.get().trim()
-fun gitCommit() = providers.exec { commandLine("git", "rev-parse", "HEAD") }.standardOutput.asText.get().trim()
+// Git helpers to avoid repetition (safe for all platforms)
+fun gitBranch() = try {
+    providers.exec { commandLine("git", "branch", "--show-current") }.standardOutput.asText.get().trim()
+} catch (e: Exception) {
+    logger.warn("Could not get git branch: ${e.message}")
+    "unknown"
+}
+
+fun gitCommit() = try {
+    providers.exec { commandLine("git", "rev-parse", "HEAD") }.standardOutput.asText.get().trim()
+} catch (e: Exception) {
+    logger.warn("Could not get git commit: ${e.message}")
+    "unknown"
+}
 
 // Extract branch tag from full branch name (everything after last slash, sanitized for Docker)
 fun branchTag(branch: String): String {

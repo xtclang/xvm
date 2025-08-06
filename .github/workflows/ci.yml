@@ -409,6 +409,8 @@ jobs:
         shell: bash
         working-directory: docker
         run: |
+          set -euo pipefail
+          
           echo "Building and pushing ${{ matrix.arch }} Docker image on native hardware..."
           
           # Setup variables
@@ -422,7 +424,7 @@ jobs:
           ${{ env.GRADLE_CACHE_INSPECT }}
           inspect_gradle_cache "host cache before Docker build"
           
-          # Build and push with architecture-specific cache 
+          # Build and push with architecture-specific cache
           docker buildx build \
             --platform ${{ matrix.platform }} \
             ${TAG_ARGS} \
@@ -438,6 +440,26 @@ jobs:
             --output type=registry \
             .
 
+      - name: Verify images pushed to registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          
+          # Setup Docker tags using shared logic
+          ${{ env.DOCKER_TAG_LOGIC }}
+          setup_docker_tags "${{ matrix.arch }}"
+          
+          echo "Verifying ${{ matrix.arch }} images exist in registry..."
+          for tag in "${TAGS[@]}"; do
+            echo "Checking: $tag"
+            if ! docker manifest inspect "$tag" > /dev/null 2>&1; then
+              echo "❌ ERROR: Image $tag not found in registry!"
+              echo "❌ Push failed for ${{ matrix.arch }} architecture!"
+              exit 1
+            fi
+            echo "✅ Confirmed: $tag"
+          done
+
   docker-manifest:
     name: Create multi-platform manifest
     needs: docker-build
@@ -447,9 +469,6 @@ jobs:
       - name: Fetch Sources
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -457,32 +476,56 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create and push multi-platform manifests
-        shell: bash
+      - name: Verify all architecture images exist
+        shell: bash  
         run: |
-          echo "Building and pushing multi-platform Docker images..."
-          
-          # Setup common variables
-          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          set -euo pipefail
           
           # Setup Docker tags using shared logic
           ${{ env.DOCKER_TAG_LOGIC }}
           setup_docker_tags "" "VERSION"
           
-          # Build and push multi-platform image
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            ${TAG_ARGS} \
-            --build-arg GH_BRANCH=${GH_BRANCH} \
-            --build-arg GH_COMMIT=${GITHUB_SHA} \
-            --label org.opencontainers.image.created=${BUILD_DATE} \
-            --label org.opencontainers.image.revision=${GITHUB_SHA} \
-            --label org.opencontainers.image.version=${VERSION} \
-            --label org.opencontainers.image.source=https://github.com/xtclang/xvm/tree/${GH_BRANCH} \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
-            --push \
-            docker/
+          echo "Verifying all architecture-specific images exist before creating manifests..."
+          for tag in "${TAGS[@]}"; do
+            for arch in amd64 arm64; do
+              arch_tag="$tag-$arch"
+              echo "Checking: $arch_tag"
+              if ! docker manifest inspect "$arch_tag" > /dev/null 2>&1; then
+                echo "❌ ERROR: Image $arch_tag not found in registry!"
+                echo "❌ Cannot create multi-platform manifest without all architectures!"
+                exit 1
+              fi
+              echo "✅ Confirmed: $arch_tag"
+            done
+          done
+
+      - name: Create and push multi-platform manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          
+          echo "Creating multi-platform manifests from pre-built images..."
+          
+          # Setup Docker tags using shared logic
+          ${{ env.DOCKER_TAG_LOGIC }}
+          setup_docker_tags "" "VERSION"
+          
+          # Create and push manifest for each tag
+          for tag in "${TAGS[@]}"; do
+            echo "Creating manifest for: $tag"
+            
+            # Create manifest from architecture-specific images
+            docker manifest create $tag \
+              $tag-amd64 \
+              $tag-arm64
+            
+            # Push the manifest
+            docker manifest push $tag
+            
+            echo "✅ Created and pushed manifest: $tag"
+          done
+          
+          echo "🎉 All multi-platform manifests created successfully!"
 
   docker-test:
     name: Test Docker image functionality
