@@ -82,8 +82,6 @@ public class ModuleLoader
 
             String suffix     = name.substring(prefix.length());
             byte[] classBytes = typeSystem.genClass(this, suffix);
-            ClassModel model  = ClassFile.of().parse(classBytes);
-            String s = model.toDebugString();
             if (classBytes == null) {
                 throw new ClassNotFoundException(name);
             }

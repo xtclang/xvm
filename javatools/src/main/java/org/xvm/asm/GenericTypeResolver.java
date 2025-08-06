@@ -11,8 +11,7 @@ import org.xvm.asm.constants.TypeConstant;
  * Resolver of a generic type name into an actual type.
  */
 @FunctionalInterface
-public interface GenericTypeResolver
-    {
+public interface GenericTypeResolver {
     /**
      * Resolve the generic type based on the formal parameter name.
      *
@@ -29,40 +28,34 @@ public interface GenericTypeResolver
      *
      * @return a resolved type
      */
-    default TypeConstant resolveFormalType(FormalConstant constFormal)
-        {
+    default TypeConstant resolveFormalType(FormalConstant constFormal) {
         return resolveGenericType(constFormal.getName());
-        }
+    }
 
     /**
      * Create a GenericTypeResolver based on the specified map.
      */
-    static GenericTypeResolver of(Map<FormalConstant, TypeConstant> mapResolve)
-        {
+    static GenericTypeResolver of(Map<FormalConstant, TypeConstant> mapResolve) {
         return new TypeParameterResolver(mapResolve);
-        }
+    }
 
     /**
      * Trivial GenericTypeResolver implementation based on a Map<FormalConstant, TypeConstant>.
      */
     class TypeParameterResolver
-            implements GenericTypeResolver
-        {
-        public TypeParameterResolver(Map<FormalConstant, TypeConstant> mapResolve)
-            {
+            implements GenericTypeResolver {
+        public TypeParameterResolver(Map<FormalConstant, TypeConstant> mapResolve) {
             this.mapResolve = mapResolve;
-            }
+        }
 
-        public TypeConstant resolveGenericType(String sFormalName)
-            {
+        public TypeConstant resolveGenericType(String sFormalName) {
             return null;
-            }
+        }
 
-        public TypeConstant resolveFormalType(FormalConstant constFormal)
-            {
+        public TypeConstant resolveFormalType(FormalConstant constFormal) {
             return mapResolve.get(constFormal);
-            }
+        }
 
         Map<FormalConstant, TypeConstant> mapResolve;
-        }
     }
+}

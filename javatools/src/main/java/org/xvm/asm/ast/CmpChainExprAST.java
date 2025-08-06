@@ -39,8 +39,7 @@ public class CmpChainExprAST
 
         for (Operator op : ops) {
             assert switch (op) {
-                case CompEq, CompNeq, CompLt, CompGt, CompLtEq, CompGtEq
-                        -> true;
+                case CompEq, CompNeq, CompLt, CompGt, CompLtEq, CompGtEq -> true;
                 default -> false;
             };
         }

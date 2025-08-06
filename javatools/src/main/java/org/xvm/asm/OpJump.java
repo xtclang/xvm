@@ -102,11 +102,9 @@ public abstract class OpJump
     public static String getLabelDesc(Op opDest, int ofJmp) {
         if (opDest instanceof Label) {
             return ((Label) opDest).getName();
-        }
-        else if (ofJmp != 0) {
+        } else if (ofJmp != 0) {
             return (ofJmp > 0 ? "+" : "") + ofJmp;
-        }
-        else if (opDest != null) {
+        } else if (opDest != null) {
             return "-> " + opDest;
         } else {
             return "???";

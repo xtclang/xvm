@@ -104,8 +104,7 @@ public class Nop extends Op {
                 m_nOp        = nopForLines(m_cLines);
                 nop.m_cLines = 0;
                 nop.m_nOp    = OP_NOP;
-            }
-            else if (m_cLines != 0) {
+            } else if (m_cLines != 0) {
                 // a LINE_* op is not redundant
                 return false;
             } else {

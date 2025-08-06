@@ -85,8 +85,7 @@ public class Return_N
 
             if (isDeferred(hArg)) {
                 fAnyProp = true;
-            }
-            else if (frame.isDynamicVar(nArg)) {
+            } else if (frame.isDynamicVar(nArg)) {
                 if (afDynamic == null) {
                     afDynamic = new boolean[cArgs];
                 }

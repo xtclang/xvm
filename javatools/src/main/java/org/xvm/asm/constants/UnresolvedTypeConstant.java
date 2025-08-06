@@ -26,8 +26,7 @@ import org.xvm.util.Severity;
  */
 public class UnresolvedTypeConstant
         extends TypeConstant
-        implements ResolvableConstant
-    {
+        implements ResolvableConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -42,593 +41,502 @@ public class UnresolvedTypeConstant
      *              never contain it while it's unresolved and will immediately replace it as it
      *              becomes resolved
      */
-    public UnresolvedTypeConstant(ConstantPool pool, UnresolvedNameConstant constUnresolved)
-        {
+    public UnresolvedTypeConstant(ConstantPool pool, UnresolvedNameConstant constUnresolved) {
         super(pool);
 
         m_constId = constUnresolved;
-        }
+    }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
 
     @Override
-    public Constant resolve()
-        {
+    public Constant resolve() {
         return unwrap();
-        }
+    }
 
     /**
      * @return true if the UnresolvedTypeConstant has been resolved
      */
-    public boolean isTypeResolved()
-        {
+    public boolean isTypeResolved() {
         return m_type != null;
-        }
+    }
 
     /**
      * Mark this unresolved type as recursive.
      */
-    public void markRecursive()
-        {
+    public void markRecursive() {
         m_fRecursive = true;
-        }
+    }
 
     /**
      * @return resolved underlying type
      */
-    protected TypeConstant getResolvedType()
-        {
+    protected TypeConstant getResolvedType() {
         TypeConstant type = m_type;
-        if (type != null)
-            {
+        if (type != null) {
             TypeConstant typeResolved = type.resolveTypedefs();
-            if (typeResolved != type)
-                {
+            if (typeResolved != type) {
                 m_type = type = typeResolved;
-                }
             }
-        return type;
         }
+        return type;
+    }
 
 
     // ----- ResolvableConstant methods ------------------------------------------------------------
 
     @Override
-    public Constant getResolvedConstant()
-        {
+    public Constant getResolvedConstant() {
         return getResolvedType();
-        }
+    }
 
     @Override
-    public void resolve(Constant constant)
-        {
-        if (!m_fRecursive)
-            {
+    public void resolve(Constant constant) {
+        if (!m_fRecursive) {
             assert m_type == null || m_type == constant;
             m_type = (TypeConstant) constant;
-            }
         }
+    }
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    public int getTypeDepth()
-        {
+    public int getTypeDepth() {
         return isTypeResolved() ? getResolvedType().getTypeDepth() : 1;
-        }
+    }
 
     @Override
-    public boolean isModifyingType()
-        {
+    public boolean isModifyingType() {
         return isTypeResolved() && getResolvedType().isModifyingType();
-        }
+    }
 
     @Override
-    public boolean isRelationalType()
-        {
+    public boolean isRelationalType() {
         return isTypeResolved() && getResolvedType().isRelationalType();
-        }
+    }
 
     @Override
-    public TypeConstant getUnderlyingType()
-        {
-        if (isTypeResolved())
-            {
+    public TypeConstant getUnderlyingType() {
+        if (isTypeResolved()) {
             return m_type;
-            }
-        throw new IllegalStateException();
         }
+        throw new IllegalStateException();
+    }
 
     @Override
-    public boolean isShared(ConstantPool poolOther)
-        {
+    public boolean isShared(ConstantPool poolOther) {
         return isTypeResolved()
                 ? getResolvedType().isShared(poolOther)
                 : poolOther == getConstantPool();
-        }
+    }
 
     @Override
-    public boolean isComposedOfAny(Set<IdentityConstant> setIds)
-        {
-        if (isTypeResolved())
-            {
+    public boolean isComposedOfAny(Set<IdentityConstant> setIds) {
+        if (isTypeResolved()) {
             return getResolvedType().isComposedOfAny(setIds);
-            }
+        }
 
         String sName = m_constId.getName();
-        for (IdentityConstant id : setIds)
-            {
-            if (id.getName().equals(sName))
-                {
+        for (IdentityConstant id : setIds) {
+            if (id.getName().equals(sName)) {
                 return true;
-                }
             }
+        }
         return false;
-        }
+    }
 
     @Override
-    public boolean isImmutable()
-        {
+    public boolean isImmutable() {
         return isTypeResolved() && getResolvedType().isImmutable();
-        }
+    }
 
     @Override
-    public boolean isVirtualChild()
-        {
+    public boolean isVirtualChild() {
         return isTypeResolved() && getResolvedType().isVirtualChild();
-        }
+    }
 
     @Override
-    public boolean isSingleDefiningConstant()
-        {
+    public boolean isSingleDefiningConstant() {
         return !isTypeResolved() || getResolvedType().isSingleDefiningConstant();
-        }
+    }
 
     @Override
-    public boolean isTuple()
-        {
-        if (isTypeResolved())
-            {
+    public boolean isTuple() {
+        if (isTypeResolved()) {
             return getResolvedType().isTuple();
-            }
+        }
         String sName = m_constId.isNameResolved()
                         ? m_constId.getResolvedConstant().getValueString()
                         : m_constId.getValueString();
         return "Tuple".equals(sName);
-        }
+    }
 
     @Override
-    public Constant getDefiningConstant()
-        {
+    public Constant getDefiningConstant() {
         return isTypeResolved()
                 ? getResolvedType().getDefiningConstant()
                 : m_constId.isNameResolved()
                         ? m_constId.getResolvedConstant()
                         : m_constId;
-        }
+    }
 
     @Override
-    public boolean isConst()
-        {
+    public boolean isConst() {
         return isTypeResolved() && getResolvedType().isConst();
-        }
+    }
 
     @Override
-    public boolean isTypeOfType()
-        {
+    public boolean isTypeOfType() {
         return isTypeResolved() && getResolvedType().isTypeOfType();
-        }
+    }
 
     @Override
-    public boolean isImmutabilitySpecified()
-        {
+    public boolean isImmutabilitySpecified() {
         return isTypeResolved() && getResolvedType().isImmutabilitySpecified();
-        }
+    }
 
     @Override
-    public boolean isAccessSpecified()
-        {
+    public boolean isAccessSpecified() {
         return isTypeResolved() && getResolvedType().isAccessSpecified();
-        }
+    }
 
     @Override
-    public Access getAccess()
-        {
+    public Access getAccess() {
         return isTypeResolved()
                 ? getResolvedType().getAccess()
                 : Access.PUBLIC;
-        }
+    }
 
     @Override
-    public boolean isAccessModifiable()
-        {
+    public boolean isAccessModifiable() {
         return isTypeResolved() && getResolvedType().isAccessModifiable();
-        }
+    }
 
     @Override
-    public boolean isNullable()
-        {
+    public boolean isNullable() {
         return isTypeResolved() && getResolvedType().isNullable();
-        }
+    }
 
     @Override
-    public boolean isOnlyNullable()
-        {
+    public boolean isOnlyNullable() {
         return isTypeResolved() && getResolvedType().isOnlyNullable();
-        }
+    }
 
     @Override
-    public TypeConstant removeNullable()
-        {
-        if (isTypeResolved())
-            {
+    public TypeConstant removeNullable() {
+        if (isTypeResolved()) {
             return getResolvedType().removeNullable();
-            }
-        throw new IllegalStateException();
         }
+        throw new IllegalStateException();
+    }
 
     @Override
-    public Category getCategory()
-        {
+    public Category getCategory() {
         return isTypeResolved() ? getResolvedType().getCategory() : Category.OTHER;
-        }
+    }
 
     @Override
-    public boolean isSingleUnderlyingClass(boolean fAllowInterface)
-        {
+    public boolean isSingleUnderlyingClass(boolean fAllowInterface) {
         return isTypeResolved() && getResolvedType().isSingleUnderlyingClass(fAllowInterface);
-        }
+    }
 
     @Override
-    public boolean isExplicitClassIdentity(boolean fAllowParams)
-        {
+    public boolean isExplicitClassIdentity(boolean fAllowParams) {
         return isTypeResolved() && getResolvedType().isExplicitClassIdentity(fAllowParams);
-        }
+    }
 
     @Override
-    public TypeConstant getExplicitClassInto(boolean fResolve)
-        {
-        if (isTypeResolved())
-            {
+    public TypeConstant getExplicitClassInto(boolean fResolve) {
+        if (isTypeResolved()) {
             return getResolvedType().getExplicitClassInto(fResolve);
-            }
+        }
         throw new IllegalStateException();
-        }
+    }
 
     @Override
-    public boolean isIntoMetaData(TypeConstant typeTarget, boolean fStrict)
-        {
+    public boolean isIntoMetaData(TypeConstant typeTarget, boolean fStrict) {
         return isTypeResolved() && getResolvedType().isIntoMetaData(typeTarget, fStrict);
-        }
+    }
 
     @Override
-    public String getEcstasyClassName()
-        {
+    public String getEcstasyClassName() {
         return isTypeResolved() ? getResolvedType().getEcstasyClassName() : "?";
-        }
+    }
 
     @Override
-    public TypeConstant resolveConstraints(boolean fPendingOnly)
-        {
+    public TypeConstant resolveConstraints(boolean fPendingOnly) {
         return isTypeResolved()
                 ? getResolvedType().resolveConstraints(fPendingOnly)
                 : this;
-        }
+    }
 
     @Override
-    public TypeConstant resolveTypedefs()
-        {
+    public TypeConstant resolveTypedefs() {
         return m_type == null
                 ? this
                 : m_fRecursive
                     ? m_type
                     : m_type.resolveTypedefs();
-        }
+    }
 
     @Override
-    public boolean containsGenericParam(String sName)
-        {
+    public boolean containsGenericParam(String sName) {
         return isTypeResolved() && getResolvedType().containsGenericParam(sName);
-        }
+    }
 
     @Override
-    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
-        {
+    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams) {
         return isTypeResolved()
                 ? getResolvedType().getGenericParamType(sName, listParams)
                 : null;
-        }
+    }
 
     @Override
-    public boolean containsAutoNarrowing(boolean fAllowVirtChild)
-        {
+    public boolean containsAutoNarrowing(boolean fAllowVirtChild) {
         return isTypeResolved() && getResolvedType().containsAutoNarrowing(fAllowVirtChild);
-        }
+    }
 
     @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
-                                             TypeConstant typeTarget, IdentityConstant idCtx)
-        {
+                                             TypeConstant typeTarget, IdentityConstant idCtx) {
         return isTypeResolved()
                 ? getResolvedType().resolveAutoNarrowing(pool, fRetainParams, typeTarget, idCtx)
                 : this;
-        }
+    }
 
     @Override
-    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
-        {
+    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver) {
         return isTypeResolved()
                 ? getResolvedType().resolveGenerics(pool, resolver)
                 : this;
-        }
+    }
 
     @Override
     public ResolutionResult resolveContributedName(
-            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector)
-        {
+            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
         return isTypeResolved()
                 ? getResolvedType().resolveContributedName(sName, access, idMethod, collector)
                 : ResolutionResult.POSSIBLE;
-        }
+    }
 
     @Override
-    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
-        {
+    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams) {
         return isTypeResolved()
                 ? getResolvedType().adoptParameters(pool, atypeParams)
                 : this;
-        }
+    }
 
     @Override
-    public TypeConstant[] collectGenericParameters()
-        {
+    public TypeConstant[] collectGenericParameters() {
         return isTypeResolved()
                 ? getResolvedType().collectGenericParameters()
                 : null;
-        }
+    }
 
     @Override
-    public Relation calculateRelation(TypeConstant typeLeft)
-        {
+    public Relation calculateRelation(TypeConstant typeLeft) {
         return isTypeResolved()
                 ? getResolvedType().calculateRelation(typeLeft)
                 : Relation.INCOMPATIBLE;
-        }
+    }
 
     @Override
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
-                                               boolean fFunction, List<TypeConstant> listParams)
-        {
+                                               boolean fFunction, List<TypeConstant> listParams) {
         return isTypeResolved() &&
                 getResolvedType().containsSubstitutableMethod(signature, access, fFunction, listParams);
-        }
+    }
 
     @Override
-    public boolean containsFormalType(boolean fAllowParams)
-        {
+    public boolean containsFormalType(boolean fAllowParams) {
         return isTypeResolved() && getResolvedType().containsFormalType(fAllowParams);
-        }
+    }
 
     @Override
-    public boolean containsGenericType(boolean fAllowParams)
-        {
+    public boolean containsGenericType(boolean fAllowParams) {
         return isTypeResolved() &&
                 getResolvedType().containsGenericType(fAllowParams);
-        }
+    }
 
     @Override
-    public boolean consumesFormalType(String sTypeName, Access access)
-        {
+    public boolean consumesFormalType(String sTypeName, Access access) {
         return isTypeResolved() && getResolvedType().consumesFormalType(sTypeName, access);
-        }
+    }
 
     @Override
-    protected Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
-        {
+    protected Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams) {
         return isTypeResolved()
                 ? getResolvedType().checkConsumption(sTypeName, access, listParams)
                 : Usage.NO;
-        }
+    }
 
     @Override
-    public boolean producesFormalType(String sTypeName, Access access)
-        {
+    public boolean producesFormalType(String sTypeName, Access access) {
         return isTypeResolved() && getResolvedType().producesFormalType(sTypeName, access);
-        }
+    }
 
     @Override
-    protected Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
-        {
+    protected Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams) {
         return isTypeResolved()
                 ? getResolvedType().checkProduction(sTypeName, access, listParams)
                 : Usage.NO;
-        }
+    }
 
     @Override
-    public boolean isIntoPropertyType()
-        {
+    public boolean isIntoPropertyType() {
         return isTypeResolved() && getResolvedType().isIntoPropertyType();
-        }
+    }
 
     @Override
-    public boolean isIntoVariableType()
-        {
+    public boolean isIntoVariableType() {
         return isTypeResolved() && getResolvedType().isIntoVariableType();
-        }
+    }
 
     @Override
-    public TypeInfo getTypeInfo()
-        {
-        if (isTypeResolved())
-            {
+    public TypeInfo getTypeInfo() {
+        if (isTypeResolved()) {
             return getResolvedType().getTypeInfo();
-            }
-        throw new IllegalStateException();
         }
+        throw new IllegalStateException();
+    }
 
     @Override
-    public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs)
-        {
-        if (isTypeResolved())
-            {
+    public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs) {
+        if (isTypeResolved()) {
             return getResolvedType().ensureTypeInfo(idClass, errs);
-            }
-        throw new IllegalStateException();
         }
+        throw new IllegalStateException();
+    }
 
     @Override
-    public TypeInfo ensureTypeInfo(ErrorListener errs)
-        {
-        if (isTypeResolved())
-            {
+    public TypeInfo ensureTypeInfo(ErrorListener errs) {
+        if (isTypeResolved()) {
             return getResolvedType().ensureTypeInfo(errs);
-            }
-        throw new IllegalStateException();
         }
+        throw new IllegalStateException();
+    }
 
     @Override
-    protected TypeInfo buildTypeInfo(ErrorListener errs)
-        {
-        if (isTypeResolved())
-            {
+    protected TypeInfo buildTypeInfo(ErrorListener errs) {
+        if (isTypeResolved()) {
             return getResolvedType().ensureTypeInfoInternal(errs);
-            }
-        throw new IllegalStateException();
         }
+        throw new IllegalStateException();
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return isTypeResolved()
                 ? getResolvedType().getFormat()
                 : Format.UnresolvedType;
-        }
+    }
 
     @Override
-    public boolean isClass()
-        {
+    public boolean isClass() {
         return isTypeResolved() && getResolvedType().isClass();
-        }
+    }
 
     @Override
-    public boolean containsUnresolved()
-        {
+    public boolean containsUnresolved() {
         return !m_fRecursive && (m_type == null || m_type.containsUnresolved());
-        }
+    }
 
     @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
-        if (isTypeResolved())
-            {
+    public void forEachUnderlying(Consumer<Constant> visitor) {
+        if (isTypeResolved()) {
             visitor.accept(getResolvedType());
-            }
         }
+    }
 
     @Override
-    protected void setPosition(int iPos)
-        {
+    protected void setPosition(int iPos) {
         throw new IllegalStateException("unresolved: " + this);
-        }
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return isTypeResolved()
                 ? getResolvedType().getValueString()
                 : m_constId.getValueString();
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
+    protected int compareDetails(Constant that) {
         that = that.resolve();
 
-        if (isTypeResolved())
-            {
+        if (isTypeResolved()) {
             return getResolvedType().compareDetails(that);
-            }
+        }
 
-        if (that instanceof UnresolvedTypeConstant thatUnresolved)
-            {
+        if (that instanceof UnresolvedTypeConstant thatUnresolved) {
             return m_constId.compareDetails(thatUnresolved.m_constId);
-            }
+        }
 
         // need to return a value that allows for stable sorts, but unless this==that, the
         // details can never be equal
         return this == that ? 0 : -1;
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         throw new IllegalStateException();
-        }
+    }
 
     @Override
-    protected void assemble(DataOutput out)
-        {
+    protected void assemble(DataOutput out) {
         throw new IllegalStateException(toString());
-        }
+    }
 
     @Override
-    public boolean validate(ErrorListener errs)
-        {
-        if (isTypeResolved())
-            {
+    public boolean validate(ErrorListener errs) {
+        if (isTypeResolved()) {
             return getResolvedType().validate(errs);
-            }
+        }
 
         errs.log(Severity.ERROR, Compiler.NAME_UNRESOLVABLE, new Object[]{getValueString()}, this);
         return true;
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return isTypeResolved()
                 ? "(resolved) " + getResolvedType().getDescription()
                 : m_constId.getDescription();
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
-        {
-        if (isTypeResolved())
-            {
+    public int hashCode() {
+        if (isTypeResolved()) {
             return Hash.of(getResolvedType());
-            }
+        }
 
         // calculate a temporary hash code
         int nHash = m_nUnresolvedHash;
-        if (nHash == 0)
-            {
+        if (nHash == 0) {
             nHash = Hash.of(m_constId);
-            if (nHash == 0)
-                {
+            if (nHash == 0) {
                 nHash = 1234567891; // prime
-                }
-            m_nUnresolvedHash = nHash;
             }
-        return nHash;
+            m_nUnresolvedHash = nHash;
         }
+        return nHash;
+    }
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return 0;
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -652,4 +560,4 @@ public class UnresolvedTypeConstant
      * A temporary hash code.
      */
     private transient int m_nUnresolvedHash;
-    }
+}
