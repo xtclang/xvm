@@ -464,7 +464,7 @@ jobs:
           
           # Setup Docker tags using shared logic
           ${{ env.DOCKER_TAG_LOGIC }}
-          setup_docker_tags "" "../VERSION"
+          setup_docker_tags "" "VERSION"
           
           # Build and push multi-platform image
           docker buildx build \
