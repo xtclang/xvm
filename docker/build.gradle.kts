@@ -12,16 +12,24 @@ plugins {
     id("org.xtclang.build.xdk.versioning")
 }
 
-// Git helpers to avoid repetition (safe for all platforms)
-fun gitBranch() = try {
-    providers.exec { commandLine("git", "branch", "--show-current") }.standardOutput.asText.get().trim()
+// Git helpers to avoid repetition (safe for all platforms, lazy execution)
+fun gitBranch(): String = try {
+    val result = providers.exec { 
+        commandLine("git", "branch", "--show-current")
+        workingDir = project.rootDir
+    }.standardOutput.asText.get().trim()
+    if (result.isBlank()) "unknown" else result
 } catch (e: Exception) {
     logger.warn("Could not get git branch: ${e.message}")
     "unknown"
 }
 
-fun gitCommit() = try {
-    providers.exec { commandLine("git", "rev-parse", "HEAD") }.standardOutput.asText.get().trim()
+fun gitCommit(): String = try {
+    val result = providers.exec { 
+        commandLine("git", "rev-parse", "HEAD")
+        workingDir = project.rootDir
+    }.standardOutput.asText.get().trim()
+    if (result.isBlank()) "unknown" else result
 } catch (e: Exception) {
     logger.warn("Could not get git commit: ${e.message}")
     "unknown"
@@ -124,9 +132,6 @@ fun createPlatformBuildTask(arch: String, platform: String) = tasks.registering(
     group = "docker"
     description = "Build Docker image for $arch ($platform)"
     workingDir = projectDir
-    
-    val config = createBuildConfig(project)
-    val tags = config.tagsForArch(arch)
     
     val cmd = listOf("docker", "buildx", "build", "--platform", platform) +
               config.buildArgs.flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
