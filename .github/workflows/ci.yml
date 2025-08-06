@@ -217,6 +217,29 @@ jobs:
           GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
           ACTIONS_STEP_DEBUG: true
 
+      - name: Test Gradle directly (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          echo "=== Testing Gradle Installation ==="
+          echo "Gradle binary location:"
+          which gradle || echo "Gradle not in PATH"
+          ls -la "C:\ProgramData\Chocolatey\bin\gradle.EXE" || echo "Gradle EXE not found"
+          
+          echo "=== Testing basic Gradle commands ==="
+          echo "Testing gradle --version:"
+          gradle --version 2>&1 || echo "gradle --version failed with exit code $?"
+          
+          echo "Testing gradle help:"
+          gradle help 2>&1 || echo "gradle help failed with exit code $?"
+          
+          echo "=== Testing project-specific Gradle ==="
+          echo "Testing ./gradlew --version:"
+          ./gradlew --version 2>&1 || echo "./gradlew --version failed with exit code $?"
+          
+          echo "=== Gradle daemon status ==="
+          gradle --status 2>&1 || echo "gradle --status failed with exit code $?"
+
       - name: Validate Gradle Wrapper
         uses: gradle/actions/wrapper-validation@v4
 
