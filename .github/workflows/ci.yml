@@ -208,37 +208,58 @@ jobs:
           echo "=== End Debug Information ==="
 
       - name: Setup Gradle (with debug)
+        if: runner.os != 'Windows'
         uses: gradle/actions/setup-gradle@v4
         with:
-          cache-disabled: ${{ runner.os == 'Windows' }}  # Disable cache on Windows to test if cache contamination is the issue
+          cache-disabled: false
           cache-read-only: false
           gradle-version: ${{ env.gradle_version }}
         env:
           GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
           ACTIONS_STEP_DEBUG: true
 
-      - name: Test Gradle directly (Windows)
+      - name: Manual Gradle setup and test (Windows)
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          echo "=== Testing Gradle Installation ==="
-          echo "Gradle binary location:"
-          which gradle || echo "Gradle not in PATH"
-          ls -la "C:\ProgramData\Chocolatey\bin\gradle.EXE" || echo "Gradle EXE not found"
+          echo "=== Bypassing setup-gradle action on Windows ==="
+          echo "Testing if Gradle works independently of the action"
+          
+          echo "=== Environment check ==="
+          echo "JAVA_HOME: $JAVA_HOME"
+          echo "PATH: $PATH"
+          echo "Current directory: $(pwd)"
           
           echo "=== Testing basic Gradle commands ==="
           echo "Testing gradle --version:"
-          gradle --version 2>&1 || echo "gradle --version failed with exit code $?"
+          if gradle --version; then
+            echo "✅ gradle --version works"
+          else
+            echo "❌ gradle --version failed with exit code $?"
+          fi
           
           echo "Testing gradle help:"
-          gradle help 2>&1 || echo "gradle help failed with exit code $?"
+          if gradle help; then
+            echo "✅ gradle help works"
+          else
+            echo "❌ gradle help failed with exit code $?"
+          fi
           
           echo "=== Testing project-specific Gradle ==="
           echo "Testing ./gradlew --version:"
-          ./gradlew --version 2>&1 || echo "./gradlew --version failed with exit code $?"
+          if ./gradlew --version; then
+            echo "✅ ./gradlew --version works"
+          else
+            echo "❌ ./gradlew --version failed with exit code $?"
+          fi
           
-          echo "=== Gradle daemon status ==="
-          gradle --status 2>&1 || echo "gradle --status failed with exit code $?"
+          echo "=== Testing with reduced environment ==="
+          echo "Testing gradle --version with minimal environment:"
+          if env -i PATH="$PATH" JAVA_HOME="$JAVA_HOME" gradle --version; then
+            echo "✅ gradle works with minimal environment"
+          else
+            echo "❌ gradle fails even with minimal environment"
+          fi
 
       - name: Validate Gradle Wrapper
         uses: gradle/actions/wrapper-validation@v4
