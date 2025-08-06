@@ -2,10 +2,15 @@ module test0.examples.org {
 
     void run() {
         @Inject Console console;
-        console.print("Hello World");
+        console.print("Hello", True);
+        console.print(" World");
 
-//        Int i1 = call1(0);
-//        i1 = call1(0, 5);
+        Int i1 = call1(0);
+        console.print(i1);
+
+        i1 = call1(i1, 5);
+        console.print(i1);
+
 //
 //        (i1, Int i2) = call2(0);
 //
@@ -17,14 +22,14 @@ module test0.examples.org {
     Int call1(Int i, Int j = 2) {
         return i + j;
     }
-    (Int, Int) call2(Int i) {
-        return i++, i;
-    }
-    conditional Int call3(Int i) {
-        return True, i;
-    }
-
-    Boolean call4(Int i) {
-        return i > 0;
-    }
+//    (Int, Int) call2(Int i) {
+//        return i++, i;
+//    }
+//    conditional Int call3(Int i) {
+//        return True, i;
+//    }
+//
+//    Boolean call4(Int i) {
+//        return i > 0;
+//    }
 }

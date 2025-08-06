@@ -5,12 +5,26 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
+import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
+
 import org.xvm.asm.Constants.Access;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitMethodDesc;
+import org.xvm.javajit.JitParamDesc;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.CallChain.VirtualConstructorChain;
@@ -289,6 +303,89 @@ public abstract class OpInvocable extends Op {
 
         return "void";
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    protected void buildInvoke(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
+        BuildContext.Slot targetSlot = bctx.loadArgument(code, m_nTarget);
+
+        MethodConstant idMethod   = (MethodConstant) bctx.getConstant(m_nMethodId);
+        MethodInfo     infoMethod = targetSlot.type().ensureTypeInfo().getMethodById(idMethod);
+        JitMethodDesc  jmd        = infoMethod.getJitDesc(bctx.typeSystem);
+        MethodTypeDesc md         = jmd.optimizedMD;
+        String         methodName = idMethod.getName();
+        boolean        fOptimized = false;
+
+        if (md == null) {
+            md = jmd.standardMD;
+        } else {
+            methodName += Builder.OPT;
+            fOptimized  = true;
+        }
+
+        bctx.loadCtx(code);
+        for (int i = 0, c = anArgValue == null ? 0 : anArgValue.length; i < c; i++ ) {
+            int iArg = anArgValue[i];
+            JitParamDesc pd = fOptimized ? jmd.getOptimizedParam(i) : jmd.standardParams[i];
+            switch (pd.flavor) {
+                case SpecificWithDefault:
+                    if (iArg == A_DEFAULT) {
+                        code.aconst_null();
+                        continue;
+                    }
+                    break;
+
+                case PrimitiveWithDefault:
+                    if (iArg == A_DEFAULT) {
+                        assert fOptimized;
+                        // default primitive with an additional `true`
+                        Builder.defaultLoad(code, pd.cd);
+                        code.iconst_1();
+                    } else {
+                        // actual primitive with an additional `false`
+                        bctx.loadArgument(code, iArg);
+                        code.iconst_0();
+                    }
+                    continue;
+
+                default:
+                    assert iArg != A_DEFAULT;
+                    break;
+            }
+            bctx.loadArgument(code, iArg, pd);
+        }
+
+        if (infoMethod.getHead().getImplementation().getExistence() == MethodBody.Existence.Interface) {
+            code.invokeinterface(targetSlot.cd(), methodName, md);
+        } else {
+            code.invokevirtual(targetSlot.cd(), methodName, md);
+        }
+
+        int cReturns = infoMethod.getSignature().getReturnCount();
+        if (cReturns > 0) {
+            // TODO: extract into assignReturns() method
+            for (int i = 0; i < cReturns; i++) {
+                JitParamDesc pdRet   = fOptimized ? jmd.getOptimizedReturn(i) : jmd.standardReturns[i];
+                int          nVar    = isMultiReturn() ? m_anRetValue[pdRet.index] : m_nRetValue;
+                TypeConstant typeRet = pdRet.type;
+                ClassDesc    cdRet   = pdRet.cd;
+
+                Slot slot = bctx.ensureSlot(nVar, typeRet, cdRet, "");
+                if (pdRet.optIndex == -1) {
+                    // process the natural return
+                    if (slot.isStack()) {
+                        // the return value is on Java stack; keep it there
+                    } else {
+                        bctx.storeValue(code, slot);
+                    }
+                } else {
+                    throw new UnsupportedOperationException("ret value " + i);
+                }
+            }
+        }
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     protected int   m_nTarget;
     protected int   m_nMethodId;

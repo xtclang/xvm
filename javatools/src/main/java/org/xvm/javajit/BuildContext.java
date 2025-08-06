@@ -1,11 +1,14 @@
 package org.xvm.javajit;
 
 import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
 import java.lang.classfile.TypeKind;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,18 +20,21 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
+import org.xvm.asm.constants.EnumValueConstant;
 import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import static java.lang.constant.ConstantDescs.CD_long;
 
+import static org.xvm.javajit.Builder.CD_Boolean;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_JavaString;
 import static org.xvm.javajit.Builder.CD_String;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
-
 
 /**
  * Whatever is necessary for the Ops compilation.
@@ -38,17 +44,17 @@ public class BuildContext {
     /**
      * Construct {@link BuildContext}.
      */
-    public BuildContext(TypeSystem typeSystem, MethodInfo method) {
+    public BuildContext(TypeSystem typeSystem, TypeInfo typeInfo, MethodInfo method) {
         this.typeSystem = typeSystem;
+        this.typeInfo   = typeInfo;
         this.method     = method;
         this.jmd        = method.getJitDesc(typeSystem);
-        this.optimized  = method.getSignature().getName().endsWith(Builder.OPT);
     }
 
+    public final TypeInfo      typeInfo;
     public final MethodInfo    method;
     public final TypeSystem    typeSystem;
     public final JitMethodDesc jmd;
-    public final boolean       optimized;
 
     /**
      * The map of {@link Slot}s indexed by the Var index.
@@ -56,9 +62,24 @@ public class BuildContext {
     public final Map<Integer, Slot> slots = new HashMap<>();
 
     /**
+     * The stack of {@link Slot}s.
+     */
+    private final Deque<Slot> stack = new ArrayDeque<>();
+
+    /**
      * The current line number.
      */
     public int lineNumber;
+
+    /**
+     * The start-of-method label.
+     */
+    public Label startScope;
+
+    /**
+     * The end-of-method label.
+     */
+    public Label endScope;
 
     /**
      * @return the ConstantPool used by this {@link BuildContext}.
@@ -70,23 +91,23 @@ public class BuildContext {
     /**
      * Get the constant for the specified argument index.
      */
-    public Constant getConstant(int argIndex) {
-        assert argIndex <= Op.CONSTANT_OFFSET;
-        return method.getHead().getMethodStructure().getLocalConstants()[Op.CONSTANT_OFFSET - argIndex];
+    public Constant getConstant(int argId) {
+        assert argId <= Op.CONSTANT_OFFSET;
+        return method.getHead().getMethodStructure().getLocalConstants()[Op.CONSTANT_OFFSET - argId];
     }
 
     /**
      * Get the String value for the specified argument index.
      */
-    public String getString(int argIndex) {
-        return ((StringConstant) getConstant(argIndex)).getValue();
+    public String getString(int argId) {
+        return ((StringConstant) getConstant(argId)).getValue();
     }
 
     /**
      * Get the type for the specified argument index.
      */
-    public TypeConstant getType(int argIndex) {
-        return resolveType((TypeConstant) getConstant(argIndex)); // must exist
+    public TypeConstant getType(int argId) {
+        return resolveType((TypeConstant) getConstant(argId)); // must exist
     }
 
     /**
@@ -115,16 +136,29 @@ public class BuildContext {
         MethodStructure struct = method.getHead().getMethodStructure();
 
         lineNumber = struct.getSourceLineNumber();
+        startScope = code.newLabel();
+        endScope   = code.newLabel();
 
-        JitParamDesc[] params = optimized ? jmd.optimizedParams : jmd.standardParams;
-        // skip the "Ctx $ctx" at index 0
-        for (int i = 1, c = params.length; i < c; i++) {
+        code
+            .labelBinding(startScope)
+            .localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, startScope, endScope)
+            ;
+
+        if (!method.isFunction()) {
+            TypeConstant thisType = typeInfo.getType();
+            slots.put(Op.A_THIS, new SingleSlot(Op.A_THIS, thisType,
+                ClassDesc.of(thisType.ensureJitClassName(typeSystem)), "thi$"));
+        }
+
+        boolean        optimized = jmd.optimizedMD != null;
+        JitParamDesc[] params    = optimized ? jmd.optimizedParams : jmd.standardParams;
+        for (int i = 0, c = params.length; i < c; i++) {
             JitParamDesc paramDesc = params[i];
             int          varIndex  = paramDesc.index;
             Parameter    param     = struct.getParam(varIndex);
             String       name      = param.getName();
             TypeConstant type      = param.getType();
-            int          slot      = code.parameterSlot(i);
+            int          slot      = code.parameterSlot(i+1); // compensate for $ctx
 
             switch (paramDesc.flavor) {
                 case Specific, Widened, Primitive, SpecificWithDefault, WidenedWithDefault:
@@ -142,6 +176,13 @@ public class BuildContext {
     }
 
     /**
+     * Finish the compilation.
+     */
+    public void exitMethod(CodeBuilder code) {
+        code.labelBinding(endScope);
+    }
+
+    /**
      * Build the code to load the Ctx instance on stack.
      */
     public CodeBuilder loadCtx(CodeBuilder code) {
@@ -150,20 +191,43 @@ public class BuildContext {
     }
 
     /**
-     * Build the code to load an invocation/property target on the stack.
+     * Build the code to load "this" instance on stack.
      */
-    public Slot loadArgument(CodeBuilder code, int iArg) {
-        if (iArg >= 0) {
-            Slot slot = getSlot(iArg);
+    public Slot loadThis(CodeBuilder code) {
+        assert !method.isFunction();
+        code.aload(0);
+        return slots.get(Op.A_THIS);
+    }
+
+    /**
+     * Build the code to load an argument value on the stack.
+     */
+    public Slot loadArgument(CodeBuilder code, int argId) {
+        if (argId >= 0) {
+            Slot slot = getSlot(argId);
             assert slot != null;
             ClassDesc cd = slot.cd();
             code.loadLocal(Builder.toTypeKind(cd), slot.slot());
             return slot;
         }
-        return iArg <= Op.CONSTANT_OFFSET
-                ? loadConstant(code, iArg)
-                : loadPredefineArgument(code, iArg);
+        return argId <= Op.CONSTANT_OFFSET
+                ? loadConstant(code, argId)
+                : loadPredefineArgument(code, argId);
 
+    }
+
+    /**
+     * Build the code to load an argument value on the stack.
+     *
+     * @param targetDesc   the desired type description
+     */
+    public Slot loadArgument(CodeBuilder code, int argId, JitTypeDesc targetDesc) {
+        Slot slot = loadArgument(code, argId);
+        if (slot.cd().isPrimitive() && !targetDesc.cd.isPrimitive()) {
+            Builder.box(code, typeSystem, slot.type(), slot.cd());
+            // TODO: replace the slot
+        }
+        return slot;
     }
 
     /**
@@ -171,8 +235,8 @@ public class BuildContext {
      *
      * We **always** load a primitive value if possible.
      */
-    public Slot loadConstant(CodeBuilder code, int iArg) {
-        return loadConstant(code, getConstant(iArg));
+    public Slot loadConstant(CodeBuilder code, int argId) {
+        return loadConstant(code, getConstant(argId));
     }
 
     /**
@@ -189,29 +253,106 @@ public class BuildContext {
             loadCtx(code)
                 .ldc(stringConst.getValue())
                 .invokestatic(CD_String, "of", MD_of);
-            return new SingleSlot(-1, constant.getType(), CD_String, "");
+            return new SingleSlot(Op.A_STACK, constant.getType(), CD_String, "");
         }
         if (constant instanceof IntConstant intConstant) {
             // TODO: support all Int/UInt types
             code
                 .ldc(intConstant.getValue().getLong());
-            return new SingleSlot(-1, constant.getType(), CD_long, "");
+            return new SingleSlot(Op.A_STACK, constant.getType(), CD_long, "");
         }
-        throw new UnsupportedOperationException();
+        if (constant instanceof EnumValueConstant enumConstant) {
+            if (enumConstant.getType().isA(pool().typeBoolean())) {
+                if (enumConstant.getIntValue().getInt() == 0) {
+                    code.iconst_0();
+                } else {
+                    code.iconst_1();
+                }
+            return new SingleSlot(-1, pool().typeBoolean(), CD_Boolean, "");
+            }
+        }
+        if (constant instanceof LiteralConstant litConstant) {
+            switch (litConstant.getFormat()) {
+                case IntLiteral:
+                    // TODO: delegate to IntN
+                    break;
+                case FPLiteral:
+                    // TODO: delegate to FloatN
+                    break;
+            }
+        }
+        throw new UnsupportedOperationException(constant.toString());
         // return code;
     }
 
     /**
      * Build the code to load a value for a predefine constant on the stack.
      */
-    public Slot loadPredefineArgument(CodeBuilder code, int iArg) {
-        switch (iArg) {
+    public Slot loadPredefineArgument(CodeBuilder code, int argId) {
+        switch (argId) {
             case Op.A_STACK:
-                return null;
+                return popSlot();
+
+            case Op.A_THIS:
+                return loadThis(code);
 
             default:
                 throw new UnsupportedOperationException();
         }
+    }
+
+    /**
+     * Store a value at the specified slot.
+     */
+    public void storeValue(CodeBuilder code, Slot slot) {
+        assert !slot.isStack();
+
+        ClassDesc cd = slot.cd();
+        if (cd.isPrimitive()) {
+            switch (cd.descriptorString()) {
+                case "I", "S", "B", "C", "Z":
+                    code.istore(slot.slot());
+                    break;
+                case "J":
+                    code.lstore(slot.slot());
+                    break;
+                case "F":
+                    code.fstore(slot.slot());
+                    break;
+                case "D":
+                    code.dstore(slot.slot());
+                    break;
+                default:
+                    throw new IllegalStateException();
+            }
+        } else {
+            code.astore(slot.slot());
+        }
+    }
+
+    /**
+     * Introduce a new variable for the specified type id, name id style and an optional value.
+     *
+     * @param varIndex  the variable index
+     * @param typeId    a "relative" (negative) number representing the TypeConstant representing
+     *                  the type
+     * @param nameId    a "relative" (negative) number representing the StringConstant for the name
+     *                  or zero for unnamed vars
+     */
+    public Slot introduceVar(CodeBuilder code, int varIndex, int typeId, int nameId) {
+        TypeConstant type = (TypeConstant) getConstant(typeId);
+        String       name = nameId == 0 ? "" : ((StringConstant) getConstant(nameId)).getValue();
+
+        ClassDesc cd = type.isPrimitive()
+            ? JitParamDesc.getPrimitiveClass(type)
+            : ClassDesc.of(type.ensureJitClassName(typeSystem));
+
+        int slotIndex = code.allocateLocal(Builder.toTypeKind(cd));
+        code.localVariable(slotIndex, name, cd, startScope, endScope);
+
+        Slot slot = new SingleSlot(slotIndex, type, cd, name);
+        slots.put(varIndex, slot);
+        return slot;
     }
 
     /**
@@ -265,14 +406,46 @@ public class BuildContext {
         return slots.get(varIndex);
     }
 
+    /**
+     * Ensure a Slot the specified var index.
+     */
+    public Slot ensureSlot(int varIndex, TypeConstant type, ClassDesc cd, String name) {
+        if (varIndex == Op.A_STACK) {
+            return pushSlot(new SingleSlot(Op.A_STACK, type, cd, name));
+        } else {
+            Slot slot = getSlot(varIndex);
+            assert slot.type().equals(type);
+            return slot;
+        }
+    }
+
+    /**
+     * Pop a Slot from the stack.
+     */
+    public Slot popSlot() {
+        return stack.pop();
+    }
+
+    /**
+     * Push a Slot onto the stack.
+     */
+    public Slot pushSlot(Slot slot) {
+        assert slot.slot() == Op.A_STACK;
+        stack.push(slot);
+        return slot;
+    }
+
     public interface Slot {
-        int          slot();
+        int          slot(); // java slot index
         TypeConstant type();
         ClassDesc    cd();
         String       name();
 
         default boolean isStack() {
-            return slot() == -1;
+            return slot() == Op.A_STACK;
+        }
+        default boolean isThis() {
+            return slot() == Op.A_THIS;
         }
     }
 

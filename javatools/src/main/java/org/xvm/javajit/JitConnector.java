@@ -70,7 +70,7 @@ public class JitConnector
     }
 
     public void invoke0Impl(MethodStructure methodStructure, String... asArg) {
-        String typeName = ts.owned[0].pkg + ".$module";
+        String typeName = ts.owned[0].module.getIdentityConstant().getType().ensureJitClassName(ts);
 
         try {
             TypeSystemLoader loader = ts.loader;

@@ -34,6 +34,8 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 
 import static org.xvm.javajit.Builder.CD_xObj;
 
+import static org.xvm.javajit.JitFlavor.*;
+
 import static org.xvm.util.Handy.appendList;
 import static org.xvm.util.Handy.startList;
 
@@ -1169,57 +1171,56 @@ public class MethodInfo
             boolean            fOptimized    = false;
             SignatureConstant  signature     = getSignature();
             MethodStructure    method        = getHead().getMethodStructure();
-            for (int i = 0, c = method.getParamCount(); i < c; i++) {
-                TypeConstant type  = signature.getRawParams()[i];
-                boolean      fDflt = method.getParam(i).hasDefaultValue();
+
+            for (int iOrig = 0, iStd = 0, iOpt = 0, c = method.getParamCount(); iOrig < c; iOrig++) {
+                TypeConstant type  = signature.getRawParams()[iOrig];
+                boolean      fDflt = method.getParam(iOrig).hasDefaultValue();
                 ClassDesc    cd;
 
                 if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
-                    JitFlavor flavor = fDflt ? JitFlavor.SpecificWithDefault : JitFlavor.Specific;
+                    JitFlavor flavor = fDflt ? SpecificWithDefault : Specific;
                     ClassDesc cdStd  = ClassDesc.of(ts.ensureJitClassName(type));
 
-                    listParamsStd.add(new JitParamDesc(type, flavor, cdStd, i, false));
+                    listParamsStd.add(new JitParamDesc(type, flavor, cdStd, iOrig, iStd++, false));
 
                     fOptimized = true;
                     if (fDflt) {
                         listParamsOpt.add(
-                            new JitParamDesc(type, JitFlavor.PrimitiveWithDefault, cd, i, false));
+                            new JitParamDesc(type, PrimitiveWithDefault, cd, iOrig, iOpt++, false));
                         listParamsOpt.add(
-                            new JitParamDesc(type, JitFlavor.PrimitiveWithDefault, CD_boolean, i, true));
+                            new JitParamDesc(type, PrimitiveWithDefault, CD_boolean, iOrig, iOpt++, true));
                     } else {
-                        listParamsOpt.add(new JitParamDesc(type, JitFlavor.Primitive, cd, i, false));
+                        listParamsOpt.add(new JitParamDesc(type, Primitive, cd, iOrig, iOpt++, false));
                     }
                 } else if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null) {
-                    JitFlavor    flavor = fDflt ? JitFlavor.WidenedWithDefault : JitFlavor.Widened;
-                    JitParamDesc pdStd  = new JitParamDesc(type, flavor, CD_xObj, i, false);
-                    listParamsStd.add(pdStd);
+                    JitFlavor flavor = fDflt ? WidenedWithDefault : Widened;
+                    listParamsStd.add(
+                        new JitParamDesc(type, flavor, CD_xObj, iOrig, iStd++, false));
 
                     if (fDflt) {
                         // TODO: we can further optimize to a three-slot (multi-primitive with default)
-                        listParamsOpt.add(pdStd);
+                        listParamsOpt.add(
+                            new JitParamDesc(type, flavor, CD_xObj, iOrig, iOpt++, false));
                     } else {
                         fOptimized = true;
                         listParamsOpt.add(
-                            new JitParamDesc(type, JitFlavor.MultiSlotPrimitive, cd, i, false));
+                            new JitParamDesc(type, MultiSlotPrimitive, cd, iOrig, iOpt++, false));
                         listParamsOpt.add(
-                            new JitParamDesc(type, JitFlavor.MultiSlotPrimitive, CD_boolean, i, true));
+                            new JitParamDesc(type, MultiSlotPrimitive, CD_boolean, iOrig, iOpt++, true));
                     }
                 } else if ((cd = JitTypeDesc.getWidenedClass(type)) != null) {
-                    JitFlavor    flavor = fDflt ? JitFlavor.WidenedWithDefault : JitFlavor.Widened;
-                    JitParamDesc pd     = new JitParamDesc(type, flavor, cd, i, false);
-
-                    listParamsStd.add(pd);
-                    listParamsOpt.add(pd);
+                    JitFlavor flavor = fDflt ? WidenedWithDefault : Widened;
+                    listParamsStd.add(new JitParamDesc(type, flavor, cd, iOrig, iStd++, false));
+                    listParamsOpt.add(new JitParamDesc(type, flavor, cd, iOrig, iOpt++, false));
                 } else {
                     assert type.isSingleUnderlyingClass(true);
 
                     cd = ClassDesc.of(ts.ensureJitClassName(type));
 
-                    JitFlavor    flavor = fDflt ? JitFlavor.SpecificWithDefault : JitFlavor.Specific;
-                    JitParamDesc pd     = new JitParamDesc(type, flavor, cd, i, false);
+                    JitFlavor flavor = fDflt ? SpecificWithDefault : Specific;
 
-                    listParamsStd.add(pd);
-                    listParamsOpt.add(pd);
+                    listParamsStd.add(new JitParamDesc(type, flavor, cd, iOrig, iStd++, false));
+                    listParamsOpt.add(new JitParamDesc(type, flavor, cd, iOrig, iOpt++, false));
                 }
             }
 
@@ -1232,45 +1233,46 @@ public class MethodInfo
             listParamsStd.clear();
             listParamsOpt.clear();
 
-            int ixLong = -1; // an index of the long return value in the Ctx
-            int ixObj  = -1; // an index of the Object return value in the Ctx
-            for (int i = 0, c = method.getReturnCount(); i < c; i++) {
-                TypeConstant type = signature.getRawReturns()[i];
+            int ixLong   = -1; // an index of the long return value in the Ctx (only in optimized)
+            int ixOptObj = -1; // an index of the Object return value in the Ctx for optimized
+            int ixStdObj = -1; // an index of the Object return value in the Ctx for standard
+            for (int iOrig = 0, c = method.getReturnCount(); iOrig < c; iOrig++) {
+                TypeConstant type = signature.getRawReturns()[iOrig];
                 ClassDesc    cd;
 
-                if (i == 1) {
+                if (iOrig == 1) {
                     // prime the indexes for all returns beyond the first one
-                    ixLong = 0;
-                    ixObj  = 0;
-            }
+                    ixLong   = 0;
+                    ixOptObj = 0;
+                    ixStdObj = 0;
+                }
 
                 if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
                     ClassDesc cdStd = ClassDesc.of(ts.ensureJitClassName(type));
 
-                    listParamsStd.add(new JitParamDesc(type, JitFlavor.Specific, cdStd, ixObj++, false));
-                    listParamsOpt.add(new JitParamDesc(type, JitFlavor.Primitive, cd, ixLong++, false));
+                    listParamsStd.add(new JitParamDesc(type, Specific, cdStd, iOrig, ixStdObj++, false));
+                    listParamsOpt.add(new JitParamDesc(type, Primitive, cd, iOrig, ixLong++, false));
                     fOptimized = true;
                 } else if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null) {
                     TypeConstant typePrimitive = type.removeNullable();
-                    listParamsStd.add(new JitParamDesc(type, JitFlavor.Widened, CD_xObj, ixObj++, false));
-                    listParamsOpt.add(new JitParamDesc(typePrimitive, JitFlavor.MultiSlotPrimitive, cd, ixLong++, false));
-                    listParamsOpt.add(new JitParamDesc(pool().typeBoolean(), JitFlavor.MultiSlotPrimitive,
-                                                        CD_boolean, ixLong++, true));
+                    TypeConstant typeBoolean   = pool().typeBoolean();
+                    listParamsStd.add(new JitParamDesc(type,
+                            Widened, CD_xObj, iOrig, ixStdObj++, false));
+                    listParamsOpt.add(new JitParamDesc(typePrimitive,
+                            MultiSlotPrimitive, cd, iOrig, ixLong++, false));
+                    listParamsOpt.add(new JitParamDesc(typeBoolean,
+                            MultiSlotPrimitive, CD_boolean, iOrig, ixLong++, true));
                     fOptimized = true;
                 } else if ((cd = JitTypeDesc.getWidenedClass(type)) != null) {
-                    JitParamDesc pd = new JitParamDesc(type, JitFlavor.Widened, cd, ixObj++, false);
-
-                    listParamsStd.add(pd);
-                    listParamsOpt.add(pd);
+                    listParamsStd.add(new JitParamDesc(type, Widened, cd, iOrig, ixStdObj++, false));
+                    listParamsOpt.add(new JitParamDesc(type, Widened, cd, iOrig, ixOptObj++, false));
                 } else {
                     assert type.isSingleUnderlyingClass(true);
 
                     cd = ClassDesc.of(ts.ensureJitClassName(type));
 
-                    JitParamDesc pd = new JitParamDesc(type, JitFlavor.Specific, cd, ixObj++, false);
-
-                    listParamsStd.add(pd);
-                    listParamsOpt.add(pd);
+                    listParamsStd.add(new JitParamDesc(type, Specific, cd, iOrig, ixStdObj++, false));
+                    listParamsOpt.add(new JitParamDesc(type, Specific, cd, iOrig, ixOptObj++, false));
                 }
             }
 
@@ -1282,7 +1284,7 @@ public class MethodInfo
             m_jmd = jmd = new JitMethodDesc(
                     apdStandardReturn, apdStandardParam,
                     apdOptimizedReturn, apdOptimizedParam);
-        }
+            }
         return jmd;
     }
 

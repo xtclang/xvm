@@ -222,7 +222,7 @@ public class ModuleConstant
 
     @Override
     public String getJitName(TypeSystem ts) {
-        return "";
+        return "$module";
     }
 
     @Override

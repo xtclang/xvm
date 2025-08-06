@@ -30,7 +30,6 @@ import org.xvm.javajit.TypeSystem;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_long;
 
-
 /**
  * Generic Java class builder.
  */
@@ -301,11 +300,11 @@ public class CommonBuilder
                 }
                 ClassDesc    thatCD       = thatDesc.cd;
                 TypeConstant thatType     = thatDesc.type;
-                int          thatReturnIx = thatDesc.index;
+                int          thatReturnIx = thatDesc.optIndex;
 
                 JitParamDesc thisDesc     = standardReturns[thisIx--];
                 ClassDesc    thisCD       = thisDesc.cd;
-                int          thisReturnIx = thisDesc.index;
+                int          thisReturnIx = thisDesc.optIndex;
 
                 switch (thatDesc.flavor) {
                     case Specific, Widened:
@@ -419,27 +418,22 @@ public class CommonBuilder
         MethodStructure methodStruct = method.getTopmostMethodStructure(typeInfo);
         assert methodStruct != null;
 
-        Label startScope = code.newLabel();
-        Label endScope   = code.newLabel();
-        code
-            .labelBinding(startScope)
-            .localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, startScope, endScope)
-            ;
+        BuildContext bctx = new BuildContext(typeSystem, typeInfo, method);
 
-        if (className.contains("test0") && method.getSignature().getName().equals("run")) {
-            BuildContext bctx = new BuildContext(typeSystem, method);
-
+        if (className.contains("test0")) {
             bctx.enterMethod(code);
-            for (Op op : methodStruct.getOps()){
+            Op[] ops = methodStruct.getOps();
+            for (Op op : ops){
                 op.build(bctx, code);
             }
         } else {
+            bctx.enterMethod(code);
             code.lineNumber(methodStruct.getSourceLineNumber());
 
             defaultLoad(code, md.returnType());
             defaultReturn(code, md.returnType());
         }
-        code.labelBinding(endScope);
+        bctx.exitMethod(code);
     }
 
     /**

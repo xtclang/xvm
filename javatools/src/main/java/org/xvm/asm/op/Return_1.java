@@ -1,13 +1,18 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
+import java.lang.constant.ClassDesc;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpReturn;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -15,7 +20,6 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * RETURN_1 rvalue
@@ -106,6 +110,36 @@ public class Return_1
         private final ObjectHandle m_hValue;
         private final boolean      m_fDynamic;
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        BuildContext.Slot slot = bctx.loadArgument(code, m_nArg);
+        ClassDesc         cd   = slot.cd();
+        if (cd.isPrimitive()) {
+            switch (cd.descriptorString()) {
+                case "I", "S", "B", "C", "Z":
+                    code.ireturn();
+                    break;
+                case "J":
+                    code.lreturn();
+                    break;
+                case "F":
+                    code.freturn();
+                    break;
+                case "D":
+                    code.dreturn();
+                    break;
+                default:
+                    throw new IllegalStateException();
+            }
+        } else {
+            code.areturn();
+        }
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int      m_nArg;
     private Argument m_arg;
