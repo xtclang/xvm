@@ -498,7 +498,7 @@ jobs:
         run: |
           set -euo pipefail
           
-          # Setup Docker tags using shared logic
+          # Setup Docker tags using shared logic (runs from root, so VERSION not ../VERSION)
           ${{ env.DOCKER_TAG_LOGIC }}
           setup_docker_tags "" "VERSION"
           
@@ -523,7 +523,7 @@ jobs:
           
           echo "Creating multi-platform manifests from pre-built images..."
           
-          # Setup Docker tags using shared logic
+          # Setup Docker tags using shared logic (runs from root, so VERSION not ../VERSION)
           ${{ env.DOCKER_TAG_LOGIC }}
           setup_docker_tags "" "VERSION"
           
