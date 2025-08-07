@@ -36,8 +36,15 @@ fi
 if [[ -e "${DIR}/cfg_macos.sh" ]]; then
   # copy launcher to various command names
   echo "Creating command line tools: \"xcc\", \"xec\""
-  cp "${DIR}/linux_launcher" "${DIR}/xcc"
-  cp "${DIR}/linux_launcher" "${DIR}/xec"
+  # Find the architecture-specific launcher
+  ARCH=$(uname -m)
+  LAUNCHER="${DIR}/linux_launcher_${ARCH}"
+  if [[ ! -e "${LAUNCHER}" ]]; then
+    # Fallback to generic launcher for backward compatibility
+    LAUNCHER="${DIR}/linux_launcher"
+  fi
+  cp "${LAUNCHER}" "${DIR}/xcc"
+  cp "${LAUNCHER}" "${DIR}/xec"
 
   if [[ "${EXP}" == "Y" ]]; then
     if [[ -n "${ADD}" ]]; then

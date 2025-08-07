@@ -174,10 +174,11 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
 
     @Suppress("MemberVisibilityCanBePrivate")
     fun launcherFileName(): String {
+        val arch = System.getProperty("os.arch")
         return if (currentOs.isMacOsX) {
             "macos_launcher"
         } else if (currentOs.isLinux) {
-            "linux_launcher"
+            "linux_launcher_$arch"
         } else if (currentOs.isWindows) {
             "windows_launcher.exe"
         } else {
