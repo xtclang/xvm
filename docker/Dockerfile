@@ -13,6 +13,7 @@ ARG TARGETOS
 ARG BUILD_DATE
 ARG VCS_REF
 ARG NPROC=4
+ARG USE_PREBUILT_ARTIFACTS=false
 
 # *** STAGE 1 (Independent caching for C source files from the rest of the build)
 #
@@ -60,10 +61,10 @@ ARG GH_COMMIT
 WORKDIR /source
 COPY scripts/clone-xdk.sh /clone-xdk.sh
 RUN --mount=type=cache,target=/git-cache,sharing=shared \
-    apk add --no-cache bash && \
+    apk add --no-cache bash curl && \
     /clone-xdk.sh "${GH_BRANCH}" "${GH_COMMIT}"
 
-# *** STAGE 4 (Builder stage, create an XDK distribution from the cloned source)
+# *** STAGE 4 (Dual-Mode Builder: Use pre-built artifacts from CI or build from source)
 FROM bellsoft/liberica-openjdk-alpine:${JAVA_VERSION} AS builder
 ARG GH_BRANCH
 ARG GH_COMMIT
@@ -72,28 +73,29 @@ ARG TARGETOS
 ARG BUILD_DATE
 ARG VCS_REF
 ARG NPROC
+ARG USE_PREBUILT_ARTIFACTS
 
 ENV JAVA_OPTS="-XX:+UseContainerSupport" \
     GRADLE_USER_HOME="/root/.gradle" \
     GRADLE_OPTS="-Dorg.gradle.daemon=false" \
-    NPROC=${NPROC}
+    NPROC=${NPROC} \
+    XDK_INSTALL_DIR="/workspace/xdk/build/install"
 
-
-RUN apk add --no-cache unzip curl git bash
+RUN apk add --no-cache unzip curl git bash file
 WORKDIR /workspace
 
-# Copy source from source-cloner stage
-# Copy the compiled launcher from launcher-builder stage  
-# Copy the build script from docker/scripts directory
+# Copy source and launcher for source build mode (unconditional COPY)
 COPY --from=source-cloner /source .
 COPY --from=launcher-builder /launcher-output/ javatools_launcher/src/main/resources/exe/
+# Copy pre-built artifacts if available (will be empty dir for local builds)
+COPY artifacts /artifacts
 COPY scripts/build-xdk.sh /build-xdk.sh
 
-# Build XDK using BuildKit cache mounts
+# Build XDK - handles both pre-built artifacts and source build modes
 RUN --mount=type=cache,target=/root/.gradle/caches,sharing=locked \
     --mount=type=cache,target=/root/.gradle/wrapper,sharing=locked \
     --mount=type=cache,target=/root/.gradle/build-cache,sharing=locked \
-    chmod +x ./gradlew && \
+    chmod +x /build-xdk.sh && \
     /build-xdk.sh
 
 # *** STAGE 5 (Export stage to copy launcher to host filesystem)

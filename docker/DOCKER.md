@@ -76,23 +76,34 @@ docker buildx build --platform linux/arm64 --tag test-xvm:latest .
 ### Master Branch Images
 All builds from the master branch create these tags:
 - `ghcr.io/xtclang/xvm:latest-amd64` - Latest AMD64 build
-- `ghcr.io/xtclang/xvm:latest-arm64` - Latest ARM64 build
+- `ghcr.io/xtclang/xvm:latest-arm64` - Latest ARM64 build  
 - `ghcr.io/xtclang/xvm:VERSION-amd64` - Versioned AMD64 build
 - `ghcr.io/xtclang/xvm:VERSION-arm64` - Versioned ARM64 build
+- `ghcr.io/xtclang/xvm:COMMIT_SHA-amd64` - Commit-specific AMD64 build
+- `ghcr.io/xtclang/xvm:COMMIT_SHA-arm64` - Commit-specific ARM64 build
 
-Generic tags (when using multi-platform builds):
+Multi-platform manifests:
 - `ghcr.io/xtclang/xvm:latest` - Multi-platform manifest
 - `ghcr.io/xtclang/xvm:VERSION` - Versioned multi-platform manifest
+- `ghcr.io/xtclang/xvm:COMMIT_SHA` - Commit-specific multi-platform manifest
 
-### Branch-Specific Images
-Non-master branches create separate image repositories with branch suffix:
-- `ghcr.io/xtclang/xvm-BRANCH:latest` - Latest build from specific branch
-- `ghcr.io/xtclang/xvm-BRANCH:latest-amd64` - Branch-specific AMD64 build
-- `ghcr.io/xtclang/xvm-BRANCH:latest-arm64` - Branch-specific ARM64 build
+### Branch-Specific Images  
+**Single Package Model**: All branches use the same package with branch-based tags.
 
-Example for `feature-branch`:
-- `ghcr.io/xtclang/xvm-feature-branch:latest`
-- `ghcr.io/xtclang/xvm-feature-branch:latest-amd64`
+Non-master branches create these tags:
+- `ghcr.io/xtclang/xvm:BRANCH_NAME-amd64` - Branch-specific AMD64 build
+- `ghcr.io/xtclang/xvm:BRANCH_NAME-arm64` - Branch-specific ARM64 build
+- `ghcr.io/xtclang/xvm:COMMIT_SHA-amd64` - Commit-specific AMD64 build  
+- `ghcr.io/xtclang/xvm:COMMIT_SHA-arm64` - Commit-specific ARM64 build
+
+Multi-platform manifests:
+- `ghcr.io/xtclang/xvm:BRANCH_NAME` - Branch multi-platform manifest
+- `ghcr.io/xtclang/xvm:COMMIT_SHA` - Commit multi-platform manifest
+
+Example for `lagergren/gradle-lifecycle-fixes`:
+- `ghcr.io/xtclang/xvm:gradle-lifecycle-fixes-amd64`
+- `ghcr.io/xtclang/xvm:gradle-lifecycle-fixes-arm64`  
+- `ghcr.io/xtclang/xvm:gradle-lifecycle-fixes`
 
 ## Build Configuration
 

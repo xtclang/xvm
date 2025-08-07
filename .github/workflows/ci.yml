@@ -247,7 +247,7 @@ jobs:
           MANUAL_TASK=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runSequential" )
           ./gradlew ${{ env.gradle_options }} manualTests:$MANUAL_TASK
 
-      - name: Upload build artifacts
+      - name: Upload build artifacts including native launchers
         if: ${{ success() && matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-artifact@v4
         with:
@@ -255,6 +255,7 @@ jobs:
           path: |
             xdk/build/distributions/
             xdk/build/install/
+            javatools_launcher/src/main/resources/exe/
           retention-days: 1
 
   publish-snapshot:
@@ -374,6 +375,7 @@ jobs:
     name: Build and push Docker images
     needs: compute-docker-tags
     runs-on: ${{ matrix.runner }}
+    if: ${{ success() }}
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
     strategy:
@@ -416,16 +418,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image (${{ matrix.arch }})
+      - name: Download build artifacts from build-verify
+        uses: actions/download-artifact@v4
+        with:
+          name: xdk-distribution
+          path: docker/artifacts/
+
+      - name: Build and push Docker image with pre-built artifacts (${{ matrix.arch }})
         id: build
         shell: bash
         working-directory: docker
         run: |
           set -euo pipefail
           
-          echo "Building and pushing ${{ matrix.arch }} Docker image on native hardware..."
+          echo "Building and pushing ${{ matrix.arch }} Docker image with pre-built artifacts..."
           
-          # Use computed metadata from previous job
+          # Use computed metadata from previous job (single source of truth)
           VERSION="${{ needs.compute-docker-tags.outputs.version }}"
           BRANCH_TAG="${{ needs.compute-docker-tags.outputs.branch-tag }}"
           BASE_TAGS='${{ needs.compute-docker-tags.outputs.tags-json }}'
@@ -440,14 +448,27 @@ jobs:
           echo "🏷️ Architecture-specific tags for ${{ matrix.arch }}:"
           echo "$TAGS" | while read tag; do echo "  $tag"; done
           
-          # Cache inspection
-          ${{ env.GRADLE_CACHE_INSPECT }}
-          inspect_gradle_cache "host cache before Docker build"
+          # Validate artifacts exist and show structure
+          echo "📋 Pre-built artifacts validation:"
+          if [ ! -d "artifacts" ]; then
+            echo "❌ No artifacts directory found!"
+            exit 1
+          fi
+          echo "  Artifacts size: $(du -sh artifacts | cut -f1)"
+          echo "  Artifacts structure:"
+          find artifacts -type f | head -10
           
-          # Build and push with architecture-specific cache
+          # Platform safety check
+          echo "🔍 Platform safety validation:"
+          echo "  Target platform: ${{ matrix.platform }}"
+          echo "  Target arch: ${{ matrix.arch }}"
+          echo "  Runner arch: $(uname -m)"
+          
+          # Build with pre-built artifacts (fast path - no Gradle execution in container)
           docker buildx build \
             --platform ${{ matrix.platform }} \
             $TAG_ARGS \
+            --build-arg USE_PREBUILT_ARTIFACTS=true \
             --build-arg GH_BRANCH=${{ env.GH_BRANCH }} \
             --build-arg GH_COMMIT=${{ env.GH_COMMIT }} \
             --label org.opencontainers.image.created=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
