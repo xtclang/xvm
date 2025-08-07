@@ -71,69 +71,12 @@ env:
   java_distribution: temurin
   gradle_version: 8.14.2
 
-  # Docker build variables (DRY approach)
+  # Docker build variables - computed once, used everywhere
   GH_COMMIT: ${{ github.sha }}
   GH_BRANCH: ${{ github.ref_name }}
   DOCKER_BASE_IMAGE: ghcr.io/xtclang/xvm
-  
-  # Centralized Docker tag computation (DRY)
-  COMPUTE_DOCKER_TAGS: |
-    compute_docker_tags() {
-      local arch_suffix="${1:-}"
-      local version_file="${2:-VERSION}"  # Default to root VERSION
-      
-      # Sanitize branch name for Docker tags
-      BRANCH_TAG=$(echo "${GH_BRANCH}" | sed 's|.*/||' | sed 's/[^a-zA-Z0-9._-]/_/g')
-      
-      # Read version once
-      if [ -f "$version_file" ]; then
-        VERSION=$(cat "$version_file" | tr -d '\n\r ')
-      else
-        echo "❌ VERSION file not found: $version_file" >&2
-        exit 1
-      fi
-      
-      # Generate tags based on branch and architecture
-      if [ "${GH_BRANCH}" = "master" ]; then
-        BASE_TAGS=("latest" "${VERSION}" "${GITHUB_SHA}")
-      else
-        BASE_TAGS=("${BRANCH_TAG}" "${GITHUB_SHA}")
-      fi
-      
-      # Apply architecture suffix if specified
-      TAGS=()
-      TAG_ARGS=""
-      for base_tag in "${BASE_TAGS[@]}"; do
-        if [ -n "$arch_suffix" ]; then
-          tag="${DOCKER_BASE_IMAGE}:${base_tag}-${arch_suffix}"
-        else
-          tag="${DOCKER_BASE_IMAGE}:${base_tag}"
-        fi
-        TAGS+=("$tag")
-        TAG_ARGS="${TAG_ARGS} --tag ${tag}"
-      done
-      
-      echo "🏷️ Tags for ${arch_suffix:-multi-platform}: ${TAGS[*]}"
-    }
-    
-    # Prepare Docker build environment with tags and metadata
-    prepare_docker_build() {
-      local arch_suffix="$1"
-      local version_file="${2:-../VERSION}"
-      
-      # Compute tags
-      compute_docker_tags "$arch_suffix" "$version_file"
-      
-      # Standard build metadata (not cache-busting build args)
-      BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-      
-      echo "🔧 Docker build prepared:"
-      echo "  Architecture: ${arch_suffix:-multi-platform}"
-      echo "  Build date: $BUILD_DATE"
-      echo "  Tags: ${TAGS[*]}"
-    }
 
-  # Gradle cache inspection function (DRY approach)
+  # Gradle cache inspection function
   GRADLE_CACHE_INSPECT: |
     inspect_gradle_cache() {
       local label="${1:-}"
@@ -380,11 +323,59 @@ jobs:
           ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true
           ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true
 
+  compute-docker-tags:
+    name: Compute Docker tags and metadata
+    needs: build-verify
+    runs-on: ubuntu-latest
+    if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
+    outputs:
+      version: ${{ steps.compute.outputs.version }}
+      branch-tag: ${{ steps.compute.outputs.branch-tag }}
+      tags-json: ${{ steps.compute.outputs.tags-json }}
+      is-master: ${{ steps.compute.outputs.is-master }}
+    steps:
+      - name: Fetch Sources
+        uses: actions/checkout@v4
+
+      - name: Compute tags and metadata
+        id: compute
+        shell: bash
+        run: |
+          set -euo pipefail
+          
+          # Read version
+          VERSION=$(cat VERSION | tr -d '\n\r ')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Sanitize branch name for Docker tags
+          BRANCH_TAG=$(echo "${{ env.GH_BRANCH }}" | sed 's|.*/||' | sed 's/[^a-zA-Z0-9._-]/_/g')
+          echo "branch-tag=$BRANCH_TAG" >> $GITHUB_OUTPUT
+          
+          # Determine if master branch
+          IS_MASTER=${{ github.ref == 'refs/heads/master' }}
+          echo "is-master=$IS_MASTER" >> $GITHUB_OUTPUT
+          
+          # Generate base tags
+          if [ "$IS_MASTER" = "true" ]; then
+            BASE_TAGS='["latest", "'$VERSION'", "'${{ env.GH_COMMIT }}'"]'
+          else
+            BASE_TAGS='["'$BRANCH_TAG'", "'${{ env.GH_COMMIT }}'"]'
+          fi
+          
+          echo "tags-json=$BASE_TAGS" >> $GITHUB_OUTPUT
+          
+          echo "🏷️ Computed Docker metadata:"
+          echo "  Version: $VERSION"
+          echo "  Branch tag: $BRANCH_TAG"
+          echo "  Is master: $IS_MASTER"
+          echo "  Base tags: $BASE_TAGS"
+
   docker-build:
     name: Build and push Docker images
-    needs: build-verify
+    needs: compute-docker-tags
     runs-on: ${{ matrix.runner }}
-    if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
     strategy:
       matrix:
         include:
@@ -426,6 +417,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image (${{ matrix.arch }})
+        id: build
         shell: bash
         working-directory: docker
         run: |
@@ -433,9 +425,20 @@ jobs:
           
           echo "Building and pushing ${{ matrix.arch }} Docker image on native hardware..."
           
-          # Prepare Docker build environment
-          ${{ env.COMPUTE_DOCKER_TAGS }}
-          prepare_docker_build "${{ matrix.arch }}" "../VERSION"
+          # Use computed metadata from previous job
+          VERSION="${{ needs.compute-docker-tags.outputs.version }}"
+          BRANCH_TAG="${{ needs.compute-docker-tags.outputs.branch-tag }}"
+          BASE_TAGS='${{ needs.compute-docker-tags.outputs.tags-json }}'
+          
+          # Generate architecture-specific tags
+          TAGS=$(echo "$BASE_TAGS" | jq -r --arg base "${{ env.DOCKER_BASE_IMAGE }}" --arg arch "${{ matrix.arch }}" '.[] | $base + ":" + . + "-" + $arch')
+          TAG_ARGS=""
+          for tag in $TAGS; do
+            TAG_ARGS="$TAG_ARGS --tag $tag"
+          done
+          
+          echo "🏷️ Architecture-specific tags for ${{ matrix.arch }}:"
+          echo "$TAGS" | while read tag; do echo "  $tag"; done
           
           # Cache inspection
           ${{ env.GRADLE_CACHE_INSPECT }}
@@ -444,13 +447,13 @@ jobs:
           # Build and push with architecture-specific cache
           docker buildx build \
             --platform ${{ matrix.platform }} \
-            ${TAG_ARGS} \
-            --build-arg GH_BRANCH=${GH_BRANCH} \
-            --build-arg GH_COMMIT=${GITHUB_SHA} \
-            --label org.opencontainers.image.created=${BUILD_DATE} \
-            --label org.opencontainers.image.revision=${GITHUB_SHA} \
-            --label org.opencontainers.image.version=${VERSION} \
-            --label org.opencontainers.image.source=https://github.com/xtclang/xvm/tree/${GH_BRANCH} \
+            $TAG_ARGS \
+            --build-arg GH_BRANCH=${{ env.GH_BRANCH }} \
+            --build-arg GH_COMMIT=${{ env.GH_COMMIT }} \
+            --label org.opencontainers.image.created=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+            --label org.opencontainers.image.revision=${{ env.GH_COMMIT }} \
+            --label org.opencontainers.image.version="$VERSION" \
+            --label org.opencontainers.image.source=https://github.com/xtclang/xvm/tree/${{ env.GH_BRANCH }} \
             --cache-from type=gha,scope=${{ matrix.arch }} \
             --cache-to type=gha,mode=max,scope=${{ matrix.arch }} \
             --provenance=false \
@@ -462,12 +465,14 @@ jobs:
         run: |
           set -euo pipefail
           
-          # Compute Docker tags using centralized logic
-          ${{ env.COMPUTE_DOCKER_TAGS }}
-          compute_docker_tags "${{ matrix.arch }}" "../VERSION"
+          # Use computed metadata from previous job
+          BASE_TAGS='${{ needs.compute-docker-tags.outputs.tags-json }}'
+          
+          # Generate architecture-specific tags
+          TAGS=$(echo "$BASE_TAGS" | jq -r --arg base "${{ env.DOCKER_BASE_IMAGE }}" --arg arch "${{ matrix.arch }}" '.[] | $base + ":" + . + "-" + $arch')
           
           echo "Verifying ${{ matrix.arch }} images exist in registry..."
-          for tag in "${TAGS[@]}"; do
+          echo "$TAGS" | while read tag; do
             echo "Checking: $tag"
             if ! docker manifest inspect "$tag" > /dev/null 2>&1; then
               echo "❌ ERROR: Image $tag not found in registry!"
@@ -479,7 +484,7 @@ jobs:
 
   docker-manifest:
     name: Create multi-platform manifest
-    needs: docker-build
+    needs: [compute-docker-tags, docker-build]
     runs-on: ubuntu-latest
     if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
     steps:
@@ -498,14 +503,13 @@ jobs:
         run: |
           set -euo pipefail
           
-          # Compute Docker tags using centralized logic
-          ${{ env.COMPUTE_DOCKER_TAGS }}
-          compute_docker_tags "" "VERSION"
+          # Use computed metadata from compute-docker-tags job
+          BASE_TAGS='${{ needs.compute-docker-tags.outputs.tags-json }}'
           
           echo "Verifying all architecture-specific images exist before creating manifests..."
-          for tag in "${TAGS[@]}"; do
+          echo "$BASE_TAGS" | jq -r '.[]' | while read base_tag; do
             for arch in amd64 arm64; do
-              arch_tag="$tag-$arch"
+              arch_tag="${{ env.DOCKER_BASE_IMAGE }}:$base_tag-$arch"
               echo "Checking: $arch_tag"
               if ! docker manifest inspect "$arch_tag" > /dev/null 2>&1; then
                 echo "❌ ERROR: Image $arch_tag not found in registry!"
@@ -523,23 +527,23 @@ jobs:
           
           echo "Creating multi-platform manifests from pre-built images..."
           
-          # Compute Docker tags using centralized logic
-          ${{ env.COMPUTE_DOCKER_TAGS }}
-          compute_docker_tags "" "VERSION"
+          # Use computed metadata from compute-docker-tags job
+          BASE_TAGS='${{ needs.compute-docker-tags.outputs.tags-json }}'
           
           # Create and push manifest for each tag
-          for tag in "${TAGS[@]}"; do
-            echo "Creating manifest for: $tag"
+          echo "$BASE_TAGS" | jq -r '.[]' | while read base_tag; do
+            manifest_tag="${{ env.DOCKER_BASE_IMAGE }}:$base_tag"
+            echo "Creating manifest for: $manifest_tag"
             
             # Create manifest from architecture-specific images
-            docker manifest create $tag \
-              $tag-amd64 \
-              $tag-arm64
+            docker manifest create $manifest_tag \
+              $manifest_tag-amd64 \
+              $manifest_tag-arm64
             
             # Push the manifest
-            docker manifest push $tag
+            docker manifest push $manifest_tag
             
-            echo "✅ Created and pushed manifest: $tag"
+            echo "✅ Created and pushed manifest: $manifest_tag"
           done
           
           echo "🎉 All multi-platform manifests created successfully!"
