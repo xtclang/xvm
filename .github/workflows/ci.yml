@@ -571,7 +571,7 @@ jobs:
 
   docker-test:
     name: Test Docker image functionality
-    needs: docker-manifest
+    needs: [compute-docker-tags, docker-manifest]
     runs-on: ubuntu-latest
     if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
     steps:
@@ -587,7 +587,14 @@ jobs:
         run: |
           echo "Testing Docker image functionality with EchoTest..."
           
-          IMAGE="${{ env.DOCKER_BASE_IMAGE }}:latest"
+          # Use appropriate tag based on branch
+          if [ "${{ needs.compute-docker-tags.outputs.is-master }}" = "true" ]; then
+            IMAGE="${{ env.DOCKER_BASE_IMAGE }}:latest"
+          else
+            IMAGE="${{ env.DOCKER_BASE_IMAGE }}:${{ needs.compute-docker-tags.outputs.branch-tag }}"
+          fi
+          
+          echo "Using Docker image: $IMAGE"
           
           # Test functions with early exits
           test_no_args() {
