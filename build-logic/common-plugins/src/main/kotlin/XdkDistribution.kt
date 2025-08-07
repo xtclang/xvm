@@ -178,7 +178,13 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         return if (currentOs.isMacOsX) {
             "macos_launcher"
         } else if (currentOs.isLinux) {
-            "linux_launcher_$arch"
+            // Map Java arch names to binary file names
+            val mappedArch = when (arch) {
+                "amd64", "x86_64" -> "x86_64"
+                "aarch64", "arm64" -> "aarch64"
+                else -> arch
+            }
+            "linux_launcher_$mappedArch"
         } else if (currentOs.isWindows) {
             "windows_launcher.exe"
         } else {
