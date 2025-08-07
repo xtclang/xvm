@@ -76,58 +76,61 @@ env:
   GH_BRANCH: ${{ github.ref_name }}
   DOCKER_BASE_IMAGE: ghcr.io/xtclang/xvm
   
-  # Docker tagging logic (DRY approach)
-  DOCKER_TAG_LOGIC: |
-    setup_docker_tags() {
+  # Centralized Docker tag computation (DRY)
+  COMPUTE_DOCKER_TAGS: |
+    compute_docker_tags() {
       local arch_suffix="${1:-}"
-      local version_file="${2:-../VERSION}"
+      local version_file="${2:-VERSION}"  # Default to root VERSION
       
-      # Extract branch tag (everything after last slash, sanitized for Docker)
+      # Sanitize branch name for Docker tags
       BRANCH_TAG=$(echo "${GH_BRANCH}" | sed 's|.*/||' | sed 's/[^a-zA-Z0-9._-]/_/g')
-      echo "Using branch tag: ${BRANCH_TAG} (from: ${GH_BRANCH})"
       
-      # Get version
-      VERSION=$(cat "$version_file" | tr -d '\n\r ')
-      
-      # Master branch gets latest, version, commit
-      if [ "${GH_BRANCH}" = "master" ]; then
-        if [ -n "$arch_suffix" ]; then
-          TAGS=(
-            "${DOCKER_BASE_IMAGE}:latest-$arch_suffix"
-            "${DOCKER_BASE_IMAGE}:${VERSION}-$arch_suffix"
-            "${DOCKER_BASE_IMAGE}:${GITHUB_SHA}-$arch_suffix"
-          )
-        else
-          TAGS=(
-            "${DOCKER_BASE_IMAGE}:latest"
-            "${DOCKER_BASE_IMAGE}:${VERSION}"
-            "${DOCKER_BASE_IMAGE}:${GITHUB_SHA}"
-          )
-        fi
-        TAG_ARGS=""
-        for tag in "${TAGS[@]}"; do
-          TAG_ARGS="${TAG_ARGS} --tag ${tag}"
-        done
-        return
-      fi
-      
-      # Branch builds get branch tag and commit only
-      if [ -n "$arch_suffix" ]; then
-        TAGS=(
-          "${DOCKER_BASE_IMAGE}:${BRANCH_TAG}-$arch_suffix"
-          "${DOCKER_BASE_IMAGE}:${GITHUB_SHA}-$arch_suffix"
-        )
+      # Read version once
+      if [ -f "$version_file" ]; then
+        VERSION=$(cat "$version_file" | tr -d '\n\r ')
       else
-        TAGS=(
-          "${DOCKER_BASE_IMAGE}:${BRANCH_TAG}"
-          "${DOCKER_BASE_IMAGE}:${GITHUB_SHA}"
-        )
+        echo "❌ VERSION file not found: $version_file" >&2
+        exit 1
       fi
       
+      # Generate tags based on branch and architecture
+      if [ "${GH_BRANCH}" = "master" ]; then
+        BASE_TAGS=("latest" "${VERSION}" "${GITHUB_SHA}")
+      else
+        BASE_TAGS=("${BRANCH_TAG}" "${GITHUB_SHA}")
+      fi
+      
+      # Apply architecture suffix if specified
+      TAGS=()
       TAG_ARGS=""
-      for tag in "${TAGS[@]}"; do
+      for base_tag in "${BASE_TAGS[@]}"; do
+        if [ -n "$arch_suffix" ]; then
+          tag="${DOCKER_BASE_IMAGE}:${base_tag}-${arch_suffix}"
+        else
+          tag="${DOCKER_BASE_IMAGE}:${base_tag}"
+        fi
+        TAGS+=("$tag")
         TAG_ARGS="${TAG_ARGS} --tag ${tag}"
       done
+      
+      echo "🏷️ Tags for ${arch_suffix:-multi-platform}: ${TAGS[*]}"
+    }
+    
+    # Prepare Docker build environment with tags and metadata
+    prepare_docker_build() {
+      local arch_suffix="$1"
+      local version_file="${2:-../VERSION}"
+      
+      # Compute tags
+      compute_docker_tags "$arch_suffix" "$version_file"
+      
+      # Standard build metadata (not cache-busting build args)
+      BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+      
+      echo "🔧 Docker build prepared:"
+      echo "  Architecture: ${arch_suffix:-multi-platform}"
+      echo "  Build date: $BUILD_DATE"
+      echo "  Tags: ${TAGS[*]}"
     }
 
   # Gradle cache inspection function (DRY approach)
@@ -430,12 +433,9 @@ jobs:
           
           echo "Building and pushing ${{ matrix.arch }} Docker image on native hardware..."
           
-          # Setup variables
-          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          
-          # Setup Docker tags using shared logic
-          ${{ env.DOCKER_TAG_LOGIC }}
-          setup_docker_tags "${{ matrix.arch }}"
+          # Prepare Docker build environment
+          ${{ env.COMPUTE_DOCKER_TAGS }}
+          prepare_docker_build "${{ matrix.arch }}" "../VERSION"
           
           # Cache inspection
           ${{ env.GRADLE_CACHE_INSPECT }}
@@ -462,9 +462,9 @@ jobs:
         run: |
           set -euo pipefail
           
-          # Setup Docker tags using shared logic
-          ${{ env.DOCKER_TAG_LOGIC }}
-          setup_docker_tags "${{ matrix.arch }}"
+          # Compute Docker tags using centralized logic
+          ${{ env.COMPUTE_DOCKER_TAGS }}
+          compute_docker_tags "${{ matrix.arch }}" "../VERSION"
           
           echo "Verifying ${{ matrix.arch }} images exist in registry..."
           for tag in "${TAGS[@]}"; do
@@ -498,9 +498,9 @@ jobs:
         run: |
           set -euo pipefail
           
-          # Setup Docker tags using shared logic (runs from root, so VERSION not ../VERSION)
-          ${{ env.DOCKER_TAG_LOGIC }}
-          setup_docker_tags "" "VERSION"
+          # Compute Docker tags using centralized logic
+          ${{ env.COMPUTE_DOCKER_TAGS }}
+          compute_docker_tags "" "VERSION"
           
           echo "Verifying all architecture-specific images exist before creating manifests..."
           for tag in "${TAGS[@]}"; do
@@ -523,9 +523,9 @@ jobs:
           
           echo "Creating multi-platform manifests from pre-built images..."
           
-          # Setup Docker tags using shared logic (runs from root, so VERSION not ../VERSION)
-          ${{ env.DOCKER_TAG_LOGIC }}
-          setup_docker_tags "" "VERSION"
+          # Compute Docker tags using centralized logic
+          ${{ env.COMPUTE_DOCKER_TAGS }}
+          compute_docker_tags "" "VERSION"
           
           # Create and push manifest for each tag
           for tag in "${TAGS[@]}"; do
