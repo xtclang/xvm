@@ -145,9 +145,10 @@ echo "📍 Extracting distribution: $DIST_ZIP"
 unzip -q "$DIST_ZIP"
 
 # Find any extracted directory and strip the outer directory layer
-XDK_EXTRACTED=$(find . -maxdepth 1 -name "xdk-*" -type d | head -1)
+XDK_EXTRACTED=$(find . -maxdepth 1 -name "xdk*" -type d | head -1)
 if [ -z "$XDK_EXTRACTED" ]; then
     echo "❌ No extracted XDK directory found"
+    ls -la . | head -10
     exit 1
 fi
 
