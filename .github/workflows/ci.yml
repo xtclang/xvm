@@ -247,15 +247,12 @@ jobs:
           MANUAL_TASK=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runSequential" )
           ./gradlew ${{ env.gradle_options }} manualTests:$MANUAL_TASK
 
-      - name: Upload build artifacts including native launchers
+      - name: Upload XDK distribution ZIP for Docker builds
         if: ${{ success() && matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-artifact@v4
         with:
           name: xdk-distribution
-          path: |
-            xdk/build/distributions/
-            xdk/build/install/
-            javatools_launcher/src/main/resources/exe/
+          path: xdk/build/distributions/xdk-*-linux_*.zip
           retention-days: 1
 
   publish-snapshot:
@@ -450,15 +447,8 @@ jobs:
           
           # Validate downloaded artifacts exist and show structure
           echo "📋 Pre-built artifacts validation:"
-          if [ ! -d "xdk/build/distributions" ]; then
-            echo "❌ No XDK distributions directory found!"
-            exit 1
-          fi
-          echo "  Downloaded artifacts size: $(du -sh xdk | cut -f1)"
-          echo "  Distributions available:"
-          ls -la xdk/build/distributions/ || true
-          echo "  Install directories available:"  
-          ls -la xdk/build/install/ || true
+          echo "  Downloaded files in parent directory:"
+          ls -la ../ | grep -E '(xdk|zip)' || echo "No XDK files found"
           
           # Platform safety check
           echo "🔍 Platform safety validation:"
@@ -468,16 +458,17 @@ jobs:
           
           # Build with pre-built artifacts (fast path - no Gradle execution in container)
           # Find and copy distribution ZIP to Docker build context
-          DIST_ZIP_FILE=$(find xdk/build/distributions -name "xdk-*-linux_${{ matrix.arch }}.zip" | head -1)
+          DIST_ZIP_FILE=$(find ../ -name "xdk-*-linux_${{ matrix.arch }}.zip" | head -1)
           if [ -z "$DIST_ZIP_FILE" ]; then
             echo "❌ No Linux ${{ matrix.arch }} distribution ZIP found in artifacts"
-            ls -la xdk/build/distributions/ || echo "No distributions directory"
+            echo "Available files in parent directory:"
+            ls -la ../ || echo "No files"
             exit 1
           fi
           
           # Copy ZIP to Docker build context with standard name
-          cp "$DIST_ZIP_FILE" docker/ci-dist.zip
-          echo "📦 Copied distribution to Docker context: $DIST_ZIP_FILE → docker/ci-dist.zip"
+          cp "$DIST_ZIP_FILE" ci-dist.zip
+          echo "📦 Copied distribution to Docker context: $DIST_ZIP_FILE → ci-dist.zip"
           
           docker buildx build \
             --platform ${{ matrix.platform }} \
