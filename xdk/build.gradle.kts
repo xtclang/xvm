@@ -156,6 +156,11 @@ tasks.filter { XdkDistribution.isDistributionArchiveTask(it) }.forEach {
     it.dependsOn(tasks.named("processXtcResources"))
 }
 
+// Also ensure install tasks depend on processXtcResources (install tasks use the same content)
+tasks.matching { it.group == "distribution" && it.name.contains("install") }.configureEach {
+    dependsOn(tasks.named("processXtcResources"))
+}
+
 tasks.withType<Tar>().configureEach {
     compression = Compression.GZIP
     archiveExtension = "tar.gz"

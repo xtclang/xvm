@@ -46,18 +46,19 @@ validate_platform() {
 [ -n "$TARGET_ARCH" ] && validate_platform "$TARGET_ARCH"
 
 
-# Check if a distribution ZIP URL is provided (CI artifact mode)
+# Check if a pre-built distribution is available (CI artifact mode)
 if [ -n "${DIST_ZIP_URL:-}" ] && [ "$DIST_ZIP_URL" != "test-local" ]; then
     echo "📦 Using pre-built distribution: $DIST_ZIP_URL"
-    if [[ "$DIST_ZIP_URL" == /* ]]; then
-        # Absolute path - copy it
-        cp "$DIST_ZIP_URL" dist.zip
+    if [ -f "$DIST_ZIP_URL" ]; then
+        # Local file path (from CI build context)
+        DIST_ZIP="$DIST_ZIP_URL"
+        echo "✅ Using CI distribution ZIP: $DIST_ZIP"
     else
-        # URL - download it
+        # URL - download it (future external URLs)
         curl -fsSL "$DIST_ZIP_URL" -o dist.zip
+        DIST_ZIP="dist.zip"
+        echo "✅ Downloaded distribution ZIP from: $DIST_ZIP_URL"
     fi
-    DIST_ZIP="dist.zip"
-    echo "✅ Got distribution ZIP from CI artifacts"
 else
     # Build distribution ZIP from source (local development)
     echo "🏗️ Building XDK distribution from source..."

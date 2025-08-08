@@ -544,6 +544,7 @@ val pruneImages by tasks.registering {
     }
 }
 
+
 // Docker build test with local artifacts
 val testDockerWithLocalArtifacts by tasks.registering {
     group = "docker"

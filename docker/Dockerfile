@@ -49,6 +49,8 @@ WORKDIR /workspace
 # Copy source and build script
 COPY --from=source-cloner /source .
 COPY scripts/build-xdk.sh /build-xdk.sh
+# Copy CI distribution if it exists (optional - for CI builds)  
+COPY ci-dist.zi[p] /workspace/
 
 # Build XDK - handles both pre-built artifacts and source build modes
 RUN --mount=type=cache,target=/root/.gradle/caches,sharing=locked \
