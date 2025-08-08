@@ -448,15 +448,17 @@ jobs:
           echo "🏷️ Architecture-specific tags for ${{ matrix.arch }}:"
           echo "$TAGS" | while read tag; do echo "  $tag"; done
           
-          # Validate artifacts exist and show structure
+          # Validate downloaded artifacts exist and show structure
           echo "📋 Pre-built artifacts validation:"
-          if [ ! -d "artifacts" ]; then
-            echo "❌ No artifacts directory found!"
+          if [ ! -d "xdk/build/distributions" ]; then
+            echo "❌ No XDK distributions directory found!"
             exit 1
           fi
-          echo "  Artifacts size: $(du -sh artifacts | cut -f1)"
-          echo "  Artifacts structure:"
-          find artifacts -type f
+          echo "  Downloaded artifacts size: $(du -sh xdk | cut -f1)"
+          echo "  Distributions available:"
+          ls -la xdk/build/distributions/ || true
+          echo "  Install directories available:"  
+          ls -la xdk/build/install/ || true
           
           # Platform safety check
           echo "🔍 Platform safety validation:"
