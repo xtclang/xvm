@@ -158,25 +158,16 @@ mv "$XDK_EXTRACTED"/* xdk/
 rmdir "$XDK_EXTRACTED"
 echo "📁 Created clean xdk/ directory structure"
 
-# Copy correct native launchers based on target architecture
-if [ -n "${TARGETARCH:-}" ]; then
-    echo "🚀 Installing native launchers for ${TARGETOS}/${TARGETARCH}"
-    LAUNCHER_FILE="javatools_launcher/src/main/resources/exe/${TARGETOS}_launcher_${TARGETARCH}$([ "${TARGETOS}" = "windows" ] && echo ".exe" || echo "")"
-    
-    if [ -f "$LAUNCHER_FILE" ]; then
-        cp "$LAUNCHER_FILE" "xdk/bin/xec"
-        cp "$LAUNCHER_FILE" "xdk/bin/xcc"
-        chmod +x "xdk/bin/xec" "xdk/bin/xcc"
-        echo "✅ Installed native launchers: $LAUNCHER_FILE → xec, xcc"
-    else
-        echo "⚠️  Native launcher not found: $LAUNCHER_FILE"
-        echo "   Available launchers:"
-        ls -la javatools_launcher/src/main/resources/exe/ || echo "   No launcher directory found"
-        echo "   Using Java wrapper scripts instead"
-    fi
-else
-    echo "ℹ️  No TARGETARCH specified, using Java wrapper scripts"
-fi
+# Install correct native launchers based on target architecture
+echo "🚀 Installing native launchers for ${TARGETOS}/${TARGETARCH}"
+LAUNCHER_EXT=""
+[ "${TARGETOS}" = "windows" ] && LAUNCHER_EXT=".exe"
+LAUNCHER_FILE="javatools_launcher/src/main/resources/exe/${TARGETOS}_launcher_${TARGETARCH}${LAUNCHER_EXT}"
+
+cp "$LAUNCHER_FILE" "xdk/bin/xec"
+cp "$LAUNCHER_FILE" "xdk/bin/xcc"
+chmod +x "xdk/bin/xec" "xdk/bin/xcc"
+echo "✅ Installed native launchers: $LAUNCHER_FILE → xec, xcc"
 
 # Create build info (consistent variable naming)
 BUILD_DATE_VAL="${BUILD_DATE:-$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"
