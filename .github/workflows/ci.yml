@@ -17,6 +17,15 @@ on:
         type: boolean
         required: false
         default: false
+      single_platform:
+        description: 'Run only single platform (ubuntu-latest, windows-latest, or full matrix)'
+        type: choice
+        required: false
+        default: 'full'
+        options:
+          - 'full'
+          - 'ubuntu-latest'
+          - 'windows-latest'
       extra_gradle_options:
         description: 'Extra Gradle options to pass to the build'
         required: false
@@ -62,12 +71,12 @@ env:
   java_distribution: temurin
   gradle_version: 8.14.2
 
-  # Docker build variables (DRY approach)
+  # Docker build variables - computed once, used everywhere
   GH_COMMIT: ${{ github.sha }}
   GH_BRANCH: ${{ github.ref_name }}
-  DOCKER_BASE_IMAGE: ${{ github.ref_name == 'master' && 'ghcr.io/xtclang/xvm' || format('ghcr.io/xtclang/xvm-{0}', github.ref_name) }}
-  
-  # Gradle cache inspection function (DRY approach)
+  DOCKER_BASE_IMAGE: ghcr.io/xtclang/xvm
+
+  # Gradle cache inspection function
   GRADLE_CACHE_INSPECT: |
     inspect_gradle_cache() {
       local label="${1:-}"
@@ -105,7 +114,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
+        os: ${{ github.event.inputs.single_platform == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.single_platform == 'windows-latest' && fromJSON('["windows-latest"]') || fromJSON('["ubuntu-latest", "windows-latest"]') }}
 
     runs-on: ${{ matrix.os }}
 
@@ -121,12 +130,35 @@ jobs:
           distribution: ${{ env.java_distribution }}
           java-version: ${{ env.java_version }}
 
-      - name: Setup Gradle
+      - name: Debug Environment (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          echo "=== Windows Debug Information ==="
+          echo "OS: $RUNNER_OS"
+          echo "Operating System: $(uname -a 2>/dev/null || echo 'N/A')"
+          echo "PowerShell version:"
+          pwsh --version 2>/dev/null || echo "PowerShell not available"
+          echo "Git version:"
+          git --version 2>/dev/null || echo "Git not available"
+          echo "Java version:"
+          java -version 2>&1 || echo "Java not available"
+          echo "Current working directory: $(pwd)"
+          echo "Directory contents:"
+          ls -la . || dir
+          echo "Environment variables:"
+          env | grep -E '^(GRADLE|JAVA|PATH|GH_|GITHUB_)' | sort
+          echo "=== End Debug Information ==="
+
+      - name: Setup Gradle (with debug)
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-disabled: false
           cache-read-only: false
           gradle-version: ${{ env.gradle_version }}
+        env:
+          GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
+          ACTIONS_STEP_DEBUG: true
 
       - name: Validate Gradle Wrapper
         uses: gradle/actions/wrapper-validation@v4
@@ -152,6 +184,7 @@ jobs:
 
       - name: Build the XDK and create a distribution layout
         shell: bash
+        # No JAVA_OPTS needed for general builds
         run: |
           ${{ env.GRADLE_CACHE_INSPECT }}
           
@@ -160,11 +193,19 @@ jobs:
           echo "Skipping 'gradle clean' - fresh runner + cache integrity guaranteed"
           ls -la build/ 2>/dev/null && echo "WARNING: build/ directory exists on fresh runner!" || echo "✅ Confirmed: No previous build outputs"
           
+          echo "🔧 JVM Configuration:"
+          echo "  No special JAVA_OPTS for general builds"
+          
+          # Print JVM flags for debugging  
+          echo "🔍 JVM Flag Information:"
+          java -XX:+PrintFlagsFinal -version 2>&1 || echo "  Flag printing failed (non-fatal)"
+          
           inspect_gradle_cache "before installDist"
-          ./gradlew ${{ env.gradle_options }} installDist 
+          ./gradlew ${{ env.gradle_options }} installDist xdk:distZip 
 
       - name: Build a machine specific XDK installation with native launchers, test run launchers on native platform
         shell: bash
+        # No JAVA_OPTS needed for general builds
         run: |
           ${{ env.GRADLE_CACHE_INSPECT }}
           
@@ -191,6 +232,7 @@ jobs:
         if: ${{ env.run_manual_tests == 'true' }}
         timeout-minutes: 10
         shell: bash
+        # No JAVA_OPTS needed for general builds
         run: |
           ${{ env.GRADLE_CACHE_INSPECT }}
           
@@ -205,14 +247,12 @@ jobs:
           MANUAL_TASK=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runSequential" )
           ./gradlew ${{ env.gradle_options }} manualTests:$MANUAL_TASK
 
-      - name: Upload build artifacts
+      - name: Upload XDK distribution ZIP for Docker builds
         if: ${{ success() && matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-artifact@v4
         with:
           name: xdk-distribution
-          path: |
-            xdk/build/distributions/
-            xdk/build/install/
+          path: xdk/build/distributions/xdk-*.zip
           retention-days: 1
 
   publish-snapshot:
@@ -281,11 +321,60 @@ jobs:
           ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true
           ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true
 
+  compute-docker-tags:
+    name: Compute Docker tags and metadata
+    needs: build-verify
+    runs-on: ubuntu-latest
+    if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
+    outputs:
+      version: ${{ steps.compute.outputs.version }}
+      branch-tag: ${{ steps.compute.outputs.branch-tag }}
+      tags-json: ${{ steps.compute.outputs.tags-json }}
+      is-master: ${{ steps.compute.outputs.is-master }}
+    steps:
+      - name: Fetch Sources
+        uses: actions/checkout@v4
+
+      - name: Compute tags and metadata
+        id: compute
+        shell: bash
+        run: |
+          set -euo pipefail
+          
+          # Read version
+          VERSION=$(cat VERSION | tr -d '\n\r ')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Sanitize branch name for Docker tags
+          BRANCH_TAG=$(echo "${{ env.GH_BRANCH }}" | sed 's|.*/||' | sed 's/[^a-zA-Z0-9._-]/_/g')
+          echo "branch-tag=$BRANCH_TAG" >> $GITHUB_OUTPUT
+          
+          # Determine if master branch
+          IS_MASTER=${{ github.ref == 'refs/heads/master' }}
+          echo "is-master=$IS_MASTER" >> $GITHUB_OUTPUT
+          
+          # Generate base tags
+          if [ "$IS_MASTER" = "true" ]; then
+            BASE_TAGS='["latest", "'$VERSION'", "'${{ env.GH_COMMIT }}'"]'
+          else
+            BASE_TAGS='["'$BRANCH_TAG'", "'${{ env.GH_COMMIT }}'"]'
+          fi
+          
+          echo "tags-json=$BASE_TAGS" >> $GITHUB_OUTPUT
+          
+          echo "🏷️ Computed Docker metadata:"
+          echo "  Version: $VERSION"
+          echo "  Branch tag: $BRANCH_TAG"
+          echo "  Is master: $IS_MASTER"
+          echo "  Base tags: $BASE_TAGS"
+
   docker-build:
     name: Build and push Docker images
-    needs: build-verify
+    needs: compute-docker-tags
     runs-on: ${{ matrix.runner }}
-    if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
+    if: ${{ success() }}
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
     strategy:
       matrix:
         include:
@@ -326,45 +415,103 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image (${{ matrix.arch }})
+      - name: Download build artifacts from build-verify
+        uses: actions/download-artifact@v4
+        with:
+          name: xdk-distribution
+          path: .
+
+      - name: Build and push Docker image with pre-built artifacts (${{ matrix.arch }})
+        id: build
         shell: bash
         working-directory: docker
         run: |
-          echo "Building and pushing ${{ matrix.arch }} Docker image on native hardware..."
+          set -euo pipefail
           
-          # Common Docker setup function
-          setup_docker_vars() {
-            VERSION=$(cat ../VERSION | tr -d '\n\r ')
-            
-            echo "DEBUG: VERSION=$VERSION"
-            echo "DEBUG: GH_COMMIT=$GH_COMMIT" 
-            echo "DEBUG: GH_BRANCH=$GH_BRANCH"
-            echo "DEBUG: DOCKER_BASE_IMAGE=$DOCKER_BASE_IMAGE"
-          }
+          echo "Building and pushing ${{ matrix.arch }} Docker image with pre-built artifacts..."
           
-          ${{ env.GRADLE_CACHE_INSPECT }}
+          # Use computed metadata from previous job (single source of truth)
+          VERSION="${{ needs.compute-docker-tags.outputs.version }}"
+          BRANCH_TAG="${{ needs.compute-docker-tags.outputs.branch-tag }}"
+          BASE_TAGS='${{ needs.compute-docker-tags.outputs.tags-json }}'
           
-          setup_docker_vars
-          inspect_gradle_cache "host cache before Docker build"
+          # Generate architecture-specific tags
+          TAGS=$(echo "$BASE_TAGS" | jq -r --arg base "${{ env.DOCKER_BASE_IMAGE }}" --arg arch "${{ matrix.arch }}" '.[] | $base + ":" + . + "-" + $arch')
+          TAG_ARGS=""
+          for tag in $TAGS; do
+            TAG_ARGS="$TAG_ARGS --tag $tag"
+          done
+          
+          echo "🏷️ Architecture-specific tags for ${{ matrix.arch }}:"
+          echo "$TAGS" | while read tag; do echo "  $tag"; done
+          
+          # Validate downloaded artifacts exist and show structure
+          echo "📋 Pre-built artifacts validation:"
+          echo "  Downloaded files in parent directory:"
+          ls -la ../ | grep -E '(xdk|zip)' || echo "No XDK files found"
+          
+          # Platform safety check
+          echo "🔍 Platform safety validation:"
+          echo "  Target platform: ${{ matrix.platform }}"
+          echo "  Target arch: ${{ matrix.arch }}"
+          echo "  Runner arch: $(uname -m)"
+          
+          # Build with pre-built artifacts (fast path - no Gradle execution in container)
+          # Find platform-agnostic distribution ZIP
+          DIST_ZIP_FILE=$(find ../ -name "xdk-*.zip" | head -1)
+          if [ -z "$DIST_ZIP_FILE" ]; then
+            echo "❌ No XDK distribution ZIP found in artifacts"
+            echo "Available files in parent directory:"
+            ls -la ../ || echo "No files"
+            exit 1
+          fi
+          
+          # Copy ZIP to Docker build context with standard name
+          cp "$DIST_ZIP_FILE" ci-dist.zip
+          echo "📦 Copied distribution to Docker context: $DIST_ZIP_FILE → ci-dist.zip"
           
           docker buildx build \
             --platform ${{ matrix.platform }} \
-            --tag ${DOCKER_BASE_IMAGE}:latest-${{ matrix.arch }} \
-            --tag ${DOCKER_BASE_IMAGE}:${VERSION}-${{ matrix.arch }} \
-            --tag ${DOCKER_BASE_IMAGE}:${GH_COMMIT::8}-${{ matrix.arch }} \
-            --build-arg GH_BRANCH=${GH_BRANCH} \
-            --build-arg GH_COMMIT=${GH_COMMIT} \
-            --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
-            --build-arg VCS_REF=${GITHUB_SHA} \
+            --progress=plain \
+            $TAG_ARGS \
+            --build-arg DIST_ZIP_URL="ci-dist.zip" \
+            --build-arg GH_BRANCH=${{ env.GH_BRANCH }} \
+            --build-arg GH_COMMIT=${{ env.GH_COMMIT }} \
+            --label org.opencontainers.image.created=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+            --label org.opencontainers.image.revision=${{ env.GH_COMMIT }} \
+            --label org.opencontainers.image.version="$VERSION" \
+            --label org.opencontainers.image.source=https://github.com/xtclang/xvm/tree/${{ env.GH_BRANCH }} \
             --cache-from type=gha,scope=${{ matrix.arch }} \
             --cache-to type=gha,mode=max,scope=${{ matrix.arch }} \
             --provenance=false \
             --output type=registry \
             .
 
+      - name: Verify images pushed to registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          
+          # Use computed metadata from previous job
+          BASE_TAGS='${{ needs.compute-docker-tags.outputs.tags-json }}'
+          
+          # Generate architecture-specific tags
+          TAGS=$(echo "$BASE_TAGS" | jq -r --arg base "${{ env.DOCKER_BASE_IMAGE }}" --arg arch "${{ matrix.arch }}" '.[] | $base + ":" + . + "-" + $arch')
+          
+          echo "Verifying ${{ matrix.arch }} images exist in registry..."
+          echo "$TAGS" | while read tag; do
+            echo "Checking: $tag"
+            if ! docker manifest inspect "$tag" > /dev/null 2>&1; then
+              echo "❌ ERROR: Image $tag not found in registry!"
+              echo "❌ Push failed for ${{ matrix.arch }} architecture!"
+              exit 1
+            fi
+            echo "✅ Confirmed: $tag"
+          done
+
   docker-manifest:
     name: Create multi-platform manifest
-    needs: docker-build
+    needs: [compute-docker-tags, docker-build]
     runs-on: ubuntu-latest
     if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
     steps:
@@ -378,67 +525,159 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Verify all architecture images exist
+        shell: bash  
+        run: |
+          set -euo pipefail
+          
+          # Use computed metadata from compute-docker-tags job
+          BASE_TAGS='${{ needs.compute-docker-tags.outputs.tags-json }}'
+          
+          echo "Verifying all architecture-specific images exist before creating manifests..."
+          echo "$BASE_TAGS" | jq -r '.[]' | while read base_tag; do
+            for arch in amd64 arm64; do
+              arch_tag="${{ env.DOCKER_BASE_IMAGE }}:$base_tag-$arch"
+              echo "Checking: $arch_tag"
+              if ! docker manifest inspect "$arch_tag" > /dev/null 2>&1; then
+                echo "❌ ERROR: Image $arch_tag not found in registry!"
+                echo "❌ Cannot create multi-platform manifest without all architectures!"
+                exit 1
+              fi
+              echo "✅ Confirmed: $arch_tag"
+            done
+          done
+
       - name: Create and push multi-platform manifests
         shell: bash
         run: |
-          echo "Creating multi-platform manifests..."
+          set -euo pipefail
           
-          # Common Docker setup function
-          setup_docker_vars() {
-            VERSION=$(cat VERSION | tr -d '\n\r ')
-            echo "Creating manifests for: ${DOCKER_BASE_IMAGE} (version: ${VERSION})"
-          }
+          echo "Creating multi-platform manifests from pre-built images..."
           
-          # Function to create and push manifest
-          create_manifest() {
-            local tag=$1
-            echo "Creating manifest for tag: $tag"
-            echo "Inspecting source images:"
-            docker manifest inspect ${DOCKER_BASE_IMAGE}:${tag}-amd64 || echo "AMD64 image inspect failed"
-            docker manifest inspect ${DOCKER_BASE_IMAGE}:${tag}-arm64 || echo "ARM64 image inspect failed"
+          # Use computed metadata from compute-docker-tags job
+          BASE_TAGS='${{ needs.compute-docker-tags.outputs.tags-json }}'
+          
+          # Create and push manifest for each tag
+          echo "$BASE_TAGS" | jq -r '.[]' | while read base_tag; do
+            manifest_tag="${{ env.DOCKER_BASE_IMAGE }}:$base_tag"
+            echo "Creating manifest for: $manifest_tag"
             
-            echo "Creating manifest..."
-            docker manifest create ${DOCKER_BASE_IMAGE}:${tag} \
-              ${DOCKER_BASE_IMAGE}:${tag}-amd64 \
-              ${DOCKER_BASE_IMAGE}:${tag}-arm64
-            echo "Pushing manifest..."
-            docker manifest push ${DOCKER_BASE_IMAGE}:${tag}
-          }
+            # Create manifest from architecture-specific images
+            docker manifest create $manifest_tag \
+              $manifest_tag-amd64 \
+              $manifest_tag-arm64
+            
+            # Push the manifest
+            docker manifest push $manifest_tag
+            
+            echo "✅ Created and pushed manifest: $manifest_tag"
+          done
           
-          setup_docker_vars
-          
-          # Create all manifests
-          create_manifest "latest"
-          create_manifest "${VERSION}"
-          create_manifest "${GH_COMMIT::8}"
+          echo "🎉 All multi-platform manifests created successfully!"
 
   docker-test:
-    name: Test Docker images
-    needs: docker-manifest
+    name: Test Docker image functionality
+    needs: [compute-docker-tags, docker-manifest]
     runs-on: ubuntu-latest
     if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
     steps:
-      - name: Fetch Sources
-        uses: actions/checkout@v4
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Test Docker image functionality
+      - name: Test Docker image with EchoTest arguments
         shell: bash
         run: |
-          # Common Docker setup function
-          setup_docker_vars() {
-            echo "Testing Docker image: ${DOCKER_BASE_IMAGE}:latest"
+          echo "Testing Docker image functionality with EchoTest..."
+          
+          # Use appropriate tag based on branch
+          if [ "${{ needs.compute-docker-tags.outputs.is-master }}" = "true" ]; then
+            IMAGE="${{ env.DOCKER_BASE_IMAGE }}:latest"
+          else
+            IMAGE="${{ env.DOCKER_BASE_IMAGE }}:${{ needs.compute-docker-tags.outputs.branch-tag }}"
+          fi
+          
+          echo "Using Docker image: $IMAGE"
+          
+          # Test functions with early exits
+          test_no_args() {
+            echo "🧪 Testing EchoTest with no arguments..."
+            local output=$(docker run --rm ${IMAGE} xec EchoTest 2>&1)
+            echo "Output: $output"
+            
+            if ! echo "$output" | grep -q "EchoTest invoked with 0 arguments\."; then
+              echo "❌ No arguments test failed"
+              exit 1
+            fi
+            echo "✅ No arguments test passed"
           }
           
-          setup_docker_vars
+          test_single_arg() {
+            echo "🧪 Testing EchoTest with single argument..."
+            local output=$(docker run --rm ${IMAGE} xec EchoTest "hello" 2>&1)
+            echo "Output: $output"
+            
+            if ! echo "$output" | grep -q "EchoTest invoked with 1 arguments:"; then
+              echo "❌ Single argument test failed - wrong count"
+              exit 1
+            fi
+            
+            if ! echo "$output" | grep -q '\[1\]="hello"'; then
+              echo "❌ Single argument test failed - wrong content"
+              exit 1
+            fi
+            echo "✅ Single argument test passed"
+          }
           
-          # Copy EchoTest.x from the repository
-          cp manualTests/src/main/x/EchoTest.x .
+          test_multiple_args() {
+            echo "🧪 Testing EchoTest with multiple arguments..."
+            local output=$(docker run --rm ${IMAGE} xec EchoTest "arg1" "arg with spaces" "arg3" 2>&1)
+            echo "Output: $output"
+            
+            if ! echo "$output" | grep -q "EchoTest invoked with 3 arguments:"; then
+              echo "❌ Multiple arguments test failed - wrong count"
+              exit 1
+            fi
+            
+            if ! echo "$output" | grep -q '\[1\]="arg1"'; then
+              echo "❌ Multiple arguments test failed - missing arg1"
+              exit 1
+            fi
+            
+            if ! echo "$output" | grep -q '\[2\]="arg with spaces"'; then
+              echo "❌ Multiple arguments test failed - missing spaced arg"
+              exit 1
+            fi
+            
+            if ! echo "$output" | grep -q '\[3\]="arg3"'; then
+              echo "❌ Multiple arguments test failed - missing arg3"
+              exit 1
+            fi
+            echo "✅ Multiple arguments test passed"
+          }
           
-          echo "Compiling EchoTest.x..."
-          docker run --rm -v $(pwd):/workspace -w /workspace ${DOCKER_BASE_IMAGE}:latest xcc EchoTest.x
-          echo "Running EchoTest..."
-          OUTPUT=$(docker run --rm -v $(pwd):/workspace -w /workspace ${DOCKER_BASE_IMAGE}:latest xec EchoTest)
+          # Run all tests with early exits
+          test_no_args
+          test_single_arg  
+          test_multiple_args
           
-          echo "Docker test output: $OUTPUT"
-          echo "$OUTPUT" | grep -q "EchoTest invoked with 0 arguments" || exit 1
-          echo "✅ Docker test passed!"
+          echo "🎉 All Docker image tests passed successfully!"
+
+  docker-cleanup:
+    name: Clean up old Docker package versions
+    needs: docker-test
+    runs-on: ubuntu-latest
+    if: ${{ success() && github.ref == 'refs/heads/master' }}
+    steps:
+      - name: Clean up old container versions
+        uses: snok/container-retention-policy@v3
+        with:
+          image-names: xvm
+          cut-off: 4 weeks ago UTC
+          keep-n-most-recent: 5
+          account-type: org
+          org-name: xtclang
+          token: ${{ secrets.GITHUB_TOKEN }}

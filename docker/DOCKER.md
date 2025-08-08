@@ -76,23 +76,34 @@ docker buildx build --platform linux/arm64 --tag test-xvm:latest .
 ### Master Branch Images
 All builds from the master branch create these tags:
 - `ghcr.io/xtclang/xvm:latest-amd64` - Latest AMD64 build
-- `ghcr.io/xtclang/xvm:latest-arm64` - Latest ARM64 build
+- `ghcr.io/xtclang/xvm:latest-arm64` - Latest ARM64 build  
 - `ghcr.io/xtclang/xvm:VERSION-amd64` - Versioned AMD64 build
 - `ghcr.io/xtclang/xvm:VERSION-arm64` - Versioned ARM64 build
+- `ghcr.io/xtclang/xvm:COMMIT_SHA-amd64` - Commit-specific AMD64 build
+- `ghcr.io/xtclang/xvm:COMMIT_SHA-arm64` - Commit-specific ARM64 build
 
-Generic tags (when using multi-platform builds):
+Multi-platform manifests:
 - `ghcr.io/xtclang/xvm:latest` - Multi-platform manifest
 - `ghcr.io/xtclang/xvm:VERSION` - Versioned multi-platform manifest
+- `ghcr.io/xtclang/xvm:COMMIT_SHA` - Commit-specific multi-platform manifest
 
-### Branch-Specific Images
-Non-master branches create separate image repositories with branch suffix:
-- `ghcr.io/xtclang/xvm-BRANCH:latest` - Latest build from specific branch
-- `ghcr.io/xtclang/xvm-BRANCH:latest-amd64` - Branch-specific AMD64 build
-- `ghcr.io/xtclang/xvm-BRANCH:latest-arm64` - Branch-specific ARM64 build
+### Branch-Specific Images  
+**Single Package Model**: All branches use the same package with branch-based tags.
 
-Example for `feature-branch`:
-- `ghcr.io/xtclang/xvm-feature-branch:latest`
-- `ghcr.io/xtclang/xvm-feature-branch:latest-amd64`
+Non-master branches create these tags:
+- `ghcr.io/xtclang/xvm:BRANCH_NAME-amd64` - Branch-specific AMD64 build
+- `ghcr.io/xtclang/xvm:BRANCH_NAME-arm64` - Branch-specific ARM64 build
+- `ghcr.io/xtclang/xvm:COMMIT_SHA-amd64` - Commit-specific AMD64 build  
+- `ghcr.io/xtclang/xvm:COMMIT_SHA-arm64` - Commit-specific ARM64 build
+
+Multi-platform manifests:
+- `ghcr.io/xtclang/xvm:BRANCH_NAME` - Branch multi-platform manifest
+- `ghcr.io/xtclang/xvm:COMMIT_SHA` - Commit multi-platform manifest
+
+Example for `lagergren/gradle-lifecycle-fixes`:
+- `ghcr.io/xtclang/xvm:gradle-lifecycle-fixes-amd64`
+- `ghcr.io/xtclang/xvm:gradle-lifecycle-fixes-arm64`  
+- `ghcr.io/xtclang/xvm:gradle-lifecycle-fixes`
 
 ## Build Configuration
 
@@ -104,7 +115,13 @@ Example for `feature-branch`:
 - Platform matches host architecture (linux/amd64 on x86, linux/arm64 on ARM)
 - Compiles native launchers from C source for target platform
 - Creates architecture-specific xcc/xec executables
-- Build script: `docker/build-xdk.sh` (clean, non-branchy shell logic)
+
+### Build Scripts
+The Docker build uses several helper scripts in `docker/scripts/`:
+
+- **`clone-xdk.sh`** - Handles efficient git cloning with smart caching and commit/branch support
+- **`build-launcher.sh`** - Compiles native C launchers for the target platform (amd64/arm64)
+- **`build-xdk.sh`** - Builds the XDK using Gradle with cache optimization and debug output
 
 ### Build Arguments
 You can override default settings using build arguments:
@@ -205,8 +222,11 @@ ghcr.io/xtclang/xvm:latest
 ghcr.io/xtclang/xvm:0.4.4-SNAPSHOT
 
 # Commit-specific builds  
-ghcr.io/xtclang/xvm:abc1234     # Short commit hash
-ghcr.io/xtclang/xvm:abc1234...  # Full commit hash
+ghcr.io/xtclang/xvm:abc1234567890abcdef1234567890abcdef12  # Full commit hash
+
+# Branch-specific builds
+ghcr.io/xtclang/xvm:master                              # Branch name
+ghcr.io/xtclang/xvm:feature-branch                     # Feature branch
 
 # Platform-specific (if needed)
 ghcr.io/xtclang/xvm:latest-amd64
@@ -231,6 +251,27 @@ docker run -v $(pwd):/workspace -w /workspace --rm ghcr.io/xtclang/xvm:latest xe
 # Check build information
 docker run --rm ghcr.io/xtclang/xvm:latest cat /opt/xdk/xvm.json
 ```
+
+### Inspecting Multi-Platform Images
+
+```bash
+# View the multi-platform manifest list
+docker manifest inspect ghcr.io/xtclang/xvm:latest
+
+# Check which architecture was automatically pulled for your machine
+docker image inspect ghcr.io/xtclang/xvm:latest --format '{{.Architecture}}'
+
+# View complete image details (metadata, layers, config)
+docker image inspect ghcr.io/xtclang/xvm:latest
+
+# Get specific image information
+docker image inspect ghcr.io/xtclang/xvm:latest --format '{{.Config.Env}}'     # Environment variables
+docker image inspect ghcr.io/xtclang/xvm:latest --format '{{.Config.Cmd}}'     # Default command
+docker image inspect ghcr.io/xtclang/xvm:latest --format '{{.Size}}'           # Image size in bytes
+docker image inspect ghcr.io/xtclang/xvm:latest --format '{{.Created}}'        # Build timestamp
+```
+
+The manifest shows available platforms (`linux/amd64` and `linux/arm64`), and Docker automatically selects the correct architecture for your machine without requiring platform specification.
 
 ### Notes
 
@@ -294,8 +335,8 @@ The GitHub Actions workflow (`.github/workflows/ci.yml`) performs:
    ghcr.io/xtclang/xvm:latest-amd64
    ghcr.io/xtclang/xvm:latest-arm64
    ghcr.io/xtclang/xvm:0.4.4-SNAPSHOT
-   ghcr.io/xtclang/xvm:abc1234       # Short commit hash
-   ghcr.io/xtclang/xvm:abc1234...    # Full commit hash
+   ghcr.io/xtclang/xvm:abc1234567890abcdef1234567890abcdef12  # Full commit hash
+   ghcr.io/xtclang/xvm:master                              # Branch name
    ```
 
 ### Key Features
@@ -341,3 +382,275 @@ Each image includes build metadata at `/opt/xdk/xvm.json`:
 - **No shell access**: Images are distroless (use docker exec with external tools if debugging needed)
 - **Multi-platform pushes**: Cannot use `--load` (pushes directly to registry)
 - **Platform emulation**: Cross-platform builds may be slower on some systems
+
+## GitHub Package Repository Management
+
+### Authentication
+
+To interact with GitHub Container Registry packages (listing, deleting, etc.), you need a Personal Access Token with appropriate scopes:
+
+```bash
+# Login to GitHub Container Registry using gh CLI
+gh auth login
+gh auth token | docker login ghcr.io -u $(gh api user --jq .login) --password-stdin
+```
+
+### Required Scopes
+
+For different operations, you need these token scopes:
+- **Pulling public images**: No authentication required
+- **Pulling private images**: `read:packages`
+- **Listing packages**: `read:packages`  
+- **Deleting packages**: `read:packages` + `delete:packages`
+
+To add scopes to your existing GitHub CLI authentication:
+```bash
+gh auth refresh --hostname github.com --scopes read:packages,delete:packages
+```
+
+## Bootstrap Guide: Setting Up CI/CD and Containerization
+
+### Initial Project Setup
+
+If you're setting up Docker containerization and CI/CD for the first time, here's the complete bootstrap process:
+
+#### 1. GitHub CLI Authentication
+
+First, authenticate with comprehensive scopes for full CI/CD operations:
+
+```bash
+# Authenticate with all necessary scopes for containerization and CI
+gh auth refresh --hostname github.com --scopes repo,read:packages,write:packages,delete:packages,workflow
+
+# Verify authentication and scopes
+gh auth status --show-token
+```
+
+**Required Scopes Explained**:
+- `repo` - Access repository contents, create releases, manage artifacts
+- `read:packages` - List and pull Docker images/packages 
+- `write:packages` - Push Docker images to GitHub Container Registry
+- `delete:packages` - Clean up old Docker image versions (for maintenance)
+- `workflow` - Trigger and manage GitHub Actions workflows
+
+**Security Note**: These scopes are standard for containerization workflows. The GitHub CLI stores tokens securely in your system keychain (macOS Keychain, Windows Credential Manager, Linux keyring).
+
+#### 2. Docker Registry Authentication
+
+```bash
+# Login to GitHub Container Registry (one-time setup)
+gh auth token | docker login ghcr.io -u $(gh api user --jq .login) --password-stdin
+
+# Verify Docker registry access
+docker pull ghcr.io/xtclang/xvm:latest --quiet
+```
+
+#### 3. Local Build Environment Setup
+
+```bash
+# Verify Docker buildx multi-platform support
+docker buildx version
+
+# Create buildx builder if needed (for multi-platform builds)
+docker buildx create --name multiplatform --use
+docker buildx inspect --bootstrap
+
+# Test local Docker build
+./gradlew docker:buildArm64  # or buildAmd64 depending on your platform
+```
+
+#### 4. CI/CD Secrets Configuration
+
+For GitHub Actions to work properly, ensure these secrets are configured in your repository:
+
+**Repository Settings → Secrets and variables → Actions**:
+
+```bash
+# Required secrets (these should already be configured)
+GITHUB_TOKEN                    # Automatically provided by GitHub Actions
+ORG_XTCLANG_GPG_SIGNING_KEY    # For package signing (if enabled)
+ORG_XTCLANG_GPG_SIGNING_PASSWORD # For package signing (if enabled)
+
+# Optional secrets for enhanced publishing
+ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY    # For Gradle plugin portal
+ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET # For Gradle plugin portal
+PACKAGE_DELETE_TOKEN            # For automated cleanup (custom token with delete:packages)
+```
+
+The `GITHUB_TOKEN` is automatically provided and has sufficient permissions for Docker operations.
+
+#### 5. Testing the Complete Pipeline
+
+```bash
+# Test local builds first
+./gradlew docker:buildArm64
+./gradlew docker:buildArm64  # Second run should be faster (caching test)
+
+# Test manual workflow dispatch
+gh workflow run "XVM Verification and Package Updates" \
+  --ref your-branch-name \
+  --field always_build_docker_image=true \
+  --field single_platform=full
+
+# Monitor the workflow
+gh run list --limit 3
+gh run view --web  # Opens in browser
+```
+
+#### 6. Package Management Setup
+
+```bash
+# Test package operations
+./gradlew docker:listImages      # List all Docker packages
+./gradlew docker:cleanupVersions # Clean up old versions (with confirmation)
+
+# View packages in GitHub web interface
+open "https://github.com/orgs/xtclang/packages"
+```
+
+### Troubleshooting Common Bootstrap Issues
+
+#### Authentication Problems
+```bash
+# Clear and re-authenticate if having issues
+gh auth logout --hostname github.com
+gh auth login --hostname github.com --scopes repo,read:packages,write:packages,delete:packages,workflow
+```
+
+#### Docker Registry Access Denied
+```bash
+# Re-authenticate with Docker registry
+gh auth token | docker login ghcr.io -u $(gh api user --jq .login) --password-stdin
+
+# Test with explicit package name
+docker pull ghcr.io/xtclang/xvm:latest
+```
+
+#### Local Docker Build Issues
+```bash
+# Check Docker buildx setup
+docker buildx ls
+
+# Recreate builder if needed
+docker buildx rm multiplatform
+docker buildx create --name multiplatform --driver docker-container --use
+```
+
+#### CI/CD Workflow Failures
+```bash
+# Check recent workflow runs
+gh run list --limit 5
+
+# View detailed logs
+gh run view WORKFLOW_ID --log
+
+# Common issue: missing authentication
+# Solution: Verify GITHUB_TOKEN has sufficient permissions in repo settings
+```
+
+### Alternative: Fine-Grained Personal Access Tokens
+
+For enhanced security, you can use fine-grained tokens scoped to specific repositories:
+
+1. **GitHub.com → Settings → Developer settings → Personal access tokens → Fine-grained tokens**
+2. **Select specific repositories** (e.g., just `xtclang/xvm`)
+3. **Choose minimal permissions**:
+   - Contents: Read (for repository access)
+   - Packages: Read + Write + Delete (for Docker operations)  
+   - Actions: Write (for workflow dispatch)
+   - Metadata: Read (always required)
+
+4. **Use the token**:
+```bash
+gh auth login --with-token < token.txt
+```
+
+**Benefits**: More secure than classic tokens, repository-specific, granular permissions.
+
+### Maintenance Checklist
+
+Once bootstrapped, maintain your setup with these periodic tasks:
+
+- **Monthly**: Review and clean up old Docker image versions
+- **Quarterly**: Rotate authentication tokens for security  
+- **After major changes**: Test the complete CI/CD pipeline end-to-end
+- **Before releases**: Verify all package permissions and visibility settings
+
+This bootstrap process ensures your containerization and CI/CD pipeline is properly configured with appropriate security and permissions.
+
+### Managing Packages
+
+#### List all container packages for the organization:
+```bash
+gh api 'orgs/xtclang/packages?package_type=container' --jq '.[] | {name: .name, visibility: .visibility, updated_at: .updated_at}'
+```
+
+#### Delete a package:
+```bash
+gh api -X DELETE 'orgs/xtclang/packages/container/PACKAGE_NAME'
+```
+
+#### Get package details:
+```bash
+gh api 'orgs/xtclang/packages/container/PACKAGE_NAME'
+```
+
+### Package Naming Strategy
+
+- **Main images**: Use simple names like `xvm` for primary project artifacts
+- **Branch-specific**: Use `xvm-BRANCH` format for development builds (e.g., `xvm-feature-branch`)
+- **Avoid clutter**: Clean up temporary or test images regularly to keep the registry organized
+
+### Visibility Settings
+
+- **Public packages**: Accessible without authentication - preferred for open source
+- **Internal packages**: Only accessible to organization members
+- **Private packages**: Only accessible to specific users/teams
+
+Change visibility in the GitHub web interface under package settings.
+
+### Package Version Retention
+
+**Important**: GitHub Container Registry keeps ALL package versions by default - there's no built-in retention policy.
+
+#### Current Behavior Without Retention Policy
+- Each `docker push` creates a new version stored permanently
+- Tags like `latest` get reassigned but old image data remains under SHA digests
+- Storage grows indefinitely with every CI build
+- Manual cleanup required to prevent unbounded growth
+
+#### Check Current Version Count
+```bash
+# Count total versions stored
+gh api 'orgs/xtclang/packages/container/xvm/versions' --jq 'length'
+
+# List recent versions with creation dates
+gh api 'orgs/xtclang/packages/container/xvm/versions' --jq '.[] | {id: .id, created_at: .created_at}' | head -10
+```
+
+#### Automated Retention Policy (Recommended)
+
+Add this to your GitHub Actions workflow to automatically manage versions:
+
+```yaml
+- name: Clean up old container versions
+  uses: snok/container-retention-policy@v3
+  with:
+    image-names: xvm
+    cut-off: 4 weeks ago UTC
+    keep-n-most-recent: 5          # Maintains exactly 5 versions maximum
+    account-type: org
+    org-name: xtclang
+    token: ${{ secrets.PACKAGE_DELETE_TOKEN }}  # Requires delete:packages scope
+```
+
+#### Manual Version Cleanup
+```bash
+# Delete specific version by ID
+gh api -X DELETE 'orgs/xtclang/packages/container/xvm/versions/VERSION_ID'
+
+# Bulk delete versions older than a date (requires scripting)
+gh api 'orgs/xtclang/packages/container/xvm/versions' --jq '.[] | select(.created_at < "2025-07-01") | .id'
+```
+
+**Note**: Retention policies prevent storage growth by maintaining a rolling window (e.g., 5 most recent versions). Without a policy, versions accumulate indefinitely.

@@ -1,0 +1,88 @@
+# Build outputs and caches
+build/
+out/
+classes/
+.gradle/
+gradle-user-home/
+profile-out/
+.kotlin/
+
+# IDE and editor files
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+*~
+.DS_Store
+
+# Git and version control
+.git/
+.gitignore
+.gitattributes
+
+# Documentation and non-essential files
+doc/
+docs/
+README.md
+*.md
+!CLAUDE.md
+
+# Test and development files
+test/
+tests/
+**/test/
+**/tests/
+
+# Temporary and log files
+*.log
+*.tmp
+*.temp
+*.old
+*.new
+*.bak
+*.backup
+
+# OS files
+Thumbs.db
+ehthumbs.db
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Development tools and configs
+.editorconfig
+.secrets
+TODO
+
+# CI/CD files (not needed in container)
+.github/
+.gitlab-ci.yml
+Jenkinsfile
+
+# Package files (will be downloaded in container)
+*.zip
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# Large binary files that shouldn't be in Docker context
+*.iso
+*.dmg
+*.exe
+*.msi
+
+# Node modules if present
+node_modules/
+
+# Python cache if present
+__pycache__/
+*.pyc
+*.pyo
+
+# Keep only essential files for Docker build
+# Scripts directory is needed
+!docker/scripts/

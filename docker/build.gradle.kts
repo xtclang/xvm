@@ -1,237 +1,663 @@
+/**
+ * Comprehensive Docker build script for XVM project.
+ * Supports multi-platform builds, manifest creation, registry management, and caching.
+ * All git commands and configuration creation deferred to execution phase only.
+ */
+
 plugins {
+    // NOTE: We add base here to get lifecycle tasks.
     base
+    id("org.xtclang.build.xdk.versioning")
 }
 
-// Git helpers to avoid repetition
-fun gitBranch() = providers.exec { commandLine("git", "branch", "--show-current") }.standardOutput.asText.get().trim()
-fun gitCommit() = providers.exec { commandLine("git", "rev-parse", "HEAD") }.standardOutput.asText.get().trim()
-fun gitCommitShort() = providers.exec { commandLine("git", "rev-parse", "--short", "HEAD") }.standardOutput.asText.get().trim()
-
-// Image name logic
-fun baseImageName(branch: String) = "ghcr.io/xtclang/xvm" + if (branch != "master") "-$branch" else ""
-
-// Command line execution with logging
-fun Exec.loggedCommandLine(cmd: List<String>) {
-    logger.lifecycle("Executing command line: ${cmd.joinToString(" ")}")
-    commandLine(cmd)
-}
-
-fun Exec.loggedCommandLine(vararg cmd: String) = loggedCommandLine(cmd.toList())
-
-// Helper function to create platform-specific Docker build tasks
-fun createDockerBuildTask(platform: String, arch: String) = tasks.registering(Exec::class) {
-    group = "docker"
-    description = "Build Docker image for $platform platform"
+// Build configuration data class
+data class BuildConfig(
+    val version: String,
+    val branch: String, 
+    val commit: String,
+    val baseImage: String,
+    val branchTagName: String,
+    val buildArgs: Map<String, String>,
+    val metadataLabels: Map<String, String>,
+    val isCI: Boolean
+) {
     
-    doFirst {
-        val version = project.version.toString()
-        val branch = gitBranch()
-        val commit = gitCommit()
-        val commitShort = gitCommitShort()
-        val baseImage = baseImageName(branch)
-        
-        val buildArgs = mapOf(
-            "GH_BRANCH" to branch,
-            "GH_COMMIT" to commit
-        )
-        
-        val tags = listOf(
-            "${baseImage}:latest-$arch",
-            "${baseImage}:${version}-$arch", 
-            "${baseImage}:${commitShort}-$arch"
-        )
-        
-        val cmd = listOf("docker", "buildx", "build", "--platform", platform) +
-                  buildArgs.flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
-                  tags.flatMap { listOf("--tag", it) } +
-                  listOf("--load", ".")
-        
-        loggedCommandLine(cmd)
-        
-        logger.info("Building Docker image for $platform platform...")
-        logger.info("Branch: $branch, Commit: $commitShort")
-        logger.info("Base image: $baseImage")
+    // Computed properties to avoid branchy logic
+    val isMasterBranch = branch == "master"
+    val tagPrefix = if (isMasterBranch) "latest" else branchTagName
+    val versionTags = if (isMasterBranch) listOf(version) else emptyList()
+    
+    fun tagsForArch(arch: String): List<String> {
+        return (listOf("${tagPrefix}-$arch") + versionTags.map { "${it}-$arch" } + listOf("${commit}-$arch"))
+            .map { "${baseImage}:${it}" }
     }
     
-    workingDir = projectDir
-}
-
-// Platform-specific build tasks (useful for debugging)
-val dockerBuildAmd64 by createDockerBuildTask("linux/amd64", "amd64")
-val dockerBuildArm64 by createDockerBuildTask("linux/arm64", "arm64")
-
-// Main build task - builds multi-platform locally
-val dockerBuildMultiPlatform by tasks.registering(Exec::class) {
-    group = "docker"
-    description = "Build multi-platform Docker images locally (amd64 + arm64)"
-    
-    doFirst {
-        val version = project.version.toString()
-        val branch = gitBranch()
-        val commit = gitCommit()
-        val commitShort = gitCommitShort()
-        val baseImage = baseImageName(branch)
-        val buildDate = java.time.Instant.now().toString()
-        
-        val buildArgs = mapOf(
-            "GH_BRANCH" to branch,
-            "GH_COMMIT" to commit,
-            "BUILD_DATE" to buildDate,
-            "VCS_REF" to commit
-        )
-        
-        val tags = listOf(
-            "${baseImage}:latest",
-            "${baseImage}:${version}",
-            "${baseImage}:${commitShort}",
-            "${baseImage}:${commit}"
-        )
-        
-        java.io.File("/tmp/.buildx-cache").mkdirs()
-        val cacheArgs = listOf("--cache-from", "type=local,src=/tmp/.buildx-cache", "--cache-to", "type=local,dest=/tmp/.buildx-cache,mode=max")
-        
-        val cmd = listOf("docker", "buildx", "build", "--platform", "linux/amd64,linux/arm64") +
-                  buildArgs.flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
-                  cacheArgs +
-                  tags.flatMap { listOf("--tag", it) } +
-                  listOf("--load", ".")
-        
-        loggedCommandLine(cmd)
-        
-        logger.info("Building multi-platform Docker images locally...")
-        logger.info("Branch: $branch, Commit: $commitShort")
-        logger.info("Base image: $baseImage")
+    fun multiPlatformTags(): List<String> {
+        return (listOf(tagPrefix) + versionTags + listOf(commit))
+            .map { "${baseImage}:${it}" }
     }
     
-    workingDir = projectDir
+    fun cacheArgs(arch: String? = null) = if (isCI) {
+        val scope = arch?.let { ",scope=$it" } ?: ""
+        listOf("--cache-from", "type=gha$scope", "--cache-to", "type=gha,mode=max$scope")
+    } else {
+        val archSuffix = arch?.let { "-$it" } ?: ""
+        val cacheDir = File(System.getProperty("user.home"), ".cache/docker-buildx$archSuffix")
+        cacheDir.mkdirs()
+        listOf("--cache-from", "type=local,src=${cacheDir.absolutePath}", "--cache-to", "type=local,dest=${cacheDir.absolutePath},mode=max")
+    }
 }
 
-// Main push task - builds and pushes to registry
-val dockerPushMultiPlatform by tasks.registering(Exec::class) {
+// Factory function that can be called from doFirst blocks safely
+fun createBuildConfig(): BuildConfig {
+    val startTime = System.currentTimeMillis()
+    logger.lifecycle("🔍 [DOCKER-DEBUG] createBuildConfig() called - starting configuration")
+    
+    val version = project.version.toString()
+    
+    // Get branch - prefer GH_BRANCH, fallback to git command only if needed
+    val branch = System.getenv("GH_BRANCH") ?: try {
+        providers.exec {
+            commandLine("git", "branch", "--show-current")
+            workingDir = project.rootDir
+        }.standardOutput.asText.get().trim().ifBlank { "unknown" }
+    } catch (e: Exception) {
+        logger.warn("Failed to get git branch: ${e.message}")
+        "unknown"
+    }
+    
+    // Get commit - prefer GH_COMMIT, fallback to GitHub API to get remote commit
+    // Always ensure we have a resolved commit (never empty for tagging consistency)  
+    val commit = System.getenv("GH_COMMIT")?.takeIf { it.isNotBlank() } ?: try {
+        // Query GitHub API to get the latest commit on the remote branch
+        val encodedBranch = java.net.URLEncoder.encode(branch, "UTF-8")
+        val apiUrl = "https://api.github.com/repos/xtclang/xvm/commits/$encodedBranch"
+        val curlResult = providers.exec {
+            commandLine("curl", "-fsSL", apiUrl)
+            workingDir = project.rootDir
+        }.standardOutput.asText.get()
+        
+        // Extract SHA from JSON response (simple regex extraction)
+        val shaRegex = """"sha":\s*"([a-f0-9]{40})"""".toRegex()
+        val matchResult = shaRegex.find(curlResult)
+        matchResult?.groupValues?.get(1) ?: "unknown"
+    } catch (e: Exception) {
+        logger.warn("Failed to get remote commit from GitHub API: ${e.message}")
+        "unknown"
+    }
+    
+    val baseImage = "ghcr.io/xtclang/xvm"
+    val branchTagName = branch.substringAfterLast("/").replace(Regex("[^a-zA-Z0-9._-]"), "_")
+    
+    // Only build args that actually affect the build process
+    val buildArgs = mapOf(
+        "GH_BRANCH" to branch,
+        "GH_COMMIT" to commit
+    )
+    
+    // Metadata that will be added as Docker labels (doesn't invalidate cache)
+    val metadataLabels = mapOf(
+        "org.opencontainers.image.created" to java.time.Instant.now().toString(),
+        "org.opencontainers.image.revision" to commit,
+        "org.opencontainers.image.version" to version,  
+        "org.opencontainers.image.source" to "https://github.com/xtclang/xvm/tree/$branch"
+    )
+    val isCI = System.getenv("CI") == "true"
+    
+    val duration = System.currentTimeMillis() - startTime
+    logger.lifecycle("🔍 [DOCKER-DEBUG] createBuildConfig() completed in ${duration}ms total")
+    
+    return BuildConfig(version, branch, commit, baseImage, branchTagName, buildArgs, metadataLabels, isCI)
+}
+
+// Helper function to show comprehensive build lifecycle information
+fun logLifecycleInfo(arch: String, config: BuildConfig) {
+    val buildTime = java.time.Instant.now()
+    val hostArch = System.getProperty("os.arch")
+    val hostOS = System.getProperty("os.name")
+    val buildMode = if (config.isCI) "CI/CD Pipeline" else "Local Development"
+    val buildMethod = if (config.isCI) "Pre-built artifacts (fast)" else "Tarball source (ultra-fast)"
+    val modeDetails = if (config.isCI) {
+        "⚡ CI Mode: Using pre-built XDK artifacts from build-verify job"
+    } else {
+        "⚡ Local Mode: GitHub tarball download + source build (no git operations)"
+    }
+    
+    logger.lifecycle("""
+
+🚀 ═══════════════════════════════════════════════════════════════════════
+🚀 DOCKER BUILD LIFECYCLE - ${arch.uppercase()} Container
+🚀 ═══════════════════════════════════════════════════════════════════════
+📍 Source Information:
+   • Branch: ${config.branch}
+   • Commit: ${config.commit} (${config.commit.take(8)})
+   • Version: ${config.version}
+   • Repository: https://github.com/xtclang/xvm
+
+🏗️ Build Environment:
+   • Build Type: $buildMode
+   • Build Time: $buildTime
+   • Host OS: $hostOS
+   • Host Architecture: $hostArch
+   • Target Platform: linux/$arch
+   • Project Root: ${project.rootDir}
+
+🐳 Docker Configuration:
+   • Build Method: $buildMethod
+   • Base Image: ${config.baseImage}
+   • Gradle Version: ${gradle.gradleVersion}
+   • Java Version: ${System.getProperty("java.version")}
+
+$modeDetails
+🚀 ═══════════════════════════════════════════════════════════════════════
+""".trimIndent())
+}
+
+// Common Docker command builder
+fun buildDockerCommand(
+    platforms: List<String>,
+    config: BuildConfig, 
+    cacheArgs: List<String>,
+    tags: List<String>,
+    action: String // "load" or "push"
+): List<String> {
+    // Use plain progress for better cache visibility, can be overridden with DOCKER_BUILDX_PROGRESS
+    val progressMode = System.getenv("DOCKER_BUILDX_PROGRESS") ?: "plain"
+    
+    return listOf("docker", "buildx", "build", "--platform", platforms.joinToString(",")) +
+           listOf("--progress=$progressMode") +
+           config.buildArgs.flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
+           config.metadataLabels.flatMap { listOf("--label", "${it.key}=${it.value}") } +
+           cacheArgs +
+           tags.flatMap { listOf("--tag", it) } +
+           listOf("--$action", ".")
+}
+
+// Common Docker task execution logic
+fun executeDockerTask(arch: String, platforms: List<String>, config: BuildConfig, action: String) {
+    logLifecycleInfo(arch, config)
+    
+    val tags = if (platforms.size == 1) config.tagsForArch(arch) else config.multiPlatformTags()
+    val cacheArgs = if (platforms.size == 1) config.cacheArgs(arch) else config.cacheArgs()
+    
+    val cmd = buildDockerCommand(platforms, config, cacheArgs, tags, action)
+    
+    logger.lifecycle("🔍 [DOCKER-DEBUG] Executing: ${cmd.joinToString(" ")}")
+    logger.lifecycle("🔍 [DOCKER-DEBUG] Tags: ${tags.joinToString(", ")}")
+    logger.lifecycle("🔍 [DOCKER-DEBUG] Build args: ${config.buildArgs}")
+    logger.lifecycle("🔍 [DOCKER-DEBUG] Cache args: $cacheArgs")
+    
+    ProcessBuilder(cmd)
+        .directory(projectDir)
+        .inheritIO()
+        .start()
+        .waitFor()
+        .let { exitCode ->
+            if (exitCode != 0) {
+                throw GradleException("Docker command failed with exit code: $exitCode")
+            }
+        }
+}
+
+// Simplified platform-specific build task factory
+fun createPlatformBuildTask(arch: String, platform: String) = tasks.registering {
+    group = "docker"
+    description = "Build Docker image for $arch ($platform)"
+    
+    doLast {
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Starting $arch build task execution")
+        
+        // Cross-platform build protection
+        val hostArch = System.getProperty("os.arch").let { osArch ->
+            when (osArch) {
+                "x86_64", "amd64" -> "amd64"
+                "aarch64", "arm64" -> "arm64"
+                else -> osArch
+            }
+        }
+        
+        val allowEmulation = project.findProperty("docker_emulated_build")?.toString()?.toBoolean() ?: false
+        
+        if (arch != hostArch && !allowEmulation) {
+            logger.warn("")
+            logger.warn("⚠️  SKIPPING CROSS-PLATFORM BUILD")
+            logger.warn("⚠️  Task: $name")
+            logger.warn("⚠️  Requested: $arch ($platform)")
+            logger.warn("⚠️  Host Architecture: $hostArch") 
+            logger.warn("⚠️  Reason: Cross-platform Docker builds are slow and emulated")
+            logger.warn("⚠️  To override: -Pdocker_emulated_build=true")
+            logger.warn("⚠️  Recommended: Use docker:build$hostArch or docker:buildMultiPlatform")
+            logger.warn("")
+            return@doLast
+        }
+        
+        val config = createBuildConfig()
+        executeDockerTask(arch, listOf(platform), config, "load")
+    }
+}
+
+// Simplified platform-specific push task factory  
+fun createPlatformPushTask(arch: String, buildTask: TaskProvider<Task>) = tasks.registering {
+    group = "docker"
+    description = "Push $arch Docker image to registry"
+    dependsOn(buildTask)
+    
+    doLast {
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Starting $arch push task execution")
+        val config = createBuildConfig()
+        val tags = config.tagsForArch(arch)
+        
+        // Push all tags for this architecture
+        tags.forEach { tag ->
+            val pushCmd = listOf("docker", "push", tag)
+            logger.lifecycle("🔍 [DOCKER-DEBUG] Executing: ${pushCmd.joinToString(" ")}")
+            
+            ProcessBuilder(pushCmd)
+                .inheritIO()
+                .start()
+                .waitFor()
+                .let { exitCode ->
+                    if (exitCode != 0) {
+                        throw GradleException("Docker push failed with exit code: $exitCode")
+                    }
+                }
+        }
+    }
+}
+
+//
+// CORE BUILD TASKS
+//
+
+val buildAmd64 by createPlatformBuildTask("amd64", "linux/amd64")
+val buildArm64 by createPlatformBuildTask("arm64", "linux/arm64")
+
+val buildMultiPlatform by tasks.registering {
+    group = "docker"
+    description = "Build multi-platform Docker images locally"
+    
+    doLast {
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Starting multi-platform build task execution")
+        val config = createBuildConfig()
+        executeDockerTask("multi-platform", listOf("linux/amd64", "linux/arm64"), config, "load")
+    }
+}
+
+// Integrate with standard Gradle lifecycle
+val assemble by tasks.existing {
+    dependsOn(buildMultiPlatform)
+    description = "Build multi-platform Docker images"
+}
+
+//
+// CORE PUSH TASKS
+//
+
+val pushAmd64 by createPlatformPushTask("amd64", buildAmd64)
+val pushArm64 by createPlatformPushTask("arm64", buildArm64)
+
+val push by tasks.registering {
     group = "docker"
     description = "Build and push multi-platform Docker images to registry"
     
+    doLast {
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Starting multi-platform push task execution")
+        val config = createBuildConfig()
+        executeDockerTask("multi-platform", listOf("linux/amd64", "linux/arm64"), config, "push")
+    }
+}
+
+// Main push task for multi-platform Docker images
+
+//
+// MANIFEST TASKS
+//
+
+val createManifest by tasks.registering {
+    group = "docker"
+    description = "Create multi-platform manifest (builds both architectures locally)"
+    dependsOn(buildAmd64, buildArm64)
+    
+    doLast {
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Starting manifest creation task execution")
+        val config = createBuildConfig()
+        
+        logger.lifecycle("✅ Built both architecture images locally:")
+        logger.lifecycle("  📦 ${config.baseImage}:${config.tagPrefix}-amd64")
+        logger.lifecycle("  📦 ${config.baseImage}:${config.tagPrefix}-arm64")
+        logger.lifecycle("💡 To create registry manifest, push images first then use pushManifest task")
+    }
+}
+
+val pushManifest by tasks.registering(Exec::class) {
+    group = "docker"
+    description = "Push multi-platform manifest"
+    dependsOn(createManifest)
+    
     doFirst {
-        val version = project.version.toString()
-        val branch = gitBranch()
-        val commit = gitCommit()
-        val commitShort = gitCommitShort()
-        val baseImage = baseImageName(branch)
-        val buildDate = java.time.Instant.now().toString()
-        val isCI = System.getenv("CI") == "true"
-        
-        val buildArgs = mapOf(
-            "GH_BRANCH" to branch,
-            "GH_COMMIT" to commit,
-            "BUILD_DATE" to buildDate,
-            "VCS_REF" to commit
-        )
-        
-        val tags = listOf(
-            "${baseImage}:latest",
-            "${baseImage}:${version}",
-            "${baseImage}:${commitShort}",
-            "${baseImage}:${commit}"
-        )
-        
-        val cacheArgs = if (isCI) {
-            listOf("--cache-from", "type=gha", "--cache-to", "type=gha,mode=max")
-        } else {
-            java.io.File("/tmp/.buildx-cache").mkdirs()
-            listOf("--cache-from", "type=local,src=/tmp/.buildx-cache", "--cache-to", "type=local,dest=/tmp/.buildx-cache,mode=max")
-        }
-        
-        val cmd = listOf("docker", "buildx", "build", "--platform", "linux/amd64,linux/arm64") +
-                  buildArgs.flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
-                  cacheArgs +
-                  tags.flatMap { listOf("--tag", it) } +
-                  listOf("--push", ".")
-        
-        loggedCommandLine(cmd)
-        
-        logger.info("Building and pushing multi-platform Docker images to registry...")
-        logger.info("Branch: $branch, Commit: $commitShort")
-        logger.info("Base image: $baseImage")
-        logger.info("Environment: ${if (isCI) "CI" else "Local"}")
+        logger.lifecycle("🔍 [DOCKER-DEBUG] Starting push manifest task execution")
+        val config = createBuildConfig()
+        commandLine("docker", "manifest", "push", "${config.baseImage}:${config.tagPrefix}")
     }
     
     workingDir = projectDir
 }
 
-// Helper function to create platform-specific Docker push tasks
-fun createDockerPushTask(arch: String, buildTask: TaskProvider<Exec>) = tasks.registering(Exec::class) {
+//
+// MANAGEMENT TASKS  
+//
+
+val listImages by tasks.registering {
     group = "docker"
-    description = "Push $arch Docker image to GitHub Container Registry"
-    dependsOn(buildTask)
+    description = "List all Docker images with detailed tags, labels, and metadata"
     
-    doFirst {
-        val branch = gitBranch()
-        val baseImage = baseImageName(branch)
-        val imageTag = "${baseImage}:latest-$arch"
+    doLast {
+        println("🐳 Docker Images Summary")
+        println("=".repeat(50))
         
-        loggedCommandLine("docker", "push", imageTag)
+        val packages = try {
+            providers.exec {
+                commandLine("gh", "api", "orgs/xtclang/packages?package_type=container", "--jq", ".[].name")
+            }.standardOutput.asText.get().trim().split("\n").map { it.removeSurrounding("\"") }
+                .filter { it.isNotEmpty() }
+        } catch (e: Exception) {
+            println("❌ Error: ${e.message}")
+            println("💡 Run: gh auth refresh --hostname github.com --scopes read:packages")
+            return@doLast
+        }
         
-        logger.info("Pushing $arch Docker image to GitHub Container Registry...")
-        logger.info("Branch: $branch, Image: $imageTag")
-        logger.info("Make sure you're logged in with: docker login ghcr.io")
+        println("Found ${packages.size} container packages in registry")
+        
+        packages.forEach { pkg ->
+            println("\n📦 Package: $pkg")
+            println("   Registry: ghcr.io/xtclang/$pkg")
+            
+            val versions = try {
+                val result = providers.exec {
+                    commandLine("gh", "api", "orgs/xtclang/packages/container/$pkg/versions", 
+                               "--jq", ".[] | {id: .id, tags: .metadata.container.tags, created: .created_at, size: .size}")
+                }
+                result.standardOutput.asText.get().trim().split("\n")
+            } catch (e: Exception) {
+                val errorOutput = try {
+                    providers.exec {
+                        commandLine("gh", "api", "orgs/xtclang/packages/container/$pkg/versions")
+                        isIgnoreExitValue = true
+                    }.standardError.asText.get()
+                } catch (ex: Exception) {
+                    "Unable to get detailed error"
+                }
+                println("  ❌ Could not get versions for $pkg")
+                println("     Error: ${e.message}")
+                println("     Details: $errorOutput")
+                return@forEach
+            }
+            
+            println("   Total versions: ${versions.size}")
+            println("   📋 Recent versions with tags:")
+            
+            versions.take(10).forEachIndexed { i, version ->
+                println("     ${i+1}. $version")
+            }
+            
+            if (versions.size > 10) {
+                println("     ... and ${versions.size - 10} more versions")
+            }
+        }
     }
 }
 
-val dockerPushAmd64 by createDockerPushTask("amd64", dockerBuildAmd64)
-val dockerPushArm64 by createDockerPushTask("arm64", dockerBuildArm64)
-
-val dockerPushAll by tasks.registering {
+val cleanupVersions by tasks.registering {
     group = "docker"
-    description = "Push all platform-specific Docker images to GitHub Container Registry"
+    description = "Clean up old Docker package versions (keep 5 most recent)"
+    dependsOn(listImages)
     
-    dependsOn(dockerPushAmd64, dockerPushArm64)
-}
-
-// Simple task that builds both platforms individually (useful for local testing)
-val dockerBuild by tasks.registering {
-    group = "docker"
-    description = "Build Docker images for both platforms individually (amd64 + arm64)"
-    
-    dependsOn(dockerBuildAmd64, dockerBuildArm64)
-}
-
-val dockerCreateManifest by tasks.registering(Exec::class) {
-    group = "docker"
-    description = "Create and push multi-platform Docker manifests (like CI workflow)"
-    
-    doFirst {
-        val version = project.version.toString()
-        val branch = gitBranch()
-        val commitShort = gitCommitShort()
-        val baseImage = baseImageName(branch)
+    doLast {
+        logger.lifecycle("🧹 Docker Package Cleanup")
+        logger.lifecycle("=".repeat(50))
         
-        val manifestTags = listOf(
-            "latest" to version,
-            version to version,
-            commitShort to commitShort
+        val keepCount = 5
+        val packageName = "xvm"
+        
+        // Get all versions sorted by creation date (newest first)
+        val versions = try {
+            val output = providers.exec {
+                commandLine("gh", "api", "orgs/xtclang/packages/container/$packageName/versions", 
+                           "--jq", ".[] | {id: .id, created: .created_at, tags: .metadata.container.tags}")
+            }.standardOutput.asText.get().trim()
+            
+            if (output.isEmpty()) {
+                logger.lifecycle("❌ No versions found for package: $packageName")
+                return@doLast
+            }
+            
+            output.split("\n")
+        } catch (e: Exception) {
+            logger.error("❌ Error getting versions: ${e.message}")
+            logger.warn("💡 Run: gh auth refresh --hostname github.com --scopes read:packages,delete:packages")
+            return@doLast
+        }
+        
+        logger.lifecycle("📦 Package: $packageName")
+        logger.lifecycle("📊 Total versions: ${versions.size}")
+        logger.lifecycle("🎯 Keeping: $keepCount most recent")
+        logger.lifecycle("🗑️  Deleting: ${maxOf(0, versions.size - keepCount)} old versions")
+        logger.lifecycle("")
+        
+        if (versions.size <= keepCount) {
+            logger.lifecycle("✅ No cleanup needed - already at or below limit")
+            return@doLast
+        }
+        
+        // Show what we're keeping
+        logger.lifecycle("✅ Keeping these versions:")
+        versions.take(keepCount).forEachIndexed { i, version ->
+            logger.lifecycle("  ${i+1}. $version")
+        }
+        logger.lifecycle("")
+        
+        // Show what we're deleting
+        val toDelete = versions.drop(keepCount)
+        logger.lifecycle("🗑️  Deleting these ${toDelete.size} versions:")
+        toDelete.forEachIndexed { i, version ->
+            logger.lifecycle("  ${i+1}. $version")
+        }
+        logger.lifecycle("")
+        
+        // Ask for confirmation (only in interactive mode)
+        if (System.getenv("CI") != "true") {
+            logger.warn("⚠️  This will permanently delete ${toDelete.size} package versions!")
+            logger.warn("💡 Add -Pconfirm=true to proceed, or run from CI")
+            
+            if (project.findProperty("confirm") != "true") {
+                logger.error("❌ Cancelled - add -Pconfirm=true to actually delete")
+                return@doLast
+            }
+        }
+        
+        // Delete old versions
+        var deletedCount = 0
+        var failedCount = 0
+        
+        toDelete.forEach { versionJson ->
+            try {
+                // Extract ID from JSON string (simple parsing)
+                val id = versionJson.substringAfter("\"id\":").substringBefore(",").trim()
+                
+                providers.exec {
+                    commandLine("gh", "api", "-X", "DELETE", "orgs/xtclang/packages/container/$packageName/versions/$id")
+                }
+                
+                deletedCount++
+                logger.lifecycle("✅ Deleted version ID: $id")
+                
+            } catch (e: Exception) {
+                failedCount++
+                logger.error("❌ Failed to delete version: ${e.message}")
+            }
+        }
+        
+        logger.lifecycle("")
+        logger.lifecycle("🎯 Cleanup Summary:")
+        logger.lifecycle("  ✅ Deleted: $deletedCount versions")  
+        logger.lifecycle("  ❌ Failed: $failedCount versions")
+        logger.lifecycle("  📦 Remaining: $keepCount versions")
+        
+        if (failedCount > 0) {
+            logger.warn("💡 Some deletions failed - check GitHub CLI authentication and permissions")
+        }
+    }
+}
+
+val pruneImages by tasks.registering {
+    group = "docker"
+    description = "Delete non-master Docker packages from GitHub Container Registry"
+    
+    doLast {
+        logger.lifecycle("🧹 Pruning Non-Master Docker Packages")
+        logger.lifecycle("=".repeat(50))
+        
+        val packagesToDelete = listOf<String>(
+            // Add branch-specific packages here as needed  
+            // e.g., "xvm-feature-branch", "xvm-experimental"
         )
         
-        logger.info("Creating manifests for: $baseImage (version: $version)")
-        
-        fun loggedExec(vararg cmd: String) {
-            logger.lifecycle("Executing command line: ${cmd.joinToString(" ")}")
-            providers.exec { commandLine(*cmd) }
+        if (packagesToDelete.isEmpty()) {
+            logger.lifecycle("✅ No packages configured for deletion")
+            logger.warn("💡 Add package names to the packagesToDelete list in build.gradle.kts")
+            return@doLast
         }
         
-        manifestTags.forEach { (tag, _) ->
-            loggedExec("docker", "manifest", "create", "$baseImage:$tag", 
-                       "$baseImage:$tag-amd64", "$baseImage:$tag-arm64")
-            loggedExec("docker", "manifest", "push", "$baseImage:$tag")
+        packagesToDelete.forEach { packageName ->
+            logger.lifecycle("🗑️  Attempting to delete package: $packageName")
+            try {
+                providers.exec {
+                    commandLine("gh", "api", "-X", "DELETE", "orgs/xtclang/packages/container/$packageName")
+                }
+                logger.lifecycle("✅ Successfully deleted package: $packageName")
+            } catch (e: Exception) {
+                logger.error("❌ Failed to delete $packageName: ${e.message}")
+            }
         }
+        
+        logger.lifecycle("💡 View remaining packages: https://github.com/orgs/xtclang/packages")
     }
-    
-    workingDir = projectDir
 }
 
-// Convenience aliases for common workflows
-val dockerBuildPushAndManifest by tasks.registering {
-    group = "docker"  
-    description = "Build, push platform images, and create manifests (complete CI-like workflow)"
+
+// Docker build test with local artifacts
+val testDockerWithLocalArtifacts by tasks.registering {
+    group = "docker"
+    description = "Test Docker build using local XDK distribution as artifacts"
     
-    dependsOn(dockerPushAll, dockerCreateManifest)
+    doLast {
+        logger.lifecycle("🧪 Testing Docker build with local artifacts...")
+        
+        // First ensure we have the XDK built with distribution ZIP
+        logger.lifecycle("📋 Building XDK distribution ZIP with native launchers...")
+        exec {
+            commandLine("../gradlew", "xdk:withLaunchersDistZip")
+            workingDir = projectDir
+        }
+        
+        // Find the built distribution ZIP
+        val xdkBuildDir = file("../xdk/build")
+        if (!xdkBuildDir.exists()) {
+            throw GradleException("XDK build directory not found after build.")
+        }
+        
+        val distZipFile = fileTree("../xdk/build/distributions") {
+            include("xdk-*-linux_amd64.zip")
+        }.singleFile
+        
+        logger.lifecycle("📋 Using distribution ZIP: ${distZipFile.name}")
+        
+        // Copy the distribution ZIP to the Docker build context  
+        copy {
+            from(distZipFile)
+            into(".")
+            rename { "ci-dist.zip" }
+        }
+        
+        logger.lifecycle("📋 Copied distribution ZIP to Docker context: ci-dist.zip")
+        
+        // Get host architecture for native build
+        val hostArch = System.getProperty("os.arch").let { osArch ->
+            when (osArch) {
+                "x86_64", "amd64" -> "amd64"
+                "aarch64", "arm64" -> "arm64"
+                else -> osArch
+            }
+        }
+        
+        val platform = "linux/$hostArch"
+        val testTag = "test-xvm-artifacts:latest"
+        
+        logger.lifecycle("🐳 Building Docker image with pre-built artifacts...")
+        logger.lifecycle("  Platform: $platform")
+        logger.lifecycle("  Tag: $testTag")
+        
+        val config = createBuildConfig()
+        
+        // Build Docker image with artifacts
+        val cmd = listOf(
+            "docker", "buildx", "build",
+            "--platform", platform,
+            "--progress=plain",
+            "--build-arg", "USE_PREBUILT_ARTIFACTS=true",
+            "--build-arg", "GH_BRANCH=${config.branch}",
+            "--build-arg", "GH_COMMIT=${config.commit}",
+            "--tag", testTag,
+            "--load",
+            "."
+        )
+        
+        logger.lifecycle("🔍 Executing: ${cmd.joinToString(" ")}")
+        
+        val result = ProcessBuilder(cmd)
+            .directory(projectDir)
+            .inheritIO()
+            .start()
+            .waitFor()
+            
+        if (result != 0) {
+            throw GradleException("Docker build with artifacts failed with exit code: $result")
+        }
+        
+        logger.lifecycle("✅ Docker build with local artifacts succeeded!")
+        
+        // Test the built image
+        logger.lifecycle("🧪 Testing built Docker image...")
+        
+        val testCommands = listOf(
+            listOf("docker", "run", "--rm", testTag, "xec", "--version"),
+            listOf("docker", "run", "--rm", testTag, "xcc", "--version"),
+            listOf("docker", "run", "--rm", testTag, "cat", "/opt/xdk/xvm.json")
+        )
+        
+        testCommands.forEach { testCmd ->
+            logger.lifecycle("  Testing: ${testCmd.drop(3).joinToString(" ")}")
+            val testResult = ProcessBuilder(testCmd)
+                .start()
+                .waitFor()
+            if (testResult != 0) {
+                logger.warn("  ⚠️ Test command failed: ${testCmd.joinToString(" ")}")
+            } else {
+                logger.lifecycle("  ✅ Test passed")
+            }
+        }
+        
+        logger.lifecycle("🎉 Docker artifacts test completed!")
+        logger.lifecycle("💡 Image tagged as: $testTag")
+        logger.lifecycle("💡 Clean up with: docker image rm $testTag")
+    }
+}
+
+// Extension function to calculate directory size
+fun File.directorySize(): Long {
+    return if (isDirectory) {
+        listFiles()?.sumOf { it.directorySize() } ?: 0L
+    } else {
+        length()
+    }
 }

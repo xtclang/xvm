@@ -131,11 +131,48 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
 
         val isCiEnabled = System.getenv(CI) == "true"
         val currentOs: OperatingSystem = OperatingSystem.current()
+        val currentArch: String = normalizeArchitecture(System.getProperty("os.arch"))
         val distributionTasks = listOf("distTar", "distZip", "withLaunchersDistTar", "withLaunchersDistZip")
         val binaryLauncherNames = listOf("xcc", "xec")
 
         fun isDistributionArchiveTask(task: Task): Boolean {
             return task.group == DISTRIBUTION_TASK_GROUP && task.name in distributionTasks
+        }
+        
+        // Normalize architecture names to consistent values (Docker platform naming)
+        fun normalizeArchitecture(arch: String): String {
+            return when (arch.lowercase()) {
+                "amd64", "x86_64", "x64" -> "amd64"
+                "aarch64", "arm64" -> "arm64"
+                "arm" -> "arm"
+                else -> arch.lowercase()
+            }
+        }
+        
+        // Get OS name in consistent format
+        fun getOsName(): String {
+            return when {
+                currentOs.isMacOsX -> "macos"
+                currentOs.isLinux -> "linux" 
+                currentOs.isWindows -> "windows"
+                else -> throw UnsupportedOperationException("Unsupported OS: $currentOs")
+            }
+        }
+        
+        // Get all supported OS×Architecture combinations (Docker platform naming)
+        fun getSupportedPlatforms(): List<Pair<String, String>> {
+            return listOf(
+                "linux" to "amd64",
+                "linux" to "arm64", 
+                "macos" to "arm64",   // Apple Silicon
+                "macos" to "amd64",   // Intel Mac (if needed)
+                "windows" to "amd64"
+            )
+        }
+        
+        // Check if a platform combination is supported
+        fun isPlatformSupported(os: String, arch: String): Boolean {
+            return getSupportedPlatforms().contains(os to arch)
         }
     }
 
@@ -144,7 +181,9 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
             $prefix Configuring XVM distribution: '$this'
             $prefix   Name        : '$distributionName'
             $prefix   Version     : '$distributionVersion'
-            $prefix   Current OS  : '$currentOs'
+            $prefix   Target OS   : '${getOsName()}'
+            $prefix   Target Arch : '$currentArch'
+            $prefix   Platform    : '${getOsName()}_$currentArch'
             $prefix   Environment:
             $prefix       CI             : '$isCiEnabled' (CI property can be overwritten)
             $prefix       GITHUB_ACTIONS : '${System.getenv("GITHUB_ACTIONS") ?: "[not set]"}'
@@ -159,47 +198,36 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         append(project.version)
     }
 
-    fun configScriptFilename(installDir: Provider<Directory>): RegularFile {
-        val config = if (currentOs.isMacOsX) {
-            "cfg_macos.sh"
-        } else if (currentOs.isLinux) {
-            "cfg_linux.sh"
-        } else if (currentOs.isWindows) {
-            "cfg_windows.bat"
-        } else {
-            throw UnsupportedOperationException("Cannot find launcher config script for currentOs: $currentOs")
+    fun configScriptFilename(installDir: Provider<Directory>, os: String = getOsName()): RegularFile {
+        val config = when (os) {
+            "macos" -> "cfg_macos.sh"
+            "linux" -> "cfg_linux.sh"
+            "windows" -> "cfg_windows.bat"
+            else -> throw UnsupportedOperationException("Cannot find launcher config script for OS: $os")
         }
         return installDir.get().file(config)
     }
 
     @Suppress("MemberVisibilityCanBePrivate")
-    fun launcherFileName(): String {
-        return if (currentOs.isMacOsX) {
-            "macos_launcher"
-        } else if (currentOs.isLinux) {
-            "linux_launcher"
-        } else if (currentOs.isWindows) {
-            "windows_launcher.exe"
-        } else {
-            throw UnsupportedOperationException("Cannot build distribution for currentOs: $currentOs")
-        }
+    fun launcherFileName(os: String = getOsName(), arch: String = currentArch): String {
+        val extension = if (os == "windows") ".exe" else ""
+        return "${os}_launcher_$arch$extension"
     }
 
-    fun resolveLauncherFile(dir: Provider<Directory>): RegularFile {
-        return dir.get().file("bin/${launcherFileName()}")
+    fun resolveLauncherFile(dir: Provider<Directory>, os: String = getOsName(), arch: String = currentArch): RegularFile {
+        return dir.get().file("bin/${launcherFileName(os, arch)}")
+    }
+    
+    // Build for current platform 
+    fun isCurrentPlatform(os: String = getOsName(), arch: String = currentArch): Boolean {
+        return os == getOsName() && arch == currentArch
     }
 
     /*
      * Helper for jreleaser etc.
      */
-    fun osClassifier(): String {
-        val arch = System.getProperty("os.arch")
-        return when {
-            currentOs.isMacOsX -> "macos_$arch"
-            currentOs.isLinux -> "linux_$arch"
-            currentOs.isWindows -> "windows_$arch"
-            else -> throw UnsupportedOperationException("Cannot build distribution for currentOs: $currentOs")
-        }
+    fun osClassifier(os: String = getOsName(), arch: String = currentArch): String {
+        return "${os}_$arch"
     }
 
     override fun toString(): String {

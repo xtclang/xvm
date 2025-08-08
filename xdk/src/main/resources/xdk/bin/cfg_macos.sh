@@ -36,8 +36,27 @@ fi
 if [[ -e "${DIR}/cfg_macos.sh" ]]; then
   # copy launcher to various command names
   echo "Creating command line tools: \"xcc\", \"xec\""
-  cp "${DIR}/macos_launcher" "${DIR}/xcc"
-  cp "${DIR}/macos_launcher" "${DIR}/xec"
+  # Find the architecture-specific launcher
+  SYSTEM_ARCH=$(uname -m)
+  # Map system architecture to Docker platform naming
+  case "${SYSTEM_ARCH}" in
+    x86_64|amd64)
+      ARCH="amd64"
+      ;;
+    arm64|aarch64)
+      ARCH="arm64"
+      ;;
+    *)
+      ARCH="${SYSTEM_ARCH}"
+      ;;
+  esac
+  LAUNCHER="${DIR}/macos_launcher_${ARCH}"
+  if [[ ! -e "${LAUNCHER}" ]]; then
+    # Fallback to generic launcher for backward compatibility
+    LAUNCHER="${DIR}/macos_launcher"
+  fi
+  cp "${LAUNCHER}" "${DIR}/xcc"
+  cp "${LAUNCHER}" "${DIR}/xec"
 
   if [[ "${EXP}" == "Y" ]]; then
     if [[ -n "${ADD}" ]]; then

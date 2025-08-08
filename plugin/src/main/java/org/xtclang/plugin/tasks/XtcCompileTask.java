@@ -16,6 +16,7 @@ import kotlin.Pair;
 
 import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
+import org.gradle.api.file.FileTree;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
@@ -192,6 +193,20 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     Provider<Directory> getOutputDirectory() {
         // TODO We can make this configurable later.
         return XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, getCompileSourceSet());
+    }
+
+    /**
+     * Returns all XTC source files (including subdirectory files) for incremental build tracking.
+     * This ensures Gradle detects changes in subdirectory .x files that are part of the module
+     * compilation unit, even though only top-level module files are passed to the XTC compiler.
+     * 
+     * This method fixes the incremental build issue where changes to subdirectory .x files 
+     * (like xenia/BundlePool.x) were not triggering recompilation of the parent module.
+     */
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    public FileTree getAllXtcSourceFiles() {
+        return getSource(); // All .x files in the source tree for dependency tracking
     }
 
     @TaskAction
