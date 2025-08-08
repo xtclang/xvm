@@ -95,9 +95,10 @@ else
             echo "    $dir: $dir_size"
           fi
         done
-      else
-        echo "  Status: ❌ (will be created)"
+        return 0
       fi
+      echo "  Status: ❌ (will be created)"
+      return 0
     }
     
     mkdir -p "$GRADLE_USER_HOME"
@@ -156,6 +157,26 @@ mkdir -p xdk
 mv "$XDK_EXTRACTED"/* xdk/
 rmdir "$XDK_EXTRACTED"
 echo "📁 Created clean xdk/ directory structure"
+
+# Copy correct native launchers based on target architecture
+if [ -n "${TARGETARCH:-}" ]; then
+    echo "🚀 Installing native launchers for ${TARGETOS}/${TARGETARCH}"
+    LAUNCHER_FILE="javatools_launcher/src/main/resources/exe/${TARGETOS}_launcher_${TARGETARCH}$([ "${TARGETOS}" = "windows" ] && echo ".exe" || echo "")"
+    
+    if [ -f "$LAUNCHER_FILE" ]; then
+        cp "$LAUNCHER_FILE" "xdk/bin/xec"
+        cp "$LAUNCHER_FILE" "xdk/bin/xcc"
+        chmod +x "xdk/bin/xec" "xdk/bin/xcc"
+        echo "✅ Installed native launchers: $LAUNCHER_FILE → xec, xcc"
+    else
+        echo "⚠️  Native launcher not found: $LAUNCHER_FILE"
+        echo "   Available launchers:"
+        ls -la javatools_launcher/src/main/resources/exe/ || echo "   No launcher directory found"
+        echo "   Using Java wrapper scripts instead"
+    fi
+else
+    echo "ℹ️  No TARGETARCH specified, using Java wrapper scripts"
+fi
 
 # Create build info (consistent variable naming)
 BUILD_DATE_VAL="${BUILD_DATE:-$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"

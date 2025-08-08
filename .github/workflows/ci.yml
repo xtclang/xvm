@@ -201,7 +201,7 @@ jobs:
           java -XX:+PrintFlagsFinal -version 2>&1 || echo "  Flag printing failed (non-fatal)"
           
           inspect_gradle_cache "before installDist"
-          ./gradlew ${{ env.gradle_options }} installDist xdk:withLaunchersDistZip 
+          ./gradlew ${{ env.gradle_options }} installDist xdk:distZip 
 
       - name: Build a machine specific XDK installation with native launchers, test run launchers on native platform
         shell: bash
@@ -252,7 +252,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: xdk-distribution
-          path: xdk/build/distributions/xdk-*-linux_*.zip
+          path: xdk/build/distributions/xdk-*.zip
           retention-days: 1
 
   publish-snapshot:
@@ -457,10 +457,10 @@ jobs:
           echo "  Runner arch: $(uname -m)"
           
           # Build with pre-built artifacts (fast path - no Gradle execution in container)
-          # Find and copy distribution ZIP to Docker build context
-          DIST_ZIP_FILE=$(find ../ -name "xdk-*-linux_${{ matrix.arch }}.zip" | head -1)
+          # Find platform-agnostic distribution ZIP
+          DIST_ZIP_FILE=$(find ../ -name "xdk-*.zip" | head -1)
           if [ -z "$DIST_ZIP_FILE" ]; then
-            echo "❌ No Linux ${{ matrix.arch }} distribution ZIP found in artifacts"
+            echo "❌ No XDK distribution ZIP found in artifacts"
             echo "Available files in parent directory:"
             ls -la ../ || echo "No files"
             exit 1
