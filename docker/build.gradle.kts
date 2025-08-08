@@ -553,67 +553,33 @@ val testDockerWithLocalArtifacts by tasks.registering {
     doLast {
         logger.lifecycle("🧪 Testing Docker build with local artifacts...")
         
-        // Clean artifacts directory
-        val artifactsDir = file("artifacts")
-        if (artifactsDir.exists()) {
-            artifactsDir.deleteRecursively()
-        }
-        artifactsDir.mkdirs()
-        
-        // First ensure we have the XDK built with launchers
-        logger.lifecycle("📋 Building XDK with native launchers...")
+        // First ensure we have the XDK built with distribution ZIP
+        logger.lifecycle("📋 Building XDK distribution ZIP with native launchers...")
         exec {
-            commandLine("../gradlew", "xdk:installWithLaunchersDist")
+            commandLine("../gradlew", "xdk:withLaunchersDistZip")
             workingDir = projectDir
         }
         
-        // Copy XDK distribution to artifacts structure (same as CI)
+        // Find the built distribution ZIP
         val xdkBuildDir = file("../xdk/build")
         if (!xdkBuildDir.exists()) {
             throw GradleException("XDK build directory not found after build.")
         }
         
-        logger.lifecycle("📋 Copying XDK distribution to artifacts structure...")
+        val distZipFile = fileTree("../xdk/build/distributions") {
+            include("xdk-*-linux_amd64.zip")
+        }.singleFile
+        
+        logger.lifecycle("📋 Using distribution ZIP: ${distZipFile.name}")
+        
+        // Copy the distribution ZIP to the Docker build context  
         copy {
-            from("../xdk/build") {
-                include("distributions/**")
-                include("install/**")
-            }
-            into("artifacts/xdk/build")
+            from(distZipFile)
+            into(".")
+            rename { "ci-dist.zip" }
         }
         
-        // Copy native launchers if available
-        val launcherDir = file("../javatools_launcher/src/main/resources/exe")
-        if (launcherDir.exists()) {
-            logger.lifecycle("📋 Copying native launchers to artifacts structure...")
-            copy {
-                from(launcherDir)
-                into("artifacts/javatools_launcher/src/main/resources/exe")
-            }
-        } else {
-            logger.warn("⚠️ No native launchers found - Docker will use Java wrapper scripts")
-        }
-        
-        // Validate artifacts structure
-        logger.lifecycle("📋 Validating artifacts structure:")
-        if (!file("artifacts/xdk/build/install").exists()) {
-            throw GradleException("Missing artifacts/xdk/build/install directory")
-        }
-        
-        val artifactFiles = fileTree("artifacts").files
-        logger.lifecycle("  Total artifacts: ${artifactFiles.size} files")
-        logger.lifecycle("  Artifacts size: ${(artifactsDir.directorySize() / (1024 * 1024))} MB")
-        
-        // Show key artifacts
-        logger.lifecycle("  Key artifacts found:")
-        fileTree("artifacts") {
-            include("**/VERSION")
-            include("**/launcher*")
-            include("**/*.xtc")
-        }.files.take(10).forEach { file ->
-            val relativePath = file.relativeTo(artifactsDir)
-            logger.lifecycle("    ${relativePath}")
-        }
+        logger.lifecycle("📋 Copied distribution ZIP to Docker context: ci-dist.zip")
         
         // Get host architecture for native build
         val hostArch = System.getProperty("os.arch").let { osArch ->

@@ -422,7 +422,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: xdk-distribution
-          path: docker/artifacts/
+          path: .
 
       - name: Build and push Docker image with pre-built artifacts (${{ matrix.arch }})
         id: build
@@ -466,10 +466,10 @@ jobs:
           
           # Build with pre-built artifacts (fast path - no Gradle execution in container)
           # Find and copy distribution ZIP to Docker build context
-          DIST_ZIP_FILE=$(find docker/artifacts/xdk/build/distributions -name "xdk-*-linux_amd64.zip" | head -1)
+          DIST_ZIP_FILE=$(find xdk/build/distributions -name "xdk-*-linux_${{ matrix.arch }}.zip" | head -1)
           if [ -z "$DIST_ZIP_FILE" ]; then
-            echo "❌ No Linux AMD64 distribution ZIP found in artifacts"
-            ls -la docker/artifacts/xdk/build/distributions/ || echo "No distributions directory"
+            echo "❌ No Linux ${{ matrix.arch }} distribution ZIP found in artifacts"
+            ls -la xdk/build/distributions/ || echo "No distributions directory"
             exit 1
           fi
           
