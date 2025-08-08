@@ -456,7 +456,7 @@ jobs:
           fi
           echo "  Artifacts size: $(du -sh artifacts | cut -f1)"
           echo "  Artifacts structure:"
-          find artifacts -type f | head -10
+          find artifacts -type f
           
           # Platform safety check
           echo "🔍 Platform safety validation:"
