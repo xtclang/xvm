@@ -55,7 +55,7 @@ public class FunctionBuilder
             .withMethodBody("$invoke", invokeMD, ClassFile.ACC_PUBLIC, code -> {
                 // TODO: implement the wrapper
                 Builder.defaultLoad(code, callMD.returnType());
-                Builder.defaultReturn(code, callMD.returnType());
+                Builder.addReturn(code, callMD.returnType());
             }
         );
     }

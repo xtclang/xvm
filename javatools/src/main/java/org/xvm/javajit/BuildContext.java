@@ -33,6 +33,7 @@ import static java.lang.constant.ConstantDescs.CD_long;
 import static org.xvm.javajit.Builder.CD_Boolean;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_JavaString;
+import static org.xvm.javajit.Builder.CD_Nullable;
 import static org.xvm.javajit.Builder.CD_String;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 
@@ -49,12 +50,14 @@ public class BuildContext {
         this.typeInfo   = typeInfo;
         this.method     = method;
         this.jmd        = method.getJitDesc(typeSystem);
+        this.optimized  = jmd.optimizedMD != null;
     }
 
     public final TypeInfo      typeInfo;
     public final MethodInfo    method;
     public final TypeSystem    typeSystem;
     public final JitMethodDesc jmd;
+    public final boolean       optimized;
 
     /**
      * The map of {@link Slot}s indexed by the Var index.
@@ -150,8 +153,7 @@ public class BuildContext {
                 ClassDesc.of(thisType.ensureJitClassName(typeSystem)), "thi$"));
         }
 
-        boolean        optimized = jmd.optimizedMD != null;
-        JitParamDesc[] params    = optimized ? jmd.optimizedParams : jmd.standardParams;
+        JitParamDesc[] params = optimized ? jmd.optimizedParams : jmd.standardParams;
         for (int i = 0, c = params.length; i < c; i++) {
             JitParamDesc paramDesc = params[i];
             int          varIndex  = paramDesc.index;
@@ -183,7 +185,7 @@ public class BuildContext {
     }
 
     /**
-     * Build the code to load the Ctx instance on stack.
+     * Build the code to load the Ctx instance on the java stack.
      */
     public CodeBuilder loadCtx(CodeBuilder code) {
         code.aload(code.parameterSlot(0));
@@ -191,7 +193,7 @@ public class BuildContext {
     }
 
     /**
-     * Build the code to load "this" instance on stack.
+     * Build the code to load "this" instance on the java stack.
      */
     public Slot loadThis(CodeBuilder code) {
         assert !method.isFunction();
@@ -200,7 +202,7 @@ public class BuildContext {
     }
 
     /**
-     * Build the code to load an argument value on the stack.
+     * Build the code to load an argument value on the java stack.
      */
     public Slot loadArgument(CodeBuilder code, int argId) {
         if (argId >= 0) {
@@ -217,15 +219,15 @@ public class BuildContext {
     }
 
     /**
-     * Build the code to load an argument value on the stack.
+     * Build the code to load an argument value on the java stack.
      *
-     * @param targetDesc   the desired type description
+     * @param targetDesc  the desired type description
      */
     public Slot loadArgument(CodeBuilder code, int argId, JitTypeDesc targetDesc) {
         Slot slot = loadArgument(code, argId);
         if (slot.cd().isPrimitive() && !targetDesc.cd.isPrimitive()) {
             Builder.box(code, typeSystem, slot.type(), slot.cd());
-            // TODO: replace the slot
+            slot = new SingleSlot(slot.slot(), targetDesc.type, targetDesc.cd, slot.name());
         }
         return slot;
     }
@@ -240,7 +242,7 @@ public class BuildContext {
     }
 
     /**
-     * Build the code to load a value for a constant on the stack.
+     * Build the code to load a value for a constant on the java stack.
      *
      * We **always** load a primitive value if possible.
      */
@@ -262,13 +264,17 @@ public class BuildContext {
             return new SingleSlot(Op.A_STACK, constant.getType(), CD_long, "");
         }
         if (constant instanceof EnumValueConstant enumConstant) {
-            if (enumConstant.getType().isA(pool().typeBoolean())) {
+            ConstantPool pool = pool();
+            if (enumConstant.getType().isOnlyNullable()) {
+                code.getstatic(CD_Nullable, "Null", CD_Nullable);
+                return new SingleSlot(-1, pool.typeNullable(), CD_Nullable, "");
+            } else if (enumConstant.getType().isA(pool.typeBoolean())) {
                 if (enumConstant.getIntValue().getInt() == 0) {
                     code.iconst_0();
                 } else {
                     code.iconst_1();
                 }
-            return new SingleSlot(-1, pool().typeBoolean(), CD_Boolean, "");
+            return new SingleSlot(-1, pool.typeBoolean(), CD_Boolean, "");
             }
         }
         if (constant instanceof LiteralConstant litConstant) {
@@ -286,7 +292,7 @@ public class BuildContext {
     }
 
     /**
-     * Build the code to load a value for a predefine constant on the stack.
+     * Build the code to load a value for a predefine constant on the java stack.
      */
     public Slot loadPredefineArgument(CodeBuilder code, int argId) {
         switch (argId) {
@@ -420,14 +426,14 @@ public class BuildContext {
     }
 
     /**
-     * Pop a Slot from the stack.
+     * Pop a Slot from the context stack.
      */
     public Slot popSlot() {
         return stack.pop();
     }
 
     /**
-     * Push a Slot onto the stack.
+     * Push a Slot onto the context stack.
      */
     public Slot pushSlot(Slot slot) {
         assert slot.slot() == Op.A_STACK;
@@ -451,5 +457,6 @@ public class BuildContext {
 
     record SingleSlot(int slot, TypeConstant type, ClassDesc cd, String name) implements Slot {}
 
-    record DoubleSlot(int slot, int extSlot, TypeConstant type, ClassDesc cd, String name) implements Slot {}
+    record DoubleSlot(int slot, int extSlot, TypeConstant type, ClassDesc cd, String name)
+        implements Slot {}
 }

@@ -149,9 +149,10 @@ public class NativeTypeSystem
                 ClassModel     model  = ClassFile.of().parse(classBytes);
                 String         path   = className.substring(moduleLoader.prefix.length()).replace('$', '.');
                 ClassStructure struct = (ClassStructure) moduleLoader.module.getChildByPath(path);
-                if (struct != null) {
-                    return augmentNativeClass(model, className, struct.getCanonicalType());
+                if (struct == null) {
+                    throw new RuntimeException("Structure is missing for " + moduleLoader.prefix + name);
                 }
+                return augmentNativeClass(model, className, struct.getCanonicalType());
             }
         } catch (IOException ignore) {}
 

@@ -90,10 +90,12 @@ public class JitConnector
                 method.invoke(module, Ctx.get(), asArg); // TODO create xStr args
             }
         } catch (ClassNotFoundException | NoClassDefFoundError e) {
+            e.printStackTrace();
             throw new RuntimeException("Failed to load class \"" + typeName + '"', e);
         } catch (NoSuchMethodException e) {
             throw new RuntimeException("No \"run()\" method", e);
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            e.printStackTrace();
             throw new RuntimeException("Failed to invoke \"run()\" method", e);
         }
     }

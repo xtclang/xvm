@@ -1233,33 +1233,26 @@ public class MethodInfo
             listParamsStd.clear();
             listParamsOpt.clear();
 
-            int ixLong   = -1; // an index of the long return value in the Ctx (only in optimized)
+            int ixLong   = -1; // an index of the long return value in the Ctx (only for optimized)
             int ixOptObj = -1; // an index of the Object return value in the Ctx for optimized
             int ixStdObj = -1; // an index of the Object return value in the Ctx for standard
             for (int iOrig = 0, c = method.getReturnCount(); iOrig < c; iOrig++) {
                 TypeConstant type = signature.getRawReturns()[iOrig];
                 ClassDesc    cd;
 
-                if (iOrig == 1) {
-                    // prime the indexes for all returns beyond the first one
-                    ixLong   = 0;
-                    ixOptObj = 0;
-                    ixStdObj = 0;
-                }
-
                 if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
                     ClassDesc cdStd = ClassDesc.of(ts.ensureJitClassName(type));
 
                     listParamsStd.add(new JitParamDesc(type, Specific, cdStd, iOrig, ixStdObj++, false));
-                    listParamsOpt.add(new JitParamDesc(type, Primitive, cd, iOrig, ixLong++, false));
+                    listParamsOpt.add(new JitParamDesc(type, Primitive, cd,   iOrig, ixLong++, false));
                     fOptimized = true;
                 } else if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null) {
                     TypeConstant typePrimitive = type.removeNullable();
                     TypeConstant typeBoolean   = pool().typeBoolean();
                     listParamsStd.add(new JitParamDesc(type,
-                            Widened, CD_xObj, iOrig, ixStdObj++, false));
+                            Widened, CD_xObj,               iOrig, ixStdObj++, false));
                     listParamsOpt.add(new JitParamDesc(typePrimitive,
-                            MultiSlotPrimitive, cd, iOrig, ixLong++, false));
+                            MultiSlotPrimitive, cd,         iOrig, ixLong++, false));
                     listParamsOpt.add(new JitParamDesc(typeBoolean,
                             MultiSlotPrimitive, CD_boolean, iOrig, ixLong++, true));
                     fOptimized = true;
@@ -1273,6 +1266,14 @@ public class MethodInfo
 
                     listParamsStd.add(new JitParamDesc(type, Specific, cd, iOrig, ixStdObj++, false));
                     listParamsOpt.add(new JitParamDesc(type, Specific, cd, iOrig, ixOptObj++, false));
+                }
+
+                // prime optimized indexes
+                if (ixLong == -1) {
+                    ixLong = 0;
+                }
+                if (ixOptObj == -1) {
+                    ixOptObj = 0;
                 }
             }
 

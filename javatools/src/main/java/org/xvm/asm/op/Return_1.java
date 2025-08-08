@@ -115,28 +115,7 @@ public class Return_1
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        BuildContext.Slot slot = bctx.loadArgument(code, m_nArg);
-        ClassDesc         cd   = slot.cd();
-        if (cd.isPrimitive()) {
-            switch (cd.descriptorString()) {
-                case "I", "S", "B", "C", "Z":
-                    code.ireturn();
-                    break;
-                case "J":
-                    code.lreturn();
-                    break;
-                case "F":
-                    code.freturn();
-                    break;
-                case "D":
-                    code.dreturn();
-                    break;
-                default:
-                    throw new IllegalStateException();
-            }
-        } else {
-            code.areturn();
-        }
+        buildReturn(bctx, code, new int[] {m_nArg});
     }
 
     // ----- fields --------------------------------------------------------------------------------

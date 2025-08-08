@@ -1,8 +1,5 @@
 package org.xvm.javajit;
 
-import java.lang.classfile.ClassFile;
-import java.lang.classfile.ClassModel;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;

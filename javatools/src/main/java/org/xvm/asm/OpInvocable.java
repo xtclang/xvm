@@ -371,7 +371,7 @@ public abstract class OpInvocable extends Op {
                 ClassDesc    cdRet   = pdRet.cd;
 
                 Slot slot = bctx.ensureSlot(nVar, typeRet, cdRet, "");
-                if (pdRet.optIndex == -1) {
+                if (pdRet.altIndex == -1) {
                     // process the natural return
                     if (slot.isStack()) {
                         // the return value is on Java stack; keep it there

@@ -81,9 +81,10 @@ public abstract class Builder {
     }
 
     /**
-     * Generate a default return for the specified Java class.
+     * Generate a default return for the specified Java class assuming the corresponding value
+     * is already on java stack.
      */
-    public static void defaultReturn(CodeBuilder code, ClassDesc cd) {
+    public static void addReturn(CodeBuilder code, ClassDesc cd) {
         if (cd.isPrimitive()) {
             switch (cd.descriptorString()) {
                 case "I", "S", "B", "C", "Z":
@@ -101,9 +102,11 @@ public abstract class Builder {
                 case "V":
                     code.return_();
                     break;
+                default:
+                    throw new IllegalStateException();
             }
         } else {
-            code.aconst_null().areturn();
+            code.areturn();
         }
     }
 
@@ -207,11 +210,121 @@ public abstract class Builder {
         };
     }
 
+    /**
+     * Generate a "load the return value from the context" for the specified Java class. Out: The
+     * loaded value is at the java stack top.
+     *
+     * @param returnIndex the index of the value in the Ctx object
+     */
+    public void loadFromContext(CodeBuilder code, ClassDesc cd, int returnIndex) {
+        assert returnIndex >= 0;
+
+        code.aload(code.parameterSlot(0));
+
+        if (cd.isPrimitive()) {
+            if (returnIndex < 8) {
+                code // r = $ctx.i"returnIndex"
+                    .getfield(CD_Ctx, "i" + (returnIndex), CD_long);
+            } else {
+                code // r = $ctx.iN[returnIndex-8]
+                    .getfield(CD_Ctx, "iN", CD_long.arrayType())
+                    .loadConstant(returnIndex-8)
+                    .aaload();
+            }
+
+            // convert the long to the corresponding Java primitive
+            switch (cd.descriptorString()) {
+                case "I", "S", "B", "C", "Z":
+                    code.l2i();
+                    break;
+                case "J":
+                    break;
+                case "F":
+                    code.l2f();
+                    break;
+                case "D":
+                    code.l2d();
+                    break;
+                default:
+                    throw new IllegalStateException();
+            }
+        } else {
+            if (returnIndex < 8) {
+                code // r = $ctx.o"returnIndex"
+                    .getfield(CD_Ctx, "o" + (returnIndex-1), CD_Object);
+            } else {
+                code // r = $ctx.oN[returnIndex-8]
+                    .getfield(CD_Ctx, "oN", CD_Object.arrayType())
+                    .loadConstant(returnIndex-8)
+                    .aaload();
+            }
+        }
+    }
+
+    /**
+     * Generate a "store the return value to the context" for the specified Java class.
+     * In: The value to store is at the java stack top.
+     */
+    public static void storeToContext(CodeBuilder code, ClassDesc cd, int returnIndex) {
+        assert returnIndex >= 0;
+
+        code.aload(code.parameterSlot(0));
+        if (cd.isPrimitive() && cd.descriptorString().equals("J")) {
+             // the value is a "long" that occupies two slots
+             // stack (lvalue, lvalue2, $ctx) -> ($ctx, lvalue, lvalue2)
+            code.dup_x2().pop();
+        } else {
+            // stack (value, $ctx) -> ($ctx, value)
+            code.swap();
+        }
+
+        if (cd.isPrimitive()) {
+            // all primitives are stored into "long" fields; convert
+            switch (cd.descriptorString()) {
+                case "I", "S", "B", "C", "Z":
+                    code.i2l();
+                    break;
+                case "J":
+                    break;
+                case "F":
+                    code.f2l();
+                    break;
+                case "D":
+                    code.d2l();
+                    break;
+                default:
+                    throw new IllegalStateException();
+            }
+
+            if (returnIndex < 8) {
+                code // $ctx.i"returnIndex" = r
+                    .putfield(CD_Ctx, "i" + returnIndex, CD_long);
+            } else {
+                // TODO: replace with a helper "Ctx.storeLong(i-8, value)"
+                code // $ctx.iN[returnIndex-8] = r
+                    .getfield(CD_Ctx, "iN", CD_long.arrayType())
+                    .loadConstant(returnIndex-8)
+                    .aastore();
+            }
+        } else {
+            if (returnIndex < 8) {
+                code // $ctx.o"returnIndex" = r
+                    .putfield(CD_Ctx, "o" + (returnIndex), CD_Object);
+            } else {
+                // TODO: replace with a helper "Ctx.storeRef(i-8, value)"
+                code // $ctx.oN[returnIndex-8] = r
+                    .getfield(CD_Ctx, "oN", CD_Object.arrayType())
+                    .loadConstant(returnIndex-8)
+                    .aastore();
+            }
+        }
+    }
+
     // ----- native class names --------------------------------------------------------------------
 
     public static final String N_Object      = "org.xtclang.ecstasy.Object";
     public static final String N_Boolean     = "org.xtclang.ecstasy.Boolean";
-    public static final String N_Null        = "org.xtclang.ecstasy.Null";
+    public static final String N_Nullable    = "org.xtclang.ecstasy.Nullable";
     public static final String N_xConst      = "org.xtclang.ecstasy.xConst";
     public static final String N_xFunction   = "org.xtclang.ecstasy.xFunction";
     public static final String N_xModule     = "org.xtclang.ecstasy.xModule";
@@ -239,7 +352,7 @@ public abstract class Builder {
     public static final ClassDesc CD_Boolean       = ClassDesc.of(N_Boolean);
     public static final ClassDesc CD_Char          = ClassDesc.of(N_Char);
     public static final ClassDesc CD_Int64         = ClassDesc.of(N_Int64);
-    public static final ClassDesc CD_Null          = ClassDesc.of(N_Null);
+    public static final ClassDesc CD_Nullable      = ClassDesc.of(N_Nullable);
     public static final ClassDesc CD_Object        = ClassDesc.of(N_Object);
     public static final ClassDesc CD_String        = ClassDesc.of(N_String);
 

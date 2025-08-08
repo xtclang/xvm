@@ -11,7 +11,7 @@ module test0.examples.org {
         i1 = call1(i1, 5);
         console.print(i1);
 
-//
+
 //        (i1, Int i2) = call2(0);
 //
 //        if (Int i3 := call3(0)) {
@@ -22,9 +22,9 @@ module test0.examples.org {
     Int call1(Int i, Int j = 2) {
         return i + j;
     }
-//    (Int, Int) call2(Int i) {
-//        return i++, i;
-//    }
+    (Int?, Int) call2(Int i) {
+        return i, i;
+    }
 //    conditional Int call3(Int i) {
 //        return True, i;
 //    }

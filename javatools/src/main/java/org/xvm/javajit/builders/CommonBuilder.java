@@ -28,7 +28,6 @@ import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.TypeSystem;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
-import static java.lang.constant.ConstantDescs.CD_long;
 
 /**
  * Generic Java class builder.
@@ -191,31 +190,29 @@ public class CommonBuilder
 
         classBuilder.withMethodBody(jitName, jmDesc.standardMD, flags, code -> {
 
-            int argOffset = 0;
             if (!method.isFunction()) {
-                code.aload(argOffset++); // stack: this
+                code.aload(0); // stack: this
             }
-            int ctxIndex = argOffset;
-            code.aload(argOffset++);     // stack: Ctx
+            code.aload(code.parameterSlot(0)); // stack: Ctx
 
             JitParamDesc[] optimizedParams = jmDesc.optimizedParams;
             for (int i = 0, c = optimizedParams.length; i < c; i++) {
-                JitParamDesc thatParamDesc  = optimizedParams[i];
-                int          thisParamIndex = argOffset + thatParamDesc.index;
-                TypeConstant thisParamType  = thatParamDesc.type;
-                switch (thatParamDesc.flavor) {
+                JitParamDesc optParamDesc = optimizedParams[i];
+                int          stdParamSlot = code.parameterSlot(1 + optParamDesc.index);
+                TypeConstant stdParamType = optParamDesc.type;
+                switch (optParamDesc.flavor) {
                     case Specific, Widened:
-                        code.aload(thisParamIndex);
+                        code.aload(stdParamSlot);
                         break;
 
                     case SpecificWithDefault, WidenedWithDefault:
                         // null indicates "default" value; pass it along regardless
-                        code.aload(thisParamIndex);
+                        code.aload(stdParamSlot);
                         break;
 
                     case Primitive:
-                        code.aload(thisParamIndex);
-                        unbox(code, typeSystem, thisParamType, thatParamDesc.cd);
+                        code.aload(stdParamSlot);
+                        unbox(code, typeSystem, stdParamType, optParamDesc.cd);
                         break;
 
                     case PrimitiveWithDefault: {
@@ -225,18 +222,18 @@ public class CommonBuilder
                         Label endIf     = code.newLabel();
 
                         code
-                           .aload(thisParamIndex)
+                           .aload(stdParamSlot)
                            .aconst_null()
                            .if_acmpne(ifNotNull);
                         // the value is `null`
-                        Builder.defaultLoad(code, thatParamDesc.cd); // default primitive
+                        Builder.defaultLoad(code, optParamDesc.cd); // default primitive
                         code.iconst_1();                             // true
 
                         code
                             .goto_(endIf)
                             .labelBinding(ifNotNull)
-                            .aload(thisParamIndex);
-                        unbox(code, typeSystem, thisParamType, thatParamDesc.cd); // unwrapped primitive
+                            .aload(stdParamSlot);
+                        unbox(code, typeSystem, stdParamType, optParamDesc.cd); // unwrapped primitive
                         code.iconst_0();                                          // false
 
                         code.labelBinding(endIf);
@@ -245,26 +242,26 @@ public class CommonBuilder
                     }
 
                     case MultiSlotPrimitive: {
-                        assert thisParamType.isNullable();
-                        TypeConstant primitiveType = thisParamType.getUnderlyingType();
+                        assert stdParamType.isNullable();
+                        TypeConstant primitiveType = stdParamType.getUnderlyingType();
                         // if the argument is Ecstasy `Null`, pass the default value for the type
                         // and `true`; otherwise the unboxed primitive value and `false`
                         Label ifNotNull = code.newLabel();
                         Label endIf  = code.newLabel();
 
                         code
-                           .aload(thisParamIndex)
-                           .getstatic(CD_Null, "Null", CD_Null)
+                           .aload(stdParamSlot)
+                           .getstatic(CD_Nullable, "Null", CD_Nullable)
                            .if_acmpne(ifNotNull);
                         // the value is `Null`
-                        Builder.defaultLoad(code, thatParamDesc.cd);  // default primitive
+                        Builder.defaultLoad(code, optParamDesc.cd);  // default primitive
                         code.iconst_1();                              // true
 
                         code
                             .goto_(endIf)
                             .labelBinding(ifNotNull)
-                            .aload(thisParamIndex);
-                        unbox(code, typeSystem, primitiveType, thatParamDesc.cd); // unboxed primitive
+                            .aload(stdParamSlot);
+                        unbox(code, typeSystem, primitiveType, optParamDesc.cd); // unboxed primitive
                         code.iconst_0();                                          // false
 
                         code.labelBinding(endIf);
@@ -282,88 +279,89 @@ public class CommonBuilder
                 code.invokevirtual(CD_this, jitName + OPT, jmDesc.optimizedMD);
             }
 
-            JitParamDesc[] optimizedReturns = jmDesc.optimizedReturns;
-            int            thatReturnCount  = optimizedReturns.length;
-            JitParamDesc[] standardReturns  = jmDesc.standardReturns;
-            int            thisReturnCount  = standardReturns.length;
-            if (thatReturnCount == 0) {
+            JitParamDesc[] optReturns     = jmDesc.optimizedReturns;
+            int            optReturnCount = optReturns.length;
+            JitParamDesc[] stdReturns     = jmDesc.standardReturns;
+            int            stdReturnCount = stdReturns.length;
+            if (optReturnCount == 0) {
                 code.return_();
                 return;
             }
 
             // the natural return is at the top of the stack now; iterate returns in the inverse order
-            for (int thatIx = thatReturnCount-1, thisIx = thisReturnCount-1; thatIx >= 0; thatIx--) {
-                JitParamDesc thatDesc = optimizedReturns[thatIx];
-                if (thatDesc.extension) {
+            for (int optIx = optReturnCount-1, stdIx = stdReturnCount-1; optIx >= 0; optIx--) {
+                JitParamDesc optDesc = optReturns[optIx];
+                if (optDesc.extension) {
                     // since we are in the reverse order, the "actual" return will use this value
                     continue;
                 }
-                ClassDesc    thatCD       = thatDesc.cd;
-                TypeConstant thatType     = thatDesc.type;
-                int          thatReturnIx = thatDesc.optIndex;
+                ClassDesc    optCD    = optDesc.cd;
+                TypeConstant optType  = optDesc.type;
+                int          optRetIx = optDesc.altIndex;
 
-                JitParamDesc thisDesc     = standardReturns[thisIx--];
-                ClassDesc    thisCD       = thisDesc.cd;
-                int          thisReturnIx = thisDesc.optIndex;
+                JitParamDesc stdDesc  = stdReturns[stdIx--];
+                ClassDesc    stdCD    = stdDesc.cd;
+                TypeConstant stdType  = stdDesc.type;
+                int          stdRetIx = stdDesc.altIndex;
 
-                switch (thatDesc.flavor) {
+                switch (optDesc.flavor) {
                     case Specific, Widened:
-                        if (thatIx == 0) {
+                        if (optIx == 0) {
                             // natural return
                             code.areturn();
                         } else {
-                            if (thatReturnIx != thisReturnIx) {
-                                loadFromContext(code, thatCD, ctxIndex, thatReturnIx);
-                                storeToContext(code, thisCD, ctxIndex, thisReturnIx);
+                            if (optRetIx != stdRetIx) {
+                                loadFromContext(code, optCD, optRetIx);
+                                storeToContext(code, stdCD, stdRetIx);
                             }
                         }
                         break;
 
                     case Primitive:
-                        if (thatIx == 0) {
+                        if (optIx == 0) {
                             // natural return
-                            box(code, typeSystem, thatType, thatCD);
+                            box(code, typeSystem, optType, optCD);
                             code.areturn();
                         } else {
-                            loadFromContext(code, thatCD, ctxIndex, thatReturnIx);
-                            box(code, typeSystem, thatType, thatCD);
-                            storeToContext(code, thisCD, ctxIndex, thisReturnIx);
+                            loadFromContext(code, optCD, optRetIx);
+                            box(code, typeSystem, optType, optCD);
+                            storeToContext(code, stdCD, stdRetIx);
                         }
                         break;
 
                     case MultiSlotPrimitive:
-                        assert thatType.isNullable();
-                        TypeConstant primitiveType = thatType.getUnderlyingType();
+                        assert stdType.isNullable();
 
-                        // if the extension is 'true', return is "Null", otherwise the unboxed
-                        // primitive value
+                        // if the extension is 'true', the return value is "Null", otherwise the
+                        // unboxed primitive value
                         Label ifNull = code.newLabel();
                         Label endIf  = code.newLabel();
 
-                        loadFromContext(code, CD_boolean, ctxIndex, thatIx+1);
+                        JitParamDesc optExt = optReturns[optIx + 1];
+                        loadFromContext(code, CD_boolean, optExt.altIndex);
                         code
                             .iconst_1()
                             .if_icmpeq(ifNull)  // if true, go to Null
                             ;
 
-                        box(code, typeSystem, primitiveType, thatCD);
-                        if (thatIx == 0) {
+                        box(code, typeSystem, optType, optCD);
+                        if (optIx == 0) {
                             code.areturn();
                         } else {
-                            storeToContext(code, thisCD, ctxIndex, thisIx);
+                            storeToContext(code, stdCD, stdIx);
+                            code.goto_(endIf);
                         }
                         code
-                            .goto_(endIf)
                             .labelBinding(ifNull)
-                            .getstatic(CD_Null, "Null", CD_Null);
+                            .getstatic(CD_Nullable, "Null", CD_Nullable);
 
-                        if (thatIx == 0) {
+                        if (optIx == 0) {
                             code.areturn();
                         } else {
-                            storeToContext(code, thisCD, ctxIndex, thisIx);
+                            storeToContext(code, stdCD, stdIx);
+                            code.labelBinding(endIf);
                         }
 
-                        code.labelBinding(endIf);
                         break;
 
                     case SpecificWithDefault:
@@ -431,111 +429,8 @@ public class CommonBuilder
             code.lineNumber(methodStruct.getSourceLineNumber());
 
             defaultLoad(code, md.returnType());
-            defaultReturn(code, md.returnType());
+            addReturn(code, md.returnType());
         }
         bctx.exitMethod(code);
-    }
-
-    /**
-     * Generate a "load the return value from the context" for the specified Java class.
-     * Out: The loaded value is at the stack top.
-     *
-     * @param returnIndex  the index of the value in the Ctx object
-     */
-    protected void loadFromContext(CodeBuilder code, ClassDesc cd, int ctxIndex, int returnIndex) {
-        assert returnIndex >= 0;
-
-        code.aload(ctxIndex);
-
-        if (cd.isPrimitive()) {
-            if (returnIndex < 8) {
-                code // r = $ctx.i"returnIndex"
-                    .getfield(CD_Ctx, "i" + (returnIndex), CD_long);
-            } else {
-                code // r = $ctx.iN[returnIndex-8]
-                    .getfield(CD_Ctx, "iN", CD_long.arrayType())
-                    .loadConstant(returnIndex-8)
-                    .aaload();
-            }
-
-            // convert the long to the corresponding Java primitive
-            switch (cd.descriptorString()) {
-                case "I", "S", "B", "C", "Z":
-                    code.l2i();
-                    break;
-                case "J":
-                    break;
-                case "F":
-                    code.l2f();
-                    break;
-                case "D":
-                    code.l2d();
-                    break;
-                default:
-                    throw new IllegalStateException();
-            }
-        } else {
-            if (returnIndex < 8) {
-                code // r = $ctx.o"returnIndex"
-                    .getfield(CD_Ctx, "o" + (returnIndex-1), CD_Object);
-            } else {
-                code // r = $ctx.oN[returnIndex-8]
-                    .getfield(CD_Ctx, "oN", CD_Object.arrayType())
-                    .loadConstant(returnIndex-8)
-                    .aaload();
-            }
-        }
-    }
-
-    /**
-     * Generate a "store the return value to the context" for the specified Java class.
-     * In: The value to store is at the stack top.
-     */
-    protected void storeToContext(CodeBuilder code, ClassDesc cd, int ctxIndex, int returnIndex) {
-        assert returnIndex >= 0;
-
-        code.aload(ctxIndex)
-                   .swap(); // stack: ($ctx, value)
-
-        if (cd.isPrimitive()) {
-            // all primitives are stored into "long" fields; convert
-            switch (cd.descriptorString()) {
-                case "I", "S", "B", "C", "Z":
-                    code.i2l();
-                    break;
-                case "J":
-                    break;
-                case "F":
-                    code.f2l();
-                    break;
-                case "D":
-                    code.d2l();
-                    break;
-                default:
-                    throw new IllegalStateException();
-            }
-
-            if (returnIndex < 8) {
-                code // $ctx.i"returnIndex" = r
-                    .putfield(CD_Ctx, "i" + returnIndex, CD_long);
-            } else {
-                // TODO: replace with a helper "Ctx.storeLong(i-8, value)"
-                code // $ctx.iN[returnIndex-8] = r
-                    .getfield(CD_Ctx, "iN", CD_long.arrayType())
-                    .loadConstant(returnIndex-8)
-                    .aastore();
-            }
-        } else {
-            if (returnIndex < 8) {
-                code // $ctx.o"returnIndex" = r
-                    .putfield(CD_Ctx, "o" + (returnIndex), CD_Object);
-            } else {
-                // TODO: replace with a helper "Ctx.storeRef(i-8, value)"
-                code // $ctx.oN[returnIndex-8] = r
-                    .getfield(CD_Ctx, "oN", CD_Object.arrayType())
-                    .loadConstant(returnIndex-8)
-                    .aastore();
-            }
-        }
     }
 }
