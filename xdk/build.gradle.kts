@@ -220,6 +220,14 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
         @Suppress("UnstableApiUsage")
         distributionClassifier = distClassifier
     }
+    // Override the internal directory name to be generic (without classifier)
+    contents.eachFile {
+        // This will be processed during archive creation, making the internal structure generic
+        if (relativePath.segments.first().contains("-$distClassifier")) {
+            val newFirstSegment = relativePath.segments.first().replace("-$distClassifier", "")
+            relativePath = RelativePath(true, *arrayOf(newFirstSegment) + relativePath.segments.drop(1))
+        }
+    }
     contents {
         val xdkTemplate = tasks.processResources.map {
             logger.info("$prefix Resolving processResources output (this should be during the execution phase).");

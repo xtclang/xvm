@@ -7,7 +7,9 @@
       "Bash(gh run view:*)",
       "Bash(gh api:*)",
       "Bash(./gradlew:*)",
-      "Bash(../../gradlew test --tests XdkDistributionTest --console=plain --info)"
+      "Bash(../../gradlew test --tests XdkDistributionTest --console=plain --info)",
+      "Bash(git commit:*)",
+      "Bash(docker run:*)"
     ],
     "deny": []
   }

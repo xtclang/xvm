@@ -201,7 +201,7 @@ jobs:
           java -XX:+PrintFlagsFinal -version 2>&1 || echo "  Flag printing failed (non-fatal)"
           
           inspect_gradle_cache "before installDist"
-          ./gradlew ${{ env.gradle_options }} installDist 
+          ./gradlew ${{ env.gradle_options }} installDist xdk:withLaunchersDistZip 
 
       - name: Build a machine specific XDK installation with native launchers, test run launchers on native platform
         shell: bash
@@ -465,11 +465,23 @@ jobs:
           echo "  Runner arch: $(uname -m)"
           
           # Build with pre-built artifacts (fast path - no Gradle execution in container)
+          # Find and verify distribution ZIP file in artifacts
+          DIST_ZIP_FILE=$(find docker/artifacts/xdk/build/distributions -name "xdk-*-linux_amd64.zip" | head -1)
+          if [ -z "$DIST_ZIP_FILE" ]; then
+            echo "❌ No Linux AMD64 distribution ZIP found in artifacts"
+            ls -la docker/artifacts/xdk/build/distributions/ || echo "No distributions directory"
+            exit 1
+          fi
+          
+          # Convert to absolute path and pass to Docker build
+          DIST_ZIP_PATH=$(realpath "$DIST_ZIP_FILE")
+          echo "📦 Using distribution ZIP: $DIST_ZIP_PATH"
+          
           docker buildx build \
             --platform ${{ matrix.platform }} \
             --progress=plain \
             $TAG_ARGS \
-            --build-arg USE_PREBUILT_ARTIFACTS=true \
+            --build-arg DIST_ZIP_URL="file://$DIST_ZIP_PATH" \
             --build-arg GH_BRANCH=${{ env.GH_BRANCH }} \
             --build-arg GH_COMMIT=${{ env.GH_COMMIT }} \
             --label org.opencontainers.image.created=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \

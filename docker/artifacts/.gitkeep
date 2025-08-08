@@ -1,2 +1,0 @@
-# This directory is populated with pre-built XDK artifacts during CI builds
-# For local builds, it remains empty and source build mode is used

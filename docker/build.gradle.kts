@@ -543,3 +543,154 @@ val pruneImages by tasks.registering {
         logger.lifecycle("💡 View remaining packages: https://github.com/orgs/xtclang/packages")
     }
 }
+
+// Docker build test with local artifacts
+val testDockerWithLocalArtifacts by tasks.registering {
+    group = "docker"
+    description = "Test Docker build using local XDK distribution as artifacts"
+    
+    doLast {
+        logger.lifecycle("🧪 Testing Docker build with local artifacts...")
+        
+        // Clean artifacts directory
+        val artifactsDir = file("artifacts")
+        if (artifactsDir.exists()) {
+            artifactsDir.deleteRecursively()
+        }
+        artifactsDir.mkdirs()
+        
+        // First ensure we have the XDK built with launchers
+        logger.lifecycle("📋 Building XDK with native launchers...")
+        exec {
+            commandLine("../gradlew", "xdk:installWithLaunchersDist")
+            workingDir = projectDir
+        }
+        
+        // Copy XDK distribution to artifacts structure (same as CI)
+        val xdkBuildDir = file("../xdk/build")
+        if (!xdkBuildDir.exists()) {
+            throw GradleException("XDK build directory not found after build.")
+        }
+        
+        logger.lifecycle("📋 Copying XDK distribution to artifacts structure...")
+        copy {
+            from("../xdk/build") {
+                include("distributions/**")
+                include("install/**")
+            }
+            into("artifacts/xdk/build")
+        }
+        
+        // Copy native launchers if available
+        val launcherDir = file("../javatools_launcher/src/main/resources/exe")
+        if (launcherDir.exists()) {
+            logger.lifecycle("📋 Copying native launchers to artifacts structure...")
+            copy {
+                from(launcherDir)
+                into("artifacts/javatools_launcher/src/main/resources/exe")
+            }
+        } else {
+            logger.warn("⚠️ No native launchers found - Docker will use Java wrapper scripts")
+        }
+        
+        // Validate artifacts structure
+        logger.lifecycle("📋 Validating artifacts structure:")
+        if (!file("artifacts/xdk/build/install").exists()) {
+            throw GradleException("Missing artifacts/xdk/build/install directory")
+        }
+        
+        val artifactFiles = fileTree("artifacts").files
+        logger.lifecycle("  Total artifacts: ${artifactFiles.size} files")
+        logger.lifecycle("  Artifacts size: ${(artifactsDir.directorySize() / (1024 * 1024))} MB")
+        
+        // Show key artifacts
+        logger.lifecycle("  Key artifacts found:")
+        fileTree("artifacts") {
+            include("**/VERSION")
+            include("**/launcher*")
+            include("**/*.xtc")
+        }.files.take(10).forEach { file ->
+            val relativePath = file.relativeTo(artifactsDir)
+            logger.lifecycle("    ${relativePath}")
+        }
+        
+        // Get host architecture for native build
+        val hostArch = System.getProperty("os.arch").let { osArch ->
+            when (osArch) {
+                "x86_64", "amd64" -> "amd64"
+                "aarch64", "arm64" -> "arm64"
+                else -> osArch
+            }
+        }
+        
+        val platform = "linux/$hostArch"
+        val testTag = "test-xvm-artifacts:latest"
+        
+        logger.lifecycle("🐳 Building Docker image with pre-built artifacts...")
+        logger.lifecycle("  Platform: $platform")
+        logger.lifecycle("  Tag: $testTag")
+        
+        val config = createBuildConfig()
+        
+        // Build Docker image with artifacts
+        val cmd = listOf(
+            "docker", "buildx", "build",
+            "--platform", platform,
+            "--progress=plain",
+            "--build-arg", "USE_PREBUILT_ARTIFACTS=true",
+            "--build-arg", "GH_BRANCH=${config.branch}",
+            "--build-arg", "GH_COMMIT=${config.commit}",
+            "--tag", testTag,
+            "--load",
+            "."
+        )
+        
+        logger.lifecycle("🔍 Executing: ${cmd.joinToString(" ")}")
+        
+        val result = ProcessBuilder(cmd)
+            .directory(projectDir)
+            .inheritIO()
+            .start()
+            .waitFor()
+            
+        if (result != 0) {
+            throw GradleException("Docker build with artifacts failed with exit code: $result")
+        }
+        
+        logger.lifecycle("✅ Docker build with local artifacts succeeded!")
+        
+        // Test the built image
+        logger.lifecycle("🧪 Testing built Docker image...")
+        
+        val testCommands = listOf(
+            listOf("docker", "run", "--rm", testTag, "xec", "--version"),
+            listOf("docker", "run", "--rm", testTag, "xcc", "--version"),
+            listOf("docker", "run", "--rm", testTag, "cat", "/opt/xdk/xvm.json")
+        )
+        
+        testCommands.forEach { testCmd ->
+            logger.lifecycle("  Testing: ${testCmd.drop(3).joinToString(" ")}")
+            val testResult = ProcessBuilder(testCmd)
+                .start()
+                .waitFor()
+            if (testResult != 0) {
+                logger.warn("  ⚠️ Test command failed: ${testCmd.joinToString(" ")}")
+            } else {
+                logger.lifecycle("  ✅ Test passed")
+            }
+        }
+        
+        logger.lifecycle("🎉 Docker artifacts test completed!")
+        logger.lifecycle("💡 Image tagged as: $testTag")
+        logger.lifecycle("💡 Clean up with: docker image rm $testTag")
+    }
+}
+
+// Extension function to calculate directory size
+fun File.directorySize(): Long {
+    return if (isDirectory) {
+        listFiles()?.sumOf { it.directorySize() } ?: 0L
+    } else {
+        length()
+    }
+}
