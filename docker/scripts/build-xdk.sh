@@ -142,7 +142,12 @@ else
 fi
 
 echo "📍 Extracting distribution: $DIST_ZIP"
-unzip -q "$DIST_ZIP"
+echo "📋 ZIP file info:"
+file "$DIST_ZIP" || echo "Cannot detect file type"
+ls -la "$DIST_ZIP" || echo "ZIP file doesn't exist"
+unzip -t "$DIST_ZIP" || echo "ZIP test failed"
+echo "📋 Extracting ZIP contents..."
+unzip "$DIST_ZIP"
 
 # Find any extracted directory and strip the outer directory layer
 XDK_EXTRACTED=$(find . -maxdepth 1 -name "xdk*" -type d | head -1)
