@@ -14,13 +14,9 @@ echo "  Target: ${TARGETOS}/${TARGETARCH}"
 echo "  Branch: ${GH_BRANCH}"
 echo "  Commit: ${GH_COMMIT}"
 
-# Map Docker arch to XVM arch names
+# Use Docker arch names directly (no mapping needed - launchers now use Docker conventions)
 arch_name() { 
-    case "$1" in 
-        amd64) echo "x86_64";; 
-        arm64) echo "aarch64";; 
-        *) echo "$1";; 
-    esac; 
+    echo "$1"
 }
 
 # Platform validation to prevent cross-architecture contamination
@@ -85,7 +81,7 @@ setup_prebuilt_artifacts() {
     fi
     
     echo "📁 Extracted XDK structure:"
-    find "$XDK_INSTALL_DIR" -maxdepth 3 -type d | head -10
+    find "$XDK_INSTALL_DIR" -maxdepth 3 -type d
     echo "✅ Pre-built artifacts setup completed"
 }
 

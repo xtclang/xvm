@@ -408,6 +408,176 @@ To add scopes to your existing GitHub CLI authentication:
 gh auth refresh --hostname github.com --scopes read:packages,delete:packages
 ```
 
+## Bootstrap Guide: Setting Up CI/CD and Containerization
+
+### Initial Project Setup
+
+If you're setting up Docker containerization and CI/CD for the first time, here's the complete bootstrap process:
+
+#### 1. GitHub CLI Authentication
+
+First, authenticate with comprehensive scopes for full CI/CD operations:
+
+```bash
+# Authenticate with all necessary scopes for containerization and CI
+gh auth refresh --hostname github.com --scopes repo,read:packages,write:packages,delete:packages,workflow
+
+# Verify authentication and scopes
+gh auth status --show-token
+```
+
+**Required Scopes Explained**:
+- `repo` - Access repository contents, create releases, manage artifacts
+- `read:packages` - List and pull Docker images/packages 
+- `write:packages` - Push Docker images to GitHub Container Registry
+- `delete:packages` - Clean up old Docker image versions (for maintenance)
+- `workflow` - Trigger and manage GitHub Actions workflows
+
+**Security Note**: These scopes are standard for containerization workflows. The GitHub CLI stores tokens securely in your system keychain (macOS Keychain, Windows Credential Manager, Linux keyring).
+
+#### 2. Docker Registry Authentication
+
+```bash
+# Login to GitHub Container Registry (one-time setup)
+gh auth token | docker login ghcr.io -u $(gh api user --jq .login) --password-stdin
+
+# Verify Docker registry access
+docker pull ghcr.io/xtclang/xvm:latest --quiet
+```
+
+#### 3. Local Build Environment Setup
+
+```bash
+# Verify Docker buildx multi-platform support
+docker buildx version
+
+# Create buildx builder if needed (for multi-platform builds)
+docker buildx create --name multiplatform --use
+docker buildx inspect --bootstrap
+
+# Test local Docker build
+./gradlew docker:buildArm64  # or buildAmd64 depending on your platform
+```
+
+#### 4. CI/CD Secrets Configuration
+
+For GitHub Actions to work properly, ensure these secrets are configured in your repository:
+
+**Repository Settings → Secrets and variables → Actions**:
+
+```bash
+# Required secrets (these should already be configured)
+GITHUB_TOKEN                    # Automatically provided by GitHub Actions
+ORG_XTCLANG_GPG_SIGNING_KEY    # For package signing (if enabled)
+ORG_XTCLANG_GPG_SIGNING_PASSWORD # For package signing (if enabled)
+
+# Optional secrets for enhanced publishing
+ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY    # For Gradle plugin portal
+ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET # For Gradle plugin portal
+PACKAGE_DELETE_TOKEN            # For automated cleanup (custom token with delete:packages)
+```
+
+The `GITHUB_TOKEN` is automatically provided and has sufficient permissions for Docker operations.
+
+#### 5. Testing the Complete Pipeline
+
+```bash
+# Test local builds first
+./gradlew docker:buildArm64
+./gradlew docker:buildArm64  # Second run should be faster (caching test)
+
+# Test manual workflow dispatch
+gh workflow run "XVM Verification and Package Updates" \
+  --ref your-branch-name \
+  --field always_build_docker_image=true \
+  --field single_platform=full
+
+# Monitor the workflow
+gh run list --limit 3
+gh run view --web  # Opens in browser
+```
+
+#### 6. Package Management Setup
+
+```bash
+# Test package operations
+./gradlew docker:listImages      # List all Docker packages
+./gradlew docker:cleanupVersions # Clean up old versions (with confirmation)
+
+# View packages in GitHub web interface
+open "https://github.com/orgs/xtclang/packages"
+```
+
+### Troubleshooting Common Bootstrap Issues
+
+#### Authentication Problems
+```bash
+# Clear and re-authenticate if having issues
+gh auth logout --hostname github.com
+gh auth login --hostname github.com --scopes repo,read:packages,write:packages,delete:packages,workflow
+```
+
+#### Docker Registry Access Denied
+```bash
+# Re-authenticate with Docker registry
+gh auth token | docker login ghcr.io -u $(gh api user --jq .login) --password-stdin
+
+# Test with explicit package name
+docker pull ghcr.io/xtclang/xvm:latest
+```
+
+#### Local Docker Build Issues
+```bash
+# Check Docker buildx setup
+docker buildx ls
+
+# Recreate builder if needed
+docker buildx rm multiplatform
+docker buildx create --name multiplatform --driver docker-container --use
+```
+
+#### CI/CD Workflow Failures
+```bash
+# Check recent workflow runs
+gh run list --limit 5
+
+# View detailed logs
+gh run view WORKFLOW_ID --log
+
+# Common issue: missing authentication
+# Solution: Verify GITHUB_TOKEN has sufficient permissions in repo settings
+```
+
+### Alternative: Fine-Grained Personal Access Tokens
+
+For enhanced security, you can use fine-grained tokens scoped to specific repositories:
+
+1. **GitHub.com → Settings → Developer settings → Personal access tokens → Fine-grained tokens**
+2. **Select specific repositories** (e.g., just `xtclang/xvm`)
+3. **Choose minimal permissions**:
+   - Contents: Read (for repository access)
+   - Packages: Read + Write + Delete (for Docker operations)  
+   - Actions: Write (for workflow dispatch)
+   - Metadata: Read (always required)
+
+4. **Use the token**:
+```bash
+gh auth login --with-token < token.txt
+```
+
+**Benefits**: More secure than classic tokens, repository-specific, granular permissions.
+
+### Maintenance Checklist
+
+Once bootstrapped, maintain your setup with these periodic tasks:
+
+- **Monthly**: Review and clean up old Docker image versions
+- **Quarterly**: Rotate authentication tokens for security  
+- **After major changes**: Test the complete CI/CD pipeline end-to-end
+- **Before releases**: Verify all package permissions and visibility settings
+
+This bootstrap process ensures your containerization and CI/CD pipeline is properly configured with appropriate security and permissions.
+
 ### Managing Packages
 
 #### List all container packages for the organization:

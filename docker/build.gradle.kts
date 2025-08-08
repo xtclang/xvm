@@ -206,6 +206,31 @@ fun createPlatformBuildTask(arch: String, platform: String) = tasks.registering 
     
     doLast {
         logger.lifecycle("🔍 [DOCKER-DEBUG] Starting $arch build task execution")
+        
+        // Cross-platform build protection
+        val hostArch = System.getProperty("os.arch").let { osArch ->
+            when (osArch) {
+                "x86_64", "amd64" -> "amd64"
+                "aarch64", "arm64" -> "arm64"
+                else -> osArch
+            }
+        }
+        
+        val allowEmulation = project.findProperty("docker_emulated_build")?.toString()?.toBoolean() ?: false
+        
+        if (arch != hostArch && !allowEmulation) {
+            logger.warn("")
+            logger.warn("⚠️  SKIPPING CROSS-PLATFORM BUILD")
+            logger.warn("⚠️  Task: $name")
+            logger.warn("⚠️  Requested: $arch ($platform)")
+            logger.warn("⚠️  Host Architecture: $hostArch") 
+            logger.warn("⚠️  Reason: Cross-platform Docker builds are slow and emulated")
+            logger.warn("⚠️  To override: -Pdocker_emulated_build=true")
+            logger.warn("⚠️  Recommended: Use docker:build$hostArch or docker:buildMultiPlatform")
+            logger.warn("")
+            return@doLast
+        }
+        
         val config = createBuildConfig()
         executeDockerTask(arch, listOf(platform), config, "load")
     }
