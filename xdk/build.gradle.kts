@@ -16,7 +16,6 @@ import java.io.File
 plugins {
     alias(libs.plugins.xdk.build.publish)
     alias(libs.plugins.xtc)
-    alias(libs.plugins.tasktree)
     alias(libs.plugins.versions)
     alias(libs.plugins.sonatype.publish)
     distribution // TODO: If we turn this into an application plugin instead, we can automatically get third party dependency jars with e.g. javatools resolved.

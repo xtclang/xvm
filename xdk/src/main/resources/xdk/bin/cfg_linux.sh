@@ -37,7 +37,19 @@ if [[ -e "${DIR}/cfg_macos.sh" ]]; then
   # copy launcher to various command names
   echo "Creating command line tools: \"xcc\", \"xec\""
   # Find the architecture-specific launcher
-  ARCH=$(uname -m)
+  SYSTEM_ARCH=$(uname -m)
+  # Map system architecture to Docker platform naming
+  case "${SYSTEM_ARCH}" in
+    x86_64|amd64)
+      ARCH="amd64"
+      ;;
+    aarch64|arm64)
+      ARCH="arm64"
+      ;;
+    *)
+      ARCH="${SYSTEM_ARCH}"
+      ;;
+  esac
   LAUNCHER="${DIR}/linux_launcher_${ARCH}"
   if [[ ! -e "${LAUNCHER}" ]]; then
     # Fallback to generic launcher for backward compatibility

@@ -7,7 +7,6 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 
 plugins {
     alias(libs.plugins.xdk.build.java)
-    alias(libs.plugins.tasktree)
 }
 
 private val semanticVersion: SemanticVersion by extra

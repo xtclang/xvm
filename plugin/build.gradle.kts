@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.xdk.build.publish)
     alias(libs.plugins.gradle.portal.publish)
-    alias(libs.plugins.tasktree)
 }
 
 private val semanticVersion: SemanticVersion by extra

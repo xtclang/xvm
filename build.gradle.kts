@@ -8,7 +8,6 @@ import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 plugins {
     alias(libs.plugins.xdk.build.versioning)
     alias(libs.plugins.xdk.build.aggregator)
-    alias(libs.plugins.tasktree)
 }
 
 /**

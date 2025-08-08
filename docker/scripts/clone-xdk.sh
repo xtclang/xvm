@@ -30,7 +30,9 @@ download_github_tarball() {
     command -v curl >/dev/null || { log_error "curl not available"; return 1; }
     
     log_info "Downloading $desc from GitHub API"
-    local tarball_url="https://api.github.com/repos/$GITHUB_REPO/tarball/$ref"
+    # URL-encode the ref to handle branch names with special characters like slashes
+    local encoded_ref=$(printf "%s" "$ref" | sed 's|/|%2F|g')
+    local tarball_url="https://api.github.com/repos/$GITHUB_REPO/tarball/$encoded_ref"
     
     # Download and extract tarball directly 
     curl -fsSL "$tarball_url" | tar -xz --strip-components=1 || return 1
@@ -46,7 +48,9 @@ resolve_commit_hash() {
     command -v curl >/dev/null || { echo "unknown"; return 0; }
     
     log_info "Resolving commit hash for '$target_ref' via GitHub API"
-    local api_url="https://api.github.com/repos/$GITHUB_REPO/commits/$target_ref"
+    # URL-encode the ref to handle branch names with special characters like slashes
+    local encoded_ref=$(printf "%s" "$target_ref" | sed 's|/|%2F|g')
+    local api_url="https://api.github.com/repos/$GITHUB_REPO/commits/$encoded_ref"
     local commit_hash
     
     commit_hash=$(curl -fsSL "$api_url" 2>/dev/null | sed -n 's/.*"sha": "\([^"]*\)".*/\1/p' | head -1)

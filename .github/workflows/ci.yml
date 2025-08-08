@@ -467,6 +467,7 @@ jobs:
           # Build with pre-built artifacts (fast path - no Gradle execution in container)
           docker buildx build \
             --platform ${{ matrix.platform }} \
+            --progress=plain \
             $TAG_ARGS \
             --build-arg USE_PREBUILT_ARTIFACTS=true \
             --build-arg GH_BRANCH=${{ env.GH_BRANCH }} \

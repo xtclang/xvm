@@ -5,7 +5,9 @@
       "Bash(gh run list:*)",
       "Bash(gh run watch:*)",
       "Bash(gh run view:*)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(./gradlew:*)",
+      "Bash(../../gradlew test --tests XdkDistributionTest --console=plain --info)"
     ],
     "deny": []
   }
