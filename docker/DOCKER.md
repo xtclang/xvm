@@ -12,51 +12,52 @@ For developers building the project, see the [Building Images](#building-images)
 
 All Docker tasks are now organized in the `docker/` subproject. Run from project root:
 
-### Individual Platform Tasks (for debugging)
-- `dockerBuildAmd64` - Build Docker image for linux/amd64 platform only
-- `dockerBuildArm64` - Build Docker image for linux/arm64 platform only  
-- `dockerPushAmd64` - Push AMD64 Docker image to GitHub Container Registry
-- `dockerPushArm64` - Push ARM64 Docker image to GitHub Container Registry
+### Build Tasks
+- `docker:buildAmd64` - Build Docker image for AMD64 platform
+- `docker:buildArm64` - Build Docker image for ARM64 platform  
+- `docker:buildMultiPlatform` - Build multi-platform Docker images (recommended for local builds)
 
-### Main Tasks
-- `dockerBuild` - Build Docker images for both platforms individually (amd64 + arm64)
-- `dockerBuildMultiPlatform` - Build multi-platform images locally (recommended for local builds)
-- `dockerPushMultiPlatform` - Build and push multi-platform manifest to registry (recommended for publishing)
-- `dockerPushAll` - Push all platform-specific Docker images to GitHub Container Registry
+### Push Tasks
+- `docker:pushAmd64` - Push AMD64 Docker image to GitHub Container Registry
+- `docker:pushArm64` - Push ARM64 Docker image to GitHub Container Registry
+- `docker:pushMultiPlatform` - Build and push multi-platform Docker images (recommended for publishing)
 
-### Workflow Tasks
-- `dockerBuildPushAndManifest` - Complete CI-like workflow: build platforms + create manifests
+### Management Tasks
+- `docker:createManifest` - Create multi-platform manifest
+- `docker:testDockerImageFunctionality` - Test Docker image functionality
+- `docker:listImages` - List Docker images in registry
+- `docker:cleanImages` - Clean up old Docker package versions with improved verification (default: keep 10 most recent, protect master images)
 
 ## Building Images
 
 ### Build Both Platforms
 ```bash
-# Individual platform builds (useful for local testing)
-./gradlew dockerBuild
-
 # Multi-platform build (recommended for local development)
-./gradlew dockerBuildMultiPlatform
+./gradlew docker:buildMultiPlatform
+
+# Individual platform builds (useful for local testing)
+./gradlew docker:buildAmd64 docker:buildArm64
 ```
 
 ### Build Specific Platform
 ```bash
 # AMD64 only
-./gradlew dockerBuildAmd64
+./gradlew docker:buildAmd64
 
 # ARM64 only  
-./gradlew dockerBuildArm64
+./gradlew docker:buildArm64
 ```
 
 ### Build and Push
 ```bash
 # Build and push multi-platform manifest (recommended)
-./gradlew dockerPushMultiPlatform
-
-# Build and push individual platform images then create manifests
-./gradlew dockerBuildPushAndManifest
+./gradlew docker:pushMultiPlatform
 
 # Push individual platforms only
-./gradlew dockerPushAll
+./gradlew docker:pushAmd64 docker:pushArm64
+
+# Create manifest after pushing individual platforms
+./gradlew docker:createManifest
 ```
 
 ### Working with Docker Directory
@@ -65,7 +66,7 @@ You can also run tasks directly from the `docker/` subdirectory:
 
 ```bash
 cd docker/
-../gradlew dockerBuildMultiPlatform
+../gradlew buildMultiPlatform
 
 # Or use direct Docker commands
 docker buildx build --platform linux/arm64 --tag test-xvm:latest .
@@ -312,32 +313,75 @@ services:
 
 Docker images are automatically built and published when:
 - Code is pushed to the `master` branch
-- Manual workflow dispatch is triggered with `always_publish_snapshot: true`
+- Manual workflow dispatch is triggered with `always_build_docker_image: true`
+- Manual workflow dispatch is triggered with `always_clean_docker: true` (runs cleanup only)
+
+#### Workflow Input Options
+
+The CI workflow accepts these input parameters:
+
+- `always_build_docker_image`: Always build Docker images regardless of branch
+- `always_clean_docker`: Always run Docker cleanup regardless of branch  
+- `always_publish_snapshot`: Always publish snapshot packages regardless of branch
+- `single_platform`: Run only single platform (ubuntu-latest, windows-latest, or full matrix)
+- `run_manual_tests`: Run manual tests (default: true)
+- `run_manual_tests_parallel`: Run manual tests in parallel mode (default: true)
+- `extra_gradle_options`: Extra Gradle options to pass to the build
+
+#### Triggering Workflows Manually
+
+```bash
+# Build Docker images on any branch
+gh workflow run ci.yml --ref your-branch-name --raw-field always_build_docker_image=true
+
+# Test cleanup functionality only
+gh workflow run ci.yml --ref your-branch-name --raw-field always_clean_docker=true --raw-field single_platform=ubuntu-latest
+
+# Full build with single platform for faster testing
+gh workflow run ci.yml --ref your-branch-name --raw-field always_build_docker_image=true --raw-field single_platform=ubuntu-latest
+```
 
 ### CI Process
 
 The GitHub Actions workflow (`.github/workflows/ci.yml`) performs:
 
 1. **Build Verification**: Runs on Ubuntu + Windows matrix
+   - Uses `setup-xvm-build` action for consistent environment setup
    - Builds XDK with `./gradlew installDist`
    - Runs all tests including manual tests
    - Uploads build artifacts for reuse
 
-2. **Docker Build & Push**: Only after ALL tests pass
-   - Downloads verified build artifacts (no rebuild)
-   - Builds multi-platform images (AMD64 + ARM64)
-   - Uses latest master source from GitHub
+2. **Compute Docker Tags**: Calculates metadata once for consistency
+   - Determines version, branch, and commit information
+   - Generates tag lists for all subsequent Docker operations
+
+3. **Docker Build & Push**: Only after ALL tests pass
+   - Downloads verified build artifacts (no rebuild)  
+   - Builds multi-platform images (AMD64 + ARM64) in parallel on native runners
+   - Uses pre-built XDK artifacts with fresh source checkout
    - Pushes to GitHub Container Registry with multiple tags
 
-3. **Image Tags Created**:
-   ```bash
-   ghcr.io/xtclang/xvm:latest
-   ghcr.io/xtclang/xvm:latest-amd64
-   ghcr.io/xtclang/xvm:latest-arm64
-   ghcr.io/xtclang/xvm:0.4.4-SNAPSHOT
-   ghcr.io/xtclang/xvm:abc1234567890abcdef1234567890abcdef12  # Full commit hash
-   ghcr.io/xtclang/xvm:master                              # Branch name
-   ```
+4. **Docker Testing**: Validates functionality
+   - Tests both `xec` and `xcc` commands
+   - Validates compilation and execution of test programs
+   - Ensures native launcher functionality works correctly
+
+5. **Package Cleanup**: Automated maintenance with enhanced verification
+   - Removes old Docker package versions (keeps 10 most recent + 1 master image)
+   - Uses retry verification with 3 attempts and 5-second delays
+   - Fails CI build if deletions don't complete (prevents silent failures)
+
+#### Image Tags Created
+
+After successful builds, these tags are published:
+```bash
+ghcr.io/xtclang/xvm:latest
+ghcr.io/xtclang/xvm:latest-amd64
+ghcr.io/xtclang/xvm:latest-arm64
+ghcr.io/xtclang/xvm:0.4.4-SNAPSHOT
+ghcr.io/xtclang/xvm:abc1234567890abcdef1234567890abcdef12  # Full commit hash
+ghcr.io/xtclang/xvm:master                              # Branch name
+```
 
 ### Key Features
 
@@ -628,29 +672,54 @@ gh api 'orgs/xtclang/packages/container/xvm/versions' --jq 'length'
 gh api 'orgs/xtclang/packages/container/xvm/versions' --jq '.[] | {id: .id, created_at: .created_at}' | head -10
 ```
 
-#### Automated Retention Policy (Recommended)
+#### Automated Cleanup (Current Implementation)
 
-Add this to your GitHub Actions workflow to automatically manage versions:
+The XVM project uses a built-in Gradle task for automated cleanup with enhanced safety features:
+
+```bash
+# Manual cleanup (with confirmation prompts)
+./gradlew docker:cleanImages
+
+# Automated cleanup (for CI - no prompts)
+./gradlew docker:cleanImages -Pforce=true
+
+# Dry-run to see what would be deleted
+./gradlew docker:cleanImages -PdryRun=true
+
+# Custom retention count (default: 10)
+./gradlew docker:cleanImages -PkeepCount=15
+```
+
+**Enhanced Safety Features**:
+- Always protects at least one master/release image
+- Keeps configurable number of most recent versions (default: 10)
+- Uses retry verification with 3 attempts and 5-second delays
+- Fails in CI if deletions don't complete (prevents silent failures)
+- Detailed logging shows exactly what was deleted vs kept
+
+#### Alternative: External Retention Policy
+
+You can also use external tools for more complex retention policies:
 
 ```yaml
-- name: Clean up old container versions
+- name: Clean up old container versions  
   uses: snok/container-retention-policy@v3
   with:
     image-names: xvm
     cut-off: 4 weeks ago UTC
-    keep-n-most-recent: 5          # Maintains exactly 5 versions maximum
+    keep-n-most-recent: 10
     account-type: org
     org-name: xtclang
-    token: ${{ secrets.PACKAGE_DELETE_TOKEN }}  # Requires delete:packages scope
+    token: ${{ secrets.PACKAGE_DELETE_TOKEN }}
 ```
 
 #### Manual Version Cleanup
 ```bash
-# Delete specific version by ID
-gh api -X DELETE 'orgs/xtclang/packages/container/xvm/versions/VERSION_ID'
+# List all versions with details
+./gradlew docker:listImages
 
-# Bulk delete versions older than a date (requires scripting)
-gh api 'orgs/xtclang/packages/container/xvm/versions' --jq '.[] | select(.created_at < "2025-07-01") | .id'
+# Delete specific version by ID (use with caution)
+gh api -X DELETE 'orgs/xtclang/packages/container/xvm/versions/VERSION_ID'
 ```
 
-**Note**: Retention policies prevent storage growth by maintaining a rolling window (e.g., 5 most recent versions). Without a policy, versions accumulate indefinitely.
+**Note**: The built-in cleanup task is safer and more reliable than manual deletion scripts, with comprehensive verification to prevent accidental data loss.
