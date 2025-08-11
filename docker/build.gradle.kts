@@ -10,6 +10,7 @@ plugins {
     id("org.xtclang.build.xdk.versioning")
 }
 
+
 // Build configuration data class
 data class BuildConfig(
     val version: String,
@@ -689,33 +690,108 @@ fun File.directorySize(): Long {
     }
 }
 
-// Docker image functional test task
+// Docker image functional test task with proper Gradle dependencies
 val testDockerImageFunctionality by tasks.registering {
     group = "docker"
     description = "Test Docker image functionality with XVM sample programs on current platform"
     
+    // Get host architecture for dependencies
+    val hostArch = System.getProperty("os.arch").let { osArch ->
+        when (osArch) {
+            "x86_64", "amd64" -> "amd64"
+            "aarch64", "arm64" -> "arm64"
+            else -> osArch
+        }
+    }
+    
+    // Depend on Docker image build for current platform (ensure Docker image exists)
+    dependsOn(if (hostArch == "amd64") buildAmd64 else buildArm64)
+    
+    // Input: XDK distribution ZIP that the Docker build needs
+    inputs.files(fileTree("../xdk/build/distributions") {
+        include("xdk-*.zip")
+        exclude("*-linux_*.zip")  // Use platform-agnostic ZIP
+        exclude("*-macos_*.zip")
+        exclude("*-windows_*.zip")
+    }).optional(true)  // Optional because we may need to build it first
+    
+    // Input: DockerTest.x program that gets copied into the image
+    inputs.file("test/DockerTest.x")
+    
+    // Input: Dockerfile and build scripts that affect the image
+    inputs.file("Dockerfile")
+    inputs.dir("scripts")
+    
+    // Output: Test result marker file for up-to-date checking
+    val testResultFile = layout.buildDirectory.file("docker-test-results.txt")
+    outputs.file(testResultFile)
+    
     doLast {
         logger.lifecycle("🧪 Testing Docker image functionality...")
-        
-        // Get host architecture for native build
-        val hostArch = System.getProperty("os.arch").let { osArch ->
-            when (osArch) {
-                "x86_64", "amd64" -> "amd64"
-                "aarch64", "arm64" -> "arm64"
-                else -> osArch
-            }
-        }
         
         val platform = "linux/$hostArch"
         val testTag = "test-xvm-functional:latest"
         
-        logger.lifecycle("🐳 Building test Docker image...")
+        logger.lifecycle("🐳 Using Docker image built by platform build task...")
         logger.lifecycle("  Platform: $platform")
-        logger.lifecycle("  Tag: $testTag")
+        logger.lifecycle("  Build task: ${if (hostArch == "amd64") "buildAmd64" else "buildArm64"}")
+        logger.lifecycle("  Test tag: $testTag")
         
+        // The Docker image was already built by the platform build task we depend on
+        // We just need to copy the distribution file and re-tag the image for testing
+        
+        // Ensure XDK distribution exists, building it through proper Gradle execution if needed
+        val xdkBuildDir = file("../xdk/build/distributions")
+        val existingDistFiles = fileTree(xdkBuildDir) {
+            include("xdk-*.zip")
+            exclude("*-linux_*.zip")
+            exclude("*-macos_*.zip") 
+            exclude("*-windows_*.zip")
+        }.files
+        
+        val distZipFile = if (existingDistFiles.isNotEmpty()) {
+            // Use existing distribution
+            val file = existingDistFiles.first()
+            logger.lifecycle("📦 Found existing XDK distribution: ${file.name}")
+            file
+        } else {
+            // Build XDK distribution through proper Gradle execution
+            logger.lifecycle("📋 XDK distribution not found, building it...")
+            
+            exec {
+                commandLine("../gradlew", ":xdk:distZip")
+                workingDir = projectDir
+            }
+            
+            val newDistFiles = fileTree(xdkBuildDir) {
+                include("xdk-*.zip")
+                exclude("*-linux_*.zip")
+                exclude("*-macos_*.zip") 
+                exclude("*-windows_*.zip")
+            }.files
+            
+            if (newDistFiles.isEmpty()) {
+                throw GradleException("Failed to build XDK distribution")
+            }
+            
+            val file = newDistFiles.first()
+            logger.lifecycle("📦 Built XDK distribution: ${file.name}")
+            file
+        }
+        
+        // Copy distribution ZIP to Docker build context if not already there
+        val dockerContextZip = file("ci-dist.zip")
+        if (!dockerContextZip.exists() || dockerContextZip.lastModified() < distZipFile.lastModified()) {
+            copy {
+                from(distZipFile)
+                into(".")
+                rename { "ci-dist.zip" }
+            }
+            logger.lifecycle("📋 Updated distribution ZIP in Docker context")
+        }
+        
+        // Build Docker image with proper dependencies satisfied
         val config = createBuildConfig()
-        
-        // Build Docker image for functional testing
         val cmd = listOf(
             "docker", "buildx", "build",
             "--platform", platform,
@@ -728,7 +804,7 @@ val testDockerImageFunctionality by tasks.registering {
             "."
         )
         
-        logger.lifecycle("🔍 Executing: ${cmd.joinToString(" ")}")
+        logger.lifecycle("🔍 Building Docker image with dependencies satisfied: ${cmd.joinToString(" ")}")
         
         val buildResult = ProcessBuilder(cmd)
             .directory(projectDir)
@@ -740,7 +816,7 @@ val testDockerImageFunctionality by tasks.registering {
             throw GradleException("Docker build failed with exit code: $buildResult")
         }
         
-        logger.lifecycle("✅ Docker image built successfully!")
+        logger.lifecycle("✅ Docker image built successfully with proper dependencies!")
         
         // Define test scenarios that match the original CI functionality
         val testScenarios = listOf(
@@ -827,6 +903,18 @@ val testDockerImageFunctionality by tasks.registering {
         
         logger.lifecycle("🎉 All Docker functional tests passed!")
         logger.lifecycle("💡 Image tagged as: $testTag")
-        logger.lifecycle("💡 Clean up with: docker image rm $testTag")
+        
+        // Write test completion marker with timestamp and dependencies info
+        testResultFile.get().asFile.apply {
+            parentFile.mkdirs()
+            writeText(buildString {
+                appendLine("Docker functionality tests passed at ${java.time.Instant.now()}")
+                appendLine("Dependencies satisfied:")
+                appendLine("- XDK distribution: ${distZipFile.name}")
+                appendLine("- Docker build task: ${if (hostArch == "amd64") "buildAmd64" else "buildArm64"}")
+                appendLine("- Platform: $platform")
+                appendLine("- Host architecture: $hostArch")
+            })
+        }
     }
 }
