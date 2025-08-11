@@ -52,7 +52,6 @@ runs:
 
     - name: Validate Gradle Wrapper
       uses: gradle/actions/wrapper-validation@v4
-      shell: bash
 
 branding:
   icon: 'settings'
