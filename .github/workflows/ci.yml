@@ -5,7 +5,7 @@ name: XVM Verification and Package Updates
 
 # Grant additional permissions needed for Docker package management  
 permissions:
-  contents: read
+  contents: write
   packages: write
   actions: read
   # Note: GitHub Actions doesn't support packages: delete in permissions
