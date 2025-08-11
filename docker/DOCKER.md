@@ -521,7 +521,12 @@ ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET # For Gradle plugin portal
 PACKAGE_DELETE_TOKEN            # For automated cleanup (custom token with delete:packages)
 ```
 
-The `GITHUB_TOKEN` is automatically provided and has sufficient permissions for Docker operations.
+The `GITHUB_TOKEN` is automatically provided and has sufficient permissions for Docker operations, but lacks `delete:packages` scope.
+
+**For Docker Package Cleanup**: The `PACKAGE_DELETE_TOKEN` is optional but recommended:
+- **Without it**: Cleanup shows warnings but doesn't fail CI builds
+- **With it**: Cleanup actually deletes old package versions
+- **Setup**: Organization owner creates fine-grained PAT with `delete:packages` scope
 
 #### 5. Testing the Complete Pipeline
 

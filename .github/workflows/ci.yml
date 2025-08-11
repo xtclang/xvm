@@ -9,7 +9,7 @@ permissions:
   packages: write
   actions: read
   # Note: GitHub Actions doesn't support packages: delete in permissions
-  # Will use organization-level PAT for deletion operations
+  # Docker cleanup uses PACKAGE_DELETE_TOKEN (org PAT) if available, otherwise shows warnings
 
 on:
   push:
@@ -664,4 +664,5 @@ jobs:
           # Use --no-daemon for cleaner process isolation and network handling
           ./gradlew docker:cleanImages -Pforce=true --no-daemon
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use organization-level PAT with delete:packages scope if available, fallback to default token
+          GITHUB_TOKEN: ${{ secrets.PACKAGE_DELETE_TOKEN || secrets.GITHUB_TOKEN }}
