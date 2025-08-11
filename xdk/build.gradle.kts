@@ -16,7 +16,6 @@ import java.io.File
 plugins {
     alias(libs.plugins.xdk.build.publish)
     alias(libs.plugins.xtc)
-    alias(libs.plugins.tasktree)
     alias(libs.plugins.versions)
     alias(libs.plugins.sonatype.publish)
     distribution // TODO: If we turn this into an application plugin instead, we can automatically get third party dependency jars with e.g. javatools resolved.
@@ -121,14 +120,8 @@ distributions {
     }
 }
 
-tasks.filter { XdkDistribution.isDistributionArchiveTask(it) }.forEach {
-    // Add transitive dependency to the process resource tasks. There might be something brokemn with those dependencies,
-    // but it's more likely that since the processXtcResources task needs to be run before compileXtc, and the Java one does
-    // not, this somehow confuses the life cycle. TODO: This is another argument to remove and duplicate what is needed of the
-    // Java plugin functionality for the XTC Plugin, but we haven't had time to neither do that, nor work on build speedups
-    // through configuration caching and other dependencies.
-    it.dependsOn(tasks.compileXtc)
-}
+// Let the Distribution plugin handle dependencies properly through the standard lifecycle
+// Distribution tasks should automatically depend on processResources and other build outputs
 
 val cleanXdk by tasks.registering(Delete::class) {
     subprojects.forEach {
@@ -158,13 +151,19 @@ tasks.withType<Sign>().configureEach {
     }
 }
 
+// Restore the proper distribution task dependencies using the existing utility
+tasks.filter { XdkDistribution.isDistributionArchiveTask(it) }.forEach {
+    it.dependsOn(tasks.named("processXtcResources"))
+}
+
+// Also ensure install tasks depend on processXtcResources (install tasks use the same content)
+tasks.matching { it.group == "distribution" && it.name.contains("install") }.configureEach {
+    dependsOn(tasks.named("processXtcResources"))
+}
+
 tasks.withType<Tar>().configureEach {
     compression = Compression.GZIP
     archiveExtension = "tar.gz"
-}
-
-val distZip by tasks.existing(Zip::class) {
-    dependsOn(tasks.compileXtc) // And by transitive dependency, processResources
 }
 
 val test by tasks.existing {
@@ -188,26 +187,26 @@ val ensureTags by tasks.registering {
     description = "Ensure that the current commit is tagged with the current version."
     
     // Capture values during configuration phase to avoid runtime project access
-    val capturedSnapshotOnly = snapshotOnly()
-    val capturedSemanticVersion = semanticVersion
-    val capturedGitHubProtocol = xdkBuildLogic.gitHubProtocol()
-    val capturedPrefix = prefix  // Capture prefix to avoid project access during execution
+    val snapshotOnly = snapshotOnly()
+    val currentVersion = semanticVersion
+    val gitHubProtocol = xdkBuildLogic.gitHubProtocol()
+    val logPrefix = prefix  // Capture prefix to avoid project access during execution
     
     if (!allowPublication()) {
-        logger.lifecycle("$capturedPrefix Skipping publication task, snapshotOnly=${capturedSnapshotOnly} for version: '$capturedSemanticVersion")
+        logger.lifecycle("$logPrefix Skipping publication task, snapshotOnly=${snapshotOnly} for version: '$currentVersion")
     }
     onlyIf {
         allowPublication()
     }
     doLast {
         logger.lifecycle("""
-            $capturedPrefix Ensuring that the current commit is tagged with version.
-            $capturedPrefix     version: $capturedSemanticVersion
-            $capturedPrefix     snapshotOnly: $capturedSnapshotOnly
+            $logPrefix Ensuring that the current commit is tagged with version.
+            $logPrefix     version: $currentVersion
+            $logPrefix     snapshotOnly: $snapshotOnly
         """.trimIndent())
-        val tag = capturedGitHubProtocol.ensureTags(capturedSnapshotOnly)
+        val tag = gitHubProtocol.ensureTags(snapshotOnly)
         if (GitHubProtocol.tagCreated(tag)) {
-            logger.lifecycle("$capturedPrefix Created or updated tag '$tag' for version: '$capturedSemanticVersion'")
+            logger.lifecycle("$logPrefix Created or updated tag '$tag' for version: '$currentVersion'")
         }
     }
 }
@@ -225,6 +224,14 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
     if (distClassifier.isNotEmpty()) {
         @Suppress("UnstableApiUsage")
         distributionClassifier = distClassifier
+    }
+    // Override the internal directory name to be generic (without classifier)
+    contents.eachFile {
+        // This will be processed during archive creation, making the internal structure generic
+        if (relativePath.segments.first().contains("-$distClassifier")) {
+            val newFirstSegment = relativePath.segments.first().replace("-$distClassifier", "")
+            relativePath = RelativePath(true, *arrayOf(newFirstSegment) + relativePath.segments.drop(1))
+        }
     }
     contents {
         val xdkTemplate = tasks.processResources.map {
@@ -267,6 +274,4 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
     }
 }
 
-val installDist by tasks.existing {
-    dependsOn(tasks.compileXtc)
-}
+// Let the Distribution plugin handle installDist dependencies according to Gradle standards

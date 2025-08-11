@@ -22,8 +22,12 @@ fun compositeRootRelativeFile(path: String): File? {
 }
 
 val libsVersionCatalog = compositeRootRelativeFile("gradle/libs.versions.toml")!!
+val versionFile = compositeRootRelativeFile("VERSION")!!
 
-// Standard dependency resolution - no version patching needed
+// Read VERSION file for single source of truth
+val xvmVersion = versionFile.readText().trim()
+
+// Standard dependency resolution with dynamic version injection
 dependencyResolutionManagement {
     @Suppress("UnstableApiUsage")
     repositories {
@@ -32,11 +36,15 @@ dependencyResolutionManagement {
 
     versionCatalogs {
         val libs by creating {
-            from(files(libsVersionCatalog)) // Versions are directly specified in catalog
+            from(files(libsVersionCatalog))
+            // Override versions from VERSION file to maintain single source of truth
+            version("xdk", xvmVersion)
+            version("xtc-plugin", xvmVersion)
         }
     }
 }
 
-// Optional: Log version info for debugging (read from catalog)
+// Optional: Log version info for debugging
 val prefix = "[${rootProject.name}]"
 logger.info("$prefix Using version catalog from: $libsVersionCatalog")
+logger.info("$prefix XVM version from VERSION file: $xvmVersion")

@@ -29,7 +29,7 @@ data class ProcessResult(val execResult: Pair<Int, String>, val failure: Throwab
     }
 }
 
-fun spawn(command: String, vararg args: String, throwOnError: Boolean = true, logger: Logger? = null): ProcessResult {
+fun spawn(command: String, vararg args: String, env: Map<String, String> = emptyMap(), workingDir: File? = null, throwOnError: Boolean = true, logger: Logger? = null): ProcessResult {
     fun InputStream.readTextAndClose(charset: Charset = Charsets.UTF_8): String {
         return this.bufferedReader(charset).use { it.readText() }
     }
@@ -52,7 +52,15 @@ fun spawn(command: String, vararg args: String, throwOnError: Boolean = true, lo
     val commandLine = listOf(commandPath, *args)
     val builder = ProcessBuilder(commandLine).redirectErrorStream(true)
 
-    logger?.info("[processes] Spawning process: '${commandLine.joinToString(" ")}'")
+    // Add environment variables if provided
+    env.forEach { (key, value) ->
+        builder.environment()[key] = value
+    }
+    
+    // Set working directory if provided
+    workingDir?.let { builder.directory(it) }
+
+    logger?.info("[processes] Spawning process: '${commandLine.joinToString(" ")}'${if (env.isNotEmpty()) " (with ${env.size} env vars)" else ""}")
 
     val processResult = try {
         val process = builder.start() // can throw IOException

@@ -12,7 +12,6 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
 plugins {
     alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.download)
-    alias(libs.plugins.tasktree)
 }
 
 dependencies {

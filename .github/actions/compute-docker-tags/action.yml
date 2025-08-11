@@ -1,0 +1,111 @@
+name: 'Compute Docker Tags'
+description: 'Computes Docker image tags and metadata based on branch, version, and commit information'
+inputs:
+  base-image:
+    description: 'Base Docker image name (e.g., ghcr.io/xtclang/xvm)'
+    required: true
+  version-file:
+    description: 'Path to VERSION file'
+    required: false
+    default: 'VERSION'
+  branch:
+    description: 'Git branch name'
+    required: false
+    default: ${{ github.ref_name }}
+  commit:
+    description: 'Git commit SHA'
+    required: false
+    default: ${{ github.sha }}
+  is-master:
+    description: 'Override master branch detection'
+    required: false
+    default: ''
+
+outputs:
+  version:
+    description: 'Project version from VERSION file'
+    value: ${{ steps.compute.outputs.version }}
+  branch-tag:
+    description: 'Sanitized branch name for use as Docker tag'
+    value: ${{ steps.compute.outputs.branch-tag }}
+  is-master:
+    description: 'Whether this is the master branch'
+    value: ${{ steps.compute.outputs.is-master }}
+  tags-json:
+    description: 'JSON array of base tags (without image prefix)'
+    value: ${{ steps.compute.outputs.tags-json }}
+  full-tags-json:
+    description: 'JSON array of full image tags with base-image prefix'
+    value: ${{ steps.compute.outputs.full-tags-json }}
+  latest-tag:
+    description: 'The latest/primary tag for this build'
+    value: ${{ steps.compute.outputs.latest-tag }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Compute Docker tags and metadata
+      id: compute
+      shell: bash
+      run: |
+        set -euo pipefail
+        
+        echo "🏷️ Computing Docker tags and metadata..."
+        
+        # Read version from file
+        if [ -f "${{ inputs.version-file }}" ]; then
+          VERSION=$(cat "${{ inputs.version-file }}" | tr -d '\n\r ')
+        else
+          echo "❌ Version file not found: ${{ inputs.version-file }}"
+          exit 1
+        fi
+        echo "  📋 Version: $VERSION"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        
+        # Sanitize branch name for Docker tags
+        BRANCH_TAG=$(echo "${{ inputs.branch }}" | sed 's|.*/||' | sed 's/[^a-zA-Z0-9._-]/_/g')
+        echo "  🌿 Branch tag: $BRANCH_TAG"
+        echo "branch-tag=$BRANCH_TAG" >> $GITHUB_OUTPUT
+        
+        # Determine if master branch (check override first)
+        if [ -n "${{ inputs.is-master }}" ]; then
+          IS_MASTER="${{ inputs.is-master }}"
+        else
+          IS_MASTER=${{ github.ref == 'refs/heads/master' }}
+        fi
+        echo "  👑 Is master: $IS_MASTER"
+        echo "is-master=$IS_MASTER" >> $GITHUB_OUTPUT
+        
+        # Generate base tags (without image prefix)
+        if [ "$IS_MASTER" = "true" ]; then
+          # Master branch gets: latest, version, commit
+          BASE_TAGS='["latest", "'$VERSION'", "'${{ inputs.commit }}'"]'
+          LATEST_TAG="latest"
+        else
+          # Feature branches get: branch-name, commit  
+          BASE_TAGS='["'$BRANCH_TAG'", "'${{ inputs.commit }}'"]'
+          LATEST_TAG="$BRANCH_TAG"
+        fi
+        
+        echo "  🏷️ Base tags: $BASE_TAGS"
+        echo "tags-json=$BASE_TAGS" >> $GITHUB_OUTPUT
+        echo "latest-tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+        
+        # Generate full tags with image prefix
+        FULL_TAGS=$(echo "$BASE_TAGS" | jq -r --arg img "${{ inputs.base-image }}" 'map($img + ":" + .)')
+        echo "  🖼️ Full image tags: $FULL_TAGS"
+        echo "full-tags-json=$FULL_TAGS" >> $GITHUB_OUTPUT
+        
+        # Summary
+        echo ""
+        echo "✅ Docker metadata computed:"
+        echo "   Base image: ${{ inputs.base-image }}"
+        echo "   Version: $VERSION"
+        echo "   Branch: ${{ inputs.branch }} → $BRANCH_TAG"
+        echo "   Commit: ${{ inputs.commit }}"
+        echo "   Is master: $IS_MASTER"
+        echo "   Primary tag: ${{ inputs.base-image }}:$LATEST_TAG"
+
+branding:
+  icon: 'tag'
+  color: 'blue'
