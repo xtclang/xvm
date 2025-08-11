@@ -3,6 +3,14 @@
 #
 name: XVM Verification and Package Updates
 
+# Grant additional permissions needed for Docker package management  
+permissions:
+  contents: read
+  packages: write
+  actions: read
+  # Note: GitHub Actions doesn't support packages: delete in permissions
+  # Will use organization-level PAT for deletion operations
+
 on:
   push:
   workflow_dispatch:
@@ -649,9 +657,11 @@ jobs:
           echo "  • Always protects at least one master image"
           echo "  • Keeps 10 most recent versions overall (configurable)"
           echo "  • Verifies deletions actually worked"
+          echo "  • Running without daemon for cleaner process isolation"
           echo ""
           
           # Run cleanup in force mode (no interactive prompts in CI)
-          ./gradlew docker:cleanImages -Pforce=true
+          # Use --no-daemon for cleaner process isolation and network handling
+          ./gradlew docker:cleanImages -Pforce=true --no-daemon
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

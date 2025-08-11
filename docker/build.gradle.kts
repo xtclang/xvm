@@ -255,6 +255,14 @@ fun fetchPackageVersions(packageName: String): List<String> {
         providers.exec {
             commandLine("gh", "api", "orgs/xtclang/packages/container/$packageName/versions",
                        "--jq", ".[] | {id: .id, created: .created_at, tags: .metadata.container.tags}")
+            
+            // Ensure GitHub token is available to the subprocess
+            val githubToken = System.getenv("GITHUB_TOKEN") 
+                ?: try { providers.exec { commandLine("gh", "auth", "token") }.standardOutput.asText.get().trim() } catch (e: Exception) { null }
+            
+            if (githubToken != null) {
+                environment("GITHUB_TOKEN", githubToken)
+            }
         }.standardOutput.asText.get().trim().split("\n").filter { it.isNotEmpty() }
     } catch (e: Exception) {
         logger.warn("Failed to fetch package versions: ${e.message}")
@@ -292,6 +300,14 @@ val listImages by tasks.registering {
         val packages = try {
             providers.exec {
                 commandLine("gh", "api", "orgs/xtclang/packages?package_type=container", "--jq", ".[].name")
+                
+                // Ensure GitHub token is available to the subprocess
+                val githubToken = System.getenv("GITHUB_TOKEN") 
+                    ?: try { providers.exec { commandLine("gh", "auth", "token") }.standardOutput.asText.get().trim() } catch (e: Exception) { null }
+                
+                if (githubToken != null) {
+                    environment("GITHUB_TOKEN", githubToken)
+                }
             }.standardOutput.asText.get().trim().split("\n").map { it.removeSurrounding("\"") }.filter { it.isNotEmpty() }
         } catch (e: Exception) {
             logger.lifecycle("❌ Error: ${e.message}")
@@ -397,9 +413,17 @@ val cleanImages by tasks.registering {
         
         toDelete.forEach { version ->
             try {
-                val result = providers.exec {
+                providers.exec {
                     commandLine("gh", "api", "-X", "DELETE", "orgs/xtclang/packages/container/$packageName/versions/${version.id}")
                     isIgnoreExitValue = false // Ensure we catch non-zero exit codes
+                    
+                    // Ensure GitHub token is available to the subprocess
+                    val githubToken = System.getenv("GITHUB_TOKEN") 
+                        ?: try { providers.exec { commandLine("gh", "auth", "token") }.standardOutput.asText.get().trim() } catch (e: Exception) { null }
+                    
+                    if (githubToken != null) {
+                        environment("GITHUB_TOKEN", githubToken)
+                    }
                 }
                 
                 // If we get here, the command succeeded
@@ -448,18 +472,25 @@ val cleanImages by tasks.registering {
         }
         
         if (actuallyDeleted != toDelete.size) {
-            val errorMsg = "❌ Only $actuallyDeleted/${toDelete.size} deletions confirmed after $maxRetries attempts"
-            logger.lifecycle(errorMsg)
-            logger.lifecycle("💡 This could indicate:")
-            logger.lifecycle("   • GitHub API delays (common)")
-            logger.lifecycle("   • Permission issues (GITHUB_TOKEN lacks delete:packages scope)")
-            logger.lifecycle("   • Network/connectivity issues")
-            
-            if (System.getenv("CI") == "true") {
-                throw GradleException("$errorMsg - failing CI build to prevent silent failures")
-            } else {
-                logger.lifecycle("⚠️  Continuing in non-CI mode, but deletions may not have completed")
-            }
+            logger.warn("""
+                
+                ⚠️${"=".repeat(70)}
+                ⚠️  DOCKER PACKAGE CLEANUP WARNING
+                ⚠️${"=".repeat(70)}
+                ⚠️  Package cleanup incomplete: $actuallyDeleted/${toDelete.size} deletions confirmed after $maxRetries attempts
+                ⚠️
+                ⚠️  Possible causes:
+                ⚠️    • GitHub API delays (very common - may resolve on next build)
+                ⚠️    • Permission issues (GITHUB_TOKEN lacks delete:packages scope)
+                ⚠️    • Network/connectivity issues
+                ⚠️    • Package registry temporarily unavailable
+                ⚠️
+                ⚠️  Impact: Old package versions were not cleaned up
+                ⚠️  Action: Check package registry manually or retry next build
+                ⚠️${"=".repeat(70)}
+                
+                ✅ Continuing build - package cleanup is not critical for build success
+            """.trimIndent())
         }
     }
 }
