@@ -257,9 +257,7 @@ fun fetchPackageVersions(packageName: String): List<String> {
                        "--jq", ".[] | {id: .id, created: .created_at, tags: .metadata.container.tags}")
             
             // Ensure GitHub token is available to the subprocess
-            val githubToken = System.getenv("GITHUB_TOKEN") 
-                ?: try { providers.exec { commandLine("gh", "auth", "token") }.standardOutput.asText.get().trim() } catch (e: Exception) { null }
-            
+            val githubToken = System.getenv("GITHUB_TOKEN")
             if (githubToken != null) {
                 environment("GITHUB_TOKEN", githubToken)
             }
@@ -357,6 +355,7 @@ val cleanImages by tasks.registering {
         val keepCount = capturedKeepCount
         val packageName = "xvm"
         val isDryRun = capturedIsDryRun
+        
         val isForced = capturedIsForced
         
         if (isDryRun) logger.lifecycle("🔍 DRY RUN MODE")
@@ -398,7 +397,7 @@ val cleanImages by tasks.registering {
             return@doLast
         }
         
-        val needsConfirmation = !System.getenv("CI").equals("true") && !isForced
+        val needsConfirmation = !(System.getenv("CI") == "true") && !isForced
         if (needsConfirmation) {
             logger.lifecycle("❓ Delete ${toDelete.size} versions? (Type 'yes' to confirm)")
             val response = readlnOrNull()?.trim()?.lowercase()
@@ -418,9 +417,7 @@ val cleanImages by tasks.registering {
                     isIgnoreExitValue = false // Ensure we catch non-zero exit codes
                     
                     // Ensure GitHub token is available to the subprocess
-                    val githubToken = System.getenv("GITHUB_TOKEN") 
-                        ?: try { providers.exec { commandLine("gh", "auth", "token") }.standardOutput.asText.get().trim() } catch (e: Exception) { null }
-                    
+                    val githubToken = System.getenv("GITHUB_TOKEN")
                     if (githubToken != null) {
                         environment("GITHUB_TOKEN", githubToken)
                     }
