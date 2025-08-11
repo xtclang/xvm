@@ -10,6 +10,17 @@ plugins {
     id("org.xtclang.build.xdk.versioning")
 }
 
+// Add XDK dependency configuration like manualTests
+configurations.maybeCreate("xdk").apply {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+
+dependencies {
+    // Consume XDK like manualTests does
+    "xdk"(libs.xdk)  
+}
+
 
 // Build configuration data class
 data class BuildConfig(
@@ -707,13 +718,8 @@ val testDockerImageFunctionality by tasks.registering {
     // Depend on Docker image build for current platform (ensure Docker image exists)
     dependsOn(if (hostArch == "amd64") buildAmd64 else buildArm64)
     
-    // Input: XDK distribution ZIP that the Docker build needs
-    inputs.files(fileTree("../xdk/build/distributions") {
-        include("xdk-*.zip")
-        exclude("*-linux_*.zip")  // Use platform-agnostic ZIP
-        exclude("*-macos_*.zip")
-        exclude("*-windows_*.zip")
-    }).optional(true)  // Optional because we may need to build it first
+    // Input: XDK distribution from configuration (like manualTests)
+    inputs.files(configurations["xdk"])
     
     // Input: DockerTest.x program that gets copied into the image
     inputs.file("test/DockerTest.x")
@@ -740,44 +746,23 @@ val testDockerImageFunctionality by tasks.registering {
         // The Docker image was already built by the platform build task we depend on
         // We just need to copy the distribution file and re-tag the image for testing
         
-        // Ensure XDK distribution exists, building it through proper Gradle execution if needed
+        // Get XDK distribution from configuration (like manualTests does)
+        val xdkFiles = configurations["xdk"].resolve()
+        logger.lifecycle("📦 XDK configuration resolved to ${xdkFiles.size} files: ${xdkFiles.map { it.name }}")
+        
+        // The XDK configuration provides JARs, not ZIPs. We need the distribution ZIP from the build output
         val xdkBuildDir = file("../xdk/build/distributions")
-        val existingDistFiles = fileTree(xdkBuildDir) {
+        val distZipFiles = fileTree(xdkBuildDir) {
             include("xdk-*.zip")
             exclude("*-linux_*.zip")
             exclude("*-macos_*.zip") 
             exclude("*-windows_*.zip")
         }.files
         
-        val distZipFile = if (existingDistFiles.isNotEmpty()) {
-            // Use existing distribution
-            val file = existingDistFiles.first()
-            logger.lifecycle("📦 Found existing XDK distribution: ${file.name}")
-            file
-        } else {
-            // Build XDK distribution through proper Gradle execution
-            logger.lifecycle("📋 XDK distribution not found, building it...")
-            
-            exec {
-                commandLine("../gradlew", ":xdk:distZip")
-                workingDir = projectDir
-            }
-            
-            val newDistFiles = fileTree(xdkBuildDir) {
-                include("xdk-*.zip")
-                exclude("*-linux_*.zip")
-                exclude("*-macos_*.zip") 
-                exclude("*-windows_*.zip")
-            }.files
-            
-            if (newDistFiles.isEmpty()) {
-                throw GradleException("Failed to build XDK distribution")
-            }
-            
-            val file = newDistFiles.first()
-            logger.lifecycle("📦 Built XDK distribution: ${file.name}")
-            file
-        }
+        val distZipFile = distZipFiles.firstOrNull() 
+            ?: throw GradleException("XDK distribution ZIP not found. Run 'xdk:distZip' first or use the 'installDist' task from root.")
+        
+        logger.lifecycle("📦 Using XDK distribution ZIP: ${distZipFile.name}")
         
         // Copy distribution ZIP to Docker build context if not already there
         val dockerContextZip = file("ci-dist.zip")
