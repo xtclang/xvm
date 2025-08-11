@@ -129,6 +129,20 @@ module web.xtclang.org {
      * This annotation, `@LoginRequired`, is used to mark a web service call -- or any containing
      * class thereof, up to the level of the web module itself -- as requiring authentication.
      *
+     * When this annotation is used, the endpoint is implicitly [HttpsRequired] (which this
+     * annotation extends), because (i) any and all traffic that is sent over HTTP (not HTTPS)
+     * **must be assumed to have been captured by a hostile entity**, and (ii) that information may
+     * **immediately** be used to attack the application. Thus, access to any `@LoginRequired`
+     * endpoint cannot (and **must** not) be performed over an HTTP connection. See [HttpsRequired]
+     * for more information.
+     *
+     * When `LoginRequired` applies to an endpoint and the application is using the Ecstasy Xenia
+     * web server, a security step is inserted by the `ChainBundle.generateRestrictCheck()` method
+     * as part of the request routing to the endpoint. This security step first checks the user
+     * [Session] for a cached grant of access, and otherwise invokes the application's
+     * [security.Authenticator] to either validate the information already included in the request,
+     * or to determine that some further user action is required to authenticate.
+     *
      * A method (any `Endpoint`, such as `@Get` or `@Post`) that handles a web service call will
      * require authentication iff:
      *
@@ -198,6 +212,27 @@ module web.xtclang.org {
      * class thereof, up to the level of the web module itself -- as requiring Transport Level
      * Security (TLS), sometimes also referred to using the obsolete term "SSL".
      *
+     * Traditionally, web servers and applications have automated the transition from HTTP to HTTPS
+     * by using an automatic redirect, but the combination of (i) a number of real world security
+     * incidents and (ii) the general move away from typing URLs into a web browser's "address bar"
+     * means that most URLs now are being created and submitted (without any user awareness) by
+     * Javascript application code, and thus this code should **never** be accidentally specifying
+     * HTTP when HTTPS is required. In other words, developers should treat any HTTP request to an
+     * HTTPS endpoint as an error, not as something to be silently swept under the rug. As a result,
+     * the `autoRedirect` parameter of this annotation defaults to `False`. For more information,
+     * see: [Your API Shouldn't Redirect HTTP to HTTPS](https://jviide.iki.fi/http-redirects)
+     *
+     * Additionally, any and all traffic that is sent over HTTP (not HTTPS) **must be assumed to
+     * have been captured by a hostile entity**. When an application accidentally sends a request
+     * over HTTP, any information in that request may **immediately** be used to attack the
+     * application. Developers **must** ensure that the any potentially leaked information --
+     * including tokens, API keys, passwords, etc. -- is **immediately** invalidated.
+     *
+     * When an application is using the Ecstasy Xenia web server, all authentication/authorization
+     * data that arrives on an HTTP (not HTTPS) connection is automatically invalidated: The
+     * `handlePlainTextSecrets()` method on the Xenia `Dispatcher` service automatically invokes
+     * [security.Authenticator.findAndRevokeSecrets].
+     *
      * A method (any `Endpoint`, such as `@Get` or `@Post`) that handles a web service call will
      * require TLS iff:
      *
@@ -216,9 +251,6 @@ module web.xtclang.org {
      * The purpose of this design is to allow the use of annotations for specifying the requirement
      * for TLS, but only requiring those annotations within the class hierarchy at the few points
      * where a change occurs from "requiring TLS" to "not requiring TLS", or vice versa.
-     *
-     * Regarding the default of the `autoRedirect` of `False`, see the article:
-     * [Your API Shouldn't Redirect HTTP to HTTPS](https://jviide.iki.fi/http-redirects)
      */
     annotation HttpsRequired(Boolean autoRedirect = False)
             into Class<WebApp> | Class<WebService> | Endpoint;
