@@ -31,10 +31,11 @@ then
     find "$git_root" -name build -type d | grep -v src | xargs -r rm -rf
     
     echo "Deleting all Gradle cache directories from GRADLE_USER_HOME"
-    rm -rf "$HOME/.gradle/caches"
-    rm -rf "$HOME/.gradle/daemon"  # Fixed: was 'daemons', should be 'daemon'
-    rm -rf "$HOME/.gradle/wrapper"
-    rm -rf "$HOME/.gradle/build-cache"
+    gradle_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
+    rm -rf "$gradle_home/caches"
+    rm -rf "$gradle_home/daemon"  # Fixed: was 'daemons', should be 'daemon'
+    rm -rf "$gradle_home/wrapper"
+    rm -rf "$gradle_home/build-cache"
 
     echo "Deleting local maven repository"
     rm -rf "$HOME/.m2/repository"
