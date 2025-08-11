@@ -655,22 +655,3 @@ jobs:
           ./gradlew docker:cleanImages -Pforce=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  standalone-docker-cleanup:
-    name: Standalone Docker package cleanup (testing)
-    runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.always_clean_docker == 'true' }}
-    steps:
-      - name: Fetch Sources
-        uses: actions/checkout@v4
-
-      - name: Setup XVM Build Environment
-        uses: ./.github/actions/setup-xvm-build
-
-      - name: Clean up Docker package versions with improved verification
-        run: |
-          echo "🧹 Running standalone Docker package cleanup for testing..."
-          echo "This version includes retry verification and will fail on incomplete deletions"
-          ./gradlew docker:cleanImages -Pforce=true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
