@@ -648,7 +648,7 @@ jobs:
     name: Clean up old Docker package versions
     needs: docker-test
     runs-on: ubuntu-latest
-    if: ${{ success() && github.ref == 'refs/heads/master' }}
+    if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
     steps:
       - name: Fetch Sources
         uses: actions/checkout@v4
@@ -666,6 +666,6 @@ jobs:
           echo ""
           
           # Run cleanup in force mode (no interactive prompts in CI)
-          ./gradlew docker:cleanupVersions -Pforce=true
+          ./gradlew docker:cleanImages -Pforce=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
