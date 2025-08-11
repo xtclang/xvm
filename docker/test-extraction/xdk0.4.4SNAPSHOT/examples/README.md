@@ -1,0 +1,1 @@
+This directory contains Ecstasy code examples to help a new developer get started with the Ecstasy language.

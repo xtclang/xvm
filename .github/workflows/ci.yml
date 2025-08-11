@@ -588,54 +588,61 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Test Docker image functionality
+      - name: Test Docker image functionality with compilation and execution
         shell: bash
         run: |
-          echo "Testing Docker image functionality..."
-          
-          # Use appropriate tag based on branch
+          # Use the appropriate image tag based on branch
           if [ "${{ needs.compute-docker-tags.outputs.is-master }}" = "true" ]; then
             IMAGE="${{ env.DOCKER_BASE_IMAGE }}:latest"
           else
             IMAGE="${{ env.DOCKER_BASE_IMAGE }}:${{ needs.compute-docker-tags.outputs.branch-tag }}"
           fi
           
-          echo "Using Docker image: $IMAGE"
+          echo "🧪 Testing Docker image: $IMAGE"
+          echo "This tests compilation and execution of XTC programs with different parameters"
           
-          # Test basic launcher functionality (what's actually available)
-          echo "🧪 Testing xec launcher version..."
-          xec_output=$(docker run --rm ${IMAGE} xec --version 2>&1)
-          echo "xec output: $xec_output"
-          if ! echo "$xec_output" | grep -q "xdk version"; then
-            echo "❌ xec version test failed"
+          # Test launcher versions
+          echo "🔧 Testing launchers..."
+          docker run --rm ${IMAGE} xec --version
+          docker run --rm ${IMAGE} xcc --version
+          
+          # Test compilation and execution with different argument patterns (like original EchoTest)
+          echo "🧪 Testing XTC program compilation and execution..."
+          
+          echo "📋 Testing with no arguments..."
+          output_0=$(docker run --rm ${IMAGE} xec /opt/xdk/test/DockerTest.x 2>&1)
+          echo "$output_0"
+          if ! echo "$output_0" | grep -q "DockerTest invoked with 0 arguments\."; then
+            echo "❌ No arguments test failed"
             exit 1
           fi
-          echo "✅ xec version test passed"
+          echo "✅ No arguments test passed"
           
-          echo "🧪 Testing xcc launcher version..."
-          xcc_output=$(docker run --rm ${IMAGE} xcc --version 2>&1)
-          echo "xcc output: $xcc_output"
-          if ! echo "$xcc_output" | grep -q "xdk version"; then
-            echo "❌ xcc version test failed"
+          echo "📋 Testing with single argument..."
+          output_1=$(docker run --rm ${IMAGE} xec /opt/xdk/test/DockerTest.x "hello" 2>&1)
+          echo "$output_1"
+          if ! echo "$output_1" | grep -q "DockerTest invoked with 1 arguments:" || ! echo "$output_1" | grep -q '\[1\]="hello"'; then
+            echo "❌ Single argument test failed"
             exit 1
           fi
-          echo "✅ xcc version test passed"
+          echo "✅ Single argument test passed"
           
-          echo "🧪 Testing launcher help functionality..."
-          help_output=$(docker run --rm ${IMAGE} xec --help 2>&1)
-          if ! echo "$help_output" | grep -q "Ecstasy runner"; then
-            echo "❌ xec help test failed"
+          echo "📋 Testing with multiple arguments..."
+          output_3=$(docker run --rm ${IMAGE} xec /opt/xdk/test/DockerTest.x "arg1" "arg with spaces" "arg3" 2>&1)
+          echo "$output_3"
+          if ! echo "$output_3" | grep -q "DockerTest invoked with 3 arguments:" || \
+             ! echo "$output_3" | grep -q '\[1\]="arg1"' || \
+             ! echo "$output_3" | grep -q '\[2\]="arg with spaces"' || \
+             ! echo "$output_3" | grep -q '\[3\]="arg3"'; then
+            echo "❌ Multiple arguments test failed"
             exit 1
           fi
-          echo "✅ xec help test passed"
+          echo "✅ Multiple arguments test passed"
           
-          echo "🧪 Testing native launcher binary compatibility..."
-          # Test that the musl-compiled launcher runs without library errors
-          container_arch=$(docker run --rm ${IMAGE} uname -m 2>&1)
-          echo "Container architecture: $container_arch"
-          echo "✅ Native launcher compatibility test passed"
-          
-          echo "🎉 All Docker image functionality tests passed successfully!"
+          echo "🎉 All Docker image functionality tests passed!"
+          echo "✅ Native launcher functionality validated"
+          echo "✅ XTC program compilation validated" 
+          echo "✅ Program execution with 0, 1, and multiple arguments validated"
 
   docker-cleanup:
     name: Clean up old Docker package versions

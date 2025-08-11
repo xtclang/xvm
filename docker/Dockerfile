@@ -91,6 +91,9 @@ ENV PATH="${XDK_HOME}/bin:${PATH}"
 # Copy XDK distribution from builder stage
 COPY --from=builder /workspace/xdk/ /opt/xdk/
 
+# Copy Docker test program
+COPY test/DockerTest.x /opt/xdk/test/
+
 # Copy container-built native launcher (overwrites any pre-built launchers)
 COPY --from=launcher-builder /launcher-build/javatools_launcher/src/main/c/launcher /opt/xdk/bin/xec
 COPY --from=launcher-builder /launcher-build/javatools_launcher/src/main/c/launcher /opt/xdk/bin/xcc

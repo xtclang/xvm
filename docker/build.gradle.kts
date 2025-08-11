@@ -272,6 +272,30 @@ fun createPlatformPushTask(arch: String, buildTask: TaskProvider<Task>) = tasks.
 val buildAmd64 by createPlatformBuildTask("amd64", "linux/amd64")
 val buildArm64 by createPlatformBuildTask("arm64", "linux/arm64")
 
+// Docker functionality test for current platform (runs after build)
+val testDockerFunctionality by tasks.registering {
+    group = "docker"
+    description = "Test Docker image functionality on current platform (fast cached version)"
+    
+    // Depend on the current platform's build
+    val hostArch = System.getProperty("os.arch").let { osArch ->
+        when (osArch) {
+            "x86_64", "amd64" -> "amd64"
+            "aarch64", "arm64" -> "arm64"
+            else -> osArch
+        }
+    }
+    
+    dependsOn(if (hostArch == "amd64") buildAmd64 else buildArm64)
+    
+    doLast {
+        // Run the comprehensive functionality test
+        project.tasks.getByName("testDockerImageFunctionality").actions.forEach { action ->
+            action.execute(project.tasks.getByName("testDockerImageFunctionality"))
+        }
+    }
+}
+
 val buildMultiPlatform by tasks.registering {
     group = "docker"
     description = "Build multi-platform Docker images locally"
@@ -718,12 +742,18 @@ val testDockerImageFunctionality by tasks.registering {
         
         logger.lifecycle("✅ Docker image built successfully!")
         
-        // Define test scenarios (matching the CI workflow tests)
+        // Define test scenarios that match the original CI functionality
         val testScenarios = listOf(
+            // Basic launcher tests
             "xec launcher version" to listOf("xec", "--version"),
             "xcc launcher version" to listOf("xcc", "--version"),
             "launcher help functionality" to listOf("xec", "--help"),
-            "native launcher binary compatibility" to listOf("uname", "-m")
+            "native launcher binary compatibility" to listOf("uname", "-m"),
+            
+            // Program compilation and execution tests (like original EchoTest)
+            "compile and run with no arguments" to listOf("xec", "/opt/xdk/test/DockerTest.x"),
+            "compile and run with single argument" to listOf("xec", "/opt/xdk/test/DockerTest.x", "hello"),
+            "compile and run with multiple arguments" to listOf("xec", "/opt/xdk/test/DockerTest.x", "arg1", "arg with spaces", "arg3")
         )
         
         // Run functional tests
@@ -757,6 +787,31 @@ val testDockerImageFunctionality by tasks.registering {
                 if (testName.contains("help") && !output.contains("Ecstasy runner")) {
                     logger.error("  ❌ $testName - FAILED (help output missing)")
                     throw GradleException("Docker functional test failed: $testName - no help info")
+                }
+                
+                // Additional validation for DockerTest program execution (matching original EchoTest behavior)
+                when (testName) {
+                    "compile and run with no arguments" -> {
+                        if (!output.contains("DockerTest invoked with 0 arguments.")) {
+                            logger.error("  ❌ $testName - FAILED (no arguments output missing)")
+                            throw GradleException("Docker functional test failed: $testName - wrong output")
+                        }
+                    }
+                    "compile and run with single argument" -> {
+                        if (!output.contains("DockerTest invoked with 1 arguments:") || !output.contains("[1]=\"hello\"")) {
+                            logger.error("  ❌ $testName - FAILED (single argument output missing)")
+                            throw GradleException("Docker functional test failed: $testName - wrong output")
+                        }
+                    }
+                    "compile and run with multiple arguments" -> {
+                        if (!output.contains("DockerTest invoked with 3 arguments:") || 
+                            !output.contains("[1]=\"arg1\"") ||
+                            !output.contains("[2]=\"arg with spaces\"") || 
+                            !output.contains("[3]=\"arg3\"")) {
+                            logger.error("  ❌ $testName - FAILED (multiple arguments output missing)")
+                            throw GradleException("Docker functional test failed: $testName - wrong output")
+                        }
+                    }
                 }
             } else {
                 logger.error("  ❌ $testName - FAILED (exit code: $exitCode)")
