@@ -4,22 +4,15 @@
  * All git commands and configuration creation deferred to execution phase only.
  */
 
+import java.net.URLEncoder
+import java.time.Instant
+
 plugins {
     // NOTE: We add base here to get lifecycle tasks.
     base
     id("org.xtclang.build.xdk.versioning")
 }
 
-// Add XDK dependency configuration like manualTests
-configurations.maybeCreate("xdk").apply {
-    isCanBeResolved = true
-    isCanBeConsumed = false
-}
-
-dependencies {
-    // Consume XDK like manualTests does
-    "xdk"(libs.xdk)  
-}
 
 
 // Build configuration data class
@@ -82,7 +75,7 @@ fun createBuildConfig(): BuildConfig {
     // Always ensure we have a resolved commit (never empty for tagging consistency)  
     val commit = System.getenv("GH_COMMIT")?.takeIf { it.isNotBlank() } ?: try {
         // Query GitHub API to get the latest commit on the remote branch
-        val encodedBranch = java.net.URLEncoder.encode(branch, "UTF-8")
+        val encodedBranch = URLEncoder.encode(branch, "UTF-8")
         val apiUrl = "https://api.github.com/repos/xtclang/xvm/commits/$encodedBranch"
         val curlResult = providers.exec {
             commandLine("curl", "-fsSL", apiUrl)
@@ -109,7 +102,7 @@ fun createBuildConfig(): BuildConfig {
     
     // Metadata that will be added as Docker labels (doesn't invalidate cache)
     val metadataLabels = mapOf(
-        "org.opencontainers.image.created" to java.time.Instant.now().toString(),
+        "org.opencontainers.image.created" to Instant.now().toString(),
         "org.opencontainers.image.revision" to commit,
         "org.opencontainers.image.version" to version,  
         "org.opencontainers.image.source" to "https://github.com/xtclang/xvm/tree/$branch"
@@ -124,7 +117,7 @@ fun createBuildConfig(): BuildConfig {
 
 // Helper function to show comprehensive build lifecycle information
 fun logLifecycleInfo(arch: String, config: BuildConfig) {
-    val buildTime = java.time.Instant.now()
+    val buildTime = Instant.now()
     val hostArch = System.getProperty("os.arch")
     val hostOS = System.getProperty("os.name")
     val buildMode = if (config.isCI) "CI/CD Pipeline" else "Local Development"
@@ -430,32 +423,86 @@ val listImages by tasks.registering {
             }
             
             println("   Total versions: ${versions.size}")
-            println("   📋 Recent versions with tags:")
             
-            versions.take(10).forEachIndexed { i, version ->
-                println("     ${i+1}. $version")
+            // Parse and calculate total size
+            var totalSize = 0L
+            var sizedVersionsCount = 0
+            
+            val parsedVersions = versions.mapNotNull { versionJson ->
+                try {
+                    val created = versionJson.substringAfter("\"created\":\"").substringBefore("\"")
+                    val tagsSection = versionJson.substringAfter("\"tags\":[").substringBefore("]")
+                    val tags = if (tagsSection.isBlank()) emptyList() else {
+                        tagsSection.split(",").map { it.trim().removeSurrounding("\"") }
+                    }
+                    
+                    // Extract size (might be null)
+                    val sizeStr = versionJson.substringAfter("\"size\":").substringBefore("}")
+                        .replace("null", "0").trim()
+                    val size = try {
+                        sizeStr.toLong()
+                    } catch (e: Exception) {
+                        0L
+                    }
+                    
+                    if (size > 0) {
+                        totalSize += size
+                        sizedVersionsCount++
+                    }
+                    
+                    Triple(created, tags, size)
+                } catch (e: Exception) {
+                    null
+                }
             }
             
-            if (versions.size > 10) {
-                println("     ... and ${versions.size - 10} more versions")
+            if (sizedVersionsCount > 0) {
+                val totalSizeMB = totalSize / (1024 * 1024)
+                println("   💾 Total size: ${totalSizeMB} MB across $sizedVersionsCount versioned images")
+            }
+            
+            println("   📋 Recent versions with tags and sizes:")
+            
+            parsedVersions.take(10).forEachIndexed { i, (created, tags, size) ->
+                val sizeStr = if (size > 0) {
+                    val sizeMB = size / (1024 * 1024)
+                    " (${sizeMB} MB)"
+                } else {
+                    " (size unknown)"
+                }
+                println("     ${i+1}. [${created}] tags: $tags$sizeStr")
+            }
+            
+            if (parsedVersions.size > 10) {
+                println("     ... and ${parsedVersions.size - 10} more versions")
             }
         }
     }
 }
 
+// Data class for image version information
+data class ImageVersion(val id: String, val created: String, val tags: List<String>, val isMasterImage: Boolean, val json: String)
+
 val cleanupVersions by tasks.registering {
     group = "docker"
-    description = "Clean up old Docker package versions (keep 5 most recent)"
-    dependsOn(listImages)
+    description = "Clean up old Docker package versions (default: keep 10 most recent, protect master images)"
+    // Don't depend on listImages to avoid caching - always fetch fresh data
     
     doLast {
         logger.lifecycle("🧹 Docker Package Cleanup")
         logger.lifecycle("=".repeat(50))
         
-        val keepCount = 5
+        val keepCount = project.findProperty("keepCount")?.toString()?.toIntOrNull() ?: 10
         val packageName = "xvm"
+        val isDryRun = project.findProperty("dryRun")?.toString()?.toBoolean() ?: false
+        val isForced = project.findProperty("force")?.toString()?.toBoolean() ?: false
         
-        // Get all versions sorted by creation date (newest first)
+        if (isDryRun) {
+            logger.lifecycle("🔍 DRY RUN MODE - No actual deletions will be performed")
+            logger.lifecycle("")
+        }
+        
+        // Get all versions sorted by creation date (newest first)  
         val versions = try {
             val output = providers.exec {
                 commandLine("gh", "api", "orgs/xtclang/packages/container/$packageName/versions", 
@@ -474,109 +521,203 @@ val cleanupVersions by tasks.registering {
             return@doLast
         }
         
+        // Parse versions and identify master/official images
+        val parsedVersions = versions.mapNotNull { versionJson ->
+            try {
+                val id = versionJson.substringAfter("\"id\":").substringBefore(",").trim()
+                val created = versionJson.substringAfter("\"created\":\"").substringBefore("\"")
+                val tagsSection = versionJson.substringAfter("\"tags\":[").substringBefore("]")
+                val tags = if (tagsSection.isBlank()) emptyList() else {
+                    tagsSection.split(",").map { it.trim().removeSurrounding("\"") }
+                }
+                
+                // Identify master/official images: those with "latest", version numbers, or "master" tags
+                val isMasterImage = tags.any { tag -> 
+                    tag == "latest" || 
+                    tag == "master" ||
+                    tag.matches(Regex("\\d+\\.\\d+\\.\\d+.*")) || // version pattern
+                    tag.matches(Regex("latest-\\w+")) // latest-amd64, latest-arm64
+                }
+                
+                ImageVersion(id, created, tags, isMasterImage, versionJson)
+            } catch (e: Exception) {
+                logger.warn("⚠️  Could not parse version: $versionJson")
+                null
+            }
+        }.sortedByDescending { it.created } // Sort by creation date (newest first)
+        
         logger.lifecycle("📦 Package: $packageName")
-        logger.lifecycle("📊 Total versions: ${versions.size}")
-        logger.lifecycle("🎯 Keeping: $keepCount most recent")
-        logger.lifecycle("🗑️  Deleting: ${maxOf(0, versions.size - keepCount)} old versions")
+        logger.lifecycle("📊 Total versions: ${parsedVersions.size}")
+        
+        // Separate master images from branch images
+        val masterImages = parsedVersions.filter { it.isMasterImage }
+        val branchImages = parsedVersions.filter { !it.isMasterImage }
+        
+        logger.lifecycle("🎯 Master/Official images: ${masterImages.size}")
+        logger.lifecycle("🌿 Branch images: ${branchImages.size}")
         logger.lifecycle("")
         
-        if (versions.size <= keepCount) {
-            logger.lifecycle("✅ No cleanup needed - already at or below limit")
+        // Determine what to keep and delete
+        // RULE 1: Always keep at least one master image (the most recent)
+        val masterToKeep = if (masterImages.isNotEmpty()) listOf(masterImages.first()) else emptyList()
+        
+        // RULE 2: Keep up to keepCount total recent images, but prioritize protecting master images
+        val allToKeep = mutableSetOf<ImageVersion>()
+        allToKeep.addAll(masterToKeep) // Always keep most recent master
+        
+        // Fill remaining slots with most recent images (master + branch)
+        val remaining = parsedVersions.take(keepCount)
+        allToKeep.addAll(remaining)
+        
+        val finalKeep = allToKeep.toList().sortedByDescending { it.created }
+        val toDelete = parsedVersions.filter { it !in finalKeep }
+        
+        // Additional safety check: never delete ALL master images
+        val masterInDeleteList = toDelete.filter { it.isMasterImage }
+        val masterInKeepList = finalKeep.filter { it.isMasterImage }
+        
+        if (masterInKeepList.isEmpty() && masterImages.isNotEmpty()) {
+            logger.error("❌ SAFETY CHECK FAILED: Would delete all master images!")
+            logger.error("❌ This is not allowed. At least one master image must remain.")
             return@doLast
         }
         
-        // Show what we're keeping
-        logger.lifecycle("✅ Keeping these versions:")
-        versions.take(keepCount).forEachIndexed { i, version ->
-            logger.lifecycle("  ${i+1}. $version")
+        logger.lifecycle("✅ Keeping these ${finalKeep.size} versions:")
+        finalKeep.forEachIndexed { i, version ->
+            val typeMarker = if (version.isMasterImage) "🏷️ MASTER" else "🌿 BRANCH"
+            logger.lifecycle("  ${i+1}. $typeMarker [${version.created}] tags: ${version.tags}")
         }
         logger.lifecycle("")
         
-        // Show what we're deleting
-        val toDelete = versions.drop(keepCount)
-        logger.lifecycle("🗑️  Deleting these ${toDelete.size} versions:")
+        if (toDelete.isEmpty()) {
+            logger.lifecycle("✅ No cleanup needed - already at optimal state")
+            return@doLast
+        }
+        
+        logger.lifecycle("🗑️  Would delete these ${toDelete.size} versions:")
         toDelete.forEachIndexed { i, version ->
-            logger.lifecycle("  ${i+1}. $version")
+            val typeMarker = if (version.isMasterImage) "🏷️ MASTER" else "🌿 BRANCH"
+            logger.lifecycle("  ${i+1}. $typeMarker [${version.created}] tags: ${version.tags}")
         }
         logger.lifecycle("")
         
-        // Ask for confirmation (only in interactive mode)
-        if (System.getenv("CI") != "true") {
+        // Safety summary
+        logger.lifecycle("🛡️  Safety Summary:")
+        logger.lifecycle("  📦 Master images to keep: ${masterInKeepList.size}")
+        logger.lifecycle("  🗑️  Master images to delete: ${masterInDeleteList.size}")
+        logger.lifecycle("  🌿 Branch images to delete: ${toDelete.size - masterInDeleteList.size}")
+        logger.lifecycle("")
+        
+        if (isDryRun) {
+            logger.lifecycle("🔍 DRY RUN COMPLETE - No changes made")
+            logger.lifecycle("💡 Remove -PdryRun to perform actual cleanup")
+            return@doLast
+        }
+        
+        // Confirmation logic
+        val needsConfirmation = System.getenv("CI") != "true" && !isForced
+        
+        if (needsConfirmation) {
             logger.warn("⚠️  This will permanently delete ${toDelete.size} package versions!")
-            logger.warn("💡 Add -Pconfirm=true to proceed, or run from CI")
+            logger.lifecycle("")
+            logger.lifecycle("📋 Deletion Plan:")
+            toDelete.forEachIndexed { i, version ->
+                val typeMarker = if (version.isMasterImage) "🏷️ MASTER" else "🌿 BRANCH" 
+                logger.lifecycle("  ${i+1}. DELETE $typeMarker [${version.created}] tags: ${version.tags}")
+            }
+            logger.lifecycle("")
+            logger.lifecycle("❓ Do you want to proceed with deleting these ${toDelete.size} versions?")
+            logger.lifecycle("💡 Options:")
+            logger.lifecycle("   • Add -Pforce=true to skip this prompt")
+            logger.lifecycle("   • Add -PdryRun=true to preview without changes")
+            logger.lifecycle("   • Press Ctrl+C to cancel")
+            logger.lifecycle("")
             
-            if (project.findProperty("confirm") != "true") {
-                logger.error("❌ Cancelled - add -Pconfirm=true to actually delete")
+            print("Type 'yes' to confirm deletion: ")
+            val response = readLine()?.trim()?.lowercase()
+            
+            if (response != "yes") {
+                logger.error("❌ Cancelled - user did not confirm deletion")
                 return@doLast
             }
+            
+            logger.lifecycle("✅ User confirmed deletion, proceeding...")
+        } else if (isForced) {
+            logger.lifecycle("⚡ FORCED MODE - Skipping confirmation prompt")
+        } else {
+            logger.lifecycle("🤖 CI MODE - Proceeding automatically")
         }
         
         // Delete old versions
         var deletedCount = 0
         var failedCount = 0
         
-        toDelete.forEach { versionJson ->
+        toDelete.forEach { version ->
             try {
-                // Extract ID from JSON string (simple parsing)
-                val id = versionJson.substringAfter("\"id\":").substringBefore(",").trim()
-                
                 providers.exec {
-                    commandLine("gh", "api", "-X", "DELETE", "orgs/xtclang/packages/container/$packageName/versions/$id")
+                    commandLine("gh", "api", "-X", "DELETE", "orgs/xtclang/packages/container/$packageName/versions/${version.id}")
                 }
                 
                 deletedCount++
-                logger.lifecycle("✅ Deleted version ID: $id")
+                val typeMarker = if (version.isMasterImage) "🏷️ MASTER" else "🌿 BRANCH"
+                logger.lifecycle("✅ Deleted $typeMarker version ID: ${version.id} (tags: ${version.tags})")
                 
             } catch (e: Exception) {
                 failedCount++
-                logger.error("❌ Failed to delete version: ${e.message}")
+                logger.error("❌ Failed to delete version ${version.id}: ${e.message}")
             }
         }
         
         logger.lifecycle("")
-        logger.lifecycle("🎯 Cleanup Summary:")
-        logger.lifecycle("  ✅ Deleted: $deletedCount versions")  
-        logger.lifecycle("  ❌ Failed: $failedCount versions")
-        logger.lifecycle("  📦 Remaining: $keepCount versions")
+        logger.lifecycle("🔍 Verifying deletions by fetching fresh data from registry...")
         
-        if (failedCount > 0) {
-            logger.warn("💡 Some deletions failed - check GitHub CLI authentication and permissions")
-        }
-    }
-}
-
-val pruneImages by tasks.registering {
-    group = "docker"
-    description = "Delete non-master Docker packages from GitHub Container Registry"
-    
-    doLast {
-        logger.lifecycle("🧹 Pruning Non-Master Docker Packages")
-        logger.lifecycle("=".repeat(50))
-        
-        val packagesToDelete = listOf<String>(
-            // Add branch-specific packages here as needed  
-            // e.g., "xvm-feature-branch", "xvm-experimental"
-        )
-        
-        if (packagesToDelete.isEmpty()) {
-            logger.lifecycle("✅ No packages configured for deletion")
-            logger.warn("💡 Add package names to the packagesToDelete list in build.gradle.kts")
-            return@doLast
-        }
-        
-        packagesToDelete.forEach { packageName ->
-            logger.lifecycle("🗑️  Attempting to delete package: $packageName")
-            try {
-                providers.exec {
-                    commandLine("gh", "api", "-X", "DELETE", "orgs/xtclang/packages/container/$packageName")
-                }
-                logger.lifecycle("✅ Successfully deleted package: $packageName")
-            } catch (e: Exception) {
-                logger.error("❌ Failed to delete $packageName: ${e.message}")
+        // Fetch fresh data to verify deletions
+        val verificationVersions = try {
+            val output = providers.exec {
+                commandLine("gh", "api", "orgs/xtclang/packages/container/$packageName/versions", 
+                           "--jq", ".[] | {id: .id, created: .created_at, tags: .metadata.container.tags}")
+            }.standardOutput.asText.get().trim()
+            
+            if (output.isEmpty()) {
+                emptyList()
+            } else {
+                output.split("\n")
             }
+        } catch (e: Exception) {
+            logger.warn("⚠️  Could not verify deletions: ${e.message}")
+            emptyList()
         }
         
-        logger.lifecycle("💡 View remaining packages: https://github.com/orgs/xtclang/packages")
+        val remainingIds = verificationVersions.mapNotNull { versionJson ->
+            try {
+                versionJson.substringAfter("\"id\":").substringBefore(",").trim()
+            } catch (e: Exception) {
+                null
+            }
+        }.toSet()
+        
+        // Check which deletions actually took effect
+        val actuallyDeleted = toDelete.filter { it.id !in remainingIds }
+        val stillPresent = toDelete.filter { it.id in remainingIds }
+        
+        logger.lifecycle("🎯 Cleanup Summary:")
+        logger.lifecycle("  ✅ Successfully deleted: ${actuallyDeleted.size} versions")  
+        logger.lifecycle("  ❌ Failed deletions: ${stillPresent.size} versions")
+        logger.lifecycle("  📦 Total remaining in registry: ${verificationVersions.size} versions")
+        logger.lifecycle("  🛡️  Master images protected: ${masterInKeepList.size}")
+        
+        if (stillPresent.isNotEmpty()) {
+            logger.warn("⚠️  These versions are still present after deletion attempt:")
+            stillPresent.forEach { version ->
+                val typeMarker = if (version.isMasterImage) "🏷️ MASTER" else "🌿 BRANCH"
+                logger.warn("    $typeMarker ID: ${version.id} (tags: ${version.tags})")
+            }
+            logger.warn("💡 GitHub API may have delays, or there were permission issues")
+        }
+        
+        if (actuallyDeleted.size == toDelete.size) {
+            logger.lifecycle("🎉 All requested deletions completed successfully!")
+        }
     }
 }
 
@@ -591,7 +732,7 @@ val testDockerWithLocalArtifacts by tasks.registering {
         
         // First ensure we have the XDK built with distribution ZIP
         logger.lifecycle("📋 Building XDK platform-agnostic distribution ZIP...")
-        exec {
+        providers.exec {
             commandLine("../gradlew", "xdk:distZip")
             workingDir = projectDir
         }
@@ -701,12 +842,12 @@ fun File.directorySize(): Long {
     }
 }
 
-// Docker image functional test task with proper Gradle dependencies
+// Docker image functional test - tests the pushed image functionality
 val testDockerImageFunctionality by tasks.registering {
     group = "docker"
-    description = "Test Docker image functionality with XVM sample programs on current platform"
+    description = "Test Docker image functionality - verifies that the pushed Docker image works correctly"
     
-    // Get host architecture for dependencies
+    // Get host architecture to determine which image to test
     val hostArch = System.getProperty("os.arch").let { osArch ->
         when (osArch) {
             "x86_64", "amd64" -> "amd64"
@@ -715,13 +856,10 @@ val testDockerImageFunctionality by tasks.registering {
         }
     }
     
-    // Depend on Docker image build for current platform (ensure Docker image exists)
+    // Only dependency: ensure the Docker image exists (was built)
     dependsOn(if (hostArch == "amd64") buildAmd64 else buildArm64)
     
-    // Input: XDK distribution from configuration (like manualTests)
-    inputs.files(configurations["xdk"])
-    
-    // Input: DockerTest.x program that gets copied into the image
+    // Input: DockerTest.x program (copied into image during build)
     inputs.file("test/DockerTest.x")
     
     // Input: Dockerfile and build scripts that affect the image
@@ -735,95 +873,39 @@ val testDockerImageFunctionality by tasks.registering {
     doLast {
         logger.lifecycle("🧪 Testing Docker image functionality...")
         
-        val platform = "linux/$hostArch"
-        val testTag = "test-xvm-functional:latest"
-        
-        logger.lifecycle("🐳 Using Docker image built by platform build task...")
-        logger.lifecycle("  Platform: $platform")
-        logger.lifecycle("  Build task: ${if (hostArch == "amd64") "buildAmd64" else "buildArm64"}")
-        logger.lifecycle("  Test tag: $testTag")
-        
-        // The Docker image was already built by the platform build task we depend on
-        // We just need to copy the distribution file and re-tag the image for testing
-        
-        // Get XDK distribution from configuration (like manualTests does)
-        val xdkFiles = configurations["xdk"].resolve()
-        logger.lifecycle("📦 XDK configuration resolved to ${xdkFiles.size} files: ${xdkFiles.map { it.name }}")
-        
-        // The XDK configuration provides JARs, not ZIPs. We need the distribution ZIP from the build output
-        val xdkBuildDir = file("../xdk/build/distributions")
-        val distZipFiles = fileTree(xdkBuildDir) {
-            include("xdk-*.zip")
-            exclude("*-linux_*.zip")
-            exclude("*-macos_*.zip") 
-            exclude("*-windows_*.zip")
-        }.files
-        
-        val distZipFile = distZipFiles.firstOrNull() 
-            ?: throw GradleException("XDK distribution ZIP not found. Run 'xdk:distZip' first or use the 'installDist' task from root.")
-        
-        logger.lifecycle("📦 Using XDK distribution ZIP: ${distZipFile.name}")
-        
-        // Copy distribution ZIP to Docker build context if not already there
-        val dockerContextZip = file("ci-dist.zip")
-        if (!dockerContextZip.exists() || dockerContextZip.lastModified() < distZipFile.lastModified()) {
-            copy {
-                from(distZipFile)
-                into(".")
-                rename { "ci-dist.zip" }
-            }
-            logger.lifecycle("📋 Updated distribution ZIP in Docker context")
-        }
-        
-        // Build Docker image with proper dependencies satisfied
+        // Get the built image tag from the build configuration
         val config = createBuildConfig()
-        val cmd = listOf(
-            "docker", "buildx", "build",
-            "--platform", platform,
-            "--progress=plain",
-            "--build-arg", "GH_BRANCH=${config.branch}",
-            "--build-arg", "GH_COMMIT=${config.commit}",
-            "--build-arg", "USE_PREBUILT_ARTIFACTS=true",
-            "--tag", testTag,
-            "--load",
-            "."
-        )
+        val imageTag = config.tagsForArch(hostArch).first()
         
-        logger.lifecycle("🔍 Building Docker image with dependencies satisfied: ${cmd.joinToString(" ")}")
+        logger.lifecycle("🐳 Testing Docker image: $imageTag")
+        logger.lifecycle("  Platform: linux/$hostArch")
+        logger.lifecycle("  Build task: ${if (hostArch == "amd64") "buildAmd64" else "buildArm64"}")
         
-        val buildResult = ProcessBuilder(cmd)
-            .directory(projectDir)
-            .inheritIO()
-            .start()
-            .waitFor()
-            
-        if (buildResult != 0) {
-            throw GradleException("Docker build failed with exit code: $buildResult")
-        }
-        
-        logger.lifecycle("✅ Docker image built successfully with proper dependencies!")
-        
-        // Define test scenarios that match the original CI functionality
+        // Define test scenarios that verify the Docker image functionality
         val testScenarios = listOf(
             // Basic launcher tests
             "xec launcher version" to listOf("xec", "--version"),
             "xcc launcher version" to listOf("xcc", "--version"),
             "launcher help functionality" to listOf("xec", "--help"),
-            "native launcher binary compatibility" to listOf("uname", "-m"),
+            "container environment" to listOf("uname", "-m"),
             
-            // Program compilation and execution tests (like original EchoTest)
+            // Program compilation and execution tests (using the DockerTest.x copied into image)
             "compile and run with no arguments" to listOf("xec", "/opt/xdk/test/DockerTest.x"),
             "compile and run with single argument" to listOf("xec", "/opt/xdk/test/DockerTest.x", "hello"),
             "compile and run with multiple arguments" to listOf("xec", "/opt/xdk/test/DockerTest.x", "arg1", "arg with spaces", "arg3")
         )
         
-        // Run functional tests
-        testScenarios.forEach { (testName, testCmd) ->
+        // Run functional tests against the built Docker image
+        testScenarios.forEach { pair ->
+            val (testName, testCmd) = pair
             logger.lifecycle("🧪 Testing: $testName")
             logger.lifecycle("  Command: ${testCmd.joinToString(" ")}")
             
-            val dockerCmd = listOf("docker", "run", "--rm", testTag) + testCmd
-            val testResult = ProcessBuilder(dockerCmd)
+            val dockerCmd = mutableListOf<String>().apply {
+                addAll(listOf("docker", "run", "--rm", imageTag))
+                addAll(testCmd)
+            }
+            val testResult = ProcessBuilder(dockerCmd.toList())
                 .redirectOutput(ProcessBuilder.Redirect.PIPE)
                 .redirectError(ProcessBuilder.Redirect.PIPE)
                 .start()
@@ -850,7 +932,7 @@ val testDockerImageFunctionality by tasks.registering {
                     throw GradleException("Docker functional test failed: $testName - no help info")
                 }
                 
-                // Additional validation for DockerTest program execution (matching original EchoTest behavior)
+                // Additional validation for DockerTest program execution
                 when (testName) {
                     "compile and run with no arguments" -> {
                         if (!output.contains("DockerTest invoked with 0 arguments.")) {
@@ -887,18 +969,16 @@ val testDockerImageFunctionality by tasks.registering {
         }
         
         logger.lifecycle("🎉 All Docker functional tests passed!")
-        logger.lifecycle("💡 Image tagged as: $testTag")
+        logger.lifecycle("💡 Tested image: $imageTag")
         
-        // Write test completion marker with timestamp and dependencies info
+        // Write test completion marker with timestamp
         testResultFile.get().asFile.apply {
             parentFile.mkdirs()
             writeText(buildString {
-                appendLine("Docker functionality tests passed at ${java.time.Instant.now()}")
-                appendLine("Dependencies satisfied:")
-                appendLine("- XDK distribution: ${distZipFile.name}")
-                appendLine("- Docker build task: ${if (hostArch == "amd64") "buildAmd64" else "buildArm64"}")
-                appendLine("- Platform: $platform")
-                appendLine("- Host architecture: $hostArch")
+                appendLine("Docker functionality tests passed at ${Instant.now()}")
+                appendLine("Image tested: $imageTag")
+                appendLine("Platform: linux/$hostArch")
+                appendLine("Host architecture: $hostArch")
             })
         }
     }

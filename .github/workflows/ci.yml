@@ -650,12 +650,22 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ success() && github.ref == 'refs/heads/master' }}
     steps:
-      - name: Clean up old container versions
-        uses: snok/container-retention-policy@v3
-        with:
-          image-names: xvm
-          cut-off: 4 weeks ago UTC
-          keep-n-most-recent: 5
-          account-type: org
-          org-name: xtclang
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Fetch Sources
+        uses: actions/checkout@v4
+
+      - name: Setup XVM Build Environment
+        uses: ./.github/actions/setup-xvm-build
+
+      - name: Clean up Docker package versions with master protection
+        run: |
+          echo "🧹 Running Docker package cleanup with master image protection..."
+          echo "This uses our custom Gradle task with enhanced safety features:"
+          echo "  • Always protects at least one master image"
+          echo "  • Keeps 10 most recent versions overall (configurable)"
+          echo "  • Verifies deletions actually worked"
+          echo ""
+          
+          # Run cleanup in force mode (no interactive prompts in CI)
+          ./gradlew docker:cleanupVersions -Pforce=true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
