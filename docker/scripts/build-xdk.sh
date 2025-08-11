@@ -59,6 +59,11 @@ if [ -n "${DIST_ZIP_URL:-}" ] && [ "$DIST_ZIP_URL" != "test-local" ]; then
         DIST_ZIP="dist.zip"
         echo "✅ Downloaded distribution ZIP from: $DIST_ZIP_URL"
     fi
+elif [ -f "ci-dist.zip" ]; then
+    # CI artifact mode - platform-agnostic pre-built distribution
+    echo "📦 Using pre-built CI artifact: ci-dist.zip"
+    DIST_ZIP="ci-dist.zip"
+    echo "✅ Using CI distribution ZIP: $DIST_ZIP"
 else
     # Build distribution ZIP from source (local development)
     echo "🏗️ Building XDK distribution from source..."
@@ -150,30 +155,71 @@ echo "📋 Extracting ZIP contents..."
 unzip "$DIST_ZIP"
 
 # Find any extracted directory and strip the outer directory layer
-XDK_EXTRACTED=$(find . -maxdepth 1 -name "xdk*" -type d | head -1)
+# Handle both platform-specific (e.g., xdk-0.4.4-SNAPSHOT-linux_aarch64) and platform-agnostic (e.g., xdk0.4.4SNAPSHOT)
+echo "📋 Looking for extracted XDK directory..."
+ls -la . | grep "^d" || true  # Show directories for debugging
+
+# Find the extracted distribution directory (exclude the source xdk directory)
+XDK_EXTRACTED=$(find . -maxdepth 1 -name "xdk*" -type d -not -name "xdk" | head -1)
 if [ -z "$XDK_EXTRACTED" ]; then
     echo "❌ No extracted XDK directory found"
+    echo "📋 Contents of current directory:"
     ls -la . | head -10
     exit 1
 fi
 
 echo "📁 Stripping outer directory layer from: $XDK_EXTRACTED"
 # Move contents up one level to create clean 'xdk/' structure
+
+# Remove existing xdk directory if it exists from source (it will be replaced with distribution)
+if [ -d "xdk" ]; then
+    echo "📁 Removing existing xdk directory (will be replaced with distribution)..."
+    rm -rf xdk
+fi
+
+echo "📁 Creating clean xdk/ directory..."
 mkdir -p xdk
-mv "$XDK_EXTRACTED"/* xdk/
-rmdir "$XDK_EXTRACTED"
+
+echo "📁 Moving contents from $XDK_EXTRACTED to xdk/..."
+# Use explicit loop instead of glob to avoid SIGPIPE on large file lists
+find "$XDK_EXTRACTED" -mindepth 1 -maxdepth 1 -exec mv {} xdk/ \;
+
+echo "📁 Removing empty extracted directory: $XDK_EXTRACTED"
+rmdir "$XDK_EXTRACTED" || {
+    echo "⚠️  Could not remove $XDK_EXTRACTED (not empty?)"
+    ls -la "$XDK_EXTRACTED" || true
+}
 echo "📁 Created clean xdk/ directory structure"
 
 # Install correct native launchers based on target architecture
 echo "🚀 Installing native launchers for ${TARGETOS}/${TARGETARCH}"
 LAUNCHER_EXT=""
 [ "${TARGETOS}" = "windows" ] && LAUNCHER_EXT=".exe"
-LAUNCHER_FILE="javatools_launcher/src/main/resources/exe/${TARGETOS}_launcher_${TARGETARCH}${LAUNCHER_EXT}"
 
-cp "$LAUNCHER_FILE" "xdk/bin/xec"
-cp "$LAUNCHER_FILE" "xdk/bin/xcc"
-chmod +x "xdk/bin/xec" "xdk/bin/xcc"
-echo "✅ Installed native launchers: $LAUNCHER_FILE → xec, xcc"
+# Check if we're using pre-built distribution (launchers already in xdk/bin/) or source build
+if [ -f "xdk/bin/${TARGETOS}_launcher_${TARGETARCH}${LAUNCHER_EXT}" ]; then
+    # Pre-built distribution - launchers already exist, just rename them
+    echo "📦 Using pre-built launchers from distribution"
+    cp "xdk/bin/${TARGETOS}_launcher_${TARGETARCH}${LAUNCHER_EXT}" "xdk/bin/xec${LAUNCHER_EXT}"
+    cp "xdk/bin/${TARGETOS}_launcher_${TARGETARCH}${LAUNCHER_EXT}" "xdk/bin/xcc${LAUNCHER_EXT}"
+    chmod +x "xdk/bin/xec${LAUNCHER_EXT}" "xdk/bin/xcc${LAUNCHER_EXT}"
+    echo "✅ Installed pre-built launchers: ${TARGETOS}_launcher_${TARGETARCH}${LAUNCHER_EXT} → xec, xcc"
+elif [ -f "javatools_launcher/src/main/resources/exe/${TARGETOS}_launcher_${TARGETARCH}${LAUNCHER_EXT}" ]; then
+    # Source build - copy launchers from source tree
+    echo "🔧 Using source launchers from build tree"
+    LAUNCHER_FILE="javatools_launcher/src/main/resources/exe/${TARGETOS}_launcher_${TARGETARCH}${LAUNCHER_EXT}"
+    cp "$LAUNCHER_FILE" "xdk/bin/xec${LAUNCHER_EXT}"
+    cp "$LAUNCHER_FILE" "xdk/bin/xcc${LAUNCHER_EXT}"
+    chmod +x "xdk/bin/xec${LAUNCHER_EXT}" "xdk/bin/xcc${LAUNCHER_EXT}"
+    echo "✅ Installed source launchers: $LAUNCHER_FILE → xec, xcc"
+else
+    echo "❌ No native launchers found for ${TARGETOS}/${TARGETARCH}"
+    echo "📋 Checked locations:"
+    echo "  - xdk/bin/${TARGETOS}_launcher_${TARGETARCH}${LAUNCHER_EXT} (pre-built)"
+    echo "  - javatools_launcher/src/main/resources/exe/${TARGETOS}_launcher_${TARGETARCH}${LAUNCHER_EXT} (source)"
+    ls -la xdk/bin/ | head -5 || true
+    exit 1
+fi
 
 # Create build info (consistent variable naming)
 BUILD_DATE_VAL="${BUILD_DATE:-$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"

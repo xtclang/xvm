@@ -8,11 +8,11 @@ echo "Building launcher for ${TARGETOS}/${TARGETARCH}"
 case "${TARGETARCH}" in
     amd64) 
         ARCH_FLAGS="-O3 -mtune=generic" 
-        LAUNCHER_NAME="linux_launcher_x86_64" 
+        LAUNCHER_NAME="linux_launcher_amd64"
         ;;
     arm64) 
         ARCH_FLAGS="-O3 -march=armv8-a -mtune=cortex-a72" 
-        LAUNCHER_NAME="linux_launcher_aarch64" 
+        LAUNCHER_NAME="linux_launcher_arm64"
         ;;
     *) 
         echo "ERROR: Unsupported platform ${TARGETOS}/${TARGETARCH}" 

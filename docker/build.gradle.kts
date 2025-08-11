@@ -554,9 +554,9 @@ val testDockerWithLocalArtifacts by tasks.registering {
         logger.lifecycle("🧪 Testing Docker build with local artifacts...")
         
         // First ensure we have the XDK built with distribution ZIP
-        logger.lifecycle("📋 Building XDK distribution ZIP with native launchers...")
+        logger.lifecycle("📋 Building XDK platform-agnostic distribution ZIP...")
         exec {
-            commandLine("../gradlew", "xdk:withLaunchersDistZip")
+            commandLine("../gradlew", "xdk:distZip")
             workingDir = projectDir
         }
         
@@ -567,7 +567,10 @@ val testDockerWithLocalArtifacts by tasks.registering {
         }
         
         val distZipFile = fileTree("../xdk/build/distributions") {
-            include("xdk-*-linux_amd64.zip")
+            include("xdk-*.zip")
+            exclude("*-linux_*.zip")  // Use platform-agnostic ZIP
+            exclude("*-macos_*.zip")  // Use platform-agnostic ZIP
+            exclude("*-windows_*.zip")  // Use platform-agnostic ZIP
         }.singleFile
         
         logger.lifecycle("📋 Using distribution ZIP: ${distZipFile.name}")

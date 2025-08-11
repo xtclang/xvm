@@ -59,16 +59,43 @@ RUN --mount=type=cache,target=/root/.gradle/caches,sharing=locked \
     chmod +x /build-xdk.sh && \
     /build-xdk.sh
 
-# *** STAGE 5 (Export stage to copy launcher to host filesystem)
-FROM scratch AS launcher-export
-# Copy all available Linux launchers (both old and new naming schemes)
-COPY --from=builder /workspace/javatools_launcher/src/main/resources/exe/linux_launcher* /
+# *** STAGE 5 (Native Launcher Builder - ensures compatibility with target runtime)
+FROM alpine:latest AS launcher-builder
+ARG TARGETARCH
+ARG TARGETOS
 
+# Install build tools for C compilation
+RUN apk add --no-cache gcc musl-dev make
+
+WORKDIR /launcher-build
+COPY --from=source-cloner /source .
+
+# Build the native launcher from C source for the container's architecture
+RUN echo "🔧 Building native launcher for ${TARGETOS}/${TARGETARCH} (musl libc)" && \
+    cd javatools_launcher/src/main/c && \
+    gcc -static -O2 -o launcher launcher.c os_linux.c os_unux.c && \
+    echo "✅ Launcher build complete" && \
+    ls -la launcher
+
+# *** STAGE 6 (Export stage to copy launcher to host filesystem)
+FROM scratch AS launcher-export
+# Copy the container-built launcher
+COPY --from=launcher-builder /launcher-build/javatools_launcher/src/main/c/launcher /
+
+# *** STAGE 7 (Final Runtime Image)
 FROM bellsoft/liberica-runtime-container:jre-21-slim-musl
 
 ENV XDK_HOME=/opt/xdk
 ENV PATH="${XDK_HOME}/bin:${PATH}"
 
+# Copy XDK distribution from builder stage
 COPY --from=builder /workspace/xdk/ /opt/xdk/
+
+# Copy container-built native launcher (overwrites any pre-built launchers)
+COPY --from=launcher-builder /launcher-build/javatools_launcher/src/main/c/launcher /opt/xdk/bin/xec
+COPY --from=launcher-builder /launcher-build/javatools_launcher/src/main/c/launcher /opt/xdk/bin/xcc
+
+# Ensure launchers are executable
+RUN chmod +x /opt/xdk/bin/xec /opt/xdk/bin/xcc
 
 CMD ["xec"]
