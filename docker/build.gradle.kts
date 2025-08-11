@@ -346,19 +346,15 @@ val cleanImages by tasks.registering {
     description = "Clean up old Docker package versions (default: keep 10 most recent, protect master images)"
     
     // Capture values during configuration phase to avoid deprecation warnings
-    val capturedKeepCount = project.findProperty("keepCount")?.toString()?.toIntOrNull() ?: 10
-    val capturedIsDryRun = project.findProperty("dryRun")?.toString()?.toBoolean() ?: false
-    val capturedIsForced = project.findProperty("force")?.toString()?.toBoolean() ?: false
+    val keepCount = project.findProperty("keepCount")?.toString()?.toIntOrNull() ?: 10
+    val isDryRun = project.findProperty("dryRun")?.toString()?.toBoolean() ?: false
+    val isForced = project.findProperty("force")?.toString()?.toBoolean() ?: false
     
     doLast {
         logger.lifecycle("🧹 Docker Package Cleanup")
         logger.lifecycle("=".repeat(50))
         
-        val keepCount = capturedKeepCount
         val packageName = "xvm"
-        val isDryRun = capturedIsDryRun
-        
-        val isForced = capturedIsForced
         
         if (isDryRun) logger.lifecycle("🔍 DRY RUN MODE")
         
