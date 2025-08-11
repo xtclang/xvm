@@ -252,12 +252,14 @@ data class ImageVersion(val id: String, val created: String, val tags: List<Stri
 
 fun fetchPackageVersions(packageName: String): List<String> {
     return try {
+        // Get GitHub token before exec block
+        val githubToken = System.getenv("GITHUB_TOKEN")
+        
         providers.exec {
             commandLine("gh", "api", "orgs/xtclang/packages/container/$packageName/versions",
                        "--jq", ".[] | {id: .id, created: .created_at, tags: .metadata.container.tags}")
             
-            // Ensure GitHub token is available to the subprocess
-            val githubToken = System.getenv("GITHUB_TOKEN")
+            // Pass GitHub token to subprocess
             if (githubToken != null) {
                 environment("GITHUB_TOKEN", githubToken)
             }
@@ -410,14 +412,16 @@ val cleanImages by tasks.registering {
         var deleted = 0
         val failures = mutableListOf<String>()
         
+        // Get GitHub token once for all deletions
+        val githubToken = System.getenv("GITHUB_TOKEN")
+        
         toDelete.forEach { version ->
             try {
                 providers.exec {
                     commandLine("gh", "api", "-X", "DELETE", "orgs/xtclang/packages/container/$packageName/versions/${version.id}")
                     isIgnoreExitValue = false // Ensure we catch non-zero exit codes
                     
-                    // Ensure GitHub token is available to the subprocess
-                    val githubToken = System.getenv("GITHUB_TOKEN")
+                    // Pass GitHub token to subprocess
                     if (githubToken != null) {
                         environment("GITHUB_TOKEN", githubToken)
                     }
