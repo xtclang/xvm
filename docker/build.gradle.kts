@@ -406,15 +406,37 @@ val cleanImages by tasks.registering {
         
         logger.lifecycle("🎯 Deleted: $deleted/${toDelete.size} versions")
         
-        // Verify deletions
-        val remainingVersions = fetchPackageVersions(packageName)
-        val remainingIds = remainingVersions.mapNotNull { parseImageVersion(it)?.id }.toSet()
-        val actuallyDeleted = toDelete.count { it.id !in remainingIds }
+        // Verify deletions with retry logic for API delays
+        logger.lifecycle("🔍 Verifying deletions...")
+        var actuallyDeleted = 0
+        val maxRetries = 3
+        val retryDelayMs = 5000L // 5 seconds
         
-        if (actuallyDeleted == toDelete.size) {
-            logger.lifecycle("🎉 All deletions verified!")
-        } else {
-            logger.lifecycle("⚠️  Only $actuallyDeleted/${toDelete.size} deletions confirmed (API delay possible)")
+        for (attempt in 1..maxRetries) {
+            Thread.sleep(if (attempt > 1) retryDelayMs else 1000L) // Initial 1s delay, then 5s
+            
+            val remainingVersions = fetchPackageVersions(packageName)
+            val remainingIds = remainingVersions.mapNotNull { parseImageVersion(it)?.id }.toSet()
+            actuallyDeleted = toDelete.count { it.id !in remainingIds }
+            
+            logger.lifecycle("📊 Attempt $attempt: $actuallyDeleted/${toDelete.size} deletions confirmed")
+            
+            if (actuallyDeleted == toDelete.size) {
+                logger.lifecycle("🎉 All deletions verified! Final count: ${remainingVersions.size} versions remaining")
+                break
+            }
+            
+            if (attempt < maxRetries) {
+                logger.lifecycle("⏳ Waiting ${retryDelayMs/1000}s for API consistency...")
+            }
+        }
+        
+        if (actuallyDeleted != toDelete.size) {
+            val errorMsg = "❌ Only $actuallyDeleted/${toDelete.size} deletions confirmed after $maxRetries attempts"
+            logger.lifecycle(errorMsg)
+            if (System.getenv("CI") == "true") {
+                throw GradleException("$errorMsg - failing CI build to prevent silent failures")
+            }
         }
     }
 }
