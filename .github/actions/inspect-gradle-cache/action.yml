@@ -1,0 +1,70 @@
+name: 'Inspect Gradle Cache'
+description: 'Displays comprehensive information about Gradle cache state and size'
+inputs:
+  label:
+    description: 'Optional label to include in the output for context'
+    required: false
+    default: ''
+  gradle-user-home:
+    description: 'Custom Gradle user home directory'
+    required: false
+    default: ''
+
+outputs:
+  cache-exists:
+    description: 'Whether the Gradle cache exists'
+    value: ${{ steps.inspect.outputs.cache-exists }}
+  cache-size:
+    description: 'Human readable cache size'
+    value: ${{ steps.inspect.outputs.cache-size }}
+  cache-bytes:
+    description: 'Cache size in bytes'
+    value: ${{ steps.inspect.outputs.cache-bytes }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Inspect Gradle Cache
+      id: inspect
+      shell: bash
+      run: |
+        # Gradle cache inspection function
+        inspect_gradle_cache() {
+          local label="${1:-}"
+          local gradle_home="${2:-${GRADLE_USER_HOME:-$HOME/.gradle}}"
+          
+          echo "🔍 Gradle Cache Inspection${label:+ ($label)}:"
+          echo "  Cache location: $gradle_home"
+          
+          if [ -d "$gradle_home" ]; then
+            echo "  Cache exists: ✅"
+            echo "cache-exists=true" >> $GITHUB_OUTPUT
+            
+            local total_size=$(du -sh "$gradle_home" 2>/dev/null | cut -f1 || echo "unknown")
+            local total_bytes=$(du -sb "$gradle_home" 2>/dev/null | cut -f1 || echo "unknown")
+            
+            echo "  Cache size: $total_size ($total_bytes bytes)"
+            echo "cache-size=$total_size" >> $GITHUB_OUTPUT
+            echo "cache-bytes=$total_bytes" >> $GITHUB_OUTPUT
+            
+            # Show breakdown by directory
+            for dir in caches wrapper build-cache; do
+              if [ -d "$gradle_home/$dir" ]; then
+                local dir_size=$(du -sh "$gradle_home/$dir" 2>/dev/null | cut -f1 || echo "unknown")
+                echo "    $dir: $dir_size"
+              fi
+            done
+          else
+            echo "  Cache exists: ❌"
+            echo "cache-exists=false" >> $GITHUB_OUTPUT
+            echo "cache-size=0" >> $GITHUB_OUTPUT
+            echo "cache-bytes=0" >> $GITHUB_OUTPUT
+          fi
+        }
+        
+        # Call the inspection function
+        inspect_gradle_cache "${{ inputs.label }}" "${{ inputs.gradle-user-home }}"
+
+branding:
+  icon: 'info'
+  color: 'green'

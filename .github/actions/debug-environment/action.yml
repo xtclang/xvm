@@ -1,0 +1,90 @@
+name: 'Debug Environment Information'
+description: 'Displays comprehensive environment and system information for debugging CI builds'
+inputs:
+  include-java-properties:
+    description: 'Include Java system properties in output'
+    required: false
+    default: 'true'
+  include-workflow-inputs:
+    description: 'Include workflow dispatch inputs in output'
+    required: false
+    default: 'true'
+  include-platform-info:
+    description: 'Include platform-specific information'
+    required: false
+    default: 'true'
+  custom-variables:
+    description: 'JSON object of custom variables to display'
+    required: false
+    default: '{}'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Display Environment Information
+      shell: bash
+      run: |
+        echo "=== XVM Build Environment Debug Information ==="
+        echo ""
+        
+        # Core build information
+        echo "🏗️ Build Context:"
+        echo "  Branch (github.ref): ${{ github.ref }}"
+        echo "  Commit (github.sha): ${{ github.sha }}"
+        echo "  Runner OS: ${{ runner.os }}"
+        echo "  Workflow: ${{ github.workflow }}"
+        echo "  Run ID: ${{ github.run_id }}"
+        echo ""
+        
+        # Workflow inputs (if enabled)
+        if [ "${{ inputs.include-workflow-inputs }}" = "true" ]; then
+          echo "📝 Workflow Dispatch Inputs:"
+          echo "  always_publish_snapshot: '${{ github.event.inputs.always_publish_snapshot }}'"
+          echo "  always_build_docker_image: '${{ github.event.inputs.always_build_docker_image }}'"
+          echo "  single_platform: '${{ github.event.inputs.single_platform }}'"
+          echo "  run_manual_tests: '${{ github.event.inputs.run_manual_tests }}'"
+          echo "  run_manual_tests_parallel: '${{ github.event.inputs.run_manual_tests_parallel }}'"
+          echo "  extra_gradle_options: '${{ github.event.inputs.extra_gradle_options }}'"
+          echo ""
+        fi
+        
+        # Platform information (if enabled and Windows)
+        if [ "${{ inputs.include-platform-info }}" = "true" ] && [ "${{ runner.os }}" = "Windows" ]; then
+          echo "🪟 Windows Platform Information:"
+          echo "  Operating System: $(uname -a 2>/dev/null || echo 'N/A')"
+          echo "  PowerShell version:"
+          pwsh --version 2>/dev/null || echo "    PowerShell not available"
+          echo "  Git version:"
+          git --version 2>/dev/null || echo "    Git not available"
+          echo "  Current working directory: $(pwd)"
+          echo ""
+        fi
+        
+        # Java information (if enabled)
+        if [ "${{ inputs.include-java-properties }}" = "true" ]; then
+          echo "☕ Java Environment:"
+          java -version 2>&1 || echo "  Java not available"
+          echo ""
+          echo "📋 Java System Properties:"
+          java -XshowSettings:properties --version 2>&1 | head -20 || echo "  Properties not available"
+          echo ""
+        fi
+        
+        # Environment variables
+        echo "🌍 Relevant Environment Variables:"
+        env | grep -E '^(GRADLE|JAVA|PATH|GH_|GITHUB_|XVM|XTC)' | sort || echo "  No relevant variables found"
+        
+        # Custom variables (if provided)
+        CUSTOM_VARS='${{ inputs.custom-variables }}'
+        if [ "$CUSTOM_VARS" != "{}" ]; then
+          echo ""
+          echo "🔧 Custom Variables:"
+          echo "$CUSTOM_VARS" | jq -r 'to_entries[] | "  \(.key): \(.value)"' 2>/dev/null || echo "  Invalid JSON format"
+        fi
+        
+        echo ""
+        echo "=== End Debug Information ==="
+
+branding:
+  icon: 'info'
+  color: 'purple'

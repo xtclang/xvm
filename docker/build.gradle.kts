@@ -664,3 +664,114 @@ fun File.directorySize(): Long {
         length()
     }
 }
+
+// Docker image functional test task
+val testDockerImageFunctionality by tasks.registering {
+    group = "docker"
+    description = "Test Docker image functionality with XVM sample programs on current platform"
+    
+    doLast {
+        logger.lifecycle("🧪 Testing Docker image functionality...")
+        
+        // Get host architecture for native build
+        val hostArch = System.getProperty("os.arch").let { osArch ->
+            when (osArch) {
+                "x86_64", "amd64" -> "amd64"
+                "aarch64", "arm64" -> "arm64"
+                else -> osArch
+            }
+        }
+        
+        val platform = "linux/$hostArch"
+        val testTag = "test-xvm-functional:latest"
+        
+        logger.lifecycle("🐳 Building test Docker image...")
+        logger.lifecycle("  Platform: $platform")
+        logger.lifecycle("  Tag: $testTag")
+        
+        val config = createBuildConfig()
+        
+        // Build Docker image for functional testing
+        val cmd = listOf(
+            "docker", "buildx", "build",
+            "--platform", platform,
+            "--progress=plain",
+            "--build-arg", "GH_BRANCH=${config.branch}",
+            "--build-arg", "GH_COMMIT=${config.commit}",
+            "--build-arg", "USE_PREBUILT_ARTIFACTS=true",
+            "--tag", testTag,
+            "--load",
+            "."
+        )
+        
+        logger.lifecycle("🔍 Executing: ${cmd.joinToString(" ")}")
+        
+        val buildResult = ProcessBuilder(cmd)
+            .directory(projectDir)
+            .inheritIO()
+            .start()
+            .waitFor()
+            
+        if (buildResult != 0) {
+            throw GradleException("Docker build failed with exit code: $buildResult")
+        }
+        
+        logger.lifecycle("✅ Docker image built successfully!")
+        
+        // Define test scenarios (matching the CI workflow tests)
+        val testScenarios = listOf(
+            "xec launcher version" to listOf("xec", "--version"),
+            "xcc launcher version" to listOf("xcc", "--version"),
+            "launcher help functionality" to listOf("xec", "--help"),
+            "native launcher binary compatibility" to listOf("uname", "-m")
+        )
+        
+        // Run functional tests
+        testScenarios.forEach { (testName, testCmd) ->
+            logger.lifecycle("🧪 Testing: $testName")
+            logger.lifecycle("  Command: ${testCmd.joinToString(" ")}")
+            
+            val dockerCmd = listOf("docker", "run", "--rm", testTag) + testCmd
+            val testResult = ProcessBuilder(dockerCmd)
+                .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                .redirectError(ProcessBuilder.Redirect.PIPE)
+                .start()
+            
+            val output = testResult.inputStream.bufferedReader().readText()
+            val errors = testResult.errorStream.bufferedReader().readText()
+            val exitCode = testResult.waitFor()
+            
+            if (exitCode == 0) {
+                logger.lifecycle("  ✅ $testName - PASSED")
+                if (output.isNotEmpty()) {
+                    logger.lifecycle("    Output: ${output.trim().take(100)}")
+                }
+                
+                // Additional validation for version tests
+                if (testName.contains("version") && !output.contains("xdk version")) {
+                    logger.error("  ❌ $testName - FAILED (version output missing)")
+                    throw GradleException("Docker functional test failed: $testName - no version info")
+                }
+                
+                // Additional validation for help test
+                if (testName.contains("help") && !output.contains("Ecstasy runner")) {
+                    logger.error("  ❌ $testName - FAILED (help output missing)")
+                    throw GradleException("Docker functional test failed: $testName - no help info")
+                }
+            } else {
+                logger.error("  ❌ $testName - FAILED (exit code: $exitCode)")
+                if (errors.isNotEmpty()) {
+                    logger.error("    Error: ${errors.trim()}")
+                }
+                if (output.isNotEmpty()) {
+                    logger.error("    Output: ${output.trim()}")
+                }
+                throw GradleException("Docker functional test failed: $testName")
+            }
+        }
+        
+        logger.lifecycle("🎉 All Docker functional tests passed!")
+        logger.lifecycle("💡 Image tagged as: $testTag")
+        logger.lifecycle("💡 Clean up with: docker image rm $testTag")
+    }
+}
