@@ -256,7 +256,7 @@ fun fetchPackageVersions(packageName: String): List<String> {
         val githubToken = System.getenv("GITHUB_TOKEN")
         
         providers.exec {
-            commandLine("gh", "api", "orgs/xtclang/packages/container/$packageName/versions",
+            commandLine("gh", "api", "--paginate", "orgs/xtclang/packages/container/$packageName/versions",
                        "--jq", ".[] | {id: .id, created: .created_at, tags: .metadata.container.tags}")
             
             // Pass GitHub token to subprocess
