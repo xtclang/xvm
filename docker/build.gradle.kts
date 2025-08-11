@@ -258,11 +258,26 @@ data class ImageVersion(val id: String, val created: String, val tags: List<Stri
     }
 }
 
+fun execWithToken(cmd: List<String>, token: String?): Pair<Int, String> {
+    return try {
+        val processBuilder = ProcessBuilder(cmd)
+        if (token != null) {
+            processBuilder.environment()["GITHUB_TOKEN"] = token
+        }
+        val process = processBuilder.start()
+        val output = process.inputStream.bufferedReader().readText()
+        val exitCode = process.waitFor()
+        exitCode to output
+    } catch (e: Exception) {
+        logger.warn("Command execution failed: ${e.message}")
+        -1 to ""
+    }
+}
+
 fun getGitHubToken(): String? {
     return System.getenv("GITHUB_TOKEN") ?: try {
-        providers.exec {
-            commandLine("gh", "auth", "token")
-        }.standardOutput.asText.get().trim()
+        val (exitCode, output) = execWithToken(listOf("gh", "auth", "token"), null)
+        if (exitCode == 0) output.trim() else null
     } catch (e: Exception) {
         logger.warn("Could not get GitHub token: ${e.message}")
         null
@@ -270,18 +285,14 @@ fun getGitHubToken(): String? {
 }
 
 fun fetchPackageVersions(packageName: String, token: String?): List<String> {
-    return try {
-        providers.exec {
-            commandLine("gh", "api", "--paginate", "orgs/xtclang/packages/container/$packageName/versions",
-                       "--jq", ".[] | {id: .id, created: .created_at, tags: .metadata.container.tags, size: .size}")
-            
-            // Pass GitHub token to subprocess
-            if (token != null) {
-                environment("GITHUB_TOKEN", token)
-            }
-        }.standardOutput.asText.get().trim().split("\n").filter { it.isNotEmpty() }
-    } catch (e: Exception) {
-        logger.warn("Failed to fetch package versions: ${e.message}")
+    val cmd = listOf("gh", "api", "--paginate", "orgs/xtclang/packages/container/$packageName/versions",
+                    "--jq", ".[] | {id: .id, created: .created_at, tags: .metadata.container.tags, size: .size}")
+    val (exitCode, output) = execWithToken(cmd, token)
+    
+    return if (exitCode == 0) {
+        output.trim().split("\n").filter { it.isNotEmpty() }
+    } else {
+        logger.warn("Failed to fetch package versions (exit code: $exitCode)")
         emptyList()
     }
 }
@@ -471,21 +482,34 @@ val cleanImages by tasks.registering {
         
         // Use the same token for deletions
         
+        logger.lifecycle("🔍 Debug: GitHub token available: ${githubToken != null}, length: ${githubToken?.length ?: 0}")
+        
+        // Test token authentication
+        if (toDelete.isNotEmpty()) {
+            logger.lifecycle("🧪 Testing token authentication...")
+            val (exitCode, _) = execWithToken(listOf("gh", "auth", "status"), githubToken)
+            if (exitCode == 0) {
+                logger.lifecycle("✅ Auth status check passed")
+            } else {
+                logger.warn("❌ Auth status check failed with exit code $exitCode")
+            }
+        }
+        
         toDelete.forEach { version ->
             try {
-                providers.exec {
-                    commandLine("gh", "api", "-X", "DELETE", "orgs/xtclang/packages/container/$packageName/versions/${version.id}")
-                    isIgnoreExitValue = false // Ensure we catch non-zero exit codes
-                    
-                    // Pass GitHub token to subprocess
-                    if (githubToken != null) {
-                        environment("GITHUB_TOKEN", githubToken)
-                    }
-                }
+                logger.lifecycle("🔧 Deleting ${version.id} with token: ${githubToken?.take(10)}...")
                 
-                // If we get here, the command succeeded
-                deleted++
-                logger.lifecycle("✅ Deleted version ${version.id} (tags: ${version.tags})")
+                val cmd = listOf("gh", "api", "-X", "DELETE", "orgs/xtclang/packages/container/$packageName/versions/${version.id}")
+                val (exitCode, output) = execWithToken(cmd, githubToken)
+                
+                if (exitCode == 0) {
+                    deleted++
+                    logger.lifecycle("✅ Deleted version ${version.id} (tags: ${version.tags})")
+                } else {
+                    val errorMsg = "Delete command failed with exit code $exitCode: $output"
+                    logger.warn("❌ $errorMsg")
+                    failures.add(errorMsg)
+                }
                 
             } catch (e: Exception) {
                 val errorMsg = "Failed to delete version ${version.id} (tags: ${version.tags}): ${e.message}"
