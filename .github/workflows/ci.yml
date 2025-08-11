@@ -323,7 +323,7 @@ jobs:
     name: Compute Docker tags and metadata
     needs: build-verify
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
+    if: ${{ success() && ((github.event.inputs.always_build_docker_image == 'true') || (github.ref == 'refs/heads/master')) }}
     outputs:
       version: ${{ steps.compute.outputs.version }}
       branch-tag: ${{ steps.compute.outputs.branch-tag }}
@@ -507,7 +507,7 @@ jobs:
     name: Create multi-platform manifest
     needs: [compute-docker-tags, docker-build]
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
+    if: ${{ success() && ((github.event.inputs.always_build_docker_image == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
       - name: Fetch Sources
         uses: actions/checkout@v4
@@ -573,7 +573,7 @@ jobs:
     name: Test Docker image functionality
     needs: [compute-docker-tags, docker-manifest]
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.ref == 'refs/heads/master')) }}
+    if: ${{ success() && ((github.event.inputs.always_build_docker_image == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -642,7 +642,7 @@ jobs:
     name: Clean up old Docker package versions
     needs: docker-test
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_build_docker_image) || (github.event.inputs.always_clean_docker) || (github.ref == 'refs/heads/master')) }}
+    if: ${{ success() && ((github.event.inputs.always_build_docker_image == 'true') || (github.event.inputs.always_clean_docker == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
       - name: Fetch Sources
         uses: actions/checkout@v4
