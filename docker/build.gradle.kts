@@ -137,7 +137,7 @@ val buildArm64 by tasks.registering {
     }
 }
 
-val buildMultiPlatform by tasks.registering {
+val buildAll by tasks.registering {
     group = "docker"
     description = "Build multi-platform Docker images"
     
@@ -173,7 +173,7 @@ val pushArm64 by tasks.registering {
     }
 }
 
-val pushMultiPlatform by tasks.registering {
+val pushAll by tasks.registering {
     group = "docker"
     description = "Build and push multi-platform Docker images"
     
@@ -195,7 +195,7 @@ val createManifest by tasks.registering {
 }
 
 // Test functionality
-val testDockerImageFunctionality by tasks.registering {
+val testImageFunctionality by tasks.registering {
     group = "docker"
     description = "Test Docker image functionality"
     
@@ -244,7 +244,7 @@ val testDockerImageFunctionality by tasks.registering {
 
 // Lifecycle integration
 tasks.assemble {
-    dependsOn(buildMultiPlatform)
+    dependsOn(buildAll)
 }
 
 // Registry management tasks
@@ -393,18 +393,34 @@ val cleanImages by tasks.registering {
         }
         
         var deleted = 0
+        val failures = mutableListOf<String>()
+        
         toDelete.forEach { version ->
             try {
-                providers.exec {
+                val result = providers.exec {
                     commandLine("gh", "api", "-X", "DELETE", "orgs/xtclang/packages/container/$packageName/versions/${version.id}")
+                    isIgnoreExitValue = false // Ensure we catch non-zero exit codes
                 }
+                
+                // If we get here, the command succeeded
                 deleted++
+                logger.lifecycle("✅ Deleted version ${version.id} (tags: ${version.tags})")
+                
             } catch (e: Exception) {
-                logger.warn("Failed to delete version ${version.id}: ${e.message}")
+                val errorMsg = "Failed to delete version ${version.id} (tags: ${version.tags}): ${e.message}"
+                logger.warn("❌ $errorMsg")
+                failures.add(errorMsg)
             }
         }
         
-        logger.lifecycle("🎯 Deleted: $deleted/${toDelete.size} versions")
+        logger.lifecycle("🎯 Attempted deletions: $deleted/${toDelete.size} versions")
+        
+        // Log failures but don't fail immediately - let verification determine success
+        if (failures.isNotEmpty()) {
+            logger.lifecycle("⚠️  Some deletion commands failed:")
+            failures.forEach { logger.lifecycle("   $it") }
+            logger.lifecycle("🔍 Will verify actual deletions via API to determine success...")
+        }
         
         // Verify deletions with retry logic for API delays
         logger.lifecycle("🔍 Verifying deletions...")
@@ -434,8 +450,15 @@ val cleanImages by tasks.registering {
         if (actuallyDeleted != toDelete.size) {
             val errorMsg = "❌ Only $actuallyDeleted/${toDelete.size} deletions confirmed after $maxRetries attempts"
             logger.lifecycle(errorMsg)
+            logger.lifecycle("💡 This could indicate:")
+            logger.lifecycle("   • GitHub API delays (common)")
+            logger.lifecycle("   • Permission issues (GITHUB_TOKEN lacks delete:packages scope)")
+            logger.lifecycle("   • Network/connectivity issues")
+            
             if (System.getenv("CI") == "true") {
                 throw GradleException("$errorMsg - failing CI build to prevent silent failures")
+            } else {
+                logger.lifecycle("⚠️  Continuing in non-CI mode, but deletions may not have completed")
             }
         }
     }

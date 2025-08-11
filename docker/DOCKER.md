@@ -15,16 +15,16 @@ All Docker tasks are now organized in the `docker/` subproject. Run from project
 ### Build Tasks
 - `docker:buildAmd64` - Build Docker image for AMD64 platform
 - `docker:buildArm64` - Build Docker image for ARM64 platform  
-- `docker:buildMultiPlatform` - Build multi-platform Docker images (recommended for local builds)
+- `docker:buildAll` - Build multi-platform Docker images (recommended for local builds)
 
 ### Push Tasks
 - `docker:pushAmd64` - Push AMD64 Docker image to GitHub Container Registry
 - `docker:pushArm64` - Push ARM64 Docker image to GitHub Container Registry
-- `docker:pushMultiPlatform` - Build and push multi-platform Docker images (recommended for publishing)
+- `docker:pushAll` - Build and push multi-platform Docker images (recommended for publishing)
 
 ### Management Tasks
 - `docker:createManifest` - Create multi-platform manifest
-- `docker:testDockerImageFunctionality` - Test Docker image functionality
+- `docker:testImageFunctionality` - Test Docker image functionality
 - `docker:listImages` - List Docker images in registry
 - `docker:cleanImages` - Clean up old Docker package versions with improved verification (default: keep 10 most recent, protect master images)
 
@@ -33,7 +33,7 @@ All Docker tasks are now organized in the `docker/` subproject. Run from project
 ### Build Both Platforms
 ```bash
 # Multi-platform build (recommended for local development)
-./gradlew docker:buildMultiPlatform
+./gradlew docker:buildAll
 
 # Individual platform builds (useful for local testing)
 ./gradlew docker:buildAmd64 docker:buildArm64
@@ -51,7 +51,7 @@ All Docker tasks are now organized in the `docker/` subproject. Run from project
 ### Build and Push
 ```bash
 # Build and push multi-platform manifest (recommended)
-./gradlew docker:pushMultiPlatform
+./gradlew docker:pushAll
 
 # Push individual platforms only
 ./gradlew docker:pushAmd64 docker:pushArm64
@@ -66,7 +66,7 @@ You can also run tasks directly from the `docker/` subdirectory:
 
 ```bash
 cd docker/
-../gradlew buildMultiPlatform
+../gradlew buildAll
 
 # Or use direct Docker commands
 docker buildx build --platform linux/arm64 --tag test-xvm:latest .
