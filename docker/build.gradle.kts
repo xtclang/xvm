@@ -3,7 +3,8 @@
  * Supports multi-platform builds, registry management, and cleanup.
  */
 
-import java.net.URLEncoder
+import XdkDistribution.Companion.normalizeArchitecture
+import java.io.File
 import java.time.Instant
 
 plugins {
@@ -11,21 +12,20 @@ plugins {
     id("org.xtclang.build.xdk.versioning")
 }
 
-// Configuration and utility functions
-data class BuildConfig(
+// Docker configuration
+data class DockerConfig(
     val version: String,
     val branch: String,
     val commit: String,
     val isCI: Boolean = System.getenv("CI") == "true"
 ) {
     val baseImage = "ghcr.io/xtclang/xvm"
-    val isMaster = branch == "master" 
+    val isMaster = branch == "master"
     val tagPrefix = if (isMaster) "latest" else branch.substringAfterLast("/").replace(Regex("[^a-zA-Z0-9._-]"), "_")
     val versionTags = if (isMaster) listOf(version) else emptyList()
     
     fun tagsForArch(arch: String) = (listOf("${tagPrefix}-$arch") + versionTags.map { "${it}-$arch" } + listOf("${commit}-$arch"))
     fun multiPlatformTags() = listOf(tagPrefix) + versionTags + listOf(commit)
-    
     fun buildArgs() = mapOf("GH_BRANCH" to branch, "GH_COMMIT" to commit)
     fun metadataLabels() = mapOf(
         "org.opencontainers.image.created" to Instant.now().toString(),
@@ -46,43 +46,27 @@ data class BuildConfig(
     }
 }
 
-fun createBuildConfig(): BuildConfig {
+fun createDockerConfig(): DockerConfig {
     val version = project.version.toString()
     val branch = System.getenv("GH_BRANCH") ?: try {
-        providers.exec {
-            commandLine("git", "branch", "--show-current")
-            workingDir = project.rootDir
-        }.standardOutput.asText.get().trim().ifBlank { "unknown" }
-    } catch (_: Exception) {
-        "unknown"
-    }
+        val result = spawn("git", "branch", "--show-current", throwOnError = false, logger = logger)
+        if (result.isSuccessful()) result.output.ifBlank { "unknown" } else "unknown"
+    } catch (_: Exception) { "unknown" }
     
-    val commit = System.getenv("GH_COMMIT")?.takeIf { it.isNotBlank() } ?: try {
-        val encodedBranch = URLEncoder.encode(branch, "UTF-8")
-        val apiUrl = "https://api.github.com/repos/xtclang/xvm/commits/$encodedBranch"
-        val curlResult = providers.exec {
-            commandLine("curl", "-fsSL", apiUrl)
-            workingDir = project.rootDir
-        }.standardOutput.asText.get()
-        """"sha":\s*"([a-f0-9]{40})"""".toRegex().find(curlResult)?.groupValues?.get(1) ?: "unknown"
-    } catch (_: Exception) {
-        "unknown"
-    }
+    val commit = System.getenv("GH_COMMIT") ?: try {
+        val result = spawn("git", "rev-parse", "HEAD", throwOnError = false, logger = logger)
+        if (result.isSuccessful()) result.output else "unknown"
+    } catch (_: Exception) { "unknown" }
     
-    return BuildConfig(version, branch, commit)
+    return DockerConfig(version, branch, commit)
 }
 
 fun execDockerCommand(cmd: List<String>) {
     logger.info("Docker: ${cmd.joinToString(" ")}")
-    ProcessBuilder(cmd)
-        .directory(projectDir)
-        .inheritIO()
-        .start()
-        .waitFor()
-        .let { if (it != 0) throw GradleException("Docker command failed with exit code: $it") }
+    spawn(cmd.first(), *cmd.drop(1).toTypedArray(), workingDir = projectDir, throwOnError = true, logger = logger)
 }
 
-fun buildDockerImage(config: BuildConfig, platforms: List<String>, tags: List<String>, action: String) {
+fun buildDockerImage(config: DockerConfig, platforms: List<String>, tags: List<String>, action: String) {
     val platformArg = platforms.joinToString(",")
     val cmd = listOf("docker", "buildx", "build", "--platform", platformArg) +
               listOf("--progress=${System.getenv("DOCKER_BUILDX_PROGRESS") ?: "plain"}") +
@@ -94,16 +78,8 @@ fun buildDockerImage(config: BuildConfig, platforms: List<String>, tags: List<St
     execDockerCommand(cmd)
 }
 
-fun getHostArch(): String = System.getProperty("os.arch").let { osArch ->
-    when (osArch) {
-        "x86_64", "amd64" -> "amd64"
-        "aarch64", "arm64" -> "arm64"
-        else -> osArch
-    }
-}
-
 fun checkCrossPlatformBuild(targetArch: String, taskName: String): Boolean {
-    val hostArch = getHostArch()
+    val hostArch = normalizeArchitecture(System.getProperty("os.arch"))
     val allowEmulation = project.findProperty("docker_emulated_build")?.toString()?.toBoolean() ?: false
     
     if (targetArch != hostArch && !allowEmulation) {
@@ -118,10 +94,9 @@ fun checkCrossPlatformBuild(targetArch: String, taskName: String): Boolean {
 val buildAmd64 by tasks.registering {
     group = "docker"
     description = "Build Docker image for AMD64"
-    
     doLast {
         if (!checkCrossPlatformBuild("amd64", name)) return@doLast
-        val config = createBuildConfig()
+        val config = createDockerConfig()
         buildDockerImage(config, listOf("linux/amd64"), config.tagsForArch("amd64"), "load")
     }
 }
@@ -129,10 +104,9 @@ val buildAmd64 by tasks.registering {
 val buildArm64 by tasks.registering {
     group = "docker"
     description = "Build Docker image for ARM64"
-    
     doLast {
         if (!checkCrossPlatformBuild("arm64", name)) return@doLast
-        val config = createBuildConfig()
+        val config = createDockerConfig()
         buildDockerImage(config, listOf("linux/arm64"), config.tagsForArch("arm64"), "load")
     }
 }
@@ -140,45 +114,37 @@ val buildArm64 by tasks.registering {
 val buildAll by tasks.registering {
     group = "docker"
     description = "Build multi-platform Docker images"
-    
     doLast {
-        val config = createBuildConfig()
+        val config = createDockerConfig()
         buildDockerImage(config, listOf("linux/amd64", "linux/arm64"), config.multiPlatformTags(), "load")
     }
 }
 
 val pushAmd64 by tasks.registering {
     group = "docker"
-    description = "Push AMD64 Docker image"
-    dependsOn(buildAmd64)
-    
+    description = "Push AMD64 Docker image to GitHub Container Registry"
     doLast {
-        val config = createBuildConfig()
-        config.tagsForArch("amd64").forEach { tag ->
-            execDockerCommand(listOf("docker", "push", "${config.baseImage}:$tag"))
-        }
+        if (!checkCrossPlatformBuild("amd64", name)) return@doLast
+        val config = createDockerConfig()
+        buildDockerImage(config, listOf("linux/amd64"), config.tagsForArch("amd64"), "push")
     }
 }
 
 val pushArm64 by tasks.registering {
-    group = "docker" 
-    description = "Push ARM64 Docker image"
-    dependsOn(buildArm64)
-    
+    group = "docker"
+    description = "Push ARM64 Docker image to GitHub Container Registry"
     doLast {
-        val config = createBuildConfig()
-        config.tagsForArch("arm64").forEach { tag ->
-            execDockerCommand(listOf("docker", "push", "${config.baseImage}:$tag"))
-        }
+        if (!checkCrossPlatformBuild("arm64", name)) return@doLast
+        val config = createDockerConfig()
+        buildDockerImage(config, listOf("linux/arm64"), config.tagsForArch("arm64"), "push")
     }
 }
 
 val pushAll by tasks.registering {
     group = "docker"
     description = "Build and push multi-platform Docker images"
-    
     doLast {
-        val config = createBuildConfig()
+        val config = createDockerConfig()
         buildDockerImage(config, listOf("linux/amd64", "linux/arm64"), config.multiPlatformTags(), "push")
     }
 }
@@ -186,20 +152,33 @@ val pushAll by tasks.registering {
 val createManifest by tasks.registering {
     group = "docker"
     description = "Create multi-platform manifest"
-    dependsOn(buildAmd64, buildArm64)
-    
+    dependsOn(pushAmd64, pushArm64)
     doLast {
-        val config = createBuildConfig()
-        logger.info("Built images: ${config.baseImage}:${config.tagPrefix}-{amd64,arm64}")
+        val config = createDockerConfig()
+        val multiTags = config.multiPlatformTags()
+        
+        multiTags.forEach { tag ->
+            val manifestTag = "${config.baseImage}:$tag"
+            logger.info("Creating manifest for: $manifestTag")
+            
+            val createCmd = listOf("docker", "manifest", "create", manifestTag,
+                                 "${config.baseImage}:$tag-amd64",
+                                 "${config.baseImage}:$tag-arm64")
+            execDockerCommand(createCmd)
+            
+            val pushCmd = listOf("docker", "manifest", "push", manifestTag)
+            execDockerCommand(pushCmd)
+            
+            logger.info("✅ Created and pushed manifest: $manifestTag")
+        }
     }
 }
 
-// Test functionality
 val testImageFunctionality by tasks.registering {
     group = "docker"
     description = "Test Docker image functionality"
     
-    val hostArch = getHostArch()
+    val hostArch = normalizeArchitecture(System.getProperty("os.arch"))
     dependsOn(if (hostArch == "amd64") buildAmd64 else buildArm64)
     
     inputs.file("test/DockerTest.x")
@@ -207,7 +186,7 @@ val testImageFunctionality by tasks.registering {
     outputs.file(layout.buildDirectory.file("docker-test-results.txt"))
     
     doLast {
-        val config = createBuildConfig()
+        val config = createDockerConfig()
         val imageTag = "${config.baseImage}:${config.tagPrefix}-$hostArch"
         
         logger.info("Testing Docker image: $imageTag")
@@ -221,33 +200,23 @@ val testImageFunctionality by tasks.registering {
         
         testScenarios.forEach { (testName, testCmd) ->
             val dockerCmd = listOf("docker", "run", "--rm", imageTag) + testCmd
-            val result = ProcessBuilder(dockerCmd)
-                .redirectOutput(ProcessBuilder.Redirect.PIPE)
-                .redirectError(ProcessBuilder.Redirect.PIPE)
-                .start()
+            val result = spawn(dockerCmd.first(), *dockerCmd.drop(1).toTypedArray(), throwOnError = false, logger = logger)
             
-            val exitCode = result.waitFor()
-            result.inputStream.bufferedReader().readText()
-            
-            if (exitCode == 0) {
+            if (result.isSuccessful()) {
                 logger.info("✅ $testName")
             } else {
-                val errors = result.errorStream.bufferedReader().readText()
-                throw GradleException("❌ $testName failed (exit $exitCode): $errors")
+                throw GradleException("❌ $testName failed (exit ${result.exitValue}): ${result.output}")
             }
         }
         
         outputs.files.singleFile.writeText("Docker tests passed at ${Instant.now()}")
-        logger.info("All Docker functionality tests passed")
     }
 }
 
 // Lifecycle integration
-tasks.assemble {
-    dependsOn(buildAll)
-}
+tasks.assemble { dependsOn(buildAll) }
 
-// Registry management tasks
+// Registry management
 data class ImageVersion(val id: String, val created: String, val tags: List<String>, val isMasterImage: Boolean, val sizeBytes: Long = 0L) {
     fun formattedSize(): String = when {
         sizeBytes == 0L -> "unknown"
@@ -258,26 +227,18 @@ data class ImageVersion(val id: String, val created: String, val tags: List<Stri
     }
 }
 
-fun execWithToken(cmd: List<String>, token: String?): Pair<Int, String> {
-    return try {
-        val processBuilder = ProcessBuilder(cmd)
-        if (token != null) {
-            processBuilder.environment()["GITHUB_TOKEN"] = token
-        }
-        val process = processBuilder.start()
-        val output = process.inputStream.bufferedReader().readText()
-        val exitCode = process.waitFor()
-        exitCode to output
-    } catch (e: Exception) {
-        logger.warn("Command execution failed: ${e.message}")
-        -1 to ""
-    }
+fun Long.formatBytes(): String = when {
+    this == 0L -> "unknown"
+    this < 1024 -> "${this}B"
+    this < 1024 * 1024 -> "${"%.1f".format(this / 1024.0)}KB"
+    this < 1024 * 1024 * 1024 -> "${"%.1f".format(this / (1024.0 * 1024.0))}MB"
+    else -> "${"%.1f".format(this / (1024.0 * 1024.0 * 1024.0))}GB"
 }
 
 fun getGitHubToken(): String? {
     return System.getenv("GITHUB_TOKEN") ?: try {
-        val (exitCode, output) = execWithToken(listOf("gh", "auth", "token"), null)
-        if (exitCode == 0) output.trim() else null
+        val result = spawn("gh", "auth", "token", throwOnError = false, logger = logger)
+        if (result.isSuccessful()) result.output else null
     } catch (e: Exception) {
         logger.warn("Could not get GitHub token: ${e.message}")
         null
@@ -285,14 +246,15 @@ fun getGitHubToken(): String? {
 }
 
 fun fetchPackageVersions(packageName: String, token: String?): List<String> {
-    val cmd = listOf("gh", "api", "--paginate", "orgs/xtclang/packages/container/$packageName/versions",
-                    "--jq", ".[] | {id: .id, created: .created_at, tags: .metadata.container.tags, size: .size}")
-    val (exitCode, output) = execWithToken(cmd, token)
+    val env = if (token != null) mapOf("GITHUB_TOKEN" to token) else emptyMap()
+    val result = spawn("gh", "api", "--paginate", "orgs/xtclang/packages/container/$packageName/versions",
+                      "--jq", ".[] | {id: .id, created: .created_at, tags: .metadata.container.tags, size: .size}",
+                      env = env, throwOnError = false, logger = logger)
     
-    return if (exitCode == 0) {
-        output.trim().split("\n").filter { it.isNotEmpty() }
+    return if (result.isSuccessful()) {
+        result.output.split("\n").filter { it.isNotEmpty() }
     } else {
-        logger.warn("Failed to fetch package versions (exit code: $exitCode)")
+        logger.warn("Failed to fetch package versions: ${result.output}")
         emptyList()
     }
 }
@@ -322,19 +284,15 @@ fun parseImageVersion(versionJson: String): ImageVersion? {
 
 fun getDockerImageSize(imageRef: String): Long {
     return try {
-        val manifestJson = providers.exec {
-            commandLine("docker", "manifest", "inspect", imageRef)
-            isIgnoreExitValue = true // Don't fail if image doesn't exist
-        }.standardOutput.asText.get()
-        
-        if (manifestJson.isBlank()) return 0L
+        val result = spawn("docker", "manifest", "inspect", imageRef, throwOnError = false, logger = logger)
+        if (!result.isSuccessful() || result.output.isBlank()) return 0L
         
         // Parse manifest to get config size + layer sizes
-        val configSizeMatch = """"size":\s*(\d+)""".toRegex().find(manifestJson)
+        val configSizeMatch = """"size":\s*(\d+)""".toRegex().find(result.output)
         val configSize = configSizeMatch?.groupValues?.get(1)?.toLongOrNull() ?: 0L
         
         val layerSizes = """"size":\s*(\d+)""".toRegex()
-            .findAll(manifestJson)
+            .findAll(result.output)
             .mapNotNull { it.groupValues[1].toLongOrNull() }
             .toList()
         
@@ -345,18 +303,11 @@ fun getDockerImageSize(imageRef: String): Long {
     }
 }
 
-fun formatBytes(bytes: Long): String = when {
-    bytes < 1024 -> "${bytes}B"
-    bytes < 1024 * 1024 -> "${"%.1f".format(bytes / 1024.0)}KB"
-    bytes < 1024 * 1024 * 1024 -> "${"%.1f".format(bytes / (1024.0 * 1024.0))}MB"
-    else -> "${"%.1f".format(bytes / (1024.0 * 1024.0 * 1024.0))}GB"
-}
 
 val listImages by tasks.registering {
     group = "docker"
     description = "List Docker images in registry (use -PshowSizes=true to calculate actual sizes)"
     
-    // Capture configuration-time property
     val showSizes = project.findProperty("showSizes")?.toString()?.toBoolean() ?: false
     
     doLast {
@@ -364,20 +315,16 @@ val listImages by tasks.registering {
         logger.lifecycle("=".repeat(50))
         
         val githubToken = getGitHubToken()
+        val env = if (githubToken != null) mapOf("GITHUB_TOKEN" to githubToken) else emptyMap()
+        val result = spawn("gh", "api", "orgs/xtclang/packages?package_type=container", "--jq", ".[].name", 
+                          env = env, throwOnError = false, logger = logger)
         
-        val packages = try {
-            providers.exec {
-                commandLine("gh", "api", "orgs/xtclang/packages?package_type=container", "--jq", ".[].name")
-                
-                if (githubToken != null) {
-                    environment("GITHUB_TOKEN", githubToken)
-                }
-            }.standardOutput.asText.get().trim().split("\n").map { it.removeSurrounding("\"") }.filter { it.isNotEmpty() }
-        } catch (e: Exception) {
-            logger.lifecycle("❌ Error: ${e.message}")
+        if (!result.isSuccessful()) {
+            logger.lifecycle("❌ Error fetching packages")
             return@doLast
         }
         
+        val packages = result.output.trim().split("\n").map { it.removeSurrounding("\"") }.filter { it.isNotEmpty() }
         logger.lifecycle("Found ${packages.size} container packages in registry")
         
         packages.forEach { pkg ->
@@ -392,13 +339,12 @@ val listImages by tasks.registering {
             
             val parsedVersions = versions.mapNotNull { parseImageVersion(it) }
             logger.lifecycle("   Total versions: ${parsedVersions.size}")
-            
-            logger.lifecycle("   📋 All versions:")
+            logger.lifecycle("   📋 Recent versions:")
             
             parsedVersions.take(20).forEachIndexed { i, version ->
                 val sizeInfo = if (showSizes && version.tags.isNotEmpty()) {
                     val actualSize = getDockerImageSize("ghcr.io/xtclang/$pkg:${version.tags.first()}")
-                    if (actualSize > 0) " (${formatBytes(actualSize)})" else ""
+                    if (actualSize > 0) " (${actualSize.formatBytes()})" else ""
                 } else ""
                 
                 val tagInfo = if (version.tags.isEmpty()) " [UNTAGGED/DANGLING]" else " tags: ${version.tags}"
@@ -416,7 +362,6 @@ val cleanImages by tasks.registering {
     group = "docker"
     description = "Clean up old Docker package versions (default: keep 10 most recent, protect master images)"
     
-    // Capture values during configuration phase to avoid deprecation warnings
     val keepCount = project.findProperty("keepCount")?.toString()?.toIntOrNull() ?: 10
     val isDryRun = project.findProperty("dryRun")?.toString()?.toBoolean() ?: false
     val isForced = project.findProperty("force")?.toString()?.toBoolean() ?: false
@@ -426,7 +371,6 @@ val cleanImages by tasks.registering {
         logger.lifecycle("=".repeat(50))
         
         val packageName = "xvm"
-        
         if (isDryRun) logger.lifecycle("🔍 DRY RUN MODE")
         
         val githubToken = getGitHubToken()
@@ -477,42 +421,19 @@ val cleanImages by tasks.registering {
             }
         }
         
+        // Execute deletions
         var deleted = 0
         val failures = mutableListOf<String>()
         
-        // Use the same token for deletions
-        
-        logger.lifecycle("🔍 Debug: GitHub token available: ${githubToken != null}, length: ${githubToken?.length ?: 0}")
-        
-        // Test token authentication
-        if (toDelete.isNotEmpty()) {
-            logger.lifecycle("🧪 Testing token authentication...")
-            val (exitCode, _) = execWithToken(listOf("gh", "auth", "status"), githubToken)
-            if (exitCode == 0) {
-                logger.lifecycle("✅ Auth status check passed")
-            } else {
-                logger.warn("❌ Auth status check failed with exit code $exitCode")
-            }
-        }
-        
         toDelete.forEach { version ->
-            try {
-                logger.lifecycle("🔧 Deleting ${version.id} with token: ${githubToken?.take(10)}...")
-                
-                val cmd = listOf("gh", "api", "-X", "DELETE", "orgs/xtclang/packages/container/$packageName/versions/${version.id}")
-                val (exitCode, output) = execWithToken(cmd, githubToken)
-                
-                if (exitCode == 0) {
-                    deleted++
-                    logger.lifecycle("✅ Deleted version ${version.id} (tags: ${version.tags})")
-                } else {
-                    val errorMsg = "Delete command failed with exit code $exitCode: $output"
-                    logger.warn("❌ $errorMsg")
-                    failures.add(errorMsg)
-                }
-                
-            } catch (e: Exception) {
-                val errorMsg = "Failed to delete version ${version.id} (tags: ${version.tags}): ${e.message}"
+            val env = if (githubToken != null) mapOf("GITHUB_TOKEN" to githubToken) else emptyMap()
+            val result = spawn("gh", "api", "-X", "DELETE", "orgs/xtclang/packages/container/$packageName/versions/${version.id}",
+                              env = env, throwOnError = false, logger = logger)
+            if (result.isSuccessful()) {
+                deleted++
+                logger.lifecycle("✅ Deleted version ${version.id} (tags: ${version.tags})")
+            } else {
+                val errorMsg = "Delete command failed with exit code ${result.exitValue}: ${result.output}"
                 logger.warn("❌ $errorMsg")
                 failures.add(errorMsg)
             }
@@ -520,21 +441,13 @@ val cleanImages by tasks.registering {
         
         logger.lifecycle("🎯 Attempted deletions: $deleted/${toDelete.size} versions")
         
-        // Log failures but don't fail immediately - let verification determine success
-        if (failures.isNotEmpty()) {
-            logger.lifecycle("⚠️  Some deletion commands failed:")
-            failures.forEach { logger.lifecycle("   $it") }
-            logger.lifecycle("🔍 Will verify actual deletions via API to determine success...")
-        }
-        
-        // Verify deletions with retry logic for API delays
+        // Verify deletions
         logger.lifecycle("🔍 Verifying deletions...")
         var actuallyDeleted = 0
         val maxRetries = 3
-        val retryDelayMs = 5000L // 5 seconds
         
         for (attempt in 1..maxRetries) {
-            Thread.sleep(if (attempt > 1) retryDelayMs else 1000L) // Initial 1s delay, then 5s
+            Thread.sleep(if (attempt > 1) 5000L else 1000L)
             
             val remainingVersions = fetchPackageVersions(packageName, githubToken)
             val remainingIds = remainingVersions.mapNotNull { parseImageVersion(it)?.id }.toSet()
@@ -548,31 +461,14 @@ val cleanImages by tasks.registering {
             }
             
             if (attempt < maxRetries) {
-                logger.lifecycle("⏳ Waiting ${retryDelayMs/1000}s for API consistency...")
+                logger.lifecycle("⏳ Waiting 5s for API consistency...")
             }
         }
         
         if (actuallyDeleted != toDelete.size) {
-            logger.warn("""
-                
-                ⚠️${"=".repeat(70)}
-                ⚠️  DOCKER PACKAGE CLEANUP WARNING
-                ⚠️${"=".repeat(70)}
-                ⚠️  Package cleanup incomplete: $actuallyDeleted/${toDelete.size} deletions confirmed after $maxRetries attempts
-                ⚠️
-                ⚠️  Possible causes:
-                ⚠️    • GitHub API delays (very common - may resolve on next build)
-                ⚠️    • Permission issues (GITHUB_TOKEN lacks delete:packages scope)
-                ⚠️    • Network/connectivity issues
-                ⚠️    • Package registry temporarily unavailable
-                ⚠️
-                ⚠️  Impact: Old package versions were not cleaned up
-                ⚠️  Action: Check package registry manually or retry next build
-                ⚠️${"=".repeat(70)}
-                
-                ✅ Continuing build - package cleanup is not critical for build success
-            """.trimIndent())
+            logger.warn("⚠️  Package cleanup incomplete: $actuallyDeleted/${toDelete.size} deletions confirmed after $maxRetries attempts")
+            logger.warn("⚠️  This may be due to GitHub API delays, permission issues, or network problems")
+            logger.warn("✅  Continuing build - package cleanup is not critical for build success")
         }
     }
 }
-
