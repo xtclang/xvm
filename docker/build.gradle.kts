@@ -248,20 +248,36 @@ tasks.assemble {
 }
 
 // Registry management tasks
-data class ImageVersion(val id: String, val created: String, val tags: List<String>, val isMasterImage: Boolean)
+data class ImageVersion(val id: String, val created: String, val tags: List<String>, val isMasterImage: Boolean, val sizeBytes: Long = 0L) {
+    fun formattedSize(): String = when {
+        sizeBytes == 0L -> "unknown"
+        sizeBytes < 1024 -> "${sizeBytes}B"
+        sizeBytes < 1024 * 1024 -> "${"%.1f".format(sizeBytes / 1024.0)}KB"
+        sizeBytes < 1024 * 1024 * 1024 -> "${"%.1f".format(sizeBytes / (1024.0 * 1024.0))}MB"
+        else -> "${"%.1f".format(sizeBytes / (1024.0 * 1024.0 * 1024.0))}GB"
+    }
+}
 
-fun fetchPackageVersions(packageName: String): List<String> {
+fun getGitHubToken(): String? {
+    return System.getenv("GITHUB_TOKEN") ?: try {
+        providers.exec {
+            commandLine("gh", "auth", "token")
+        }.standardOutput.asText.get().trim()
+    } catch (e: Exception) {
+        logger.warn("Could not get GitHub token: ${e.message}")
+        null
+    }
+}
+
+fun fetchPackageVersions(packageName: String, token: String?): List<String> {
     return try {
-        // Get GitHub token before exec block
-        val githubToken = System.getenv("GITHUB_TOKEN")
-        
         providers.exec {
             commandLine("gh", "api", "--paginate", "orgs/xtclang/packages/container/$packageName/versions",
-                       "--jq", ".[] | {id: .id, created: .created_at, tags: .metadata.container.tags}")
+                       "--jq", ".[] | {id: .id, created: .created_at, tags: .metadata.container.tags, size: .size}")
             
             // Pass GitHub token to subprocess
-            if (githubToken != null) {
-                environment("GITHUB_TOKEN", githubToken)
+            if (token != null) {
+                environment("GITHUB_TOKEN", token)
             }
         }.standardOutput.asText.get().trim().split("\n").filter { it.isNotEmpty() }
     } catch (e: Exception) {
@@ -279,31 +295,68 @@ fun parseImageVersion(versionJson: String): ImageVersion? {
             tagsSection.split(",").map { it.trim().removeSurrounding("\"") }
         }
         
+        val sizeBytes = try {
+            versionJson.substringAfter("\"size\":").substringBefore(",").substringBefore("}").trim().toLongOrNull() ?: 0L
+        } catch (_: Exception) { 0L }
+        
         val isMasterImage = tags.any { tag ->
             tag == "latest" || tag == "master" || tag.matches(Regex("\\d+\\.\\d+\\.\\d+.*")) || tag.matches(Regex("latest-\\w+"))
         }
         
-        ImageVersion(id, created, tags, isMasterImage)
+        ImageVersion(id, created, tags, isMasterImage, sizeBytes)
     } catch (_: Exception) {
         null
     }
 }
 
+fun getDockerImageSize(imageRef: String): Long {
+    return try {
+        val manifestJson = providers.exec {
+            commandLine("docker", "manifest", "inspect", imageRef)
+            isIgnoreExitValue = true // Don't fail if image doesn't exist
+        }.standardOutput.asText.get()
+        
+        if (manifestJson.isBlank()) return 0L
+        
+        // Parse manifest to get config size + layer sizes
+        val configSizeMatch = """"size":\s*(\d+)""".toRegex().find(manifestJson)
+        val configSize = configSizeMatch?.groupValues?.get(1)?.toLongOrNull() ?: 0L
+        
+        val layerSizes = """"size":\s*(\d+)""".toRegex()
+            .findAll(manifestJson)
+            .mapNotNull { it.groupValues[1].toLongOrNull() }
+            .toList()
+        
+        configSize + layerSizes.sum()
+    } catch (e: Exception) {
+        logger.debug("Failed to get size for $imageRef: ${e.message}")
+        0L
+    }
+}
+
+fun formatBytes(bytes: Long): String = when {
+    bytes < 1024 -> "${bytes}B"
+    bytes < 1024 * 1024 -> "${"%.1f".format(bytes / 1024.0)}KB"
+    bytes < 1024 * 1024 * 1024 -> "${"%.1f".format(bytes / (1024.0 * 1024.0))}MB"
+    else -> "${"%.1f".format(bytes / (1024.0 * 1024.0 * 1024.0))}GB"
+}
+
 val listImages by tasks.registering {
     group = "docker"
-    description = "List Docker images in registry"
+    description = "List Docker images in registry (use -PshowSizes=true to calculate actual sizes)"
+    
+    // Capture configuration-time property
+    val showSizes = project.findProperty("showSizes")?.toString()?.toBoolean() ?: false
     
     doLast {
         logger.lifecycle("🐳 Docker Images Summary")
         logger.lifecycle("=".repeat(50))
         
+        val githubToken = getGitHubToken()
+        
         val packages = try {
             providers.exec {
                 commandLine("gh", "api", "orgs/xtclang/packages?package_type=container", "--jq", ".[].name")
-                
-                // Ensure GitHub token is available to the subprocess
-                val githubToken = System.getenv("GITHUB_TOKEN") 
-                    ?: try { providers.exec { commandLine("gh", "auth", "token") }.standardOutput.asText.get().trim() } catch (e: Exception) { null }
                 
                 if (githubToken != null) {
                     environment("GITHUB_TOKEN", githubToken)
@@ -320,7 +373,7 @@ val listImages by tasks.registering {
             logger.lifecycle("\n📦 Package: $pkg")
             logger.lifecycle("   Registry: ghcr.io/xtclang/$pkg")
             
-            val versions = fetchPackageVersions(pkg)
+            val versions = fetchPackageVersions(pkg, githubToken)
             if (versions.isEmpty()) {
                 logger.lifecycle("  ❌ Could not get versions for $pkg")
                 return@forEach
@@ -328,14 +381,21 @@ val listImages by tasks.registering {
             
             val parsedVersions = versions.mapNotNull { parseImageVersion(it) }
             logger.lifecycle("   Total versions: ${parsedVersions.size}")
-            logger.lifecycle("   📋 Recent versions:")
             
-            parsedVersions.take(10).forEachIndexed { i, version ->
-                logger.lifecycle("     ${i+1}. [${version.created}] tags: ${version.tags}")
+            logger.lifecycle("   📋 All versions:")
+            
+            parsedVersions.take(20).forEachIndexed { i, version ->
+                val sizeInfo = if (showSizes && version.tags.isNotEmpty()) {
+                    val actualSize = getDockerImageSize("ghcr.io/xtclang/$pkg:${version.tags.first()}")
+                    if (actualSize > 0) " (${formatBytes(actualSize)})" else ""
+                } else ""
+                
+                val tagInfo = if (version.tags.isEmpty()) " [UNTAGGED/DANGLING]" else " tags: ${version.tags}"
+                logger.lifecycle("     ${i+1}. [${version.created}]$tagInfo$sizeInfo")
             }
             
-            if (parsedVersions.size > 10) {
-                logger.lifecycle("     ... and ${parsedVersions.size - 10} more versions")
+            if (parsedVersions.size > 20) {
+                logger.lifecycle("     ... and ${parsedVersions.size - 20} more versions")
             }
         }
     }
@@ -358,7 +418,8 @@ val cleanImages by tasks.registering {
         
         if (isDryRun) logger.lifecycle("🔍 DRY RUN MODE")
         
-        val versions = fetchPackageVersions(packageName)
+        val githubToken = getGitHubToken()
+        val versions = fetchPackageVersions(packageName, githubToken)
         if (versions.isEmpty()) {
             logger.lifecycle("❌ No versions found")
             return@doLast
@@ -408,8 +469,7 @@ val cleanImages by tasks.registering {
         var deleted = 0
         val failures = mutableListOf<String>()
         
-        // Get GitHub token once for all deletions
-        val githubToken = System.getenv("GITHUB_TOKEN")
+        // Use the same token for deletions
         
         toDelete.forEach { version ->
             try {
@@ -452,7 +512,7 @@ val cleanImages by tasks.registering {
         for (attempt in 1..maxRetries) {
             Thread.sleep(if (attempt > 1) retryDelayMs else 1000L) // Initial 1s delay, then 5s
             
-            val remainingVersions = fetchPackageVersions(packageName)
+            val remainingVersions = fetchPackageVersions(packageName, githubToken)
             val remainingIds = remainingVersions.mapNotNull { parseImageVersion(it)?.id }.toSet()
             actuallyDeleted = toDelete.count { it.id !in remainingIds }
             
