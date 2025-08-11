@@ -124,11 +124,14 @@ jobs:
         with:
           show-progress: true
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - name: Setup XVM Build Environment
+        uses: ./.github/actions/setup-xvm-build
         with:
-          distribution: ${{ env.java_distribution }}
           java-version: ${{ env.java_version }}
+          java-distribution: ${{ env.java_distribution }}
+          gradle-version: ${{ env.gradle_version }}
+          cache-read-only: false
+          enable-debug: true
 
       - name: Debug Environment (Windows)
         if: runner.os == 'Windows'
@@ -149,19 +152,6 @@ jobs:
           echo "Environment variables:"
           env | grep -E '^(GRADLE|JAVA|PATH|GH_|GITHUB_)' | sort
           echo "=== End Debug Information ==="
-
-      - name: Setup Gradle (with debug)
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-disabled: false
-          cache-read-only: false
-          gradle-version: ${{ env.gradle_version }}
-        env:
-          GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
-          ACTIONS_STEP_DEBUG: true
-
-      - name: Validate Gradle Wrapper
-        uses: gradle/actions/wrapper-validation@v4
 
       - name: Dump environment info
         shell: bash
@@ -266,19 +256,14 @@ jobs:
       - name: Fetch Sources
         uses: actions/checkout@v4
 
-      # Set up Java environment for the next steps
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - name: Setup XVM Build Environment
+        uses: ./.github/actions/setup-xvm-build
         with:
-          distribution: ${{ env.java_distribution }}
           java-version: ${{ env.java_version }}
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-disabled: false
-          cache-read-only: true  # Read-only since build-verify already populated cache
+          java-distribution: ${{ env.java_distribution }}
           gradle-version: ${{ env.gradle_version }}
+          cache-read-only: true  # Read-only since build-verify already populated cache
+          enable-debug: false
 
       - name: Debug publish conditions and verify all tests passed
         run: |
@@ -389,18 +374,14 @@ jobs:
         uses: actions/checkout@v4
 
       # Set up Java and Gradle to warm cache for Docker build
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - name: Setup XVM Build Environment
+        uses: ./.github/actions/setup-xvm-build
         with:
-          distribution: ${{ env.java_distribution }}
           java-version: ${{ env.java_version }}
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-disabled: false
-          cache-read-only: true  # Read-only since build-verify already populated cache
+          java-distribution: ${{ env.java_distribution }}
           gradle-version: ${{ env.gradle_version }}
+          cache-read-only: true  # Read-only since build-verify already populated cache
+          enable-debug: false
 
       # Note: Dockerfile is self-contained and downloads source itself
       # But now Docker build can benefit from Gradle cache via GitHub Actions cache
