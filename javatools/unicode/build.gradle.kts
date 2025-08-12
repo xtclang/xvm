@@ -8,15 +8,17 @@
 
 import de.undercouch.gradle.tasks.download.Download
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
+import org.gradle.api.attributes.Category
+import org.gradle.api.attributes.LibraryElements
 
 plugins {
-    alias(libs.plugins.xdk.build.java)
+    id("org.xtclang.build.java")
     alias(libs.plugins.download)
 }
 
 dependencies {
     implementation(libs.bundles.unicode)
-    implementation(libs.javatools.utils)
+    implementation(project(":utils"))
 }
 
 val unicodeUcdUrl = "https://unicode.org/Public/UCD/latest/ucdxml/ucd.all.flat.zip"
@@ -89,5 +91,18 @@ val rebuildUnicodeTables by tasks.registering {
         printTaskInputs()
         printTaskOutputs()
         printTaskDependencies()
+    }
+}
+
+// Make Unicode tables available for consumption by other projects (like lib_ecstasy)
+val unicodeTablesElements by configurations.registering {
+    isCanBeResolved = false
+    isCanBeConsumed = true
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("unicodeDir"))
+    }
+    outgoing.artifact(rebuildUnicodeTables.map { processedResourcesDir }) {
+        type = "directory"
     }
 }
