@@ -23,36 +23,53 @@ val xdkJavaToolsProvider by configurations.registering {
     }
 }
 
+val xdkEcstasyResourcesConsumer by configurations.registering {
+    description = "Consumer configuration for ecstasy resources needed by javatools"
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("ecstasy-resources"))
+    }
+}
+
 dependencies {
     implementation(libs.javatools.utils)
     implementation(libs.jline)
     testImplementation(libs.javatools.utils)
+    // Note: We don't add this to sourceSets to avoid IntelliJ seeing cross-module paths
+    xdkEcstasyResourcesConsumer(libs.xdk.ecstasy)
 }
 
 /**
- * TODO: Someone please determine if this is something we should fix or not:
+ * INTELLIJ FIX: Copy resources at build time instead of referencing them directly.
  *
- * We add the implicits.x file to the resource set, to both make it a part of the javatools.jar + available.
- * IntelliJ may warn that we have a "duplicate resource folder" if this is executed by a Run/Debug configuration.
- * This is because lib_ecstasy is the place where these resources are originally placed. I'm not sure if
- * they need to be there to be compiled into the ecstasy.xtc binary, in order for the launchers to work, or
- * if they only need to be in the javatools.jar. If the latter is the case, we should move them. If the
- * former is the case, they should be resolved from the the built ecstasy.xtc module on the module path
- * anyway.
- *
- * We also need to refer to the "mack" module during runtime in the debugger. I suppose we can't access that
- * due to a similar reason as above - IntelliJ needs a reference to it to be able to invoke it in
- * the debug session, and it resides in a different module too (javatools_turtle). Seems weird that it
- * doesn't get that from the ecstasy.xtc file that actually IS on the module path in the debug run.
+ * Instead of adding lib_ecstasy resources as a source directory (which confuses IntelliJ),
+ * we copy them to our build directory and include that. This completely isolates
+ * the resource dependency from IntelliJ's module system.
  */
+val copyEcstasyResources by tasks.registering(Copy::class) {
+    description = "Copy ecstasy resources to avoid IntelliJ cross-module path issues"
+    from(xdkEcstasyResourcesConsumer)
+    into(layout.buildDirectory.dir("generated/resources/main"))
+    // Only copy when source changes or destination doesn't exist
+    onlyIf { 
+        !destinationDir.exists() || 
+        source.files.any { it.lastModified() > destinationDir.lastModified() }
+    }
+}
+
 sourceSets {
     main {
         resources {
-            // May trigger a warning in your IDE, since we are referencing someone else's
-            // (javatools_turtle) main resource path. IDEs like to have one.
-            srcDir(file(xdkImplicitsFile.parent))
+            // Use build-time copied resources instead of direct reference
+            srcDir(copyEcstasyResources.map { it.destinationDir })
         }
     }
+}
+
+tasks.processResources {
+    dependsOn(copyEcstasyResources)
 }
 
 /**

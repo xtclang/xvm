@@ -33,6 +33,20 @@ val xdkUnicodeConsumer by configurations.registering {
     }
 }
 
+val xdkEcstasyResourcesProvider by configurations.registering {
+    description = "Provider configuration for ecstasy resources (implicit.x and unicode data)"
+    isCanBeResolved = false
+    isCanBeConsumed = true
+    attributes {
+        attribute(CATEGORY_ATTRIBUTE, objects.named(LIBRARY))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("ecstasy-resources"))
+    }
+}
+
+artifacts {
+    add(xdkEcstasyResourcesProvider.name, layout.projectDirectory.dir("src/main/resources"))
+}
+
 dependencies {
     xdkJavaTools(libs.javatools)
     @Suppress("UnstableApiUsage")
