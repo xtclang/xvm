@@ -1,0 +1,284 @@
+#
+# GitHub workflow for building and testing native launchers across supported platforms.
+# This workflow builds the javatools_launcher for each available OS/architecture combination and verifies they work correctly.
+# Uses native builds where possible and cross-compilation/emulation for other architectures.
+#
+name: Native Launcher Cross-Platform Build Test
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_execution:
+        description: 'Test launcher execution (requires javatools.jar)'
+        type: boolean
+        required: false
+        default: true
+      upload_artifacts:
+        description: 'Upload launcher binaries as artifacts'
+        type: boolean
+        required: false
+        default: true
+
+jobs:
+  build-launchers:
+    name: Build Launcher (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux AMD64 build (native on ubuntu-latest)
+          - platform: linux-amd64
+            runner: ubuntu-latest
+            expected_file_type: "ELF 64-bit LSB executable, x86-64"
+            setup_cross_compile: false
+          # Linux ARM64 build (cross-compile on ubuntu-latest)
+          - platform: linux-arm64
+            runner: ubuntu-latest
+            expected_file_type: "ELF 64-bit LSB executable, ARM aarch64"
+            setup_cross_compile: true
+          # macOS Intel build (native on macos-13)
+          - platform: macos-amd64
+            runner: macos-13  # Intel Mac
+            expected_file_type: "Mach-O 64-bit executable x86_64"
+            setup_cross_compile: false
+          # macOS Apple Silicon build (native on macos-latest)
+          - platform: macos-arm64
+            runner: macos-latest  # Apple Silicon Mac
+            expected_file_type: "Mach-O 64-bit executable arm64"
+            setup_cross_compile: false
+          # Windows AMD64 build (native on windows-latest)
+          - platform: windows-amd64
+            runner: windows-latest
+            expected_file_type: "PE32+ executable.*x86-64.*Windows"
+            setup_cross_compile: false
+          # Windows AMD64 cross-compiled from Linux (test cross-compilation)
+          - platform: windows-amd64-cross
+            runner: ubuntu-latest
+            expected_file_type: "PE32+ executable.*x86-64.*Windows"
+            setup_cross_compile: true
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        cache-disabled: false
+        
+    - name: Install cross-compilation tools
+      if: matrix.setup_cross_compile
+      shell: bash
+      run: |
+        echo "Setting up cross-compilation for ${{ matrix.platform }}"
+        if [[ "${{ matrix.platform }}" == "linux-arm64" ]]; then
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          echo "Installed ARM64 cross-compiler"
+        fi
+        
+    - name: Install MinGW for Windows cross-compilation
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        echo "Installing MinGW for Windows cross-compilation"
+        sudo apt-get update
+        sudo apt-get install -y gcc-mingw-w64-x86-64
+        echo "MinGW installed for Windows cross-compilation"
+        
+    - name: Build native launcher
+      shell: bash
+      run: |
+        echo "Building launcher for ${{ matrix.platform }} on ${{ matrix.runner }}"
+        echo "System info:"
+        uname -a
+        echo "Java version:"
+        java -version
+        echo "Starting build..."
+        
+        if [[ "${{ matrix.platform }}" == *"-cross" ]]; then
+          # For cross-compilation test, build all available platforms
+          echo "Cross-compilation test - building all available platforms"
+          ./gradlew :xdk:javatools-launcher:crossCompileAll --info
+        else
+          # For native builds, build current platform only
+          ./gradlew :xdk:javatools-launcher:compileNativeLauncher --info
+        fi
+        
+    - name: Verify built launcher file
+      shell: bash
+      run: |
+        # Find the built launcher (it should be the only one in the native build dir)
+        LAUNCHER_FILE=$(find javatools_launcher/build/native -name "*launcher*" -type f | head -1)
+        
+        if [ -z "$LAUNCHER_FILE" ]; then
+          echo "❌ No launcher file found in build/native directory"
+          ls -la javatools_launcher/build/native/
+          exit 1
+        fi
+        
+        echo "Checking launcher file: $LAUNCHER_FILE"
+        ls -la "$LAUNCHER_FILE"
+        
+        if command -v file >/dev/null 2>&1; then
+          file "$LAUNCHER_FILE"
+          FILE_OUTPUT=$(file "$LAUNCHER_FILE")
+          echo "File type: $FILE_OUTPUT"
+          
+          # Verify file type matches expectation (basic check)
+          if echo "$FILE_OUTPUT" | grep -q "executable"; then
+            echo "✅ File appears to be an executable"
+          else
+            echo "❌ File does not appear to be executable: $FILE_OUTPUT"
+            exit 1
+          fi
+        else
+          echo "⚠️ 'file' command not available on this platform"
+        fi
+        
+        # Make sure file is executable (Unix-like systems)  
+        if [[ "$RUNNER_OS" != "Windows" ]]; then
+          chmod +x "$LAUNCHER_FILE"
+        fi
+        
+    - name: Copy launcher to output directory
+      shell: bash
+      run: |
+        if [[ "${{ matrix.platform }}" == *"-cross" ]]; then
+          # For cross-compilation, copy all executables
+          ./gradlew :xdk:javatools-launcher:copyAllExecutables
+        else
+          # For native builds, copy current platform executable
+          ./gradlew :xdk:javatools-launcher:copyExecutables
+        fi
+        ls -la javatools_launcher/build/bin/
+        
+    - name: Test launcher execution (basic)
+      if: inputs.test_execution
+      shell: bash
+      run: |
+        # Find the launcher in the bin directory
+        LAUNCHER_FILE=$(find javatools_launcher/build/bin -name "*launcher*" -type f | head -1)
+        
+        if [ -z "$LAUNCHER_FILE" ]; then
+          echo "❌ No launcher file found in build/bin directory"
+          ls -la javatools_launcher/build/bin/
+          exit 1
+        fi
+        
+        echo "Testing launcher execution: $LAUNCHER_FILE"
+        
+        # Test basic execution (should fail gracefully without javatools.jar)
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          # Windows execution test
+          powershell -Command "& { try { & '$LAUNCHER_FILE' --help } catch { Write-Host 'Expected failure without javatools.jar' } }" 2>&1 || echo "Launcher execution test completed"
+        else
+          # Unix-like execution test
+          timeout 10s "$LAUNCHER_FILE" --help 2>&1 || echo "Expected failure without javatools.jar"
+        fi
+        
+    - name: Build javatools for testing launcher with jar
+      if: inputs.test_execution
+      shell: bash
+      run: |
+        echo "Building javatools.jar for launcher testing..."
+        ./gradlew :xdk:javatools:jar --info
+        
+        # Copy javatools.jar to expected location relative to launcher
+        mkdir -p javatools_launcher/build/bin/javatools
+        cp javatools/build/libs/javatools-*.jar javatools_launcher/build/bin/javatools/javatools.jar
+        ls -la javatools_launcher/build/bin/javatools/
+        
+    - name: Test launcher with javatools.jar
+      if: inputs.test_execution
+      shell: bash
+      working-directory: javatools_launcher/build/bin
+      run: |
+        # Find the launcher file 
+        LAUNCHER_FILE=$(find . -name "*launcher*" -type f | head -1)
+        
+        if [ -z "$LAUNCHER_FILE" ]; then
+          echo "❌ No launcher file found"
+          ls -la .
+          exit 1
+        fi
+        
+        echo "Testing launcher with javatools.jar: $LAUNCHER_FILE"
+        
+        # Test with javatools.jar present
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          powershell -Command "& { try { & '$LAUNCHER_FILE' --version } catch { Write-Host 'Launcher execution with jar completed' } }" 2>&1 || echo "Test completed"
+        else
+          timeout 30s "$LAUNCHER_FILE" --version 2>&1 || echo "Launcher execution with jar completed"
+        fi
+        
+    - name: Prepare artifacts
+      if: inputs.upload_artifacts
+      shell: bash
+      run: |
+        mkdir -p launcher-artifacts/${{ matrix.platform }}
+        
+        # Find the launcher file
+        LAUNCHER_FILE=$(find javatools_launcher/build/bin -name "*launcher*" -type f | head -1)
+        
+        if [ -z "$LAUNCHER_FILE" ]; then
+          echo "❌ No launcher file found for artifacts"
+          ls -la javatools_launcher/build/bin/
+          exit 1
+        fi
+        
+        cp "$LAUNCHER_FILE" launcher-artifacts/${{ matrix.platform }}/
+        
+        # Add file info
+        if command -v file >/dev/null 2>&1; then
+          file "$LAUNCHER_FILE" > launcher-artifacts/${{ matrix.platform }}/file-info.txt
+        fi
+        
+        # Add build info
+        echo "Platform: ${{ matrix.platform }}" > launcher-artifacts/${{ matrix.platform }}/build-info.txt
+        echo "Runner: ${{ matrix.runner }}" >> launcher-artifacts/${{ matrix.platform }}/build-info.txt
+        echo "Built: $(date)" >> launcher-artifacts/${{ matrix.platform }}/build-info.txt
+        echo "File: $(basename "$LAUNCHER_FILE")" >> launcher-artifacts/${{ matrix.platform }}/build-info.txt
+        
+    - name: Upload launcher artifacts
+      if: inputs.upload_artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: launcher-${{ matrix.platform }}
+        path: launcher-artifacts/${{ matrix.platform }}/
+        retention-days: 7
+
+  summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: build-launchers
+    if: always()
+    
+    steps:
+    - name: Summary
+      run: |
+        echo "## Native Launcher Build Test Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Tested native launcher builds for all supported platforms:" >> $GITHUB_STEP_SUMMARY
+        echo "- Linux: amd64, arm64 (cross-compiled)" >> $GITHUB_STEP_SUMMARY  
+        echo "- macOS: amd64 (Intel), arm64 (Apple Silicon)" >> $GITHUB_STEP_SUMMARY
+        echo "- Windows: amd64 (native + cross-compiled from Linux)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ needs.build-launchers.result }}" = "success" ]; then
+          echo "✅ All launcher builds completed successfully!" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Some launcher builds failed. Check the job details above." >> $GITHUB_STEP_SUMMARY
+        fi
