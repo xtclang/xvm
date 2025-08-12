@@ -3,6 +3,10 @@
  */
 
 plugins {
-    alias(libs.plugins.xdk.build.java)
+    id("org.xtclang.build.java")
+}
+
+dependencies {
+    testImplementation(libs.junit.jupiter)
 }
 

@@ -1,0 +1,12 @@
+Manifest-Version: 1.0
+Main-Class: org.xvm.tool.Launcher
+Name: /org/xvm/
+Specification-Title: xvm
+Specification-Version: 0.4.4-SNAPSHOT
+Specification-Vendor: xtclang.org
+Implementation-Title: xvm-prototype
+Implementation-Version: 0.4.4-SNAPSHOT
+Implementation-Vendor: xtclang.org
+Sealed: true
+Xdk-Version: org.xtclang:javatools:0.4.4-SNAPSHOT
+

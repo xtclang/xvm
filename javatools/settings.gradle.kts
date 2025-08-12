@@ -8,3 +8,5 @@ plugins {
 }
 
 rootProject.name = "javatools"
+
+include("utils", "unicode")
