@@ -622,7 +622,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
          */
         final var container = project.getExtensions().findByType(JavaPluginExtension.class);
         if (container == null) {
-            throw buildException(project.getLogger(), prefix(project), "Internal error; was expected to have a Java extension container.");
+            throw buildException(project.getLogger(), prefix(project.getName(), null), "Internal error; was expected to have a Java extension container.");
         }
         return container;
     }

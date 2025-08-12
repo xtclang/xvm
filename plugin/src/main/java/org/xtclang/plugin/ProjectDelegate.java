@@ -123,11 +123,11 @@ public abstract class ProjectDelegate<T, R> {
     }
 
     public final String prefix() {
-        return prefix(project);
+        return prefix(projectName, null);
     }
 
     public final String prefix(final Task task) {
-        return prefix(project, task);
+        return prefix(projectName, task == null ? null : task.getName());
     }
 
     public final String prefix(final String taskName) {

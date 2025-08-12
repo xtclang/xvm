@@ -11,6 +11,7 @@ plugins {
 
 private val semanticVersion: SemanticVersion by extra
 private val gitHubToken = getXtclangGitHubMavenPackageRepositoryToken()
+private val prefix = "[publish]"
 
 publishing {
     repositories {
@@ -89,7 +90,7 @@ val listLocalPublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that lists local Maven publications for this project from the mavenLocal() repository."
     doLast {
-        logger.lifecycle("$prefix '$name' Listing local publications (and their artifacts) for project '${project.group}:${project.name}':")
+        logger.lifecycle("$prefix '$name' Listing local publications (and their artifacts):")
         val repoDir = File(System.getProperty("user.home"), ".m2/repository/org/xtclang/${project.name}")
         if (!repoDir.exists()) {
             logger.warn("$prefix WARNING: No local publications found on disk at: '${repoDir.absolutePath}'.")
@@ -128,10 +129,10 @@ val listRemotePublications by tasks.registering {
             .toSet()
         val map = github.resolvePackages(artifactNames)
         if (map.isEmpty()) {
-            logger.warn("$prefix No packages found for project '${project.name}'.")
+            logger.warn("$prefix No packages found.")
             return@doLast
         }
-        logger.lifecycle("$prefix Listing all published packages for project '${project.name}':")
+        logger.lifecycle("$prefix Listing all published packages:")
         map.forEach { (packageName, versionMap) ->
             logger.lifecycle("$prefix     Package: '$packageName'")
             versionMap.forEach { (key, timestamps) ->

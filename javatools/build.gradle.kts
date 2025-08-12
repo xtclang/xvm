@@ -10,6 +10,7 @@ plugins {
 }
 
 private val semanticVersion: SemanticVersion by extra
+private val prefix = "[javatools]"
 
 // TODO: Move these to common-plugins, the XDK composite build does use them in some different places.
 val xdkJavaToolsProvider by configurations.registering {
@@ -78,7 +79,7 @@ tasks.processResources {
  * still being in the build output, as we have not cleaned.
  */
 val syncDependencies by tasks.registering(Sync::class) {
-    val taskPrefix = "[${project.name}:syncDependencies]"
+    val taskPrefix = "[javatools:syncDependencies]"
     from(configurations.compileClasspath) {
         include("**/*.jar")
     }

@@ -145,7 +145,7 @@ tasks.withType<Sign>().configureEach {
     val sign = getXdkPropertyBoolean("org.xtclang.signing.enabled", isRelease())
     // TODO: Before mavenCentral access tokens are sorted, signing should never be enabled:
     require(!sign) { "Signing is not enabled, and should not be enabled until we are sure default configs work." }
-    logger.info("$prefix Publication for project '${project.name}' will ${if (sign) "" else "NOT "}be signed.")
+    logger.info("$prefix Publication will ${if (sign) "" else "NOT "}be signed.")
     onlyIf {
         sign
     }

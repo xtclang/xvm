@@ -14,7 +14,7 @@ private class XdkBuildAggregator(project: Project) : Runnable {
             listOf(ASSEMBLE_TASK_NAME, BUILD_TASK_NAME, CHECK_TASK_NAME, CLEAN_TASK_NAME)
     }
 
-    private val prefix = "[${project.name}]"
+    private val prefix = "[aggregator]"
 
     override fun run() {
         gradle.includedBuilds.forEachIndexed { i, includedBuild ->
@@ -36,7 +36,7 @@ private class XdkBuildAggregator(project: Project) : Runnable {
 
     private fun aggregateLifeCycleTasks(ignored: Set<String>) {
         lifeCycleTasks.forEach { taskName ->
-            logger.info("$prefix Creating aggregated lifecycle task: ':$taskName' in project '${project.name}'")
+            logger.info("$prefix Creating aggregated lifecycle task: ':$taskName'")
             tasks.named(taskName) {
                 group = BUILD_GROUP
                 description = "Aggregates and executes the '$taskName' task for all included builds."

@@ -45,6 +45,6 @@ dependencyResolutionManagement {
 }
 
 // Optional: Log version info for debugging
-val prefix = "[${rootProject.name}]"
+val prefix = "[settings]"
 logger.info("$prefix Using version catalog from: $libsVersionCatalog")
 logger.info("$prefix XVM version from VERSION file: $xvmVersion")

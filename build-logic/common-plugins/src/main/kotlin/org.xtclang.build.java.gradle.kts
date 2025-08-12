@@ -14,13 +14,14 @@ plugins {
 
 private val pprefix = "org.xtclang.java"
 private val lintProperty = "$pprefix.lint"
+private val prefix = "[java]"
 
 private val jdkVersion: Provider<Int> = provider {
     // For build-logic and plugin projects, use the current JVM to avoid chicken-and-egg problems with toolchain provisioning
     val isBuildLogic = project.rootDir.absolutePath.contains("build-logic")
     val isPlugin = project.rootDir.absolutePath.endsWith("plugin")
     val shouldUseCurrentJVM = isBuildLogic || isPlugin
-    logger.debug("$prefix Project '${project.path}' at '${project.rootDir.absolutePath}' - shouldUseCurrentJVM: $shouldUseCurrentJVM")
+    logger.debug("$prefix shouldUseCurrentJVM: $shouldUseCurrentJVM")
     if (shouldUseCurrentJVM) {
         JavaVersion.current().majorVersion.toInt()
     } else {

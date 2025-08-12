@@ -9,6 +9,7 @@ plugins {
 private val semanticVersion: SemanticVersion by extra
 
 private val pprefix = "org.xtclang"
+private val prefix = "[plugin]"
 
 // Property for the Plugin ID (unique to a plugin)
 private val pluginId = getXdkProperty("$pprefix.plugin.id")

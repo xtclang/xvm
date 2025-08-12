@@ -15,6 +15,8 @@ plugins {
     base
 }
 
+val prefix = "[launcher]"
+
 val launcherExecutableDir = layout.projectDirectory.dir("src/main/resources/exe")
 
 val processResources by tasks.registering(Copy::class) {

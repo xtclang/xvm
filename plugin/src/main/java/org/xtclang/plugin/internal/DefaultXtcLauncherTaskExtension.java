@@ -38,7 +38,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
 
     protected DefaultXtcLauncherTaskExtension(final Project project) {
         this.project = project;
-        this.prefix = ProjectDelegate.prefix(project);
+        this.prefix = ProjectDelegate.prefix(project.getName(), null);
         this.objects = project.getObjects();
         this.logger = project.getLogger();
 
