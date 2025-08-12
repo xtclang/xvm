@@ -5,9 +5,9 @@ inputs:
     description: 'Base Docker image name (e.g., ghcr.io/xtclang/xvm)'
     required: true
   version-file:
-    description: 'Path to VERSION file'
+    description: 'Path to version.properties file'
     required: false
-    default: 'VERSION'
+    default: 'version.properties'
   branch:
     description: 'Git branch name'
     required: false
@@ -23,7 +23,7 @@ inputs:
 
 outputs:
   version:
-    description: 'Project version from VERSION file'
+    description: 'Project version from version.properties file'
     value: ${{ steps.compute.outputs.version }}
   branch-tag:
     description: 'Sanitized branch name for use as Docker tag'
@@ -52,9 +52,13 @@ runs:
         
         echo "🏷️ Computing Docker tags and metadata..."
         
-        # Read version from file
+        # Read version from properties file
         if [ -f "${{ inputs.version-file }}" ]; then
-          VERSION=$(cat "${{ inputs.version-file }}" | tr -d '\n\r ')
+          VERSION=$(grep "^xdk.version=" "${{ inputs.version-file }}" | cut -d'=' -f2 | tr -d '\n\r ')
+          if [ -z "$VERSION" ]; then
+            echo "❌ xdk.version not found in ${{ inputs.version-file }}"
+            exit 1
+          fi
         else
           echo "❌ Version file not found: ${{ inputs.version-file }}"
           exit 1

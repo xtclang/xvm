@@ -86,3 +86,26 @@ fun spawn(command: String, vararg args: String, env: Map<String, String> = empty
         }
     }
 }
+
+/**
+ * Execute multiple commands and return their results.
+ * 
+ * @param commands Map of command names to command lists (first element is command, rest are args)
+ * @param env Environment variables to set for all commands
+ * @param workingDir Working directory for all commands
+ * @param throwOnError If true, throws exception on first command failure; if false, continues with all commands
+ * @param logger Logger for command output
+ * @return Map of command names to their ProcessResults
+ */
+fun spawn(
+    commands: Map<String, List<String>>, 
+    env: Map<String, String> = emptyMap(), 
+    workingDir: File? = null, 
+    throwOnError: Boolean = true, 
+    logger: Logger? = null
+): Map<String, ProcessResult> {
+    return commands.mapValues { (name, command) ->
+        logger?.info("[processes] Executing command '$name': ${command.joinToString(" ")}")
+        spawn(command.first(), *command.drop(1).toTypedArray(), env = env, workingDir = workingDir, throwOnError = throwOnError, logger = logger)
+    }
+}

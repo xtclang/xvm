@@ -19,8 +19,10 @@ public interface Constants
      *
      * By convention, version 0 is the pre-production version: The language and tool-chain are still
      * in development.
+     *
+     * This value is read from build-info.properties as the single source of truth.
      */
-    int VERSION_MAJOR_CUR = 0;
+    int VERSION_MAJOR_CUR = BuildInfo.getApiVersionMajor();
 
     /**
      * The current minor version of the XVM File structure. This is the newest version that can be
@@ -32,8 +34,10 @@ public interface Constants
      * the date string with the "-" characters having been removed). The result is that an error
      * will be displayed if there is a version mismatch, which should save some frustration -- since
      * otherwise the resulting error(s) can be very hard to diagnose.
+     *
+     * This value is read from build-info.properties as the single source of truth.
      */
-    int VERSION_MINOR_CUR = 2025_05_08;
+    int VERSION_MINOR_CUR = BuildInfo.getApiVersionMinor();
 
 
     // ----- names ---------------------------------------------------------------------------------

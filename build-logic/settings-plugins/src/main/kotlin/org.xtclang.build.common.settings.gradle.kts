@@ -22,10 +22,16 @@ fun compositeRootRelativeFile(path: String): File? {
 }
 
 val libsVersionCatalog = compositeRootRelativeFile("gradle/libs.versions.toml")!!
-val versionFile = compositeRootRelativeFile("VERSION")!!
+val versionPropertiesFile = compositeRootRelativeFile("version.properties")!!
 
-// Read VERSION file for single source of truth
-val xvmVersion = versionFile.readText().trim()
+// Read version.properties file for single source of truth
+val versionProps = java.util.Properties().apply { 
+    load(versionPropertiesFile.inputStream()) 
+}
+val xvmVersion = versionProps.getProperty("xdk.version")
+    ?: error("xdk.version not found in version.properties file")
+val xvmGroup = versionProps.getProperty("xdk.group")
+    ?: error("xdk.group not found in version.properties file")
 
 // Standard dependency resolution with dynamic version injection
 dependencyResolutionManagement {
@@ -37,9 +43,11 @@ dependencyResolutionManagement {
     versionCatalogs {
         val libs by creating {
             from(files(libsVersionCatalog))
-            // Override versions from VERSION file to maintain single source of truth
+            // Override versions from version.properties file to maintain single source of truth
             version("xdk", xvmVersion)
             version("xtc-plugin", xvmVersion)
+            version("group-xdk", xvmGroup)
+            version("group-xtc-plugin", xvmGroup)
         }
     }
 }
@@ -47,4 +55,5 @@ dependencyResolutionManagement {
 // Optional: Log version info for debugging
 val prefix = "[${rootProject.name}]"
 logger.info("$prefix Using version catalog from: $libsVersionCatalog")
-logger.info("$prefix XVM version from VERSION file: $xvmVersion")
+logger.info("$prefix XVM version from version.properties file: $xvmVersion")
+logger.info("$prefix XVM group from version.properties file: $xvmGroup")

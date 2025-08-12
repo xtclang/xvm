@@ -339,8 +339,8 @@ jobs:
         run: |
           set -euo pipefail
           
-          # Read version
-          VERSION=$(cat VERSION | tr -d '\n\r ')
+          # Read version from properties file
+          VERSION=$(grep "^xdk.version=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           
           # Sanitize branch name for Docker tags
