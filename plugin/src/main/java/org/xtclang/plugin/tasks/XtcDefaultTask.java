@@ -34,11 +34,12 @@ public abstract class XtcDefaultTask extends DefaultTask {
     protected final ObjectFactory objects;  
     protected final Logger logger;
     protected final boolean overrideVerboseLogging;
+    private final boolean projectVerboseLogging; // Pre-resolved project verbose logging state
 
     private boolean isBeingExecuted;
 
     protected XtcDefaultTask(final Project project) {
-        this(project, ProjectDelegate.hasVerboseLogging(project));
+        this(project, false); // Default: no override
     }
 
     protected XtcDefaultTask(final Project project, final boolean overrideVerboseLogging) {
@@ -47,6 +48,7 @@ public abstract class XtcDefaultTask extends DefaultTask {
         this.objects = project.getObjects();
         this.logger = project.getLogger();
         this.overrideVerboseLogging = overrideVerboseLogging;
+        this.projectVerboseLogging = ProjectDelegate.hasVerboseLogging(project);
     }
 
     protected final String prefix() {
@@ -62,7 +64,9 @@ public abstract class XtcDefaultTask extends DefaultTask {
      * @return True of we are running with verbose logging enabled, false otherwise.
      */
     public boolean hasVerboseLogging() {
-        return overrideVerboseLogging || ProjectDelegate.hasVerboseLogging(getProject());
+        // For configuration cache compatibility, use pre-resolved verbose logging states
+        // Original logic: overrideVerboseLogging || ProjectDelegate.hasVerboseLogging(getProject())
+        return overrideVerboseLogging || projectVerboseLogging;
     }
 
     protected void executeTask() {

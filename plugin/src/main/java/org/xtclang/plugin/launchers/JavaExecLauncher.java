@@ -100,8 +100,11 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
          * we keep this code here for now. It will very likely go away in the future, and assume and assert that
          * there is only one configuration available to consume, containing the javatools.jar.
          */
-        final var javaToolsFromConfig = task.filesFromConfigs(true, XDK_CONFIG_NAME_JAVATOOLS_INCOMING).filter(FileUtils::isValidJavaToolsArtifact);
-        final var javaToolsFromXdk = getProject().fileTree(XtcProjectDelegate.getXdkContentsDir(getProject())).filter(FileUtils::isValidJavaToolsArtifact);
+        // Use pre-resolved JavaTools configuration for configuration cache compatibility
+        final var javaToolsFromConfig = task.getInputXtcJavaToolsConfig().filter(FileUtils::isValidJavaToolsArtifact);
+        // CONFIGURATION CACHE TODO: For now, skip XDK JavaTools resolution to avoid Project access during execution
+        // Since we have the JavaTools from config, we can skip the XDK resolution for configuration cache compatibility
+        final var javaToolsFromXdk = task.getInputXtcJavaToolsConfig().filter(f -> false); // Empty collection (filter nothing)
 
         logger.info("""            
                 {} javaToolsFromConfig files: {}
