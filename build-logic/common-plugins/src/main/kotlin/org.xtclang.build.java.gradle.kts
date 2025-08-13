@@ -37,7 +37,13 @@ java {
             logger.warn("NOTE: We are using a more modern Java tool chain than the build process. $buildProcessJavaVersion < $xdkJavaVersion")
         }
         logger.info("$prefix Java Toolchain config; binary format version: 'JDK $xdkJavaVersion' (build process version: 'JDK $buildProcessJavaVersion')")
-        languageVersion.set(xdkJavaVersion)
+        // Only set language version if not already set (configuration cache compatibility)
+        try {
+            languageVersion.set(xdkJavaVersion)
+        } catch (e: IllegalStateException) {
+            // Property is already finalized, skip setting
+            logger.debug("$prefix Java toolchain language version already set, skipping")
+        }
     }
 }
 

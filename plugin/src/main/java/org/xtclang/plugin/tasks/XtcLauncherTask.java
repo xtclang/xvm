@@ -78,6 +78,10 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     private final Provider<Directory> xdkContentsDirectory;
     @Internal
     private final Map<String, Provider<Directory>> sourceSetOutputDirectories;
+    
+    // Pre-resolved Java executable for configuration cache compatibility
+    @Internal
+    private final String javaExecutable;
 
     protected XtcLauncherTask(final Project project, final E ext) {
         super(project);
@@ -140,6 +144,9 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             final Provider<Directory> outputDir = XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet);
             this.sourceSetOutputDirectories.put(sourceSetName, outputDir);
         }
+        
+        // Pre-resolve Java executable for configuration cache compatibility
+        this.javaExecutable = XtcProjectDelegate.resolveJavaExecutable(project);
     }
 
     @Inject
@@ -147,6 +154,14 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     
     @Inject
     public abstract FileSystemOperations getFileSystemOperations();
+    
+    /**
+     * Returns the pre-resolved Java executable for configuration cache compatibility.
+     * This avoids Project access during task execution.
+     */
+    public String getJavaExecutable() {
+        return javaExecutable;
+    }
 
     @Override
     public void executeTask() {

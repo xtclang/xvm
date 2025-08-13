@@ -13,10 +13,8 @@ import java.util.zip.ZipFile;
 import org.gradle.process.ExecOperations;
 import org.gradle.process.ExecResult;
 
-import org.xtclang.plugin.ProjectDelegate;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcPluginUtils.FileUtils;
-import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 
 // TODO: Add more info to the LauncherException, and if we can reflect it out for the "javatools bundled with
@@ -33,21 +31,10 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
     public JavaExecLauncher(final T task, final ExecOperations execOperations) {
         super(task);
         this.execOperations = execOperations;
-        this.javaExecutable = resolveJavaExecutable(task);
-    }
-    
-    private static String resolveJavaExecutable(final XtcLauncherTask<?> task) {
-        // Pre-resolve Java toolchain executable using centralized XtcProjectDelegate method
-        final var project = task.getProject();
-        final var executable = XtcProjectDelegate.resolveJavaExecutable(project);
-        final var prefix = ProjectDelegate.prefix(project.getName(), task.getName());
-        
-        if (executable != null) {
-            task.getLogger().info("{} Pre-resolved Java toolchain executable: {}", prefix, executable);
-        } else {
-            task.getLogger().info("{} Using default JVM (no Java toolchain configured)", prefix);
-        }
-        return executable;
+        // Use pre-resolved Java executable from task to avoid Project access during execution
+        this.javaExecutable = task.getJavaExecutable();
+        logger.info("{} Using pre-resolved Java executable: {}", prefix, 
+            javaExecutable != null ? javaExecutable : "default JVM");
     }
 
     @Override
