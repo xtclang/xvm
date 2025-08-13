@@ -30,6 +30,7 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.file.FileSystemOperations;
 
 import org.xtclang.plugin.XtcCompilerExtension;
 import org.xtclang.plugin.XtcPluginUtils.FileUtils;
@@ -94,6 +95,8 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         this.outputDirectory = XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet);
     }
 
+    @Inject
+    public abstract FileSystemOperations getFileSystemOperations();
 
     private String getCompileSourceSetName() {
         final String taskName = getName();
@@ -110,8 +113,8 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
 
     private SourceSet getCompileSourceSet() {
-        // Return a SourceSet resolved from the stored source set name
-        // This still accesses Project but only during execution when needed
+        // CONFIGURATION CACHE TODO: This method still accesses Project during execution
+        // We should pre-resolve the SourceSet source directories during construction
         return XtcProjectDelegate.resolveSourceSet(getProject(), sourceSetName);
     }
 
@@ -300,7 +303,12 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
      * in the DSL for the compile task (the outputFilenames property with its value pairs).
      */
     private void finalizeOutputs() {
-        getProject().fileTree(getOutputDirectory()).filter(FileUtils::isValidXtcModule).getFiles().forEach(this::renameOutput);
+        // Resolve output directory from Provider to avoid configuration cache issues
+        final File outputDir = getOutputDirectory().get().getAsFile();
+        
+        // Use ObjectFactory to create fileTree from resolved directory
+        final var fileTree = objects.fileTree().from(outputDir);
+        fileTree.filter(FileUtils::isValidXtcModule).getFiles().forEach(this::renameOutput);
     }
 
     private void renameOutput(final File oldFile) {

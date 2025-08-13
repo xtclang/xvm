@@ -42,6 +42,7 @@ import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.process.ExecOperations;
 import org.gradle.process.ExecResult;
+import org.gradle.api.file.FileSystemOperations;
 
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
@@ -73,7 +74,9 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     
     // Capture dependency information at construction time for configuration cache compatibility
     private final FileCollection xtcModuleDependencies;
-    private final List<SourceSet> dependentSourceSets;
+    private final List<String> dependentSourceSetNames;
+    private final Provider<Directory> xdkContentsDirectory;
+    private final Map<String, Provider<Directory>> sourceSetOutputDirectories;
 
     protected XtcLauncherTask(final Project project, final E ext) {
         super(project);
@@ -107,10 +110,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         this.useNativeLauncher = objects.property(Boolean.class).convention(ext.getUseNativeLauncher());
         
         // Initialize dependency information during construction time
-        this.dependentSourceSets = XtcProjectDelegate.getSourceSets(project).stream().toList();
+        final List<SourceSet> sourceSets = XtcProjectDelegate.getSourceSets(project).stream().toList();
+        this.dependentSourceSetNames = sourceSets.stream().map(SourceSet::getName).toList();
         
         // Build FileCollection for XTC module dependencies
-        final List<String> xtcDependencyConfigNames = dependentSourceSets.stream()
+        final List<String> xtcDependencyConfigNames = sourceSets.stream()
                 .map(XtcProjectDelegate::incomingXtcModuleDependencies).toList();
         
         FileCollection fc = project.getObjects().fileCollection();
@@ -119,10 +123,24 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             fc = fc.plus(config);
         }
         this.xtcModuleDependencies = fc;
+        
+        // Pre-resolve XDK contents directory for configuration cache compatibility
+        this.xdkContentsDirectory = XtcProjectDelegate.getXdkContentsDir(project);
+        
+        // Pre-resolve source set output directories for configuration cache compatibility
+        this.sourceSetOutputDirectories = new HashMap<>();
+        for (final SourceSet sourceSet : sourceSets) {
+            final String sourceSetName = sourceSet.getName();
+            final Provider<Directory> outputDir = XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet);
+            this.sourceSetOutputDirectories.put(sourceSetName, outputDir);
+        }
     }
 
     @Inject
     public abstract ExecOperations getExecOperations();
+    
+    @Inject
+    public abstract FileSystemOperations getFileSystemOperations();
 
     @Override
     public void executeTask() {
@@ -142,6 +160,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputXtcJavaToolsConfig() {
+        // CONFIGURATION CACHE TODO: This still accesses Project, should be pre-resolved
         return getProject().files(getProject().getConfigurations().getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING));
     }
 
@@ -200,6 +219,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @Override
     public void jvmArg(final Provider<? extends String> arg) {
+        // CONFIGURATION CACHE TODO: This accesses Project, should use objects factory
         jvmArgs(singleArgumentIterableProvider(getProject(), arg));
     }
 
@@ -288,15 +308,16 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected List<File> resolveFullModulePath() {
         final var map = new HashMap<String, Set<File>>();
 
-        final Set<File> xdkContents = resolveDirectories(XtcProjectDelegate.getXdkContentsDir(getProject()));
+        final Set<File> xdkContents = resolveDirectories(xdkContentsDirectory);
         map.put(XDK_CONFIG_NAME_CONTENTS, xdkContents);
 
         final Set<File> xtcModuleDeclarations = resolveFiles(getXtcModuleDependencies());
         map.put(XTC_CONFIG_NAME_MODULE_DEPENDENCY, xtcModuleDeclarations);
 
-        for (final var sourceSet : getDependentSourceSets()) {
-            final Set<File> sourceSetOutput = resolveDirectories(XtcProjectDelegate.getXtcSourceSetOutputDirectory(getProject(), sourceSet));
-            map.put(XTC_LANGUAGE_NAME + capitalize(sourceSet.getName()), sourceSetOutput);
+        for (final String sourceSetName : dependentSourceSetNames) {
+            final Provider<Directory> outputDirProvider = sourceSetOutputDirectories.get(sourceSetName);
+            final Set<File> sourceSetOutput = resolveDirectories(outputDirProvider);
+            map.put(XTC_LANGUAGE_NAME + capitalize(sourceSetName), sourceSetOutput);
         }
 
         logger.info("{} Compilation/runtime full module path resolved as: ", prefix());
@@ -307,7 +328,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @InputDirectory
     @PathSensitive(PathSensitivity.RELATIVE)
     Provider<Directory> getInputXdkContents() {
-        return XtcProjectDelegate.getXdkContentsDir(getProject());
+        return xdkContentsDirectory;
     }
 
     @Optional
@@ -319,7 +340,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @Internal
     protected List<SourceSet> getDependentSourceSets() {
-        return dependentSourceSets;
+        // CONFIGURATION CACHE TODO: This method still accesses Project during execution
+        // We should pre-resolve the SourceSet information during construction
+        return dependentSourceSetNames.stream()
+                .map(name -> XtcProjectDelegate.resolveSourceSet(getProject(), name))
+                .toList();
     }
 
     protected List<File> verifiedModulePath(final Map<String, Set<File>> map) {
@@ -388,11 +413,14 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @SuppressWarnings("unused")
     protected Set<File> resolveFiles(final Provider<Directory> dirProvider) {
+        // CONFIGURATION CACHE TODO: This still accesses Project, should use FileSystemOperations
         return resolveFiles(getProject().files(dirProvider));
     }
 
     protected Set<File> resolveDirectories(final Provider<Directory> dirProvider) {
-        return resolveDirectories(resolveFiles(getProject().files(dirProvider)));
+        // For configuration cache compatibility, resolve directory directly from Provider
+        final File dir = dirProvider.get().getAsFile();
+        return Set.of(dir);
     }
 
     private static char yesOrNo(final boolean value) {
