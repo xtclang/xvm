@@ -7,6 +7,7 @@ import XdkDistribution.Companion.normalizeArchitecture
 import java.io.File
 import java.time.Instant
 import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
@@ -58,6 +59,7 @@ data class DockerConfig(
 
 // Get semantic version from versioning plugin
 private val semanticVersion: SemanticVersion by extra
+private val sharedLogger: Logger by extra
 
 // Git properties configuration
 gitProperties {
@@ -123,9 +125,8 @@ abstract class DockerBuildTask : DefaultTask() {
         
         // Check cross-platform build
         if (targetArch != hostArch && !allowEmulation.get()) {
-            logger.warn("Skipping cross-platform build ${name} ($targetArch on $hostArch)")
-            logger.warn("Use -PdockerAllowEmulation=true to enable emulation")
-            return
+            throw GradleException("❌ Cross-platform Docker build not allowed: Cannot build $targetArch on $hostArch without emulation. " +
+                                 "Use -PdockerAllowEmulation=true to enable emulation (WARNING: This will be very slow on your machine!)")
         }
         
         // Create config and build Docker image
@@ -622,8 +623,8 @@ val buildAll by tasks.registering {
                   tags.flatMap { listOf("--tag", "${config.baseImage}:${it}") } +
                   listOf("--$action", ".")
         
-        // Inline execDockerCommand logic
-        spawn(cmd.first(), *cmd.drop(1).toTypedArray(), workingDir = buildWorkingDir, throwOnError = true, logger = project.logger)
+        // Remove logger parameter to fix configuration cache issue
+        spawn(cmd.first(), *cmd.drop(1).toTypedArray(), workingDir = buildWorkingDir, throwOnError = true)
     }
 }
 
@@ -660,7 +661,7 @@ val pushAll by tasks.registering {
                   tags.flatMap { listOf("--tag", "${config.baseImage}:${it}") } +
                   listOf("--$action", ".")
         
-        spawn(cmd.first(), *cmd.drop(1).toTypedArray(), workingDir = buildWorkingDir, throwOnError = true, logger = project.logger)
+        spawn(cmd.first(), *cmd.drop(1).toTypedArray(), workingDir = buildWorkingDir, throwOnError = true)
     }
 }
 

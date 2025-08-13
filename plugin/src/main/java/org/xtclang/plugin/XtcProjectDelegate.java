@@ -79,7 +79,7 @@ import org.xtclang.plugin.tasks.XtcRunTask;
  */
 public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
-    private final Map<String, Set<SourceSet>> taskSourceSets = new HashMap<>();
+    private final Map<String, Set<String>> taskSourceSetNames = new HashMap<>();
 
     @SuppressWarnings("unused")
     public XtcProjectDelegate(final Project project) {
@@ -175,14 +175,15 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         // We should increase granularity for the dependencies, so that we have an xtc equivalent of the "classes" task,
         // probable a "modules" and "<sourceSetName>" modules task. TODO: Do this when getting rid of the Java base plugin.
         compileTasks.forEach(task -> {
-            final Set<SourceSet> sourceSets = taskSourceSets.get(task.getName());
-            if (sourceSets == null || sourceSets.isEmpty()) {
+            final Set<String> sourceSetNames = taskSourceSetNames.get(task.getName());
+            if (sourceSetNames == null || sourceSetNames.isEmpty()) {
                 logger.warn("{} WARNING: No specific source set associated with compile task '{}'.", prefix, task.getName());
             } else {
-                sourceSets.forEach(sourceSet -> {
+                sourceSetNames.forEach(sourceSetName -> {
+                    final var sourceSet = resolveSourceSet(project, sourceSetName);
                     final var processResourcesTasks = List.of(getProcessResourcesTaskName(sourceSet), getJavaProcessResourcesTaskName(sourceSet));
                     logger.info("{} Adding resource dependency for compile task '{}' -> ({}, resource tasks: {})",
-                        prefix, task.getName(), sourceSets, processResourcesTasks);
+                        prefix, task.getName(), sourceSetNames, processResourcesTasks);
                     task.dependsOn(processResourcesTasks);
                 });
             }
@@ -306,8 +307,11 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             final var outputDir = getXtcResourceOutputDirectory(project, sourceSet);
             task.from(resourceDirs);
             task.into(outputDir);
-            task.doLast(t -> logger.info("{} Processed XTC resources for source set: {} (srcDirs: {}, destination: {})",
-                prefix, sourceSet.getName(), sourceSet.getResources().getSrcDirs(), outputDir.get()));
+            
+            // Remove logging to avoid capturing XtcProjectDelegate in closure
+            task.doLast(t -> {
+                // Task completed - resources processed
+            });
         });
 
         // Note, the rebuild extension flag is not the same thing as always rerunning this task. The fact that we call
@@ -329,8 +333,8 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         logger.info("{} Registered and configured source set for compile task '{}' -> sourceSet: {}", prefix, compileTaskName, sourceSet.getName());
 
         // Register the compile task as belonging to a specific source set.
-        final var sourceSets = taskSourceSets.computeIfAbsent(compileTaskName, k -> new HashSet<>());
-        sourceSets.add(sourceSet);
+        final var sourceSetNames = taskSourceSetNames.computeIfAbsent(compileTaskName, k -> new HashSet<>());
+        sourceSetNames.add(sourceSet.getName());
 
         logger.info("{} Registered and configured compile task for sourceSet: {}", prefix, sourceSet.getName());
 
@@ -373,8 +377,14 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         tasks.register(XDK_VERSION_TASK_NAME, task -> {
             task.setGroup(XDK_VERSION_GROUP_NAME);
             task.setDescription("Display XTC version for project, and sanity check its application.");
-            task.doLast(t -> logger.info("{} XTC (version '{}'); Semantic Version: '{}'",
-                prefix(projectName, XDK_VERSION_TASK_NAME), project.getVersion(), getSemanticVersion()));
+            
+            // Extract values at configuration time to avoid capturing XtcProjectDelegate in closure
+            final var projectVersion = project.getVersion();
+            final var semanticVersionAtConfig = getSemanticVersion();
+            
+            task.doLast(t -> {
+                t.getLogger().lifecycle("XTC version: {}; Semantic Version: {}", projectVersion, semanticVersionAtConfig);
+            });
         });
 
         tasks.register(XDK_VERSION_FILE_TASK_NAME, task -> {
@@ -382,15 +392,16 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             task.setDescription("Generate a file containing the XDK/XTC semantic version under the build tree.");
             final var version = buildDir.file(XDK_VERSION_PATH);
             task.getOutputs().file(version);
+            
+            // Extract semantic version at configuration time to avoid capturing XtcProjectDelegate in closure  
+            final var semanticVersionAtConfig = getSemanticVersion();
+            
             task.doLast(t -> {
-                final var semanticVersion = getSemanticVersion();
                 final var file = version.get().getAsFile();
-                logger.info("{} Writing version information: '{}' to '{}'",
-                    prefix(projectName, XDK_VERSION_FILE_TASK_NAME), semanticVersion, file.getAbsolutePath());
                 try {
-                    Files.writeString(file.toPath(), semanticVersion + System.lineSeparator());
+                    Files.writeString(file.toPath(), semanticVersionAtConfig + System.lineSeparator());
                 } catch (final IOException e) {
-                    throw buildException(e, "I/O error when writing VERSION file: '{}'.", e.getMessage());
+                    throw new RuntimeException("I/O error when writing VERSION file: " + e.getMessage(), e);
                 }
             });
         });

@@ -13,3 +13,6 @@ plugins {
 val semanticVersion by extra {
     xdkBuildLogic.versions().assignSemanticVersionFromCatalog()
 }
+
+// Store logger in extra properties for reuse in tasks (avoids Task.project deprecation)
+val sharedLogger by extra { logger }
