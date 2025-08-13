@@ -214,7 +214,8 @@ val testImageFunctionality by tasks.registering {
 }
 
 // Lifecycle integration
-tasks.assemble { dependsOn(buildAll) }
+// Docker build removed from main lifecycle - run manually with ./gradlew :docker:buildAll
+// tasks.assemble { dependsOn(buildAll) }
 
 // Registry management
 data class ImageVersion(val id: String, val created: String, val tags: List<String>, val isMasterImage: Boolean, val sizeBytes: Long = 0L) {
