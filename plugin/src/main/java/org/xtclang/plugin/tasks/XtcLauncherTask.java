@@ -70,6 +70,10 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected final Property<Boolean> useNativeLauncher;
 
     protected final E ext;
+    
+    // Capture dependency information at construction time for configuration cache compatibility
+    private final FileCollection xtcModuleDependencies;
+    private final List<SourceSet> dependentSourceSets;
 
     protected XtcLauncherTask(final Project project, final E ext) {
         super(project);
@@ -101,6 +105,20 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         this.fork = objects.property(Boolean.class).convention(ext.getFork());
         this.showVersion = objects.property(Boolean.class).convention(ext.getShowVersion());
         this.useNativeLauncher = objects.property(Boolean.class).convention(ext.getUseNativeLauncher());
+        
+        // Initialize dependency information during construction time
+        this.dependentSourceSets = XtcProjectDelegate.getSourceSets(project).stream().toList();
+        
+        // Build FileCollection for XTC module dependencies
+        final List<String> xtcDependencyConfigNames = dependentSourceSets.stream()
+                .map(XtcProjectDelegate::incomingXtcModuleDependencies).toList();
+        
+        FileCollection fc = project.getObjects().fileCollection();
+        for (final String configName : xtcDependencyConfigNames) {
+            final var config = project.getConfigurations().getByName(configName);
+            fc = fc.plus(config);
+        }
+        this.xtcModuleDependencies = fc;
     }
 
     @Inject
@@ -296,17 +314,12 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getXtcModuleDependencies() {
-        final List<SourceSet> sourceSets = getDependentSourceSets();
-        final List<String> xtcDependencyConfigNames = sourceSets.stream().map(XtcProjectDelegate::incomingXtcModuleDependencies).toList();
-        final FileCollection xtcDependencyConfigs = filesFromConfigs(xtcDependencyConfigNames);
-        logger.info("{} Incoming XTC module dependencies for source sets (execution phase: {}): {} -> {}", prefix(), isBeingExecuted(), sourceSets,
-                    xtcDependencyConfigNames);
-        return xtcDependencyConfigs;
+        return xtcModuleDependencies;
     }
 
     @Internal
     protected List<SourceSet> getDependentSourceSets() {
-        return XtcProjectDelegate.getSourceSets(getProject()).stream().toList();
+        return dependentSourceSets;
     }
 
     protected List<File> verifiedModulePath(final Map<String, Set<File>> map) {
