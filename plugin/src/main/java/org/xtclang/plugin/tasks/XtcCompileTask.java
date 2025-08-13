@@ -131,12 +131,16 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         final File dir = file.getParentFile();
         assert dir != null && dir.isDirectory();
         final boolean isTopLevelSrc = sourceDirs.contains(dir);
-        logger.debug("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}",
-            prefix(), file.getAbsolutePath(), isTopLevelSrc);
-        if (isTopLevelSrc || XDK_TURTLE_SOURCE_FILENAME.equalsIgnoreCase(file.getName())) {
+        final boolean isTurtleSource = XDK_TURTLE_SOURCE_FILENAME.equalsIgnoreCase(file.getName());
+        final boolean isTopLevel = isTopLevelSrc || isTurtleSource;
+        
+        logger.debug("{} Checking if {} is a module definition: isTopLevelSrc={}, isTurtleSource={}, result={}",
+            prefix(), file.getAbsolutePath(), isTopLevelSrc, isTurtleSource, isTopLevel);
+        
+        if (isTopLevel) {
             logger.info("{} Found module definition: {}", prefix(), file.getAbsolutePath());
         }
-        return isTopLevelSrc;
+        return isTopLevel;
     }
 
     private boolean isMainSourceSetCompileTask() {
