@@ -10,7 +10,6 @@ import java.io.IOException;
 
 import java.util.zip.ZipFile;
 
-import org.gradle.api.Project;
 import org.gradle.process.ExecOperations;
 import org.gradle.process.ExecResult;
 
@@ -29,8 +28,8 @@ import org.xtclang.plugin.tasks.XtcLauncherTask;
 public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends XtcLauncher<E, T> {
     private final ExecOperations execOperations;
     
-    public JavaExecLauncher(final Project project, final T task, final ExecOperations execOperations) {
-        super(project, task);
+    public JavaExecLauncher(final T task, final ExecOperations execOperations) {
+        super(task);
         this.execOperations = execOperations;
     }
 
@@ -61,9 +60,9 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
             spec.setIgnoreExitValue(true);
             
             // Use the project's configured Java toolchain instead of current JVM
-            final var javaExtension = project.getProject().getExtensions().findByType(org.gradle.api.plugins.JavaPluginExtension.class);
+            final var javaExtension = getProject().getExtensions().findByType(org.gradle.api.plugins.JavaPluginExtension.class);
             if (javaExtension != null) {
-                final var toolchains = project.getProject().getExtensions().getByType(org.gradle.jvm.toolchain.JavaToolchainService.class);
+                final var toolchains = getProject().getExtensions().getByType(org.gradle.jvm.toolchain.JavaToolchainService.class);
                 final var launcher = toolchains.launcherFor(javaExtension.getToolchain());
                 final var toolchainExecutable = launcher.get().getExecutablePath().toString();
                 logger.info("{} Using Java toolchain executable: {}", prefix, toolchainExecutable);
@@ -102,7 +101,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
          * there is only one configuration available to consume, containing the javatools.jar.
          */
         final var javaToolsFromConfig = task.filesFromConfigs(true, XDK_CONFIG_NAME_JAVATOOLS_INCOMING).filter(FileUtils::isValidJavaToolsArtifact);
-        final var javaToolsFromXdk = project.fileTree(XtcProjectDelegate.getXdkContentsDir(project)).filter(FileUtils::isValidJavaToolsArtifact);
+        final var javaToolsFromXdk = getProject().fileTree(XtcProjectDelegate.getXdkContentsDir(getProject())).filter(FileUtils::isValidJavaToolsArtifact);
 
         logger.info("""            
                 {} javaToolsFromConfig files: {}

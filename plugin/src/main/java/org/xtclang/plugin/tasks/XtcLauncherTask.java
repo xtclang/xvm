@@ -296,14 +296,14 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         final var prefix = prefix();
         if (getUseNativeLauncher().get()) {
             logger.info("{} Created XTC launcher: native executable.", prefix);
-            return new NativeBinaryLauncher<>(getProject(), this);
+            return new NativeBinaryLauncher<>(this);
         } else if (getFork().get()) {
             logger.info("{} Created XTC launcher: Java process forked from build.", prefix);
-            return new JavaExecLauncher<>(getProject(), this, getExecOperations());
+            return new JavaExecLauncher<>(this, getExecOperations());
         } else {
             logger.warn("{} WARNING: Created XTC launcher: Running launcher in the same thread as the build process. This is not recommended for production",
                     prefix);
-            return new BuildThreadLauncher<>(getProject(), this);
+            return new BuildThreadLauncher<>(this);
         }
     }
 

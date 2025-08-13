@@ -2,22 +2,25 @@ package org.xtclang.plugin.launchers;
 
 import static org.xtclang.plugin.launchers.XtcExecResult.XtcExecResultBuilder;
 
-import org.gradle.api.Project;
 import org.gradle.process.BaseExecSpec;
 import org.gradle.process.ExecResult;
+import org.gradle.api.logging.Logger;
 
 import org.xtclang.plugin.ProjectDelegate;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 
-public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends ProjectDelegate<CommandLine, ExecResult> {
+public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> {
     protected final T task;
     protected final String taskName;
+    protected final String prefix;
+    protected final Logger logger;
 
-    protected XtcLauncher(final Project project, final T task) {
-        super(project);
+    protected XtcLauncher(final T task) {
         this.task = task;
         this.taskName = task.getName();
+        this.prefix = ProjectDelegate.prefix(task.getProject().getName(), taskName);
+        this.logger = task.getLogger();
     }
 
     @Override
@@ -25,6 +28,8 @@ public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends 
         return String.format("%s (launcher='%s', task='%s', fork=%s, native=%s).",
                 prefix, getClass().getSimpleName(), taskName, shouldFork(), isNativeLauncher());
     }
+
+    public abstract ExecResult apply(final CommandLine cmd);
 
     protected boolean shouldFork() {
         return task.getFork().get();
@@ -57,6 +62,21 @@ public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends 
 
     protected final XtcExecResultBuilder resultBuilder(final CommandLine cmd) {
         return XtcExecResult.builder(getClass(), cmd);
+    }
+
+    // Delegate buildException methods to task
+    protected RuntimeException buildException(final String msg, final Object... args) {
+        return task.buildException(msg, args);
+    }
+
+    protected RuntimeException buildException(final Throwable t, final String msg, final Object... args) {
+        return task.buildException(t, msg, args);
+    }
+
+    // CONFIGURATION CACHE TODO: These methods still access Project through task
+    // They should be refactored to pre-resolve needed information during construction
+    protected org.gradle.api.Project getProject() {
+        return task.getProject();
     }
 
     @SuppressWarnings("UnusedReturnValue")

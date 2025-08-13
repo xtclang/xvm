@@ -13,7 +13,6 @@ import java.net.URLClassLoader;
 
 import java.util.Objects;
 
-import org.gradle.api.Project;
 import org.gradle.process.ExecResult;
 
 import org.xtclang.plugin.XtcLauncherTaskExtension;
@@ -31,8 +30,8 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
 
     private final Method main;
 
-    public BuildThreadLauncher(final Project project, final T task) {
-        super(project, task);
+    public BuildThreadLauncher(final T task) {
+        super(task);
         this.main = resolveMethod(task);
     }
 
