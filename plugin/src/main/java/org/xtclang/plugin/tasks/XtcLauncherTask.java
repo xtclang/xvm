@@ -72,7 +72,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     protected final E ext;
     
-    // Capture dependency information at construction time for configuration cache compatibility
+    // Configuration cache compatibility - avoid storing additional Project references
     private final FileCollection xtcModuleDependencies;
     private final FileCollection javaToolsConfiguration;
     private final List<String> dependentSourceSetNames;
@@ -112,9 +112,10 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         
         // Initialize dependency information during construction time
         final List<SourceSet> sourceSets = XtcProjectDelegate.getSourceSets(project).stream().toList();
+        // Store source set names directly (no Project references in simple collections)
         this.dependentSourceSetNames = sourceSets.stream().map(SourceSet::getName).toList();
         
-        // Build FileCollection for XTC module dependencies
+        // Build FileCollection for XTC module dependencies (Provider pattern within FileCollection)
         final List<String> xtcDependencyConfigNames = sourceSets.stream()
                 .map(XtcProjectDelegate::incomingXtcModuleDependencies).toList();
         
@@ -128,8 +129,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         // Pre-resolve XDK contents directory for configuration cache compatibility
         this.xdkContentsDirectory = XtcProjectDelegate.getXdkContentsDir(project);
         
-        // CONFIGURATION CACHE TODO: JavaTools configuration pre-resolution
-        // For now, create empty collection - will need to fix execution-time access differently
+        // CONFIGURATION CACHE TODO: JavaTools configuration resolution
+        // For now, create empty collection - will be resolved at execution time in JavaExecLauncher
         this.javaToolsConfiguration = project.files();
         
         // Pre-resolve source set output directories for configuration cache compatibility
@@ -165,8 +166,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     public FileCollection getInputXtcJavaToolsConfig() {
-        // Return the pre-resolved JavaTools configuration from construction time
-        // This avoids Project access during input resolution for configuration cache compatibility
+        // Return the JavaTools configuration FileCollection
+        // This allows Gradle to handle lazy resolution of dependencies
         return javaToolsConfiguration;
     }
 
