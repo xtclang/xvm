@@ -16,6 +16,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -73,6 +74,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     
     // Capture dependency information at construction time for configuration cache compatibility
     private final FileCollection xtcModuleDependencies;
+    private final FileCollection javaToolsConfiguration;
     private final List<String> dependentSourceSetNames;
     private final Provider<Directory> xdkContentsDirectory;
     private final Map<String, Provider<Directory>> sourceSetOutputDirectories;
@@ -126,6 +128,14 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         // Pre-resolve XDK contents directory for configuration cache compatibility
         this.xdkContentsDirectory = XtcProjectDelegate.getXdkContentsDir(project);
         
+        // Pre-resolve JavaTools configuration for configuration cache compatibility
+        // Check if configuration exists before accessing it
+        final var configurations = project.getConfigurations();
+        final var javaToolsConfig = configurations.findByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING);
+        this.javaToolsConfiguration = javaToolsConfig != null ? 
+            project.files(javaToolsConfig) : 
+            project.files(); // Empty file collection if config doesn't exist
+        
         // Pre-resolve source set output directories for configuration cache compatibility
         this.sourceSetOutputDirectories = new HashMap<>();
         for (final SourceSet sourceSet : sourceSets) {
@@ -159,9 +169,9 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputXtcJavaToolsConfig() {
-        // CONFIGURATION CACHE TODO: This still accesses Project, should be pre-resolved
-        // The configuration may not exist during task construction, so we access it during input resolution
-        return getProject().files(getProject().getConfigurations().getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING));
+        // Return the pre-resolved JavaTools configuration from construction time
+        // This avoids Project access during input resolution for configuration cache compatibility
+        return javaToolsConfiguration;
     }
 
     public boolean hasStdinRedirect() {
@@ -347,6 +357,15 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return dependentSourceSetNames.stream()
                 .map(name -> XtcProjectDelegate.resolveSourceSet(getProject(), name))
                 .toList();
+    }
+    
+    /**
+     * Configuration cache compatible method to get source set output directories
+     * without needing to access SourceSet objects during execution.
+     */
+    @Internal
+    protected Collection<Provider<Directory>> getDependentSourceSetOutputDirectories() {
+        return sourceSetOutputDirectories.values();
     }
 
     protected List<File> verifiedModulePath(final Map<String, Set<File>> map) {

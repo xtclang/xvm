@@ -7,6 +7,7 @@ import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILE_MAIN_TASK_NAME;
 import java.io.File;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -375,9 +376,24 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
     @Override
     protected List<SourceSet> getDependentSourceSets() {
-        if (isMainSourceSetCompileTask()) {
-            return List.of(getCompileSourceSet());
-        }
+        // CONFIGURATION CACHE TODO: This method causes execution-time Project access
+        // Temporarily using parent implementation to avoid getCompileSourceSet() call
+        // The real solution is to eliminate all usage of SourceSet objects during execution
         return super.getDependentSourceSets();
+    }
+    
+    /**
+     * Configuration cache compatible method to get this task's source set output directories.
+     * For main source set tasks, returns just the main source set output directory.
+     * For other tasks, returns all dependent source set output directories.
+     */
+    @Override
+    protected Collection<Provider<Directory>> getDependentSourceSetOutputDirectories() {
+        if (isMainSourceSetCompileTask()) {
+            // For main source set tasks, return just this task's output directory
+            return List.of(outputDirectory);
+        }
+        // For other tasks, return all dependent source set output directories  
+        return super.getDependentSourceSetOutputDirectories();
     }
 }
