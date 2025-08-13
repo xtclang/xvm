@@ -255,7 +255,7 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
             include(JAVATOOLS_PREFIX_PATTERN) // only javatools_*.xtc
         }
         from(configurations.xdkJavaTools) {
-            rename("javatools-${project.version}.jar", JAVATOOLS_INSTALLATION_NAME)
+            rename("javatools-${semanticVersion.artifactVersion}.jar", JAVATOOLS_INSTALLATION_NAME)
             into("javatools")
         }
         from(tasks.xtcVersionFile)

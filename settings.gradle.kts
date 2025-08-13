@@ -42,6 +42,11 @@ val xvmBuilds = listOf(
 
 xvmBuilds.forEach(::includeBuild)
 
+// Disable problematic test distribution websocket check task
+gradle.taskGraph.whenReady {
+    allTasks.find { it.name == "testDistributionWebSocketCheck" }?.enabled = false
+}
+
 /**
  * Checks if the property "includeBuildManualTests" is present, which can be set in the gradle.properties
  * file, or passed on the command line with -P, or the environment variable ORG_GRADLE_PROJECT_includeBuildManualTests
