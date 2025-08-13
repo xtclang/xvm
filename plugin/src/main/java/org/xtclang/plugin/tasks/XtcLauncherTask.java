@@ -75,8 +75,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     // Configuration cache compatibility - avoid storing additional Project references
     private final FileCollection xtcModuleDependencies;
     private final FileCollection javaToolsConfiguration;
-    private final List<String> dependentSourceSetNames;
     private final Provider<Directory> xdkContentsDirectory;
+    @Internal
     private final Map<String, Provider<Directory>> sourceSetOutputDirectories;
 
     protected XtcLauncherTask(final Project project, final E ext) {
@@ -112,8 +112,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         
         // Initialize dependency information during construction time
         final List<SourceSet> sourceSets = XtcProjectDelegate.getSourceSets(project).stream().toList();
-        // Store source set names directly (no Project references in simple collections)
-        this.dependentSourceSetNames = sourceSets.stream().map(SourceSet::getName).toList();
         
         // Build FileCollection for XTC module dependencies (Provider pattern within FileCollection)
         final List<String> xtcDependencyConfigNames = sourceSets.stream()
@@ -325,8 +323,9 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         final Set<File> xtcModuleDeclarations = resolveFiles(getXtcModuleDependencies());
         map.put(XTC_CONFIG_NAME_MODULE_DEPENDENCY, xtcModuleDeclarations);
 
-        for (final String sourceSetName : dependentSourceSetNames) {
-            final Provider<Directory> outputDirProvider = sourceSetOutputDirectories.get(sourceSetName);
+        for (final var entry : sourceSetOutputDirectories.entrySet()) {
+            final String sourceSetName = entry.getKey();
+            final Provider<Directory> outputDirProvider = entry.getValue();
             final Set<File> sourceSetOutput = resolveDirectories(outputDirProvider);
             map.put(XTC_LANGUAGE_NAME + capitalize(sourceSetName), sourceSetOutput);
         }

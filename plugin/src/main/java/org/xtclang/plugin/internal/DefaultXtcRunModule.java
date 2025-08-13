@@ -23,7 +23,8 @@ public class DefaultXtcRunModule implements XtcRunModule {
     protected final Property<String> methodName; // optional but always has a modifiable convention value
     protected final ListProperty<String> moduleArgs; // optional but always has a modifiable, initially empty, set of arguments
 
-    private final Project project;
+    // Remove Project reference for configuration cache compatibility
+    private final org.gradle.api.model.ObjectFactory objects;
 
     @Inject
     @SuppressWarnings("unused")
@@ -36,8 +37,8 @@ public class DefaultXtcRunModule implements XtcRunModule {
     }
 
     public DefaultXtcRunModule(final Project project, final String moduleName, final String moduleMethod, final List<String> moduleArgs) {
-        this.project = project;
-        final var objects = project.getObjects();
+        // Pre-resolve ObjectFactory without storing Project reference
+        this.objects = project.getObjects();
         this.moduleName = objects.property(String.class);
         this.methodName = objects.property(String.class).convention(requireNonNull(moduleMethod));
         this.moduleArgs = objects.listProperty(String.class).value(new ArrayList<>(moduleArgs));
@@ -68,7 +69,7 @@ public class DefaultXtcRunModule implements XtcRunModule {
 
     @Override
     public void moduleArg(final Provider<? extends String> arg) {
-        moduleArgs(XtcPluginUtils.singleArgumentIterableProvider(project, arg));
+        moduleArgs(XtcPluginUtils.singleArgumentIterableProvider(objects, arg));
     }
 
     @Override

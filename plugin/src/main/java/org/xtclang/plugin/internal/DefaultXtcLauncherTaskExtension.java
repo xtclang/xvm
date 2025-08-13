@@ -19,7 +19,7 @@ import org.xtclang.plugin.XtcPluginUtils;
 public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTaskExtension {
     private static final List<String> DEFAULT_JVM_ARGS = List.of("-ea");
 
-    protected final Project project;
+    // Remove Project reference for configuration cache compatibility
     protected final String prefix;
     protected final ObjectFactory objects;
     protected final Logger logger;
@@ -37,7 +37,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     protected final Property<OutputStream> stderr;
 
     protected DefaultXtcLauncherTaskExtension(final Project project) {
-        this.project = project;
+        // Pre-resolve values from Project without storing Project reference
         this.prefix = ProjectDelegate.prefix(project.getName(), null);
         this.objects = project.getObjects();
         this.logger = project.getLogger();
@@ -119,7 +119,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
 
     @Override
     public void jvmArg(final Provider<? extends String> arg) {
-        jvmArgs(XtcPluginUtils.singleArgumentIterableProvider(project, arg));
+        jvmArgs(XtcPluginUtils.singleArgumentIterableProvider(objects, arg));
     }
 
     @Override

@@ -22,7 +22,9 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Provider;
+import org.gradle.api.provider.ProviderFactory;
 
 /**
  * XTC Plugin Helper methods in a utility class.
@@ -35,6 +37,11 @@ public final class XtcPluginUtils {
 
     public static <T> Provider<? extends Iterable<? extends T>> singleArgumentIterableProvider(final Project project, final Provider<? extends T> arg) {
         return project.provider(() -> List.of(arg.get()));
+    }
+
+    public static <T> Provider<? extends Iterable<? extends T>> singleArgumentIterableProvider(final ObjectFactory objects, final Provider<? extends T> arg) {
+        // ObjectFactory doesn't have provider method, need to use property approach
+        return arg.map(value -> List.of(value));
     }
 
     public static List<String> argumentArrayToList(final String... args) {

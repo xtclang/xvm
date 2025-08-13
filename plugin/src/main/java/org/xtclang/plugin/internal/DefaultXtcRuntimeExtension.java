@@ -46,10 +46,14 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension 
      * mode, that is the only way to talk to the XTC debugger ATM.
      */
     private final ListProperty<XtcRunModule> modules;
+    
+    // Store Project for module creation (needed for ObjectFactory instantiation)
+    private final Project project;
 
     @Inject
     public DefaultXtcRuntimeExtension(final Project project) {
         super(project);
+        this.project = project; // Store Project for module creation
         this.modules = objects.listProperty(XtcRunModule.class).value(emptyList());
         // Check for a command line module as
     }
