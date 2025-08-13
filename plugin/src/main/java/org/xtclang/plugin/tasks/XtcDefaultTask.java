@@ -30,6 +30,7 @@ public abstract class XtcDefaultTask extends DefaultTask {
 
     // TODO gradually remove the delegate and distribute the logic to its correct places in the "normal" Gradle plugin and DSL APIs and implementations.
     // Removed stored Project reference for configuration cache compatibility
+    @Internal
     protected final String projectName;
     protected final ObjectFactory objects;  
     protected final Logger logger;
