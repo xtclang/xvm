@@ -124,7 +124,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputXtcJavaToolsConfig() {
-        return project.files(project.getConfigurations().getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING));
+        return getProject().files(getProject().getConfigurations().getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING));
     }
 
     public boolean hasStdinRedirect() {
@@ -182,7 +182,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @Override
     public void jvmArg(final Provider<? extends String> arg) {
-        jvmArgs(singleArgumentIterableProvider(project, arg));
+        jvmArgs(singleArgumentIterableProvider(getProject(), arg));
     }
 
     @Override
@@ -256,28 +256,28 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         final var prefix = prefix();
         if (getUseNativeLauncher().get()) {
             logger.info("{} Created XTC launcher: native executable.", prefix);
-            return new NativeBinaryLauncher<>(project, this);
+            return new NativeBinaryLauncher<>(getProject(), this);
         } else if (getFork().get()) {
             logger.info("{} Created XTC launcher: Java process forked from build.", prefix);
-            return new JavaExecLauncher<>(project, this, getExecOperations());
+            return new JavaExecLauncher<>(getProject(), this, getExecOperations());
         } else {
             logger.warn("{} WARNING: Created XTC launcher: Running launcher in the same thread as the build process. This is not recommended for production",
                     prefix);
-            return new BuildThreadLauncher<>(project, this);
+            return new BuildThreadLauncher<>(getProject(), this);
         }
     }
 
     protected List<File> resolveFullModulePath() {
         final var map = new HashMap<String, Set<File>>();
 
-        final Set<File> xdkContents = resolveDirectories(XtcProjectDelegate.getXdkContentsDir(project));
+        final Set<File> xdkContents = resolveDirectories(XtcProjectDelegate.getXdkContentsDir(getProject()));
         map.put(XDK_CONFIG_NAME_CONTENTS, xdkContents);
 
         final Set<File> xtcModuleDeclarations = resolveFiles(getXtcModuleDependencies());
         map.put(XTC_CONFIG_NAME_MODULE_DEPENDENCY, xtcModuleDeclarations);
 
         for (final var sourceSet : getDependentSourceSets()) {
-            final Set<File> sourceSetOutput = resolveDirectories(XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet));
+            final Set<File> sourceSetOutput = resolveDirectories(XtcProjectDelegate.getXtcSourceSetOutputDirectory(getProject(), sourceSet));
             map.put(XTC_LANGUAGE_NAME + capitalize(sourceSet.getName()), sourceSetOutput);
         }
 
@@ -289,7 +289,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @InputDirectory
     @PathSensitive(PathSensitivity.RELATIVE)
     Provider<Directory> getInputXdkContents() {
-        return XtcProjectDelegate.getXdkContentsDir(project);
+        return XtcProjectDelegate.getXdkContentsDir(getProject());
     }
 
     @Optional
@@ -306,7 +306,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @Internal
     protected List<SourceSet> getDependentSourceSets() {
-        return XtcProjectDelegate.getSourceSets(project).stream().toList();
+        return XtcProjectDelegate.getSourceSets(getProject()).stream().toList();
     }
 
     protected List<File> verifiedModulePath(final Map<String, Set<File>> map) {
@@ -375,11 +375,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @SuppressWarnings("unused")
     protected Set<File> resolveFiles(final Provider<Directory> dirProvider) {
-        return resolveFiles(project.files(dirProvider));
+        return resolveFiles(getProject().files(dirProvider));
     }
 
     protected Set<File> resolveDirectories(final Provider<Directory> dirProvider) {
-        return resolveDirectories(resolveFiles(project.files(dirProvider)));
+        return resolveDirectories(resolveFiles(getProject().files(dirProvider)));
     }
 
     private static char yesOrNo(final boolean value) {

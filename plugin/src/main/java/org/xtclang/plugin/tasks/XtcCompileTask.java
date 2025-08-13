@@ -93,7 +93,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
 
     private SourceSet getCompileSourceSet() {
-        return XtcProjectDelegate.resolveSourceSet(project, getCompileSourceSetName());
+        return XtcProjectDelegate.resolveSourceSet(getProject(), getCompileSourceSetName());
     }
 
     private boolean isMainSourceSetCompileTask() {
@@ -186,13 +186,13 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     Provider<Directory> getResourceDirectory() {
         // TODO: This is wrong. The compile task should not be the one depending on resources src, but resources build.
         //   But that is java behavior, so make sure at least we get the resource input dependency.
-        return XtcProjectDelegate.getXtcResourceOutputDirectory(project, getCompileSourceSet());
+        return XtcProjectDelegate.getXtcResourceOutputDirectory(getProject(), getCompileSourceSet());
     }
 
     @OutputDirectory
     Provider<Directory> getOutputDirectory() {
         // TODO We can make this configurable later.
-        return XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, getCompileSourceSet());
+        return XtcProjectDelegate.getXtcSourceSetOutputDirectory(getProject(), getCompileSourceSet());
     }
 
     /**
@@ -275,7 +275,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
      * in the DSL for the compile task (the outputFilenames property with its value pairs).
      */
     private void finalizeOutputs() {
-        project.fileTree(getOutputDirectory()).filter(FileUtils::isValidXtcModule).getFiles().forEach(this::renameOutput);
+        getProject().fileTree(getOutputDirectory()).filter(FileUtils::isValidXtcModule).getFiles().forEach(this::renameOutput);
     }
 
     private void renameOutput(final File oldFile) {

@@ -47,7 +47,7 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
 
     @OutputDirectory
     Provider<Directory> getOutputXtcModules() {
-        return XtcProjectDelegate.getXdkContentsDir(project);
+        return XtcProjectDelegate.getXdkContentsDir(getProject());
     }
 
     @TaskAction
@@ -66,9 +66,9 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
         final var archiveFile = archives.getSingleFile();
         final var prefix = prefix();
 
-        project.copy(config -> {
+        getProject().copy(config -> {
             logger.info("{} CopySpec: XDK archive file dependency: {}", prefix, archiveFile);
-            config.from(project.zipTree(archiveFile));
+            config.from(getProject().zipTree(archiveFile));
             config.include(
                     "**/*." + XTC_MODULE_FILE_EXTENSION,
                     "**/" + XDK_JAVATOOLS_ARTIFACT_ID + '*' + XDK_JAVATOOLS_ARTIFACT_SUFFIX,

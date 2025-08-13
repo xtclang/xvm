@@ -29,9 +29,9 @@ public abstract class XtcDefaultTask extends DefaultTask {
      */
 
     // TODO gradually remove the delegate and distribute the logic to its correct places in the "normal" Gradle plugin and DSL APIs and implementations.
-    protected final Project project;
+    // Removed stored Project reference for configuration cache compatibility
     protected final String projectName;
-    protected final ObjectFactory objects;
+    protected final ObjectFactory objects;  
     protected final Logger logger;
     protected final boolean overrideVerboseLogging;
 
@@ -42,7 +42,7 @@ public abstract class XtcDefaultTask extends DefaultTask {
     }
 
     protected XtcDefaultTask(final Project project, final boolean overrideVerboseLogging) {
-        this.project = project;
+        // Capture values at configuration time but don't store Project reference
         this.projectName = project.getName();
         this.objects = project.getObjects();
         this.logger = project.getLogger();
@@ -62,7 +62,7 @@ public abstract class XtcDefaultTask extends DefaultTask {
      * @return True of we are running with verbose logging enabled, false otherwise.
      */
     public boolean hasVerboseLogging() {
-        return overrideVerboseLogging || ProjectDelegate.hasVerboseLogging(project);
+        return overrideVerboseLogging || ProjectDelegate.hasVerboseLogging(getProject());
     }
 
     protected void executeTask() {
@@ -100,20 +100,21 @@ public abstract class XtcDefaultTask extends DefaultTask {
     }
 
     public FileCollection filesFromConfigs(final boolean shouldBeResolved, final List<String> configNames) {
-        final Logger logger = project.getLogger();
+        final Project currentProject = getProject();
+        final Logger currentLogger = currentProject.getLogger();
         final String prefix = prefix();
-        logger.info("{} Resolving filesFrom config: {}", prefix, configNames);
-        FileCollection fc = project.getObjects().fileCollection();
+        currentLogger.info("{} Resolving filesFrom config: {}", prefix, configNames);
+        FileCollection fc = currentProject.getObjects().fileCollection();
         for (final var name : configNames) {
-            final Configuration config = project.getConfigurations().getByName(name);
+            final Configuration config = currentProject.getConfigurations().getByName(name);
             if (shouldBeResolved && config.getState() != Configuration.State.RESOLVED) {
                 throw buildException("Configuration '{}' is not resolved, which is a requirement from the task execution phase.", name);
             }
-            final var files = project.files(config);
-            logger.info("{} Scanning file collection: filesFrom: {} {}, files: {}", prefix, name, config.getState(), files.getFiles());
+            final var files = currentProject.files(config);
+            currentLogger.info("{} Scanning file collection: filesFrom: {} {}, files: {}", prefix, name, config.getState(), files.getFiles());
             fc = fc.plus(files);
         }
-        fc.getAsFileTree().forEach(it -> logger.debug("{}    Resolved fileTree '{}'", prefix, it.getAbsolutePath()));
+        fc.getAsFileTree().forEach(it -> currentLogger.debug("{}    Resolved fileTree '{}'", prefix, it.getAbsolutePath()));
         return fc;
     }
 

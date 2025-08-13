@@ -104,7 +104,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @InputDirectory
     @PathSensitive(PathSensitivity.RELATIVE)
     Provider<Directory> getInputXdkModules() {
-        return XtcProjectDelegate.getXdkContentsDir(project); // Modules in the XDK directory, if one exists.
+        return XtcProjectDelegate.getXdkContentsDir(getProject()); // Modules in the XDK directory, if one exists.
     }
 
     // XTC modules needed to resolve module path (the ones in the output of the project source set, that the compileXtc tasks create)
@@ -114,7 +114,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     FileCollection getInputModulesCompiledByProject() {
         FileCollection fc = objects.fileCollection();
         for (final var sourceSet : getDependentSourceSets()) {
-            fc = fc.plus(XtcProjectDelegate.getXtcSourceSetOutput(project, sourceSet));
+            fc = fc.plus(XtcProjectDelegate.getXtcSourceSetOutput(getProject(), sourceSet));
         }
         return fc;
     }
