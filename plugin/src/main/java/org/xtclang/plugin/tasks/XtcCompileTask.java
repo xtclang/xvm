@@ -39,6 +39,7 @@ import org.xtclang.plugin.launchers.CommandLine;
 
 @CacheableTask
 public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtension {
+    private static final String XDK_TURTLE_SOURCE_FILENAME = "mack.x";
     // Default values for inputs and outputs below are inherited from extension, can be reset per task
     protected final Property<Boolean> disableWarnings;
     protected final Property<Boolean> strict;
@@ -52,6 +53,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     
     // Pre-resolved paths for configuration cache compatibility
     private final String sourceSetName;
+    private final Set<File> sourceDirs;
     private final Provider<Directory> resourceDirectory;
     private final Provider<Directory> outputDirectory;
 
@@ -91,6 +93,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         
         // Resolve directories during construction when Project is available
         final SourceSet sourceSet = XtcProjectDelegate.resolveSourceSet(project, sourceSetName);
+        this.sourceDirs = sourceSet.getAllSource().getSrcDirs();
         this.resourceDirectory = XtcProjectDelegate.getXtcResourceOutputDirectory(project, sourceSet);
         this.outputDirectory = XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet);
     }
@@ -116,6 +119,24 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         // CONFIGURATION CACHE TODO: This method still accesses Project during execution
         // We should pre-resolve the SourceSet source directories during construction
         return XtcProjectDelegate.resolveSourceSet(getProject(), sourceSetName);
+    }
+
+    private boolean isTopLevelXtcSourceFile(final File file) {
+        // Use pre-resolved source directories for configuration cache compatibility
+        return !file.isDirectory() && isXtcSourceFile(file) && isTopLevelSource(file);
+    }
+
+    private boolean isTopLevelSource(final File file) {
+        assert file.isFile();
+        final File dir = file.getParentFile();
+        assert dir != null && dir.isDirectory();
+        final boolean isTopLevelSrc = sourceDirs.contains(dir);
+        logger.debug("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}",
+            prefix(), file.getAbsolutePath(), isTopLevelSrc);
+        if (isTopLevelSrc || XDK_TURTLE_SOURCE_FILENAME.equalsIgnoreCase(file.getName())) {
+            logger.info("{} Found module definition: {}", prefix(), file.getAbsolutePath());
+        }
+        return isTopLevelSrc;
     }
 
     private boolean isMainSourceSetCompileTask() {
@@ -331,7 +352,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
 
     private Set<File> resolveXtcSourceFiles() {
-        final var resolvedSources = getSource().filter(file -> isTopLevelXtcSourceFile(getCompileSourceSet(), file)).getFiles();
+        final var resolvedSources = getSource().filter(this::isTopLevelXtcSourceFile).getFiles();
         logger.info("{} Resolved top level sources (should be module definitions, or XTC will fail later): {}", prefix(), resolvedSources);
         return resolvedSources;
     }

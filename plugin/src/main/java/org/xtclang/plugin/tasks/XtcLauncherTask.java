@@ -10,7 +10,6 @@ import static org.xtclang.plugin.XtcPluginConstants.XTC_LANGUAGE_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.FileUtils.isValidXtcModule;
 import static org.xtclang.plugin.XtcPluginUtils.argumentArrayToList;
 import static org.xtclang.plugin.XtcPluginUtils.capitalize;
-import static org.xtclang.plugin.XtcPluginUtils.singleArgumentIterableProvider;
 
 import java.io.File;
 import java.io.InputStream;
@@ -161,6 +160,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputXtcJavaToolsConfig() {
         // CONFIGURATION CACHE TODO: This still accesses Project, should be pre-resolved
+        // The configuration may not exist during task construction, so we access it during input resolution
         return getProject().files(getProject().getConfigurations().getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING));
     }
 
@@ -219,8 +219,10 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @Override
     public void jvmArg(final Provider<? extends String> arg) {
-        // CONFIGURATION CACHE TODO: This accesses Project, should use objects factory
-        jvmArgs(singleArgumentIterableProvider(getProject(), arg));
+        // Use ObjectFactory to create Provider for configuration cache compatibility
+        final Provider<Iterable<? extends String>> iterableProvider = 
+            objects.property(String.class).value(arg).map(value -> List.of(value));
+        jvmArgs(iterableProvider);
     }
 
     @Override
@@ -413,8 +415,13 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @SuppressWarnings("unused")
     protected Set<File> resolveFiles(final Provider<Directory> dirProvider) {
-        // CONFIGURATION CACHE TODO: This still accesses Project, should use FileSystemOperations
-        return resolveFiles(getProject().files(dirProvider));
+        // For configuration cache compatibility, resolve directory directly from Provider
+        // This assumes the provider contains a single directory
+        final File dir = dirProvider.get().getAsFile();
+        if (!dir.exists() || !dir.isDirectory()) {
+            return Set.of();
+        }
+        return objects.fileTree().from(dir).getFiles();
     }
 
     protected Set<File> resolveDirectories(final Provider<Directory> dirProvider) {
