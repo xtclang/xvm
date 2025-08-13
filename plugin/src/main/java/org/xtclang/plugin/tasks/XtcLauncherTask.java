@@ -129,9 +129,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         // Pre-resolve XDK contents directory for configuration cache compatibility
         this.xdkContentsDirectory = XtcProjectDelegate.getXdkContentsDir(project);
         
-        // CONFIGURATION CACHE TODO: JavaTools configuration resolution
-        // For now, create empty collection - will be resolved at execution time in JavaExecLauncher
-        this.javaToolsConfiguration = project.files();
+        // Use Provider to defer JavaTools configuration resolution until it exists
+        // This ensures proper dependency chain while avoiding configuration cache issues
+        this.javaToolsConfiguration = project.files(
+            project.provider(() -> project.getConfigurations().getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING))
+        );
         
         // Pre-resolve source set output directories for configuration cache compatibility
         this.sourceSetOutputDirectories = new HashMap<>();
