@@ -128,13 +128,9 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         // Pre-resolve XDK contents directory for configuration cache compatibility
         this.xdkContentsDirectory = XtcProjectDelegate.getXdkContentsDir(project);
         
-        // Pre-resolve JavaTools configuration for configuration cache compatibility
-        // Check if configuration exists before accessing it
-        final var configurations = project.getConfigurations();
-        final var javaToolsConfig = configurations.findByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING);
-        this.javaToolsConfiguration = javaToolsConfig != null ? 
-            project.files(javaToolsConfig) : 
-            project.files(); // Empty file collection if config doesn't exist
+        // CONFIGURATION CACHE TODO: JavaTools configuration pre-resolution
+        // For now, create empty collection - will need to fix execution-time access differently
+        this.javaToolsConfiguration = project.files();
         
         // Pre-resolve source set output directories for configuration cache compatibility
         this.sourceSetOutputDirectories = new HashMap<>();
