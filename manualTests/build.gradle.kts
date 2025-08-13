@@ -294,7 +294,7 @@ val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
     module {
         moduleName = "EchoTest"
         moduleArg("Hello")
-        moduleArg(provider { System.getProperty("user.name") ?: "unknown user" })
+        moduleArg(providers.systemProperty("user.name").orElse("unknown user"))
     }
     moduleName("TestArray")
 }

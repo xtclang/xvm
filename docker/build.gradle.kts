@@ -28,7 +28,7 @@ data class DockerConfig(
     val version: String,
     val branch: String,
     val commit: String,
-    val isCI: Boolean = System.getenv("CI") == "true"
+    val isCI: Boolean = providers.environmentVariable("CI").orElse("false").get() == "true"
 ) {
     val baseImage = "ghcr.io/xtclang/xvm"
     val isMaster = branch == "master"
@@ -50,7 +50,7 @@ data class DockerConfig(
             val scope = arch?.let { ",scope=$it" } ?: ""
             listOf("--cache-from", "type=gha$scope", "--cache-to", "type=gha,mode=max$scope")
         } else {
-            val cacheDir = File(System.getProperty("user.home"), ".cache/docker-buildx${arch?.let { "-$it" } ?: ""}")
+            val cacheDir = File(providers.systemProperty("user.home").get(), ".cache/docker-buildx${arch?.let { "-$it" } ?: ""}")
             cacheDir.mkdirs()
             listOf("--cache-from", "type=local,src=${cacheDir.absolutePath}", "--cache-to", "type=local,dest=${cacheDir.absolutePath},mode=max")
         }
@@ -64,8 +64,8 @@ private val sharedLogger: Logger by extra
 // Git properties configuration
 gitProperties {
     // Let plugin handle git operations, with env var overrides
-    val envBranch = System.getenv("GH_BRANCH")
-    val envCommit = System.getenv("GH_COMMIT")
+    val envBranch = providers.environmentVariable("GH_BRANCH").orNull
+    val envCommit = providers.environmentVariable("GH_COMMIT").orNull
     
     if (envBranch != null) {
         customProperty("branch", envBranch)
@@ -77,17 +77,19 @@ gitProperties {
 
 // Docker configuration using git properties plugin with env var fallbacks for CI
 // Priority: 1) CI env vars (GH_BRANCH/GH_COMMIT), 2) git properties plugin, 3) direct git commands
-val dockerBranch = System.getenv("GH_BRANCH") 
-    ?: project.findProperty("git.branch")?.toString()
-    ?: providers.exec {
+val dockerBranch = providers.environmentVariable("GH_BRANCH")
+    .orElse(providers.gradleProperty("git.branch"))
+    .orElse(providers.exec {
         commandLine("git", "rev-parse", "--abbrev-ref", "HEAD")
-    }.standardOutput.asText.map { it.trim() }.orElse("master").get()
+    }.standardOutput.asText.map { it.trim() })
+    .orElse("master").get()
 
-val dockerCommit = System.getenv("GH_COMMIT") 
-    ?: project.findProperty("git.commit.id")?.toString()
-    ?: providers.exec {
+val dockerCommit = providers.environmentVariable("GH_COMMIT")
+    .orElse(providers.gradleProperty("git.commit.id"))
+    .orElse(providers.exec {
         commandLine("git", "rev-parse", "HEAD")  
-    }.standardOutput.asText.map { it.trim() }.orElse("").get()
+    }.standardOutput.asText.map { it.trim() })
+    .orElse("").get()
 
 val dockerConfig = DockerConfig(
     version = semanticVersion.artifactVersion, // Use artifact version (e.g. "0.4.4-SNAPSHOT") 
@@ -121,7 +123,7 @@ abstract class DockerBuildTask : DefaultTask() {
     @TaskAction
     fun buildDockerImage() {
         val targetArch = targetArchitecture.get()
-        val hostArch = normalizeArchitecture(System.getProperty("os.arch"))
+        val hostArch = normalizeArchitecture(providers.systemProperty("os.arch").get())
         
         // Check cross-platform build
         if (targetArch != hostArch && !allowEmulation.get()) {
@@ -136,7 +138,7 @@ abstract class DockerBuildTask : DefaultTask() {
         
         val platformArg = platforms.joinToString(",")
         val cmd = listOf("docker", "buildx", "build", "--platform", platformArg) +
-                  listOf("--progress=${System.getenv("DOCKER_BUILDX_PROGRESS") ?: "plain"}") +
+                  listOf("--progress=${providers.environmentVariable("DOCKER_BUILDX_PROGRESS").orElse("plain").get()}") +
                   config.buildArgs().flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
                   config.metadataLabels().flatMap { listOf("--label", "${it.key}=${it.value}") } +
                   config.cacheArgs(targetArch) +
@@ -257,7 +259,7 @@ abstract class DockerListImagesTask : DefaultTask() {
     }
     
     private fun getGitHubTokenInternal(): String? {
-        return System.getenv("GITHUB_TOKEN") ?: try {
+        return providers.environmentVariable("GITHUB_TOKEN").orNull ?: try {
             val result = spawn("gh", "auth", "token", throwOnError = false, workingDir = workingDirectory.get().asFile)
             if (result.isSuccessful()) result.output else null
         } catch (e: Exception) {
@@ -390,7 +392,7 @@ abstract class DockerDeleteBrokenPackagesTask : DefaultTask() {
     }
     
     private fun getGitHubTokenInternal(): String? {
-        return System.getenv("GITHUB_TOKEN") ?: try {
+        return providers.environmentVariable("GITHUB_TOKEN").orNull ?: try {
             val result = spawn("gh", "auth", "token", throwOnError = false, workingDir = workingDirectory.get().asFile)
             if (result.isSuccessful()) result.output else null
         } catch (e: Exception) {
@@ -460,7 +462,7 @@ abstract class DockerCleanImagesTask : DefaultTask() {
             return
         }
         
-        val needsConfirmation = !(System.getenv("CI") == "true") && !forced.get()
+        val needsConfirmation = !(providers.environmentVariable("CI").orElse("false").get() == "true") && !forced.get()
         if (needsConfirmation) {
             logger.lifecycle("❓ Delete ${toDelete.size} versions? (Type 'yes' to confirm)")
             val response = readlnOrNull()?.trim()?.lowercase()
@@ -522,7 +524,7 @@ abstract class DockerCleanImagesTask : DefaultTask() {
     }
     
     private fun getGitHubTokenInternal(): String? {
-        return System.getenv("GITHUB_TOKEN") ?: try {
+        return providers.environmentVariable("GITHUB_TOKEN").orNull ?: try {
             val result = spawn("gh", "auth", "token", throwOnError = false, workingDir = workingDirectory.get().asFile)
             if (result.isSuccessful()) result.output else null
         } catch (e: Exception) {
@@ -568,7 +570,7 @@ abstract class DockerCleanImagesTask : DefaultTask() {
         }
     }
 }
-val allowEmulation = project.findProperty("dockerAllowEmulation")?.toString()?.toBoolean() ?: false
+val allowEmulation = providers.gradleProperty("dockerAllowEmulation").map { it.toBoolean() }.orElse(false).get()
 val workingDir = projectDir
 
 // Helper to configure DockerBuildTask with common settings
@@ -580,7 +582,7 @@ fun TaskContainer.registerDockerBuild(taskName: String, arch: String, action: St
         branch.set(dockerConfig.branch)
         commit.set(dockerConfig.commit)
         this.action.set(action)
-        allowEmulation.set(project.findProperty("dockerAllowEmulation")?.toString()?.toBoolean() ?: false)
+        allowEmulation.set(providers.gradleProperty("dockerAllowEmulation").map { it.toBoolean() }.orElse(false))
         workingDirectory.set(layout.projectDirectory.dir("."))
         configure()
     }
@@ -616,7 +618,7 @@ val buildAll by tasks.registering {
         // Inline buildDockerImage logic
         val platformArg = platforms.joinToString(",")
         val cmd = listOf("docker", "buildx", "build", "--platform", platformArg) +
-                  listOf("--progress=${System.getenv("DOCKER_BUILDX_PROGRESS") ?: "plain"}") +
+                  listOf("--progress=${providers.environmentVariable("DOCKER_BUILDX_PROGRESS").orElse("plain").get()}") +
                   config.buildArgs().flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
                   config.metadataLabels().flatMap { listOf("--label", "${it.key}=${it.value}") } +
                   config.cacheArgs(if (platforms.size == 1) platforms[0].substringAfter("/") else null) +
@@ -654,7 +656,7 @@ val pushAll by tasks.registering {
         
         val platformArg = platforms.joinToString(",")
         val cmd = listOf("docker", "buildx", "build", "--platform", platformArg) +
-                  listOf("--progress=${System.getenv("DOCKER_BUILDX_PROGRESS") ?: "plain"}") +
+                  listOf("--progress=${providers.environmentVariable("DOCKER_BUILDX_PROGRESS").orElse("plain").get()}") +
                   config.buildArgs().flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
                   config.metadataLabels().flatMap { listOf("--label", "${it.key}=${it.value}") } +
                   config.cacheArgs(if (platforms.size == 1) platforms[0].substringAfter("/") else null) +
@@ -683,7 +685,7 @@ val testImageFunctionality by tasks.registering {
     group = "docker"
     description = "Test Docker image functionality"
     
-    val hostArch = normalizeArchitecture(System.getProperty("os.arch"))
+    val hostArch = normalizeArchitecture(providers.systemProperty("os.arch").get())
     dependsOn(if (hostArch == "amd64") buildAmd64 else buildArm64)
     
     inputs.file("test/DockerTest.x")
@@ -725,8 +727,8 @@ val debugDockerConfig by tasks.registering {
     doLast {
         println("=== Docker Configuration Debug ===")
         println("Current git branch: ${providers.exec { commandLine("git", "rev-parse", "--abbrev-ref", "HEAD") }.standardOutput.asText.orElse("unknown").get().trim()}")
-        println("GH_BRANCH env: ${System.getenv("GH_BRANCH")}")
-        println("GH_COMMIT env: ${System.getenv("GH_COMMIT")}")
+        println("GH_BRANCH env: ${providers.environmentVariable("GH_BRANCH").orNull}")
+        println("GH_COMMIT env: ${providers.environmentVariable("GH_COMMIT").orNull}")
         println("Detected branch: ${dockerConfig.branch}")
         println("Detected commit: ${dockerConfig.commit.take(8)}")
         println("Version: ${dockerConfig.version}")
@@ -833,7 +835,7 @@ val listImages by tasks.registering(DockerListImagesTask::class) {
     group = "docker"
     description = "List Docker images in registry (use -PshowSizes=true to calculate actual sizes)"
     
-    showSizes.set(project.findProperty("showSizes")?.toString()?.toBoolean() ?: false)
+    showSizes.set(providers.gradleProperty("showSizes").map { it.toBoolean() }.orElse(false))
     workingDirectory.set(layout.projectDirectory.dir("."))
 }
 
@@ -841,7 +843,7 @@ val deleteBrokenPackages by tasks.registering(DockerDeleteBrokenPackagesTask::cl
     group = "docker"
     description = "Delete packages with invalid names that break the API"
     
-    dryRun.set(project.findProperty("dryRun")?.toString()?.toBoolean() ?: true)
+    dryRun.set(providers.gradleProperty("dryRun").map { it.toBoolean() }.orElse(true))
     workingDirectory.set(layout.projectDirectory.dir("."))
 }
 
@@ -849,8 +851,8 @@ val cleanImages by tasks.registering(DockerCleanImagesTask::class) {
     group = "docker"
     description = "Clean up old Docker package versions (default: keep 10 most recent, protect master images)"
     
-    keepCount.set(project.findProperty("keepCount")?.toString()?.toIntOrNull() ?: 10)
-    dryRun.set(project.findProperty("dryRun")?.toString()?.toBoolean() ?: false)
-    forced.set(project.findProperty("force")?.toString()?.toBoolean() ?: false)
+    keepCount.set(providers.gradleProperty("keepCount").map { it.toIntOrNull() ?: 10 }.orElse(10))
+    dryRun.set(providers.gradleProperty("dryRun").map { it.toBoolean() }.orElse(false))
+    forced.set(providers.gradleProperty("force").map { it.toBoolean() }.orElse(false))
     workingDirectory.set(layout.projectDirectory.dir("."))
 }

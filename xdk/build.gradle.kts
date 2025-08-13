@@ -234,6 +234,7 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
         }
     }
     contents {
+        // Defer processResources resolution for configuration cache compatibility
         val xdkTemplate = tasks.processResources.map {
             logger.info("$prefix Resolving processResources output (this should be during the execution phase).");
             File(it.outputs.files.singleFile, "xdk")

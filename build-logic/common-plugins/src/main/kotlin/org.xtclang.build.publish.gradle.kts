@@ -66,7 +66,7 @@ val listTags by tasks.registering {
 
 val deleteLocalPublications by tasks.registering {
     doLast {
-        val repoDir = File(System.getProperty("user.home"), ".m2/repository/org/xtclang/${project.name}")
+        val repoDir = File(providers.systemProperty("user.home").get(), ".m2/repository/org/xtclang/${project.name}")
         if (!repoDir.exists()) {
             logger.warn("$prefix No local publications found in '${repoDir.absolutePath}'.")
             return@doLast
@@ -91,7 +91,7 @@ val listLocalPublications by tasks.registering {
     description = "Task that lists local Maven publications for this project from the mavenLocal() repository."
     doLast {
         logger.lifecycle("$prefix '$name' Listing local publications (and their artifacts):")
-        val repoDir = File(System.getProperty("user.home"), ".m2/repository/org/xtclang/${project.name}")
+        val repoDir = File(providers.systemProperty("user.home").get(), ".m2/repository/org/xtclang/${project.name}")
         if (!repoDir.exists()) {
             logger.warn("$prefix WARNING: No local publications found on disk at: '${repoDir.absolutePath}'.")
         }
