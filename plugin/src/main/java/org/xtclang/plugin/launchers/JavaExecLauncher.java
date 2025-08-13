@@ -37,21 +37,17 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
     }
     
     private static String resolveJavaExecutable(final XtcLauncherTask<?> task) {
-        // Pre-resolve Java toolchain executable during construction when Project is available
+        // Pre-resolve Java toolchain executable using centralized XtcProjectDelegate method
         final var project = task.getProject();
-        final var javaExtension = project.getExtensions().findByType(org.gradle.api.plugins.JavaPluginExtension.class);
-        if (javaExtension != null) {
-            final var toolchains = project.getExtensions().getByType(org.gradle.jvm.toolchain.JavaToolchainService.class);
-            final var launcher = toolchains.launcherFor(javaExtension.getToolchain());
-            final var executable = launcher.get().getExecutablePath().toString();
-            task.getLogger().info("{} Pre-resolved Java toolchain executable: {}", 
-                ProjectDelegate.prefix(project.getName(), task.getName()), executable);
-            return executable;
+        final var executable = XtcProjectDelegate.resolveJavaExecutable(project);
+        final var prefix = ProjectDelegate.prefix(project.getName(), task.getName());
+        
+        if (executable != null) {
+            task.getLogger().info("{} Pre-resolved Java toolchain executable: {}", prefix, executable);
         } else {
-            task.getLogger().warn("{} No Java extension found, will use default JVM", 
-                ProjectDelegate.prefix(project.getName(), task.getName()));
-            return null; // null means use default
+            task.getLogger().info("{} Using default JVM (no Java toolchain configured)", prefix);
         }
+        return executable;
     }
 
     @Override

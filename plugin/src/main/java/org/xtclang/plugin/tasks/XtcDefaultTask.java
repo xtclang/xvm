@@ -54,6 +54,14 @@ public abstract class XtcDefaultTask extends DefaultTask {
     protected final String prefix() {
         return ProjectDelegate.prefix(projectName, getName());
     }
+    
+    /**
+     * Returns the pre-resolved project name for configuration cache compatibility.
+     * Use this instead of getProject().getName() during task execution.
+     */
+    public final String getProjectName() {
+        return projectName;
+    }
 
     /**
      * We count everything with the log level "info" or finer as verbose logging.

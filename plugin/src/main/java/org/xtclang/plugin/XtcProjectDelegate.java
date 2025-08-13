@@ -625,7 +625,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         return XTC_LANGUAGE_NAME + (config.getName().contains("Test") ? "-test" : "");
     }
 
-    private static JavaPluginExtension getJavaExtensionContainer(final Project project) {
+    public static JavaPluginExtension getJavaExtensionContainer(final Project project) {
         /*
          * The Java sourceSets and the application of the Java plugin modifies the life cycle.
          * We may have to extend the compileClasspath and runtimeClasspath for the Java plugin with XTC
@@ -636,6 +636,24 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             throw buildException(project.getLogger(), prefix(project.getName(), null), "Internal error; was expected to have a Java extension container.");
         }
         return container;
+    }
+    
+    /**
+     * Resolves the Java executable from the project's configured Java toolchain.
+     * Returns null if no Java toolchain is configured (use default JVM).
+     * 
+     * @param project the project to resolve the Java executable for
+     * @return the Java executable path, or null to use default JVM
+     */
+    public static String resolveJavaExecutable(final Project project) {
+        final var javaExtension = project.getExtensions().findByType(JavaPluginExtension.class);
+        if (javaExtension != null) {
+            final var toolchains = project.getExtensions().getByType(org.gradle.jvm.toolchain.JavaToolchainService.class);
+            final var launcher = toolchains.launcherFor(javaExtension.getToolchain());
+            return launcher.get().getExecutablePath().toString();
+        } else {
+            return null; // Use default JVM
+        }
     }
 
     private static String requestToNotation(final ModuleVersionSelector request) {

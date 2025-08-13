@@ -19,7 +19,9 @@ public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends 
     protected XtcLauncher(final T task) {
         this.task = task;
         this.taskName = task.getName();
-        this.prefix = ProjectDelegate.prefix(task.getProject().getName(), taskName);
+        // Use pre-resolved project name from task instead of accessing Project during execution
+        final String projectName = task.getProjectName(); 
+        this.prefix = ProjectDelegate.prefix(projectName, taskName);
         this.logger = task.getLogger();
     }
 
