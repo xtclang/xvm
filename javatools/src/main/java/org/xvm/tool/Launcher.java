@@ -1452,11 +1452,11 @@ public abstract class Launcher
         // Add git info if available
         String gitCommit = org.xvm.asm.BuildInfo.getGitCommit();
         String gitStatus = org.xvm.asm.BuildInfo.getGitStatus();
-        if (gitCommit != null)
+        if (!gitCommit.isEmpty())
             {
             version.append(" [").append(gitCommit.substring(0, Math.min(8, gitCommit.length()))).append("]");
             }
-        if (gitStatus != null)
+        if (!gitStatus.isEmpty())
             {
             version.append(" (").append(gitStatus).append(")");
             }

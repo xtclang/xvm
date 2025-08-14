@@ -47,15 +47,14 @@ public class BuildInfoTest
         String gitCommit = BuildInfo.getGitCommit();
         String gitStatus = BuildInfo.getGitStatus();
         
-        // Git info might not be available in all build environments, so allow null
-        if (gitCommit != null)
+        // Git info might not be available in all build environments, so allow empty
+        if (!gitCommit.isEmpty())
             {
-            assertFalse(gitCommit.isEmpty(), "Git commit should not be empty if present");
             assertTrue(gitCommit.length() >= 7, "Git commit should be at least 7 characters (short hash)");
             assertTrue(gitCommit.matches("[a-f0-9]+"), "Git commit should be hexadecimal");
             }
             
-        if (gitStatus != null)
+        if (!gitStatus.isEmpty())
             {
             assertTrue(gitStatus.equals("clean") || gitStatus.equals("detached-head"), 
                       "Git status should be 'clean' or 'detached-head'");

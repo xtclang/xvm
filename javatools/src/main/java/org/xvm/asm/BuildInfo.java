@@ -63,7 +63,7 @@ public final class BuildInfo
      */
     public static int getApiVersionMajor()
         {
-        return Integer.parseInt(BUILD_INFO.getProperty("api.version.major", "0"));
+        return Integer.parseInt(BUILD_INFO.getProperty("api.version.major"));
         }
     
     /**
@@ -72,24 +72,24 @@ public final class BuildInfo
      */
     public static int getApiVersionMinor()
         {
-        return Integer.parseInt(BUILD_INFO.getProperty("api.version.minor", "0"));
+        return Integer.parseInt(BUILD_INFO.getProperty("api.version.minor"));
         }
     
     /**
      * Get the git commit hash, if available.
-     * @return git commit hash or null if not available
+     * @return git commit hash or empty string if not available
      */
     public static String getGitCommit()
         {
-        return BUILD_INFO.getProperty("git.commit");
+        return BUILD_INFO.getProperty("git.commit", "");
         }
     
     /**
      * Get the git status, if available.
-     * @return git status ("clean" or "detached-head") or null if not available
+     * @return git status ("clean" or "detached-head") or empty string if not available
      */
     public static String getGitStatus()
         {
-        return BUILD_INFO.getProperty("git.status");
+        return BUILD_INFO.getProperty("git.status", "");
         }
     }

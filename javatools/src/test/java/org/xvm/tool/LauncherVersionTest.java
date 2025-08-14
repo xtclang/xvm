@@ -50,14 +50,14 @@ public class LauncherVersionTest
             String gitCommit = BuildInfo.getGitCommit();
             String gitStatus = BuildInfo.getGitStatus();
             
-            if (gitCommit != null)
+            if (!gitCommit.isEmpty())
                 {
                 String shortCommit = gitCommit.length() >= 8 ? gitCommit.substring(0, 8) : gitCommit;
                 assertTrue(output.contains("[" + shortCommit + "]"), 
                           "Version output should contain git commit: [" + shortCommit + "]");
                 }
                 
-            if (gitStatus != null)
+            if (!gitStatus.isEmpty())
                 {
                 assertTrue(output.contains("(" + gitStatus + ")"), 
                           "Version output should contain git status: (" + gitStatus + ")");
