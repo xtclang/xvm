@@ -6,14 +6,14 @@ import java.util.Properties;
 
 /**
  * Utility class to access build-time information from generated resources.
- * 
+ *
  * This class reads version and git information from build-info.properties,
  * which is generated at build time from version.properties and git commands.
  */
 public final class BuildInfo
     {
     private static final Properties BUILD_INFO = loadBuildInfo();
-    
+
     private static Properties loadBuildInfo()
         {
         Properties props = new Properties();
@@ -28,7 +28,7 @@ public final class BuildInfo
             {
             // Ignore - will use fallback values from version.properties if available
             }
-        
+
         // Fallback to version.properties if build-info.properties not found
         if (props.isEmpty())
             {
@@ -44,10 +44,10 @@ public final class BuildInfo
                 // Ignore - will use default values
                 }
             }
-        
+
         return props;
         }
-    
+
     /**
      * Get the XDK version string (e.g., "0.4.4-SNAPSHOT").
      * Used by xcc --version, xec --version, and build system.
@@ -56,25 +56,25 @@ public final class BuildInfo
         {
         return BUILD_INFO.getProperty("xdk.version", "0.0.0-unknown");
         }
-    
+
     /**
      * Get the API major version number.
      * Controls XTC file format compatibility.
      */
-    public static int getApiVersionMajor()
+    public static int getXvmVersionMajor()
         {
-        return Integer.parseInt(BUILD_INFO.getProperty("api.version.major"));
+        return Integer.parseInt(BUILD_INFO.getProperty("xvm.version.major"));
         }
-    
+
     /**
      * Get the API minor version number.
      * Controls XTC file format compatibility.
      */
-    public static int getApiVersionMinor()
+    public static int getXvmVersionMinor()
         {
-        return Integer.parseInt(BUILD_INFO.getProperty("api.version.minor"));
+        return Integer.parseInt(BUILD_INFO.getProperty("xvm.version.minor"));
         }
-    
+
     /**
      * Get the git commit hash, if available.
      * @return git commit hash or empty string if not available
@@ -83,7 +83,7 @@ public final class BuildInfo
         {
         return BUILD_INFO.getProperty("git.commit", "");
         }
-    
+
     /**
      * Get the git status, if available.
      * @return git status ("clean" or "detached-head") or empty string if not available

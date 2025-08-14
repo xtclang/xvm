@@ -36,7 +36,7 @@ public interface Constants
      *
      * The "single source of truth" for this value is the "version.properties" file.
      */
-    int VERSION_MAJOR_CUR = BuildInfo.getApiVersionMajor();
+    int VERSION_MAJOR_CUR = BuildInfo.getXvmVersionMajor();
 
     /**
      * This is the XVM specification minor version number; the major version is available as
@@ -54,7 +54,7 @@ public interface Constants
      *
      * The "single source of truth" for this value is the "version.properties" file.
      */
-    int VERSION_MINOR_CUR = BuildInfo.getApiVersionMinor();
+    int VERSION_MINOR_CUR = BuildInfo.getXvmVersionMinor();
 
 
     // ----- names ---------------------------------------------------------------------------------
