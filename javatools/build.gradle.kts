@@ -116,7 +116,7 @@ val jar by tasks.existing(Jar::class) {
      *      use the "Class-Path" attribute of the manifest to point to them.
      */
     from(syncDependencies.map { fileTree(it.destinationDir).map { jarFile ->
-        logger.info("$prefix Resolving dependency: $jarFile for $version")
+        logger.info("Resolving dependency: $jarFile for $version")
         zipTree(jarFile)
     }})
 
@@ -157,13 +157,13 @@ val sanityCheckJar by tasks.registering {
     inputs.properties("sanityCheckJarBoolean" to checkJar, "sanityCheckJarEntryCount" to expectedEntryCount)
     inputs.file(jar.map { it.archiveFile })
 
-    logger.info("$prefix Configuring sanityCheckJar task (enabled: $checkJar, expected entry count: $expectedEntryCount)")
+    logger.info("Configuring sanityCheckJar task (enabled: $checkJar, expected entry count: $expectedEntryCount)")
 
     onlyIf {
         checkJar
     }
     doLast {
-        logger.info("$prefix Sanity checking integrity of generated jar file.")
+        logger.info("Sanity checking integrity of generated jar file.")
         val size = DebugBuild.verifyJarFileContents(
             project,
             listOf(
@@ -174,6 +174,6 @@ val sanityCheckJar by tasks.registering {
             ),
             expectedEntryCount
         )
-        logger.lifecycle("$prefix Sanity check of javatools.jar completed successfully ($size elements found).")
+        logger.lifecycle("Sanity check of javatools.jar completed successfully ($size elements found).")
     }
 }

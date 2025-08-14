@@ -11,7 +11,7 @@ import java.io.File
 
 abstract class XdkProjectBuildLogic(protected val project: Project) {
     protected val logger = project.logger
-    protected val prefix = project.prefix
+    // Removed prefix to avoid configuration cache issues
 
     override fun toString(): String {
         return this::class.simpleName?.let { "$it('${project.name}')" } ?: throw IllegalStateException("Unknown class: ${this::class}")
@@ -33,7 +33,7 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
     }
 
     private val xdkProperties: XdkProperties by lazy {
-        logger.info("$prefix Created lazy XDK Properties for project ${project.name}")
+        logger.info("Created lazy XDK Properties for project ${project.name}")
         XdkPropertiesImpl(project)
     }
 
@@ -70,9 +70,9 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
             singletonCache[project] = instance
             project.logger.info(
                     """
-                    ${project.prefix} Creating new XdkBuildLogic for project '${project.name}'
-                    ${project.prefix} (singletonCache)      ${System.identityHashCode(singletonCache)}
-                    ${project.prefix} (project -> instance) ${System.identityHashCode(project)} -> ${System.identityHashCode(instance)}
+                    Creating new XdkBuildLogic for project '${project.name}'
+                    (singletonCache)      ${System.identityHashCode(singletonCache)}
+                    (project -> instance) ${System.identityHashCode(project)} -> ${System.identityHashCode(instance)}
                 """.trimIndent())
             return instance
         }
@@ -101,9 +101,8 @@ val Project.buildRepoDirectory get() = compositeRootBuildDirectory.dir("repo")
 
 val Project.xdkBuildLogic: XdkBuildLogic get() = XdkBuildLogic.instanceFor(this)
 
-val Project.prefix: String get() = "[$name]"
-
-val Task.prefix: String get() = "[${project.name}:$name]"
+// Removed problematic prefix extension properties that caused configuration cache issues
+// These accessed project.name at execution time, causing serialization problems
 
 // TODO: A little bit hacky: use a config, but there is a mutual dependency between the lib_xtc and javatools.
 //  Better to add the resource directory as a source set?
@@ -132,7 +131,7 @@ fun Project.getXdkProperty(key: String, defaultValue: String? = null): String {
 
 private fun <T> registerXdkPropertyInput(task: Task, key: String, value: T): T {
     with(task) {
-        logger.info("$prefix Task tunneling property for $key to project. Can be set as input provider.")
+        logger.info("Task tunneling property for $key to project. Can be set as input provider.")
     }
     return value
 }
@@ -150,7 +149,7 @@ fun Task.getXdkProperty(key: String, defaultValue: String? = null): String {
 }
 
 fun Project.buildException(msg: String, level: LogLevel = LIFECYCLE): Throwable {
-    val prefixed = "$prefix $msg"
+    val prefixed = msg
     logger.log(level, prefixed)
     return GradleException(prefixed)
 }
@@ -162,7 +161,7 @@ fun Project.buildException(msg: String, level: LogLevel = LIFECYCLE): Throwable 
 fun Task.considerNeverUpToDate() {
     outputs.cacheIf { false }
     outputs.upToDateWhen { false }
-    logger.info("${project.prefix} WARNING: Task '${project.name}:$name' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle...")
+    logger.info("WARNING: Task is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle...")
 }
 
 /**

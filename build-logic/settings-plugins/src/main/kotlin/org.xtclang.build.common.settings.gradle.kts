@@ -46,5 +46,5 @@ dependencyResolutionManagement {
 
 // Optional: Log version info for debugging
 val prefix = "[settings]"
-logger.info("$prefix Using version catalog from: $libsVersionCatalog")
-logger.info("$prefix XVM version from VERSION file: $xvmVersion")
+logger.info("Using version catalog from: $libsVersionCatalog")
+logger.info("XVM version from VERSION file: $xvmVersion")

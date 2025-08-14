@@ -60,17 +60,17 @@ fun Task.printTaskDependencies(level: LogLevel = LIFECYCLE) {
 @Suppress("unused")
 fun Project.printRepos(level: LogLevel = LIFECYCLE) {
     repositories.map { it.name }.forEach {
-        logger.log(level, "$prefix Repository: '$it'")
+        logger.log(level, "Repository: '$it'")
     }
 }
 
 fun Project.printMavenRepos(level: LogLevel = LIFECYCLE): Int {
     val mavenRepos = repositories.withType<MavenArtifactRepository>().map { RepositoryData(it.name, it.url) }
     mavenRepos.forEach {
-        logger.log(level, "$prefix Maven Repository: ${it.name} ('${it.url}')")
+        logger.log(level, "Maven Repository: ${it.name} ('${it.url}')")
     }
     if (mavenRepos.isEmpty()) {
-        logger.log(level, "$prefix No Maven repositories found.")
+        logger.log(level, "No Maven repositories found.")
     }
     return mavenRepos.size
 }
@@ -91,35 +91,35 @@ fun Project.printResolvedConfigFiles(level: LogLevel = LIFECYCLE, configName: St
     // This only works on resolved configurations, and after the configuration phase.
     val config = configurations.getByName(configName)
     if (!config.isCanBeResolved) {
-        logger.warn("$prefix Configuration '$configName' is not resolvable.")
+        logger.warn("Configuration '$configName' is not resolvable.")
         return
     }
     val files = config.resolvedConfiguration.resolvedArtifacts.map { it.file }
-    logger.log(level, "$prefix Configuration '$configName' has ${files.size} files:")
+    logger.log(level, "Configuration '$configName' has ${files.size} files:")
     files.forEach {
-        logger.log(level, "$prefix    file: '$it'")
+        logger.log(level, "   file: '$it'")
     }
 }
 
 fun Project.printTaskInputs(level: LogLevel = LIFECYCLE, taskName: String, asFileTree: Boolean = false) {
     val task = tasks.getByName(taskName)
     val inputs = task.inputs.files
-    logger.log(level, "$prefix Task '$taskName' has ${inputs.count()} inputs:")
+    logger.log(level, "Task '$taskName' has ${inputs.count()} inputs:")
     if (asFileTree) {
-        inputs.forEach { logger.log(level, "$prefix     input: '$it' (type: ${it.javaClass.name})") }
+        inputs.forEach { logger.log(level, "    input: '$it' (type: ${it.javaClass.name})") }
     } else {
-        inputs.asFileTree.forEach { logger.log(level, "$prefix   input : '$it'") }
+        inputs.asFileTree.forEach { logger.log(level, "  input : '$it'") }
     }
 }
 
 fun Project.printTaskOutputs(level: LogLevel = LIFECYCLE, taskName: String, asFileTree: Boolean = false) {
     val task = tasks.getByName(taskName)
     val outputs = task.outputs.files
-    logger.log(level, "$prefix Task '$taskName' has ${outputs.count()} outputs:")
+    logger.log(level, "Task '$taskName' has ${outputs.count()} outputs:")
     if (asFileTree) {
-        outputs.asFileTree.forEach { logger.log(level, "$prefix   output: '$it'") }
+        outputs.asFileTree.forEach { logger.log(level, "  output: '$it'") }
     } else {
-        outputs.forEach { logger.log(level, "$prefix     output: '$it' (type: ${it.javaClass.name})") }
+        outputs.forEach { logger.log(level, "    output: '$it' (type: ${it.javaClass.name})") }
     }
 }
 
@@ -127,9 +127,9 @@ fun Project.printResolvedConfigFile(level: LogLevel = LIFECYCLE, configName: Str
     // This only works on resolved configurations, and after the configuration phase.
     val files = DebugBuild.resolvableConfig(project, configName)
     files?.resolvedConfiguration?.resolvedArtifacts?.map { it.file }?.also { f ->
-        logger.log(level, "$prefix Configuration '$configName' has ${f.size} files:")
+        logger.log(level, "Configuration '$configName' has ${f.size} files:")
         f.forEach {
-            logger.log(level, "$prefix    Path: '${it.absolutePath}'")
+            logger.log(level, "   Path: '${it.absolutePath}'")
         }
     }
 }
@@ -139,12 +139,12 @@ fun Project.printTaskDependencies(level: LogLevel = LIFECYCLE, taskName: String)
     val task = checkTask(taskName)
     val projectName = project.name
 
-    logger.log(level, "$prefix $projectName.printTaskDependencies('$taskName'):")
+    logger.log(level, "$projectName.printTaskDependencies('$taskName'):")
 
     val parents = task.taskDependencies.getDependencies(task).toSet()
-    logger.log(level, "$prefix     Task '$projectName:$taskName' depends on ${parents.size} other tasks.")
+    logger.log(level, "    Task '$projectName:$taskName' depends on ${parents.size} other tasks.")
     parents.forEach {
-        logger.log(level, "$prefix             Task '$projectName:$taskName' <- dependsOn: '${it.project.name}:${it.name}'")
+        logger.log(level, "            Task '$projectName:$taskName' <- dependsOn: '${it.project.name}:${it.name}'")
     }
     val children = project.tasks.filter {
         var match = false // TODO: Better kotlin.
@@ -156,32 +156,32 @@ fun Project.printTaskDependencies(level: LogLevel = LIFECYCLE, taskName: String)
         }
         match
     }.toSet()
-    logger.log(level, "$prefix     Task '$projectName:$taskName' is a dependency of ${children.size} other tasks.")
+    logger.log(level, "    Task '$projectName:$taskName' is a dependency of ${children.size} other tasks.")
     children.forEach {
-        logger.log(level, "$prefix         Task '$projectName:$taskName' -> isDependencyOf: '$projectName:${it.name}'")
+        logger.log(level, "        Task '$projectName:$taskName' -> isDependencyOf: '$projectName:${it.name}'")
     }
 }
 
 fun Project.printPublications(level: LogLevel = LIFECYCLE) {
     val publicationContainer: PublishingExtension? = project.extensions.findByType<PublishingExtension>()
     if (publicationContainer == null) {
-        logger.warn("$prefix Does not declare any publications. Task has no effect.")
+        logger.warn("Does not declare any publications. Task has no effect.")
         return
     }
 
     val projectName = project.name
     val publications = publicationContainer.publications
     if (publications.isEmpty()) {
-        logger.log(level, "$prefix Project has no declared publications.")
+        logger.log(level, "Project has no declared publications.")
     }
     val count = publications.size
-    logger.log(level, "$prefix Project '$projectName' has $count publications.")
+    logger.log(level, "Project '$projectName' has $count publications.")
     publications.forEachIndexed { i, it ->
-        logger.log(level, "$prefix     (${i + 1} / $count) Publication: '$projectName:${it.name}' (type: ${it::class}")
+        logger.log(level, "    (${i + 1} / $count) Publication: '$projectName:${it.name}' (type: ${it::class}")
         if (it is MavenPublication) {
-            logger.log(level, "$prefix     Publication '${projectName}.${it.name}' has ${it.artifacts.size} artifacts.")
+            logger.log(level, "    Publication '${projectName}.${it.name}' has ${it.artifacts.size} artifacts.")
             it.artifacts.forEachIndexed { j, artifact ->
-                logger.log(level, "$prefix         (${j + 1} / ${it.artifacts.size}) Artifact: '$artifact'")
+                logger.log(level, "        (${j + 1} / ${it.artifacts.size}) Artifact: '$artifact'")
             }
         }
     }
@@ -231,7 +231,7 @@ class DebugBuild(project: Project) : XdkProjectBuildLogic(project) {
         fun resolvableConfig(project: Project, configName: String): Configuration? {
             val config = project.configurations.getByName(configName)
             if (!config.isCanBeResolved) {
-                project.logger.warn("${project.prefix} Configuration '$configName' is not resolvable. Skipped.")
+                project.logger.warn("Configuration '$configName' is not resolvable. Skipped.")
                 return null
             }
             return config

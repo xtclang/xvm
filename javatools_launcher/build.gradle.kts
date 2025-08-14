@@ -34,7 +34,7 @@ val processResources by tasks.registering(Copy::class) {
 val assemble by tasks.existing {
     dependsOn(processResources)
     doLast {
-        logger.info("$prefix Finished assembling launcher resources into Gradle build.")
+        logger.info("Finished assembling launcher resources into Gradle build.")
     }
 }
 

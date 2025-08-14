@@ -20,7 +20,7 @@ import java.io.File
  */
 fun PublishingExtension.configureMavenPublications(project: Project) = project.run {
     publications.withType<MavenPublication>().configureEach {
-        logger.info("$prefix Configuring publication '$name' for project '${project.name}'.")
+        logger.info("Configuring publication '$name' for project '${project.name}'.")
         pom {
             licenses {
                 license {
@@ -58,19 +58,19 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
     fun resolveGpgSecret(): Boolean {
         val sign = getXdkPropertyBoolean("org.xtclang.signing.enabled", isRelease())
         if (!sign) {
-            logger.info("$prefix Signing is disabled. Will not try to resolve any keys.")
+            logger.info("Signing is disabled. Will not try to resolve any keys.")
             return false
         }
         val password = (project.findProperty("signing.password") ?: System.getenv("GPG_SIGNING_PASSWORD") ?: "") as String
         val key = (project.findProperty("signing.key") ?: System.getenv("GPG_SIGNING_KEY") ?: readKeyFile()) as String
         if (key.isEmpty() || password.isEmpty()) {
-            logger.warn("$prefix WARNING: Could not resolve a GPG signing key or a passphrase.")
+            logger.warn("WARNING: Could not resolve a GPG signing key or a passphrase.")
             if (XdkDistribution.isCiEnabled) {
                 throw buildException("No GPG signing key or password found in CI build, and no manual way to set them.")
             }
             return false
         }
-        logger.info("$prefix Signature: In-memory GPG keys successfully configured.")
+        logger.info("Signature: In-memory GPG keys successfully configured.")
         assert(key.isNotEmpty() && password.isNotEmpty())
         useInMemoryPgpKeys(key, password)
         return true
@@ -81,9 +81,9 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
     val publications = publishing.publications
     return sign(publications).also {
         if (publications.isEmpty()) {
-            logger.warn("$prefix WARNING: No publications found, but signature are still enabled.")
+            logger.warn("WARNING: No publications found, but signature are still enabled.")
         } else {
-            logger.info("$prefix Signature: Configured sign tasks publications in '${project.name}', publications: ${publications.map { it.name }}.")
+            logger.info("Signature: Configured sign tasks publications in '${project.name}', publications: ${publications.map { it.name }}.")
         }
     }
 }
@@ -98,7 +98,7 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
 fun PublishingExtension.mavenGitHubPackages(project: Project): Boolean = project.run {
     val gitHubToken = project.getXtclangGitHubMavenPackageRepositoryToken()
     if (gitHubToken.isEmpty()) {
-        logger.warn("$prefix WARNING: No GitHub token found, either in config or environment. publishRemote won't work.")
+        logger.warn("WARNING: No GitHub token found, either in config or environment. publishRemote won't work.")
         return false
     }
 
@@ -110,7 +110,7 @@ fun PublishingExtension.mavenGitHubPackages(project: Project): Boolean = project
                 username = "xtclang-bot"
                 password = gitHubToken
             }
-            logger.info("$prefix Configured '$name' package repository for project '${project.name}'.")
+            logger.info("Configured '$name' package repository for project '${project.name}'.")
         }
     }
 
@@ -178,15 +178,15 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
 
     init {
         logger.info("""
-            $prefix Configuring XVM distribution: '$this'
-            $prefix   Name        : '$distributionName'
-            $prefix   Version     : '$distributionVersion'
-            $prefix   Target OS   : '${getOsName()}'
-            $prefix   Target Arch : '$currentArch'
-            $prefix   Platform    : '${getOsName()}_$currentArch'
-            $prefix   Environment:
-            $prefix       CI             : '$isCiEnabled' (CI property can be overwritten)
-            $prefix       GITHUB_ACTIONS : '${System.getenv("GITHUB_ACTIONS") ?: "[not set]"}'
+            Configuring XVM distribution: '$this'
+              Name        : '$distributionName'
+              Version     : '$distributionVersion'
+              Target OS   : '${getOsName()}'
+              Target Arch : '$currentArch'
+              Platform    : '${getOsName()}_$currentArch'
+              Environment:
+                  CI             : '$isCiEnabled' (CI property can be overwritten)
+                  GITHUB_ACTIONS : '${System.getenv("GITHUB_ACTIONS") ?: "[not set]"}'
         """.trimIndent())
     }
 

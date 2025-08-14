@@ -99,7 +99,7 @@ publishing {
                 description = "XTC Language Software Development Kit (XDK) Distribution Archive"
                 url = "https://xtclang.org"
             }
-            logger.info("$prefix Publication '$name' configured for '$groupId:$artifactId:$version'")
+            logger.info("Publication '$name' configured for '$groupId:$artifactId:$version'")
             artifact(tasks.distZip) {
                 extension = "zip"
             }
@@ -145,7 +145,7 @@ tasks.withType<Sign>().configureEach {
     val sign = getXdkPropertyBoolean("org.xtclang.signing.enabled", isRelease())
     // TODO: Before mavenCentral access tokens are sorted, signing should never be enabled:
     require(!sign) { "Signing is not enabled, and should not be enabled until we are sure default configs work." }
-    logger.info("$prefix Publication will ${if (sign) "" else "NOT "}be signed.")
+    logger.info("Publication will ${if (sign) "" else "NOT "}be signed.")
     onlyIf {
         sign
     }
@@ -190,7 +190,7 @@ val ensureTags by tasks.registering {
     val snapshotOnly = snapshotOnly()
     val currentVersion = semanticVersion
     val gitHubProtocol = xdkBuildLogic.gitHubProtocol()
-    val logPrefix = prefix  // Capture prefix to avoid project access during execution
+    val logPrefix = ""  // Removed prefix to avoid project access during execution
     
     if (!allowPublication()) {
         logger.lifecycle("$logPrefix Skipping publication task, snapshotOnly=${snapshotOnly} for version: '$currentVersion")
@@ -236,7 +236,7 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
     contents {
         // Defer processResources resolution for configuration cache compatibility
         val xdkTemplate = tasks.processResources.map {
-            logger.info("$prefix Resolving processResources output (this should be during the execution phase).");
+            logger.info("Resolving processResources output (this should be during the execution phase).");
             File(it.outputs.files.singleFile, "xdk")
         }
         from(xdkTemplate) {

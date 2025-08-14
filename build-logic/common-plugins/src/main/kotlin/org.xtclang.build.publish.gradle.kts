@@ -26,7 +26,7 @@ tasks.withType<PublishToMavenRepository>().configureEach {
         allowPublication()
     }
     if (!allowPublication()) {
-        logger.warn("$prefix Skipping publication task, snapshotOnly=${snapshotOnly()} for version: '$semanticVersion'")
+        logger.warn("Skipping publication task, snapshotOnly=${snapshotOnly()} for version: '$semanticVersion'")
     }
 }
 
@@ -56,10 +56,10 @@ val listTags by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "List all tags in the repository."
     doLast {
-        logger.lifecycle("$prefix Tag information retrieved from git:")
+        logger.lifecycle("Tag information retrieved from git:")
         val github = xdkBuildLogic.gitHubProtocol()
         github.resolveTags().toString().lines().forEach {
-            logger.lifecycle("$prefix     $it")
+            logger.lifecycle("    $it")
         }
     }
 }
@@ -68,7 +68,7 @@ val deleteLocalPublications by tasks.registering {
     doLast {
         val repoDir = File(providers.systemProperty("user.home").get(), ".m2/repository/org/xtclang/${project.name}")
         if (!repoDir.exists()) {
-            logger.warn("$prefix No local publications found in '${repoDir.absolutePath}'.")
+            logger.warn("No local publications found in '${repoDir.absolutePath}'.")
             return@doLast
         }
 
@@ -76,11 +76,11 @@ val deleteLocalPublications by tasks.registering {
         require(xtclangDir.exists() && xtclangDir.isDirectory) {
             "Illegal state: parent directory of '$repoDir' does not exist."
         }
-        logger.lifecycle("$prefix Deleting all local publications in '${repoDir.absolutePath}'.")
+        logger.lifecycle("Deleting all local publications in '${repoDir.absolutePath}'.")
         delete(repoDir)
         val xtclangFiles = xtclangDir.listFiles()
         if (xtclangFiles == null || xtclangFiles.isEmpty()) {
-            logger.lifecycle("$prefix Deleting empty parent directory '${xtclangDir.absolutePath}'.")
+            logger.lifecycle("Deleting empty parent directory '${xtclangDir.absolutePath}'.")
             delete(xtclangDir)
         }
     }
@@ -90,16 +90,16 @@ val listLocalPublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that lists local Maven publications for this project from the mavenLocal() repository."
     doLast {
-        logger.lifecycle("$prefix '$name' Listing local publications (and their artifacts):")
+        logger.lifecycle("'$name' Listing local publications (and their artifacts):")
         val repoDir = File(providers.systemProperty("user.home").get(), ".m2/repository/org/xtclang/${project.name}")
         if (!repoDir.exists()) {
-            logger.warn("$prefix WARNING: No local publications found on disk at: '${repoDir.absolutePath}'.")
+            logger.warn("WARNING: No local publications found on disk at: '${repoDir.absolutePath}'.")
         }
 
-        logger.lifecycle("$prefix Declared local publication destinations (all may not be published yet) are:")
+        logger.lifecycle("Declared local publication destinations (all may not be published yet) are:")
         tasks.withType<PublishToMavenRepository>().filter { it.name.contains("Local") }.forEach {
             with(it.publication) {
-                logger.lifecycle("$prefix     '${it.name}' (${artifacts.count()} artifacts):")
+                logger.lifecycle("    '${it.name}' (${artifacts.count()} artifacts):")
                 val baseUrl = "${it.repository.url}${groupId.replace('.', '/')}/$artifactId/$version/$artifactId"
                 artifacts.forEach { artifact ->
                     val desc = buildString {
@@ -110,7 +110,7 @@ val listLocalPublications by tasks.registering {
                         }
                         append(".${artifact.extension}")
                     }
-                    logger.lifecycle("$prefix         Local Artifact: '$desc'")
+                    logger.lifecycle("        Local Artifact: '$desc'")
                 }
             }
         }
@@ -129,16 +129,16 @@ val listRemotePublications by tasks.registering {
             .toSet()
         val map = github.resolvePackages(artifactNames)
         if (map.isEmpty()) {
-            logger.warn("$prefix No packages found.")
+            logger.warn("No packages found.")
             return@doLast
         }
-        logger.lifecycle("$prefix Listing all published packages:")
+        logger.lifecycle("Listing all published packages:")
         map.forEach { (packageName, versionMap) ->
-            logger.lifecycle("$prefix     Package: '$packageName'")
+            logger.lifecycle("    Package: '$packageName'")
             versionMap.forEach { (key, timestamps) ->
                 val (versionName, versionId) = key
-                logger.lifecycle("$prefix         Version: '$versionName (id: $versionId)")
-                timestamps.forEach { timestamp -> logger.lifecycle("$prefix             Created at: $timestamp") }
+                logger.lifecycle("        Version: '$versionName (id: $versionId)")
+                timestamps.forEach { timestamp -> logger.lifecycle("            Created at: $timestamp") }
             }
         }
     }

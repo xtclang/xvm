@@ -18,14 +18,14 @@ private class XdkBuildAggregator(project: Project) : Runnable {
 
     override fun run() {
         gradle.includedBuilds.forEachIndexed { i, includedBuild ->
-            logger.info("$prefix     Included build #$i: ${includedBuild.name} [project dir: ${includedBuild.projectDir}]")
+            logger.info("    Included build #$i: ${includedBuild.name} [project dir: ${includedBuild.projectDir}]")
         }
 
         val ignoredIncludedBuilds = gradle.includedBuilds.map { it.name }.filter {
             val attachKey = "includeBuildAttach${it.replaceFirstChar(Char::titlecase)}"
             val attach = (properties[attachKey]?.toString() ?: "true").toBoolean()
             if (!attach) {
-                logger.info("$prefix Included build '$it' is explicitly configured to be outside the root lifecycle ($attachKey: false).")
+                logger.info("Included build '$it' is explicitly configured to be outside the root lifecycle ($attachKey: false).")
             }
             !attach
         }.toSet()
@@ -36,13 +36,13 @@ private class XdkBuildAggregator(project: Project) : Runnable {
 
     private fun aggregateLifeCycleTasks(ignored: Set<String>) {
         lifeCycleTasks.forEach { taskName ->
-            logger.info("$prefix Creating aggregated lifecycle task: ':$taskName'")
+            logger.info("Creating aggregated lifecycle task: ':$taskName'")
             tasks.named(taskName) {
                 group = BUILD_GROUP
                 description = "Aggregates and executes the '$taskName' task for all included builds."
                 gradle.includedBuilds.filterNot { ignored.contains(it.name) }.forEach { includedBuild ->
                     dependsOn(includedBuild.task(":$taskName"))
-                    logger.info("$prefix     Attaching: dependsOn(':$name' <- ':${includedBuild.name}:$name')")
+                    logger.info("    Attaching: dependsOn(':$name' <- ':${includedBuild.name}:$name')")
                 }
             }
         }
@@ -53,8 +53,8 @@ private class XdkBuildAggregator(project: Project) : Runnable {
         with(startParameter) {
             logger.info(
                 """
-            $prefix Start parameter tasks: $taskNames
-            $prefix Start parameter init scripts: $allInitScripts
+            Start parameter tasks: $taskNames
+            Start parameter init scripts: $allInitScripts
         """.trimIndent()
             )
 
@@ -65,13 +65,13 @@ private class XdkBuildAggregator(project: Project) : Runnable {
             }
             if (conflictingTasks.size > 1) {
                 val msg =
-                    "$prefix Multiple conflicting lifecycle tasks detected. Please run lifecycle tasks individually: $conflictingTasks"
+                    "Multiple conflicting lifecycle tasks detected. Please run lifecycle tasks individually: $conflictingTasks"
                 logger.error(msg)
                 throw GradleException(msg)
             }
         }
 
-        logger.info("$prefix Start Parameter(s): $startParameter")
+        logger.info("Start Parameter(s): $startParameter")
     }
 }
 
