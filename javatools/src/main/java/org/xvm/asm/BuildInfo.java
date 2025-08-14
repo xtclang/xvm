@@ -58,7 +58,7 @@ public final class BuildInfo
         }
 
     /**
-     * Get the API major version number.
+     * Get the XVM major version number.
      * Controls XTC file format compatibility.
      */
     public static int getXvmVersionMajor()
@@ -67,7 +67,7 @@ public final class BuildInfo
         }
 
     /**
-     * Get the API minor version number.
+     * Get the XVM minor version number.
      * Controls XTC file format compatibility.
      */
     public static int getXvmVersionMinor()
