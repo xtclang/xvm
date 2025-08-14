@@ -14,26 +14,47 @@ public interface Constants
     int FILE_MAGIC = 0xEC57A5EE;
 
     /**
-     * The current major version of the XVM FileStructure. This is the newest version that can be
-     * read and/or written by this implementation.
+     * This is the XVM major version number of this implementation; the minor version is available
+     * as {@link #VERSION_MINOR_CUR}. The XVM version is the version of the XVM specification.
      *
-     * By convention, version 0 is the pre-production version: The language and tool-chain are still
-     * in development.
+     * Each Ecstasy ".xtc" module file has an XVM version stamped onto it, which is the XVM version
+     * required to load the module correctly. An implementation of the XVM is able to support one or
+     * more versions of the XVM specification; when it reads an ".xtc" module file, it verifies that
+     * it supports the XVM version required by the file.
+     *
+     * When the Ecstasy compiler (the "xcc" command) emits an ".xtc" module file, it stamps a target
+     * XVM version onto the file. All tools that read and/or modify ".xtc" module files must respect
+     * the version contract.
+     *
+     * In this XVM implementation written in Java, the ".xtc" module files are read by the
+     * {@link FileStructure} class. When a FileStructure loads ("deserializes") an ".xtc" module
+     * file, it verifies that the version stamped on the file is supported by this implementation.
+     *
+     * By convention, major version "0" is the pre-production version: The language and tool-chain
+     * are still in development, and each minor version change should be assumed to be a breaking
+     * change. See: https://dev.to/malykhinvi/semver-0-x-x-46e7
+     *
+     * The "single source of truth" for this value is the "version.properties" file.
      */
-    int VERSION_MAJOR_CUR = 0;
+    int VERSION_MAJOR_CUR = BuildInfo.getXvmVersionMajor();
 
     /**
-     * The current minor version of the XVM File structure. This is the newest version that can be
-     * written by this implementation. (Newer minor versions can be safely read.)
+     * This is the XVM specification minor version number; the major version is available as
+     * {@link #VERSION_MAJOR_CUR}. The XVM version is the version of the XVM specification.
      *
      * By convention, as long as VERSION_MAJOR_CUR == 0, whenever a change is made to Ecstasy that
      * changes the persistent structure of an ".xtc" file in a manner that isn't both forwards and
      * backwards compatible, the minor version will be updated to the 8-digit ISO 8601 date (i.e.
      * the date string with the "-" characters having been removed). The result is that an error
      * will be displayed if there is a version mismatch, which should save some frustration -- since
-     * otherwise the resulting error(s) can be very hard to diagnose.
+     * otherwise the resulting compatibility error(s) would be frustrating to diagnose. This means
+     * that in order to use an XDK with any difference in the XVM version, that all necessary ".xtc"
+     * module files must be re-compiled so that they are emitted with the one exact version that is
+     * supported by that XDK.
+     *
+     * The "single source of truth" for this value is the "version.properties" file.
      */
-    int VERSION_MINOR_CUR = 2025_05_08;
+    int VERSION_MINOR_CUR = BuildInfo.getXvmVersionMinor();
 
 
     // ----- names ---------------------------------------------------------------------------------

@@ -10,7 +10,7 @@ pluginManagement {
 }
 
 plugins {
-    id("com.gradle.develocity").version("3.19.2")
+    id("com.gradle.develocity").version("4.1")
     id("org.gradle.toolchains.foojay-resolver-convention").version("latest.release")
 }
 
@@ -41,6 +41,11 @@ val xvmBuilds = listOf(
 )
 
 xvmBuilds.forEach(::includeBuild)
+
+// Disable problematic test distribution websocket check task
+gradle.taskGraph.whenReady {
+    allTasks.find { it.name == "testDistributionWebSocketCheck" }?.enabled = false
+}
 
 /**
  * Checks if the property "includeBuildManualTests" is present, which can be set in the gradle.properties

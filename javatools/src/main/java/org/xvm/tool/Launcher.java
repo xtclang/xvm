@@ -1431,14 +1431,37 @@ public abstract class Launcher
      */
     protected void showSystemVersion(ModuleRepository reposLib)
         {
-        String sVer = "???";
+        String sVer = null;
         try
             {
             sVer = reposLib.loadModule(Constants.ECSTASY_MODULE).getVersionString();
             }
         catch (Exception ignore) {}
-        out("xdk version " + (sVer == null ? "<none>" : sVer)
-                + " (" + Constants.VERSION_MAJOR_CUR + "." + Constants.VERSION_MINOR_CUR + ")");
+        
+        // Use version from single source of truth if module version is not available
+        if (sVer == null)
+            {
+            sVer = org.xvm.asm.BuildInfo.getXdkVersion();
+            }
+        
+        // Build version string with optional git information
+        StringBuilder version = new StringBuilder();
+        version.append("xdk version ").append(sVer)
+               .append(" (").append(Constants.VERSION_MAJOR_CUR).append(".").append(Constants.VERSION_MINOR_CUR).append(")");
+        
+        // Add git info if available
+        String gitCommit = org.xvm.asm.BuildInfo.getGitCommit();
+        String gitStatus = org.xvm.asm.BuildInfo.getGitStatus();
+        if (!gitCommit.isEmpty())
+            {
+            version.append(" [").append(gitCommit.substring(0, Math.min(8, gitCommit.length()))).append("]");
+            }
+        if (!gitStatus.isEmpty())
+            {
+            version.append(" (").append(gitStatus).append(")");
+            }
+        
+        out(version.toString());
         }
 
 

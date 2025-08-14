@@ -1,5 +1,6 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_JAR
 import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
+import java.util.Properties
 
 /**
  * Build file for the Java tools portion of the XDK.
@@ -7,6 +8,7 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 
 plugins {
     alias(libs.plugins.xdk.build.java)
+    alias(libs.plugins.git.properties)
 }
 
 private val semanticVersion: SemanticVersion by extra
@@ -59,6 +61,43 @@ val copyEcstasyResources by tasks.registering(Copy::class) {
     }
 }
 
+val generateBuildInfo by tasks.registering {
+    description = "Generate build-info.properties with version and git information"
+    
+    val versionPropsFile = compositeRootProjectDirectory.file("version.properties")
+    val outputFile = layout.buildDirectory.file("generated/resources/main/build-info.properties")
+    val gitPropsFile = layout.buildDirectory.file("resources/main/git.properties")
+    
+    inputs.file(versionPropsFile)
+    inputs.file(gitPropsFile).optional()
+    outputs.file(outputFile)
+    
+    dependsOn(tasks.named("generateGitProperties"))
+    
+    doLast {
+        // Read version properties as base
+        val buildInfo = Properties()
+        versionPropsFile.asFile.inputStream().use { buildInfo.load(it) }
+        
+        // Add git information from git.properties if available
+        if (gitPropsFile.get().asFile.exists()) {
+            val gitProps = Properties()
+            gitPropsFile.get().asFile.inputStream().use { gitProps.load(it) }
+            
+            gitProps.getProperty("git.commit.id")?.let { buildInfo.setProperty("git.commit", it) }
+            
+            val isDirty = gitProps.getProperty("git.dirty")?.toBoolean() ?: false
+            buildInfo.setProperty("git.status", if (isDirty) "detached-head" else "clean")
+        }
+        
+        outputFile.get().asFile.apply {
+            parentFile.mkdirs()
+            outputStream().use { buildInfo.store(it, "Build information generated at build time") }
+        }
+    }
+}
+
+
 sourceSets {
     main {
         resources {
@@ -69,7 +108,7 @@ sourceSets {
 }
 
 tasks.processResources {
-    dependsOn(copyEcstasyResources)
+    dependsOn(copyEcstasyResources, generateBuildInfo)
 }
 
 /**
@@ -135,6 +174,20 @@ val jar by tasks.existing(Jar::class) {
             "Sealed" to "true",
             "Xdk-Version" to semanticVersion.toString(),
         )
+    }
+}
+
+val versionOutputTest by tasks.registering(Test::class) {
+    description = "Run tests that verify version output contains git and API information"
+    group = VERIFICATION_GROUP
+    
+    dependsOn(jar, tasks.test)
+    
+    // Only run the version-related tests
+    include("**/BuildInfoTest.class", "**/LauncherVersionTest.class")
+    
+    doFirst {
+        logger.lifecycle("$prefix Verifying version output contains expected git and API information")
     }
 }
 

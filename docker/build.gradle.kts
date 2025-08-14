@@ -12,6 +12,8 @@ plugins {
     id("org.xtclang.build.xdk.versioning")
 }
 
+private val semanticVersion: SemanticVersion by extra
+
 // Docker configuration
 data class DockerConfig(
     val version: String,
@@ -47,7 +49,7 @@ data class DockerConfig(
 }
 
 fun createDockerConfig(): DockerConfig {
-    val version = project.version.toString()
+    val version = semanticVersion.artifactVersion
     val branch = System.getenv("GH_BRANCH") ?: try {
         val result = spawn("git", "branch", "--show-current", throwOnError = false, logger = logger)
         if (result.isSuccessful()) result.output.ifBlank { "unknown" } else "unknown"
@@ -214,7 +216,8 @@ val testImageFunctionality by tasks.registering {
 }
 
 // Lifecycle integration
-tasks.assemble { dependsOn(buildAll) }
+// Docker build removed from main lifecycle - run manually with ./gradlew :docker:buildAll
+// tasks.assemble { dependsOn(buildAll) }
 
 // Registry management
 data class ImageVersion(val id: String, val created: String, val tags: List<String>, val isMasterImage: Boolean, val sizeBytes: Long = 0L) {
