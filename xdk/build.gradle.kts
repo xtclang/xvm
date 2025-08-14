@@ -132,8 +132,10 @@ val cleanXdk by tasks.registering(Delete::class) {
 
 val clean by tasks.existing {
     dependsOn(cleanXdk)
+    // Pre-resolve prefix for configuration cache compatibility
+    val logPrefix = prefix
     doLast {
-        logger.info("$prefix WARNING: Note that running 'clean' is often unnecessary with a properly configured build cache.")
+        logger.info("$logPrefix WARNING: Note that running 'clean' is often unnecessary with a properly configured build cache.")
     }
 }
 
