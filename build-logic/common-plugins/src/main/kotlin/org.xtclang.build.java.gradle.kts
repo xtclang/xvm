@@ -128,9 +128,11 @@ tasks.withType<Test>().configureEach {
 }
 
 private fun enablePreview(): Boolean {
-    val enablePreview = getXdkPropertyBoolean("$pprefix.enablePreview")
+    val jdkVersion = getXdkPropertyInt("$pprefix.jdk")
+    // Enable preview features automatically for Java 24+ to handle deprecated/unsafe operations
+    val enablePreview = jdkVersion >= 24 || getXdkPropertyBoolean("$pprefix.enablePreview")
     if (enablePreview) {
-        logger.info("$prefix WARNING: Project has Java preview features enabled.")
+        logger.info("$prefix WARNING: Project has Java preview features enabled (JDK $jdkVersion).")
     }
     return enablePreview
 }

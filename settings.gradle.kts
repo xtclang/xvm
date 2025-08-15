@@ -33,6 +33,8 @@ develocity {
 
 val xvmBuilds = listOf(
     "javatools",
+    // TODO: Uncomment when javatools_jitbridge module is ready
+    // "javatools_jitbridge",
     "javatools_utils",
     "javatools_unicode",
     "plugin",

@@ -45,6 +45,8 @@ val xdkProvider by configurations.registering {
 
 dependencies {
     xdkJavaTools(libs.javatools)
+    // TODO: Uncomment when javatools_jitbridge module is ready
+    // xdkJavaTools(libs.javatools.jitbridge)
     xtcModule(libs.xdk.ecstasy)
     xtcModule(libs.xdk.aggregate)
     xtcModule(libs.xdk.cli)
@@ -254,8 +256,9 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
             into("javatools")
             include(JAVATOOLS_PREFIX_PATTERN) // only javatools_*.xtc
         }
+        // TODO: When jitbridge is added, this will rename both javatools.jar and javatools-jitbridge.jar
         from(configurations.xdkJavaTools) {
-            rename("javatools-${semanticVersion.artifactVersion}.jar", JAVATOOLS_INSTALLATION_NAME)
+            rename("(.*)\\-${semanticVersion.artifactVersion}\\.jar", "$1\\.jar" )
             into("javatools")
         }
         from(tasks.xtcVersionFile)
