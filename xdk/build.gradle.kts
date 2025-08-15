@@ -254,8 +254,9 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
             into("javatools")
             include(JAVATOOLS_PREFIX_PATTERN) // only javatools_*.xtc
         }
+        // Strip the conventional version suffix from every jar file in the distribution
         from(configurations.xdkJavaTools) {
-            rename("javatools-${semanticVersion.artifactVersion}.jar", JAVATOOLS_INSTALLATION_NAME)
+            rename("(.*)\\-${semanticVersion.artifactVersion}\\.jar", "$1\\.jar" )
             into("javatools")
         }
         from(tasks.xtcVersionFile)
