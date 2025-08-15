@@ -223,7 +223,7 @@ service ChainBundle {
 
             if (methodNext.is(InterceptorMethod)) {
                 Interceptor        interceptor  = methodNext.bindTarget(webService);
-                Parameter<Handler> handlerParam = interceptor.params[2].as(Parameter<Handler>);
+                Parameter<Handler> handlerParam = interceptor.params[1].as(Parameter<Handler>);
 
                 handle = interceptor.bind(handlerParam, handle).as(Handler);
             }
@@ -559,7 +559,8 @@ service ChainBundle {
                         interceptors.add(onErrorInfo);
                     }
                 } else {
-                    interceptors.addAll(serviceInfo.interceptors.filter(m -> m.httpMethod == httpMethod));
+                    interceptors.addAll(serviceInfo.interceptors.filter(
+                        m -> m.httpMethod? == httpMethod : True));
                 }
             }
         }
@@ -577,7 +578,8 @@ service ChainBundle {
         for (Int id : 0..wsid) {
             WebServiceInfo serviceInfo = serviceInfos[id];
             if (path.startsWith(serviceInfo.path)) {
-                observerInfos.addAll(serviceInfo.observers.filter(m -> m.httpMethod == httpMethod));
+                observerInfos.addAll(serviceInfo.observers.filter(
+                    m -> m.httpMethod? == httpMethod : True));
             }
         }
         return observerInfos.freeze(inPlace=True);

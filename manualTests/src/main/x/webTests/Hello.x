@@ -219,6 +219,19 @@ module Hello {
                 return "what?";
             }
 
+            @Intercept
+            ResponseOut measureGet(RequestIn request, Handler handler) {
+                @Inject Timer timer;
+                timer.start();
+                try {
+                    return handler(request);
+                } finally {
+                    @Inject Console console;
+                    timer.stop();
+                    console.print($"Request {request.uri} took {timer.elapsed} ms");
+                }
+            }
+
             static annotation SimpleData
                     into Session {
                 Int counter;
