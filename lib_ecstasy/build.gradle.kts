@@ -24,15 +24,6 @@ val xdkTurtleConsumer by configurations.registering {
     }
 }
 
-val xdkUnicodeConsumer by configurations.registering {
-    isCanBeResolved = true
-    isCanBeConsumed = false
-    attributes {
-        attribute(CATEGORY_ATTRIBUTE, objects.named(LIBRARY))
-        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("unicodeDir"))
-    }
-}
-
 val xdkEcstasyResourcesProvider by configurations.registering {
     description = "Provider configuration for ecstasy resources (implicit.x and unicode data)"
     isCanBeResolved = false

@@ -65,8 +65,6 @@ xdk-xenia = { group = "org.xtclang", name = "lib-xenia", version.ref = "xdk" }
 xdk-xml = { group = "org.xtclang", name = "lib-xml", version.ref = "xdk" }
 
 javatools = { group = "org.xtclang", name = "javatools", version.ref = "xdk" }
-javatools-unicode = { group = "org.xtclang", name = "javatools-unicode", version.ref = "xdk" }
-javatools-utils = { group = "org.xtclang", name = "javatools-utils", version.ref = "xdk" }
 javatools-turtle = { group = "org.xtclang", name = "javatools-turtle", version.ref = "xdk" }
 javatools-bridge = { group = "org.xtclang", name = "javatools-bridge", version.ref = "xdk" }
 
