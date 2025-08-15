@@ -72,11 +72,17 @@ val assemble by tasks.existing {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    // TODO: These xdk properties may have to be declared as inputs.
+    // Declare toolchain and XDK properties as inputs for proper invalidation
+    inputs.property("jdkVersion", jdkVersion)
+    inputs.property("enablePreview", enablePreview())
     val lint = getXdkPropertyBoolean(lintProperty, false)
+    inputs.property("lint", lint)
     val maxErrors = getXdkPropertyInt("$pprefix.maxErrors", 0)
+    inputs.property("maxErrors", maxErrors)
     val maxWarnings = getXdkPropertyInt("$pprefix.maxWarnings", 0)
+    inputs.property("maxWarnings", maxWarnings)
     val warningsAsErrors = getXdkPropertyBoolean("$pprefix.warningsAsErrors", true)
+    inputs.property("warningsAsErrors", warningsAsErrors)
     if (!warningsAsErrors) {
         logger.warn("$prefix WARNING: Task '$name' XTC Java convention warnings are not treated as errors, which is best practice (Enable -Werror).")
     }
