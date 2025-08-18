@@ -38,6 +38,7 @@ import static org.xvm.javajit.Builder.CD_Nullable;
 import static org.xvm.javajit.Builder.CD_String;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_xObj;
+import static org.xvm.javajit.Builder.EXT;
 
 /**
  * Whatever is necessary for the Ops compilation.
@@ -297,13 +298,13 @@ public class BuildContext {
      *
      * We **always** load a primitive value if possible.
      */
-    public Slot loadConstant(CodeBuilder code, Constant constant) {
+    public static Slot loadConstant(CodeBuilder code, Constant constant) {
         // see NativeContainer#getConstType()
 
         if (constant instanceof StringConstant stringConst) {
             MethodTypeDesc MD_of = MethodTypeDesc.of(CD_String, CD_Ctx, CD_JavaString);
             // String.of(s)
-            loadCtx(code)
+            code.aload(code.parameterSlot(0)) // $ctx
                 .ldc(stringConst.getValue())
                 .invokestatic(CD_String, "of", MD_of);
             return new SingleSlot(Op.A_STACK, constant.getType(), CD_String, "");
@@ -315,7 +316,7 @@ public class BuildContext {
             return new SingleSlot(Op.A_STACK, constant.getType(), CD_long, "");
         }
         if (constant instanceof EnumValueConstant enumConstant) {
-            ConstantPool pool = pool();
+            ConstantPool pool = constant.getConstantPool();
             if (enumConstant.getType().isOnlyNullable()) {
                 code.getstatic(CD_Nullable, "Null", CD_Nullable);
                 return new SingleSlot(-1, pool.typeNullable(), CD_Nullable, "");
@@ -420,7 +421,7 @@ public class BuildContext {
             int slotExt   = code.allocateLocal(TypeKind.BOOLEAN);
 
             code.localVariable(slotIndex, name, cd, varStartScope, endScope);
-            code.localVariable(slotExt,   name + "$ext", CD_boolean, varStartScope, endScope);
+            code.localVariable(slotExt,   name+EXT, CD_boolean, varStartScope, endScope);
 
             slot = new DoubleSlot(slotIndex, slotExt, JitFlavor.MultiSlotPrimitive, type, cd, name);
         } else {

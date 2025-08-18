@@ -1,6 +1,8 @@
 package org.xvm.asm.constants;
 
 
+import java.lang.constant.ClassDesc;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -24,8 +26,18 @@ import org.xvm.asm.constants.MethodBody.Existence;
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.PropertyBody.Effect;
 
+import org.xvm.javajit.JitMethodDesc;
+import org.xvm.javajit.JitParamDesc;
+import org.xvm.javajit.JitTypeDesc;
+import org.xvm.javajit.TypeSystem;
+
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
+
+import static org.xvm.javajit.Builder.CD_xObj;
+import static org.xvm.javajit.JitFlavor.Primitive;
+import static org.xvm.javajit.JitFlavor.Specific;
+import static org.xvm.javajit.JitFlavor.Widened;
 
 
 /**
@@ -1313,6 +1325,51 @@ public class PropertyInfo
     }
 
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    /**
+     * @return the JitMethodDesc for the property getter
+     */
+    public JitMethodDesc getGetterJitDesc(TypeSystem ts) {
+        JitMethodDesc jmd = m_jmdGetter;
+        if (jmd == null) {
+            JitParamDesc[] apdStdReturn;
+            JitParamDesc[] apdOptReturn = null;
+
+            TypeConstant type = getType();
+            JitTypeDesc  jtd  = type.getJitDesc(ts);
+            switch (jtd.flavor) {
+            case Primitive:
+                ClassDesc cdStd = ClassDesc.of(ts.ensureJitClassName(type));
+                apdStdReturn = new JitParamDesc[] {
+                    new JitParamDesc(type, Specific, cdStd, 0, 0, false)};
+                apdOptReturn = new JitParamDesc[] {
+                    new JitParamDesc(type, Primitive, jtd.cd, 0, 0, false)};
+                break;
+
+            case MultiSlotPrimitive:
+                apdStdReturn = new JitParamDesc[] {
+                    new JitParamDesc(type, Widened, CD_xObj, 0, 0, false)};
+                apdOptReturn = new JitParamDesc[] {
+                    new JitParamDesc(type, Primitive, jtd.cd, 0, 0, false)};
+                break;
+
+            case Specific, Widened:
+                apdStdReturn = new JitParamDesc[] {
+                    new JitParamDesc(type, jtd.flavor, jtd.cd, 0, 0, false)};
+                break;
+
+            default:
+                throw new IllegalStateException("Unsupported property flavor: " + jtd.flavor);
+            }
+
+            m_jmdGetter = jmd = new JitMethodDesc(
+                    apdStdReturn, JitParamDesc.NONE,
+                    apdOptReturn, JitParamDesc.NONE);
+        }
+        return jmd;
+    }
+
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -1437,4 +1494,14 @@ public class PropertyInfo
      * Cached setter id.
      */
     private MethodConstant m_idSetter;
+
+    /**
+     * Cached JitMethodDesc for getter.
+     */
+    private transient JitMethodDesc m_jmdGetter;
+
+    /**
+     * Cached JitMethodDesc for setter.
+     */
+    private transient JitMethodDesc m_jmdSetter;
 }
