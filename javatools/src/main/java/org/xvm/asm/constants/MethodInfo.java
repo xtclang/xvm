@@ -1224,10 +1224,10 @@ public class MethodInfo
                 }
             }
 
-            JitParamDesc[] apdStandardParam  = listParamsStd.toArray(JitParamDesc.NONE);
-            JitParamDesc[] apdOptimizedParam = fOptimized
+            JitParamDesc[] apdStdParam = listParamsStd.toArray(JitParamDesc.NONE);
+            JitParamDesc[] apdOptParam = fOptimized
                     ? listParamsOpt.toArray(JitParamDesc.NONE)
-                    : apdStandardParam;
+                    : apdStdParam;
 
             // reuse the lists for the return values
             listParamsStd.clear();
@@ -1277,15 +1277,13 @@ public class MethodInfo
                 }
             }
 
-            JitParamDesc[] apdStandardReturn  = listParamsStd.toArray(JitParamDesc.NONE);
-            JitParamDesc[] apdOptimizedReturn = fOptimized
+            JitParamDesc[] apdStdReturn = listParamsStd.toArray(JitParamDesc.NONE);
+            JitParamDesc[] apdOptReturn = fOptimized
                     ? listParamsOpt.toArray(JitParamDesc.NONE)
                     : null;
 
-            m_jmd = jmd = new JitMethodDesc(
-                    apdStandardReturn, apdStandardParam,
-                    apdOptimizedReturn, apdOptimizedParam);
-            }
+            m_jmd = jmd = new JitMethodDesc(apdStdReturn, apdStdParam, apdOptReturn, apdOptParam);
+        }
         return jmd;
     }
 

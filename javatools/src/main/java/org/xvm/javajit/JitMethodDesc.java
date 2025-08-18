@@ -64,7 +64,8 @@ public class JitMethodDesc {
         int         paramCount = params.length;
         ClassDesc[] paramCDs   = new ClassDesc[paramCount + 1];
 
-        paramCDs[0] = ClassDesc.of(org.xvm.javajit.Ctx.class.getName());
+        // the argument zero is **always** the Ctx
+        paramCDs[0] = ClassDesc.of(Ctx.class.getName());
 
         for (int i = 0; i < paramCount; i++)
             {
