@@ -80,7 +80,7 @@ env:
   run_manual_tests: ${{ github.event.inputs.run_manual_tests != 'false' }}
   run_manual_tests_parallel: ${{ github.event.inputs.run_manual_tests_parallel != 'false' }}
 
-  java_version: 21
+  java_version: 24
   java_distribution: temurin
   gradle_version: 8.14.2
 
