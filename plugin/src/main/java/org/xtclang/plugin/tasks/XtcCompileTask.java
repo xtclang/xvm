@@ -48,6 +48,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
     // Per-task configuration properties only.
     private final ListProperty<String> outputFilenames;
+    private final Provider<File> projectDirectory;
 
     /**
      * Create an XTC Compile task. This goes through the Gradle build script, and task creation through
@@ -67,6 +68,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
         // The outputFilenames property only exists in the compile task, not in the compile configuration.
         this.outputFilenames = objects.listProperty(String.class).value(new ArrayList<>());
+        this.projectDirectory = providers.provider(() -> project.getProjectDir());
 
         // Conventions inherited from extension; can be reset on a per-task basis, of course.
         this.disableWarnings = objects.property(Boolean.class).convention(ext.getDisableWarnings());
@@ -219,14 +221,14 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         final var args = new CommandLine(XTC_COMPILER_CLASS_NAME, resolveJvmArgs());
 
         final File outputDir = getOutputDirectory().get().getAsFile();
-        args.add("-o", getProject().getProjectDir().toPath().relativize(outputDir.toPath()).toString());
+        args.add("-o", projectDirectory.get().toPath().relativize(outputDir.toPath()).toString());
 
         logger.info("{} Output directory for {} is : {}", prefix, sourceSet.getName(), outputDir);
         final var processedResourcesDir = getResourceDirectory().get().getAsFile();
         logger.info("{} Resolving resource dir (build): '{}'.", prefix, processedResourcesDir);
         if (processedResourcesDir.exists()) {
             logger.info("{} '{}' Added as resource directory for '{}'.", prefix, processedResourcesDir.getAbsolutePath(), getName());
-            args.add("-r", getProject().getProjectDir().toPath().relativize(processedResourcesDir.toPath()).toString());
+            args.add("-r", projectDirectory.get().toPath().relativize(processedResourcesDir.toPath()).toString());
         }
 
         args.addBoolean("--version", getShowVersion().get());
