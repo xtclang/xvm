@@ -97,6 +97,13 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
             return envValue.toString()
         }
 
+        // Check Gradle project properties (from -P command line args)
+        val projectPropValue = project.findProperty(key)
+        if (projectPropValue != null) {
+            logger.info("$prefix XdkProperties; resolved Gradle project property '$key' (from -P flag).")
+            return projectPropValue.toString()
+        }
+
         val sysPropValue = System.getProperty(key)
         if (sysPropValue != null) {
             logger.info("$prefix XdkProperties; resolved Java System property '$key'.")
@@ -116,7 +123,7 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
     }
 
     override fun has(key: String): Boolean {
-        return properties[key] != null || System.getenv(toSystemEnvKey(key)) != null || System.getProperty(key) != null
+        return properties[key] != null || System.getenv(toSystemEnvKey(key)) != null || project.findProperty(key) != null || System.getProperty(key) != null
     }
 
     override fun toString(): String {
