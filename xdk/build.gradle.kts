@@ -27,6 +27,16 @@ val xtcLauncherBinaries by configurations.registering {
     isCanBeConsumed = false
 }
 
+val xdkJavaToolsJitBridge by configurations.registering {
+    description = "Configuration for javatools-jitbridge binary blob"
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    attributes {
+        attribute(CATEGORY_ATTRIBUTE, objects.named("native-binary"))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("native-binary"))
+    }
+}
+
 /**
  * Local configuration to provide an xdk-distribution, which contains versioned zip and tar.gz XDKs.
  */
@@ -45,7 +55,7 @@ val xdkProvider by configurations.registering {
 
 dependencies {
     xdkJavaTools(libs.javatools)
-    xdkJavaTools(libs.javatools.jitbridge)
+    xdkJavaToolsJitBridge(libs.javatools.jitbridge)
     xtcModule(libs.xdk.ecstasy)
     xtcModule(libs.xdk.aggregate)
     xtcModule(libs.xdk.cli)
@@ -296,6 +306,11 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
         }
         // Strip the conventional version suffix from every jar file in the distribution
         from(configurations.xdkJavaTools) {
+            rename("(.*)\\-${semanticVersion.artifactVersion}\\.jar", "$1\\.jar" )
+            into("javatools")
+        }
+        // Include javatools-jitbridge binary blob (separate from normal javatools classpath)
+        from(xdkJavaToolsJitBridge) {
             rename("(.*)\\-${semanticVersion.artifactVersion}\\.jar", "$1\\.jar" )
             into("javatools")
         }

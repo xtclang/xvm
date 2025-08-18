@@ -9,19 +9,22 @@ plugins {
     id("org.xtclang.build.java")
 }
 
-// Provider configuration to make this jar available to the XDK distribution
-val xdkJavaToolsProvider by configurations.registering {
-    description = "Provider configuration for the javatools-jitbridge jar"
-// Note to ML: the build sill works without these
-//    isCanBeResolved = false
-//    isCanBeConsumed = true
+// Special configuration for javatools-jitbridge - this is a binary blob that gets
+// loaded by the runtime via disk probing, not through normal JAR classpath resolution.
+// It should be in the distribution but not participate in normal JAR/dependency resolution.
+val xdkJavaToolsJitBridgeProvider by configurations.registering {
+    description = "Provider configuration specifically for the javatools-jitbridge binary blob"
+    isCanBeResolved = false
+    isCanBeConsumed = true
     outgoing.artifact(tasks.jar)
     attributes {
-// Note to ML: the build sill works without this
-//        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
-        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(XDK_ARTIFACT_NAME_JAVATOOLS_JAR))
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named("native-binary"))
+        // Tag as native binary blob, not a JAR library
+        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("native-binary"))
     }
 }
+
+// Note: javatools-jitbridge.jar is built as regular JAR but treated as binary blob by runtime
 
 dependencies {
     implementation(libs.javatools)
