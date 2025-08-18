@@ -83,7 +83,7 @@ FROM scratch AS launcher-export
 COPY --from=launcher-builder /launcher-build/javatools_launcher/src/main/c/launcher /
 
 # *** STAGE 7 (Final Runtime Image)
-FROM bellsoft/liberica-runtime-container:jre-21-slim-musl
+FROM bellsoft/liberica-runtime-container:jre-24-slim-musl
 
 ENV XDK_HOME=/opt/xdk
 ENV PATH="${XDK_HOME}/bin:${PATH}"
