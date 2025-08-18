@@ -344,7 +344,7 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           
           # Sanitize branch name for Docker tags
-          BRANCH_TAG=$(echo "${{ env.GH_BRANCH }}" | sed 's|.*/||' | sed 's/[^a-zA-Z0-9._-]/_/g')
+          BRANCH_TAG=$(echo "${{ env.GH_BRANCH }}" | sed 's/[^a-zA-Z0-9._-]/_/g')
           echo "branch-tag=$BRANCH_TAG" >> $GITHUB_OUTPUT
           
           # Determine if master branch
