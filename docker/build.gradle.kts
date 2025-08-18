@@ -23,7 +23,7 @@ data class DockerConfig(
 ) {
     val baseImage = "ghcr.io/xtclang/xvm"
     val isMaster = branch == "master"
-    val tagPrefix = if (isMaster) "latest" else branch.substringAfterLast("/").replace(Regex("[^a-zA-Z0-9._-]"), "_")
+    val tagPrefix = if (isMaster) "latest" else branch.replace(Regex("[^a-zA-Z0-9._-]"), "_")
     val versionTags = if (isMaster) listOf(version) else emptyList()
     
     fun tagsForArch(arch: String) = (listOf("${tagPrefix}-$arch") + versionTags.map { "${it}-$arch" } + listOf("${commit}-$arch"))
