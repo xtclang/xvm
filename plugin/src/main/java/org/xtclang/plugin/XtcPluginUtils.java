@@ -3,7 +3,6 @@ package org.xtclang.plugin;
 import static java.util.Objects.requireNonNull;
 
 import static org.xtclang.plugin.XtcPluginConstants.JAVATOOLS_JAR_NAME;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_ID;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_MAGIC;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_MODULE_FILE_EXTENSION;
 
@@ -63,8 +62,13 @@ public final class XtcPluginUtils {
          * @param file file to check
          * @return true if the file is a valid JavaTools jar file, false otherwise.
          */
-        public static boolean isValidJavaToolsArtifact(final File file) {
-            return hasJarExtension(file) && file.getName().startsWith(XDK_JAVATOOLS_ARTIFACT_ID) && readXdkVersionFromJar(file) != null;
+        public static boolean isValidJavaToolsArtifact(final File file, final String artifactVersion) {
+            final String name = file.getName();
+            final String expectedVersionedName = "javatools-" + artifactVersion + ".jar";
+            
+            // Check for exact name (XDK distribution) or exact versioned name (configuration resolution)
+            return (JAVATOOLS_JAR_NAME.equals(name) || expectedVersionedName.equals(name))
+                && hasJarExtension(file) && readXdkVersionFromJar(file) != null;
         }
 
         /**
