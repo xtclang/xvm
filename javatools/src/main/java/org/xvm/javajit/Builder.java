@@ -384,8 +384,9 @@ public abstract class Builder {
     // ----- well-known methods --------------------------------------------------------------------
 
     public static final String         Initializer    = "$init";
-    public static final MethodTypeDesc MD_Char_box    = MethodTypeDesc.of(CD_Char, CD_int);
+    public static final String         Instance       = "$INSTANCE";
     public static final MethodTypeDesc MD_Boolean_box = MethodTypeDesc.of(CD_Boolean, CD_boolean);
+    public static final MethodTypeDesc MD_Char_box    = MethodTypeDesc.of(CD_Char, CD_int);
     public static final MethodTypeDesc MD_Int64_box   = MethodTypeDesc.of(CD_Int64, CD_long);
     public static final MethodTypeDesc MD_Initializer = MethodTypeDesc.of(CD_void, CD_Ctx);
 }
