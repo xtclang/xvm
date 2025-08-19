@@ -229,6 +229,28 @@ const Http1Request(RequestInfo   info,
     }
 
     @Override
+    @Lazy Map<String, String> formParams.calc() {
+        Byte[] bytes = this.bytes;
+        if (!bytes.empty) {
+            String   formData = bytes.unpackUtf8();
+            String[] pairs    = formData.split('&');
+
+            Map<String, String> values = new ListMap();
+            for (String pair : pairs) {
+                if (Int separator := pair.indexOf('=')) {
+                    String key   = pair[0..<separator];
+                    String value = Uri.unescape(pair.substring(separator+1), plusIsSpace=True);
+                    values.put(key, value);
+                } else {
+                    values.put(pair, "");
+                }
+            }
+            return values.freeze(inPlace=True);
+        }
+        return [];
+    }
+
+    @Override
     @Lazy Session? session.calc() {
         if (bindRequired) {
             assert sessionReady_ as "bindSession() call was required, but never came";

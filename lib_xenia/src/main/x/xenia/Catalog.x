@@ -140,7 +140,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
             for (Parameter param : method.params) {
                 // well-known types are Session and RequestIn (see ChainBundle.ensureCallChain)
                 if (param.ParamType == RequestIn ||
-                    param.is(QueryParam)) {
+                    param.is(QueryParam) || param.is(FormParam)) {
                     continue;
                 }
                 if (param.is(BodyParam)) {

@@ -12,6 +12,7 @@
 module Hello {
     package json  import json.xtclang.org;
     package net   import net.xtclang.org;
+    package sec   import sec.xtclang.org;
     package web   import web.xtclang.org;
     package xenia import xenia.xtclang.org;
 
@@ -141,6 +142,17 @@ module Hello {
             @Produces(Text)
             String getUser(Session session) {
                 return session.principal?.name : "";
+            }
+
+            @Post("login")
+            @HttpsRequired
+            @SessionRequired
+            HttpStatus login(@FormParam String username,  @FormParam("pwd") String password) {
+                if (username == "admin" && password == "addaya") {
+                    session?.authenticate(new sec.Principal(0, "admin")) : assert;
+                    return OK;
+                }
+                return Unauthorized;
             }
 
             @LoginRequired(autoRedirect=True)

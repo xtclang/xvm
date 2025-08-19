@@ -23,6 +23,7 @@ import web.AcceptList;
 import web.Body;
 import web.BodyParam;
 import web.ErrorHandler;
+import web.FormParam;
 import web.Header;
 import web.HttpMethod;
 import web.HttpStatus;
@@ -154,6 +155,11 @@ service ChainBundle {
 
                     binders += (request, values) ->
                         extractPathValue(request, name, param, values);
+                    continue;
+                }
+                if (param.is(FormParam)) {
+                    binders += (request, values) ->
+                        extractFormValue(request, name, param, values);
                     continue;
                 }
                 if (param.is(BodyParam)) {
@@ -647,6 +653,21 @@ service ChainBundle {
             paramValue = defaultValue;
         } else {
             throw new IllegalState($"Missing query parameter: {name.quoted()}");
+        }
+        return values.add(paramValue.as(param.ParamType));
+    }
+
+    /**
+     * Extract the form value from the request and append it to the values Tuple.
+     */
+    private Tuple extractFormValue(RequestIn request, String name, FormParam param, Tuple values) {
+        Object paramValue;
+        if (String value := request.formParams.get(name)) {
+            paramValue = convertValue(value, param.ParamType, param.format);
+        } else if (param.ParamType defaultValue := param.defaultValue()) {
+            paramValue = defaultValue;
+        } else {
+            throw new IllegalState($"Missing form parameter: {name.quoted()}");
         }
         return values.add(paramValue.as(param.ParamType));
     }

@@ -58,6 +58,11 @@ interface RequestIn
     @RO Map<String, String|List<String>> queryParams;
 
     /**
+     * The `Form Data` parameters contained with the request body.
+     */
+    @RO Map<String, String> formParams;
+
+    /**
      * The session associated with this request, if one exists.
      */
     @RO Session? session;

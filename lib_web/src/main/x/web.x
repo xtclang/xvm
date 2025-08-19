@@ -439,7 +439,7 @@ module web.xtclang.org {
     // ----- parameter annotations -----------------------------------------------------------------
 
     /**
-     * A annotation to indicate that a Parameter is bound to a request value.
+     * A annotation to indicate that a [Parameter] is bound to a request value.
      *
      * @param bindName  indicates the source of the value that will be bound to the parameter
      * @param format    indicates the textual format that the parameter will
@@ -449,7 +449,7 @@ module web.xtclang.org {
             into Parameter;
 
     /**
-     * A annotation to indicate that a Parameter is bound to a request URI path segment.
+     * A annotation to indicate that a [Parameter] is bound to a request URI path segment.
      *
      * Example:
      *
@@ -471,7 +471,7 @@ module web.xtclang.org {
             extends ParameterBinding(bindName, format);
 
     /**
-     * A annotation to indicate that a Parameter is bound to a request URI query parameter.
+     * A annotation to indicate that a [Parameter] is bound to a request URI query parameter.
      *
      * Example:
      *
@@ -502,7 +502,29 @@ module web.xtclang.org {
             extends ParameterBinding(bindName, format);
 
     /**
-     * A annotation to indicate that a Parameter is bound to a request header value.
+     * An annotation to indicate that a [Parameter] is bound to a key-value pair within a
+     * [Form Data](https://www.rfc-editor.org/rfc/rfc7578) request. This annotation assumes that
+     * the request body uses "application/x-www-form-urlencoded" encryption, where the body
+     * contains '&'-delimited key-value pairs, where values are
+     * [URL-encoded (aka Percent-Encoded)](https://www.rfc-editor.org/rfc/rfc3986#page-12).
+     *
+     * Example:
+     *
+     *     @Post("/login")
+     *     void login(@FormParam("username") String user, @FormParam String password)
+     *         {...}
+     *
+     * @param bindName  the `FormData` parameter name
+     * @param format    allows a textual format to be specified if the default format assumption is
+     *                  incorrect, or if the default format cannot be determined
+     */
+    annotation FormParam(String? bindName = Null,
+                         String? format   = Null)
+            extends ParameterBinding(bindName, format);
+
+
+    /**
+     * A annotation to indicate that a [Parameter] is bound to a request header value.
      *
      * Example:
      *
@@ -519,7 +541,7 @@ module web.xtclang.org {
             extends ParameterBinding(bindName, format);
 
     /**
-     * A annotation to indicate that a Parameter is bound to a named cookie value.
+     * A annotation to indicate that a [Parameter] is bound to a named cookie value.
      *
      * Example:
      *
