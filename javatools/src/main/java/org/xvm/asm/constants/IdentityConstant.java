@@ -657,7 +657,7 @@ public abstract class IdentityConstant
     }
 
     /**
-     * Support for {@link #getJitName()}; overridden at {@link ModuleConstant}.
+     * Support for {@link #getJitName()}.
      */
     protected StringBuilder buildJitName(TypeSystem ts) {
         IdentityConstant idParent = getParentConstant();

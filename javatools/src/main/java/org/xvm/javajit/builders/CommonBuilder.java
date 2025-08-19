@@ -17,7 +17,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
@@ -301,8 +300,17 @@ public class CommonBuilder
                 generateTrivialGetter(className, classBuilder, prop);
             }
         } else {
-            if (getterInfo.getHead().getImplementation() == Implementation.Field) {
+            switch (getterInfo.getHead().getImplementation()) {
+            case Field:
                 generateTrivialGetter(className, classBuilder, prop);
+                break;
+            case Explicit:
+                String         jitName = prop.getGetterId().ensureJitMethodName(typeSystem);
+                JitMethodDesc  jmDesc  = prop.getGetterJitDesc(typeSystem);
+                boolean        isOpt   = jmDesc.optimizedMD != null;
+                MethodTypeDesc md      = isOpt ? jmDesc.optimizedMD : jmDesc.standardMD;
+                assemblePropertyAccessor(className, classBuilder, prop, jitName, md, isOpt, true);
+                break;
             }
         }
 
@@ -312,8 +320,17 @@ public class CommonBuilder
                 generateTrivialSetter(className, classBuilder, prop);
             }
         } else {
-            if (setterInfo.getHead().getImplementation() == Implementation.Field) {
+            switch (getterInfo.getHead().getImplementation()) {
+            case Field:
                 generateTrivialSetter(className, classBuilder, prop);
+                break;
+            case Explicit:
+                String         jitName = prop.getSetterId().ensureJitMethodName(typeSystem);
+                JitMethodDesc  jmDesc  = prop.getSetterJitDesc(typeSystem);
+                boolean        isOpt   = jmDesc.optimizedMD != null;
+                MethodTypeDesc md      = isOpt ? jmDesc.optimizedMD : jmDesc.standardMD;
+                assemblePropertyAccessor(className, classBuilder, prop, jitName, md, isOpt, false);
+                break;
             }
         }
     }
@@ -676,7 +693,30 @@ public class CommonBuilder
     }
 
     /**
-     * Assemble the standard (non optimized) method.
+     * Assemble the property accessor (optimized if possible, standard otherwise).
+     */
+    protected void assemblePropertyAccessor(String className, ClassBuilder classBuilder,
+                                            PropertyInfo prop, String jitName, MethodTypeDesc md,
+                                            boolean optimized, boolean isGetter) {
+        int flags = ClassFile.ACC_PUBLIC;
+        if (prop.isAbstract()) {
+            flags |= ClassFile.ACC_ABSTRACT;
+        }
+
+        BuildContext bctx = new BuildContext(typeSystem, typeInfo, prop, isGetter);
+
+        classBuilder.withMethod(jitName, md, flags,
+            methodBuilder -> {
+                if (!prop.isAbstract()) {
+                    methodBuilder.withCode(code ->
+                        generateCode(className, md, bctx, code));
+                }
+            }
+        );
+    }
+
+    /**
+     * Assemble the method (optimized if possible, standard otherwise).
      */
     protected void assembleMethod(String className, ClassBuilder classBuilder, MethodInfo method,
                                   String jitName, MethodTypeDesc md, boolean optimized) {
@@ -685,27 +725,25 @@ public class CommonBuilder
             flags |= ClassFile.ACC_ABSTRACT;
         }
 
+        BuildContext bctx = new BuildContext(typeSystem, typeInfo, method);
+
         classBuilder.withMethod(jitName, md, flags,
             methodBuilder -> {
                 if (!method.isAbstract()) {
                     methodBuilder.withCode(code ->
-                        generateCode(className, code, method, md, optimized));
+                        generateCode(className, md, bctx, code));
                 }
             }
         );
     }
 
-    protected void generateCode(String className, CodeBuilder code,
-                                MethodInfo method, MethodTypeDesc md, boolean optimized) {
+    protected void generateCode(String className, MethodTypeDesc md, BuildContext bctx,
+                                CodeBuilder code) {
 
-        MethodStructure methodStruct = method.getTopmostMethodStructure(typeInfo);
-        assert methodStruct != null;
-
-        BuildContext bctx = new BuildContext(typeSystem, typeInfo, method);
         bctx.enterMethod(code);
 
         if (className.toLowerCase().contains("test")) {
-            Op[] ops = methodStruct.getOps();
+            Op[] ops = bctx.methodStruct.getOps();
             for (Op op : ops){
                 op.build(bctx, code);
             }

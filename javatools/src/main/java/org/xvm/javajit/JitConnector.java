@@ -101,7 +101,7 @@ public class JitConnector
     }
 
     @Override
-    public void join() throws InterruptedException {}
+    public void join() {}
 
     /**
      * The XVM within which this TypeSystem exists

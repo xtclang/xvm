@@ -112,6 +112,7 @@ public class Var_I
     }
 
     // ----- fields --------------------------------------------------------------------------------
+
     private int m_nValueId;
 
     private Argument m_argValue;

@@ -6,7 +6,8 @@ module test1.examples.org {
     void run() {
         @Inject Console console;
 
-        // console.print(prop1);
+        console.print(prop1);
+        // console.print(prop2);
     }
 
     void test(TestDerived t) {

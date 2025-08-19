@@ -1370,6 +1370,49 @@ public class PropertyInfo
         return jmd;
     }
 
+    /**
+     * @return the JitMethodDesc for the property setter
+     */
+    public JitMethodDesc getSetterJitDesc(TypeSystem ts) {
+        JitMethodDesc jmd = m_jmdSetter;
+        if (jmd == null) {
+            JitParamDesc[] apdStdParam;
+            JitParamDesc[] apdOptParam = null;
+
+            TypeConstant type = getType();
+            JitTypeDesc  jtd  = type.getJitDesc(ts);
+            switch (jtd.flavor) {
+            case Primitive:
+                ClassDesc cdStd = ClassDesc.of(ts.ensureJitClassName(type));
+                apdStdParam = new JitParamDesc[] {
+                    new JitParamDesc(type, Specific, cdStd, 0, 0, false)};
+                apdOptParam = new JitParamDesc[] {
+                    new JitParamDesc(type, Primitive, jtd.cd, 0, 0, false)};
+                break;
+
+            case MultiSlotPrimitive:
+                apdStdParam = new JitParamDesc[] {
+                    new JitParamDesc(type, Widened, CD_xObj, 0, 0, false)};
+                apdOptParam = new JitParamDesc[] {
+                    new JitParamDesc(type, Primitive, jtd.cd, 0, 0, false)};
+                break;
+
+            case Specific, Widened:
+                apdStdParam = new JitParamDesc[] {
+                    new JitParamDesc(type, jtd.flavor, jtd.cd, 0, 0, false)};
+                break;
+
+            default:
+                throw new IllegalStateException("Unsupported property flavor: " + jtd.flavor);
+            }
+
+            m_jmdSetter = jmd = new JitMethodDesc(
+                JitParamDesc.NONE, apdStdParam,
+                JitParamDesc.NONE, apdOptParam);
+        }
+        return jmd;
+    }
+
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
