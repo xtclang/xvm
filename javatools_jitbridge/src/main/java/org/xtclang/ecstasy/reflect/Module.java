@@ -1,4 +1,4 @@
-package org.xtclang.ecstasy;
+package org.xtclang.ecstasy.reflect;
 
 /**
  * Native implementation for `ecstasy.Module`.

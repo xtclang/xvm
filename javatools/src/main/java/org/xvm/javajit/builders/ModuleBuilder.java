@@ -35,11 +35,6 @@ public class ModuleBuilder extends CommonBuilder {
             .withSuperclass(CD_xModule)
             ;
 
-        classBuilder.withField("module$",
-            CD_ModuleStructure,
-            ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL
-        );
-
         // public $module(long containerId) {
         //   super(containerId, org.xvm.javajit.Ctx.get().container.typeSystem.mainModule());
         // }
