@@ -14,7 +14,7 @@ public class Container {
      *                    main container, and all other values (where n>0) indicate child containers
      *                    created by Ecstasy code
      * @param typeSystem  the TypeSystem for this Container
-     * @param injector
+     * @param injector    the resource provider
      */
     Container(Container parent, long id, TypeSystem typeSystem, Injector injector) {
         if (id < 0) {

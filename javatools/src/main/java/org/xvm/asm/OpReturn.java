@@ -53,7 +53,7 @@ public abstract class OpReturn
         assert cRets > 0;
 
         JitMethodDesc jmd        = bctx.jmd;
-        boolean       fOptimized = bctx.optimized;
+        boolean       fOptimized = bctx.isOptimized;
 
         for (int i = cRets - 1; i >= 0; i--) {
             int          iOpt  = fOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
