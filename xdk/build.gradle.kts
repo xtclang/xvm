@@ -300,9 +300,7 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
             into("javatools")
         }
         from(tasks.xtcVersionFile)
-        // Exclude ALL application plugin scripts by default
-        exclude("**/xdk")
-        exclude("**/xdk.bat") 
+        // Exclude launcher scripts by default - only include them based on LauncherType
         exclude("**/xcc")
         exclude("**/xec")
         exclude("**/xcc.bat")
@@ -322,17 +320,13 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
             }
             LauncherType.Scripts -> {
                 // Copy generated script launchers and rename them
-                from(layout.buildDirectory.dir("launcher-scripts")) {
-                    include("launch-xcc-script", "launch-xcc-script.bat")
-                    rename("launch-xcc-script", "xcc")
-                    rename("launch-xcc-script.bat", "xcc.bat")
-                    into("bin")
-                }
-                from(layout.buildDirectory.dir("launcher-scripts")) {
-                    include("launch-xec-script", "launch-xec-script.bat") 
-                    rename("launch-xec-script", "xec")
-                    rename("launch-xec-script.bat", "xec.bat")
-                    into("bin")
+                launcherScripts.keys.forEach { scriptName ->
+                    from(layout.buildDirectory.dir("launcher-scripts")) {
+                        include("launch-$scriptName-script", "launch-$scriptName-script.bat")
+                        rename("launch-$scriptName-script", scriptName)
+                        rename("launch-$scriptName-script.bat", "$scriptName.bat")
+                        into("bin")
+                    }
                 }
             }
             LauncherType.None -> {
