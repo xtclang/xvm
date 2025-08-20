@@ -82,12 +82,16 @@ public class JitConnector
             // xvm.nativeTypeSystem.loader.dump();
             loader.dump();
 
+            Object result;
             if (asArg == null || asArg.length == 0) {
                 Method method = clz.getMethod("run", Ctx.class);
-                method.invoke(module, Ctx.get());
+                result = method.invoke(module, Ctx.get());
             } else {
                 Method method = clz.getMethod("run", Ctx.class, String.class.arrayType());
-                method.invoke(module, Ctx.get(), asArg); // TODO create xStr args
+                result = method.invoke(module, Ctx.get(), asArg); // TODO create xStr args
+            }
+            if (result instanceof Long lr) {
+                this.result = lr;
             }
         } catch (ClassNotFoundException | NoClassDefFoundError e) {
             e.printStackTrace();
@@ -101,7 +105,9 @@ public class JitConnector
     }
 
     @Override
-    public void join() {}
+    public int join() {
+        return (int) result;
+    }
 
     /**
      * The XVM within which this TypeSystem exists
@@ -122,4 +128,9 @@ public class JitConnector
      * The main container.
      */
     private Container container;
+
+    /**
+     * The result of "main" method invocation.
+     */
+    private long result = 1;
 }
