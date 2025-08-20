@@ -11,6 +11,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -185,19 +186,43 @@ public class MainContainer
                 return;
                 }
 
-            TypeConstant    typeModule = f_idModule.getType();
-            TypeComposition clzModule  = resolveClass(typeModule);
-            CallChain       chain      = clzModule.getMethodCallChain(idMethod.getSignature());
+            TypeConstant      typeModule = f_idModule.getType();
+            TypeComposition   clzModule  = resolveClass(typeModule);
+            SignatureConstant sigMethod  = idMethod.getSignature();
+            CallChain         chain      = clzModule.getMethodCallChain(sigMethod);
+            boolean           fReturn    = sigMethod.getReturnCount() > 0;
 
-            FunctionHandle hInstantiateModuleAndRun = new NativeFunctionHandle((frame, ah, iReturn) ->
+            FunctionHandle hInstantiateModuleAndRun = new NativeFunctionHandle((frame, ah, iRet) ->
                 {
                 SingletonConstant idModule = frame.poolContext().ensureSingletonConstConstant(f_idModule);
                 ObjectHandle      hModule  = frame.getConstHandle(idModule);
+                int               iReturn  = fReturn ? Op.A_STACK : Op.A_IGNORE;
 
-                return Op.isDeferred(hModule)
+                int iResult = Op.isDeferred(hModule)
                         ? hModule.proceed(frame, frameCaller ->
-                            chain.invoke(frameCaller, frameCaller.popStack(), ahArg, Op.A_IGNORE))
-                        : chain.invoke(frame, hModule, ahArg, Op.A_IGNORE);
+                            chain.invoke(frameCaller, frameCaller.popStack(), ahArg, iReturn))
+                        : chain.invoke(frame, hModule, ahArg, iReturn);
+                switch (iResult)
+                    {
+                    case Op.R_NEXT:
+                        setResult(fReturn ? frame.popStack() : null);
+                        break;
+
+                    case Op.R_CALL:
+                        frame.m_frameNext.addContinuation(frameCaller ->
+                            {
+                            setResult(fReturn ? frameCaller.popStack() : null);
+                            return Op.R_NEXT;
+                            });
+                        break;
+
+                    case Op.R_EXCEPTION:
+                        break;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                return iResult;
                 });
 
             m_contextMain.callLater(hInstantiateModuleAndRun, Utils.OBJECTS_NONE);
@@ -209,7 +234,31 @@ public class MainContainer
         }
 
     /**
+     * Save the result of "main" method execution.
+     */
+    private void setResult(ObjectHandle hReturn)
+        {
+        m_nResult = hReturn instanceof ObjectHandle.JavaLong hLong
+                ? (int) hLong.getValue()
+                : 0;
+        }
+
+    /**
+     * @return an optional result of the "main" method execution.
+     */
+    public int getResult()
+        {
+        return m_nResult;
+        }
+
+    /**
      * Map of custom injections.
      */
     private Map<String, String> m_mapInjections;
+
+    /**
+     * The return value from the "main" method. The value of "1" indicates that the method has
+     * completed abnormally.
+     */
+    private int m_nResult = 1;
     }

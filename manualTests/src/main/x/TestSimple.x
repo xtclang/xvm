@@ -1,18 +1,14 @@
+/**
+ * To test, create a shell script:
+ *     xec -L build/xtc/main/lib -o build/xtc/main/lib src/main/x/TestSimple.x
+ *     exit_status=$?
+ *     echo "The return value of 'xec' was: $exit_status"
+ */
 module TestSimple {
     @Inject Console console;
 
-    void run( ) {
-        String[] strings = ["hello", "world"];
-        for (String s : foo(strings)) {
-            console.print(s);
-        }
-    }
-
-    static <Key> Iterator<Key> foo(Key[] keys) {
-        return new Iterator<Key>() {
-            Iterator<Key> iter = keys.iterator();
-
-            @Override conditional Key next() = iter.next(); // this used to throw at runtime
-        };
+    Int run() {
+        Int i = 17;
+        return i;
     }
 }

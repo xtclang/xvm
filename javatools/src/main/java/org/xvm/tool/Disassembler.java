@@ -61,7 +61,7 @@ public class Disassembler
             }
         catch (LauncherException e)
             {
-            System.exit(e.error ? -1 : 0);
+            System.exit(e.error ? 1 : 0);
             }
         }
 

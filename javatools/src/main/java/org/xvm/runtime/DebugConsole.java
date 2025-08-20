@@ -374,7 +374,7 @@ public final class DebugConsole
                     catch (UserInterruptException e)
                         {
                         // Ctrl-C
-                        System.exit(-1);
+                        System.exit(1);
                         return iPC >= 0 ? iPC + 1 : iPC; // unreachable
                         }
                     }

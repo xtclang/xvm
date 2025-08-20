@@ -63,7 +63,7 @@ public class Runner
             }
         catch (LauncherException e)
             {
-            System.exit(e.error ? -1 : 0);
+            System.exit(e.error ? 1 : 0);
             }
         }
 
@@ -428,7 +428,7 @@ public class Runner
 
                 connector.invoke0(sMethod, ahArg);
 
-                connector.join();
+                System.exit(connector.join());
                 }
             }
         catch (InterruptedException ignore)
@@ -454,7 +454,7 @@ public class Runner
             Usage:
 
                 xec <options> <modulename>
-                
+            
             Also supports any of:
             
                 xec <options> <filename>

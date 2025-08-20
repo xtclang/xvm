@@ -117,8 +117,11 @@ public class Connector
 
     /**
      * Wait for the container termination.
+     *
+     * @return zero if the main method was void or the return type not an int-convertible; otherwise
+     *              the return value
      */
-    public void join()
+    public int join()
             throws InterruptedException
         {
         // extremely naive; replace
@@ -127,7 +130,9 @@ public class Connector
             }
         while (!f_runtime.isIdle() || !m_containerMain.isIdle());
 
+        int nResult = m_containerMain.getResult();
         m_containerMain = null;
+        return nResult;
         }
 
 
