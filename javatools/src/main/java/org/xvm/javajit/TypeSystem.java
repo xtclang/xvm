@@ -1,11 +1,7 @@
 package org.xvm.javajit;
 
-import java.lang.classfile.ClassBuilder;
-import java.lang.classfile.ClassFile;
-import java.lang.classfile.ClassHierarchyResolver;
 
-import java.lang.classfile.attribute.SourceFileAttribute;
-
+// ClassFile API imports moved to classfile package implementation
 import java.lang.constant.ClassDesc;
 
 import java.util.List;
@@ -99,16 +95,16 @@ import static org.xvm.util.Handy.require;
  *
  * * After all Modules have been specified, then the TypeSystem can be linked.
  */
-public class TypeSystem {
+public abstract class TypeSystem {
     /**
-     * Create a new TypeSystem. This should ONLY be called from the Linker.
+     * Create a new TypeSystem. This should ONLY be called from the Linker or JitImplementationFactory.
      *
      * @param xvm     the XVM
      * @param shared  the loaders that are "shared into" this TypeSystem from other TypeSystems
      *                and that can be delegated to in order to generate and load code
      * @param owned   the modules that this TypeSystem is responsible for generating code for
      */
-    TypeSystem(Xvm xvm, ModuleLoader[] shared, ModuleStructure[] owned) {
+    protected TypeSystem(Xvm xvm, ModuleLoader[] shared, ModuleStructure[] owned) {
         require("xvm", xvm);
         require("shared", shared);
         require("owned", owned);
@@ -268,49 +264,10 @@ public class TypeSystem {
      *
      * @return the bytes of the ClassFile for the specified class name
      */
-    public byte[] genClass(ModuleLoader moduleLoader, String name) {
-        String className = moduleLoader.prefix + name;
-        if (className.startsWith(Builder.N_xFunction)) {
-            TypeConstant fnType = functionTypes.get(className.substring(Builder.N_xFunction.length() + 1));
-            assert fnType != null;
-            return ClassFile.of().
-                build(ClassDesc.of(className), classBuilder ->
-                    new FunctionBuilder(this, fnType).assemblePure(className, classBuilder));
-        }
-
-        Artifact art = deduceArtifact(moduleLoader.module, name);
-        if (art != null) {
-            if (art.id.getComponent() instanceof ClassStructure clz) {
-                TypeConstant type      = clz.getCanonicalType();
-                Builder      builder   = ensureBuilder(type);
-                Consumer<? super ClassBuilder> handler = classBuilder -> {
-                    classBuilder.with(SourceFileAttribute.of(clz.getSourceFileName()));
-                    switch (art.shape) {
-                        case Impl:
-                            builder.assembleImpl(className, classBuilder);
-                            break;
-
-                        default:
-                            throw new UnsupportedOperationException();
-                    }
-                };
-
-                // There are other options that can be useful:
-                //     StackMapsOption.GENERATE_STACK_MAPS
-                //     DeadCodeOption.PATCH_DEAD_CODE
-                //     DebugElementsOption.DROP_DEBUG
-                //     LineNumbersOption.DROP_LINE_NUMBERS
-                // TODO: force some of them or make configurable
-                ClassFile classFile = ClassFile.of(
-                    ClassFile.ClassHierarchyResolverOption.of(
-                        ClassHierarchyResolver.ofClassLoading(loader))
-                );
-
-                return classFile.build(ClassDesc.of(className), handler);
-            }
-        }
-        return null;
-    }
+    /**
+     * Create a Java ClassFile for the specified class name. Implementation moved to subclasses.
+     */
+    public abstract byte[] genClass(ModuleLoader moduleLoader, String name);
 
     /**
      * @return a builder for the specified type

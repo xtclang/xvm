@@ -370,8 +370,8 @@ public class Xvm {
                 }
             }
 
-            // no such TypeSystem already exists; create one
-            TypeSystem ts = new TypeSystem(this, shared, owned);
+            // no such TypeSystem already exists; create one using factory
+            TypeSystem ts = JitImplementationFactory.createJitTypeSystem(this, shared, owned);
             register(ts);
             return ts;
         }

@@ -1,0 +1,8 @@
+# TypeSystem implementation providers
+# Standard Java SPI configuration file
+
+# ByteBuddy implementation (works on Java 21+, no preview features)
+org.xvm.javajit.bytebuddy.ByteBuddyTypeSystemProvider
+
+# ClassFile API implementation (Java 22+, may require --enable-preview)
+org.xvm.javajit.classfile.ClassFileTypeSystemProvider

@@ -31,6 +31,7 @@ jline="3.30.4"
 ktlint = "12.1.1"
 junit = "5.13.1"
 git-properties = "2.4.2"
+bytebuddy = "1.17.6"
 
 [plugins]
 xtc = { id = "org.xtclang.xtc-plugin", version.ref = "xtc-plugin" }
@@ -77,6 +78,7 @@ jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", versi
 jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jakarta" }
 jline = { module = "org.jline:jline", version.ref = "jline" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+bytebuddy = { module = "net.bytebuddy:byte-buddy", version.ref = "bytebuddy" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 
 [bundles]

@@ -7,6 +7,8 @@ import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.Superclass;
 
+import org.xvm.javajit.classfile.ClassFileTypeSystem;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -47,6 +49,7 @@ public class NativeTypeSystem
      */
     private NativeTypeSystem(Xvm xvm, ModuleLoader[] shared, ModuleStructure[] owned) {
         super(xvm, shared, owned);
+        this.classFileTypeSystem = new ClassFileTypeSystem(xvm, shared, owned);
 
         URL  javatoolsURL  = ConstantPool.class.getProtectionDomain().getCodeSource().getLocation();
         Path javatoolsPath = Paths.get(javatoolsURL.getPath());
@@ -131,6 +134,11 @@ public class NativeTypeSystem
      * A cache of builders for native classes keyed by type.
      */
     public final Map<TypeConstant, Class> nativeBuilders = new ConcurrentHashMap<>();
+    
+    /**
+     * ClassFile implementation for fallback when native class not found.
+     */
+    private final ClassFileTypeSystem classFileTypeSystem;
 
     @Override
     public byte[] genClass(ModuleLoader moduleLoader, String name) {
@@ -157,7 +165,7 @@ public class NativeTypeSystem
         } catch (IOException ignore) {}
 
         // there is no native class, but there must be a corresponding Ecstasy component
-        return super.genClass(moduleLoader, name);
+        return classFileTypeSystem.genClass(moduleLoader, name);
     }
 
     /**

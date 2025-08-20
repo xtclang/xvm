@@ -38,6 +38,7 @@ val xdkEcstasyResourcesConsumer by configurations.registering {
 dependencies {
     implementation(libs.javatools.utils)
     implementation(libs.jline)
+    implementation(libs.bytebuddy)
     testImplementation(libs.javatools.utils)
     // Note: We don't add this to sourceSets to avoid IntelliJ seeing cross-module paths
     xdkEcstasyResourcesConsumer(libs.xdk.ecstasy)
