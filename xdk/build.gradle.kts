@@ -19,6 +19,7 @@ plugins {
     alias(libs.plugins.versions)
     alias(libs.plugins.sonatype.publish)
     distribution // TODO: If we turn this into an application plugin instead, we can automatically get third party dependency jars with e.g. javatools resolved.
+    application
     signing
 }
 
@@ -70,6 +71,35 @@ private val semanticVersion: SemanticVersion by extra
 
 private val xdkDist = xdkBuildLogic.distro()
 
+// Application plugin used only for CreateStartScripts tasks, not for default launcher
+
+/**
+ * Create simple launcher scripts that call Compiler and Runner directly
+ */
+val launcherScripts = mapOf(
+    "xcc" to "org.xvm.tool.Compiler",
+    "xec" to "org.xvm.tool.Runner"
+)
+
+val scriptTasks = launcherScripts.map { (scriptName, mainClassName) ->
+    val taskName = "create${scriptName.replaceFirstChar { it.uppercase() }}Script"
+    taskName to tasks.register(taskName, CreateStartScripts::class) {
+        applicationName = "launch-$scriptName-script"
+        mainClass = mainClassName
+        outputDir = layout.buildDirectory.dir("launcher-scripts").get().asFile
+        classpath = configurations.runtimeClasspath.get()
+        defaultJvmOpts = buildList {
+            add("-ea")
+            if (getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)) {
+                add("--enable-preview")
+            }
+        }
+    }
+}.toMap()
+
+val createXccScript = scriptTasks["createXccScript"]!!
+val createXecScript = scriptTasks["createXecScript"]!!
+
 /**
  * Propagate the "version" part of the semanticVersion to all XTC compilers in all subprojects (the XDK modules
  * will get stamped with the Gradle project version, as defined in VERSION in the repo root).
@@ -116,7 +146,10 @@ distributions {
         contentSpec(xdkDist.distributionName, xdkDist.distributionVersion)
     }
     val withLaunchers by registering {
-        contentSpec(xdkDist.distributionName, xdkDist.distributionVersion, xdkDist.osClassifier(), installLaunchers = true)
+        contentSpec(xdkDist.distributionName, xdkDist.distributionVersion, xdkDist.osClassifier(), LauncherType.Binaries)
+    }
+    val withLauncherScripts by registering {
+        contentSpec(xdkDist.distributionName, xdkDist.distributionVersion, launcherType = LauncherType.Scripts)
     }
 }
 
@@ -212,13 +245,23 @@ val ensureTags by tasks.registering {
 }
 
 /**
+ * Enum to specify what type of launchers to install
+ */
+enum class LauncherType {
+    None,           // No launchers (default installDist)
+    Binaries,       // Platform-specific binary launchers
+    Scripts         // Platform-independent script launchers
+}
+
+
+/**
  * Creates distribution contents based on a distribution name, version and classifier.
  * This logic is used for the nain distribution artifact (named "xdk"), and the contents
  * has been broken out into this function so that we can easily generate ore installations
  * and distributions with slightly different contents, for example, based o OS, and with
  * an OS specific launcher already in "bin".
  */
-private fun Distribution.contentSpec(distName: String, distVersion: String, distClassifier: String = "", installLaunchers: Boolean = false) {
+private fun Distribution.contentSpec(distName: String, distVersion: String, distClassifier: String = "", launcherType: LauncherType = LauncherType.None) {
     distributionBaseName = distName
     version = distVersion
     if (distClassifier.isNotEmpty()) {
@@ -243,9 +286,6 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
                 includeEmptyDirs = false
             }
         }
-        from(xtcLauncherBinaries) {
-            into("bin")
-        }
         from(configurations.xtcModule) {
             into("lib")
             exclude(JAVATOOLS_PREFIX_PATTERN) // *.xtc, but not javatools_*.xtc
@@ -260,19 +300,45 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
             into("javatools")
         }
         from(tasks.xtcVersionFile)
-        if (installLaunchers) {
-            // Do we want to install launchers that work on the host system?
-            assert(distClassifier.isNotEmpty()) { "No distribution given for host specific distribution, OS: ${XdkDistribution.currentOs}" }
-            XdkDistribution.binaryLauncherNames.forEach {
-                val launcher = xdkDist.launcherFileName()
-                from(xtcLauncherBinaries) {
-                    include(launcher)
-                    rename(launcher, it)
-                    into("bin")
+        // Exclude launcher scripts by default - only include them based on LauncherType
+        exclude("**/xcc")
+        exclude("**/xec")
+        exclude("**/xcc.bat")
+        exclude("**/xec.bat")
+        when (launcherType) {
+            LauncherType.Binaries -> {
+                // Install platform-specific binary launchers that work on the host system
+                assert(distClassifier.isNotEmpty()) { "No distribution given for host specific distribution, OS: ${XdkDistribution.currentOs}" }
+                XdkDistribution.binaryLauncherNames.forEach {
+                    val launcher = xdkDist.launcherFileName()
+                    from(xtcLauncherBinaries) {
+                        include(launcher)
+                        rename(launcher, it)
+                        into("bin")
+                    }
                 }
+            }
+            LauncherType.Scripts -> {
+                // Copy generated script launchers and rename them
+                launcherScripts.keys.forEach { scriptName ->
+                    from(layout.buildDirectory.dir("launcher-scripts")) {
+                        include("launch-$scriptName-script", "launch-$scriptName-script.bat")
+                        rename("launch-$scriptName-script", scriptName)
+                        rename("launch-$scriptName-script.bat", "$scriptName.bat")
+                        into("bin")
+                    }
+                }
+            }
+            LauncherType.None -> {
+                // No launchers installed - all scripts already excluded above
             }
         }
     }
 }
 
 // Let the Distribution plugin handle installDist dependencies according to Gradle standards
+
+// Ensure script-based distribution depends on script generation tasks
+val installWithLauncherScriptsDist by tasks.existing {
+    dependsOn(createXccScript, createXecScript)
+}
