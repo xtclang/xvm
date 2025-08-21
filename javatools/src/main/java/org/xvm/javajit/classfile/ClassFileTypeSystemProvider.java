@@ -41,7 +41,7 @@ public class ClassFileTypeSystemProvider implements TypeSystemProvider {
         if (!isAvailable()) {
             throw new UnsupportedOperationException("ClassFile API is not available in this Java version");
         }
-        return new ClassFileTypeSystem(xvm, shared, owned);
+        return new ClassFileJitTypeSystem(xvm, shared, owned);
     }
     
     @Override

@@ -5,8 +5,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.TestInfo;
 
-import org.xvm.javajit.bytebuddy.ByteBuddyClassBuilder;
-import org.xvm.javajit.bytebuddy.ByteBuddyJitTypeSystem;
+// import org.xvm.javajit.bytebuddy.ByteBuddyClassBuilder;
+// import org.xvm.javajit.bytebuddy.ByteBuddyJitTypeSystem;
 import org.xvm.javajit.classfile.ClassFileJitTypeSystem;
 
 import net.bytebuddy.ByteBuddy;

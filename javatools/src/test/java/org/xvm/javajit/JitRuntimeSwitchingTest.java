@@ -246,7 +246,7 @@ public class JitRuntimeSwitchingTest {
     private Xvm createMockXvm() {
         // Create a minimal mock Xvm for testing
         // In a real implementation, this would be a proper mock or test fixture
-        return new Xvm() {
+        return new Xvm(null) {
             // Minimal implementation for testing
         };
     }
@@ -254,7 +254,7 @@ public class JitRuntimeSwitchingTest {
     private byte[] generateMockBytecode(TypeSystem typeSystem, String className) {
         try {
             // Create mock ModuleLoader for testing
-            ModuleLoader mockLoader = new ModuleLoader() {
+            ModuleLoader mockLoader = new ModuleLoader(null, null, "test.mock") {
                 // Minimal implementation for testing
             };
             

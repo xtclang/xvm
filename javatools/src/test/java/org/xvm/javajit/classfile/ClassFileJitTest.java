@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Note: These tests require Java 22+ with ClassFile API available.
  * On Java 22/23, requires --enable-preview flag.
  */
-@EnabledOnJre({JRE.JAVA_22, JRE.JAVA_23, JRE.JAVA_24, JRE.OTHER}) // Enable on Java 22+
+// @EnabledOnJre({JRE.JAVA_22, JRE.JAVA_23, JRE.JAVA_24, JRE.OTHER}) // Enable on Java 22+
 public class ClassFileJitTest {
     
     private static final Logger LOGGER = Logger.getLogger(ClassFileJitTest.class.getName());

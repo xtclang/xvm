@@ -8,6 +8,7 @@ import java.lang.constant.ClassDesc;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -42,7 +43,7 @@ public class ClassFileJitTypeSystem extends TypeSystem implements JitTypeSystem 
                     new FunctionBuilder(this, fnType).assemblePure(className, classBuilder));
         }
 
-        TypeSystem.Artifact art = deduceArtifact(moduleLoader.module, name);
+        Artifact art = deduceArtifact(moduleLoader.module, name);
         if (art != null) {
             if (art.id().getComponent() instanceof ClassStructure clz) {
                 TypeConstant type      = clz.getCanonicalType();
@@ -59,6 +60,12 @@ public class ClassFileJitTypeSystem extends TypeSystem implements JitTypeSystem 
                     }
                 };
 
+                // There are other options that can be useful:
+                //     StackMapsOption.GENERATE_STACK_MAPS
+                //     DeadCodeOption.PATCH_DEAD_CODE
+                //     DebugElementsOption.DROP_DEBUG
+                //     LineNumbersOption.DROP_LINE_NUMBERS
+                // TODO: force some of them or make configurable
                 ClassFile classFile = ClassFile.of(
                     ClassFile.ClassHierarchyResolverOption.of(
                         ClassHierarchyResolver.ofClassLoading(loader))
@@ -74,7 +81,13 @@ public class ClassFileJitTypeSystem extends TypeSystem implements JitTypeSystem 
      * @return a builder for the specified type
      */
     protected Builder ensureBuilder(TypeConstant type) {
-        return new ClassFileJitBuilder(this, type);
+        ConstantPool pool = pool();
+        if (type.isA(pool.typeModule())) {
+            // it's definitely not Module, since this is not the native TypeSystem
+            assert !type.equals(pool.typeModule());
+            return new ModuleBuilder(this, type);
+        }
+        return new CommonBuilder(this, type);
     }
     
     @Override

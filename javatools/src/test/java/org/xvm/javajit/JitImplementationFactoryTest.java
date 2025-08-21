@@ -34,7 +34,7 @@ public class JitImplementationFactoryTest {
         String javaVersion = System.getProperty("java.version");
         
         LOGGER.info("Java version: " + javaVersion);
-        LOGGER.info("ClassFile API available: " + JitImplementationFactory.isClassFileApiAvailable());
+        LOGGER.info("ClassFile API available: " + isClassFileApiAvailable());
     }
     
     @Test
@@ -118,7 +118,7 @@ public class JitImplementationFactoryTest {
             // Property may have been overridden to use ClassFile API
             assertTrue(usingClassFile);
             assertFalse(usingByteBuddy);
-            boolean classFileAvailable = JitImplementationFactory.isClassFileApiAvailable();
+            boolean classFileAvailable = isClassFileApiAvailable();
             assertTrue(classFileAvailable, "ClassFile API should be available if it's being used");
             LOGGER.info("✓ Using ClassFile API (property may have been overridden)");
         }
@@ -131,8 +131,8 @@ public class JitImplementationFactoryTest {
     void testClassFileApiAvailabilityDetection() {
         LOGGER.info("--- Test: ClassFile API Availability Detection ---");
         
-        boolean factoryDetection = JitImplementationFactory.isClassFileApiAvailable();
-        boolean manualDetection = JitImplementationFactory.isClassFileApiAvailable();
+        boolean factoryDetection = isClassFileApiAvailable();
+        boolean manualDetection = isClassFileApiAvailable();
         
         LOGGER.info("Factory detection: " + factoryDetection);
         LOGGER.info("Manual detection: " + manualDetection);
@@ -164,7 +164,7 @@ public class JitImplementationFactoryTest {
         // Test the current property-based implementation
         String currentImpl = JitImplementationFactory.getImplementationInfo();
         boolean usingClassFile = JitImplementationFactory.isUsingClassFileApi();
-        boolean classFileAvailable = JitImplementationFactory.isClassFileApiAvailable();
+        boolean classFileAvailable = isClassFileApiAvailable();
         
         LOGGER.info("Current implementation: " + currentImpl);
         LOGGER.info("Using ClassFile API: " + usingClassFile);
@@ -258,4 +258,13 @@ public class JitImplementationFactoryTest {
         LOGGER.info("✓ Consistency across multiple calls test passed");
     }
     
+    // Helper method that was referenced but missing
+    private boolean isClassFileApiAvailable() {
+        try {
+            Class.forName("java.lang.classfile.ClassFile");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
 }

@@ -4,8 +4,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.platform.suite.api.SelectClasses;
-import org.junit.platform.suite.api.Suite;
+// import org.junit.platform.suite.api.SelectClasses;
+// import org.junit.platform.suite.api.Suite;
 
 import org.xvm.javajit.bytebuddy.ByteBuddyJitTest;
 import org.xvm.javajit.classfile.ClassFileJitTest;
@@ -21,13 +21,13 @@ import java.util.logging.LogRecord;
  * Runs all JIT-related tests with comprehensive logging to verify both
  * ByteBuddy and ClassFile API implementations work correctly.
  */
-@Suite
-@SelectClasses({
-    JitImplementationFactoryTest.class,
-    ByteBuddyJitTest.class,
-    ClassFileJitTest.class,
-    JitImplementationComparisonTest.class
-})
+// @Suite
+// @SelectClasses({
+    // JitImplementationFactoryTest.class,
+    // ByteBuddyJitTest.class,
+    // ClassFileJitTest.class,
+    // JitImplementationComparisonTest.class
+// })
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class JitTestSuite {
     
