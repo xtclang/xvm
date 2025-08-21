@@ -28,12 +28,13 @@ val xtcLauncherBinaries by configurations.registering {
 }
 
 val xdkJavaToolsJitBridge by configurations.registering {
-    description = "Configuration for javatools-jitbridge binary blob"
+    description = "Consumes javatools-jitbridge JAR as native binary blob for distribution (NOT classpath)"
     isCanBeResolved = true
     isCanBeConsumed = false
     attributes {
-        attribute(CATEGORY_ATTRIBUTE, objects.named("native-binary"))
-        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("native-binary"))
+        attribute(CATEGORY_ATTRIBUTE, objects.named("jit-bridge-binary"))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("jit-bridge-binary"))
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named("native-runtime-blob"))
     }
 }
 
