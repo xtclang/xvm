@@ -51,10 +51,11 @@ int main(int argc, const char* argv[]) {
     const char* libPath  = findValue(cfg, "lib"  , LIB_DIR     );
 
     // finally, launch the JVM
-    execJava(javaPath, javaOpts, buildPath(execDir, jarPath), buildPath(execDir, libPath), argc, argv);
+
+    int result = execJava(javaPath, javaOpts, buildPath(execDir, jarPath), buildPath(execDir, libPath), argc, argv);
 
     freeAll();
-    return 0;
+    return result;
 }
 
 static void* garbage[MAX_GARBAGE];

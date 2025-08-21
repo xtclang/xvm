@@ -44,7 +44,7 @@ const char* resolveLinks(const char* path) {
 const char* escapePath(const char* path) {
     if (*path == '\0' || *path == '\"' || !strchr(path, ' ')) {
         return path;
-    }	      
+    }
 
     int   len    = strlen(path);
     char* result = allocBuffer(len+3);
@@ -61,12 +61,12 @@ const char* escapePath(const char* path) {
     return result;
 }
 
-void execJava(const char* javaPath,
-              const char* javaOpts,
-              const char* jarPath,
-              const char* libPath,
-              int         argc,
-              const char* argv[]) {
+int execJava(const char* javaPath,
+             const char* javaOpts,
+             const char* jarPath,
+             const char* libPath,
+             int         argc,
+             const char* argv[]) {
     // this implementation does not fork()/setsid() because we're not attempting to detach
     // from the terminal that executed the command
 
@@ -167,9 +167,18 @@ void execJava(const char* javaPath,
         abortLaunch(cmd);
     }
 
-    WaitForSingleObject(pi.hProcess, INFINITE);
+    // wait for the process to complete
+    DWORD result = WaitForSingleObject(pi.hProcess, INFINITE);
+
+    // default the return value to success (0) or generic failure (1) based on the wait call
+    DWORD retval = result == WAIT_OBJECT_0 ? EXIT_SUCCESS : EXIT_FAILURE;
+
+    // ask Windows to provide a more specific exit value if there is one
+    GetExitCodeProcess(pi.hProcess, &retval);
 
     // the handles need to be released; this isn't killing the process
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
+
+    return (int) retval;
 }

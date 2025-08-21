@@ -29,12 +29,12 @@ const char* resolveLinks(const char* path) {
     return result;
 }
 
-void execJava(const char* javaPath,
-              const char* javaOpts,
-              const char* jarPath,
-              const char* libPath,
-              int         argc,
-              const char* argv[]) {
+int execJava(const char* javaPath,
+             const char* javaOpts,
+             const char* jarPath,
+             const char* libPath,
+             int         argc,
+             const char* argv[]) {
     // this implementation does not fork()/setsid() because we're not attempting to detach
     // from the terminal that executed the command
 
@@ -100,5 +100,10 @@ void execJava(const char* javaPath,
     }
     #endif // DEBUG
 
+    // this function only returns if the process creation fails; if it succeeds, this process is
+    // replaced entirely by the process that is being created, i.e. this function does not return;
+    // see: https://linux.die.net/man/3/execvp
     execvp(javaPath, (char* const*) allArgs);
+    abortLaunch(NULL);      // errno will already be set by the OS if this code is reachable
+    return EXIT_FAILURE;    // this code is unreachable
 }
