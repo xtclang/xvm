@@ -9,6 +9,7 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.git.properties)
+    id("org.graalvm.buildtools.native") version "0.11.0"
 }
 
 private val semanticVersion: SemanticVersion by extra
@@ -230,62 +231,29 @@ val sanityCheckJar by tasks.registering {
     }
 }
 
-// Native executable generation using jpackage (direct JAR approach)
-val createNativeExecutables by tasks.registering {
-    group = "distribution"
-    description = "Create native executables (xcc, xec) using jpackage with fat JAR"
-    
-    dependsOn(jar)
-    
-    val outputDir = layout.buildDirectory.dir("native-executables")
-    
-    outputs.dir(outputDir)
-    
-    doLast {
-        val javaHome = System.getProperty("java.home")
-        val jpackage = "$javaHome/bin/jpackage"
-        val jarFile = jar.get().archiveFile.get().asFile
-        
-        // Normalize version for jpackage (remove SNAPSHOT suffix and ensure it starts with non-zero)
-        val versionStr = version.toString().replace("-SNAPSHOT", "")
-        val appVersion = if (versionStr.startsWith("0.")) "1.${versionStr.substring(2)}" else versionStr
-        
-        // Clean and create output directory
-        outputDir.get().asFile.deleteRecursively()
-        outputDir.get().asFile.mkdirs()
-        
-        // Create xcc executable (Compiler)
-        logger.lifecycle("$prefix Creating xcc executable...")
-        exec {
-            commandLine(jpackage,
-                "--type", "app-image",
-                "--input", jarFile.parent,
-                "--main-jar", jarFile.name,
-                "--main-class", "org.xvm.tool.Compiler",
-                "--name", "xcc",
-                "--app-version", appVersion,
-                "--java-options", "--enable-preview",
-                "--dest", outputDir.get().asFile.absolutePath,
-                "--verbose")
+// Configure GraalVM Native Image plugin
+graalvmNative {
+    binaries {
+        named("main") {
+            mainClass.set("org.xvm.tool.Compiler")
+            imageName.set("xcc")
+            buildArgs.add("--enable-preview")
+            buildArgs.add("--no-fallback")
+            buildArgs.add("-H:+ReportExceptionStackTraces")
+            buildArgs.add("-H:IncludeResources=.*\\.properties")
+            buildArgs.add("-H:IncludeResources=.*\\.txt")
+            buildArgs.add("-H:IncludeResources=.*\\.x")
         }
-        
-        // Create xec executable (Runner)  
-        logger.lifecycle("$prefix Creating xec executable...")
-        exec {
-            commandLine(jpackage,
-                "--type", "app-image",
-                "--input", jarFile.parent,
-                "--main-jar", jarFile.name,
-                "--main-class", "org.xvm.tool.Runner",
-                "--name", "xec",
-                "--app-version", appVersion,
-                "--java-options", "--enable-preview",
-                "--dest", outputDir.get().asFile.absolutePath,
-                "--verbose")
+        register("runner") {
+            mainClass.set("org.xvm.tool.Runner")
+            imageName.set("xec")
+            classpath.from(jar)
+            buildArgs.add("--enable-preview")
+            buildArgs.add("--no-fallback")
+            buildArgs.add("-H:+ReportExceptionStackTraces")
+            buildArgs.add("-H:IncludeResources=.*\\.properties")
+            buildArgs.add("-H:IncludeResources=.*\\.txt")
+            buildArgs.add("-H:IncludeResources=.*\\.x")
         }
-        
-        logger.lifecycle("$prefix Native executables created:")
-        logger.lifecycle("$prefix   xcc: ${outputDir.get().asFile}/xcc/bin/xcc")
-        logger.lifecycle("$prefix   xec: ${outputDir.get().asFile}/xec/bin/xec")
     }
 }
