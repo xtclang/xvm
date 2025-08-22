@@ -192,9 +192,9 @@ jobs:
           ${{ env.GRADLE_CACHE_INSPECT }}
           
           cwd_path=$(pwd)
-          echo "Executing Gradle 'installDist' task from path: '$cwd_path'"
-          echo "Skipping 'gradle clean' - fresh runner + cache integrity guaranteed"
-          ls -la build/ 2>/dev/null && echo "WARNING: build/ directory exists on fresh runner!" || echo "✅ Confirmed: No previous build outputs"
+          echo "Executing Gradle 'clean' and 'installDist' tasks from path: '$cwd_path'"
+          echo "Running clean to validate dependency graph integrity and catch missing dependencies"
+          ls -la build/ 2>/dev/null && echo "Build directory exists - will be cleaned" || echo "✅ Confirmed: No previous build outputs"
           
           echo "🔧 JVM Configuration:"
           echo "  No special JAVA_OPTS for general builds"
@@ -203,7 +203,8 @@ jobs:
           echo "🔍 JVM Flag Information:"
           java -XX:+PrintFlagsFinal -version 2>&1 || echo "  Flag printing failed (non-fatal)"
           
-          inspect_gradle_cache "before installDist"
+          inspect_gradle_cache "before clean and installDist"
+          ./gradlew ${{ env.gradle_options }} clean
           ./gradlew ${{ env.gradle_options }} installDist xdk:distZip 
 
       - name: Build a machine specific XDK installation with native launchers, test run launchers on native platform
