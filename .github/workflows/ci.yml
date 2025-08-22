@@ -30,6 +30,11 @@ on:
         type: boolean
         required: false
         default: false
+      always_update_homebrew_tap:
+        description: 'Always update Homebrew tap regardless of branch'
+        type: boolean
+        required: false
+        default: false
       single_platform:
         description: 'Run only single platform (ubuntu-latest, windows-latest, or full matrix)'
         type: choice
@@ -130,6 +135,8 @@ jobs:
         os: ${{ github.event.inputs.single_platform == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.single_platform == 'windows-latest' && fromJSON('["windows-latest"]') || fromJSON('["ubuntu-latest", "windows-latest"]') }}
 
     runs-on: ${{ matrix.os }}
+    outputs:
+      xdk-version: ${{ steps.xdk-version.outputs.version }}
 
     steps:
       - name: Fetch Sources
@@ -203,9 +210,9 @@ jobs:
           echo "🔍 JVM Flag Information:"
           java -XX:+PrintFlagsFinal -version 2>&1 || echo "  Flag printing failed (non-fatal)"
           
-          inspect_gradle_cache "before clean and installDist"
+          inspect_gradle_cache "before clean and withLauncherScriptsDistZip"
           ./gradlew ${{ env.gradle_options }} clean
-          ./gradlew ${{ env.gradle_options }} installDist xdk:distZip 
+          ./gradlew ${{ env.gradle_options }} :xdk:withLauncherScriptsDistZip
 
       - name: Build a machine specific XDK installation with native launchers, test run launchers on native platform
         shell: bash
@@ -258,6 +265,15 @@ jobs:
           name: xdk-distribution
           path: xdk/build/distributions/xdk-*.zip
           retention-days: 1
+
+      - name: Get XDK version for Homebrew
+        if: ${{ success() && matrix.os == 'ubuntu-latest' && github.ref == 'refs/heads/master' }}
+        id: xdk-version
+        run: |
+          # Extract XDK version from version.properties
+          XDK_VERSION=$(grep "^xdk.version=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
+          echo "version=$XDK_VERSION" >> $GITHUB_OUTPUT
+          echo "XDK Version: $XDK_VERSION"
 
   publish-snapshot:
     name: Publish to GitHub packages iff snapshot + non-redundant build platform + branch is master
@@ -336,17 +352,11 @@ jobs:
 
       - name: Compute tags and metadata
         id: compute
-        shell: bash
-        run: |
-          set -euo pipefail
-          
-          # Read version from properties file
-          VERSION=$(grep "^xdk.version=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          
-          # Sanitize branch name for Docker tags
-          BRANCH_TAG=$(echo "${{ env.GH_BRANCH }}" | sed 's|.*/||' | sed 's/[^a-zA-Z0-9._-]/_/g')
-          echo "branch-tag=$BRANCH_TAG" >> $GITHUB_OUTPUT
+        uses: ./.github/actions/compute-docker-tags
+        with:
+          base-image: ${{ env.DOCKER_BASE_IMAGE }}
+          branch: ${{ env.GH_BRANCH }}
+          commit: ${{ github.sha }}
           
           # Determine if master branch
           IS_MASTER=${{ github.ref == 'refs/heads/master' }}
@@ -667,3 +677,28 @@ jobs:
         env:
           # Use organization-level PAT with delete:packages scope if available, fallback to default token
           GITHUB_TOKEN: ${{ secrets.PACKAGE_DELETE_TOKEN || secrets.GITHUB_TOKEN }}
+
+  update-homebrew-tap:
+    name: Update Homebrew tap with latest XDK
+    needs: build-verify
+    runs-on: ubuntu-latest
+    if: ${{ success() && github.event.inputs.always_update_homebrew_tap == 'true' }}
+    steps:
+      - name: Checkout XVM repository
+        uses: actions/checkout@v4
+
+      - name: Get XDK version
+        id: version
+        uses: ./.github/actions/get-xdk-version
+
+      - name: Download XDK distribution
+        uses: actions/download-artifact@v4
+        with:
+          name: xdk-distribution
+
+      - name: Update Homebrew Tap
+        uses: ./.github/actions/update-homebrew-tap
+        with:
+          xdk-version: ${{ steps.version.outputs.version }}
+          xdk-zip-name: "xdk-${{ steps.version.outputs.version }}.zip"
+          homebrew-tap-token: ${{ secrets.HOMEBREW_TAP_TOKEN }}

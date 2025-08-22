@@ -1,0 +1,63 @@
+name: 'Update Homebrew Tap'
+description: 'Updates the XVM Homebrew tap with a new XDK release'
+inputs:
+  xdk-version:
+    description: 'XDK version (e.g., 0.4.4-SNAPSHOT)'
+    required: true
+  xdk-zip-name:
+    description: 'Name of the XDK zip file to upload'
+    required: true
+  homebrew-tap-token:
+    description: 'GitHub token with access to homebrew-xvm repo'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Update Homebrew formula
+      shell: bash
+      run: |
+        # Clone the homebrew tap repo
+        git clone https://oauth2:${{ inputs.homebrew-tap-token }}@github.com/xtclang/homebrew-xvm.git tap
+        cd tap && git checkout lagergren/brew-tap
+        
+        # Create downloads directory and copy zip file (always same filename)
+        mkdir -p downloads
+        cp ../${{ inputs.xdk-zip-name }} downloads/xdk-latest.zip
+        
+        ZIP_URL="https://raw.githubusercontent.com/xtclang/homebrew-xvm/lagergren/brew-tap/downloads/xdk-latest.zip"
+        SHA256=$(sha256sum downloads/xdk-latest.zip | cut -d' ' -f1)
+        
+        # Update the Homebrew formula
+        cat > xdk-latest.rb << EOF
+        class XdkLatest < Formula
+          desc "Ecstasy Development Kit (XDK)"
+          homepage "https://github.com/xtclang/xvm/"
+          url "$ZIP_URL"
+          version "${{ inputs.xdk-version }}"
+          sha256 "$SHA256"
+          license "Apache-2.0"
+          depends_on "openjdk"
+          def install
+            libexec.install Dir["*"]
+            %w[xec xtc xcc].each { |cmd| (bin/cmd).write_env_script(libexec/"bin"/cmd, JAVA_HOME: Formula["openjdk"].opt_prefix) }
+          end
+          test do
+            output = shell_output("#{bin}/xec 2>&1", 1)
+            assert_match "Missing module file", output
+          end
+        end
+        EOF
+        
+        # Commit and push changes
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add downloads/xdk-latest.zip xdk-latest.rb
+        git commit -m "Update XDK to ${{ inputs.xdk-version }}"
+        git push
+        
+        echo "✅ Homebrew tap updated to version ${{ inputs.xdk-version }}"
+
+branding:
+  icon: 'package'
+  color: 'orange'
