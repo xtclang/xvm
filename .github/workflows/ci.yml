@@ -135,7 +135,7 @@ jobs:
 
     strategy:
       matrix:
-        os: ${{ github.event.inputs.single_platform == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.single_platform == 'windows-latest' && fromJSON('["windows-latest"]') || fromJSON('["ubuntu-latest", "windows-latest"]') }}
+        os: ${{ github.ref == 'refs/heads/lagergren/brew' && fromJSON('["ubuntu-latest"]') || (github.event.inputs.single_platform == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.single_platform == 'windows-latest' && fromJSON('["windows-latest"]') || fromJSON('["ubuntu-latest", "windows-latest"]')) }}
 
     runs-on: ${{ matrix.os }}
     outputs:
