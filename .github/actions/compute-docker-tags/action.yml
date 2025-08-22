@@ -98,7 +98,7 @@ runs:
         
         # Generate full tags with image prefix (only if base-image provided)
         if [ -n "${{ inputs.base-image }}" ]; then
-          FULL_TAGS=$(echo "$BASE_TAGS" | jq -r --arg img "${{ inputs.base-image }}" 'map($img + ":" + .)')
+          FULL_TAGS=$(echo "$BASE_TAGS" | jq -c --arg img "${{ inputs.base-image }}" 'map($img + ":" + .)')
           echo "  🖼️ Full image tags: $FULL_TAGS"
           echo "full-tags-json=$FULL_TAGS" >> $GITHUB_OUTPUT
         else
