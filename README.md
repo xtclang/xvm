@@ -81,6 +81,80 @@ Manual local build for **any computer** (for advanced users):
   ./gradlew build
 ```
 
+## Gradle Build Tasks and XDK Setup
+
+The XVM project uses Gradle for building and distribution management. Understanding the different build tasks and installation options is essential for development and deployment.
+
+### Core Build Tasks
+
+- **`./gradlew build`** - Executes the complete build lifecycle including compilation, testing, and packaging. This creates all XDK components but doesn't install them locally.
+
+- **`./gradlew installDist`** - Installs the basic XDK distribution to `xdk/build/install/xdk/`. This creates a complete XDK installation without executable launchers in the `bin/` directory.
+
+### Distribution Tasks with Launchers
+
+The project provides three main distribution variants, each available as both installation and archive tasks:
+
+#### Installation Tasks (creates local installations):
+
+1. **`./gradlew installDist`** - Basic installation without launchers (default)
+
+2. **`./gradlew xdk:installWithLaunchersDist`** - Installs XDK with platform-specific native binary launchers (`xec`, `xcc`) in the `bin/` directory. These are optimized for the current platform.
+
+3. **`./gradlew xdk:installWithLauncherScriptsDist`** - Installs XDK with cross-platform shell script launchers in the `bin/` directory. These scripts work across different operating systems but require the correct Java classpath setup.
+
+#### Archive Tasks (creates distributable archives):
+
+1. **`./gradlew distZip`** / **`./gradlew distTar`** - Creates archived versions of the basic installation (without launchers) in `xdk/build/distributions/`
+
+2. **`./gradlew xdk:withLaunchersDistZip`** / **`./gradlew xdk:withLaunchersDistTar`** - Creates archived versions with native binary launchers
+
+3. **`./gradlew xdk:withLauncherScriptsDistZip`** / **`./gradlew xdk:withLauncherScriptsDistTar`** - Creates archived versions with shell script launchers
+
+The archive tasks produce the same XDK installation content as their corresponding installation tasks, but package them as ZIP and tar.gz files in the `xdk/build/distributions/` directory. These archives are suitable for distribution and deployment to other systems.
+
+### Quick Development Setup
+
+For developers who want a working XDK installation on their local machine:
+
+1. **Build and install with launchers:**
+   ```bash
+   ./gradlew xdk:installWithLauncherScriptsDist
+   ```
+
+2. **Add the XDK bin directory to your PATH:**
+   ```bash
+   export PATH="/path/to/xvm/xdk/build/install/xdk/bin:$PATH"
+   ```
+
+3. **Set XDK_HOME environment variable:**
+   ```bash
+   export XDK_HOME="/path/to/xvm/xdk/build/install/xdk"
+   ```
+
+**Note:** If you use the launcher installation tasks (`installWithLaunchersDist` or `installWithLauncherScriptsDist`), there's no need to run the platform-specific configuration scripts (`cfg_macos.sh`, `cfg_linux.sh`) that you may find in some documentation. These scripts are only needed when working with basic XDK distributions that don't include pre-configured launchers.
+
+### Environment Configuration
+
+Once you have an XDK installation (via any of the install tasks), configure your environment:
+
+- **XDK_HOME**: Set this to the root of your XDK installation directory (e.g., `xdk/build/install/xdk`)
+- **PATH**: Add `$XDK_HOME/bin` to your PATH to access `xec` and `xcc` launchers
+
+When `XDK_HOME` is properly set and the launchers are in your PATH, any `xec` (Ecstasy runner) or `xcc` (Ecstasy compiler) command will automatically use the correct XDK libraries and classpath.
+
+### Understanding the Build Artifacts
+
+After running any install task, you'll find:
+
+- **`lib/`** - Core Ecstasy modules (`ecstasy.xtc`, `collections.xtc`, etc.)
+- **`javatools/`** - Java-based toolchain (`javatools.jar`, bridge modules)
+- **`bin/`** - Executable launchers (if using launcher variants)
+  - `xec` - Ecstasy code runner
+  - `xcc` - Ecstasy compiler
+
+The difference between `build` and `installDist` is that `build` creates all the necessary artifacts but leaves them in their individual project build directories, while `installDist` assembles everything into a unified, deployable XDK structure ready for use.
+
 ## Development
 
 ### Recommended Git workflow
@@ -325,8 +399,7 @@ git clone https://github.com/xtclang/xvm.git
 (There is excellent online documentation for git at
 [git-scm.com](https://git-scm.com/book/en/v2/Git-Basics-Getting-a-Git-Repository).)
 
-To build the entire project, you need to have [gradle](https://gradle.org/install/), or you use the
-included Gradle Wrapper from within the `xvm` directory, which is the recommended method:
+To build the entire project, use the included Gradle Wrapper (recommended method):
 
 ```
 ./gradlew build
@@ -337,6 +410,8 @@ Or on Windows:
 ```
 C:\> gradlew.bat build
 ```
+
+**Note:** Always use the Gradle Wrapper (`./gradlew`) rather than a system-installed Gradle binary to ensure the correct Gradle version is used.
 
 Note that Windows may require the `JAVA_TOOLS_OPTIONS` environment variable to be set to
 `-Dfile.encoding=UTF-8` in the Environment Variables window that can be accessed from Control Panel.
@@ -349,18 +424,44 @@ accessed from Control Panel), click the "Change system locale..." button and che
 Instructions for getting started can be found in our [Contributing to Ecstasy](CONTRIBUTING.md)
 document.
 
-## Cleaning the build
+## Understanding Gradle Clean vs Make Clean
 
-You can clean everything in a build by running
+**Important:** Gradle's `clean` is fundamentally different from traditional `make clean`:
 
-    ./gradlew clean  
+- **Make clean**: Simply deletes all build outputs ("delete everything" semantic)
+- **Gradle clean**: Intelligently removes only outputs that need to be rebuilt, leveraging Gradle's incremental build system and caching
 
-However, note that if you restart the build, a lot of intermediary outputs will be cached.
-The XDK and XTC plugin use the Gradle build system intrinsics to only compile what has provably
-mutated its outputs and inputs. This should be stable, and is by design. You should really never have to
-clean your build to test any incremental change. This is even true if you modify the plugin implementation
-in the XDK repo, as we are using included builds everywhere we should. The end goal is that any
-change will only require rebuilding, and that rebuild should only build exactly what is necessary.
+### When to Use Clean
+
+```bash
+./gradlew clean
+```
+
+Gradle's incremental build system tracks input/output relationships and only rebuilds what has changed. You should **rarely need** to run `clean` because:
+
+- Gradle automatically detects when files need to be rebuilt
+- The build cache preserves intermediate outputs for faster rebuilds
+- Clean invalidates all cached work, making subsequent builds slower
+
+**Only use `clean` when:**
+- You suspect build cache corruption
+- You're troubleshooting unusual build behavior
+- You're preparing for a completely fresh build for testing
+
+### Composite Build Limitation
+
+**Critical:** Due to our parallel composite build architecture, **never combine `clean` with other build tasks** in a single command:
+
+```bash
+# ❌ DON'T DO THIS - will cause build failures
+./gradlew clean build
+
+# ✅ DO THIS INSTEAD - run separately
+./gradlew clean
+./gradlew build
+```
+
+The parallel composite build runs subprojects concurrently, and `clean` will interfere with other tasks that are simultaneously creating files, leading to race conditions and build failures.
 
 Should you, for any reason, need to clear the caches, and really start fresh, you can run the script
 
@@ -423,9 +524,14 @@ To see the list of available tasks for the XDK build, use:
   permissions is required).
 * Use `publish` to run both of the above tasks.
 
-*Note*: At the moment some publish tasks may have some raciness in execution, due to Gradle issues. Should you 
-get some kind of error during the publishing task, it may be a good idea to clean, and then rerun that task 
-with the Gradle flag `--no-parallel`.
+*Note*: Some publish tasks may have race conditions due to parallel execution. If you encounter publishing errors:
+
+```bash
+./gradlew clean
+./gradlew publishTask --no-parallel
+```
+
+Remember to run `clean` and the publish task separately due to our composite build architecture.
 
 The group and version of the current XDK build and the XTC Plugin are currently defined in 
 the properties file "version.properties". Here, we define the version of the current XDK 
@@ -458,8 +564,7 @@ very latest version by invoking:
 ./gradlew installLocalDist
 ```
 
-This copies the build from the xvm directory into the brew cellar, or other local installation,
-that is deduced from the location of the `xec` launcher on the system PATH.
+**Note:** The `installLocalDist` task is deprecated. Use the installation tasks documented in the "Gradle Build Tasks and XDK Setup" section above instead.
 
 *Note*: this would be done after installing the XDK via `brew`, or through any other installation
 utility, depending on your platform. This will overwrite several libraries and files in any

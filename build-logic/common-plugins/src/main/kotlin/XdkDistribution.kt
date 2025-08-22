@@ -132,7 +132,14 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         val isCiEnabled = System.getenv(CI) == "true"
         val currentOs: OperatingSystem = OperatingSystem.current()
         val currentArch: String = normalizeArchitecture(System.getProperty("os.arch"))
-        val distributionTasks = listOf("distTar", "distZip", "withLaunchersDistTar", "withLaunchersDistZip")
+        val distributionTasks = listOf(
+            "distTar",
+            "distZip",
+            "withLaunchersDistTar",
+            "withLaunchersDistZip",
+            "withLauncherScriptsDistTar",
+            "withLauncherScriptsDistZip"
+        )
         val binaryLauncherNames = listOf("xcc", "xec")
 
         fun isDistributionArchiveTask(task: Task): Boolean {
