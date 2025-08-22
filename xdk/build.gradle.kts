@@ -342,3 +342,7 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
 val installWithLauncherScriptsDist by tasks.existing {
     dependsOn(createXccScript, createXecScript)
 }
+
+val withLauncherScriptsDistZip by tasks.existing {
+    dependsOn(createXccScript, createXecScript)
+}
