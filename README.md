@@ -117,7 +117,7 @@ The archive tasks produce the same XDK installation content as their correspondi
 
 For developers who want a working XDK installation on their local machine:
 
-1. **Build and install with script launchers:**
+1. **Build and install with launchers:**
    ```bash
    ./gradlew xdk:installWithLauncherScriptsDist
    ```
@@ -131,6 +131,8 @@ For developers who want a working XDK installation on their local machine:
    ```bash
    export XDK_HOME="/path/to/xvm/xdk/build/install/xdk"
    ```
+
+**Note:** If you use the launcher installation tasks (`installWithLaunchersDist` or `installWithLauncherScriptsDist`), there's no need to run the platform-specific configuration scripts (`cfg_macos.sh`, `cfg_linux.sh`) that you may find in some documentation. These scripts are only needed when working with basic XDK distributions that don't include pre-configured launchers.
 
 ### Environment Configuration
 
