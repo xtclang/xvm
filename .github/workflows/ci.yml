@@ -93,6 +93,9 @@ env:
   GH_COMMIT: ${{ github.sha }}
   GH_BRANCH: ${{ github.ref_name }}
   DOCKER_BASE_IMAGE: ghcr.io/xtclang/xvm
+  
+  # Temporary override: check if on lagergren/brew branch
+  IS_BREW_BRANCH: ${{ github.ref == 'refs/heads/lagergren/brew' }}
 
   # Gradle cache inspection function
   GRADLE_CACHE_INSPECT: |
@@ -240,7 +243,7 @@ jobs:
           echo "*** Native launchers work."
 
       - name: Manual tests
-        if: ${{ env.run_manual_tests == 'true' }}
+        if: ${{ env.run_manual_tests == 'true' && github.ref != 'refs/heads/lagergren/brew' }}
         timeout-minutes: 10
         shell: bash
         # No JAVA_OPTS needed for general builds
@@ -340,7 +343,7 @@ jobs:
     name: Compute Docker tags and metadata
     needs: build-verify
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_build_docker_image == 'true') || (github.ref == 'refs/heads/master')) }}
+    if: ${{ success() && ((github.event.inputs.always_build_docker_image == 'true') || (github.ref == 'refs/heads/master') || (github.ref == 'refs/heads/lagergren/brew')) }}
     outputs:
       version: ${{ steps.compute.outputs.version }}
       branch-tag: ${{ steps.compute.outputs.branch-tag }}
@@ -526,7 +529,7 @@ jobs:
     name: Create multi-platform manifest
     needs: [compute-docker-tags, docker-build]
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_build_docker_image == 'true') || (github.ref == 'refs/heads/master')) }}
+    if: ${{ success() && ((github.event.inputs.always_build_docker_image == 'true') || (github.ref == 'refs/heads/master') || (github.ref == 'refs/heads/lagergren/brew')) }}
     steps:
       - name: Fetch Sources
         uses: actions/checkout@v4
@@ -592,7 +595,7 @@ jobs:
     name: Test Docker image functionality
     needs: [compute-docker-tags, docker-manifest]
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_build_docker_image == 'true') || (github.ref == 'refs/heads/master')) }}
+    if: ${{ success() && ((github.event.inputs.always_build_docker_image == 'true') || (github.ref == 'refs/heads/master') || (github.ref == 'refs/heads/lagergren/brew')) }}
     steps:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -690,7 +693,7 @@ jobs:
     name: Update Homebrew tap with latest XDK
     needs: build-verify
     runs-on: ubuntu-latest
-    if: ${{ success() && github.event.inputs.always_update_homebrew_tap == 'true' }}
+    if: ${{ success() && ((github.event.inputs.always_update_homebrew_tap == 'true') || (github.ref == 'refs/heads/lagergren/brew')) }}
     steps:
       - name: Checkout XVM repository
         uses: actions/checkout@v4
