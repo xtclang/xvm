@@ -344,8 +344,8 @@ jobs:
     outputs:
       version: ${{ steps.compute.outputs.version }}
       branch-tag: ${{ steps.compute.outputs.branch-tag }}
-      tags-json: ${{ steps.compute.outputs.tags-json }}
-      is-master: ${{ steps.compute.outputs.is-master }}
+      tags-json: ${{ steps.generate.outputs.tags-json }}
+      is-master: ${{ steps.generate.outputs.is-master }}
     steps:
       - name: Fetch Sources
         uses: actions/checkout@v4
@@ -357,10 +357,18 @@ jobs:
           base-image: ${{ env.DOCKER_BASE_IMAGE }}
           branch: ${{ env.GH_BRANCH }}
           commit: ${{ github.sha }}
-          
+      
+      - name: Generate Docker tags and metadata
+        id: generate
+        shell: bash
+        run: |
           # Determine if master branch
           IS_MASTER=${{ github.ref == 'refs/heads/master' }}
           echo "is-master=$IS_MASTER" >> $GITHUB_OUTPUT
+          
+          # Get version and branch tag from compute action
+          VERSION="${{ steps.compute.outputs.version }}"
+          BRANCH_TAG="${{ steps.compute.outputs.branch-tag }}"
           
           # Generate base tags
           if [ "$IS_MASTER" = "true" ]; then
