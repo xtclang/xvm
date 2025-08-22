@@ -372,9 +372,9 @@ jobs:
           
           # Generate base tags
           if [ "$IS_MASTER" = "true" ]; then
-            BASE_TAGS='["latest", "'$VERSION'", "'${{ env.GH_COMMIT }}'"]'
+            BASE_TAGS='["latest","'$VERSION'","'${{ env.GH_COMMIT }}'"]'
           else
-            BASE_TAGS='["'$BRANCH_TAG'", "'${{ env.GH_COMMIT }}'"]'
+            BASE_TAGS='["'$BRANCH_TAG'","'${{ env.GH_COMMIT }}'"]'
           fi
           
           echo "tags-json=$BASE_TAGS" >> $GITHUB_OUTPUT
