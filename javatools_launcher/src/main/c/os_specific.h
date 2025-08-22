@@ -49,10 +49,12 @@ extern const char* resolveLinks(const char* path);
  * @param libPath   the directory path containing Ecstasy.xtc and other modules
  * @param argc      the number of arguments to pass along
  * @param argv      the arguments to pass along
+ *
+ * @return the exit code to return from the launcher
  */
-extern void execJava(const char* javaPath,
-                     const char* javaOpts,
-                     const char* jarPath,
-                     const char* libPath,
-                     int         argc,
-                     const char* argv[]);
+extern int execJava(const char* javaPath,
+                    const char* javaOpts,
+                    const char* jarPath,
+                    const char* libPath,
+                    int         argc,
+                    const char* argv[]);
