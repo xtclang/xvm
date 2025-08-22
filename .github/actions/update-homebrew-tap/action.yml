@@ -29,7 +29,7 @@ runs:
         SHA256=$(sha256sum downloads/xdk-latest.zip | cut -d' ' -f1)
         
         # Update the Homebrew formula
-        cat > xdk-latest.rb << EOF
+        cat > Formula/xdk-latest.rb << EOF
         class XdkLatest < Formula
           desc "Ecstasy Development Kit (XDK) - A revolutionary programming language and runtime"
           homepage "https://github.com/xtclang/xvm/"
@@ -63,7 +63,7 @@ runs:
         # Commit and push changes
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
-        git add downloads/xdk-latest.zip xdk-latest.rb
+        git add downloads/xdk-latest.zip Formula/xdk-latest.rb
         git commit -m "Update XDK to ${{ inputs.xdk-version }}"
         git push
         
