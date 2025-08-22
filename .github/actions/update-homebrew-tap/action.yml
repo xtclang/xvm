@@ -31,20 +31,31 @@ runs:
         # Update the Homebrew formula
         cat > xdk-latest.rb << EOF
         class XdkLatest < Formula
-          desc "Ecstasy Development Kit (XDK)"
+          desc "Ecstasy Development Kit (XDK) - A revolutionary programming language and runtime"
           homepage "https://github.com/xtclang/xvm/"
           url "$ZIP_URL"
           version "${{ inputs.xdk-version }}"
           sha256 "$SHA256"
           license "Apache-2.0"
-          depends_on "openjdk"
+          depends_on "openjdk@24"
+          
           def install
             libexec.install Dir["*"]
-            %w[xec xtc xcc].each { |cmd| (bin/cmd).write_env_script(libexec/"bin"/cmd, JAVA_HOME: Formula["openjdk"].opt_prefix) }
+            
+            # Install Unix launchers (xec = Ecstasy Execution, xcc = Ecstasy Compiler)
+            %w[xec xcc].each do |cmd|
+              (bin/cmd).write_env_script(libexec/"bin"/cmd, JAVA_HOME: Formula["openjdk@24"].opt_prefix)
+            end
           end
+          
           test do
+            # Test that xec launcher works and shows expected error for missing module
             output = shell_output("#{bin}/xec 2>&1", 1)
             assert_match "Missing module file", output
+            
+            # Test that xcc launcher works and shows version info
+            output = shell_output("#{bin}/xcc --version 2>&1")
+            assert_match "Ecstasy", output
           end
         end
         EOF
