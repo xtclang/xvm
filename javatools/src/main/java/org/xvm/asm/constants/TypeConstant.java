@@ -2509,6 +2509,7 @@ public abstract class TypeConstant
                     else
                         {
                         fIncomplete = true;
+                        errs        = ErrorListener.BLACKHOLE;
                         }
                     break;
                     }
@@ -3474,6 +3475,7 @@ public abstract class TypeConstant
                 if (!collectSelfTypeParameters(struct, mapTypeParams, mapContribProps, nBasePropRank, errs))
                     {
                     fIncomplete = true;
+                    errs        = ErrorListener.BLACKHOLE;
                     }
 
                 ArrayList<PropertyConstant> listExplode = new ArrayList<>();
@@ -3783,6 +3785,7 @@ public abstract class TypeConstant
         else
             {
             fComplete = false;
+            errs      = ErrorListener.BLACKHOLE;
             }
 
         // layer on any annotations, if any
@@ -3807,6 +3810,7 @@ public abstract class TypeConstant
             if (infoAnno == null)
                 {
                 fComplete = false;
+                errs      = ErrorListener.BLACKHOLE;
                 }
             else
                 {
@@ -3845,8 +3849,12 @@ public abstract class TypeConstant
                     // if explicit accessors exist, they will be placed on top later
                     if (infoGet == null)
                         {
-                        throw new AssertionError("Missing getter for " + idGet.getValueString() +
-                            " at " + this.getValueString());
+                        if (!fComplete)
+                            {
+                            return false;
+                            }
+                        throw new IllegalStateException("Missing getter for " +
+                                idGet.getValueString() + " at " + this.getValueString());
                         }
 
                     infoGet = infoGet.layerOn(new MethodInfo(new MethodBody(
