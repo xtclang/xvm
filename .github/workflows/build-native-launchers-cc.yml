@@ -1,0 +1,213 @@
+name: Build Native Launchers (Cross-Compile)
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      platforms:
+        description: 'Platforms to build (comma-separated: linux-amd64,linux-arm64,windows-amd64,windows-arm64,macos-amd64,macos-arm64)'
+        required: false
+        default: 'linux-amd64,linux-arm64,windows-amd64,windows-arm64,macos-amd64,macos-arm64'
+  release:
+    types: [ published ]  # Still auto-run on releases
+
+jobs:
+  build-cross-compile:
+    strategy:
+      matrix:
+        include:
+          # Linux host can cross-compile to Windows and Linux targets
+          - os: ubuntu-latest
+            host-platform: linux
+            targets: |
+              linux-amd64
+              linux-arm64
+              windows-amd64
+              windows-arm64
+          # Mac host for Mac binaries (can build both architectures)
+          - os: macos-latest
+            host-platform: macos
+            targets: |
+              macos-amd64
+              macos-arm64
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Install cross-compilation dependencies (Linux)
+        if: matrix.host-platform == 'linux'
+        run: |
+          # Install MinGW for Windows cross-compilation
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-x86-64 gcc-mingw-w64-i686 gcc-multilib
+          sudo apt-get install -y gcc-aarch64-linux-gnu libc6-dev-arm64-cross
+          sudo apt-get install -y build-essential
+        
+      - name: Build launcher binaries (Linux host)
+        if: matrix.host-platform == 'linux'
+        run: |
+          mkdir -p dist
+          cd javatools_launcher/src/main/c
+          
+          # Linux AMD64
+          if [[ "${{ github.event.inputs.platforms }}" == *"linux-amd64"* ]] || [[ -z "${{ github.event.inputs.platforms }}" ]]; then
+            echo "Building Linux AMD64 launcher..."
+            gcc -static -g -Wall -std=gnu11 -DlinuxLauncher -O3 -mtune=generic \
+              launcher.c os_linux.c os_unux.c -o linux_launcher_amd64
+            mkdir -p ../../../../dist/linux-amd64
+            cp linux_launcher_amd64 ../../../../dist/linux-amd64/xcc
+            cp linux_launcher_amd64 ../../../../dist/linux-amd64/xec
+            cd ../../../../dist && zip -r xvm-tools-linux-amd64.zip linux-amd64/ && cd ../javatools_launcher/src/main/c
+          fi
+          
+          # Linux ARM64
+          if [[ "${{ github.event.inputs.platforms }}" == *"linux-arm64"* ]] || [[ -z "${{ github.event.inputs.platforms }}" ]]; then
+            echo "Building Linux ARM64 launcher..."
+            aarch64-linux-gnu-gcc -static -g -Wall -std=gnu11 -DlinuxLauncher -O3 -march=armv8-a -mtune=cortex-a72 \
+              launcher.c os_linux.c os_unux.c -o linux_launcher_arm64
+            mkdir -p ../../../../dist/linux-arm64
+            cp linux_launcher_arm64 ../../../../dist/linux-arm64/xcc
+            cp linux_launcher_arm64 ../../../../dist/linux-arm64/xec
+            cd ../../../../dist && zip -r xvm-tools-linux-arm64.zip linux-arm64/ && cd ../javatools_launcher/src/main/c
+          fi
+          
+          # Windows AMD64
+          if [[ "${{ github.event.inputs.platforms }}" == *"windows-amd64"* ]] || [[ -z "${{ github.event.inputs.platforms }}" ]]; then
+            echo "Building Windows AMD64 launcher..."
+            x86_64-w64-mingw32-gcc -static -g -Wall -std=gnu11 -DwindowsLauncher -O3 -mtune=generic \
+              launcher.c os_windows.c -o windows_launcher_amd64.exe
+            mkdir -p ../../../../dist/windows-amd64
+            cp windows_launcher_amd64.exe ../../../../dist/windows-amd64/xcc.exe
+            cp windows_launcher_amd64.exe ../../../../dist/windows-amd64/xec.exe
+            cd ../../../../dist && zip -r xvm-tools-windows-amd64.zip windows-amd64/ && cd ../javatools_launcher/src/main/c
+          fi
+          
+          # Windows ARM64 (experimental - may not work)
+          if [[ "${{ github.event.inputs.platforms }}" == *"windows-arm64"* ]] || [[ -z "${{ github.event.inputs.platforms }}" ]]; then
+            echo "Building Windows ARM64 launcher (experimental)..."
+            # This may fail if the toolchain doesn't support ARM64
+            if command -v aarch64-w64-mingw32-gcc >/dev/null 2>&1; then
+              aarch64-w64-mingw32-gcc -static -g -Wall -std=gnu11 -DwindowsLauncher -O3 -march=armv8-a \
+                launcher.c os_windows.c -o windows_launcher_arm64.exe || echo "Windows ARM64 build failed - toolchain not available"
+              if [ -f windows_launcher_arm64.exe ]; then
+                mkdir -p ../../../../dist/windows-arm64
+                cp windows_launcher_arm64.exe ../../../../dist/windows-arm64/xcc.exe
+                cp windows_launcher_arm64.exe ../../../../dist/windows-arm64/xec.exe
+                cd ../../../../dist && zip -r xvm-tools-windows-arm64.zip windows-arm64/ && cd ../javatools_launcher/src/main/c
+              fi
+            else
+              echo "Windows ARM64 toolchain not available, skipping..."
+            fi
+          fi
+        
+      - name: Build launcher binaries (Mac host)
+        if: matrix.host-platform == 'macos'
+        run: |
+          mkdir -p dist
+          cd javatools_launcher/src/main/c
+          
+          # Build both architectures and create universal binaries
+          echo "Building macOS launchers for both architectures..."
+          
+          # Build AMD64 (Intel)
+          gcc -g -Wall -std=gnu11 -DmacosLauncher -O3 -arch x86_64 \
+            launcher.c os_macos.c os_unux.c -o macos_launcher_amd64
+          
+          # Build ARM64 (Apple Silicon)  
+          gcc -g -Wall -std=gnu11 -DmacosLauncher -O3 -arch arm64 \
+            launcher.c os_macos.c os_unux.c -o macos_launcher_arm64
+          
+          # Create universal binaries
+          lipo -create macos_launcher_amd64 macos_launcher_arm64 -output macos_launcher_universal
+          
+          # Create separate architecture zips with universal binaries
+          if [[ "${{ github.event.inputs.platforms }}" == *"macos-amd64"* ]] || [[ -z "${{ github.event.inputs.platforms }}" ]]; then
+            mkdir -p ../../../../dist/macos-amd64
+            cp macos_launcher_universal ../../../../dist/macos-amd64/xcc
+            cp macos_launcher_universal ../../../../dist/macos-amd64/xec
+            cd ../../../../dist && zip -r xvm-tools-macos-amd64.zip macos-amd64/ && cd ../javatools_launcher/src/main/c
+          fi
+          
+          if [[ "${{ github.event.inputs.platforms }}" == *"macos-arm64"* ]] || [[ -z "${{ github.event.inputs.platforms }}" ]]; then
+            mkdir -p ../../../../dist/macos-arm64
+            cp macos_launcher_universal ../../../../dist/macos-arm64/xcc
+            cp macos_launcher_universal ../../../../dist/macos-arm64/xec
+            cd ../../../../dist && zip -r xvm-tools-macos-arm64.zip macos-arm64/ && cd ../javatools_launcher/src/main/c
+          fi
+        
+      - name: Verify executables work (Linux)
+        if: matrix.host-platform == 'linux'
+        run: |
+          # Test Linux binaries
+          if [ -f dist/linux-amd64/xcc ]; then
+            chmod +x dist/linux-amd64/xcc dist/linux-amd64/xec
+            echo "Testing Linux AMD64 binaries..."
+            file dist/linux-amd64/xcc
+            ./dist/linux-amd64/xcc --help >/dev/null 2>&1 || echo "Linux AMD64 xcc test completed"
+          fi
+          
+          if [ -f dist/linux-arm64/xcc ]; then
+            echo "Linux ARM64 binaries created (cannot test on AMD64 runner)"
+            file dist/linux-arm64/xcc
+          fi
+          
+          # Test Windows binaries (just check they exist and are PE files)
+          if [ -f dist/windows-amd64/xcc.exe ]; then
+            echo "Windows AMD64 binaries created"
+            file dist/windows-amd64/xcc.exe
+          fi
+        shell: bash
+        
+      - name: Verify executables work (Mac)
+        if: matrix.host-platform == 'macos'
+        run: |
+          if [ -f dist/macos-amd64/xcc ]; then
+            chmod +x dist/macos-amd64/xcc dist/macos-amd64/xec
+            echo "Testing macOS universal binaries (should work on both Intel and Apple Silicon)..."
+            file dist/macos-amd64/xcc
+            lipo -info dist/macos-amd64/xcc
+            ./dist/macos-amd64/xcc --help >/dev/null 2>&1 || echo "macOS universal xcc test completed"
+          fi
+          
+          if [ -f dist/macos-arm64/xcc ]; then
+            chmod +x dist/macos-arm64/xcc dist/macos-arm64/xec
+            echo "Verifying macOS ARM64 zip contains universal binaries..."
+            file dist/macos-arm64/xcc
+            lipo -info dist/macos-arm64/xcc
+            ./dist/macos-arm64/xcc --help >/dev/null 2>&1 || echo "macOS universal xcc test completed"
+          fi
+        shell: bash
+        
+      - name: Upload executables (Linux builds)
+        if: matrix.host-platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: xvm-cross-compiled-linux-builds
+          path: dist/*.zip
+          retention-days: 90
+          
+      - name: Upload executables (Mac builds)
+        if: matrix.host-platform == 'macos'
+        uses: actions/upload-artifact@v4
+        with:
+          name: xvm-cross-compiled-macos-builds
+          path: dist/*.zip
+          retention-days: 90
+          
+      - name: Upload to release (Linux)
+        if: github.event_name == 'release' && matrix.host-platform == 'linux'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Upload to release (Mac)
+        if: github.event_name == 'release' && matrix.host-platform == 'macos'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

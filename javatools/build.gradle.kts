@@ -9,6 +9,7 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.git.properties)
+    id("org.graalvm.buildtools.native") version "0.11.0"
 }
 
 private val semanticVersion: SemanticVersion by extra
@@ -227,5 +228,32 @@ val sanityCheckJar by tasks.registering {
             expectedEntryCount
         )
         logger.lifecycle("$prefix Sanity check of javatools.jar completed successfully ($size elements found).")
+    }
+}
+
+// Configure GraalVM Native Image plugin
+graalvmNative {
+    binaries {
+        named("main") {
+            mainClass.set("org.xvm.tool.Compiler")
+            imageName.set("xcc")
+            buildArgs.add("--enable-preview")
+            buildArgs.add("--no-fallback")
+            buildArgs.add("-H:+ReportExceptionStackTraces")
+            buildArgs.add("-H:IncludeResources=.*\\.properties")
+            buildArgs.add("-H:IncludeResources=.*\\.txt")
+            buildArgs.add("-H:IncludeResources=.*\\.x")
+        }
+        register("runner") {
+            mainClass.set("org.xvm.tool.Runner")
+            imageName.set("xec")
+            classpath.from(jar)
+            buildArgs.add("--enable-preview")
+            buildArgs.add("--no-fallback")
+            buildArgs.add("-H:+ReportExceptionStackTraces")
+            buildArgs.add("-H:IncludeResources=.*\\.properties")
+            buildArgs.add("-H:IncludeResources=.*\\.txt")
+            buildArgs.add("-H:IncludeResources=.*\\.x")
+        }
     }
 }

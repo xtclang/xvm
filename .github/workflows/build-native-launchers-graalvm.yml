@@ -1,0 +1,101 @@
+name: Build Native Executables
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      platforms:
+        description: 'Platforms to build (comma-separated: linux-amd64,windows-amd64,macos-arm64,macos-amd64)'
+        required: false
+        default: 'linux-amd64,windows-amd64,macos-arm64,macos-amd64'
+  release:
+    types: [ published ]  # Still auto-run on releases
+
+jobs:
+  build-native:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-amd64
+            executable-suffix: ""
+          - os: windows-latest
+            platform: windows-amd64
+            executable-suffix: ".exe"
+          - os: macos-latest
+            platform: macos-arm64
+            executable-suffix: ""
+          - os: macos-13  # Intel Mac
+            platform: macos-amd64
+            executable-suffix: ""
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '24'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+            
+      - name: Grant execute permission for gradlew
+        if: runner.os != 'Windows'
+        run: chmod +x gradlew
+        
+      - name: Build JAR first
+        run: ./gradlew javatools:jar
+        
+      - name: Build native executables
+        run: ./gradlew javatools:nativeCompile javatools:nativeRunnerCompile
+        
+      - name: Verify executables work
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            ./javatools/build/native/nativeCompile/xcc.exe --version
+            ./javatools/build/native/nativeRunnerCompile/xec.exe --version
+          else
+            ./javatools/build/native/nativeCompile/xcc --version
+            ./javatools/build/native/nativeRunnerCompile/xec --version
+          fi
+        shell: bash
+        
+      - name: Package executables
+        run: |
+          mkdir -p dist
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp javatools/build/native/nativeCompile/xcc.exe dist/
+            cp javatools/build/native/nativeRunnerCompile/xec.exe dist/
+          else
+            cp javatools/build/native/nativeCompile/xcc dist/
+            cp javatools/build/native/nativeRunnerCompile/xec dist/
+          fi
+        shell: bash
+        
+      - name: Upload executables
+        uses: actions/upload-artifact@v4
+        with:
+          name: xvm-tools-${{ matrix.platform }}
+          path: dist/
+          retention-days: 90
+          
+      - name: Upload to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          name: xvm-tools-${{ matrix.platform }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
