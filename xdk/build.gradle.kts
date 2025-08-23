@@ -1,5 +1,4 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE
-import XdkDistribution.Companion.JAVATOOLS_INSTALLATION_NAME
 import XdkDistribution.Companion.JAVATOOLS_PREFIX_PATTERN
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
@@ -28,6 +27,17 @@ val xtcLauncherBinaries by configurations.registering {
     isCanBeConsumed = false
 }
 
+val xdkJavaToolsJitBridge by configurations.registering {
+    description = "Consumes javatools-jitbridge JAR as native binary blob for distribution (NOT classpath)"
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    attributes {
+        attribute(CATEGORY_ATTRIBUTE, objects.named("jit-bridge-binary"))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("jit-bridge-binary"))
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named("native-runtime-blob"))
+    }
+}
+
 /**
  * Local configuration to provide an xdk-distribution, which contains versioned zip and tar.gz XDKs.
  */
@@ -46,6 +56,7 @@ val xdkProvider by configurations.registering {
 
 dependencies {
     xdkJavaTools(libs.javatools)
+    xdkJavaToolsJitBridge(libs.javatools.jitbridge)
     xtcModule(libs.xdk.ecstasy)
     xtcModule(libs.xdk.aggregate)
     xtcModule(libs.xdk.cli)
@@ -218,13 +229,13 @@ val test by tasks.existing {
 val ensureTags by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Ensure that the current commit is tagged with the current version."
-    
+
     // Capture values during configuration phase to avoid runtime project access
     val snapshotOnly = snapshotOnly()
     val currentVersion = semanticVersion
     val gitHubProtocol = xdkBuildLogic.gitHubProtocol()
     val logPrefix = prefix  // Capture prefix to avoid project access during execution
-    
+
     if (!allowPublication()) {
         logger.lifecycle("$logPrefix Skipping publication task, snapshotOnly=${snapshotOnly} for version: '$currentVersion")
     }
@@ -257,8 +268,8 @@ enum class LauncherType {
 /**
  * Creates distribution contents based on a distribution name, version and classifier.
  * This logic is used for the nain distribution artifact (named "xdk"), and the contents
- * has been broken out into this function so that we can easily generate ore installations
- * and distributions with slightly different contents, for example, based o OS, and with
+ * has been broken out into this function so that we can easily generate other installations
+ * and distributions with slightly different contents, for example, based on the OS, and with
  * an OS specific launcher already in "bin".
  */
 private fun Distribution.contentSpec(distName: String, distVersion: String, distClassifier: String = "", launcherType: LauncherType = LauncherType.None) {
@@ -296,6 +307,11 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
         }
         // Strip the conventional version suffix from every jar file in the distribution
         from(configurations.xdkJavaTools) {
+            rename("(.*)\\-${semanticVersion.artifactVersion}\\.jar", "$1\\.jar" )
+            into("javatools")
+        }
+        // Include javatools-jitbridge binary blob (separate from normal javatools classpath)
+        from(xdkJavaToolsJitBridge) {
             rename("(.*)\\-${semanticVersion.artifactVersion}\\.jar", "$1\\.jar" )
             into("javatools")
         }

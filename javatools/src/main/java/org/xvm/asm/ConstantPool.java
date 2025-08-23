@@ -57,8 +57,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * A shared pool of all Constant objects used in a particular FileStructure.
  */
 public class ConstantPool
-        extends XvmStructure
-    {
+        extends XvmStructure {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -66,10 +65,9 @@ public class ConstantPool
      *
      * @param fileStructure  the FileStructure that contains this ConstantPool
      */
-    public ConstantPool(FileStructure fileStructure)
-        {
+    public ConstantPool(FileStructure fileStructure) {
         super(fileStructure);
-        }
+    }
 
 
     // ----- public API ----------------------------------------------------------------------------
@@ -82,20 +80,18 @@ public class ConstantPool
      *
      * @return the Constant at that index
      */
-    public Constant getConstant(int i)
-        {
+    public Constant getConstant(int i) {
         return i == -1 ? null : m_listConst.get(i);
-        }
+    }
 
     /**
      * Determine the current number of constants in the pool.
      *
      * @return the count of constants in the pool
      */
-    public int size()
-        {
+    public int size() {
         return m_listConst.size();
-        }
+    }
 
     /**
      * Obtain an array containing all of the constants from the pool, in the order that they exist
@@ -107,11 +103,10 @@ public class ConstantPool
      *
      * @return the Constant at that index
      */
-    public Constant[] getConstants()
-        {
+    public Constant[] getConstants() {
         // note: this is expensive!!! (but purposeful)
         return m_listConst.toArray(Constant.NO_CONSTS);
-        }
+    }
 
     /**
      * Obtain the corresponding Constant that is currently stored in this pool.
@@ -120,12 +115,11 @@ public class ConstantPool
      *
      * @return the corresponding constant from the pool, it was already present in this pool
      */
-    public Constant getConstant(Constant constant)
-        {
+    public Constant getConstant(Constant constant) {
         return constant == null
                 ? null
                 : ensureConstantLookup(constant.getFormat()).get(constant);
-        }
+    }
 
     /**
      * Register a Constant. This is used when a new Constant is created by the ConstantPool, but it
@@ -142,14 +136,12 @@ public class ConstantPool
      *         the previously registered Constant (which should be used in lieu of the passed
      *         Constant) is returned
      */
-    public Constant register(Constant constant)
-        {
+    public Constant register(Constant constant) {
         // to allow this method to be used blindly, i.e. for constants that may be optional within a
         // given structure, simply pass back null refs
-        if (constant == null)
-            {
+        if (constant == null) {
             return null;
-            }
+        }
 
         // before registering the constant, see if there is a simpler alternative to use; for
         // example, this allows a type constant that refers to a typedef constant to be replaced
@@ -163,35 +155,29 @@ public class ConstantPool
         Constant                constantOld  = mapConstants.get(constant);
 
         boolean fRegisterRecursively = false;
-        if (constantOld == null)
-            {
+        if (constantOld == null) {
             // constants that contain unresolved information need to be resolved before they are
             // registered; note that if m_fRecurseReg is true, we could be in a compile phase that has already
             // experienced one or more name resolution errors, and so there could still be unresolved
             // constants (just ignore them here; they should have been logged as errors already)
-            if (constant.containsUnresolved())
-                {
+            if (constant.containsUnresolved()) {
                 return constant;
-                }
+            }
 
             // type constants that are "foreign" to this pool cannot be held by it
-            if (constant instanceof TypeConstant type && !type.isShared(this))
-                {
+            if (constant instanceof TypeConstant type && !type.isShared(this)) {
                 return constant;
-                }
+            }
 
-            if (constant.getContaining() != this)
-                {
+            if (constant.getContaining() != this) {
                 constant = constant.adoptedBy(this);
-                }
+            }
 
-            synchronized (this)
-                {
-                if (mapConstants.containsKey(constant))
-                    {
+            synchronized (this) {
+                if (mapConstants.containsKey(constant)) {
                     // it was concurrently inserted
                     return mapConstants.get(constant);
-                    }
+                }
 
                 constant.setPosition(m_listConst.size());
                 m_listConst.add(constant);
@@ -199,45 +185,38 @@ public class ConstantPool
 
                 // also allow the constant to be looked up by a locator
                 Object oLocator = constant.getLocator();
-                if (oLocator != null)
-                    {
+                if (oLocator != null) {
                     if (oLocator instanceof Constant constLocator &&
-                            constLocator.getContaining() != this)
-                        {
+                            constLocator.getContaining() != this) {
                         constLocator = constLocator.adoptedBy(this);
                         constLocator.registerConstants(this);
                         oLocator = constLocator;
-                        }
+                    }
 
                     Constant constOld = ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
-                    if (constOld != null && !constOld.equals(constant))
-                        {
+                    if (constOld != null && !constOld.equals(constant)) {
                         throw new IllegalStateException("locator collision: old=" + constOld + ", new=" + constant);
-                        }
                     }
                 }
+            }
 
             // make sure that the recursively referenced constants are all
             // registered (and that they are aware of their being referenced)
             fRegisterRecursively = true;
-            }
-        else
-            {
+        } else {
             constant = constantOld;
-            }
+        }
 
-        if (m_fRecurseReg)
-            {
+        if (m_fRecurseReg) {
             // this can happen only in a single-thread scenario at the end of the compilation;
             // the first time that this constant is registered, the constant has to recursively
             // register any constants that it refers to, and each time the constant is registered
             // we tally that registration so that we can later order the constants from most to
             // least referenced
             fRegisterRecursively = constant.addRef();
-            }
+        }
 
-        if (fRegisterRecursively)
-            {
+        if (fRegisterRecursively) {
             constant.registerConstants(this);
 
             // once all of the modules are linked together, we know all of the valid upstream
@@ -245,46 +224,39 @@ public class ConstantPool
             // is an assertion to make sure that we don't accidentally refer to a constant pool
             // that isn't in that set of valid pools
             constant.checkValidPools(m_setValidPools, new int[] {0});
-            }
+        }
 
         return constant;
-        }
+    }
 
     /**
      * Create a set or ConstantPools (upstream) that this ConstantPool is allowed to depend on.
      */
-    public void buildValidPoolSet()
-        {
+    public void buildValidPoolSet() {
         Set<ConstantPool> set = m_setValidPools;
-        if (set.isEmpty())
-            {
+        if (set.isEmpty()) {
             contributeToValidPoolSet(set);
-            }
         }
+    }
 
     /**
      * Add ConstantPool references that this one is allowed to depend on to the specified set.
      */
-    private void contributeToValidPoolSet(Set<ConstantPool> set)
-        {
-        if (set.add(this))
-            {
+    private void contributeToValidPoolSet(Set<ConstantPool> set) {
+        if (set.add(this)) {
             FileStructure file = getFileStructure();
-            for (ModuleConstant idModule : file.moduleIds())
-                {
+            for (ModuleConstant idModule : file.moduleIds()) {
                 ModuleStructure moduleFingerprint = file.getModule(idModule);
-                if (moduleFingerprint.isFingerprint())
-                    {
+                if (moduleFingerprint.isFingerprint()) {
                     ModuleStructure moduleUpstream = moduleFingerprint.getFingerprintOrigin();
                     // if the module is not there, TypeCompositionStatement will report it
-                    if (moduleUpstream != null)
-                        {
+                    if (moduleUpstream != null) {
                         moduleUpstream.getConstantPool().contributeToValidPoolSet(set);
-                        }
                     }
                 }
             }
         }
+    }
 
     /**
      * Given the specified byte array value, obtain a ByteStringConstant that represents it.
@@ -293,11 +265,10 @@ public class ConstantPool
      *
      * @return a ByteStringConstant for the passed byte array value
      */
-    public UInt8ArrayConstant ensureByteStringConstant(byte[] ab)
-        {
+    public UInt8ArrayConstant ensureByteStringConstant(byte[] ab) {
         UInt8ArrayConstant constant = new UInt8ArrayConstant(this, ab.clone());
         return (UInt8ArrayConstant) register(constant);
-        }
+    }
 
     /**
      * Given the specified character value, obtain a CharConstant that represents it.
@@ -306,20 +277,17 @@ public class ConstantPool
      *
      * @return a CharConstant for the passed character value
      */
-    public CharConstant ensureCharConstant(int ch)
-        {
+    public CharConstant ensureCharConstant(int ch) {
         // check the cache
-        if (ch <= 0x7F)
-            {
+        if (ch <= 0x7F) {
             CharConstant constant = (CharConstant) ensureLocatorLookup(Format.Char).get(Character.valueOf((char) ch));
-            if (constant != null)
-                {
+            if (constant != null) {
                 return constant;
-                }
             }
+        }
 
         return (CharConstant) register(new CharConstant(this, ch));
-        }
+    }
 
     /**
      * Given the specified regular expression value, obtain a {@link RegExConstant}
@@ -330,18 +298,16 @@ public class ConstantPool
      *
      * @return a {@link RegExConstant} for the passed regular expression value
      */
-    public RegExConstant ensureRegExConstant(String expression, int nFlags)
-        {
+    public RegExConstant ensureRegExConstant(String expression, int nFlags) {
         // check the pre-existing constants first (only for default flags)
         RegExConstant constant = nFlags == 0
                 ? (RegExConstant) ensureLocatorLookup(Format.RegEx).get(expression)
                 : null;
-        if (constant == null)
-            {
+        if (constant == null) {
             constant = (RegExConstant) register(new RegExConstant(this, expression, nFlags));
-            }
-        return constant;
         }
+        return constant;
+    }
 
     /**
      * Given the specified String value, obtain a CharStringConstant that represents it.
@@ -350,98 +316,88 @@ public class ConstantPool
      *
      * @return a CharStringConstant for the passed String value
      */
-    public StringConstant ensureStringConstant(String s)
-        {
+    public StringConstant ensureStringConstant(String s) {
         // check the pre-existing constants first
         StringConstant constant = (StringConstant) ensureLocatorLookup(Format.String).get(s);
-        if (constant == null)
-            {
+        if (constant == null) {
             constant = (StringConstant) register(new StringConstant(this, s));
-            }
+        }
         return constant;
-        }
+    }
 
-    public LiteralConstant ensureLiteralConstant(Format format, String s)
-        {
+    public LiteralConstant ensureLiteralConstant(Format format, String s) {
         return (LiteralConstant) ensureLiteralConstant(format, s, null);
-        }
+    }
 
-    public Constant ensureLiteralConstant(Format format, String s, Object oValue)
-        {
-        switch (format)
-            {
-            case IntLiteral:
-            case FPLiteral:
-            case Date:
-            case TimeOfDay:
-            case Time:
-            case Duration:
-            case Path:
-            case RegEx:
-                {
-                LiteralConstant constant = (LiteralConstant) ensureLocatorLookup(format).get(s);
-                if (constant == null)
-                    {
-                    constant = (LiteralConstant) register(new LiteralConstant(this, format, s, oValue));
-                    }
-                return constant;
-                }
-
-            case Dec32:
-            case Dec64:
-            case Dec128:
-            case DecN:
-            case Float8e4:
-            case Float8e5:
-            case BFloat16:
-            case Float16:
-            case Float32:
-            case Float64:
-            case Float128:
-            case FloatN:
-                {
-                LiteralConstant constant = (LiteralConstant) ensureLocatorLookup(Format.FPLiteral).get(s);
-                if (constant == null)
-                    {
-                    constant = new LiteralConstant(this, Format.FPLiteral, s, oValue);
-                    }
-                return switch (format)
-                    {
-                    case Dec32, Dec64, Dec128 -> constant.toDecimalConstant(format);
-                    case DecN                 -> constant.toDecNConstant();
-                    case Float8e4             -> constant.toFloat8e4Constant();
-                    case Float8e5             -> constant.toFloat8e5Constant();
-                    case BFloat16             -> constant.toBFloat16Constant();
-                    case Float16              -> constant.toFloat16Constant();
-                    case Float32              -> constant.toFloat32Constant();
-                    case Float64              -> constant.toFloat64Constant();
-                    case Float128             -> constant.toFloat128Constant();
-                    case FloatN               -> constant.toFloatNConstant();
-                    default                   -> throw new IllegalStateException();
-                    };
-                }
-
-            case Int16:
-            case Int32:
-            case Int64:
-            case Int128:
-            case UInt16:
-            case UInt32:
-            case UInt64:
-            case UInt128:
-            // REVIEW CP GG 4x IntN types?
-                return ensureIntConstant((PackedInteger) oValue, format);
-
-            case Bit:
-            case Int8:
-            case Nibble:
-            case UInt8:
-                return ensureByteConstant(format, ((PackedInteger) oValue).getInt());
-
-            default:
-                throw new IllegalStateException("unsupported format: " + format);
+    public Constant ensureLiteralConstant(Format format, String s, Object oValue) {
+        switch (format) {
+        case IntLiteral:
+        case FPLiteral:
+        case Date:
+        case TimeOfDay:
+        case Time:
+        case Duration:
+        case Path:
+        case RegEx: {
+            LiteralConstant constant = (LiteralConstant) ensureLocatorLookup(format).get(s);
+            if (constant == null) {
+                constant = (LiteralConstant) register(new LiteralConstant(this, format, s, oValue));
             }
+            return constant;
         }
+
+        case Dec32:
+        case Dec64:
+        case Dec128:
+        case DecN:
+        case Float8e4:
+        case Float8e5:
+        case BFloat16:
+        case Float16:
+        case Float32:
+        case Float64:
+        case Float128:
+        case FloatN: {
+            LiteralConstant constant = (LiteralConstant) ensureLocatorLookup(Format.FPLiteral).get(s);
+            if (constant == null) {
+                constant = new LiteralConstant(this, Format.FPLiteral, s, oValue);
+            }
+            return switch (format) {
+                case Dec32, Dec64, Dec128 -> constant.toDecimalConstant(format);
+                case DecN                 -> constant.toDecNConstant();
+                case Float8e4             -> constant.toFloat8e4Constant();
+                case Float8e5             -> constant.toFloat8e5Constant();
+                case BFloat16             -> constant.toBFloat16Constant();
+                case Float16              -> constant.toFloat16Constant();
+                case Float32              -> constant.toFloat32Constant();
+                case Float64              -> constant.toFloat64Constant();
+                case Float128             -> constant.toFloat128Constant();
+                case FloatN               -> constant.toFloatNConstant();
+                default                   -> throw new IllegalStateException();
+            };
+        }
+
+        case Int16:
+        case Int32:
+        case Int64:
+        case Int128:
+        case UInt16:
+        case UInt32:
+        case UInt64:
+        case UInt128:
+        // REVIEW CP GG 4x IntN types?
+            return ensureIntConstant((PackedInteger) oValue, format);
+
+        case Bit:
+        case Int8:
+        case Nibble:
+        case UInt8:
+            return ensureByteConstant(format, ((PackedInteger) oValue).getInt());
+
+        default:
+            throw new IllegalStateException("unsupported format: " + format);
+        }
+    }
 
     /**
      * Given the specified {@code int} value for a bit, obtain a ByteConstant that represents it.
@@ -450,10 +406,9 @@ public class ConstantPool
      *
      * @return an ByteConstant for the passed bit value
      */
-    public ByteConstant ensureBitConstant(int n)
-        {
+    public ByteConstant ensureBitConstant(int n) {
         return ensureByteConstant(Format.Bit, n);
-        }
+    }
 
     /**
      * Given the specified {@code int} value for a nibble, obtain a ByteConstant that represents it.
@@ -462,10 +417,9 @@ public class ConstantPool
      *
      * @return an ByteConstant for the passed nibble value
      */
-    public ByteConstant ensureNibbleConstant(int n)
-        {
+    public ByteConstant ensureNibbleConstant(int n) {
         return ensureByteConstant(Format.Nibble, n);
-        }
+    }
 
     /**
      * Given the specified {@code int} value for a byte, obtain a ByteConstant that represents it.
@@ -474,25 +428,22 @@ public class ConstantPool
      *
      * @return an ByteConstant for the passed byte value
      */
-    public ByteConstant ensureByteConstant(Format format, int n)
-        {
-        switch (format)
-            {
-            case Bit:
-            case Nibble:
-            case Int8:
-            case UInt8:
-                ByteConstant constant = (ByteConstant) ensureLocatorLookup(format).get(n);
-                if (constant == null)
-                    {
-                    constant = (ByteConstant) register(new ByteConstant(this, format, n));
-                    }
-                return constant;
-
-            default:
-                throw new IllegalArgumentException("format=" + format);
+    public ByteConstant ensureByteConstant(Format format, int n) {
+        switch (format) {
+        case Bit:
+        case Nibble:
+        case Int8:
+        case UInt8:
+            ByteConstant constant = (ByteConstant) ensureLocatorLookup(format).get(n);
+            if (constant == null) {
+                constant = (ByteConstant) register(new ByteConstant(this, format, n));
             }
+            return constant;
+
+        default:
+            throw new IllegalArgumentException("format=" + format);
         }
+    }
 
     /**
      * Given the specified {@code long} value, obtain a IntConstant that represents it.
@@ -501,10 +452,9 @@ public class ConstantPool
      *
      * @return an IntConstant for the passed {@code long} value
      */
-    public IntConstant ensureIntConstant(long n)
-        {
+    public IntConstant ensureIntConstant(long n) {
         return ensureIntConstant(PackedInteger.valueOf(n));
-        }
+    }
 
     /**
      * Given the specified PackedInteger value, obtain a IntConstant that represents it.
@@ -513,10 +463,9 @@ public class ConstantPool
      *
      * @return an IntConstant for the passed PackedInteger value
      */
-    public IntConstant ensureIntConstant(PackedInteger pint)
-        {
+    public IntConstant ensureIntConstant(PackedInteger pint) {
         return ensureIntConstant(pint, Format.Int64);
-        }
+    }
 
 
     /**
@@ -531,32 +480,29 @@ public class ConstantPool
      *
      * @return an IntConstant for the passed PackedInteger value
      */
-    public IntConstant ensureIntConstant(PackedInteger pint, Format format)
-        {
-        switch (format)
-            {
-            case Int16:
-            case Int32:
-            case Int64:
-            case Int128:
-            case IntN:
-            case UInt16:
-            case UInt32:
-            case UInt64:
-            case UInt128:
-            case UIntN:
-                // check the pre-existing constants first
-                IntConstant constant = (IntConstant) ensureLocatorLookup(format).get(pint);
-                if (constant == null)
-                    {
-                    constant = (IntConstant) register(new IntConstant(this, format, pint));
-                    }
-                return constant;
-
-            default:
-                throw new IllegalStateException("unsupported format: " + format);
+    public IntConstant ensureIntConstant(PackedInteger pint, Format format) {
+        switch (format) {
+        case Int16:
+        case Int32:
+        case Int64:
+        case Int128:
+        case IntN:
+        case UInt16:
+        case UInt32:
+        case UInt64:
+        case UInt128:
+        case UIntN:
+            // check the pre-existing constants first
+            IntConstant constant = (IntConstant) ensureLocatorLookup(format).get(pint);
+            if (constant == null) {
+                constant = (IntConstant) register(new IntConstant(this, format, pint));
             }
+            return constant;
+
+        default:
+            throw new IllegalStateException("unsupported format: " + format);
         }
+    }
 
     /**
      * Given the specified decimal value, obtain a DecimalConstant that represents it.
@@ -565,24 +511,21 @@ public class ConstantPool
      *
      * @return a DecimalConstant for the passed decimal value
      */
-    public DecimalConstant ensureDecConstant(Decimal dec)
-        {
-        Format format = switch (dec.getBitLength())
-            {
+    public DecimalConstant ensureDecConstant(Decimal dec) {
+        Format format = switch (dec.getBitLength()) {
             case 32  -> Format.Dec32;
             case 64  -> Format.Dec64;
             case 128 -> Format.Dec128;
             default  -> throw new IllegalArgumentException(
                             "unsupported decimal type: " + dec.getClass().getSimpleName());
-            };
+        };
 
         DecimalConstant constant = (DecimalConstant) ensureLocatorLookup(format).get(dec);
-        if (constant == null)
-            {
+        if (constant == null) {
             constant = (DecimalConstant) register(new DecimalConstant(this, dec));
-            }
-        return constant;
         }
+        return constant;
+    }
 
     /**
      * Given the decimal value, obtain a DecimalAutoConstant that represents it.
@@ -591,15 +534,13 @@ public class ConstantPool
      *
      * @return a DecimalAutoConstant for the passed decimal value
      */
-    public DecimalAutoConstant ensureDecAConstant(Decimal dec)
-        {
+    public DecimalAutoConstant ensureDecAConstant(Decimal dec) {
         DecimalAutoConstant constant = (DecimalAutoConstant) ensureLocatorLookup(Format.Dec64).get(dec);
-        if (constant == null)
-            {
+        if (constant == null) {
             constant = (DecimalAutoConstant) register(new DecimalAutoConstant(this, dec));
-            }
-        return constant;
         }
+        return constant;
+    }
 
     /**
      * Given the specified decimal floating point value (stored in a byte array), obtain a
@@ -609,10 +550,9 @@ public class ConstantPool
      *
      * @return a FPNConstant for the passed floating point value
      */
-    public FPNConstant ensureDecNConstant(byte[] abVal)
-        {
+    public FPNConstant ensureDecNConstant(byte[] abVal) {
         return (FPNConstant) register(new FPNConstant(this, Format.DecN, abVal));
-        }
+    }
 
     /**
      * Given the specified floating point value, obtain a Float8e4Constant that represents it.
@@ -621,15 +561,13 @@ public class ConstantPool
      *
      * @return a Float8e4Constant for the passed floating point value
      */
-    public Float8e4Constant ensureFloat8e4Constant(float flVal)
-        {
+    public Float8e4Constant ensureFloat8e4Constant(float flVal) {
         Float8e4Constant constant = (Float8e4Constant) ensureLocatorLookup(Format.Float8e4).get(flVal);
-        if (constant == null)
-            {
+        if (constant == null) {
             constant = (Float8e4Constant) register(new Float8e4Constant(this, flVal));
-            }
-        return constant;
         }
+        return constant;
+    }
 
     /**
      * Given the specified floating point value, obtain a Float8e5Constant that represents it.
@@ -638,15 +576,13 @@ public class ConstantPool
      *
      * @return a Float8e5Constant for the passed floating point value
      */
-    public Float8e5Constant ensureFloat8e5Constant(float flVal)
-        {
+    public Float8e5Constant ensureFloat8e5Constant(float flVal) {
         Float8e5Constant constant = (Float8e5Constant) ensureLocatorLookup(Format.Float8e5).get(flVal);
-        if (constant == null)
-            {
+        if (constant == null) {
             constant = (Float8e5Constant) register(new Float8e5Constant(this, flVal));
-            }
-        return constant;
         }
+        return constant;
+    }
 
     /**
      * Given the specified floating point value, obtain a BFloat16Constant that represents it.
@@ -655,15 +591,13 @@ public class ConstantPool
      *
      * @return a BFloat16Constant for the passed floating point value
      */
-    public BFloat16Constant ensureBFloat16Constant(float flVal)
-        {
+    public BFloat16Constant ensureBFloat16Constant(float flVal) {
         BFloat16Constant constant = (BFloat16Constant) ensureLocatorLookup(Format.BFloat16).get(flVal);
-        if (constant == null)
-            {
+        if (constant == null) {
             constant = (BFloat16Constant) register(new BFloat16Constant(this, flVal));
-            }
-        return constant;
         }
+        return constant;
+    }
 
     /**
      * Given the specified floating point value, obtain a Float16Constant that represents it.
@@ -672,15 +606,13 @@ public class ConstantPool
      *
      * @return a Float16Constant for the passed floating point value
      */
-    public Float16Constant ensureFloat16Constant(float flVal)
-        {
+    public Float16Constant ensureFloat16Constant(float flVal) {
         Float16Constant constant = (Float16Constant) ensureLocatorLookup(Format.Float16).get(flVal);
-        if (constant == null)
-            {
+        if (constant == null) {
             constant = (Float16Constant) register(new Float16Constant(this, flVal));
-            }
-        return constant;
         }
+        return constant;
+    }
 
     /**
      * Given the specified floating point value, obtain a Float32Constant that represents it.
@@ -689,15 +621,13 @@ public class ConstantPool
      *
      * @return a Float32Constant for the passed floating point value
      */
-    public Float32Constant ensureFloat32Constant(float flVal)
-        {
+    public Float32Constant ensureFloat32Constant(float flVal) {
         Float32Constant constant = (Float32Constant) ensureLocatorLookup(Format.Float32).get(flVal);
-        if (constant == null)
-            {
+        if (constant == null) {
             constant = (Float32Constant) register(new Float32Constant(this, flVal));
-            }
-        return constant;
         }
+        return constant;
+    }
 
     /**
      * Given the specified floating point value, obtain a Float64Constant that represents it.
@@ -706,15 +636,13 @@ public class ConstantPool
      *
      * @return a Float64Constant for the passed floating point value
      */
-    public Float64Constant ensureFloat64Constant(double flVal)
-        {
+    public Float64Constant ensureFloat64Constant(double flVal) {
         Float64Constant constant = (Float64Constant) ensureLocatorLookup(Format.Float64).get(flVal);
-        if (constant == null)
-            {
+        if (constant == null) {
             constant = (Float64Constant) register(new Float64Constant(this, flVal));
-            }
-        return constant;
         }
+        return constant;
+    }
 
     /**
      * Given the specified floating point value (stored in a byte array), obtain a Float128Constant
@@ -724,10 +652,9 @@ public class ConstantPool
      *
      * @return a Float128Constant for the passed floating point value
      */
-    public Float128Constant ensureFloat128Constant(byte[] abVal)
-        {
+    public Float128Constant ensureFloat128Constant(byte[] abVal) {
         return (Float128Constant) register(new Float128Constant(this, abVal));
-        }
+    }
 
     /**
      * Given the specified binary floating point value (stored in a byte array), obtain a
@@ -737,46 +664,41 @@ public class ConstantPool
      *
      * @return a FPNConstant for the passed floating point value
      */
-    public FPNConstant ensureFloatNConstant(byte[] abVal)
-        {
+    public FPNConstant ensureFloatNConstant(byte[] abVal) {
         return (FPNConstant) register(new FPNConstant(this, Format.FloatN, abVal));
-        }
+    }
 
     /**
      * @param ft  the FileTime value or null
      *
      * @return the Time constant for the specified FileTime (or the epoch if the FileTime is null)
      */
-    public LiteralConstant ensureTimeConstant(FileTime ft)
-        {
-        if (ft == null)
-            {
+    public LiteralConstant ensureTimeConstant(FileTime ft) {
+        if (ft == null) {
             return defaultTimeConstant();
-            }
+        }
 
         String sDT = ft.toInstant().atOffset(ZoneOffset.UTC).toString();
         return ensureLiteralConstant(Format.Time, sDT);
-        }
+    }
 
     /**
      * @param instant  the Instant value or null
      *
      * @return the Time constant for the specified instant (or the epoch if the Instant is null)
      */
-    public LiteralConstant ensureTimeConstant(Instant instant)
-        {
+    public LiteralConstant ensureTimeConstant(Instant instant) {
         return instant == null
                 ? defaultTimeConstant()
                 : ensureLiteralConstant(Format.Time, instant.toString());
-        }
+    }
 
     /**
      * @return the Time constant for the epoch (zero) value
      */
-    public LiteralConstant defaultTimeConstant()
-        {
+    public LiteralConstant defaultTimeConstant() {
         return ensureLiteralConstant(Format.Time, Instant.EPOCH.toString());
-        }
+    }
 
     /**
      * Given the specified Version value, obtain a VersionConstant that represents it.
@@ -785,15 +707,13 @@ public class ConstantPool
      *
      * @return a VersionConstant for the passed version value
      */
-    public VersionConstant ensureVersionConstant(Version ver)
-        {
+    public VersionConstant ensureVersionConstant(Version ver) {
         VersionConstant constant = (VersionConstant) ensureLocatorLookup(Format.Version).get(ver.toString());
-        if (constant == null)
-            {
+        if (constant == null) {
             constant = (VersionConstant) register(new VersionConstant(this, ver));
-            }
-        return constant;
         }
+        return constant;
+    }
 
     /**
      * Create an array constant value.
@@ -803,12 +723,11 @@ public class ConstantPool
      *
      * @return a constant representing the Array value
      */
-    public ArrayConstant ensureArrayConstant(TypeConstant constType, Constant[] aconst)
-        {
+    public ArrayConstant ensureArrayConstant(TypeConstant constType, Constant[] aconst) {
         checkElementsNonNull(aconst);
 
         return (ArrayConstant) register(new ArrayConstant(this, Format.Array, constType, aconst.clone()));
-        }
+    }
 
     /**
      * Create a set constant value.
@@ -818,12 +737,11 @@ public class ConstantPool
      *
      * @return a constant representing the Set value
      */
-    public ArrayConstant ensureSetConstant(TypeConstant constType, Constant[] aconst)
-        {
+    public ArrayConstant ensureSetConstant(TypeConstant constType, Constant[] aconst) {
         checkElementsNonNull(aconst);
 
         return (ArrayConstant) register(new ArrayConstant(this, Format.Set, constType, aconst.clone()));
-        }
+    }
 
     /**
      * Create a tuple constant value.
@@ -833,12 +751,11 @@ public class ConstantPool
      *
      * @return a constant representing the tuple value
      */
-    public ArrayConstant ensureTupleConstant(TypeConstant constType, Constant... aconst)
-        {
+    public ArrayConstant ensureTupleConstant(TypeConstant constType, Constant... aconst) {
         checkElementsNonNull(aconst);
 
         return (ArrayConstant) register(new ArrayConstant(this, Format.Tuple, constType, aconst.clone()));
-        }
+    }
 
     /**
      * Create a Map constant.
@@ -848,11 +765,10 @@ public class ConstantPool
      *
      * @return the MapConstant representing the Map
      */
-    public MapConstant ensureMapConstant(TypeConstant constType, Map<? extends Constant, ? extends Constant> map)
-        {
+    public MapConstant ensureMapConstant(TypeConstant constType, Map<? extends Constant, ? extends Constant> map) {
         // TODO validations
         return new MapConstant(this, constType, map);
-        }
+    }
 
     /**
      * Create a Range constant, which is also an Interval constant for Sequential types.
@@ -862,10 +778,9 @@ public class ConstantPool
      *
      * @return the RangeConstant representing the range or interval
      */
-    public RangeConstant ensureRangeConstant(Constant const1, Constant const2)
-        {
+    public RangeConstant ensureRangeConstant(Constant const1, Constant const2) {
         return ensureRangeConstant(const1, false, const2, false);
-        }
+    }
 
     /**
      * Create a Range constant, which is also an Interval constant for Sequential types.
@@ -878,12 +793,11 @@ public class ConstantPool
      * @return the RangeConstant representing the range or interval
      */
     public RangeConstant ensureRangeConstant(Constant const1, boolean fExclude1,
-                                             Constant const2, boolean fExclude2)
-        {
+                                             Constant const2, boolean fExclude2) {
         assert const1.getFormat() == const2.getFormat();
 
         return new RangeConstant(this, const1, fExclude1, const2,  fExclude2);
-        }
+    }
 
     /**
      * Create a FileStore constant for the specified directory.
@@ -893,10 +807,9 @@ public class ConstantPool
      *
      * @return
      */
-    public FileStoreConstant ensureFileStoreConstant(String sPath, FSNodeConstant constDir)
-        {
+    public FileStoreConstant ensureFileStoreConstant(String sPath, FSNodeConstant constDir) {
         return new FileStoreConstant(this, sPath, constDir);
-        }
+    }
 
     /**
      * Create a directory FSNodeConstant for the specified directory.
@@ -912,10 +825,9 @@ public class ConstantPool
             String           sName,
             FileTime         ftCreated,
             FileTime         ftModified,
-            FSNodeConstant[] aFiles)
-        {
+            FSNodeConstant[] aFiles) {
         return new FSNodeConstant(this, sName, ftCreated, ftModified, aFiles);
-        }
+    }
 
     /**
      * Create a file FSNodeConstant for the specified bytes.
@@ -931,10 +843,9 @@ public class ConstantPool
             String   sName,
             FileTime ftCreated,
             FileTime ftModified,
-            byte[]   ab)
-        {
+            byte[]   ab) {
         return new FSNodeConstant(this, sName, ftCreated, ftModified, ab);
-        }
+    }
 
     /**
      * Create a match-any constant.
@@ -943,15 +854,13 @@ public class ConstantPool
      *
      * @return the desired match-any constant
      */
-    public MatchAnyConstant ensureMatchAnyConstant(TypeConstant type)
-        {
+    public MatchAnyConstant ensureMatchAnyConstant(TypeConstant type) {
         MatchAnyConstant constant = (MatchAnyConstant) ensureLocatorLookup(Format.Any).get(type);
-        if (constant == null)
-            {
+        if (constant == null) {
             constant = (MatchAnyConstant) register(new MatchAnyConstant(this, type));
-            }
-        return constant;
         }
+        return constant;
+    }
 
     /**
      * Given the specified name, obtain a NamedCondition that represents a test for the name being
@@ -961,15 +870,13 @@ public class ConstantPool
      *
      * @return a NamedCondition
      */
-    public NamedCondition ensureNamedCondition(String sName)
-        {
+    public NamedCondition ensureNamedCondition(String sName) {
         NamedCondition cond = (NamedCondition) ensureLocatorLookup(Format.ConditionNamed).get(sName);
-        if (cond == null)
-            {
+        if (cond == null) {
             cond = (NamedCondition) register(new NamedCondition(this, ensureStringConstant(sName)));
-            }
-        return cond;
         }
+        return cond;
+    }
 
     /**
      * Given a constant for a particular XVM structure, obtain a PresentCondition that represents a
@@ -979,15 +886,13 @@ public class ConstantPool
      *
      * @return a PresentCondition
      */
-    public PresentCondition ensurePresentCondition(Constant constId)
-        {
+    public PresentCondition ensurePresentCondition(Constant constId) {
         PresentCondition cond = (PresentCondition) ensureLocatorLookup(Format.ConditionPresent).get(constId);
-        if (cond == null)
-            {
+        if (cond == null) {
             cond = (PresentCondition) register(new PresentCondition(this, constId));
-            }
-        return cond;
         }
+        return cond;
+    }
 
     /**
      * Given a constant for a particular XVM structure and version, obtain a PresentCondition that
@@ -998,10 +903,9 @@ public class ConstantPool
      *
      * @return a VersionMatchesCondition
      */
-    public VersionMatchesCondition ensureImportVersionCondition(ModuleConstant constModule, VersionConstant constVer)
-        {
+    public VersionMatchesCondition ensureImportVersionCondition(ModuleConstant constModule, VersionConstant constVer) {
         return (VersionMatchesCondition) register(new VersionMatchesCondition(this, constModule, constVer));
-        }
+    }
 
     /**
      * Given a version, obtain a VersionedCondition that represents a test for that version
@@ -1011,10 +915,9 @@ public class ConstantPool
      *
      * @return a VersionedCondition
      */
-    public VersionedCondition ensureVersionedCondition(Version ver)
-        {
+    public VersionedCondition ensureVersionedCondition(Version ver) {
         return ensureVersionedCondition(ensureVersionConstant(ver));
-        }
+    }
 
     /**
      * Given a version constant, obtain a VersionedCondition that represents a test for that version
@@ -1024,15 +927,13 @@ public class ConstantPool
      *
      * @return a VersionedCondition
      */
-    public VersionedCondition ensureVersionedCondition(VersionConstant constVer)
-        {
+    public VersionedCondition ensureVersionedCondition(VersionConstant constVer) {
         VersionedCondition cond = (VersionedCondition) ensureLocatorLookup(Format.ConditionVersioned).get(constVer);
-        if (cond == null)
-            {
+        if (cond == null) {
             cond = (VersionedCondition) register(new VersionedCondition(this, constVer));
-            }
-        return cond;
         }
+        return cond;
+    }
 
     /**
      * Given a condition, obtain the inverse of that condition.
@@ -1041,21 +942,18 @@ public class ConstantPool
      *
      * @return a Condition representing the inverse
      */
-    public ConditionalConstant ensureNotCondition(ConditionalConstant cond)
-        {
+    public ConditionalConstant ensureNotCondition(ConditionalConstant cond) {
         // avoid double-negatives
-        if (cond instanceof NotCondition condNot)
-            {
+        if (cond instanceof NotCondition condNot) {
             return condNot.getUnderlyingCondition();
-            }
+        }
 
         NotCondition condNot = (NotCondition) ensureLocatorLookup(Format.ConditionNot).get(cond);
-        if (condNot == null)
-            {
+        if (condNot == null) {
             condNot = (NotCondition) register(new NotCondition(this, cond));
-            }
-        return condNot;
         }
+        return condNot;
+    }
 
 
     /**
@@ -1065,16 +963,14 @@ public class ConstantPool
      *
      * @return an AnyCondition
      */
-    public AnyCondition ensureAnyCondition(ConditionalConstant... aCondition)
-        {
+    public AnyCondition ensureAnyCondition(ConditionalConstant... aCondition) {
         checkElementsNonNull(aCondition);
-        if (aCondition.length < 2)
-            {
+        if (aCondition.length < 2) {
             throw new IllegalArgumentException("at least 2 conditions required");
-            }
+        }
 
         return (AnyCondition) register(new AnyCondition(this, aCondition));
-        }
+    }
 
     /**
      * Given the multiple conditions, obtain an AllCondition that represents them.
@@ -1083,16 +979,14 @@ public class ConstantPool
      *
      * @return an AllCondition
      */
-    public AllCondition ensureAllCondition(ConditionalConstant... aCondition)
-        {
+    public AllCondition ensureAllCondition(ConditionalConstant... aCondition) {
         checkElementsNonNull(aCondition);
-        if (aCondition.length < 2)
-            {
+        if (aCondition.length < 2) {
             throw new IllegalArgumentException("at least 2 conditions required");
-            }
+        }
 
         return (AllCondition) register(new AllCondition(this, aCondition));
-        }
+    }
 
     /**
      * Obtain a Constant that represents the specified module.
@@ -1101,10 +995,9 @@ public class ConstantPool
      *
      * @return the ModuleConstant for the specified qualified module name
      */
-    public ModuleConstant ensureModuleConstant(String sName)
-        {
+    public ModuleConstant ensureModuleConstant(String sName) {
         return ensureModuleConstant(sName, null);
-        }
+    }
 
     /**
      * Obtain a Constant that represents the specified module for a specified version.
@@ -1114,15 +1007,13 @@ public class ConstantPool
      *
      * @return the ModuleConstant for the specified qualified module name and version
      */
-    public ModuleConstant ensureModuleConstant(String sName, Version version)
-        {
-        if (!isValidQualifiedModule(sName))
-            {
+    public ModuleConstant ensureModuleConstant(String sName, Version version) {
+        if (!isValidQualifiedModule(sName)) {
             throw new IllegalArgumentException("illegal qualified module name: " + quotedString(sName));
-            }
+        }
 
         return (ModuleConstant) register(new ModuleConstant(this, sName, version));
-        }
+    }
 
     /**
      * Given the specified package name and the context (module or package) within which it exists,
@@ -1133,29 +1024,21 @@ public class ConstantPool
      *
      * @return the specified PackageConstant
      */
-    public PackageConstant ensurePackageConstant(IdentityConstant constParent, String sPackage)
-        {
-        if (constParent == null)
-            {
+    public PackageConstant ensurePackageConstant(IdentityConstant constParent, String sPackage) {
+        if (constParent == null) {
             throw new IllegalArgumentException("ModuleConstant or PackageConstant required");
-            }
+        }
 
         // validate the package name
-        if (!isValidIdentifier(sPackage))
-            {
+        if (!isValidIdentifier(sPackage)) {
             throw new IllegalArgumentException("illegal package name: " + sPackage);
-            }
-
-        return switch (constParent.getFormat())
-            {
-            case Module, Package ->
-                (PackageConstant) register(new PackageConstant(this, constParent, sPackage));
-
-            default ->
-                throw new IllegalArgumentException("constant " + constParent.getFormat()
-                    + " is not a Module or Package");
-            };
         }
+
+        return switch (constParent.getFormat()) {
+            case Module, Package -> (PackageConstant) register(new PackageConstant(this, constParent, sPackage));
+            default -> throw new IllegalArgumentException("constant " + constParent.getFormat() + " is not a Module or Package");
+        };
+    }
 
     /**
      * Given the specified class name and the context (module, package, class, method) within which
@@ -1166,18 +1049,13 @@ public class ConstantPool
      *
      * @return the specified class constant
      */
-    public ClassConstant ensureClassConstant(IdentityConstant constParent, String sClass)
-        {
-        return switch (constParent.getFormat())
-            {
+    public ClassConstant ensureClassConstant(IdentityConstant constParent, String sClass) {
+        return switch (constParent.getFormat()) {
             case Module, Package, Class, Method, Property ->
-                (ClassConstant) register(new ClassConstant(this, constParent, sClass));
-
-            default ->
-                throw new IllegalArgumentException("constant " + constParent.getFormat()
-                    + " is not a valid parent");
-            };
-        }
+                    (ClassConstant) register(new ClassConstant(this, constParent, sClass));
+            default -> throw new IllegalArgumentException("constant " + constParent.getFormat() + " is not a valid parent");
+        };
+    }
 
     /**
      * Given the specified class type, obtain a ClassConstant that represents it.
@@ -1186,53 +1064,45 @@ public class ConstantPool
      *
      * @return the specified class constant
      */
-    public IdentityConstant ensureClassConstant(TypeConstant type)
-        {
+    public IdentityConstant ensureClassConstant(TypeConstant type) {
         // check the pre-existing constants first
         Map<Object, Constant> mapLocator = ensureLocatorLookup(Format.DecoratedClass);
         IdentityConstant      constant   = (IdentityConstant) mapLocator.get(type);
-        if (constant != null)
-            {
+        if (constant != null) {
             return constant;
-            }
+        }
 
-        if (!type.isSingleDefiningConstant())
-            {
+        if (!type.isSingleDefiningConstant()) {
             throw new IllegalArgumentException("type must a single defining constant: " + type);
-            }
+        }
 
         // drop the immutability and access
-        if (type.isImmutabilitySpecified() || type.isAccessSpecified())
-            {
+        if (type.isImmutabilitySpecified() || type.isAccessSpecified()) {
             type     = type.removeImmutable().removeAccess();
             constant = (IdentityConstant) mapLocator.get(type);
-            if (constant != null)
-                {
+            if (constant != null) {
                 return constant;
-                }
             }
+        }
 
         // try to avoid using the more complicated "decorated" form of the class constant
         boolean      fUseType = false;
         TypeConstant typeCur  = type;
-        do
-            {
-            if (typeCur.getParamsCount() > 0 || typeCur.isAnnotated())
-                {
+        do {
+            if (typeCur.getParamsCount() > 0 || typeCur.isAnnotated()) {
                 fUseType = true;
                 break;
-                }
+            }
 
             typeCur = typeCur.isVirtualChild()
                     ? typeCur.getParentType()
                     : null;
-            }
-        while (typeCur != null);
+        } while (typeCur != null);
 
         return type.getDefiningConstant() instanceof ClassConstant idClz && !fUseType
                 ? (IdentityConstant)       register(idClz)
                 : (DecoratedClassConstant) register(new DecoratedClassConstant(this, type));
-        }
+    }
 
     /**
      * Given a method, a register. a formal constant and a variable name obtain a corresponding
@@ -1246,12 +1116,11 @@ public class ConstantPool
      * @return the specified formal constant
      */
      public DynamicFormalConstant ensureDynamicFormal(MethodConstant idMethod, Register reg,
-                                                      FormalConstant idFormal, String sVarName)
-         {
+                                                      FormalConstant idFormal, String sVarName) {
          DynamicFormalConstant constDynamic = new DynamicFormalConstant(
                 this, idMethod, sVarName, reg, idFormal);
          return (DynamicFormalConstant) register(constDynamic);
-         }
+     }
 
     /**
      * Given an IdentityConstant for a singleton const class, obtain a constant that represents the
@@ -1261,12 +1130,11 @@ public class ConstantPool
      *
      * @return an SingletonConstant representing the singleton const value
      */
-    public SingletonConstant ensureSingletonConstConstant(IdentityConstant constClass)
-        {
+    public SingletonConstant ensureSingletonConstConstant(IdentityConstant constClass) {
         return constClass.getComponent().getFormat() == Component.Format.ENUMVALUE
                 ? (EnumValueConstant) register(new EnumValueConstant(this, (ClassConstant) constClass))
                 : (SingletonConstant) register(new SingletonConstant(this, Format.SingletonConst, constClass));
-        }
+    }
 
     /**
      * Helper to get a TypeConstant for a class in the Ecstasy core module.
@@ -1275,10 +1143,9 @@ public class ConstantPool
      *
      * @return the type for the specified class from the Ecstasy core module
      */
-    public TypeConstant ensureEcstasyTypeConstant(String sClass)
-        {
+    public TypeConstant ensureEcstasyTypeConstant(String sClass) {
         return ensureTerminalTypeConstant(ensureEcstasyClassConstant(sClass));
-        }
+    }
 
     /**
      * Helper to get a ClassConstant for a class in the Ecstasy core module.
@@ -1287,22 +1154,20 @@ public class ConstantPool
      *
      * @return the specified ClassConstant referring to a class from the Ecstasy core module
      */
-    public ClassConstant ensureEcstasyClassConstant(String sClass)
-        {
+    public ClassConstant ensureEcstasyClassConstant(String sClass) {
         IdentityConstant constParent = modEcstasy();
         int              ofStart     = 0;
         int              ofEnd       = sClass.indexOf('.');
-        while (ofEnd >= 0)
-            {
+        while (ofEnd >= 0) {
             String sName = sClass.substring(ofStart, ofEnd);
             constParent = constParent instanceof ClassConstant || sName.charAt(0) <= 'Z'
                     ? ensureClassConstant(constParent, sName)
                     : ensurePackageConstant(constParent, sName);
             ofStart = ofEnd + 1;
             ofEnd   = sClass.indexOf('.', ofStart);
-            }
-        return ensureClassConstant(constParent, sClass.substring(ofStart));
         }
+        return ensureClassConstant(constParent, sClass.substring(ofStart));
+    }
 
     /**
      * This is the implementation of the "automatically imported" names that constitute the default
@@ -1314,17 +1179,14 @@ public class ConstantPool
      * @return the IdentityConstant for the specified name, or null if the name is not implicitly
      *         imported
      */
-    public IdentityConstant getImplicitlyImportedIdentity(String sName)
-        {
+    public IdentityConstant getImplicitlyImportedIdentity(String sName) {
         IdentityConstant id = f_implicits.get(sName);
 
-        if (id == null)
-            {
+        if (id == null) {
             String[] asParts = s_implicits.get(sName);
-            if (asParts == null)
-                {
+            if (asParts == null) {
                 return null;
-                }
+            }
 
             int iPart = 1;
             int cParts = asParts.length;
@@ -1335,34 +1197,29 @@ public class ConstantPool
             id = modEcstasy();
 
             // handle package portion
-            while (iPart < cParts)
-                {
+            while (iPart < cParts) {
                 String sPkg = asParts[iPart];
                 char ch = sPkg.charAt(0);
-                if (ch >= 'A' && ch <= 'Z')
-                    {
+                if (ch >= 'A' && ch <= 'Z') {
                     // not a package
                     break;
-                    }
-                else
-                    {
+                } else {
                     id = ensurePackageConstant(id, sPkg);
                     ++iPart;
-                    }
                 }
-
-            // handle class portion
-            while (iPart < cParts)
-                {
-                String sClz = asParts[iPart++];
-                id = ensureClassConstant(id, sClz);
-                }
-
-            f_implicits.put(sName, id);
             }
 
-        return id;
+            // handle class portion
+            while (iPart < cParts) {
+                String sClz = asParts[iPart++];
+                id = ensureClassConstant(id, sClz);
+            }
+
+            f_implicits.put(sName, id);
         }
+
+        return id;
+    }
 
     /**
      * This is the implementation of the "automatically imported" names that constitute the default
@@ -1373,16 +1230,14 @@ public class ConstantPool
      *
      * @return the Component for the specified name, or null if the name is not implicitly imported
      */
-    public Component getImplicitlyImportedComponent(String sName)
-        {
+    public Component getImplicitlyImportedComponent(String sName) {
         IdentityConstant constId = getImplicitlyImportedIdentity(sName);
-        if (constId == null)
-            {
+        if (constId == null) {
             return null;
-            }
+        }
 
         return constId.getComponent();
-        }
+    }
 
     /**
      * Look up the simple name by which the specified name is implicitly imported.
@@ -1391,10 +1246,9 @@ public class ConstantPool
      *
      * @return the "import as" name, or null
      */
-    public static String getImplicitImportName(String sPath)
-        {
+    public static String getImplicitImportName(String sPath) {
         return s_implicitsByPath.get(sPath);
-        }
+    }
 
     /**
      * Given the specified typedef name and the context (module, package, class, method) within
@@ -1406,10 +1260,9 @@ public class ConstantPool
      *
      * @return the specified TypedefConstant
      */
-    public TypedefConstant ensureTypedefConstant(IdentityConstant constParent, String sName)
-        {
+    public TypedefConstant ensureTypedefConstant(IdentityConstant constParent, String sName) {
         return (TypedefConstant) register(new TypedefConstant(this, constParent, sName));
-        }
+    }
 
     /**
      * Given the specified property name and the context (module, package, class, method) within
@@ -1421,10 +1274,9 @@ public class ConstantPool
      *
      * @return the specified PropertyConstant
      */
-    public PropertyConstant ensurePropertyConstant(IdentityConstant constParent, String sName)
-        {
+    public PropertyConstant ensurePropertyConstant(IdentityConstant constParent, String sName) {
         return (PropertyConstant) register(new PropertyConstant(this, constParent, sName));
-        }
+    }
 
     /**
      * Given the specified method name and the context (module, package, class, property, method)
@@ -1436,10 +1288,9 @@ public class ConstantPool
      *
      * @return the specified MultiMethodConstant
      */
-    public MultiMethodConstant ensureMultiMethodConstant(IdentityConstant constParent, String sName)
-        {
+    public MultiMethodConstant ensureMultiMethodConstant(IdentityConstant constParent, String sName) {
         return (MultiMethodConstant) register(new MultiMethodConstant(this, constParent, sName));
-        }
+    }
 
     /**
      * Obtain a Constant that represents the specified method.
@@ -1453,26 +1304,20 @@ public class ConstantPool
      * @return the MethodConstant
      */
     public MethodConstant ensureMethodConstant(IdentityConstant constParent, String sName,
-            TypeConstant[] aconstParams, TypeConstant[] aconstReturns)
-        {
+            TypeConstant[] aconstParams, TypeConstant[] aconstReturns) {
         assert constParent != null;
 
-        MultiMethodConstant constMultiMethod = switch (constParent.getFormat())
-            {
-            case MultiMethod ->
-                (MultiMethodConstant) constParent;
-
+        MultiMethodConstant constMultiMethod = switch (constParent.getFormat()) {
+            case MultiMethod -> (MultiMethodConstant) constParent;
             case Module, Package, Class, Method, Property, TypeParameter, FormalTypeChild ->
-                ensureMultiMethodConstant(constParent, sName);
-
-            default ->
-                throw new IllegalArgumentException("constant " + constParent.getFormat()
+                    ensureMultiMethodConstant(constParent, sName);
+            default -> throw new IllegalArgumentException("constant " + constParent.getFormat()
                     + " is not a Module, Package, Class, Method, or Property");
-            };
+        };
 
         return (MethodConstant) register(new MethodConstant(this, constMultiMethod,
                 aconstParams, aconstReturns));
-        }
+    }
 
     /**
      * Obtain a constant that represents the specified methods.
@@ -1482,27 +1327,20 @@ public class ConstantPool
      *
      * @return the MethodConstant
      */
-    public MethodConstant ensureMethodConstant(IdentityConstant constParent, SignatureConstant constSig)
-        {
+    public MethodConstant ensureMethodConstant(IdentityConstant constParent, SignatureConstant constSig) {
         assert constParent != null;
         assert constSig    != null;
 
-        MultiMethodConstant constMultiMethod = switch (constParent.getFormat())
-            {
-            case MultiMethod ->
-                (MultiMethodConstant) constParent;
-
-            case Module, Package, Class, NativeClass, Method, Property,
-                 TypeParameter, FormalTypeChild, DynamicFormal ->
-                ensureMultiMethodConstant(constParent, constSig.getName());
-
-            default ->
-                throw new IllegalArgumentException("constant " + constParent.getFormat()
+        MultiMethodConstant constMultiMethod = switch (constParent.getFormat()) {
+            case MultiMethod -> (MultiMethodConstant) constParent;
+            case Module, Package, Class, NativeClass, Method, Property, TypeParameter, FormalTypeChild, DynamicFormal ->
+                    ensureMultiMethodConstant(constParent, constSig.getName());
+            default -> throw new IllegalArgumentException("constant " + constParent.getFormat()
                     + " is not a Module, Package, Class, Method, or Property");
-            };
+        };
 
         return (MethodConstant) register(new MethodConstant(this, constMultiMethod, constSig));
-        }
+    }
 
     /**
      * Obtain a constant that represents a method signature.
@@ -1514,11 +1352,10 @@ public class ConstantPool
      * @return the SignatureConstant
      */
     public SignatureConstant ensureSignatureConstant(String sName, TypeConstant[] aconstParams,
-            TypeConstant[] aconstReturns)
-        {
+            TypeConstant[] aconstReturns) {
         return (SignatureConstant) register(new SignatureConstant(this, sName, aconstParams,
                 aconstReturns));
-        }
+    }
 
     /**
      * Given the specified class, access, and optional type parameters, obtain a ClassTypeConstant
@@ -1531,26 +1368,22 @@ public class ConstantPool
      * @return a ClassTypeConstant
      */
     public TypeConstant ensureClassTypeConstant(Constant constClass,
-                                                Access access, TypeConstant... constTypes)
-        {
+                                                Access access, TypeConstant... constTypes) {
         TypeConstant constType = (TypeConstant) ensureLocatorLookup(Format.TerminalType).get(constClass);
-        if (constType == null)
-            {
+        if (constType == null) {
             constType = (TypeConstant) register(new TerminalTypeConstant(this, constClass));
-            }
+        }
 
-        if (constTypes != null)
-            {
+        if (constTypes != null) {
             constType = ensureParameterizedTypeConstant(constType, constTypes);
-            }
+        }
 
-        if (access != null && !access.equals(Access.PUBLIC))
-            {
+        if (access != null && !access.equals(Access.PUBLIC)) {
             constType = ensureAccessTypeConstant(constType, access);
-            }
+        }
 
         return constType;
-        }
+    }
 
     /**
      * Obtain a constant that represents a type constant of a particular accessibility.
@@ -1560,42 +1393,35 @@ public class ConstantPool
      *
      * @return a type constant with the specified accessibility
      */
-    public TypeConstant ensureAccessTypeConstant(TypeConstant constType, Access access)
-        {
-        if (access == null)
-            {
+    public TypeConstant ensureAccessTypeConstant(TypeConstant constType, Access access) {
+        if (access == null) {
             access = Access.PUBLIC;
+        }
+
+        if (constType.isAccessSpecified()) {
+            if (constType.getAccess() == access) {
+                return constType;
             }
 
-        if (constType.isAccessSpecified())
-            {
-            if (constType.getAccess() == access)
-                {
-                return constType;
-                }
-
-            if (constType instanceof AccessTypeConstant)
-                {
+            if (constType instanceof AccessTypeConstant) {
                 return ensureAccessTypeConstant(constType.getUnderlyingType(), access);
-                }
+            }
             // we cannot simply remove the access modifier
             throw new IllegalArgumentException("type already has an access specified");
-            }
+        }
 
         TypeConstant constAccess = null;
 
-        if (access == Access.PUBLIC)
-            {
+        if (access == Access.PUBLIC) {
             constAccess = (TypeConstant) ensureLocatorLookup(Format.AccessType).get(constType);
-            }
+        }
 
-        if (constAccess == null)
-            {
+        if (constAccess == null) {
             constAccess = (TypeConstant) register(new AccessTypeConstant(this, constType, access));
-            }
+        }
 
         return constAccess;
-        }
+    }
 
     /**
      * Obtain a constant that represents a type parameterized by the specified type parameter types.
@@ -1605,34 +1431,29 @@ public class ConstantPool
      *
      * @return a type constant with the specified type parameter types
      */
-    public TypeConstant ensureParameterizedTypeConstant(TypeConstant constType, TypeConstant... constTypes)
-        {
-        if (constType.isParamsSpecified())
-            {
+    public TypeConstant ensureParameterizedTypeConstant(TypeConstant constType, TypeConstant... constTypes) {
+        if (constType.isParamsSpecified()) {
             TypeConstant[] atypeParam = constType.getParamTypesArray();
             int c = atypeParam.length;
-            CheckTypes: if (c == constTypes.length)
-                {
-                for (int i = 0; i < c; ++i)
-                    {
-                    if (!constTypes[i].equals(atypeParam[i]))
-                        {
+            CheckTypes: if (c == constTypes.length) {
+                for (int i = 0; i < c; ++i) {
+                    if (!constTypes[i].equals(atypeParam[i])) {
                         break CheckTypes;
-                        }
                     }
+                }
 
                 // types all match
                 return constType;
-                }
+            }
 
             // types do not match
             throw new IllegalArgumentException("type already has parameters specified");
-            }
+        }
 
         checkElementsNonNull(constTypes);
 
         return (TypeConstant) register(new ParameterizedTypeConstant(this, constType, constTypes));
-        }
+    }
 
     /**
      * Obtain a TypeConstant for a parameterized Array.
@@ -1641,10 +1462,9 @@ public class ConstantPool
      *
      * @return the Array type
      */
-    public TypeConstant ensureArrayType(TypeConstant typeElement)
-        {
+    public TypeConstant ensureArrayType(TypeConstant typeElement) {
         return ensureParameterizedTypeConstant(typeArray(), typeElement);
-        }
+    }
 
     /**
      * Obtain a TypeConstant for an Int-indexed type.
@@ -1653,10 +1473,9 @@ public class ConstantPool
      *
      * @return the indexed type
      */
-    public TypeConstant ensureIndexedType(TypeConstant typeElement)
-        {
+    public TypeConstant ensureIndexedType(TypeConstant typeElement) {
         return ensureParameterizedTypeConstant(typeIndexed(), typeInt64(), typeElement);
-        }
+    }
 
     /**
      * Obtain a TypeConstant for a parameterized Set
@@ -1665,10 +1484,9 @@ public class ConstantPool
      *
      * @return the Set type
      */
-    public TypeConstant ensureSetType(TypeConstant typeElement)
-        {
+    public TypeConstant ensureSetType(TypeConstant typeElement) {
         return ensureParameterizedTypeConstant(typeSet(), typeElement);
-        }
+    }
 
     /**
      * Obtain a TypeConstant for a Range.
@@ -1677,10 +1495,9 @@ public class ConstantPool
      *
      * @return the Range type
      */
-    public TypeConstant ensureRangeType(TypeConstant typeElement)
-        {
+    public TypeConstant ensureRangeType(TypeConstant typeElement) {
         return ensureParameterizedTypeConstant(typeRange(), typeElement);
-        }
+    }
 
     /**
      * Create a TypeConstant for a Map.
@@ -1690,10 +1507,9 @@ public class ConstantPool
      *
      * @return the Map type
      */
-    public TypeConstant ensureMapType(TypeConstant typeKey, TypeConstant typeValue)
-        {
+    public TypeConstant ensureMapType(TypeConstant typeKey, TypeConstant typeValue) {
         return ensureParameterizedTypeConstant(typeMap(), typeKey, typeValue);
-        }
+    }
 
     /**
      * Obtain a TypeConstant for a parameterized Tuple.
@@ -1702,10 +1518,9 @@ public class ConstantPool
      *
      * @return the Tuple type
      */
-    public TypeConstant ensureTupleType(TypeConstant... atypeParams)
-        {
+    public TypeConstant ensureTupleType(TypeConstant... atypeParams) {
         return ensureParameterizedTypeConstant(typeTuple(), atypeParams);
-        }
+    }
 
     /**
      * Given the specified type, obtain a TypeConstant that represents the explicitly immutable form
@@ -1715,18 +1530,16 @@ public class ConstantPool
      *
      * @return the explicitly immutable form of the passed TypeConstant
      */
-    public TypeConstant ensureImmutableTypeConstant(TypeConstant constType)
-        {
-        if (constType.isImmutabilitySpecified())
-            {
+    public TypeConstant ensureImmutableTypeConstant(TypeConstant constType) {
+        if (constType.isImmutabilitySpecified()) {
             throw new IllegalArgumentException("type already has the immutability specified");
-            }
+        }
 
         TypeConstant constant = (TypeConstant) ensureLocatorLookup(Format.ImmutableType).get(constType);
         return constant == null
                 ? (TypeConstant) register(new ImmutableTypeConstant(this, constType))
                 :  constant;
-        }
+    }
 
     /**
      * Given the specified type, obtain a TypeConstant that represents the service of that type.
@@ -1735,13 +1548,12 @@ public class ConstantPool
      *
      * @return the service type of the passed TypeConstant
      */
-    public TypeConstant ensureServiceTypeConstant(TypeConstant constType)
-        {
+    public TypeConstant ensureServiceTypeConstant(TypeConstant constType) {
         TypeConstant constant = (TypeConstant) ensureLocatorLookup(Format.ServiceType).get(constType);
         return constant == null
                 ? (TypeConstant) register(new ServiceTypeConstant(this, constType))
                 : constant;
-        }
+    }
 
     /**
      * Given the specified type and name, obtain a TypeConstant representing a virtual child.
@@ -1751,10 +1563,9 @@ public class ConstantPool
      *
      * @return the TypeConstant of the virtual child type
      */
-    public TypeConstant ensureVirtualChildTypeConstant(TypeConstant constParent, String sName)
-        {
+    public TypeConstant ensureVirtualChildTypeConstant(TypeConstant constParent, String sName) {
         return (TypeConstant) register(new VirtualChildTypeConstant(this, constParent, sName, false));
-        }
+    }
 
     /**
      * Given the specified type and name, obtain a TypeConstant representing a virtual child.
@@ -1764,10 +1575,9 @@ public class ConstantPool
      *
      * @return the TypeConstant of the virtual child type
      */
-    public TypeConstant ensureThisVirtualChildTypeConstant(TypeConstant constParent, String sName)
-        {
+    public TypeConstant ensureThisVirtualChildTypeConstant(TypeConstant constParent, String sName) {
         return (TypeConstant) register(new VirtualChildTypeConstant(this, constParent, sName, true));
-        }
+    }
 
     /**
      * Given the specified base and child classes, a TypeConstant representing a virtual child.
@@ -1783,8 +1593,7 @@ public class ConstantPool
      * @return the TypeConstant of the virtual child type
      */
     public TypeConstant ensureVirtualTypeConstant(ClassStructure clzBase, ClassStructure clzChild,
-                                                  boolean fFormal, boolean fParameterize, Constant constTarget)
-        {
+                                                  boolean fFormal, boolean fParameterize, Constant constTarget) {
         assert clzChild.isVirtualChild();
 
         String           sName     = clzChild.getName();
@@ -1796,68 +1605,59 @@ public class ConstantPool
         boolean  fAutoNarrow = false;
         boolean  fThisClass  = false;
         Constant constOrig   = constTarget;
-        switch (constTarget.getFormat())
-            {
-            case ThisClass:
-                fAutoNarrow = true;
-                fThisClass  = true;
-                constTarget = ((ThisClassConstant) constTarget).getDeclarationLevelClass();
-                break;
+        switch (constTarget.getFormat()) {
+        case ThisClass:
+            fAutoNarrow = true;
+            fThisClass  = true;
+            constTarget = ((ThisClassConstant) constTarget).getDeclarationLevelClass();
+            break;
 
-            case ParentClass:
-                constTarget = ((ParentClassConstant) constTarget).getChildClass();
-                break;
+        case ParentClass:
+            constTarget = ((ParentClassConstant) constTarget).getChildClass();
+            break;
 
-            case ChildClass:
-                constTarget = ((ChildClassConstant) constTarget).getParent();
-                break;
-            }
+        case ChildClass:
+            constTarget = ((ChildClassConstant) constTarget).getParent();
+            break;
+        }
 
         TypeConstant typeParent;
         boolean      fCheckAuto;
-        if (clzBase.equals(clzParent) || clzBase.hasContribution(idParent))
-            {
+        if (clzBase.equals(clzParent) || clzBase.hasContribution(idParent)) {
             // we've reached the "top"
             typeParent = fFormal ? clzBase.getFormalType() : clzBase.getCanonicalType();
             fCheckAuto = true;
-            }
-        else if (!clzParent.isVirtualChild())
-            {
+        } else if (!clzParent.isVirtualChild()) {
             // we've reached the "virtual top"
             typeParent = fFormal ? clzParent.getFormalType() : clzParent.getCanonicalType();
             fCheckAuto = true;
-            }
-        else
-            {
+        } else {
             // as we recurse, always parameterize the parent, which is never auto-narrowing
             typeParent = ensureVirtualTypeConstant(clzBase, clzParent, fFormal, true,
                 fThisClass ? constOrig : constTarget);
-            if (typeParent == null)
-                {
+            if (typeParent == null) {
                 return null;
-                }
-            fCheckAuto = false;
             }
+            fCheckAuto = false;
+        }
 
-        if (fCheckAuto && constTarget instanceof ThisClassConstant constThis)
-            {
+        if (fCheckAuto && constTarget instanceof ThisClassConstant constThis) {
             typeParent  = constThis.getDeclarationLevelClass().getType().adoptParameters(this, typeParent);
             fAutoNarrow = true;
-            }
+        }
 
         TypeConstant typeTarget = fAutoNarrow
                         ? ensureThisVirtualChildTypeConstant(typeParent, sName)
                         : ensureVirtualChildTypeConstant(typeParent, sName);
-        if (fParameterize && clzChild.getTypeParamCount() > 0)
-            {
+        if (fParameterize && clzChild.getTypeParamCount() > 0) {
             TypeConstant[] atypeParams = fFormal
                     ? clzChild.getFormalType().getParamTypesArray()
                     : clzChild.getCanonicalType().getParamTypesArray();
 
             typeTarget = ensureParameterizedTypeConstant(typeTarget, atypeParams);
-            }
-        return typeTarget;
         }
+        return typeTarget;
+    }
 
     /**
      * Given the specified parent type and the anonymous class id, obtain a TypeConstant
@@ -1868,10 +1668,9 @@ public class ConstantPool
      *
      * @return the TypeConstant of the anonymous class type
      */
-    public TypeConstant ensureAnonymousClassTypeConstant(TypeConstant constParent, ClassConstant idAnon)
-        {
+    public TypeConstant ensureAnonymousClassTypeConstant(TypeConstant constParent, ClassConstant idAnon) {
         return (TypeConstant) register(new AnonymousClassTypeConstant(this, constParent, idAnon));
-        }
+    }
 
     /**
      * Given the specified type and class, obtain a TypeConstant representing an inner child.
@@ -1881,10 +1680,9 @@ public class ConstantPool
      *
      * @return the TypeConstant of the virtual child type
      */
-    public TypeConstant ensureInnerChildTypeConstant(TypeConstant constParent, ClassConstant idChild)
-        {
+    public TypeConstant ensureInnerChildTypeConstant(TypeConstant constParent, ClassConstant idChild) {
         return (TypeConstant) register(new InnerChildTypeConstant(this, constParent, idChild));
-        }
+    }
 
     /**
      * Given the specified type and property, obtain a TypeConstant representing a property class.
@@ -1894,26 +1692,23 @@ public class ConstantPool
      *
      * @return the TypeConstant of the instance child type
      */
-    public TypeConstant ensurePropertyClassTypeConstant(TypeConstant constParent, PropertyConstant idProp)
-        {
+    public TypeConstant ensurePropertyClassTypeConstant(TypeConstant constParent, PropertyConstant idProp) {
         return (TypeConstant) register(new PropertyClassTypeConstant(this, constParent, idProp));
-        }
+    }
 
     /**
      * Obtain an auto-narrowing constant that represents the class of "this".
      *
      * @return an auto-narrowing constant that represents the class of "this"
      */
-    public ThisClassConstant ensureThisClassConstant(IdentityConstant constClass)
-        {
+    public ThisClassConstant ensureThisClassConstant(IdentityConstant constClass) {
         ThisClassConstant constant = (ThisClassConstant) ensureLocatorLookup(Format.ThisClass).get(constClass);
-        if (constant != null)
-            {
+        if (constant != null) {
             return constant;
-            }
+        }
 
         return (ThisClassConstant) register(new ThisClassConstant(this, constClass));
-        }
+    }
 
     /**
      * Obtain an auto-narrowing constant that represents the parent class of the passed constant.
@@ -1922,23 +1717,20 @@ public class ConstantPool
      *
      * @return an auto-narrowing constant that represents the parent class of the passed constant
      */
-    public PseudoConstant ensureParentClassConstant(PseudoConstant constClass)
-        {
-        if (constClass instanceof ChildClassConstant constChild)
-            {
+    public PseudoConstant ensureParentClassConstant(PseudoConstant constClass) {
+        if (constClass instanceof ChildClassConstant constChild) {
             return constChild.getParent();
-            }
+        }
 
         // the ParentClassConstant's locator is the underlying constClass
         ParentClassConstant constant = (ParentClassConstant)
                 ensureLocatorLookup(Format.ParentClass).get(constClass);
-        if (constant != null)
-            {
+        if (constant != null) {
             return constant;
-            }
+        }
 
         return (ParentClassConstant) register(new ParentClassConstant(this, constClass));
-        }
+    }
 
     /**
      * Obtain an auto-narrowing constant that represents the named child class of the passed
@@ -1949,12 +1741,11 @@ public class ConstantPool
      * @return an auto-narrowing constant that represents the named child class of the passed
      *         constant
      */
-    public PseudoConstant ensureChildClassConstant(PseudoConstant constClass, String sName)
-        {
+    public PseudoConstant ensureChildClassConstant(PseudoConstant constClass, String sName) {
         // eventually, we could check to see if the passed class is the parent of the child class
         // being requested, but that seems like a lot of work for something that will never happen
         return (ChildClassConstant) register(new ChildClassConstant(this, constClass, sName));
-        }
+    }
 
     /**
      * Obtain an auto-narrowing class type constant that represents the type of "this".
@@ -1963,50 +1754,44 @@ public class ConstantPool
      *
      * @return an auto-narrowing class type constant that represents the type of "this"
      */
-    public TypeConstant ensureThisTypeConstant(Constant constClass, Access access)
-        {
+    public TypeConstant ensureThisTypeConstant(Constant constClass, Access access) {
         ThisClassConstant constId;
-        switch (constClass.getFormat())
-            {
-            case ThisClass:
-                constId = (ThisClassConstant) constClass;
-                break;
+        switch (constClass.getFormat()) {
+        case ThisClass:
+            constId = (ThisClassConstant) constClass;
+            break;
 
-            case NativeClass:
-                constClass = ((NativeRebaseConstant) constClass).getClassConstant();
-                // fall through;
-            case Module:
-            case Package:
-            case Class:
-                constId = ensureThisClassConstant((IdentityConstant) constClass);
-                break;
+        case NativeClass:
+            constClass = ((NativeRebaseConstant) constClass).getClassConstant();
+            // fall through;
+        case Module:
+        case Package:
+        case Class:
+            constId = ensureThisClassConstant((IdentityConstant) constClass);
+            break;
 
-            default:
-                throw new IllegalStateException("constant=" + constClass);
-            }
+        default:
+            throw new IllegalStateException("constant=" + constClass);
+        }
 
         // get the raw type
         TypeConstant constType = (TypeConstant) ensureLocatorLookup(Format.TerminalType).get(constId);
-        if (constType == null)
-            {
+        if (constType == null) {
             constType = (TypeConstant) register(new TerminalTypeConstant(this, constId));
-            }
-        if (access == null)
-            {
+        }
+        if (access == null) {
             return constType;
-            }
+        }
 
         // apply access modifier
-        if (access == Access.PUBLIC)
-            {
+        if (access == Access.PUBLIC) {
             TypeConstant constAccess = (AccessTypeConstant) ensureLocatorLookup(Format.AccessType).get(constType);
-            if (constAccess != null)
-                {
+            if (constAccess != null) {
                 return constAccess;
-                }
             }
-        return (TypeConstant) register(new AccessTypeConstant(this, constType, access));
         }
+        return (TypeConstant) register(new AccessTypeConstant(this, constType, access));
+    }
 
     /**
      * Obtain an auto-narrowing class type constant that represents the parent of the specified
@@ -2016,29 +1801,25 @@ public class ConstantPool
      *
      * @return a type representing the parent of the specified child type constant
      */
-    public TypeConstant ensureParentTypeConstant(TypeConstant constChild)
-        {
+    public TypeConstant ensureParentTypeConstant(TypeConstant constChild) {
         if (constChild == null || !constChild.containsAutoNarrowing(false)
-                || !constChild.isSingleDefiningConstant() || constChild.isParamsSpecified())
-            {
+                || !constChild.isSingleDefiningConstant() || constChild.isParamsSpecified()) {
             throw new IllegalArgumentException("single, auto-narrowing, non-parameterized child required");
-            }
+        }
 
         PseudoConstant constId     = ensureParentClassConstant((PseudoConstant) constChild.getDefiningConstant());
         TypeConstant   constParent = new TerminalTypeConstant(this, constId);
 
         // wrap the parent in the same way that the child was wrapped
-        if (constChild.isAccessSpecified())
-            {
+        if (constChild.isAccessSpecified()) {
             constParent = new AccessTypeConstant(this, constParent, constChild.getAccess());
-            }
-        if (constChild.isImmutabilitySpecified())
-            {
+        }
+        if (constChild.isImmutabilitySpecified()) {
             constParent = new ImmutableTypeConstant(this, constParent);
-            }
+        }
 
         return (TypeConstant) register(constParent);
-        }
+    }
 
     /**
      * Obtain an auto-narrowing class type that represents an inner class child of the
@@ -2049,29 +1830,25 @@ public class ConstantPool
      *
      * @return a type representing the named child of the class of the specified type constant
      */
-    public TypeConstant ensureChildTypeConstant(TypeConstant constParent, String sChild)
-        {
+    public TypeConstant ensureChildTypeConstant(TypeConstant constParent, String sChild) {
         if (constParent == null || !constParent.containsAutoNarrowing(false)
-                || !constParent.isSingleDefiningConstant() || constParent.isParamsSpecified())
-            {
+                || !constParent.isSingleDefiningConstant() || constParent.isParamsSpecified()) {
             throw new IllegalArgumentException("single, auto-narrowing, non-parameterized parent required");
-            }
+        }
 
         PseudoConstant constId    = ensureChildClassConstant((PseudoConstant) constParent.getDefiningConstant(), sChild);
         TypeConstant   constChild = new TerminalTypeConstant(this, constId);
 
         // wrap the child in the same way that the parent was wrapped
-        if (constParent.isAccessSpecified())
-            {
+        if (constParent.isAccessSpecified()) {
             constChild = new AccessTypeConstant(this, constChild, constParent.getAccess());
-            }
-        if (constParent.isImmutabilitySpecified())
-            {
+        }
+        if (constParent.isImmutabilitySpecified()) {
             constChild = new ImmutableTypeConstant(this, constChild);
-            }
+        }
 
         return constChild;
-        }
+    }
 
     /**
      * Given the specified register index, obtain a TypeConstant that represents the type parameter.
@@ -2082,20 +1859,17 @@ public class ConstantPool
      *
      * @return the RegisterTypeConstant for the specified register number
      */
-    public TypeParameterConstant ensureRegisterConstant(MethodConstant constMethod, int iReg, String sName)
-        {
+    public TypeParameterConstant ensureRegisterConstant(MethodConstant constMethod, int iReg, String sName) {
         TypeParameterConstant constReg = null;
-        if (iReg == 0)
-            {
+        if (iReg == 0) {
             constReg = (TypeParameterConstant) ensureLocatorLookup(Format.TypeParameter).get(constMethod);
-            }
-        if (constReg == null)
-            {
+        }
+        if (constReg == null) {
             constReg = (TypeParameterConstant) register(
                             new TypeParameterConstant(this, constMethod, sName, iReg));
-            }
-        return constReg;
         }
+        return constReg;
+    }
 
     /**
      * Given the specified FormalConstant and the name, obtain a constant representing the formal
@@ -2106,10 +1880,9 @@ public class ConstantPool
      *
      * @return the FormalTypeChildConstant corresponding to the specified parent and name
      */
-    public FormalTypeChildConstant ensureFormalTypeChildConstant(FormalConstant constFormal, String sName)
-        {
+    public FormalTypeChildConstant ensureFormalTypeChildConstant(FormalConstant constFormal, String sName) {
         return (FormalTypeChildConstant) register(new FormalTypeChildConstant(this, constFormal, sName));
-        }
+    }
 
     /**
      * Obtain a constant representing the type of the specified identity.
@@ -2118,20 +1891,18 @@ public class ConstantPool
      *
      * @return the TerminalTypeConstant corresponding to the specified identity
      */
-    public TypeConstant ensureTerminalTypeConstant(Constant constId)
-        {
+    public TypeConstant ensureTerminalTypeConstant(Constant constId) {
         assert constId != null && !(constId instanceof TypeConstant);
 
         // the TerminalClassConstant's locator is the underlying constId
         TypeConstant constType = (TerminalTypeConstant)
                 ensureLocatorLookup(Format.TerminalType).get(constId);
-        if (constType == null)
-            {
+        if (constType == null) {
             constType = (TypeConstant) register(new TerminalTypeConstant(this, constId));
-            }
+        }
 
         return constType;
-        }
+    }
 
     /**
      * Obtain a constant representing the specified class/object category as specified by a keyword.
@@ -2140,17 +1911,15 @@ public class ConstantPool
      *
      * @return the KeywordConstant corresponding to the format
      */
-    public KeywordConstant ensureKeywordConstant(Format format)
-        {
+    public KeywordConstant ensureKeywordConstant(Format format) {
         // the KeywordConstant's locator is the format; it's effectively a singleton
         KeywordConstant constKeyword = (KeywordConstant) ensureLocatorLookup(format).get(format);
-        if (constKeyword == null)
-            {
+        if (constKeyword == null) {
             constKeyword = (KeywordConstant) register(new KeywordConstant(this, format));
-            }
+        }
 
         return constKeyword;
-        }
+    }
 
     /**
      * Create an Annotation.
@@ -2160,10 +1929,9 @@ public class ConstantPool
      *
      * @return the specified Annotation constant
      */
-    public Annotation ensureAnnotation(Constant constClass, Constant... aconstParam)
-        {
+    public Annotation ensureAnnotation(Constant constClass, Constant... aconstParam) {
         return (Annotation) register(new Annotation(this, constClass, aconstParam));
-        }
+    }
 
     /**
      * Given the specified annotation class and parameters, obtain a type that represents the
@@ -2176,10 +1944,9 @@ public class ConstantPool
      * @return an annotated type constant
      */
     public AnnotatedTypeConstant ensureAnnotatedTypeConstant(Constant constClass,
-            Constant[] aconstParam, TypeConstant constType)
-        {
+            Constant[] aconstParam, TypeConstant constType) {
         return (AnnotatedTypeConstant) register(new AnnotatedTypeConstant(this, constClass, aconstParam, constType));
-        }
+    }
 
     /**
      * Given the specified annotations, obtain a type that represents the annotated form of the
@@ -2190,21 +1957,18 @@ public class ConstantPool
      *
      * @return an annotated type constant
      */
-    public AnnotatedTypeConstant ensureAnnotatedTypeConstant(TypeConstant constType, Annotation... annotations)
-        {
-        if (annotations.length == 0)
-            {
+    public AnnotatedTypeConstant ensureAnnotatedTypeConstant(TypeConstant constType, Annotation... annotations) {
+        if (annotations.length == 0) {
             throw new IllegalArgumentException("annotations are required");
-            }
+        }
 
         TypeConstant type = constType;
-        for (int i = annotations.length - 1; i >= 0; --i)
-            {
+        for (int i = annotations.length - 1; i >= 0; --i) {
             type = (TypeConstant) register(new AnnotatedTypeConstant(this, annotations[i], type));
-            }
+        }
 
         return (AnnotatedTypeConstant) type;
-        }
+    }
 
     /**
      * Obtain a TypeConstant for a {@code @Future Var<Referent>} type.
@@ -2213,11 +1977,10 @@ public class ConstantPool
      *
      * @return a resulting Future-annotated Var type
      */
-    public TypeConstant ensureFutureVar(TypeConstant typeReferent)
-        {
+    public TypeConstant ensureFutureVar(TypeConstant typeReferent) {
         return ensureAnnotatedTypeConstant(ensureParameterizedTypeConstant(typeVar(), typeReferent),
                 ensureAnnotation(clzFuture()));
-        }
+    }
 
     /**
      * Obtain a type that represents a constraint for a formal type that materializes into a
@@ -2225,10 +1988,9 @@ public class ConstantPool
      *
      * @return a "sequence of types" type constant
      */
-    public TypeSequenceTypeConstant ensureTypeSequenceTypeConstant()
-        {
+    public TypeSequenceTypeConstant ensureTypeSequenceTypeConstant() {
         return (TypeSequenceTypeConstant) register(new TypeSequenceTypeConstant(this));
-        }
+    }
 
     /**
      * Given a TypeConstant for a type to which Null may or may not be assignable, obtain a
@@ -2239,14 +2001,13 @@ public class ConstantPool
      *
      * @return the union of the specified type and Nullable
      */
-    public TypeConstant ensureNullableTypeConstant(TypeConstant constType)
-        {
+    public TypeConstant ensureNullableTypeConstant(TypeConstant constType) {
         // note: this is a much looser definition than the "Nullable" definition used by the
         //       TypeConstant, such that "Object" would NOT be made into "Nullable|Object"
         return typeNull().isA(constType)
                 ? constType
                 : ensureUnionTypeConstant(typeNullable(), constType);
-        }
+    }
 
     /**
      * Given two types, obtain a TypeConstant that represents the union of those two types.
@@ -2258,10 +2019,9 @@ public class ConstantPool
      *
      * @return the union of the two specified types
      */
-    public UnionTypeConstant ensureUnionTypeConstant(TypeConstant constType1, TypeConstant constType2)
-        {
+    public UnionTypeConstant ensureUnionTypeConstant(TypeConstant constType1, TypeConstant constType2) {
         return (UnionTypeConstant) register(new UnionTypeConstant(this, constType1, constType2));
-        }
+    }
 
     /**
      * Given two types, obtain a TypeConstant that represents the intersection of those two types. This
@@ -2272,10 +2032,9 @@ public class ConstantPool
      *
      * @return the intersection of the two specified types
      */
-    public IntersectionTypeConstant ensureIntersectionTypeConstant(TypeConstant constType1, TypeConstant constType2)
-        {
+    public IntersectionTypeConstant ensureIntersectionTypeConstant(TypeConstant constType1, TypeConstant constType2) {
         return (IntersectionTypeConstant) register(new IntersectionTypeConstant(this, constType1, constType2));
-        }
+    }
 
     /**
      * Given two types, obtain a TypeConstant that represents the difference of those two types.
@@ -2286,10 +2045,9 @@ public class ConstantPool
      *
      * @return the difference of the two specified types
      */
-    public DifferenceTypeConstant ensureDifferenceTypeConstant(TypeConstant constType1, TypeConstant constType2)
-        {
+    public DifferenceTypeConstant ensureDifferenceTypeConstant(TypeConstant constType1, TypeConstant constType2) {
         return (DifferenceTypeConstant) register(new DifferenceTypeConstant(this, constType1, constType2));
-        }
+    }
 
 
     // ----- caching helpers -----------------------------------------------------------------------
@@ -2390,7 +2148,7 @@ public class ConstantPool
     public TypeConstant      typeInt64()         {TypeConstant      c = m_typeInt64;         if (c == null) {m_typeInt64         = c = ensureTerminalTypeConstant(clzInt64()                           );} return c;}
     public TypeConstant      typeInt128()        {TypeConstant      c = m_typeInt128;        if (c == null) {m_typeInt128        = c = ensureTerminalTypeConstant(clzInt128()                          );} return c;}
     public TypeConstant      typeIntN()          {TypeConstant      c = m_typeIntN;          if (c == null) {m_typeIntN          = c = ensureTerminalTypeConstant(clzIntN()                            );} return c;}
-    public TypeConstant      typeByte()          { /* Just an alias */ return typeUInt8();                                                                                                                         }
+    public TypeConstant      typeByte()          { /* Just an alias */ return typeUInt8();                                                                                                                     }
     public TypeConstant      typeUInt8()         {TypeConstant      c = m_typeUInt8;         if (c == null) {m_typeUInt8         = c = ensureTerminalTypeConstant(clzUInt8()                           );} return c;}
     public TypeConstant      typeUInt16()        {TypeConstant      c = m_typeUInt16;        if (c == null) {m_typeUInt16        = c = ensureTerminalTypeConstant(clzUInt16()                          );} return c;}
     public TypeConstant      typeUInt32()        {TypeConstant      c = m_typeUInt32;        if (c == null) {m_typeUInt32        = c = ensureTerminalTypeConstant(clzUInt32()                          );} return c;}
@@ -2512,11 +2270,9 @@ public class ConstantPool
     /**
      * A special TypeInfo that acts as a place-holder for "this TypeInfo is currently being built".
      */
-    public TypeInfo infoPlaceholder()
-        {
+    public TypeInfo infoPlaceholder() {
         TypeInfo info = m_infoPlaceholder;
-        if (info == null)
-            {
+        if (info == null) {
             m_infoPlaceholder = info = new TypeInfo(
                 typeObject(), 0, null, 0, true, Collections.emptyMap(),
                 Annotation.NO_ANNOTATIONS, Annotation.NO_ANNOTATIONS,
@@ -2524,48 +2280,37 @@ public class ConstantPool
                 Collections.emptyList(), new ListMap<>(), new ListMap<>(),
                 Collections.emptyMap(), Collections.emptyMap(),
                 Collections.emptyMap(), Collections.emptyMap(),
-                ListMap.EMPTY, null, Progress.Building)
-                    {
-                    public String toString()
-                        {
+                ListMap.EMPTY, null, Progress.Building) {
+                    public String toString() {
                         return "Placeholder";
-                        }
-                    };
-            }
+                    }
+                };
+        }
         return info;
-        }
+    }
 
-    public SingletonConstant valOf(boolean f)
-        {
+    public SingletonConstant valOf(boolean f) {
         return f ? valTrue() : valFalse();
-        }
+    }
 
-    public SingletonConstant valOrd(int n)
-        {
-        if (n < 0)
-            {
+    public SingletonConstant valOrd(int n) {
+        if (n < 0) {
             return valLesser();
-            }
-        else if (n == 0)
-            {
+        } else if (n == 0) {
             return valEqual();
-            }
-        else
-            {
+        } else {
             return valGreater();
-            }
         }
+    }
 
-    private TypeConstant makeNativeRebase(ClassConstant constClass)
-        {
+    private TypeConstant makeNativeRebase(ClassConstant constClass) {
         return new NativeRebaseConstant(constClass).getType();
-        }
+    }
 
-    private SignatureConstant getSignature(String sClass, String sMethod, int cParams)
-        {
+    private SignatureConstant getSignature(String sClass, String sMethod, int cParams) {
         return (SignatureConstant) register(((ClassStructure) getImplicitlyImportedComponent(sClass)).
                 findMethod(sMethod, cParams).getIdentityConstant().getSignature());
-        }
+    }
 
     /**
      * Replace the parent identity for all IdentityConstants that are children of the specified
@@ -2575,107 +2320,89 @@ public class ConstantPool
      * be called on a freshly created copy of a FileStructure that would be immediately discarded
      * after serialization.
      */
-    void replaceModule(ModuleConstant idOld, ModuleConstant idNew)
-        {
-        for (Constant constant : m_listConst)
-            {
-            if (constant instanceof IdentityConstant id && id.getParentConstant() == idOld)
-                {
+    void replaceModule(ModuleConstant idOld, ModuleConstant idNew) {
+        for (Constant constant : m_listConst) {
+            if (constant instanceof IdentityConstant id && id.getParentConstant() == idOld) {
                 int nPos = id.getPosition();
                 id = id.replaceParentConstant(idNew);
                 id.setPosition(nPos);
                 m_listConst.set(nPos, id);
-                }
             }
         }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public ConstantPool getConstantPool()
-        {
+    public ConstantPool getConstantPool() {
         return this;
-        }
+    }
 
     @Override
-    public Iterator<? extends XvmStructure> getContained()
-        {
-        return new Iterator<>()
-            {
+    public Iterator<? extends XvmStructure> getContained() {
+        return new Iterator<>() {
             private final ArrayList<Constant> listConst = m_listConst;
             private int iNext = 0;
 
             @Override
-            public boolean hasNext()
-                {
+            public boolean hasNext() {
                 return iNext < listConst.size();
-                }
+            }
 
             @Override
-            public XvmStructure next()
-                {
-                if (iNext >= listConst.size())
-                    {
+            public XvmStructure next() {
+                if (iNext >= listConst.size()) {
                     throw new NoSuchElementException();
-                    }
+                }
 
                 return listConst.get(iNext++);
-                }
-            };
-        }
+            }
+        };
+    }
 
     @Override
-    public boolean isModified()
-        {
+    public boolean isModified() {
         // changes to the constant pool only modify the resulting file if there are changes to other
         // structures that reference the changes in the constant pool; the constants themselves are
         // constant
         return false;
-        }
+    }
 
     @Override
-    protected void markModified()
-        {
-        }
+    protected void markModified() {
+    }
 
     @Override
-    protected void resetModified()
-        {
-        }
+    protected void resetModified() {
+    }
 
     @Override
-    public boolean isConditional()
-        {
+    public boolean isConditional() {
         return false;
-        }
+    }
 
     @Override
-    public void purgeCondition(ConditionalConstant condition)
-        {
-        }
+    public void purgeCondition(ConditionalConstant condition) {
+    }
 
     @Override
-    public boolean isPresent(LinkerContext ctx)
-        {
+    public boolean isPresent(LinkerContext ctx) {
         return true;
-        }
+    }
 
     @Override
-    public boolean isResolved()
-        {
+    public boolean isResolved() {
         return true;
-        }
+    }
 
     @Override
-    public void resolve(LinkerContext ctx)
-        {
-        }
+    public void resolve(LinkerContext ctx) {
+    }
 
     @Override
     protected void disassemble(DataInput in)
-            throws IOException
-        {
+            throws IOException {
         m_listConst.clear();
         m_mapConstants.clear();
         m_mapLocators.clear();
@@ -2685,415 +2412,403 @@ public class ConstantPool
         m_listConst.ensureCapacity(cConst);
 
         // load the constant pool from the stream
-        for (int i = 0; i < cConst; ++i)
-            {
+        for (int i = 0; i < cConst; ++i) {
             Constant constant;
             int      nFmt   = in.readUnsignedByte();
             Format   format = Constant.Format.valueOf(nFmt);
-            switch (format)
-                {
-                /*
-                * Values.
-                */
-                case IntLiteral:
-                case FPLiteral:
-                case Date:
-                case TimeOfDay:
-                case Time:
-                case Duration:
-                case Path:
-                    constant = new LiteralConstant(this, format, in);
-                    break;
-
-                case Bit:
-                case Nibble:
-                case Int8:
-                case UInt8:
-                    constant = new ByteConstant(this, format, in);
-                    break;
-
-                case Int16:
-                case Int32:
-                case Int64:
-                case Int128:
-                case IntN:
-                case UInt16:
-                case UInt32:
-                case UInt64:
-                case UInt128:
-                case UIntN:
-                    constant = new IntConstant(this, format, in);
-                    break;
-
-                case Dec32:
-                case Dec64:
-                case Dec128:
-                    constant = new DecimalConstant(this, format, in);
-                    break;
-
-                case DecN:
-                case FloatN:
-                    constant = new FPNConstant(this, format, in);
-                    break;
-
-                case Float8e4:
-                    constant = new Float8e4Constant(this, format, in);
-                    break;
-
-                case Float8e5:
-                    constant = new Float8e5Constant(this, format, in);
-                    break;
-
-                case BFloat16:
-                    constant = new BFloat16Constant(this, format, in);
-                    break;
-
-                case Float16:
-                    constant = new Float16Constant(this, format, in);
-                    break;
-
-                case Float32:
-                    constant = new Float32Constant(this, format, in);
-                    break;
-
-                case Float64:
-                    constant = new Float64Constant(this, format, in);
-                    break;
-
-                case Float128:
-                    constant = new Float128Constant(this, format, in);
-                    break;
-
-                case Char:
-                    constant = new CharConstant(this, format, in);
-                    break;
-
-                case RegEx:
-                    constant = new RegExConstant(this, format, in);
-                    break;
-
-                case String:
-                    constant = new StringConstant(this, format, in);
-                    break;
-
-                case Version:
-                    constant = new VersionConstant(this, format, in);
-                    break;
-
-                case SingletonConst:
-                case SingletonService:
-                    constant = new SingletonConstant(this, format, in);
-                    break;
-
-                case EnumValueConst:
-                    constant = new EnumValueConstant(this, format, in);
-                    break;
-
-                case Array:
-                case Tuple:
-                case Set:
-                    constant = new ArrayConstant(this, format, in);
-                    break;
-
-                case UInt8Array:
-                    constant = new UInt8ArrayConstant(this, format, in);
-                    break;
-
-                case MapEntry:
-                case Map:
-                    constant = new MapConstant(this, format, in);
-                    break;
-
-                case Range:
-                case RangeInclusive:
-                case RangeExclusive:
-                    constant = new RangeConstant(this, format, in);
-                    break;
-
-                case Any:
-                    constant = new MatchAnyConstant(this, format, in);
-                    break;
-
-                case FileStore:
-                    constant = new FileStoreConstant(this, format, in);
-                    break;
-
-                case FSDir:
-                case FSFile:
-                case FSLink:
-                    constant = new FSNodeConstant(this, format, in);
-                    break;
-
-                /*
-                * Structural identifiers.
-                */
-                case Module:
-                    constant = new ModuleConstant(this, format, in);
-                    break;
-
-                case Package:
-                    constant = new PackageConstant(this, format, in);
-                    break;
-
-                case Class:
-                    constant = new ClassConstant(this, format, in);
-                    break;
-
-                case Typedef:
-                    constant = new TypedefConstant(this, format, in);
-                    break;
-
-                case Property:
-                    constant = new PropertyConstant(this, format, in);
-                    break;
-
-                case MultiMethod:
-                    constant = new MultiMethodConstant(this, format, in);
-                    break;
-
-                case Method:
-                    constant = new MethodConstant(this, format, in);
-                    break;
-
-                case Annotation:
-                    constant = new Annotation(this, in);
-                    break;
-
-                case Register:
-                    constant = new RegisterConstant(this, in);
-                    break;
-
-                case BindTarget:
-                    constant = new MethodBindingConstant(this, in);
-                    break;
-
-                /*
-                * Pseudo identifiers.
-                */
-                case UnresolvedName:
-                    throw new IOException("UnresolvedName not supported persistently");
-
-                case ThisClass:
-                    constant = new ThisClassConstant(this, format, in);
-                    break;
-
-                case ParentClass:
-                    constant = new ParentClassConstant(this, format, in);
-                    break;
-
-                case ChildClass:
-                    constant = new ChildClassConstant(this, format, in);
-                    break;
-
-                case TypeParameter:
-                    constant = new TypeParameterConstant(this, format, in);
-                    break;
-
-                case FormalTypeChild:
-                    constant = new FormalTypeChildConstant(this, format, in);
-                    break;
-
-                case DynamicFormal:
-                    constant = new DynamicFormalConstant(this, format, in);
-                    break;
-
-                case Signature:
-                    constant = new SignatureConstant(this, format, in);
-                    break;
-
-                case DecoratedClass:
-                    constant = new DecoratedClassConstant(this, format, in);
-                    break;
-
-                case NativeClass:
-                    // it is not used in the persistent form of the module
-                    throw new IllegalStateException();
-
-                case IsConst:
-                case IsEnum:
-                case IsModule:
-                case IsPackage:
-                case IsClass:
-                    constant = new KeywordConstant(this, format, in);
-                    break;
-
-                /*
-                * Types.
-                */
-                case UnresolvedType:
-                    throw new IOException("UnresolvedType not supported persistently");
-
-                case TerminalType:
-                    constant = new TerminalTypeConstant(this, format, in);
-                    break;
-
-                case ImmutableType:
-                    constant = new ImmutableTypeConstant(this, format, in);
-                    break;
-
-                case ServiceType:
-                    constant = new ServiceTypeConstant(this, format, in);
-                    break;
-
-                case AccessType:
-                    constant = new AccessTypeConstant(this, format, in);
-                    break;
-
-                case AnnotatedType:
-                    constant = new AnnotatedTypeConstant(this, format, in);
-                    break;
-
-                case ParameterizedType:
-                    constant = new ParameterizedTypeConstant(this, format, in);
-                    break;
-
-                case TurtleType:
-                    constant = new TypeSequenceTypeConstant(this);
-                    break;
-
-                case VirtualChildType:
-                    constant = new VirtualChildTypeConstant(this, format, in);
-                    break;
-
-                case InnerChildType:
-                    constant = new InnerChildTypeConstant(this, format, in);
-                    break;
-
-                case AnonymousClassType:
-                    constant = new AnonymousClassTypeConstant(this, format, in);
-                    break;
-
-                case PropertyClassType:
-                    constant = new PropertyClassTypeConstant(this, format, in);
-                    break;
-
-                case IntersectionType:
-                    constant = new IntersectionTypeConstant(this, format, in);
-                    break;
-
-                case UnionType:
-                    constant = new UnionTypeConstant(this, format, in);
-                    break;
-
-                case DifferenceType:
-                    constant = new DifferenceTypeConstant(this, format, in);
-                    break;
-
-                case RecursiveType:
-                    constant = new RecursiveTypeConstant(this, format, in);
-                    break;
-
-                /*
-                 * Conditions.
-                 */
-                case ConditionNot:
-                    constant = new NotCondition(this, format, in);
-                    break;
-
-                case ConditionAll:
-                    constant = new AllCondition(this, format, in);
-                    break;
-
-                case ConditionAny:
-                    constant = new AnyCondition(this, format, in);
-                    break;
-
-                case ConditionNamed:
-                    constant = new NamedCondition(this, format, in);
-                    break;
-
-                case ConditionPresent:
-                    constant = new PresentCondition(this, format, in);
-                    break;
-
-                case ConditionVersionMatches:
-                    constant = new VersionMatchesCondition(this, format, in);
-                    break;
-
-                case ConditionVersioned:
-                    constant = new VersionedCondition(this, format, in);
-                    break;
-
-                default:
-                    throw new IOException("Unsupported constant format: " + nFmt);
-                }
+            switch (format) {
+            /*
+            * Values.
+            */
+            case IntLiteral:
+            case FPLiteral:
+            case Date:
+            case TimeOfDay:
+            case Time:
+            case Duration:
+            case Path:
+                constant = new LiteralConstant(this, format, in);
+                break;
+
+            case Bit:
+            case Nibble:
+            case Int8:
+            case UInt8:
+                constant = new ByteConstant(this, format, in);
+                break;
+
+            case Int16:
+            case Int32:
+            case Int64:
+            case Int128:
+            case IntN:
+            case UInt16:
+            case UInt32:
+            case UInt64:
+            case UInt128:
+            case UIntN:
+                constant = new IntConstant(this, format, in);
+                break;
+
+            case Dec32:
+            case Dec64:
+            case Dec128:
+                constant = new DecimalConstant(this, format, in);
+                break;
+
+            case DecN:
+            case FloatN:
+                constant = new FPNConstant(this, format, in);
+                break;
+
+            case Float8e4:
+                constant = new Float8e4Constant(this, format, in);
+                break;
+
+            case Float8e5:
+                constant = new Float8e5Constant(this, format, in);
+                break;
+
+            case BFloat16:
+                constant = new BFloat16Constant(this, format, in);
+                break;
+
+            case Float16:
+                constant = new Float16Constant(this, format, in);
+                break;
+
+            case Float32:
+                constant = new Float32Constant(this, format, in);
+                break;
+
+            case Float64:
+                constant = new Float64Constant(this, format, in);
+                break;
+
+            case Float128:
+                constant = new Float128Constant(this, format, in);
+                break;
+
+            case Char:
+                constant = new CharConstant(this, format, in);
+                break;
+
+            case RegEx:
+                constant = new RegExConstant(this, format, in);
+                break;
+
+            case String:
+                constant = new StringConstant(this, format, in);
+                break;
+
+            case Version:
+                constant = new VersionConstant(this, format, in);
+                break;
+
+            case SingletonConst:
+            case SingletonService:
+                constant = new SingletonConstant(this, format, in);
+                break;
+
+            case EnumValueConst:
+                constant = new EnumValueConstant(this, format, in);
+                break;
+
+            case Array:
+            case Tuple:
+            case Set:
+                constant = new ArrayConstant(this, format, in);
+                break;
+
+            case UInt8Array:
+                constant = new UInt8ArrayConstant(this, format, in);
+                break;
+
+            case MapEntry:
+            case Map:
+                constant = new MapConstant(this, format, in);
+                break;
+
+            case Range:
+            case RangeInclusive:
+            case RangeExclusive:
+                constant = new RangeConstant(this, format, in);
+                break;
+
+            case Any:
+                constant = new MatchAnyConstant(this, format, in);
+                break;
+
+            case FileStore:
+                constant = new FileStoreConstant(this, format, in);
+                break;
+
+            case FSDir:
+            case FSFile:
+            case FSLink:
+                constant = new FSNodeConstant(this, format, in);
+                break;
+
+            /*
+            * Structural identifiers.
+            */
+            case Module:
+                constant = new ModuleConstant(this, format, in);
+                break;
+
+            case Package:
+                constant = new PackageConstant(this, format, in);
+                break;
+
+            case Class:
+                constant = new ClassConstant(this, format, in);
+                break;
+
+            case Typedef:
+                constant = new TypedefConstant(this, format, in);
+                break;
+
+            case Property:
+                constant = new PropertyConstant(this, format, in);
+                break;
+
+            case MultiMethod:
+                constant = new MultiMethodConstant(this, format, in);
+                break;
+
+            case Method:
+                constant = new MethodConstant(this, format, in);
+                break;
+
+            case Annotation:
+                constant = new Annotation(this, in);
+                break;
+
+            case Register:
+                constant = new RegisterConstant(this, in);
+                break;
+
+            case BindTarget:
+                constant = new MethodBindingConstant(this, in);
+                break;
+
+            /*
+            * Pseudo identifiers.
+            */
+            case UnresolvedName:
+                throw new IOException("UnresolvedName not supported persistently");
+
+            case ThisClass:
+                constant = new ThisClassConstant(this, format, in);
+                break;
+
+            case ParentClass:
+                constant = new ParentClassConstant(this, format, in);
+                break;
+
+            case ChildClass:
+                constant = new ChildClassConstant(this, format, in);
+                break;
+
+            case TypeParameter:
+                constant = new TypeParameterConstant(this, format, in);
+                break;
+
+            case FormalTypeChild:
+                constant = new FormalTypeChildConstant(this, format, in);
+                break;
+
+            case DynamicFormal:
+                constant = new DynamicFormalConstant(this, format, in);
+                break;
+
+            case Signature:
+                constant = new SignatureConstant(this, format, in);
+                break;
+
+            case DecoratedClass:
+                constant = new DecoratedClassConstant(this, format, in);
+                break;
+
+            case NativeClass:
+                // it is not used in the persistent form of the module
+                throw new IllegalStateException();
+
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
+            case IsClass:
+                constant = new KeywordConstant(this, format, in);
+                break;
+
+            /*
+            * Types.
+            */
+            case UnresolvedType:
+                throw new IOException("UnresolvedType not supported persistently");
+
+            case TerminalType:
+                constant = new TerminalTypeConstant(this, format, in);
+                break;
+
+            case ImmutableType:
+                constant = new ImmutableTypeConstant(this, format, in);
+                break;
+
+            case ServiceType:
+                constant = new ServiceTypeConstant(this, format, in);
+                break;
+
+            case AccessType:
+                constant = new AccessTypeConstant(this, format, in);
+                break;
+
+            case AnnotatedType:
+                constant = new AnnotatedTypeConstant(this, format, in);
+                break;
+
+            case ParameterizedType:
+                constant = new ParameterizedTypeConstant(this, format, in);
+                break;
+
+            case TurtleType:
+                constant = new TypeSequenceTypeConstant(this);
+                break;
+
+            case VirtualChildType:
+                constant = new VirtualChildTypeConstant(this, format, in);
+                break;
+
+            case InnerChildType:
+                constant = new InnerChildTypeConstant(this, format, in);
+                break;
+
+            case AnonymousClassType:
+                constant = new AnonymousClassTypeConstant(this, format, in);
+                break;
+
+            case PropertyClassType:
+                constant = new PropertyClassTypeConstant(this, format, in);
+                break;
+
+            case IntersectionType:
+                constant = new IntersectionTypeConstant(this, format, in);
+                break;
+
+            case UnionType:
+                constant = new UnionTypeConstant(this, format, in);
+                break;
+
+            case DifferenceType:
+                constant = new DifferenceTypeConstant(this, format, in);
+                break;
+
+            case RecursiveType:
+                constant = new RecursiveTypeConstant(this, format, in);
+                break;
+
+            /*
+             * Conditions.
+             */
+            case ConditionNot:
+                constant = new NotCondition(this, format, in);
+                break;
+
+            case ConditionAll:
+                constant = new AllCondition(this, format, in);
+                break;
+
+            case ConditionAny:
+                constant = new AnyCondition(this, format, in);
+                break;
+
+            case ConditionNamed:
+                constant = new NamedCondition(this, format, in);
+                break;
+
+            case ConditionPresent:
+                constant = new PresentCondition(this, format, in);
+                break;
+
+            case ConditionVersionMatches:
+                constant = new VersionMatchesCondition(this, format, in);
+                break;
+
+            case ConditionVersioned:
+                constant = new VersionedCondition(this, format, in);
+                break;
+
+            default:
+                throw new IOException("Unsupported constant format: " + nFmt);
+            }
 
             constant.setPosition(i);
             m_listConst.add(constant);
-            }
-
-        // convert indexes into constant references
-        for (Constant constant : m_listConst)
-            {
-            constant.resolveConstants();
-            }
         }
 
+        // convert indexes into constant references
+        for (Constant constant : m_listConst) {
+            constant.resolveConstants();
+        }
+    }
+
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         // the ConstantPool does contain constants, but it does not itself reference any constants,
         // so it has nothing to register itself. furthermore, this must be over-ridden here to avoid
         // the super implementation calling to each of the contained Constants (some of which may no
         // longer be referenced by any XVM Structure) and having them accidentally register
         // everything that they in turn depend upon
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         writePackedLong(out, m_listConst.size());
-        for (Constant constant : m_listConst)
-            {
+        for (Constant constant : m_listConst) {
             constant.assemble(out);
-            }
         }
+    }
 
 
     // ----- debugging support ---------------------------------------------------------------------
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         StringBuilder sb = new StringBuilder();
         sb.append("module=")
           .append(getFileStructure().getModuleId().getName())
           .append(", size=")
           .append(m_listConst.size());
 
-        if (m_fRecurseReg)
-            {
+        if (m_fRecurseReg) {
             sb.append(", recursive registration on");
-            }
-        return sb.toString();
         }
+        return sb.toString();
+    }
 
     @Override
-    protected void dump(PrintWriter out, String sIndent)
-        {
+    protected void dump(PrintWriter out, String sIndent) {
         dumpStructureCollection(out, sIndent, "Constants", m_listConst);
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public boolean equals(Object obj)
-        {
-        if (obj == this)
-            {
+    public boolean equals(Object obj) {
+        if (obj == this) {
             return true;
-            }
+        }
 
-        if (!(obj instanceof ConstantPool that))
-            {
+        if (!(obj instanceof ConstantPool that)) {
             return false;
-            }
+        }
 
         // compare each constant in the pool for equality
         return this.m_listConst.equals(that.m_listConst);
-        }
+    }
 
 
     // ----- methods exposed to FileStructure ------------------------------------------------------
@@ -3106,13 +2821,12 @@ public class ConstantPool
      * first in the ConstantPool, allowing their ordinal position to be addressed using a smaller
      * number of bytes throughout the FileStructure.
      */
-    protected void preRegisterAll()
-        {
+    protected void preRegisterAll() {
         assert !m_fRecurseReg;
         m_fRecurseReg = true;
 
         m_listConst.forEach(Constant::resetRefs);
-        }
+    }
 
     /**
      * Called after all of the Constants have been registered by the bulk registration process.
@@ -3120,16 +2834,14 @@ public class ConstantPool
      * @param fOptimize pass true to optimize the order of the constants, or false to maintain the
      *                  present order
      */
-    protected void postRegisterAll(final boolean fOptimize)
-        {
+    protected void postRegisterAll(final boolean fOptimize) {
         assert m_fRecurseReg;
         m_fRecurseReg = false;
 
-        if (fOptimize)
-            {
+        if (fOptimize) {
             optimize();
-            }
         }
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -3146,49 +2858,41 @@ public class ConstantPool
      *
      * @return the map from Constant to Constant
      */
-    private Map<Constant, Constant> ensureConstantLookup(Format format)
-        {
+    private Map<Constant, Constant> ensureConstantLookup(Format format) {
         Map<Constant, Constant> map = m_mapConstants.get(format);
         return map == null ? ensureConstantLookupComplex().get(format) : map;
-        }
+    }
 
     /**
      * Create the necessary structures for looking up Constant objects quickly, and populate those
      * structures with the set of existing Constant objects.
      */
-    private synchronized EnumMap<Format, Map<Constant, Constant>> ensureConstantLookupComplex()
-        {
+    private synchronized EnumMap<Format, Map<Constant, Constant>> ensureConstantLookupComplex() {
         var mapConstants = m_mapConstants;
-        if (mapConstants.isEmpty())
-            {
+        if (mapConstants.isEmpty()) {
             var mapConstNew = new EnumMap<>(mapConstants);
-            for (Format format : Format.values())
-                {
+            for (Format format : Format.values()) {
                 mapConstNew.put(format, new ConcurrentHashMap<>());
-                }
+            }
 
-            for (Constant constant : m_listConst)
-                {
+            for (Constant constant : m_listConst) {
                 Constant constantOld = mapConstNew.get(constant.getFormat()).put(constant, constant);
-                if (constantOld != null && constantOld != constant)
-                    {
+                if (constantOld != null && constantOld != constant) {
                     throw new IllegalStateException("constant collision: old=" + constantOld + ", new=" + constant);
-                    }
+                }
 
                 Object oLocator = constant.getLocator();
-                if (oLocator != null)
-                    {
+                if (oLocator != null) {
                     constantOld = ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
-                    if (constantOld != null && constantOld != constant)
-                        {
+                    if (constantOld != null && constantOld != constant) {
                         throw new IllegalStateException("locator collision: old=" + constantOld + ", new=" + constant);
-                        }
                     }
                 }
-            m_mapConstants = mapConstants = mapConstNew;
             }
-        return mapConstants;
+            m_mapConstants = mapConstants = mapConstNew;
         }
+        return mapConstants;
+    }
 
     /**
      * Obtain a Constant lookup table for Constants of the specified type, using locators as the
@@ -3207,11 +2911,10 @@ public class ConstantPool
      *
      * @return the map from locator to Constant
      */
-    private Map<Object, Constant> ensureLocatorLookup(Format format)
-        {
+    private Map<Object, Constant> ensureLocatorLookup(Format format) {
         Map<Object, Constant> map = m_mapLocators.get(format);
         return map == null ? ensureLocatorLookupComplex(format) : map;
-        }
+    }
 
     /**
      * Double check locking portion of {@link #ensureLocatorLookup(Format)}, extracted for hot-spotting.
@@ -3220,19 +2923,17 @@ public class ConstantPool
      *
      * @return the map from locator to Constant
      */
-    private synchronized Map<Object, Constant> ensureLocatorLookupComplex(Format format)
-        {
+    private synchronized Map<Object, Constant> ensureLocatorLookupComplex(Format format) {
         // m_mapLocators is an EnumMap, which is not thread-safe; use copy-on-write
         Map<Object, Constant> map = m_mapLocators.get(format);
-        if (map == null)
-            {
+        if (map == null) {
             var mapLocNew = new EnumMap<>(m_mapLocators);
             mapLocNew.put(format, map = new ConcurrentHashMap<>());
             m_mapLocators = mapLocNew;
-            }
+        }
 
         return map;
-        }
+    }
 
 
     // ----- TypeInfo helpers ----------------------------------------------------------------------
@@ -3242,42 +2943,35 @@ public class ConstantPool
      *
      * @param type  the TypeConstant to defer the building of a TypeInfo for
      */
-    void addDeferredTypeInfo(TypeConstant type)
-        {
+    void addDeferredTypeInfo(TypeConstant type) {
         assert type != null;
 
         List<TypeConstant> list = f_tlolistDeferred.computeIfAbsent(ArrayList::new);
-        if (!list.contains(type))
-            {
+        if (!list.contains(type)) {
             list.add(type);
-            }
         }
+    }
 
     /**
      * @return true iff there are any TypeConstants that have deferred the building of a TypeInfo
      */
-    boolean hasDeferredTypeInfo()
-        {
+    boolean hasDeferredTypeInfo() {
         return f_tlolistDeferred.get() != null;
-        }
+    }
 
     /**
      * @return the List of TypeConstants to build (or rebuild) TypeInfo objects for
      */
-    List<TypeConstant> takeDeferredTypeInfo()
-        {
+    List<TypeConstant> takeDeferredTypeInfo() {
         List<TypeConstant> list = f_tlolistDeferred.get();
-        if (list == null)
-            {
+        if (list == null) {
             list = Collections.emptyList();
-            }
-        else
-            {
+        } else {
             f_tlolistDeferred.remove();
-            }
+        }
 
         return list;
-        }
+    }
 
     /**
      * Cause all TypeInfos that are built from the specified class to re-build. This is necessary
@@ -3287,23 +2981,20 @@ public class ConstantPool
      *
      * @param id  an IdentityConstant specifying a class
      */
-    public void invalidateTypeInfos(IdentityConstant id)
-        {
+    public void invalidateTypeInfos(IdentityConstant id) {
         assert id.isClass();
-        synchronized (f_listInvalidated)
-            {
+        synchronized (f_listInvalidated) {
             f_listInvalidated.add((IdentityConstant) register(id));
             m_cInvalidated = f_listInvalidated.size();
-            }
         }
+    }
 
     /**
      * @return  the current TypeInfo invalidation count
      */
-    public int getInvalidationCount()
-        {
+    public int getInvalidationCount() {
         return m_cInvalidated;
-        }
+    }
 
     /**
      * Determine what classes have new information since the specified invalidation count.
@@ -3313,24 +3004,21 @@ public class ConstantPool
      * @return a set of all the invalidated IdentityConstants of the classes causing the
      *         invalidation to occur
      */
-    public Set<IdentityConstant> invalidationsSince(int cOld)
-        {
+    public Set<IdentityConstant> invalidationsSince(int cOld) {
         int cNew = getInvalidationCount();
-        if (cOld == cNew)
-            {
+        if (cOld == cNew) {
             return Collections.emptySet();
-            }
+        }
 
         assert cNew > cOld;
 
         HashSet<IdentityConstant> set = new HashSet<>();
-        for (int i = cOld; i < cNew; ++i)
-            {
+        for (int i = cOld; i < cNew; ++i) {
             set.add(f_listInvalidated.get(i));
-            }
+        }
 
         return set;
-        }
+    }
 
 
     // ----- TypeConstant helpers  -----------------------------------------------------------------
@@ -3344,38 +3032,32 @@ public class ConstantPool
      *
      * @return one of {@link Relation} constants
      */
-    public Relation checkTupleCompatibility(TypeConstant tupleLeft, TypeConstant tupleRight)
-        {
+    public Relation checkTupleCompatibility(TypeConstant tupleLeft, TypeConstant tupleRight) {
         IdentityConstant idLeft  = tupleLeft.getSingleUnderlyingClass(true);
         IdentityConstant idRight = tupleRight.getSingleUnderlyingClass(true);
 
-        if (idLeft.getFormat() == Format.NativeClass)
-            {
+        if (idLeft.getFormat() == Format.NativeClass) {
             idLeft = ((NativeRebaseConstant) idLeft).getClassConstant();
-            }
+        }
 
-        if (idRight.getFormat() == Format.NativeClass)
-            {
+        if (idRight.getFormat() == Format.NativeClass) {
             idRight = ((NativeRebaseConstant) idRight).getClassConstant();
-            }
+        }
 
         ClassStructure clzTuple = (ClassStructure) idLeft.getComponent();
 
-        if (idLeft.equals(idRight))
-            {
+        if (idLeft.equals(idRight)) {
             // compare the type parameters
             return clzTuple.calculateAssignability(this, tupleLeft.getParamTypes(), Access.PUBLIC,
                     tupleRight.getParamTypes());
-            }
+        }
 
-        if (idLeft.equals(clzCondTuple()))
-            {
+        if (idLeft.equals(clzCondTuple())) {
             // right is not conditional - never compatible
             return Relation.INCOMPATIBLE;
-            }
+        }
 
-        if (idRight.equals(clzCondTuple()))
-            {
+        if (idRight.equals(clzCondTuple())) {
             // left is not conditional - we do allow an assignment from a naked
             // ConditionalTuple to Tuple<Boolean>
             List<TypeConstant> listRight = tupleRight.getParamsCount() > 0
@@ -3384,13 +3066,13 @@ public class ConstantPool
 
             return clzTuple.calculateAssignability(this, tupleLeft.getParamTypes(), Access.PUBLIC,
                     listRight);
-            }
+        }
 
 
         // should never happen; soft assert
         System.err.println("Unsupported tuple type: " + idLeft.getValueString());
         return Relation.INCOMPATIBLE;
-        }
+    }
 
     /**
      * While it's known that the left type is a function:
@@ -3405,21 +3087,18 @@ public class ConstantPool
      *
      * @return one of {@link Relation} constants
      */
-    public Relation checkFunctionCompatibility(TypeConstant typeLeft, TypeConstant typeRight)
-        {
+    public Relation checkFunctionCompatibility(TypeConstant typeLeft, TypeConstant typeRight) {
         IdentityConstant idRight = typeRight.getSingleUnderlyingClass(true);
-        if (!idRight.equals(clzFunction()))
-            {
+        if (!idRight.equals(clzFunction())) {
             // compare the "naked" contribution
             ClassStructure clzRight = (ClassStructure) idRight.getComponent();
-            if (clzRight.calculateRelation(this, typeFunction(), idRight.getType()) != Relation.IS_A)
-                {
+            if (clzRight.calculateRelation(this, typeFunction(), idRight.getType()) != Relation.IS_A) {
                 return Relation.INCOMPATIBLE;
-                }
             }
+        }
 
         return checkFunctionOrMethodCompatibility(typeLeft, typeRight, false);
-        }
+    }
 
     /**
      * While it's known that the left type is a method:
@@ -3434,38 +3113,33 @@ public class ConstantPool
      *
      * @return one of {@link Relation} constants
      */
-    public Relation checkMethodCompatibility(TypeConstant typeLeft, TypeConstant typeRight)
-        {
+    public Relation checkMethodCompatibility(TypeConstant typeLeft, TypeConstant typeRight) {
         IdentityConstant idRight = typeRight.getSingleUnderlyingClass(true);
 
         return idRight.equals(clzMethod())
                 ? checkFunctionOrMethodCompatibility(typeLeft, typeRight, true)
                 : null;
-        }
+    }
 
     private Relation checkFunctionOrMethodCompatibility(TypeConstant typeLeft, TypeConstant typeRight,
-                                                        boolean fMethod)
-        {
+                                                        boolean fMethod) {
         // the only modification that is allowed on the Function is "this:class"
-        if (typeLeft.isSingleDefiningConstant() && typeRight.isSingleDefiningConstant())
-            {
+        if (typeLeft.isSingleDefiningConstant() && typeRight.isSingleDefiningConstant()) {
             Constant constIdLeft  = typeLeft.getDefiningConstant();
             Constant constIdRight = typeRight.getDefiningConstant();
             if (constIdLeft.getFormat()  == Format.ThisClass &&
-                constIdRight.getFormat() == Format.ThisClass)
-                {
+                constIdRight.getFormat() == Format.ThisClass) {
                 // to allow assignment of this:class(X) to this:class(Function),
                 // X should be a Function or an Object
                 typeRight = typeRight.removeAutoNarrowing();
                 typeLeft  = typeLeft .removeAutoNarrowing();
 
-                if (typeRight.equals(typeObject()))
-                    {
+                if (typeRight.equals(typeObject())) {
                     return Relation.IS_A;
-                    }
-                // continue with auto-narrowing resolved
                 }
+                // continue with auto-narrowing resolved
             }
+        }
 
         // Function<TupleRP, TupleRR> is assignable to Function<TupleLP, TupleLR> iff
         // (RP/RR - right parameters/return, LP/LR - left parameter/return)
@@ -3480,46 +3154,38 @@ public class ConstantPool
         // The same rules apply to Method<Target, TupleP, TupleR>,
 
         int ixParams, ixReturns, cMinParams, cMaxParams;
-        if (fMethod)
-            {
+        if (fMethod) {
             TypeConstant typeTargetL = typeLeft .getParamType(0);
             TypeConstant typeTargetR = typeRight.getParamType(0);
-            if (!typeTargetR.isA(typeTargetL))
-                {
+            if (!typeTargetR.isA(typeTargetL)) {
                 return Relation.INCOMPATIBLE;
-                }
+            }
 
             ixParams = 1; ixReturns = 2; cMinParams = 1; cMaxParams = 3;
-            }
-        else
-            {
+        } else {
             ixParams = 0; ixReturns = 1; cMinParams = 0; cMaxParams = 2;
-            }
+        }
 
         int cL = typeLeft .getParamsCount();
         int cR = typeRight.getParamsCount();
-        if (cL <= cMinParams)
-            {
+        if (cL <= cMinParams) {
             // Function<> <-- Function<RP, RR> is allowed
             return Relation.IS_A;
-            }
-        if (cL != cMaxParams || cR != cMaxParams)
-            {
+        }
+        if (cL != cMaxParams || cR != cMaxParams) {
             // the only valid scenario is:
             // Function<<>, <>> <-- Function<>
-            if (cL == cMaxParams && cR == cMinParams)
-                {
+            if (cL == cMaxParams && cR == cMinParams) {
                 TypeConstant typeLP = typeLeft .getParamType(ixParams);
                 TypeConstant typeLR = typeLeft .getParamType(ixReturns);
 
                 if (typeLP.isTuple() && typeLR.isTuple() &&
-                    typeLP.getParamsCount() == 0 && typeLR.getParamsCount() == 0)
-                    {
+                    typeLP.getParamsCount() == 0 && typeLR.getParamsCount() == 0) {
                     return Relation.IS_A;
-                    }
                 }
-            return Relation.INCOMPATIBLE;
             }
+            return Relation.INCOMPATIBLE;
+        }
 
         TypeConstant typeLP = typeLeft .getParamType(ixParams);
         TypeConstant typeLR = typeLeft .getParamType(ixReturns);
@@ -3527,11 +3193,10 @@ public class ConstantPool
         TypeConstant typeRR = typeRight.getParamType(ixReturns);
 
         if (!typeLP.isTuple() || !typeLR.isTuple() ||
-            !typeRP.isTuple() || !typeRR.isTuple())
-            {
+            !typeRP.isTuple() || !typeRR.isTuple()) {
             // ill-constructed function type; not our responsibility to report
             return Relation.INCOMPATIBLE;
-            }
+        }
 
         int cLP = typeLP.getParamsCount();
         int cLR = typeLR.getParamsCount();
@@ -3539,43 +3204,37 @@ public class ConstantPool
         int cRR = typeRR.getParamsCount();
 
         // the number of parameters must match unless it's an assignment to a naked Function or Method
-        if (cLP != cRP && cLP > 0)
-            {
+        if (cLP != cRP && cLP > 0) {
             return Relation.INCOMPATIBLE;
-            }
+        }
 
         // the number of returns on the left must not exceed the number of returns on the right;
         // the only exception: "void f(X)" is allowed to be assigned to "Tuple<> f(x)"
-        if (cLR > cRR)
-            {
+        if (cLR > cRR) {
             return cRR == 0 && cLR == 1 && typeLR.getParamType(0).equals(getCurrentPool().typeTuple0())
                     ? Relation.IS_A
                     : Relation.INCOMPATIBLE;
-            }
+        }
 
         // functions do not produce, so we cannot have "weak" relations
-        for (int i = 0; i < cLP; i++)
-            {
+        for (int i = 0; i < cLP; i++) {
             TypeConstant typeL = typeLP.getParamType(i);
             TypeConstant typeR = typeRP.getParamType(i);
-            if (!typeL.isA(typeR))
-                {
+            if (!typeL.isA(typeR)) {
                 return Relation.INCOMPATIBLE;
-                }
             }
+        }
 
-        for (int i = 0; i < cLR; i++)
-            {
+        for (int i = 0; i < cLR; i++) {
             TypeConstant typeL = typeLR.getParamType(i);
             TypeConstant typeR = typeRR.getParamType(i);
-            if (!typeR.isA(typeL))
-                {
+            if (!typeR.isA(typeL)) {
                 return Relation.INCOMPATIBLE;
-                }
             }
+        }
 
         return Relation.IS_A;
-        }
+    }
 
     /**
      * Build a TypeConstant for a function.
@@ -3585,11 +3244,10 @@ public class ConstantPool
      *
      * @return the function type
      */
-    public TypeConstant buildFunctionType(TypeConstant[] atypeParams, TypeConstant... atypeReturns)
-        {
+    public TypeConstant buildFunctionType(TypeConstant[] atypeParams, TypeConstant... atypeReturns) {
         return ensureParameterizedTypeConstant(
                 typeFunction(), ensureTupleType(atypeParams), ensureTupleType(atypeReturns));
-        }
+    }
 
     /**
      * Build a TypeConstant for a function with conditional return.
@@ -3599,13 +3257,12 @@ public class ConstantPool
      *
      * @return the function type
      */
-    public TypeConstant buildConditionalFunctionType(TypeConstant[] atypeParams, TypeConstant... atypeReturns)
-        {
+    public TypeConstant buildConditionalFunctionType(TypeConstant[] atypeParams, TypeConstant... atypeReturns) {
         assert atypeReturns.length >= 1 && atypeReturns[0].equals(typeBoolean());
         return ensureParameterizedTypeConstant(typeFunction(),
                 ensureTupleType(atypeParams),
                 ensureParameterizedTypeConstant(typeCondTuple(), atypeReturns));
-        }
+    }
 
     /**
      * Get the parameter types from a function or a method type.
@@ -3615,48 +3272,39 @@ public class ConstantPool
      * @return the parameter types for the function or the method, or null if the types cannot be
      *         determined
      */
-    public TypeConstant[] extractFunctionParams(TypeConstant typeFunction)
-        {
-        if (typeFunction != null)
-            {
-            if (typeFunction.isA(typeFunction()))
-                {
-                if (typeFunction.getParamsCount() > 0)
-                    {
+    public TypeConstant[] extractFunctionParams(TypeConstant typeFunction) {
+        if (typeFunction != null) {
+            if (typeFunction.isA(typeFunction())) {
+                if (typeFunction.getParamsCount() > 0) {
                     TypeConstant typeParams = typeFunction.getParamType(0);
-                    if (typeParams.isTuple())
-                        {
+                    if (typeParams.isTuple()) {
                         return typeParams.getParamTypesArray();
-                        }
                     }
-                return TypeConstant.NO_TYPES;
                 }
+                return TypeConstant.NO_TYPES;
+            }
 
-            if (typeFunction.isA(typeMethod()))
-                {
-                if (typeFunction.getParamsCount() > 1)
-                    {
+            if (typeFunction.isA(typeMethod())) {
+                if (typeFunction.getParamsCount() > 1) {
                     TypeConstant typeParams = typeFunction.getParamType(1);
-                    if (typeParams.isTuple())
-                        {
+                    if (typeParams.isTuple()) {
                         return typeParams.getParamTypesArray();
-                        }
                     }
-                return TypeConstant.NO_TYPES;
                 }
+                return TypeConstant.NO_TYPES;
+            }
 
-            if (typeFunction instanceof RelationalTypeConstant typeRel)
-                {
+            if (typeFunction instanceof RelationalTypeConstant typeRel) {
                 TypeConstant[] atype1 = extractFunctionParams(typeRel.getUnderlyingType());
                 TypeConstant[] atype2 = extractFunctionParams(typeRel.getUnderlyingType2());
                 return atype2 == null ? atype1 :
                        atype1 == null ? atype2 :
                                         null;
-                }
             }
+        }
 
         return null;
-        }
+    }
 
     /**
      * Get the return types from a function type or a method type.
@@ -3666,64 +3314,52 @@ public class ConstantPool
      * @return the return types of the function or the method, or null if the types cannot be
      *         determined
      */
-    public TypeConstant[] extractFunctionReturns(TypeConstant typeFunction)
-        {
-        if (typeFunction != null)
-            {
-            if (typeFunction.isA(typeFunction()))
-                {
-                if (typeFunction.getParamsCount() > 1)
-                    {
+    public TypeConstant[] extractFunctionReturns(TypeConstant typeFunction) {
+        if (typeFunction != null) {
+            if (typeFunction.isA(typeFunction())) {
+                if (typeFunction.getParamsCount() > 1) {
                     TypeConstant typeParams = typeFunction.getParamType(1);
-                    if (typeParams.isTuple())
-                        {
+                    if (typeParams.isTuple()) {
                         return typeParams.getParamTypesArray();
-                        }
                     }
-                return TypeConstant.NO_TYPES;
                 }
+                return TypeConstant.NO_TYPES;
+            }
 
-            if (typeFunction.isA(typeMethod()))
-                {
-                if (typeFunction.getParamsCount() > 2)
-                    {
+            if (typeFunction.isA(typeMethod())) {
+                if (typeFunction.getParamsCount() > 2) {
                     TypeConstant typeParams = typeFunction.getParamType(2);
-                    if (typeParams.isTuple())
-                        {
+                    if (typeParams.isTuple()) {
                         return typeParams.getParamTypesArray();
-                        }
                     }
-                return TypeConstant.NO_TYPES;
                 }
+                return TypeConstant.NO_TYPES;
+            }
 
-            if (typeFunction instanceof RelationalTypeConstant typeRel)
-                {
+            if (typeFunction instanceof RelationalTypeConstant typeRel) {
                 TypeConstant[] atype1 = extractFunctionReturns(typeRel.getUnderlyingType());
                 TypeConstant[] atype2 = extractFunctionReturns(typeRel.getUnderlyingType2());
                 return atype2 == null ? atype1 :
                        atype1 == null ? atype2 :
                                         null;
-                }
             }
+        }
 
         return null;
-        }
+    }
 
     /**
      * @return true iff the specified function type has a conditional return
      */
-    public boolean isConditionalReturn(TypeConstant typeFunction)
-        {
-        if (typeFunction != null && typeFunction.isA(typeFunction()))
-            {
-            if (typeFunction.getParamsCount() > 1)
-                {
+    public boolean isConditionalReturn(TypeConstant typeFunction) {
+        if (typeFunction != null && typeFunction.isA(typeFunction())) {
+            if (typeFunction.getParamsCount() > 1) {
                 return typeFunction.getParamType(1).isA(typeCondTuple());
-                }
             }
+        }
 
         return false;
-        }
+    }
 
     /**
      * Create a new function type by binding the specified parameter of the passed in function type.
@@ -3733,8 +3369,7 @@ public class ConstantPool
      *
      * @return a new function type that skips the specified parameter
      */
-    public TypeConstant bindFunctionParam(TypeConstant typeFn, int iParam)
-        {
+    public TypeConstant bindFunctionParam(TypeConstant typeFn, int iParam) {
         assert typeFn.isA(typeFunction()) && typeFn.getParamsCount() > 0;
 
         TypeConstant typeP = typeFn.getParamType(0);
@@ -3744,55 +3379,45 @@ public class ConstantPool
         assert typeP.isTuple() && iParam <= cParamsNew;
 
         TypeConstant[] atypeParams = typeP.getParamTypesArray();
-        if (cParamsNew == 0)
-            {
+        if (cParamsNew == 0) {
             // canonical Tuple represents Void
             typeP = typeTuple0();
-            }
-        else
-            {
+        } else {
             TypeConstant[] atypeNew = new TypeConstant[cParamsNew];
-            if (iParam > 0)
-                {
+            if (iParam > 0) {
                 System.arraycopy(atypeParams, 0, atypeNew, 0, iParam);
-                }
-            if (iParam < cParamsNew)
-                {
-                System.arraycopy(atypeParams, iParam + 1, atypeNew, iParam, cParamsNew - iParam);
-                }
-            typeP = ensureTupleType(atypeNew);
             }
+            if (iParam < cParamsNew) {
+                System.arraycopy(atypeParams, iParam + 1, atypeNew, iParam, cParamsNew - iParam);
+            }
+            typeP = ensureTupleType(atypeNew);
+        }
 
         return ensureParameterizedTypeConstant(typeFunction(), typeP, typeR);
-        }
+    }
 
 
     // ----- out-of-context helpers  ---------------------------------------------------------------
 
-    public TypeConstant getNakedRefType()
-        {
+    public TypeConstant getNakedRefType() {
         return m_typeNakedRef;
-        }
+    }
 
-    public void setNakedRefType(TypeConstant typeNakedRef)
-        {
+    public void setNakedRefType(TypeConstant typeNakedRef) {
         m_typeNakedRef = typeNakedRef;
-        }
+    }
 
-    public TypeInfo getNakedRefInfo(TypeConstant typeReferent)
-        {
+    public TypeInfo getNakedRefInfo(TypeConstant typeReferent) {
         return f_mapRefTypes.computeIfAbsent(typeReferent, this::computeNakedRefInfo);
-        }
+    }
 
-    private TypeInfo computeNakedRefInfo(TypeConstant typeReferent)
-        {
+    private TypeInfo computeNakedRefInfo(TypeConstant typeReferent) {
         GenericTypeResolver resolver =
                 sFormalName -> "Referent".equals(sFormalName) ? typeReferent : null;
 
-        if (m_typeNakedRef == null)
-            {
+        if (m_typeNakedRef == null) {
             throw new IllegalStateException("Mack module (javatools_turtle) is missing");
-            }
+        }
 
         TypeInfo info = m_typeNakedRef.ensureTypeInfo();
 
@@ -3840,27 +3465,25 @@ public class ConstantPool
                 ListMap.EMPTY,          // mapChildren
                 null, Progress.Complete
                 );
-        }
+    }
 
     public SingletonConstant valNull()           {SingletonConstant c = m_valNull;           if (c == null) {m_valNull           = c = ensureSingletonConstConstant(clzNull()                          );} return c;}
 
     /**
      * @return a ContextPool associated with the current thread
      */
-    public static ConstantPool getCurrentPool()
-        {
+    public static ConstantPool getCurrentPool() {
         return s_tloPool.get()[0];
-        }
+    }
 
     /**
      * Associate the specified ConstantPool with the current thread.
      *
      * @param pool  a ContextPool
      */
-    public static void setCurrentPool(ConstantPool pool)
-        {
+    public static void setCurrentPool(ConstantPool pool) {
         s_tloPool.get()[0] = pool;
-        }
+    }
 
     /**
      * Temporarily update the current ConstantPool, restoring it when the returned AutoCloseable
@@ -3875,14 +3498,13 @@ public class ConstantPool
         ConstantPool pollPrior = poolHolder[0];
         poolHolder[0] = pool;
         return () -> poolHolder[0] = pollPrior;
-    }
+}
 
     /**
      * Discard unused Constants and order the remaining constants so that the most-referred-to
      * Constants occur before the less used constants.
      */
-    private void optimize()
-        {
+    private void optimize() {
         ArrayList<Constant> list = m_listConst;
 
         // remove unused constants
@@ -3890,17 +3512,13 @@ public class ConstantPool
         Constant[] aconst = new Constant[cBefore];
         int cAfter        = 0;
 
-        for (Constant constant : list)
-            {
-            if (constant.hasRefs())
-                {
+        for (Constant constant : list) {
+            if (constant.hasRefs()) {
                 aconst[cAfter++] = constant;
-                }
-            else
-                {
+            } else {
                 constant.setPosition(-1);
-                }
             }
+        }
 
         m_valEcstasy        = null;
         m_clzObject         = null;
@@ -4065,33 +3683,29 @@ public class ConstantPool
 
         // mark each constant with its new position and add to the list
         list.clear();
-        for (int i = 0; i < cAfter; ++i)
-            {
+        for (int i = 0; i < cAfter; ++i) {
             Constant constant = aconst[i];
             constant.setPosition(i);
             list.add(constant);
-            }
+        }
 
         // discard any previous lookup structures, since contents may have changed
         m_mapConstants.clear();
         m_mapLocators.clear();
         f_implicits.clear();
-        }
+    }
 
     /**
      * A cached and pre-parsed image of the "implicit.x" file.
      */
     private static final Map<String, String[]> s_implicits;
     private static final Map<String, String>   s_implicitsByPath;
-    static
-        {
-        try
-            {
+    static {
+        try {
             ClassLoader loader = ConstantPool.class.getClassLoader();
-            if (loader == null)
-                {
+            if (loader == null) {
                 loader = ClassLoader.getSystemClassLoader();
-                }
+            }
             Source src = new Source(loader.getResourceAsStream("implicit.x"));
 
             ErrorList errs   = new ErrorList(1);
@@ -4101,39 +3715,30 @@ public class ConstantPool
             s_implicits       = new HashMap<>(mapImplicits);
             s_implicitsByPath = new HashMap<>();
 
-            for (Map.Entry<String, String[]> entry : mapImplicits.entrySet())
-                {
+            for (Map.Entry<String, String[]> entry : mapImplicits.entrySet()) {
                 StringBuilder sb     = new StringBuilder();
                 boolean       fFirst = true;
-                for (String sPart : entry.getValue())
-                    {
-                    if (fFirst)
-                        {
+                for (String sPart : entry.getValue()) {
+                    if (fFirst) {
                         fFirst = false;
-                        }
-                    else
-                        {
+                    } else {
                         sb.append('.');
-                        }
-                    sb.append(sPart);
                     }
+                    sb.append(sPart);
+                }
                 s_implicitsByPath.putIfAbsent(sb.toString(), entry.getKey());
-                }
+            }
 
-            for (ErrorListener.ErrorInfo err : errs.getErrors())
-                {
+            for (ErrorListener.ErrorInfo err : errs.getErrors()) {
                 System.err.println(err);
-                }
-            if (errs.hasSeriousErrors())
-                {
+            }
+            if (errs.hasSeriousErrors()) {
                 throw new IllegalStateException();
-                }
             }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             throw e instanceof RuntimeException ex ? ex : new RuntimeException(e);
-            }
         }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -4368,4 +3973,4 @@ public class ConstantPool
     private transient SignatureConstant m_sigClose;
     private transient SignatureConstant m_sigValidator;
     private transient TypeInfo          m_infoPlaceholder;
-    }
+}

@@ -1,13 +1,18 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
+import java.lang.constant.ClassDesc;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpReturn;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -15,7 +20,6 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * RETURN_1 rvalue
@@ -106,6 +110,15 @@ public class Return_1
         private final ObjectHandle m_hValue;
         private final boolean      m_fDynamic;
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        buildReturn(bctx, code, new int[] {m_nArg});
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int      m_nArg;
     private Argument m_arg;

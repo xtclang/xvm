@@ -797,7 +797,7 @@ public class ForEachStatement
         // MOV     xxx iter                 ; (passed in) however the iterator got assigned
         //
         // VAR     cond Boolean             ; hidden variable that holds the conditional result
-        // Repeat:
+        // LOOP
         // NVOK_0N iter Iterator.next() -> cond, val ; assign the conditional result and the value
         //                                             (with optional conversion)
         // JMP_F   cond, Exit               ; exit when the conditional result is false
@@ -805,7 +805,7 @@ public class ForEachStatement
         // Continue:
         // MOV False first                  ; (optional) no longer the L.first
         // IP_INC count                     ; (optional) increment the L.count
-        // JMP Repeat                       ; loop
+        // LOOP_END
         // Exit:
 
         Register regCond = code.createRegister(pool.typeBoolean());
@@ -817,8 +817,7 @@ public class ForEachStatement
                 ? new Register(lvalVal.getType(), null, Op.A_STACK)
                 : lvalVal.getLocalArgument();
 
-        Label labelRepeat = new Label("repeat_foreach_" + getLabelId());
-        code.add(labelRepeat);
+        code.add(new Loop());
 
         MethodConstant idConv = m_aidConvKey == null ? null : m_aidConvKey[0];
         if (idConv == null)
@@ -854,7 +853,7 @@ public class ForEachStatement
             {
             code.add(new IP_Inc(m_regCount));
             }
-        code.add(new Jump(labelRepeat));
+        code.add(new LoopEnd());
 
         return fReachable;
         }
@@ -924,7 +923,7 @@ public class ForEachStatement
 
         // VAR_IN "cur"  T _start_          ; initialize the current value to the Range "start"
         // VAR   "last" Boolean             ; (optional) if no label.last exists, create a temp for it
-        // Repeat:
+        // LOOP
         // IS_EQ cur _end_ -> last          ; compare current value to last value
         // MOV cur lval                     ; whatever code Assignable generates for "lval=cur"
         // {...}                            ; body
@@ -933,7 +932,7 @@ public class ForEachStatement
         // IP_INC/IP_DEC cur                ; increment (or decrement) the current value
         // MOV False first                  ; (optional) no longer the L.first
         // IP_INC count                     ; (optional) increment the L.count
-        // JMP Repeat                       ; loop
+        // LOOP_END
         // Exit:
 
         Assignable LVal   = m_exprLValue.generateAssignable(ctx, code, errs);
@@ -949,8 +948,7 @@ public class ForEachStatement
                     pool.ensureStringConstant(getLoopPrefix() + "last")));
             }
 
-        Label lblRepeat = new Label("repeat_foreach_" + getLabelId());
-        code.add(lblRepeat);
+        code.add(new Loop());
         code.add(new IsEq(regVal.getType(), regVal, range.getEffectiveLast(), regLast));
         LVal.assign(regVal, code, errs);
 
@@ -969,7 +967,7 @@ public class ForEachStatement
             {
             code.add(new IP_Inc(m_regCount));
             }
-        code.add(new Jump(lblRepeat));
+        code.add(new LoopEnd());
 
         return fReachable;
         }
@@ -1013,7 +1011,7 @@ public class ForEachStatement
 
         // VAR_I "cur"  T _start_           ; initialize the current value to the Range "start"
         // VAR   "last" Boolean             ; (optional) if no label.last exists, create a temp for it
-        // Repeat:
+        // LOOP
         // IS_EQ cur _end_ -> last          ; compare current value to last value
         // MOV cur lval                     ; whatever code Assignable generates for "lval=cur"
         // {...}                            ; body
@@ -1022,7 +1020,7 @@ public class ForEachStatement
         // IP_INC/IP_DEC cur                ; increment (or decrement) the current value
         // MOV False first                  ; (optional) no longer the L.first
         // IP_INC count                     ; (optional) increment the L.count
-        // JMP Repeat                       ; loop
+        // LOOP_END
         // Exit:
 
         Assignable LVal = m_exprLValue.generateAssignable(ctx, code, errs);
@@ -1039,8 +1037,7 @@ public class ForEachStatement
                     pool.ensureStringConstant(getLoopPrefix() + "last")));
             }
 
-        Label lblRepeat = new Label("repeat_foreach_" + getLabelId());
-        code.add(lblRepeat);
+        code.add(new Loop());
         code.add(new IsEq(regVal.getType(), regVal, regLastValue, regLast));
         LVal.assign(regVal, code, errs);
 
@@ -1069,7 +1066,7 @@ public class ForEachStatement
             {
             code.add(new IP_Inc(m_regCount));
             }
-        code.add(new Jump(lblRepeat));
+        code.add(new LoopEnd());
 
         return fReachable;
         }
@@ -1090,7 +1087,7 @@ public class ForEachStatement
         // JMP_GTE count end -> Exit        ; skip everything if the list is empty
         // IP_DEC  end                      ; now "end" is the last index to iterate
         // VAR     "last" Boolean           ; (optional) if no label.last exists, create a temp for it
-        // Repeat:
+        // LOOP
         // IS_EQ   count end -> last        ; compare current index to end index
         // I_GET   list [count] -> lval     ; whatever code Assignable generates for "lval=list[count]"
         //                                    (with optional conversion)
@@ -1099,7 +1096,7 @@ public class ForEachStatement
         // JMP_T last Exit                  ; exit after last iteration
         // IP_INC count                     ; increment the current index
         // MOV False first                  ; (optional) no longer the L.first
-        // JMP Repeat                       ; loop
+        // LOOP_END
         // Exit:
 
         Register regCount = m_regCount;
@@ -1152,8 +1149,7 @@ public class ForEachStatement
             code.add(new Var_N(regLast, pool.ensureStringConstant(getLoopPrefix() + "last")));
             }
 
-        Label lblRepeat = new Label("repeat_foreach_" + getLabelId());
-        code.add(lblRepeat);
+        code.add(new Loop());
         code.add(new IsEq(pool.typeInt64(), regCount, regEnd, regLast));
 
         MethodConstant idConv = m_aidConvKey == null ? null : m_aidConvKey[0];
@@ -1206,7 +1202,7 @@ public class ForEachStatement
             {
             code.add(new Move(pool.valFalse(), m_regFirst));
             }
-        code.add(new Jump(lblRepeat));
+        code.add(new LoopEnd());
 
         return fReachable;
         }
@@ -1235,7 +1231,6 @@ public class ForEachStatement
 
         Argument argMap = m_exprRValue.generateArgument(ctx, code, true, true, errs);
 
-        Label labelRepeat = new Label("repeat_foreach_" + getLabelId());
         if (m_exprLValue.getValueCount() == 2 || m_regEntry != null)
             {
             MethodConstant idIterator = findWellKnownMethod(infoMap, "iterator", errs);
@@ -1251,7 +1246,7 @@ public class ForEachStatement
             // VAR     entry Entry              ; the entry
             // VAR     key Key                  ; the key
             // VAR     value Value              ; the value
-            // Repeat:
+            // LOOP
             // NVOK_0N iter Iterator.next() -> cond, entry ; assign the conditional result and the value
             // JMP_F   cond, Exit               ; exit when the conditional result is false
             // P_GET   Entry.key, entry -> key
@@ -1262,7 +1257,7 @@ public class ForEachStatement
             // Continue:
             // MOV False first                  ; (optional) no longer the L.first
             // IP_INC count                     ; (optional) increment the L.count
-            // JMP Repeat                       ; loop
+            // LOOP_END
             // Exit:
 
             TypeInfo         infoEntry = typeEntry.ensureTypeInfo(errs);
@@ -1276,7 +1271,7 @@ public class ForEachStatement
             Register regCond = code.createRegister(pool.typeBoolean());
             code.add(new Var(regCond));
 
-            code.add(labelRepeat);
+            code.add(new Loop());
 
             Register regEntry = m_regEntry;
             if (regEntry == null)
@@ -1355,7 +1350,7 @@ public class ForEachStatement
             //
             // VAR     cond Boolean             ; hidden variable that holds the conditional result
             // VAR     key Key                  ; the key
-            // Repeat:
+            // LOOP
             // NVOK_0N iter Iterator.next() -> cond, key ; assign the conditional result and the value
             //                                            (with optional conversion)
             // JMP_F   cond, Exit               ; exit when the conditional result is false
@@ -1364,7 +1359,7 @@ public class ForEachStatement
             // Continue:
             // MOV False first                  ; (optional) no longer the L.first
             // IP_INC count                     ; (optional) increment the L.count
-            // JMP Repeat                       ; loop
+            // LOOP_END
             // Exit:
             PropertyConstant idKeys = infoMap.findProperty("keys").getIdentity();
             Register         regSet = new Register(typeSet, null, Op.A_STACK);
@@ -1377,7 +1372,7 @@ public class ForEachStatement
             Register regCond = code.createRegister(pool.typeBoolean());
             code.add(new Var(regCond));
 
-            code.add(labelRepeat);
+            code.add(new Loop());
 
             Assignable lvalKey = m_exprLValue.generateAssignable(ctx, code, errs);
 
@@ -1422,7 +1417,7 @@ public class ForEachStatement
             {
             code.add(new IP_Inc(m_regCount));
             }
-        code.add(new Jump(labelRepeat));
+        code.add(new LoopEnd());
 
         return fReachable;
         }

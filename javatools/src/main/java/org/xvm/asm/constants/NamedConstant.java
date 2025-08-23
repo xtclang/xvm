@@ -20,8 +20,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * exists within its parent structure.
  */
 public abstract class NamedConstant
-        extends IdentityConstant
-    {
+        extends IdentityConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -32,23 +31,20 @@ public abstract class NamedConstant
      * @param constParent  the module, package, class, or method that contains this identity
      * @param sName        the name associated with this identity
      */
-    public NamedConstant(ConstantPool pool, IdentityConstant constParent, String sName)
-        {
+    public NamedConstant(ConstantPool pool, IdentityConstant constParent, String sName) {
         super(pool);
 
-        if (constParent == null)
-            {
+        if (constParent == null) {
             throw new IllegalArgumentException("parent required");
-            }
+        }
 
-        if (sName == null)
-            {
+        if (sName == null) {
             throw new IllegalArgumentException("name required");
-            }
+        }
 
         m_constParent = constParent;
         m_constName   = pool.ensureStringConstant(sName);
-        }
+    }
 
     /**
      * Constructor used for deserialization.
@@ -60,42 +56,37 @@ public abstract class NamedConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public NamedConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
 
         m_iParent = readMagnitude(in);
         m_iName   = readMagnitude(in);
-        }
+    }
 
     @Override
-    protected void resolveConstants()
-        {
+    protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
         m_constParent = (IdentityConstant) pool.getConstant(m_iParent);
         m_constName   = (StringConstant)   pool.getConstant(m_iName);
-        }
+    }
 
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
-    public IdentityConstant getParentConstant()
-        {
+    public IdentityConstant getParentConstant() {
         return m_constParent;
-        }
+    }
 
-    public StringConstant getNameConstant()
-        {
+    public StringConstant getNameConstant() {
         return m_constName;
-        }
+    }
 
     @Override
-    public String getName()
-        {
+    public String getName() {
         return m_constName.getValue();
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
@@ -104,88 +95,80 @@ public abstract class NamedConstant
     public abstract Format getFormat();
 
     @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
+    public void forEachUnderlying(Consumer<Constant> visitor) {
         visitor.accept(m_constParent);
         visitor.accept(m_constName);
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof NamedConstant))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof NamedConstant)) {
             return -1;
-            }
-        int n = this.m_constParent.compareTo(((NamedConstant) that).m_constParent);
-        if (n == 0)
-            {
-            n = this.getName().compareTo(((NamedConstant) that).getName());
-            }
-        return n;
         }
+        int n = this.m_constParent.compareTo(((NamedConstant) that).m_constParent);
+        if (n == 0) {
+            n = this.getName().compareTo(((NamedConstant) that).getName());
+        }
+        return n;
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         String sParent;
         char   chSep;
         final Constant constParent = m_constParent;
-        switch (constParent.getFormat())
-            {
-            case Module:
-                sParent = ((ModuleConstant) constParent).getUnqualifiedName();
-                chSep   = ':';
-                break;
+        switch (constParent.getFormat()) {
+        case Module:
+            sParent = ((ModuleConstant) constParent).getUnqualifiedName();
+            chSep   = ':';
+            break;
 
-            case Package:
-            case Class:
-            case NativeClass:
-                sParent = constParent.getValueString();
-                chSep   = '.';
-                break;
+        case Package:
+        case Class:
+        case NativeClass:
+            sParent = constParent.getValueString();
+            chSep   = '.';
+            break;
 
-            case Property:
-                sParent = ((NamedConstant) constParent).getName();
-                chSep   = '#';
-                break;
+        case Property:
+            sParent = ((NamedConstant) constParent).getName();
+            chSep   = '#';
+            break;
 
-            case Method:
-                sParent = ((MethodConstant) constParent).getName() + "(?)";
-                chSep   = '#';
-                break;
+        case Method:
+            sParent = ((MethodConstant) constParent).getName() + "(?)";
+            chSep   = '#';
+            break;
 
-            case TypeParameter:
-            case FormalTypeChild:
-                sParent = ((NamedConstant) constParent).getName();
-                chSep   = '.';
-                break;
+        case TypeParameter:
+        case FormalTypeChild:
+            sParent = ((NamedConstant) constParent).getName();
+            chSep   = '.';
+            break;
 
-            default:
-                throw new IllegalStateException("parent=" + constParent);
-            }
+        default:
+            throw new IllegalStateException("parent=" + constParent);
+        }
 
         return sParent + chSep + m_constName.getValue();
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         m_constParent = (IdentityConstant) pool.register(m_constParent);
         m_constName   = (StringConstant)   pool.register(m_constName);
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constParent.getPosition());
         writePackedLong(out, m_constName.getPosition());
-        }
+    }
 
     @Override
     public abstract String getDescription();
@@ -194,11 +177,10 @@ public abstract class NamedConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    protected int computeHashCode()
-        {
+    protected int computeHashCode() {
         return Hash.of(m_constParent,
                Hash.of(m_constName));
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -225,4 +207,4 @@ public abstract class NamedConstant
      * The constant that holds the name of the structure identified by this constant.
      */
     private StringConstant m_constName;
-    }
+}

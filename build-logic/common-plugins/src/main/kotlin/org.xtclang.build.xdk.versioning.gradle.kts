@@ -6,9 +6,7 @@
  * Any XTC project will have an extension with its resolved SemanticVersion
  */
 
-plugins {
-    id("org.xtclang.build.debug")
-}
+// Debug plugin removed
 
 val semanticVersion by extra {
     xdkBuildLogic.versions().assignSemanticVersionFromCatalog()

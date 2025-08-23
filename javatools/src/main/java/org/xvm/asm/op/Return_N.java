@@ -5,10 +5,14 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpReturn;
 import org.xvm.asm.Register;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -85,8 +89,7 @@ public class Return_N
 
             if (isDeferred(hArg)) {
                 fAnyProp = true;
-            }
-            else if (frame.isDynamicVar(nArg)) {
+            } else if (frame.isDynamicVar(nArg)) {
                 if (afDynamic == null) {
                     afDynamic = new boolean[cArgs];
                 }
@@ -152,6 +155,15 @@ public class Return_N
         private final ObjectHandle[] m_ahValue;
         private final boolean[] m_afDynamic;
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        buildReturn(bctx, code, m_anArg);
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int[]      m_anArg;
     private Argument[] m_aArg;

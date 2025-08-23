@@ -17,8 +17,7 @@ import org.xvm.util.Handy;
  * Represents the information about a single property at a single virtual level.
  */
 public class PropertyBody
-        implements Constants
-    {
+        implements Constants {
     /**
      * Construct a PropertyBody from the passed information.
      *
@@ -52,8 +51,7 @@ public class PropertyBody
             boolean           fReqField,
             boolean           fConstant,
             Constant          constInitVal,
-            MethodConstant    constInitFunc)
-        {
+            MethodConstant    constInitFunc) {
         assert struct    != null;
         assert type      != null;
         assert     impl == Implementation.Implicit
@@ -64,21 +62,18 @@ public class PropertyBody
                 || impl == Implementation.SansCode
                 || impl == Implementation.Explicit;
         assert (impl == Implementation.Delegating) ^ (constDelegate == null);
-        if (constInitVal != null && constInitFunc != null)
-            {
+        if (constInitVal != null && constInitFunc != null) {
             // this can happen when the initial value is a constant function (lambda)
             // or any other constant that refers to the initializer (see
             // PropertyDeclarationStatement,validateContent);
             // in that case we simply disregard the initializer
             constInitFunc = null;
-            }
-        else if (fConstant && constInitVal == null && constInitFunc == null && !struct.isInjected())
-            {
+        } else if (fConstant && constInitVal == null && constInitFunc == null && !struct.isInjected()) {
             // this can only happen when we're building the TypeInfo for a partially compiled class,
             // so we will need to invalidate the TypeInfo afterward;
             // mark the implementation as "Implicit" just to assert it gets replaced later
             impl = Implementation.Implicit;
-            }
+        }
         assert effectGet != null && effectSet != null;
 
         m_structProp    = struct;
@@ -95,7 +90,7 @@ public class PropertyBody
         m_fConstant     = fConstant;
         m_constInitVal  = constInitVal;
         m_constInitFunc = constInitFunc;
-        }
+    }
 
     /**
      * Construct a PropertyBody that represents the specified formal type parameter.
@@ -103,8 +98,7 @@ public class PropertyBody
      * @param struct      the property structure that this body is derived from
      * @param infoFormal  the formal type parameter information
      */
-    public PropertyBody(PropertyStructure struct, ParamInfo infoFormal)
-        {
+    public PropertyBody(PropertyStructure struct, ParamInfo infoFormal) {
         assert infoFormal != null;
         assert struct == null || struct.getName().equals(infoFormal.getName());
         assert struct != null || infoFormal.getNestedIdentity() instanceof NestedIdentity;
@@ -128,53 +122,48 @@ public class PropertyBody
         m_constInitFunc = null;
         m_effectGet     = Effect.None;
         m_effectSet     = Effect.None;
-        }
+    }
 
     /**
      * @return a new PropertyBody that is identical to this one in all aspects, except with the
      *         specified initial value
      */
-    public PropertyBody withInitialValue(Constant constInit)
-        {
+    public PropertyBody withInitialValue(Constant constInit) {
         return new PropertyBody(m_structProp, m_impl, m_constDelegate, m_type, m_fRO, m_fRW,
                 m_fCustom, m_effectGet, m_effectSet, m_fField, m_fConstant, constInit, null);
-        }
+    }
 
     /**
      * @return the container of the property
      */
-    public IdentityConstant getParent()
-        {
+    public IdentityConstant getParent() {
         return getIdentity().getParentConstant();
-        }
+    }
 
     /**
      * @return the identity of the property
      */
-    public PropertyConstant getIdentity()
-        {
+    public PropertyConstant getIdentity() {
         return m_structProp == null
                 ? (PropertyConstant) ((NestedIdentity) m_infoFormal.getNestedIdentity()).getIdentityConstant()
                 : m_structProp.getIdentityConstant();
-        }
+    }
 
     /**
      * @return the PropertyStructure for the property body; may be null for nested type params
      */
-    public PropertyStructure getStructure()
-        {
+    public PropertyStructure getStructure() {
         return m_structProp;
-        }
+    }
 
     /**
      * @return the property name
      */
-    public String getName()
-        {
+    public String getName() {
         return m_structProp == null
                 ? m_infoFormal.getName()
                 : m_structProp.getName();
-        }
+    }
 
     /**
      * Property body implementations are one of the following:
@@ -195,277 +184,244 @@ public class PropertyBody
      *
      * @return the implementation type for the property
      */
-    public Implementation getImplementation()
-        {
+    public Implementation getImplementation() {
         return m_impl;
-        }
+    }
 
     /**
      * @return the existence for the property implementation
      */
-    public Existence getExistence()
-        {
+    public Existence getExistence() {
         return m_impl.getExistence();
-        }
+    }
 
     /**
      * @return the property that provides the reference to delegate to
      */
-    public PropertyConstant getDelegate()
-        {
+    public PropertyConstant getDelegate() {
         return m_constDelegate;
-        }
+    }
 
     /**
      * @return the property type
      */
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return m_type;
-        }
+    }
 
     /**
      * @return true iff this property represents a formal type
      */
-    public boolean isFormalType()
-        {
+    public boolean isFormalType() {
         return m_infoFormal != null;
-        }
+    }
 
     /**
      * @return the constraint type for this property (only if a formal type)
      */
-    public TypeConstant getConstraintType()
-        {
+    public TypeConstant getConstraintType() {
         return m_infoFormal == null ? null : m_infoFormal.getConstraintType();
-        }
+    }
 
     /**
      * @return the Access required for the Ref form of the property
      */
-    public Access getRefAccess()
-        {
+    public Access getRefAccess() {
         return m_structProp == null
                 ? Access.PUBLIC
                 : m_structProp.getAccess();
-        }
+    }
 
     /**
      * @return the Access required for the Var form of the property, or null if not specified
      */
-    public Access getVarAccess()
-        {
+    public Access getVarAccess() {
         return m_structProp == null
                 ? null
                 : m_structProp.getVarAccess();
-        }
+    }
 
     /**
      * @return true iff this property body must be a Ref-not-Var
      */
-    public boolean isRO()
-        {
+    public boolean isRO() {
         return m_fRO;
-        }
+    }
 
     /**
      * @return true iff this property body must be a Var
      */
-    public boolean isRW()
-        {
+    public boolean isRW() {
         return m_fRW;
-        }
+    }
 
     /**
      * @return true iff this property has a field, whether or not that field is reachable
      */
-    public boolean hasField()
-        {
+    public boolean hasField() {
         return m_fField;
-        }
+    }
 
-    public boolean impliesField()
-        {
+    public boolean impliesField() {
         // this needs to stay in sync with TypeConstant#createPropertyInfo()
         return m_fField ||
                 (getExistence() == Existence.Class
                 && !isRO()
                 && !isExplicitAbstract()
                 && !isGetterBlockingSuper());
-        }
+    }
 
     /**
      * @return true iff this property represents a constant (a static property)
      */
-    public boolean isConstant()
-        {
+    public boolean isConstant() {
         return m_fConstant;
-        }
+    }
 
     /**
      * @return the initial value of the property as a constant, or null if there is no constant
      *         initial value
      */
-    public Constant getInitialValue()
-        {
+    public Constant getInitialValue() {
         return m_constInitVal;
-        }
+    }
 
     /**
      * @return the function that provides the initial value of the property, or null if there is no
      *         initializer
      */
-    public MethodConstant getInitializer()
-        {
+    public MethodConstant getInitializer() {
         return m_constInitFunc;
-        }
+    }
 
     /**
      * @return true iff the property has any methods in addition to the underlying Ref or Var
      *         "rebasing" implementation, and in addition to any annotations
      */
-    public boolean hasCustomCode()
-        {
+    public boolean hasCustomCode() {
         return m_fCustom;
-        }
+    }
 
     /**
      * @return the property's Ref/Var annotations
      */
-    public Annotation[] getRefAnnotations()
-        {
+    public Annotation[] getRefAnnotations() {
         return m_structProp == null
                 ? Annotation.NO_ANNOTATIONS
                 : m_structProp.getRefAnnotations();
-        }
+    }
 
     /**
      * @return true iff the property has a getter method
      */
-    public boolean hasGetter()
-        {
+    public boolean hasGetter() {
         return m_effectGet != Effect.None;
-        }
+    }
 
     /**
      * @return true iff the property has a setter method
      */
-    public boolean hasSetter()
-        {
+    public boolean hasSetter() {
         return m_effectSet != Effect.None;
-        }
+    }
 
     /**
      * @return true iff the property has a getter method that blocks the invocation of its super
      *         method
      */
-    public boolean isGetterBlockingSuper()
-        {
+    public boolean isGetterBlockingSuper() {
         return m_effectGet == Effect.BlocksSuper;
-        }
+    }
 
     /**
      * @return true iff the property has a setter method that blocks the invocation of its super
      *         method
      */
-    public boolean isSetterBlockingSuper()
-        {
+    public boolean isSetterBlockingSuper() {
         return m_effectSet == Effect.BlocksSuper;
-        }
+    }
 
     /**
      * @return true iff the property body is abstract, which means that it comes from an interface
      *         or "into" clause, or is annotated with "@Abstract"
      */
-    public boolean isAbstract()
-        {
-        return switch (getImplementation())
-            {
+    public boolean isAbstract() {
+        return switch (getImplementation()) {
             case Delegating, Native -> false;
             case Explicit           -> isExplicitAbstract() || isImplicitAbstract();
             default                 -> true;
-            };
-        }
+        };
+    }
 
     /**
      * @return true iff the property is synthetic
      */
-    public boolean isSynthetic()
-        {
+    public boolean isSynthetic() {
         PropertyStructure prop = m_structProp;
         return prop != null && prop.isSynthetic();
-        }
+    }
 
     /**
      * @return true if the property is annotated by "@Abstract"
      */
-    public boolean isExplicitAbstract()
-        {
+    public boolean isExplicitAbstract() {
         PropertyStructure prop = m_structProp;
         return prop != null && m_impl != Implementation.Implicit
                 && TypeInfo.containsAnnotation(prop.getPropertyAnnotations(), "Abstract");
-        }
+    }
 
     /**
      * @return true if the property is implicitly abstract (a non-injected read-only property
      *         without a getter on an abstract class)
      */
-    public boolean isImplicitAbstract()
-        {
+    public boolean isImplicitAbstract() {
         PropertyStructure prop = m_structProp;
         return prop != null && m_impl != Implementation.Implicit
                 && !isInjected() && !hasGetter()
                 && isExplicitReadOnly() && prop.getContainingClass().isExplicitlyAbstract();
-        }
+    }
 
     /**
      * @return true if the property is annotated by "@Override"
      */
-    public boolean isExplicitOverride()
-        {
+    public boolean isExplicitOverride() {
         PropertyStructure prop = m_structProp;
         return prop != null && m_impl != Implementation.Implicit && prop.isExplicitOverride();
-        }
+    }
 
     /**
      * @return true if the property is annotated by "@RO"
      */
-    public boolean isExplicitReadOnly()
-        {
+    public boolean isExplicitReadOnly() {
         PropertyStructure prop = m_structProp;
         return prop != null && m_impl != Implementation.Implicit && prop.isExplicitReadOnly();
-        }
+    }
 
     /**
      * @return true if the property is annotated by "@Inject"
      */
-    public boolean isInjected()
-        {
+    public boolean isInjected() {
         PropertyStructure prop = m_structProp;
         return prop != null && m_impl != Implementation.Implicit && prop.isInjected();
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
-        {
+    public int hashCode() {
         return getIdentity().hashCode();
-        }
+    }
 
     @Override
-    public boolean equals(Object obj)
-        {
-        if (obj == this)
-            {
+    public boolean equals(Object obj) {
+        if (obj == this) {
             return true;
-            }
+        }
 
-        if (!(obj instanceof PropertyBody that))
-            {
+        if (!(obj instanceof PropertyBody that)) {
             return false;
-            }
+        }
 
         return Handy.equals(this.m_structProp, that.m_structProp)
             && this.m_type .equals(that.m_type)
@@ -481,11 +437,10 @@ public class PropertyBody
             && Handy.equals(this.m_constDelegate, that.m_constDelegate)
             && Handy.equals(this.m_constInitVal , that.m_constInitVal )
             && Handy.equals(this.m_constInitFunc, that.m_constInitFunc);
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
         sb.append(m_type.getValueString())
@@ -496,64 +451,51 @@ public class PropertyBody
           .append(", impl=")
           .append(m_impl);
 
-        if (m_infoFormal != null)
-            {
+        if (m_infoFormal != null) {
             sb.append(", formal");
-            }
-        if (m_fRO)
-            {
+        }
+        if (m_fRO) {
             sb.append(", RO");
-            }
-        if (m_fRW)
-            {
+        }
+        if (m_fRW) {
             sb.append(", RW");
-            }
-        if (m_fConstant)
-            {
+        }
+        if (m_fConstant) {
             sb.append(", constant");
-            }
-        if (m_fField)
-            {
+        }
+        if (m_fField) {
             sb.append(", has-field");
-            }
-        if (m_fCustom)
-            {
+        }
+        if (m_fCustom) {
             sb.append(", has-code");
-            }
+        }
 
-        if (isInjected())
-            {
+        if (isInjected()) {
             sb.append(", @Inject");
-            }
-        if (isExplicitAbstract())
-            {
+        }
+        if (isExplicitAbstract()) {
             sb.append(", @Abstract");
-            }
-        if (isExplicitOverride())
-            {
+        }
+        if (isExplicitOverride()) {
             sb.append(", @Override");
-            }
-        if (isExplicitReadOnly())
-            {
+        }
+        if (isExplicitReadOnly()) {
             sb.append(", @RO");
-            }
+        }
 
-        if (m_constInitVal != null)
-            {
+        if (m_constInitVal != null) {
             sb.append(", has-init-value");
-            }
-        if (m_constInitFunc != null)
-            {
+        }
+        if (m_constInitFunc != null) {
             sb.append(", has-init-fn");
-            }
-        if (m_constDelegate != null)
-            {
+        }
+        if (m_constDelegate != null) {
             sb.append(", delegate=")
               .append(m_constDelegate);
-            }
+        }
 
         return sb.append(')').toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -636,4 +578,4 @@ public class PropertyBody
      * The function that provides the initial value of the property.
      */
     private final MethodConstant m_constInitFunc;
-    }
+}

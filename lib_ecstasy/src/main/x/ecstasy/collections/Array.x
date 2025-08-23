@@ -159,7 +159,7 @@ class Array<Element>
     // ----- ArrayDelegate -------------------------------------------------------------------------
 
     /**
-     * An interface to which an Array can delegate its operations,l iff the array is simply a
+     * An interface to which an Array can delegate its operations, iff the array is simply a
      * representation of some other structure (such as another array).
      */
     private static interface ArrayDelegate<Element>

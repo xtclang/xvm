@@ -32,9 +32,9 @@ import static org.xvm.util.Handy.writePackedLong;
  *                {
  *                Iterator&lt;Entry> entryIterator = Map.this.entries.iterator();
  *                ...
- *                }
- *           }
- *        }
+ *            }
+ *       }
+ *    }
  * </code></pre>
  *
  * During validation we create a synthetic (anonymous) TypeCompositionStatement
@@ -44,7 +44,7 @@ import static org.xvm.util.Handy.writePackedLong;
  *          implements Iterator&lt;Iterator:1.Key>
  *      {
  *      ...
- *      }
+ *  }
  * </code></pre>
  *
  * and the compile time type of the returned Iterator is Iterator:1&lt;Map.Key>.
@@ -58,8 +58,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * {@code Map<Key, Value>.iterator().Iterator:1<Map.Key>}.
  */
 public class AnonymousClassTypeConstant
-        extends AbstractDependantChildTypeConstant
-    {
+        extends AbstractDependantChildTypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -69,22 +68,19 @@ public class AnonymousClassTypeConstant
      * @param typeParent  the parent's type
      * @param idAnon      the anonymous class id
      */
-    public AnonymousClassTypeConstant(ConstantPool pool, TypeConstant typeParent, ClassConstant idAnon)
-        {
+    public AnonymousClassTypeConstant(ConstantPool pool, TypeConstant typeParent, ClassConstant idAnon) {
         super(pool, typeParent);
 
         if (typeParent.isAccessSpecified() ||
             typeParent.isImmutabilitySpecified() ||
-            typeParent.isAnnotated())
-            {
+            typeParent.isAnnotated()) {
             throw new IllegalArgumentException("parent's immutability, access or annotations cannot be specified");
-            }
-        if (idAnon == null)
-            {
-            throw new IllegalArgumentException("id is required");
-            }
-        m_idAnon = idAnon;
         }
+        if (idAnon == null) {
+            throw new IllegalArgumentException("id is required");
+        }
+        m_idAnon = idAnon;
+    }
 
     /**
      * Constructor used for deserialization.
@@ -96,211 +92,182 @@ public class AnonymousClassTypeConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public AnonymousClassTypeConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool, format, in);
 
         m_iAnon = readIndex(in);
-        }
+    }
 
     /**
      * @return the anonymous class id
      */
-    public ClassConstant getChildClass()
-        {
+    public ClassConstant getChildClass() {
         return m_idAnon;
-        }
+    }
 
     @Override
-    protected void resolveConstants()
-        {
+    protected void resolveConstants() {
         super.resolveConstants();
 
         m_idAnon = (ClassConstant) getConstantPool().getConstant(m_iAnon);
-        }
+    }
 
     @Override
-    protected ClassStructure getChildStructure()
-        {
+    protected ClassStructure getChildStructure() {
         return (ClassStructure) m_idAnon.getComponent();
-        }
+    }
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    public boolean isShared(ConstantPool poolOther)
-        {
+    public boolean isShared(ConstantPool poolOther) {
         return super.isShared(poolOther) && m_idAnon.isShared(poolOther);
-        }
+    }
 
     @Override
-    public int getMaxParamsCount()
-        {
+    public int getMaxParamsCount() {
         // anonymous classes are never formal
         return 0;
-        }
+    }
 
     @Override
-    public boolean isAnonymousClass()
-        {
+    public boolean isAnonymousClass() {
         return true;
-        }
+    }
 
     @Override
-    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
-        {
+    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type) {
         return pool.ensureAnonymousClassTypeConstant(type, m_idAnon);
-        }
+    }
 
     @Override
-    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
-        {
-        if (atypeParams == null)
-            {
+    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams) {
+        if (atypeParams == null) {
             // this is a "normalization" call
             atypeParams = ConstantPool.NO_TYPES;
-            }
+        }
 
         ClassStructure clz = getChildStructure();
-        if (clz.isParameterized())
-            {
+        if (clz.isParameterized()) {
             return pool.ensureParameterizedTypeConstant(this,
                 clz.normalizeParameters(pool, atypeParams));
-            }
+        }
 
         // not parameterized
         return this;
-        }
+    }
 
     @Override
-    public TypeConstant[] collectGenericParameters()
-        {
+    public TypeConstant[] collectGenericParameters() {
         // anonymous class type is not formalizable
         return null;
-        }
+    }
 
     @Override
-    public Category getCategory()
-        {
+    public Category getCategory() {
         return Category.CLASS;
-        }
+    }
 
     @Override
-    public boolean isSingleUnderlyingClass(boolean fAllowInterface)
-        {
+    public boolean isSingleUnderlyingClass(boolean fAllowInterface) {
         return true;
-        }
+    }
 
     @Override
-    public TypeConstant resolveFormalType(FormalConstant constFormal)
-        {
+    public TypeConstant resolveFormalType(FormalConstant constFormal) {
         if (constFormal instanceof TypeParameterConstant constParam &&
                 getChildClass().getParentConstant() instanceof MethodConstant idMethod &&
-                constParam.getParentConstant().equals(idMethod))
-            {
+                constParam.getParentConstant().equals(idMethod)) {
             TypeConstant typeFormal   = idMethod.getType();
             TypeConstant typeActual   = getParentType();
             TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, constParam.getName());
-            if (typeResolved != null)
-                {
+            if (typeResolved != null) {
                 return typeResolved;
-                }
             }
+        }
 
         return super.resolveFormalType(constFormal);
-        }
+    }
 
 
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
     protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft,
-                                                               List<TypeConstant> listLeft)
-        {
+                                                               List<TypeConstant> listLeft) {
         throw new IllegalStateException();
-        }
+    }
 
     @Override
-    public Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
-        {
+    public Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams) {
         return Usage.NO;
-        }
+    }
 
     @Override
-    public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
-        {
+    public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams) {
         return Usage.NO;
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.AnonymousClassType;
-        }
+    }
 
     @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
+    public void forEachUnderlying(Consumer<Constant> visitor) {
         super.forEachUnderlying(visitor);
 
         visitor.accept(m_idAnon);
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant obj)
-        {
+    protected int compareDetails(Constant obj) {
         int n = super.compareDetails(obj);
-        if (n == 0)
-            {
-            if (!(obj instanceof AnonymousClassTypeConstant that))
-                {
+        if (n == 0) {
+            if (!(obj instanceof AnonymousClassTypeConstant that)) {
                 return -1;
-                }
+            }
 
             n = this.m_idAnon.compareTo(that.m_idAnon);
-            }
-        return n;
         }
+        return n;
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return m_typeParent.getValueString() + '.' + m_idAnon.getValueString();
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 
         m_idAnon = (ClassConstant) pool.register(m_idAnon);
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         super.assemble(out);
 
         writePackedLong(out, m_idAnon.getPosition());
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_typeParent,
                Hash.of(m_idAnon));
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -314,4 +281,4 @@ public class AnonymousClassTypeConstant
      * The ClassConstant representing the containing method.
      */
     protected ClassConstant m_idAnon;
-    }
+}
