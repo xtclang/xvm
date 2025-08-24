@@ -380,6 +380,8 @@ class HasherMap<Key, Value>
             extends HashBucket<Key, Value> {
 
         construct(Int hash, Key key1, Value value1, Key key2, Value value2) {
+            this.hash = hash;
+
             keys = new Key[](2);
             keys.add(key1);
             keys.add(key2);
