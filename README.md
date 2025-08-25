@@ -58,6 +58,26 @@ brew update && brew upgrade xdk-latest
 
 Note: Homebrew delivers CI snapshots for development. Stable releases will be available through other package managers.
 
+#### How Snapshot Releases Work
+
+Our CI system maintains a single, continuously updated snapshot release:
+
+- **Release Name**: `XDK Latest Snapshot`  
+- **GitHub Tag**: `xdk-latest-snapshot`
+- **Download URL**: `https://github.com/xtclang/xvm/releases/download/xdk-latest-snapshot/xdk-0.4.4-SNAPSHOT.zip`
+
+**Automatic Overwrite Process:**
+1. Every push to `master` triggers the CI pipeline
+2. The existing `xdk-latest-snapshot` release is **completely deleted**
+3. A new release with the same tag is created with the latest build
+4. The Homebrew formula gets dynamic versioning: `0.4.4-SNAPSHOT.{commitSHA}`
+
+This ensures:
+- ✅ Only **one** snapshot release exists (never accumulates old releases)
+- ✅ Download URL remains consistent for automation
+- ✅ `brew update` works correctly due to commit-qualified versioning
+- ✅ Always reflects the latest master commit
+
 **Windows:**
 
 * Visit [http://xtclang.org/xdk-latest.html](http://xtclang.org/xdk-latest.html) for Windows installer
