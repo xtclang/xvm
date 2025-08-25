@@ -257,11 +257,11 @@ The project provides three main distribution variants, each available as both in
    - Includes platform configuration scripts (`cfg_*.sh`, `cfg_*.cmd`) for manual setup
    - Requires manual classpath configuration to use
 
-2. **`./gradlew xdk:installWithLaunchersDist`** - Installs XDK with platform-specific native binary launchers (`xec`, `xcc`) in the `bin/` directory. These are simple native executables that bootstrap XTC for the target platform and are installed to `xdk/build/install/withLaunchers/`.
+2. **`./gradlew xdk:installWithLaunchersDist`** - Installs XDK with platform-specific native binary launchers (`xec`, `xcc`) in the `bin/` directory. These are simple native executables that bootstrap XTC for the target platform and are installed to `xdk/build/install/xdk-native-{os}_{arch}/` (e.g., `xdk-native-linux_amd64/`).
    - Platform configuration scripts are **excluded** (not needed with native launchers)
    - Ready to use immediately after installation
 
-3. **`./gradlew xdk:installWithLauncherScriptsDist`** - Installs XDK with cross-platform shell script launchers in the `bin/` directory. These scripts work reliably across platforms and include proper classpath configuration automatically. Both launcher approaches are functionally equivalent.
+3. **`./gradlew xdk:installWithLauncherScriptsDist`** - Installs XDK with cross-platform shell script launchers in the `bin/` directory. These scripts work reliably across platforms and include proper classpath configuration automatically. Both launcher approaches are functionally equivalent. Installs to `xdk/build/install/xdk-scripts/`.
    - Platform configuration scripts are **excluded** (not needed with script launchers)  
    - Ready to use immediately after installation
 
@@ -318,10 +318,10 @@ For developers who want a working XDK installation on their local machine:
    export PATH="/path/to/xvm/xdk/build/install/xdk/bin:$PATH"
    
    # For cross-platform script launchers:
-   export PATH="/path/to/xvm/xdk/build/install/withLauncherScripts/bin:$PATH"
+   export PATH="/path/to/xvm/xdk/build/install/xdk-scripts/bin:$PATH"
    
-   # For platform-specific binary launchers:
-   export PATH="/path/to/xvm/xdk/build/install/withLaunchers/bin:$PATH"
+   # For platform-specific binary launchers (adjust {os}_{arch} as needed):
+   export PATH="/path/to/xvm/xdk/build/install/xdk-native-linux_amd64/bin:$PATH"
    ```
 
 3. **Set XDK_HOME environment variable:**
@@ -330,16 +330,16 @@ For developers who want a working XDK installation on their local machine:
    export XDK_HOME="/path/to/xvm/xdk/build/install/xdk"
    
    # For cross-platform script launchers:
-   export XDK_HOME="/path/to/xvm/xdk/build/install/withLauncherScripts"
+   export XDK_HOME="/path/to/xvm/xdk/build/install/xdk-scripts"
    
-   # For platform-specific binary launchers:
-   export XDK_HOME="/path/to/xvm/xdk/build/install/withLaunchers"
+   # For platform-specific binary launchers (adjust {os}_{arch} as needed):
+   export XDK_HOME="/path/to/xvm/xdk/build/install/xdk-native-linux_amd64"
    ```
 
 **Tip for Local Development:** You can create a symlink from your home directory to simplify path management:
 ```bash
 # For script launchers (recommended for development):
-ln -sf "/path/to/xvm/xdk/build/install/withLauncherScripts" ~/xdk-latest
+ln -sf "/path/to/xvm/xdk/build/install/xdk-scripts" ~/xdk-latest
 export PATH="~/xdk-latest/bin:$PATH"
 export XDK_HOME="~/xdk-latest"
 ```
