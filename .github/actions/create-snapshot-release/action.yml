@@ -46,7 +46,7 @@ runs:
         
         # Create release notes using cat with heredoc to avoid YAML issues
         cat > release_notes.md << 'NOTES_EOF'
-**Automated snapshot release**
+Automated snapshot release
 
 Built from commit: `COMMIT_PLACEHOLDER`  
 Version: `VERSION_PLACEHOLDER`  
@@ -54,12 +54,12 @@ Build date: `DATE_PLACEHOLDER`
 
 This is a snapshot release that gets automatically updated on every push to master. Use this for development and testing - stable releases will be tagged separately.
 
-**Installation via Homebrew:**
+Installation via Homebrew:
 ```sh
 brew tap xtclang/xvm && brew install xdk-latest
 ```
 
-**Direct download:**
+Direct download:
 Download the zip file below and extract to your preferred location.
 NOTES_EOF
 
