@@ -25,11 +25,14 @@ runs:
         RELEASE_TAG="xdk-latest-snapshot"
         RELEASE_NAME="XDK Latest Snapshot"
         ZIP_FILE="${{ inputs.xdk_zip_name }}"
+        XDK_VERSION="${{ inputs.xdk_version }}"
+        COMMIT_SHA="${{ inputs.commit_sha }}"
+        BUILD_DATE=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
         
         echo "Creating/updating snapshot release with:"
         echo "  Tag: $RELEASE_TAG"
-        echo "  Version: ${{ inputs.xdk_version }}"
-        echo "  Commit: ${{ inputs.commit_sha }}"
+        echo "  Version: $XDK_VERSION"
+        echo "  Commit: $COMMIT_SHA"
         echo "  Zip file: $ZIP_FILE"
         
         # Delete existing release if it exists (to overwrite)
@@ -40,13 +43,11 @@ runs:
         
         # Create new snapshot release
         echo "Creating new snapshot release..."
-        gh release create $RELEASE_TAG \
-          --title "$RELEASE_NAME" \
-          --notes "**Automated snapshot release**
+        RELEASE_NOTES="**Automated snapshot release**
 
-Built from commit: \`${{ inputs.commit_sha }}\`  
-Version: \`${{ inputs.xdk_version }}\`  
-Build date: \`$(date -u '+%Y-%m-%d %H:%M:%S UTC')\`
+Built from commit: \`$COMMIT_SHA\`  
+Version: \`$XDK_VERSION\`  
+Build date: \`$BUILD_DATE\`
 
 This is a snapshot release that gets automatically updated on every push to master. Use this for development and testing - stable releases will be tagged separately.
 
@@ -56,7 +57,11 @@ brew tap xtclang/xvm && brew install xdk-latest
 \`\`\`
 
 **Direct download:**
-Download the zip file below and extract to your preferred location." \
+Download the zip file below and extract to your preferred location."
+
+        gh release create $RELEASE_TAG \
+          --title "$RELEASE_NAME" \
+          --notes "$RELEASE_NOTES" \
           --prerelease \
           "$ZIP_FILE"
           
