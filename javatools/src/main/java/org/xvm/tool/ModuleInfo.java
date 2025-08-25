@@ -1834,31 +1834,6 @@ public class ModuleInfo
             }
         }
 
-    /**
-     * @return the version of the XDK that is answering this question, or null if this running code
-     *         is not part of a well-formed XDK image
-     */
-    /**
-     * Get the XDK home directory by resolving it from the jar file location.
-     * 
-     * @return the XDK home directory, or null if it cannot be determined
-     */
-    public static File getXdkHome()
-        {
-        try
-            {
-            File jarFile = getJarFile();
-            if (jarFile != null)
-                {
-                return jarFile.getParentFile().getParentFile();
-                }
-            }
-        catch (Exception ignore)
-            {
-            }
-        return null;
-        }
-
     private static File getJarFile()
         {
         Class clz    = ModuleInfo.class;
