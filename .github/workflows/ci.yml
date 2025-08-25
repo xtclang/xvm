@@ -396,12 +396,7 @@ jobs:
       - name: Build and push Docker image from snapshot release
         uses: ./.github/actions/docker-build-push
         with:
-          platform: ${{ matrix.platform }}
-          arch: ${{ matrix.arch }}
-          base-image: ${{ env.DOCKER_BASE_IMAGE }}
-          tags: ${{ needs.compute-docker-tags.outputs.tags-json }}
-          gh-branch: ${{ env.GH_BRANCH }}
-          gh-commit: ${{ env.GH_COMMIT }}
+          base_image: ${{ env.DOCKER_BASE_IMAGE }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
   docker-manifest:
