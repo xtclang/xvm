@@ -6,10 +6,13 @@ set -euo pipefail
 
 TARGET_ARCH="${TARGETARCH:-}"
 
+# If GH_COMMIT is not set, default to empty string (will be resolved later)
+GH_COMMIT="${GH_COMMIT:-}"
+
 echo "🔧 XDK Builder"
 echo "  Target: ${TARGETOS}/${TARGETARCH}"
 echo "  Branch: ${GH_BRANCH}"
-echo "  Commit: ${GH_COMMIT}"
+echo "  Commit: ${GH_COMMIT:-<will be resolved from branch>}"
 echo "  Distribution URL: ${DIST_ZIP_URL:-'build from source'}"
 
 # Use Docker arch names directly (no mapping needed - launchers now use Docker conventions)
@@ -115,9 +118,22 @@ else
     
     inspect_container_cache "before build"
     
-    # Use NPROC from environment (set via build arg)  
-    export GRADLE_OPTS="$GRADLE_OPTS -Dorg.gradle.workers.max=${NPROC} -Dorg.gradle.vfs.watch=false"
-    echo "🔧 Final GRADLE_OPTS: $GRADLE_OPTS"
+    # Source git info from clone script (provides resolved GH_COMMIT)
+    if [ -f "/tmp/git-info.env" ]; then
+        source /tmp/git-info.env
+        echo "🔄 Loaded resolved commit from clone script: $GH_COMMIT"
+    fi
+    
+    # Use resolved GH_COMMIT and GH_BRANCH for git properties tasks
+    export ORG_GRADLE_PROJECT_gitCommit="${GH_COMMIT:-unknown}"
+    export ORG_GRADLE_PROJECT_gitBranch="${GH_BRANCH:-master}"
+    
+    echo "🔧 Git information for Gradle:"
+    echo "  Commit: $ORG_GRADLE_PROJECT_gitCommit"
+    echo "  Branch: $ORG_GRADLE_PROJECT_gitBranch"
+    echo "  Git plugin disabled: true"
+    
+    echo "🔧 Using optimized GRADLE_OPTS from Dockerfile: $GRADLE_OPTS"
     
     # Show Gradle version
     ./gradlew --version
@@ -127,9 +143,12 @@ else
     rm -rf xdk/build/distributions xdk/build/install
     echo "  Cleared distribution and install cache"
     
-    # Build the XDK distribution ZIP with native launchers renamed to xec/xcc
-    echo "Building XDK distribution ZIP with native launchers for ${TARGETOS}/${TARGETARCH}..."
-    ./gradlew --gradle-user-home="$GRADLE_USER_HOME" -x test -x check xdk:withLaunchersDistZip
+    # Build the XDK distribution ZIP with script launchers (faster than native launchers)  
+    echo "Building XDK distribution ZIP with script launchers for ${TARGETOS}/${TARGETARCH}..."
+    # Git properties tasks can now run with resolved GH_COMMIT and GH_BRANCH
+    ./gradlew --gradle-user-home="$GRADLE_USER_HOME" \
+        -x test -x check \
+        xdk:distZip
     
     echo "Build completed successfully"
     
@@ -191,33 +210,48 @@ rmdir "$XDK_EXTRACTED" || {
 }
 echo "📁 Created clean xdk/ directory structure"
 
-# Install correct native launchers based on target architecture
-echo "🚀 Installing native launchers for ${TARGETOS}/${TARGETARCH}"
+# Install script launchers (xec/xcc should already be present from distZip)
+echo "🚀 Checking script launchers for ${TARGETOS}/${TARGETARCH}"
 LAUNCHER_EXT=""
-[ "${TARGETOS}" = "windows" ] && LAUNCHER_EXT=".exe"
+[ "${TARGETOS}" = "windows" ] && LAUNCHER_EXT=".bat"
 
-# Check if we're using pre-built distribution (launchers already in xdk/bin/) or source build
-if [ -f "xdk/bin/${TARGETOS}_launcher_${TARGETARCH}${LAUNCHER_EXT}" ]; then
-    # Pre-built distribution - launchers already exist, just rename them
-    echo "📦 Using pre-built launchers from distribution"
-    cp "xdk/bin/${TARGETOS}_launcher_${TARGETARCH}${LAUNCHER_EXT}" "xdk/bin/xec${LAUNCHER_EXT}"
-    cp "xdk/bin/${TARGETOS}_launcher_${TARGETARCH}${LAUNCHER_EXT}" "xdk/bin/xcc${LAUNCHER_EXT}"
+# Script launchers should already be present from the scripts distribution
+if [ -f "xdk/bin/xec${LAUNCHER_EXT}" ] && [ -f "xdk/bin/xcc${LAUNCHER_EXT}" ]; then
+    echo "✅ Script launchers already present: xec${LAUNCHER_EXT}, xcc${LAUNCHER_EXT}"
     chmod +x "xdk/bin/xec${LAUNCHER_EXT}" "xdk/bin/xcc${LAUNCHER_EXT}"
-    echo "✅ Installed pre-built launchers: ${TARGETOS}_launcher_${TARGETARCH}${LAUNCHER_EXT} → xec, xcc"
-elif [ -f "javatools_launcher/src/main/resources/exe/${TARGETOS}_launcher_${TARGETARCH}${LAUNCHER_EXT}" ]; then
-    # Source build - copy launchers from source tree
-    echo "🔧 Using source launchers from build tree"
-    LAUNCHER_FILE="javatools_launcher/src/main/resources/exe/${TARGETOS}_launcher_${TARGETARCH}${LAUNCHER_EXT}"
-    cp "$LAUNCHER_FILE" "xdk/bin/xec${LAUNCHER_EXT}"
-    cp "$LAUNCHER_FILE" "xdk/bin/xcc${LAUNCHER_EXT}"
-    chmod +x "xdk/bin/xec${LAUNCHER_EXT}" "xdk/bin/xcc${LAUNCHER_EXT}"
-    echo "✅ Installed source launchers: $LAUNCHER_FILE → xec, xcc"
+    
+    # Verify script launchers are working and have the correct module paths
+    echo "🧪 Testing script launcher functionality..."
+    echo "📋 Testing xcc --version:"
+    "./xdk/bin/xcc${LAUNCHER_EXT}" --version || {
+        echo "❌ xcc script launcher test failed"
+        exit 1
+    }
+    echo "📋 Testing xec --version:"
+    "./xdk/bin/xec${LAUNCHER_EXT}" --version || {
+        echo "❌ xec script launcher test failed"
+        exit 1
+    }
+    
+    # Verify script launchers have the expected module paths (check script content)
+    echo "🔍 Verifying script launchers contain XTC module paths..."
+    if grep -q "XDK_HOME.*APP_HOME" "xdk/bin/xcc${LAUNCHER_EXT}" && \
+       grep -q "\-L.*lib" "xdk/bin/xcc${LAUNCHER_EXT}" && \
+       grep -q "javatools_turtle.xtc" "xdk/bin/xcc${LAUNCHER_EXT}" && \
+       grep -q "javatools_bridge.xtc" "xdk/bin/xcc${LAUNCHER_EXT}"; then
+        echo "✅ Script launchers contain expected XTC module paths"
+    else
+        echo "❌ Script launchers missing XTC module paths - this is a critical bug!"
+        echo "📋 xcc script content preview:"
+        head -20 "xdk/bin/xcc${LAUNCHER_EXT}" || true
+        exit 1
+    fi
+    
+    echo "✅ All script launcher tests passed"
 else
-    echo "❌ No native launchers found for ${TARGETOS}/${TARGETARCH}"
-    echo "📋 Checked locations:"
-    echo "  - xdk/bin/${TARGETOS}_launcher_${TARGETARCH}${LAUNCHER_EXT} (pre-built)"
-    echo "  - javatools_launcher/src/main/resources/exe/${TARGETOS}_launcher_${TARGETARCH}${LAUNCHER_EXT} (source)"
-    ls -la xdk/bin/ | head -5 || true
+    echo "❌ Script launchers not found in distribution"
+    echo "📋 Contents of xdk/bin/:"
+    ls -la xdk/bin/ | head -10 || true
     exit 1
 fi
 

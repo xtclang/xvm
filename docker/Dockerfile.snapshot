@@ -1,0 +1,59 @@
+# syntax=docker/dockerfile:1
+#
+# XDK Docker Container - Snapshot/Pre-built Distribution
+# Simple, fast builds using existing XDK distribution ZIP files
+#
+
+# Build arguments
+ARG JAVA_VERSION=21
+ARG DIST_ZIP_URL
+ARG TARGETARCH
+ARG TARGETOS
+
+# Validation stage - ensure DIST_ZIP_URL is provided
+FROM alpine:latest AS validator
+ARG DIST_ZIP_URL
+RUN [ -n "$DIST_ZIP_URL" ] || { echo "ERROR: DIST_ZIP_URL must be provided for snapshot builds"; exit 1; }
+
+# Download and extract stage
+FROM alpine:latest AS extractor
+ARG DIST_ZIP_URL
+
+RUN apk add --no-cache curl unzip
+
+WORKDIR /extract
+RUN echo "📦 Downloading XDK distribution from: $DIST_ZIP_URL" && \
+    if [[ "$DIST_ZIP_URL" =~ ^https?:// ]]; then \
+        curl -L -o xdk-dist.zip "$DIST_ZIP_URL"; \
+    else \
+        cp "$DIST_ZIP_URL" xdk-dist.zip; \
+    fi
+
+RUN echo "📋 Extracting XDK distribution..." && \
+    unzip -q xdk-dist.zip && \
+    # Find the extracted directory (handles various naming patterns)
+    EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "*xdk*" | head -1) && \
+    [ -n "$EXTRACTED_DIR" ] && \
+    mv "$EXTRACTED_DIR" xdk && \
+    echo "✅ XDK distribution extracted to /extract/xdk"
+
+# Runtime stage
+FROM bellsoft/liberica-runtime-container:jre-${JAVA_VERSION}-slim-musl
+
+ENV XDK_HOME=/opt/xdk
+ENV PATH="${XDK_HOME}/bin:${PATH}"
+
+# Copy XDK distribution
+COPY --from=extractor /extract/xdk /opt/xdk/
+
+# Copy Docker test program
+COPY test/DockerTest.x /opt/xdk/test/
+
+# Ensure launchers are executable and test functionality
+RUN chmod +x /opt/xdk/bin/xec /opt/xdk/bin/xcc && \
+    echo "🧪 Testing XDK functionality..." && \
+    /opt/xdk/bin/xec --version && \
+    /opt/xdk/bin/xcc --version && \
+    echo "✅ XDK snapshot build ready!"
+
+CMD ["xec"]
