@@ -43,7 +43,7 @@ runs:
         username: ${{ github.actor }}
         password: ${{ inputs.github_token }}
 
-    - name: Download XDK from snapshot release and build Docker image
+    - name: Download XDK from snapshot release
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
@@ -51,45 +51,28 @@ runs:
         echo "📥 Downloading XDK from snapshot release..."
         gh release download xdk-latest-snapshot --pattern "xdk-*-scripts.zip"
         
-        DIST_ZIP_FILE=$(find . -name "xdk-*-scripts.zip" | head -1)
-        if [ -z "$DIST_ZIP_FILE" ]; then
+        SCRIPTS_ZIP=$(find . -name "xdk-*-scripts.zip" | head -1)
+        if [ -z "$SCRIPTS_ZIP" ]; then
           echo "❌ Failed to download XDK scripts distribution from snapshot release"
           exit 1
         fi
         
-        echo "✅ Downloaded XDK distribution: $DIST_ZIP_FILE"
-        
-        # Copy ZIP to Docker build context with standard name (like master does)
-        cp "$DIST_ZIP_FILE" ci-dist.zip
-        echo "📦 Copied distribution to Docker context: $DIST_ZIP_FILE → ci-dist.zip"
-        
-        # Get version from compute-tags
-        VERSION=${{ steps.compute-tags.outputs.version }}
-        BASE_TAGS='${{ steps.compute-tags.outputs.full-tags-json }}'
-        
-        # Build tag arguments
-        TAG_ARGS=""
-        echo "$BASE_TAGS" | jq -r '.[]' | while read tag; do
-          TAG_ARGS="$TAG_ARGS --tag $tag"
-        done
-        
-        # Use the same approach as master
-        docker buildx build \
-          --platform linux/amd64,linux/arm64 \
-          --progress=plain \
-          $(echo "$BASE_TAGS" | jq -r '.[] | "--tag " + .' | tr '\n' ' ') \
-          --build-arg DIST_ZIP_URL="ci-dist.zip" \
-          --build-arg GH_BRANCH="${{ github.ref_name }}" \
-          --build-arg GH_COMMIT="${{ github.sha }}" \
-          --label org.opencontainers.image.created=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
-          --label org.opencontainers.image.revision="${{ github.sha }}" \
-          --label org.opencontainers.image.version="$VERSION" \
-          --label org.opencontainers.image.source=https://github.com/xtclang/xvm/tree/${{ github.ref_name }} \
-          --cache-from type=gha \
-          --cache-to type=gha,mode=max \
-          --provenance=false \
-          --output type=registry \
-          .
+        echo "✅ Downloaded XDK distribution: $SCRIPTS_ZIP"
+        ls -la xdk-*-scripts.zip
+
+    - name: Build and push multiplatform image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./docker
+        file: ./docker/Dockerfile
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ join(fromJSON(steps.compute-tags.outputs.full-tags-json), '
+') }}
+        build-args: |
+          DIST_ZIP_URL=../xdk-${{ steps.compute-tags.outputs.version }}-scripts.zip
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
     - name: Test Docker image functionality
       shell: bash
