@@ -67,8 +67,9 @@ runs:
         file: ./docker/Dockerfile
         platforms: linux/amd64,linux/arm64
         push: true
-        tags: ${{ join(fromJSON(steps.compute-tags.outputs.full-tags-json), '
-') }}
+        tags: |
+          ${{ fromJSON(steps.compute-tags.outputs.full-tags-json)[0] }}
+          ${{ fromJSON(steps.compute-tags.outputs.full-tags-json)[1] }}
         build-args: |
           DIST_ZIP_URL=../xdk-${{ steps.compute-tags.outputs.version }}-scripts.zip
         cache-from: type=gha
