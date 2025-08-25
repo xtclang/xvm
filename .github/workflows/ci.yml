@@ -149,13 +149,13 @@ jobs:
           show-progress: true
 
       - name: Get Java version from XDK properties
-        id: java-version
+        id: java_version
         uses: ./.github/actions/get-java-version
 
       - name: Setup XVM Build Environment
         uses: ./.github/actions/setup-xvm-build
         with:
-          java-version: ${{ steps.java-version.outputs.java-version }}
+          java-version: ${{ steps.java_version.outputs.java_version }}
           java-distribution: ${{ env.java_distribution }}
           gradle-version: ${{ env.gradle_version }}
           cache-read-only: false
@@ -295,13 +295,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Get Java version from XDK properties
-        id: java-version
+        id: java_version
         uses: ./.github/actions/get-java-version
 
       - name: Setup XVM Build Environment
         uses: ./.github/actions/setup-xvm-build
         with:
-          java-version: ${{ steps.java-version.outputs.java-version }}
+          java-version: ${{ steps.java_version.outputs.java_version }}
           java-distribution: ${{ env.java_distribution }}
           gradle-version: ${{ env.gradle_version }}
           cache-read-only: true  # Read-only since build-verify already populated cache
@@ -716,7 +716,7 @@ jobs:
         uses: ./.github/actions/get-xdk-version
 
       - name: Get Java version
-        id: java
+        id: java_version
         uses: ./.github/actions/get-java-version
 
       - name: Download XDK distribution
@@ -736,6 +736,6 @@ jobs:
         with:
           xdk-version: ${{ steps.version.outputs.version }}
           commit-sha: ${{ github.sha }}
-          java-version: ${{ steps.java.outputs.java-version }}
+          java_version: ${{ steps.java_version.outputs.java_version }}
           xdk-zip-name: "xdk-${{ steps.version.outputs.version }}.zip"
           homebrew-tap-token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
