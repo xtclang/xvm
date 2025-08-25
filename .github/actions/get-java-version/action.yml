@@ -1,9 +1,9 @@
 name: 'Get Java Version'
 description: 'Gets the Java version from XDK properties'
 outputs:
-  java-version:
+  java_version:
     description: 'Java version (e.g., 21, 24)'
-    value: ${{ steps.get-version.outputs.java-version }}
+    value: ${{ steps.get-version.outputs.java_version }}
 
 runs:
   using: 'composite'
@@ -14,7 +14,7 @@ runs:
       run: |
         # Extract Java version from xdk.properties
         JAVA_VERSION=$(grep '^org\.xtclang\.java\.jdk=' xdk.properties | cut -d'=' -f2)
-        echo "java-version=$JAVA_VERSION" >> $GITHUB_OUTPUT
+        echo "java_version=$JAVA_VERSION" >> $GITHUB_OUTPUT
         echo "✅ Detected Java version: $JAVA_VERSION"
 
 branding:
