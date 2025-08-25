@@ -135,16 +135,8 @@ public abstract class Launcher
             log(Severity.INFO, "JVM version: " + Runtime.version());
             }
 
-        // Log XDK_HOME for debugging
-        String xdkHome = System.getProperty("XDK_HOME");
-        if (xdkHome != null)
-            {
-            log(Severity.INFO, "XDK_HOME: " + xdkHome);
-            }
-        else
-            {
-            log(Severity.WARNING, "XDK_HOME not set");
-            }
+        // Log resolved XDK_HOME for debugging
+        logXdkHome();
             
         checkErrors(fHelp);
 
@@ -2060,4 +2052,65 @@ public abstract class Launcher
     protected int m_cSuspended;
 
     protected Map<File, ModuleInfo> moduleCache;
+
+    /**
+     * Resolves and logs the XDK_HOME directory for debugging purposes.
+     * First checks the system property, then computes the default path relative to the jar location.
+     * Validates that the resolved path contains a proper XDK installation.
+     */
+    private static void logXdkHome()
+        {
+        String xdkHome = System.getProperty("XDK_HOME");
+        
+        if (xdkHome != null)
+            {
+            // XDK_HOME was explicitly set, validate it exists
+            File xdkDir = new File(xdkHome);
+            if (xdkDir.isDirectory())
+                {
+                File ecstasyFile = new File(xdkDir, "lib/ecstasy.xtc");
+                if (ecstasyFile.exists())
+                    {
+                    DefaultConsole.log(Severity.INFO, "XDK_HOME: " + xdkHome + " (explicitly set, valid XDK installation)");
+                    }
+                else
+                    {
+                    DefaultConsole.log(Severity.WARNING, "XDK_HOME: " + xdkHome + " (explicitly set, but missing lib/ecstasy.xtc)");
+                    }
+                }
+            else
+                {
+                DefaultConsole.log(Severity.WARNING, "XDK_HOME: " + xdkHome + " (explicitly set, but directory does not exist)");
+                }
+            }
+        else
+            {
+            // XDK_HOME not set, compute default from jar location
+            try
+                {
+                File xdkDir = ModuleInfo.getXdkHome();
+                if (xdkDir != null && xdkDir.isDirectory())
+                    {
+                    File ecstasyFile = new File(xdkDir, "lib/ecstasy.xtc");
+                    if (ecstasyFile.exists())
+                        {
+                        DefaultConsole.log(Severity.INFO, "XDK_HOME: " + xdkDir.getAbsolutePath() + " (computed from jar location, valid XDK installation)");
+                        }
+                    else
+                        {
+                        DefaultConsole.log(Severity.WARNING, "XDK_HOME: " + xdkDir.getAbsolutePath() + " (computed from jar location, but missing lib/ecstasy.xtc)");
+                        }
+                    }
+                else
+                    {
+                    DefaultConsole.log(Severity.WARNING, "XDK_HOME: not set and unable to determine jar location");
+                    }
+                }
+            catch (Exception e)
+                {
+                DefaultConsole.log(Severity.WARNING, "XDK_HOME: not set and error computing default: " + e.getMessage());
+                }
+            }
+        }
+
     }
