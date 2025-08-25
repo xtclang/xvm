@@ -320,22 +320,12 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, osCl
     distributionBaseName = distName
     version = distVersion
     val actualClassifier = launcherType.getDistributionClassifier(osClassifier)
-    val distClassifierSuffix = if (actualClassifier.isNotEmpty()) "-$actualClassifier" else ""
     if (actualClassifier.isNotEmpty()) {
         @Suppress("UnstableApiUsage")
         distributionClassifier = actualClassifier
     }
-    // Override the internal directory name to be properly formatted
-    contents.eachFile {
-        // This will be processed during archive creation
-        val currentFirstSegment = relativePath.segments.first()
-        val expectedSegment = "$distName-$distVersion$distClassifierSuffix"
-        
-        // Replace the sanitized directory name with the properly formatted one
-        if (currentFirstSegment != expectedSegment) {
-            relativePath = RelativePath(true, *arrayOf(expectedSegment) + relativePath.segments.drop(1))
-        }
-    }
+    // Note: Gradle automatically handles internal directory naming for archives
+    // The install tasks create flat directory structures while archive tasks create nested ones
     contents {
         val xdkTemplate = tasks.processResources.map {
             logger.info("$prefix Resolving processResources output (this should be during the execution phase).");

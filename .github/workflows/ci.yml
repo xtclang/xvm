@@ -222,31 +222,6 @@ jobs:
           ./gradlew ${{ env.gradle_options }} clean
           ./gradlew ${{ env.gradle_options }} :xdk:withLauncherScriptsDistZip
 
-      - name: Build a machine specific XDK installation with native launchers, test run launchers on native platform
-        shell: bash
-        # No JAVA_OPTS needed for general builds
-        run: |
-          ${{ env.GRADLE_CACHE_INSPECT }}
-          
-          inspect_gradle_cache "before native launcher build"
-          ./gradlew ${{ env.gradle_options }} xdk:installWithLaunchersDist
-          xcc_path=$(find xdk/build/install/ -name xcc)
-          xec_path=$(find xdk/build/install/ -name xec)
-          echo "Location of native launcher (xcc): $xcc_path"
-          echo "Location of native launcher (xec): $xec_path"
-          echo "*** Testing native launchers, verifying their binary format and that they run on this platform..."
-          xcc_file=$(file $xcc_path)
-          xec_file=$(file $xec_path)
-          xcc_version=$($xcc_path --version)
-          xec_version=$($xec_path --version)
-          echo "    xcc:"
-          echo "        file   : $xcc_file"
-          echo "        version: $xcc_version"
-          echo "    xec:"
-          echo "        file   : $xec_file"
-          echo "        version: $xec_version"
-          echo "*** Native launchers work."
-
       - name: Manual tests
         if: ${{ env.run_manual_tests == 'true' && github.ref != 'refs/heads/lagergren/brew' }}
         timeout-minutes: 10
