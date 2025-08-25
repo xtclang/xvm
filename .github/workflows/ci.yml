@@ -425,7 +425,7 @@ jobs:
       - name: Setup XVM Build Environment
         uses: ./.github/actions/setup-xvm-build
         with:
-          java-version: ${{ steps.java-version.outputs.java-version }}
+          java-version: ${{ steps.java-version.outputs.java_version }}
           java-distribution: ${{ env.java_distribution }}
           gradle-version: ${{ env.gradle_version }}
           cache-read-only: true  # Read-only since build-verify already populated cache
