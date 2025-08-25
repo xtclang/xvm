@@ -216,8 +216,11 @@ The plugin handles all XDK dependencies automatically - most XTC developers won'
 
 Manual local build for **any computer** (for advanced users):
 
-* Java 17 or later is required (automatically provisioned by Gradle toolchain if not available)
-* Gradle is not required to be pre-installed (project includes Gradle Wrapper)
+* **Bootstrap JVM**: Any Java 8+ to run the Gradle wrapper (just to bootstrap the build)
+* **Target JDK**: Gradle toolchain automatically provisions the correct JDK version for building XTC
+* **Gradle**: Not required to be pre-installed (project includes Gradle Wrapper)
+
+The build system uses Gradle's toolchain support to automatically download and configure the exact JDK version needed for compilation, so you only need a basic Java installation to get started.
 
 * Use `git` to obtain the XDK:
 
