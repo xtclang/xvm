@@ -135,16 +135,6 @@ public abstract class Launcher
             log(Severity.INFO, "JVM version: " + Runtime.version());
             }
 
-        // Log XDK_HOME for debugging
-        String xdkHome = System.getProperty("XDK_HOME");
-        if (xdkHome != null)
-            {
-            log(Severity.INFO, "XDK_HOME: " + xdkHome);
-            }
-        else
-            {
-            log(Severity.WARNING, "XDK_HOME not set");
-            }
             
         checkErrors(fHelp);
 

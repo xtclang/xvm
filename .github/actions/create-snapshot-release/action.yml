@@ -43,28 +43,40 @@ runs:
         
         # Create new snapshot release
         echo "Creating new snapshot release..."
-        RELEASE_NOTES="**Automated snapshot release**
+        
+        # Create release notes using echo to avoid YAML parsing issues
+        echo "Automated snapshot release" > release_notes.md
+        echo "" >> release_notes.md
+        echo "Built from commit: \`$COMMIT_SHA\`" >> release_notes.md
+        echo "Version: \`$XDK_VERSION\`" >> release_notes.md
+        echo "Build date: \`$BUILD_DATE\`" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "This is a snapshot release that gets automatically updated on every push to master. Use this for development and testing - stable releases will be tagged separately." >> release_notes.md
+        echo "" >> release_notes.md
+        echo "Installation via Homebrew:" >> release_notes.md
+        echo "\`\`\`sh" >> release_notes.md
+        echo "brew tap xtclang/xvm && brew install xdk-latest" >> release_notes.md
+        echo "\`\`\`" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "Direct download:" >> release_notes.md
+        echo "Download the zip file below and extract to your preferred location." >> release_notes.md
 
-Built from commit: \`$COMMIT_SHA\`  
-Version: \`$XDK_VERSION\`  
-Build date: \`$BUILD_DATE\`
-
-This is a snapshot release that gets automatically updated on every push to master. Use this for development and testing - stable releases will be tagged separately.
-
-**Installation via Homebrew:**
-\`\`\`bash
-brew tap xtclang/xvm && brew install xdk-latest
-\`\`\`
-
-**Direct download:**
-Download the zip file below and extract to your preferred location."
-
+        # Rename the zip file to remove "-scripts" before uploading
+        CLEAN_ZIP_NAME="xdk-$XDK_VERSION.zip"
+        if [ "$ZIP_FILE" != "$CLEAN_ZIP_NAME" ]; then
+          echo "Renaming $ZIP_FILE to $CLEAN_ZIP_NAME for upload..."
+          cp "$ZIP_FILE" "$CLEAN_ZIP_NAME"
+        fi
+        
         gh release create $RELEASE_TAG \
           --title "$RELEASE_NAME" \
-          --notes "$RELEASE_NOTES" \
+          --notes-file release_notes.md \
           --prerelease \
-          "$ZIP_FILE"
-          
+          "$CLEAN_ZIP_NAME"
+        
+        # Clean up temp file
+        rm -f release_notes.md
+        
         echo "✅ Snapshot release created successfully"
 
 branding:

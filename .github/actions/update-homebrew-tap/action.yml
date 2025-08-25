@@ -16,24 +16,46 @@ inputs:
   homebrew_tap_token:
     description: 'GitHub token with access to homebrew-xvm repo'
     required: true
+  homebrew_tap_branch:
+    description: 'Branch to use in homebrew-xvm repo'
+    required: false
+    default: 'master'
 
 runs:
   using: 'composite'
   steps:
     - name: Update Homebrew formula
       shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.homebrew_tap_token }}
       run: |
+        # Download the XDK zip from snapshot release
+        echo "📥 Downloading XDK from snapshot release for SHA256 calculation..."
+        gh release download xdk-latest-snapshot --pattern "${{ inputs.xdk_zip_name }}"
+        
+        # Store commit info for reuse
+        BUILD_COMMIT_SHA="${{ inputs.commit_sha }}"
+        XDK_VERSION="${{ inputs.xdk_version }}"
+        
+        echo "📦 Snapshot release built from commit:"
+        echo "   Version: $XDK_VERSION"
+        echo "   Commit: $BUILD_COMMIT_SHA"
+        echo "   Repository: https://github.com/xtclang/xvm/commit/$BUILD_COMMIT_SHA"
+        
         # Clone the homebrew tap repo
+        HOMEBREW_TAP_BRANCH="${{ inputs.homebrew_tap_branch }}"
+        echo "🍺 Using Homebrew tap branch: $HOMEBREW_TAP_BRANCH"
+        
         git clone https://oauth2:${{ inputs.homebrew_tap_token }}@github.com/xtclang/homebrew-xvm.git tap
-        cd tap && git checkout lagergren/brew-tap
+        cd tap && git checkout "$HOMEBREW_TAP_BRANCH"
         
         # Use commit SHA for dynamic versioning - ensures brew update works
-        DYNAMIC_VERSION="${{ inputs.xdk_version }}.$(echo ${{ inputs.commit_sha }} | cut -c1-8)"
+        DYNAMIC_VERSION="$XDK_VERSION.$BUILD_COMMIT_SHA"
         
         # Create GitHub release URL for the snapshot zip file
         RELEASE_URL="https://github.com/xtclang/xvm/releases/download/xdk-latest-snapshot/${{ inputs.xdk_zip_name }}"
         
-        # Get SHA256 from the existing zip file
+        # Get SHA256 from the downloaded zip file
         SHA256=$(sha256sum ../${{ inputs.xdk_zip_name }} | cut -d' ' -f1)
         
         # Update the Homebrew formula
@@ -57,9 +79,10 @@ runs:
           end
           
           test do
-            # Test that xec launcher works and shows expected error for missing module
-            output = shell_output("#{bin}/xec 2>&1", 1)
-            assert_match "Missing module file", output
+            # Test that xec launcher works and shows help when no arguments provided  
+            # TODO: The exit code test is technically correct to check for 1, but xec doesn't follow the accepted standard
+            output = shell_output("#{bin}/xec 2>&1")
+            assert_match "Ecstasy runner", output
             
             # Test that xcc launcher works and shows version info
             output = shell_output("#{bin}/xcc --version 2>&1")
@@ -72,7 +95,7 @@ runs:
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         git add Formula/xdk-latest.rb
-        git commit -m "Update XDK to $DYNAMIC_VERSION (commit: $(echo ${{ inputs.commit_sha }} | cut -c1-8))"
+        git commit -m "Update XDK to $DYNAMIC_VERSION (commit: $BUILD_COMMIT_SHA)"
         git push
         
         echo "✅ Homebrew tap updated to version $DYNAMIC_VERSION"

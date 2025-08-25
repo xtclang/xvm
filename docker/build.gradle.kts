@@ -28,7 +28,12 @@ data class DockerConfig(
     
     fun tagsForArch(arch: String) = (listOf("${tagPrefix}-$arch") + versionTags.map { "${it}-$arch" } + listOf("${commit}-$arch"))
     fun multiPlatformTags() = listOf(tagPrefix) + versionTags + listOf(commit)
-    fun buildArgs() = mapOf("GH_BRANCH" to branch, "GH_COMMIT" to commit)
+    fun buildArgs(distZipUrl: String? = null) = mapOf(
+        "GH_BRANCH" to branch,
+        "GH_COMMIT" to commit
+    ).let { baseArgs ->
+        if (distZipUrl != null) baseArgs + ("DIST_ZIP_URL" to distZipUrl) else baseArgs
+    }
     fun metadataLabels() = mapOf(
         "org.opencontainers.image.created" to Instant.now().toString(),
         "org.opencontainers.image.revision" to commit,
@@ -52,8 +57,8 @@ fun createDockerConfig(): DockerConfig {
     val version = semanticVersion.artifactVersion
     val branch = System.getenv("GH_BRANCH") ?: try {
         val result = spawn("git", "branch", "--show-current", throwOnError = false, logger = logger)
-        if (result.isSuccessful()) result.output.ifBlank { "unknown" } else "unknown"
-    } catch (_: Exception) { "unknown" }
+        if (result.isSuccessful()) result.output.ifBlank { "master" } else "master"
+    } catch (_: Exception) { "master" }
     
     val commit = System.getenv("GH_COMMIT") ?: try {
         val result = spawn("git", "rev-parse", "HEAD", throwOnError = false, logger = logger)
@@ -65,14 +70,31 @@ fun createDockerConfig(): DockerConfig {
 
 fun execDockerCommand(cmd: List<String>) {
     logger.info("Docker: ${cmd.joinToString(" ")}")
-    spawn(cmd.first(), *cmd.drop(1).toTypedArray(), workingDir = projectDir, throwOnError = true, logger = logger)
+    
+    // Use ProcessBuilder for live output streaming
+    val builder = ProcessBuilder(cmd).redirectErrorStream(true)
+    builder.directory(projectDir)
+    
+    val process = builder.start()
+    
+    // Stream output in real-time
+    process.inputStream.bufferedReader().useLines { lines ->
+        lines.forEach { line ->
+            logger.info(line)
+        }
+    }
+    
+    val exitCode = process.waitFor()
+    if (exitCode != 0) {
+        throw IllegalStateException("Docker command failed with exit code: $exitCode")
+    }
 }
 
-fun buildDockerImage(config: DockerConfig, platforms: List<String>, tags: List<String>, action: String) {
+fun buildDockerImage(config: DockerConfig, platforms: List<String>, tags: List<String>, action: String, distZipUrl: String? = null) {
     val platformArg = platforms.joinToString(",")
     val cmd = listOf("docker", "buildx", "build", "--platform", platformArg) +
               listOf("--progress=${System.getenv("DOCKER_BUILDX_PROGRESS") ?: "plain"}") +
-              config.buildArgs().flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
+              config.buildArgs(distZipUrl).flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
               config.metadataLabels().flatMap { listOf("--label", "${it.key}=${it.value}") } +
               config.cacheArgs(if (platforms.size == 1) platforms[0].substringAfter("/") else null) +
               tags.flatMap { listOf("--tag", "${config.baseImage}:${it}") } +
@@ -95,59 +117,95 @@ fun checkCrossPlatformBuild(targetArch: String, taskName: String): Boolean {
 // Build tasks
 val buildAmd64 by tasks.registering {
     group = "docker"
-    description = "Build Docker image for AMD64"
+    description = "Build Docker image for AMD64 (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
     doLast {
         if (!checkCrossPlatformBuild("amd64", name)) return@doLast
         val config = createDockerConfig()
-        buildDockerImage(config, listOf("linux/amd64"), config.tagsForArch("amd64"), "load")
+        val distZipUrl = System.getenv("DIST_ZIP_URL")
+        if (distZipUrl != null) {
+            logger.info("Using snapshot distribution: $distZipUrl")
+        } else {
+            logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
+        }
+        buildDockerImage(config, listOf("linux/amd64"), config.tagsForArch("amd64"), "load", distZipUrl)
     }
 }
 
 val buildArm64 by tasks.registering {
     group = "docker"
-    description = "Build Docker image for ARM64"
+    description = "Build Docker image for ARM64 (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
     doLast {
         if (!checkCrossPlatformBuild("arm64", name)) return@doLast
         val config = createDockerConfig()
-        buildDockerImage(config, listOf("linux/arm64"), config.tagsForArch("arm64"), "load")
+        val distZipUrl = System.getenv("DIST_ZIP_URL")
+        if (distZipUrl != null) {
+            logger.info("Using snapshot distribution: $distZipUrl")
+        } else {
+            logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
+        }
+        buildDockerImage(config, listOf("linux/arm64"), config.tagsForArch("arm64"), "load", distZipUrl)
     }
 }
 
 val buildAll by tasks.registering {
     group = "docker"
-    description = "Build multi-platform Docker images"
+    description = "Build multi-platform Docker images (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
     doLast {
         val config = createDockerConfig()
-        buildDockerImage(config, listOf("linux/amd64", "linux/arm64"), config.multiPlatformTags(), "load")
+        val distZipUrl = System.getenv("DIST_ZIP_URL")
+        if (distZipUrl != null) {
+            logger.info("Using snapshot distribution: $distZipUrl")
+        } else {
+            logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
+        }
+        buildDockerImage(config, listOf("linux/amd64", "linux/arm64"), config.multiPlatformTags(), "load", distZipUrl)
     }
 }
 
 val pushAmd64 by tasks.registering {
     group = "docker"
-    description = "Push AMD64 Docker image to GitHub Container Registry"
+    description = "Push AMD64 Docker image to GitHub Container Registry (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
     doLast {
         if (!checkCrossPlatformBuild("amd64", name)) return@doLast
         val config = createDockerConfig()
-        buildDockerImage(config, listOf("linux/amd64"), config.tagsForArch("amd64"), "push")
+        val distZipUrl = System.getenv("DIST_ZIP_URL")
+        if (distZipUrl != null) {
+            logger.info("Using snapshot distribution: $distZipUrl")
+        } else {
+            logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
+        }
+        buildDockerImage(config, listOf("linux/amd64"), config.tagsForArch("amd64"), "push", distZipUrl)
     }
 }
 
 val pushArm64 by tasks.registering {
     group = "docker"
-    description = "Push ARM64 Docker image to GitHub Container Registry"
+    description = "Push ARM64 Docker image to GitHub Container Registry (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
     doLast {
         if (!checkCrossPlatformBuild("arm64", name)) return@doLast
         val config = createDockerConfig()
-        buildDockerImage(config, listOf("linux/arm64"), config.tagsForArch("arm64"), "push")
+        val distZipUrl = System.getenv("DIST_ZIP_URL")
+        if (distZipUrl != null) {
+            logger.info("Using snapshot distribution: $distZipUrl")
+        } else {
+            logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
+        }
+        buildDockerImage(config, listOf("linux/arm64"), config.tagsForArch("arm64"), "push", distZipUrl)
     }
 }
 
 val pushAll by tasks.registering {
     group = "docker"
-    description = "Build and push multi-platform Docker images"
+    description = "Build and push multi-platform Docker images (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
     doLast {
         val config = createDockerConfig()
-        buildDockerImage(config, listOf("linux/amd64", "linux/arm64"), config.multiPlatformTags(), "push")
+        val distZipUrl = System.getenv("DIST_ZIP_URL")
+        if (distZipUrl != null) {
+            logger.info("Using snapshot distribution: $distZipUrl")
+        } else {
+            logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
+        }
+        buildDockerImage(config, listOf("linux/amd64", "linux/arm64"), config.multiPlatformTags(), "push", distZipUrl)
     }
 }
 
@@ -176,42 +234,135 @@ val createManifest by tasks.registering {
     }
 }
 
-val testImageFunctionality by tasks.registering {
-    group = "docker"
-    description = "Test Docker image functionality"
+// Common function to test Docker image functionality
+fun testDockerImage(imageTag: String, logger: Logger) {
+    logger.info("🧪 Testing Docker image: $imageTag")
+    logger.info("This tests compilation and execution of XTC programs with different parameters")
     
-    val hostArch = normalizeArchitecture(System.getProperty("os.arch"))
-    dependsOn(if (hostArch == "amd64") buildAmd64 else buildArm64)
+    // Basic launcher tests
+    logger.info("🔧 Testing launchers...")
+    val basicTests = listOf(
+        "xec --version" to listOf("xec", "--version"),
+        "xcc --version" to listOf("xcc", "--version")
+    )
+    
+    basicTests.forEach { (testName, testCmd) ->
+        val dockerCmd = listOf("docker", "run", "--rm", imageTag) + testCmd
+        val result = spawn(dockerCmd.first(), *dockerCmd.drop(1).toTypedArray(), throwOnError = false, logger = logger)
+        
+        if (result.isSuccessful()) {
+            logger.info("✅ $testName")
+        } else {
+            throw GradleException("❌ $testName failed (exit ${result.exitValue}): ${result.output}")
+        }
+    }
+    
+    // Verify launcher type (script vs binary)
+    logger.info("🔍 Verifying Docker image uses script launchers...")
+    val launcherContentCmd = listOf("docker", "run", "--rm", imageTag, "head", "-5", "/opt/xdk/bin/xcc")
+    val launcherResult = spawn(launcherContentCmd.first(), *launcherContentCmd.drop(1).toTypedArray(), throwOnError = false, logger = logger)
+    
+    if (launcherResult.isSuccessful()) {
+        val content = launcherResult.output
+        logger.info("📋 Launcher content preview: $content")
+        
+        if (content.contains("#!/bin/sh") || content.contains("#!/bin/bash") || content.contains("exec") && content.contains("java")) {
+            logger.info("✅ Docker image is using script launchers (as expected)")
+        } else {
+            throw GradleException("❌ Launcher doesn't appear to be a shell script - this indicates the distribution changes didn't work. Content: $content")
+        }
+    } else {
+        throw GradleException("❌ Failed to check launcher type: ${launcherResult.output}")
+    }
+    
+    // Verify script content has XTC module paths
+    logger.info("🔍 Verifying script launchers contain XTC module paths...")
+    val scriptContentCmd = listOf("docker", "run", "--rm", imageTag, "head", "-50", "/opt/xdk/bin/xcc")
+    val scriptResult = spawn(scriptContentCmd.first(), *scriptContentCmd.drop(1).toTypedArray(), throwOnError = false, logger = logger)
+    
+    if (scriptResult.isSuccessful()) {
+        val scriptContent = scriptResult.output
+        val hasXdkHome = scriptContent.contains("XDK_HOME") || scriptContent.contains("APP_HOME")
+        val hasLibPaths = scriptContent.contains("-L") && scriptContent.contains("lib")
+        val hasTurtle = scriptContent.contains("javatools_turtle.xtc")
+        val hasBridge = scriptContent.contains("javatools_bridge.xtc")
+        
+        if (hasXdkHome && hasLibPaths && hasTurtle && hasBridge) {
+            logger.info("✅ Script launchers contain expected XTC module paths")
+        } else {
+            logger.warn("⚠️  Script launcher missing some expected paths:")
+            logger.warn("  XDK_HOME/APP_HOME: $hasXdkHome")
+            logger.warn("  Library paths (-L): $hasLibPaths") 
+            logger.warn("  javatools_turtle.xtc: $hasTurtle")
+            logger.warn("  javatools_bridge.xtc: $hasBridge")
+            logger.info("📋 Script content: $scriptContent")
+        }
+    } else {
+        throw GradleException("❌ Failed to check script content: ${scriptResult.output}")
+    }
+    
+    // Functional tests
+    logger.info("🧪 Testing XTC program execution...")
+    val functionalTests = listOf(
+        "DockerTest (no args)" to listOf("xec", "/opt/xdk/test/DockerTest.x"),
+        "DockerTest (with args)" to listOf("xec", "/opt/xdk/test/DockerTest.x", "hello", "world")
+    )
+    
+    functionalTests.forEach { (testName, testCmd) ->
+        val dockerCmd = listOf("docker", "run", "--rm", imageTag) + testCmd
+        val result = spawn(dockerCmd.first(), *dockerCmd.drop(1).toTypedArray(), throwOnError = false, logger = logger)
+        
+        if (result.isSuccessful()) {
+            logger.info("✅ $testName")
+        } else {
+            throw GradleException("❌ $testName failed (exit ${result.exitValue}): ${result.output}")
+        }
+    }
+}
+
+val testImageFunctionalityAmd64 by tasks.registering {
+    group = "docker"
+    description = "Test AMD64 Docker image functionality"
+    dependsOn(buildAmd64)
     
     inputs.file("test/DockerTest.x")
     inputs.file("Dockerfile")
-    outputs.file(layout.buildDirectory.file("docker-test-results.txt"))
+    outputs.file(layout.buildDirectory.file("docker-test-amd64-results.txt"))
     
     doLast {
         val config = createDockerConfig()
-        val imageTag = "${config.baseImage}:${config.tagPrefix}-$hostArch"
-        
-        logger.info("Testing Docker image: $imageTag")
-        
-        val testScenarios = listOf(
-            "xec --version" to listOf("xec", "--version"),
-            "xcc --version" to listOf("xcc", "--version"),
-            "DockerTest (no args)" to listOf("xec", "/opt/xdk/test/DockerTest.x"),
-            "DockerTest (with args)" to listOf("xec", "/opt/xdk/test/DockerTest.x", "hello", "world")
-        )
-        
-        testScenarios.forEach { (testName, testCmd) ->
-            val dockerCmd = listOf("docker", "run", "--rm", imageTag) + testCmd
-            val result = spawn(dockerCmd.first(), *dockerCmd.drop(1).toTypedArray(), throwOnError = false, logger = logger)
-            
-            if (result.isSuccessful()) {
-                logger.info("✅ $testName")
-            } else {
-                throw GradleException("❌ $testName failed (exit ${result.exitValue}): ${result.output}")
-            }
-        }
-        
-        outputs.files.singleFile.writeText("Docker tests passed at ${Instant.now()}")
+        val imageTag = "${config.baseImage}:${config.tagPrefix}-amd64"
+        testDockerImage(imageTag, logger)
+        outputs.files.singleFile.writeText("AMD64 Docker tests passed at ${Instant.now()}")
+    }
+}
+
+val testImageFunctionalityArm64 by tasks.registering {
+    group = "docker"
+    description = "Test ARM64 Docker image functionality"
+    dependsOn(buildArm64)
+    
+    inputs.file("test/DockerTest.x")
+    inputs.file("Dockerfile")
+    outputs.file(layout.buildDirectory.file("docker-test-arm64-results.txt"))
+    
+    doLast {
+        val config = createDockerConfig()
+        val imageTag = "${config.baseImage}:${config.tagPrefix}-arm64"
+        testDockerImage(imageTag, logger)
+        outputs.files.singleFile.writeText("ARM64 Docker tests passed at ${Instant.now()}")
+    }
+}
+
+val testImageFunctionality by tasks.registering {
+    group = "docker"
+    description = "Test Docker image functionality for all platforms"
+    dependsOn(testImageFunctionalityAmd64, testImageFunctionalityArm64)
+    
+    outputs.file(layout.buildDirectory.file("docker-test-results.txt"))
+    
+    doLast {
+        outputs.files.singleFile.writeText("All platform Docker tests completed at ${Instant.now()}")
     }
 }
 
