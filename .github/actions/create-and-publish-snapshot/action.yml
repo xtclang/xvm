@@ -108,7 +108,7 @@ runs:
         COMMIT_SHA="${{ github.sha }}"
         
         # Use commit SHA for dynamic versioning - ensures brew update works
-        DYNAMIC_VERSION="$XDK_VERSION.$(echo $COMMIT_SHA | cut -c1-8)"
+        DYNAMIC_VERSION="$XDK_VERSION.$COMMIT_SHA"
         
         # Create GitHub release URL for the snapshot zip file
         ZIP_NAME="xdk-$XDK_VERSION.zip"
@@ -154,7 +154,7 @@ runs:
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         git add Formula/xdk-latest.rb
-        git commit -m "Update XDK to $DYNAMIC_VERSION (commit: $(echo $COMMIT_SHA | cut -c1-8))"
+        git commit -m "Update XDK to $DYNAMIC_VERSION (commit: $COMMIT_SHA)"
         git push
         
         echo "✅ Homebrew tap updated to version $DYNAMIC_VERSION"

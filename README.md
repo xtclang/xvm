@@ -64,7 +64,7 @@ Our CI system maintains a single, continuously updated snapshot release:
 
 - **Release Name**: `XDK Latest Snapshot`  
 - **GitHub Tag**: `xdk-latest-snapshot`
-- **Download URL**: `https://github.com/xtclang/xvm/releases/download/xdk-latest-snapshot/xdk-0.4.4-SNAPSHOT.zip`
+- **Download URL**: `https://github.com/xtclang/xvm/releases/download/xdk-latest-snapshot/xdk-0.4.4-SNAPSHOT-scripts.zip`
 
 **Automatic Overwrite Process:**
 1. Every push to `master` triggers the CI pipeline
@@ -254,20 +254,54 @@ The project provides three main distribution variants, each available as both in
 #### Installation Tasks (creates local installations):
 
 1. **`./gradlew installDist`** - Basic installation without launchers (default)
+   - Includes platform configuration scripts (`cfg_*.sh`, `cfg_*.cmd`) for manual setup
+   - Requires manual classpath configuration to use
 
-2. **`./gradlew xdk:installWithLaunchersDist`** - Installs XDK with platform-specific native binary launchers (`xec`, `xcc`) in the `bin/` directory. These are simple native executables that bootstrap XTC for the target platform and are installed to platform-specific directories following the pattern `xdk/build/install/xdk-{os}_{arch}/` (e.g., `xdk-macos_arm64/`, `xdk-linux_x64/`, `xdk-windows_x64/`).
+2. **`./gradlew xdk:installWithLaunchersDist`** - Installs XDK with platform-specific native binary launchers (`xec`, `xcc`) in the `bin/` directory. These are simple native executables that bootstrap XTC for the target platform and are installed to `xdk/build/install/withLaunchers/`.
+   - Platform configuration scripts are **excluded** (not needed with native launchers)
+   - Ready to use immediately after installation
 
-3. **`./gradlew xdk:installWithLauncherScriptsDist`** - Installs XDK with cross-platform shell script launchers in the `bin/` directory. These scripts also work reliably and include proper classpath configuration automatically. Both launcher approaches are functionally equivalent.
+3. **`./gradlew xdk:installWithLauncherScriptsDist`** - Installs XDK with cross-platform shell script launchers in the `bin/` directory. These scripts work reliably across platforms and include proper classpath configuration automatically. Both launcher approaches are functionally equivalent.
+   - Platform configuration scripts are **excluded** (not needed with script launchers)  
+   - Ready to use immediately after installation
 
 #### Archive Tasks (creates distributable archives):
 
 1. **`./gradlew distZip`** / **`./gradlew distTar`** - Creates archived versions of the basic installation (without launchers) in `xdk/build/distributions/`
+   - **Output**: `xdk-{version}.zip` / `xdk-{version}.tar.gz`
+   - **Contents**: Includes platform configuration scripts for manual setup
 
-2. **`./gradlew xdk:withLaunchersDistZip`** / **`./gradlew xdk:withLaunchersDistTar`** - Creates archived versions with native binary launchers
+2. **`./gradlew xdk:withLaunchersDistZip`** / **`./gradlew xdk:withLaunchersDistTar`** - Creates archived versions with platform-specific native binary launchers
+   - **Output**: `xdk-{version}-native-{os}_{arch}.zip` / `xdk-{version}-native-{os}_{arch}.tar.gz`
+   - **Contents**: Platform-specific native launchers, no configuration scripts
 
-3. **`./gradlew xdk:withLauncherScriptsDistZip`** / **`./gradlew xdk:withLauncherScriptsDistTar`** - Creates archived versions with shell script launchers
+3. **`./gradlew xdk:withLauncherScriptsDistZip`** / **`./gradlew xdk:withLauncherScriptsDistTar`** - Creates archived versions with cross-platform shell script launchers
+   - **Output**: `xdk-{version}-scripts.zip` / `xdk-{version}-scripts.tar.gz` 
+   - **Contents**: Cross-platform script launchers, no configuration scripts
+
+#### Distribution Differences
+
+**Universal Distribution** (`installDist`, `distZip`, `distTar`):
+- ✅ Includes platform configuration scripts (`cfg_linux.sh`, `cfg_macos.sh`, `cfg_windows.cmd`)
+- ❌ No executable launchers in `bin/` directory
+- 🔧 Requires manual setup using provided configuration scripts
+
+**Native Launcher Distribution** (`withLaunchers*`):
+- ❌ No platform configuration scripts (not needed)
+- ✅ Platform-specific native binary launchers (`xec`, `xcc`)  
+- ✅ Ready to use immediately - just add `bin/` to your PATH
+
+**Script Launcher Distribution** (`withLauncherScripts*`):
+- ❌ No platform configuration scripts (not needed)
+- ✅ Cross-platform shell script launchers (`xec`, `xcc`, `xec.bat`, `xcc.bat`)
+- ✅ Ready to use immediately - just add `bin/` to your PATH
 
 The archive tasks produce the same XDK installation content as their corresponding installation tasks, but package them as ZIP and tar.gz files in the `xdk/build/distributions/` directory. These archives are suitable for distribution and deployment to other systems.
+
+**Example archive filenames** (for version `0.4.4-SNAPSHOT`):
+- `xdk-0.4.4-SNAPSHOT.zip` - Universal distribution with config scripts
+- `xdk-0.4.4-SNAPSHOT-scripts.zip` - Cross-platform script launchers  
+- `xdk-0.4.4-SNAPSHOT-native-macos_arm64.zip` - macOS ARM64 native launchers
 
 ### Quick Development Setup
 
@@ -280,25 +314,32 @@ For developers who want a working XDK installation on their local machine:
 
 2. **Add the XDK bin directory to your PATH:**
    ```bash
-   # For cross-platform script launchers:
+   # For universal distribution (manual setup required):
    export PATH="/path/to/xvm/xdk/build/install/xdk/bin:$PATH"
    
-   # For platform-specific binary launchers (adjust {os}_{arch} as needed):
-   export PATH="/path/to/xvm/xdk/build/install/xdk-macos_arm64/bin:$PATH"
+   # For cross-platform script launchers:
+   export PATH="/path/to/xvm/xdk/build/install/withLauncherScripts/bin:$PATH"
+   
+   # For platform-specific binary launchers:
+   export PATH="/path/to/xvm/xdk/build/install/withLaunchers/bin:$PATH"
    ```
 
 3. **Set XDK_HOME environment variable:**
    ```bash
-   # For cross-platform script launchers:
+   # For universal distribution (manual setup required):
    export XDK_HOME="/path/to/xvm/xdk/build/install/xdk"
    
-   # For platform-specific binary launchers (adjust {os}_{arch} as needed):
-   export XDK_HOME="/path/to/xvm/xdk/build/install/xdk-macos_arm64"
+   # For cross-platform script launchers:
+   export XDK_HOME="/path/to/xvm/xdk/build/install/withLauncherScripts"
+   
+   # For platform-specific binary launchers:
+   export XDK_HOME="/path/to/xvm/xdk/build/install/withLaunchers"
    ```
 
 **Tip for Local Development:** You can create a symlink from your home directory to simplify path management:
 ```bash
-ln -sf "/path/to/xvm/xdk/build/install/xdk" ~/xdk-latest
+# For script launchers (recommended for development):
+ln -sf "/path/to/xvm/xdk/build/install/withLauncherScripts" ~/xdk-latest
 export PATH="~/xdk-latest/bin:$PATH"
 export XDK_HOME="~/xdk-latest"
 ```

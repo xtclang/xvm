@@ -271,7 +271,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: xdk-distribution
-          path: xdk/build/distributions/xdk-*.zip
+          path: xdk/build/distributions/xdk-*-scripts.zip
           retention-days: 1
 
       - name: Get XDK version for Homebrew
@@ -487,7 +487,7 @@ jobs:
           
           # Build with pre-built artifacts (fast path - no Gradle execution in container)
           # Find platform-agnostic distribution ZIP
-          DIST_ZIP_FILE=$(find ../ -name "xdk-*.zip" | head -1)
+          DIST_ZIP_FILE=$(find ../ -name "xdk-*-scripts.zip" | head -1)
           if [ -z "$DIST_ZIP_FILE" ]; then
             echo "❌ No XDK distribution ZIP found in artifacts"
             echo "Available files in parent directory:"
@@ -729,7 +729,7 @@ jobs:
         with:
           xdk_version: ${{ steps.version.outputs.version }}
           commit_sha: ${{ github.sha }}
-          xdk_zip_name: "xdk-${{ steps.version.outputs.version }}.zip"
+          xdk_zip_name: "xdk-${{ steps.version.outputs.version }}-scripts.zip"
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update Homebrew Tap
         uses: ./.github/actions/update-homebrew-tap
@@ -737,5 +737,5 @@ jobs:
           xdk_version: ${{ steps.version.outputs.version }}
           commit_sha: ${{ github.sha }}
           java_version: ${{ steps.java_version.outputs.java_version }}
-          xdk_zip_name: "xdk-${{ steps.version.outputs.version }}.zip"
+          xdk_zip_name: "xdk-${{ steps.version.outputs.version }}-scripts.zip"
           homebrew_tap_token: ${{ secrets.HOMEBREW_TAP_TOKEN }}

@@ -23,6 +23,9 @@ plugins {
     signing
 }
 
+// Debug: Print project name and version
+println("Debug: Project name: ${project.name}, version: ${project.version}")
+
 
 val xtcLauncherBinaries by configurations.registering {
     isCanBeResolved = true
@@ -178,6 +181,13 @@ signing {
     mavenCentralSigning()
 }
 
+/*
+ * Distribution archives contain internal directory names like "xdk0.4.4SNAPSHOT" rather than "xdk-0.4.4-SNAPSHOT".
+ * This is intentional and follows Gradle's standard behavior - the Distribution plugin sanitizes version strings
+ * to remove special characters (hyphens, dots) for filesystem compatibility. This naming convention is used
+ * by many Gradle-built projects and should not be changed as it ensures compatibility across different
+ * operating systems and deployment tools.
+ */
 distributions {
     main {
         contentSpec(xdkDist.distributionName, xdkDist.distributionVersion)
@@ -284,10 +294,18 @@ val ensureTags by tasks.registering {
 /**
  * Enum to specify what type of launchers to install
  */
-enum class LauncherType {
-    None,           // No launchers (default installDist)
-    Binaries,       // Platform-specific binary launchers
-    Scripts         // Platform-independent script launchers
+enum class LauncherType(val classifier: String) {
+    None(""),               // No launchers (default installDist)
+    Binaries("native-"),    // Platform-specific binary launchers (prefix for OS classifier)
+    Scripts("scripts");     // Platform-independent script launchers
+    
+    fun getDistributionClassifier(osClassifier: String): String {
+        return when (this) {
+            None -> ""
+            Binaries -> "${classifier}${osClassifier}"
+            Scripts -> classifier
+        }
+    }
 }
 
 
@@ -298,19 +316,24 @@ enum class LauncherType {
  * and distributions with slightly different contents, for example, based o OS, and with
  * an OS specific launcher already in "bin".
  */
-private fun Distribution.contentSpec(distName: String, distVersion: String, distClassifier: String = "", launcherType: LauncherType = LauncherType.None) {
+private fun Distribution.contentSpec(distName: String, distVersion: String, osClassifier: String = "", launcherType: LauncherType = LauncherType.None) {
     distributionBaseName = distName
     version = distVersion
-    if (distClassifier.isNotEmpty()) {
+    val actualClassifier = launcherType.getDistributionClassifier(osClassifier)
+    val distClassifierSuffix = if (actualClassifier.isNotEmpty()) "-$actualClassifier" else ""
+    if (actualClassifier.isNotEmpty()) {
         @Suppress("UnstableApiUsage")
-        distributionClassifier = distClassifier
+        distributionClassifier = actualClassifier
     }
-    // Override the internal directory name to be generic (without classifier)
+    // Override the internal directory name to be properly formatted
     contents.eachFile {
-        // This will be processed during archive creation, making the internal structure generic
-        if (relativePath.segments.first().contains("-$distClassifier")) {
-            val newFirstSegment = relativePath.segments.first().replace("-$distClassifier", "")
-            relativePath = RelativePath(true, *arrayOf(newFirstSegment) + relativePath.segments.drop(1))
+        // This will be processed during archive creation
+        val currentFirstSegment = relativePath.segments.first()
+        val expectedSegment = "$distName-$distVersion$distClassifierSuffix"
+        
+        // Replace the sanitized directory name with the properly formatted one
+        if (currentFirstSegment != expectedSegment) {
+            relativePath = RelativePath(true, *arrayOf(expectedSegment) + relativePath.segments.drop(1))
         }
     }
     contents {
@@ -342,10 +365,15 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
         exclude("**/xec")
         exclude("**/xcc.bat")
         exclude("**/xec.bat")
+        // Exclude platform config scripts when using platform-specific launchers
+        if (launcherType != LauncherType.None) {
+            exclude("**/cfg_*.sh")
+            exclude("**/cfg_*.cmd")
+        }
         when (launcherType) {
             LauncherType.Binaries -> {
                 // Install platform-specific binary launchers that work on the host system
-                assert(distClassifier.isNotEmpty()) { "No distribution given for host specific distribution, OS: ${XdkDistribution.currentOs}" }
+                assert(actualClassifier.isNotEmpty()) { "No distribution given for host specific distribution, OS: ${XdkDistribution.currentOs}" }
                 XdkDistribution.binaryLauncherNames.forEach {
                     val launcher = xdkDist.launcherFileName()
                     from(xtcLauncherBinaries) {

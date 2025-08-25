@@ -49,15 +49,16 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github_token }}
       run: |
         echo "📥 Downloading XDK from snapshot release..."
-        gh release download xdk-latest-snapshot --pattern "xdk-*.zip"
+        gh release download xdk-latest-snapshot --pattern "xdk-*-scripts.zip"
         
-        if [ ! -f xdk-*.zip ]; then
-          echo "❌ Failed to download XDK from snapshot release"
+        SCRIPTS_ZIP=$(find . -name "xdk-*-scripts.zip" | head -1)
+        if [ -z "$SCRIPTS_ZIP" ]; then
+          echo "❌ Failed to download XDK scripts distribution from snapshot release"
           exit 1
         fi
         
-        echo "✅ Downloaded XDK distribution"
-        ls -la xdk-*.zip
+        echo "✅ Downloaded XDK distribution: $SCRIPTS_ZIP"
+        ls -la xdk-*-scripts.zip
 
     - name: Build and push multiplatform image
       uses: docker/build-push-action@v5

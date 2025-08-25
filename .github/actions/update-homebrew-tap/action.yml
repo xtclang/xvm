@@ -28,7 +28,7 @@ runs:
         cd tap && git checkout lagergren/brew-tap
         
         # Use commit SHA for dynamic versioning - ensures brew update works
-        DYNAMIC_VERSION="${{ inputs.xdk_version }}.$(echo ${{ inputs.commit_sha }} | cut -c1-8)"
+        DYNAMIC_VERSION="${{ inputs.xdk_version }}.${{ inputs.commit_sha }}"
         
         # Create GitHub release URL for the snapshot zip file
         RELEASE_URL="https://github.com/xtclang/xvm/releases/download/xdk-latest-snapshot/${{ inputs.xdk_zip_name }}"
@@ -72,7 +72,7 @@ runs:
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         git add Formula/xdk-latest.rb
-        git commit -m "Update XDK to $DYNAMIC_VERSION (commit: $(echo ${{ inputs.commit_sha }} | cut -c1-8))"
+        git commit -m "Update XDK to $DYNAMIC_VERSION (commit: ${{ inputs.commit_sha }})"
         git push
         
         echo "✅ Homebrew tap updated to version $DYNAMIC_VERSION"

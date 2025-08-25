@@ -75,12 +75,13 @@ runs:
         echo "🔍 Attempting to download from snapshot release..."
         if gh release view xdk-latest-snapshot >/dev/null 2>&1; then
           echo "📥 Downloading from snapshot release..."
-          gh release download xdk-latest-snapshot --pattern "xdk-*.zip" || true
+          gh release download xdk-latest-snapshot --pattern "xdk-*-scripts.zip" || true
           
-          if [ -f xdk-*.zip ]; then
-            echo "✅ Successfully downloaded snapshot release artifact"
+          SCRIPTS_ZIP=$(find . -name "xdk-*-scripts.zip" | head -1)
+          if [ -n "$SCRIPTS_ZIP" ]; then
+            echo "✅ Successfully downloaded snapshot release artifact: $SCRIPTS_ZIP"
             mkdir -p xdk/build/distributions/
-            cp xdk-*.zip xdk/build/distributions/
+            cp "$SCRIPTS_ZIP" xdk/build/distributions/
             echo "reuse_artifact=true" >> $GITHUB_OUTPUT
             echo "🎯 Will reuse snapshot release artifact, skipping build steps"
           else
