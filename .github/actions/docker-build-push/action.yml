@@ -66,7 +66,7 @@ runs:
         context: .
         platforms: linux/amd64,linux/arm64
         push: true
-        tags: ${{ steps.compute-tags.outputs.full-tags-json }}
+        tags: ${{ join(fromJSON(steps.compute-tags.outputs.full-tags-json), '\n') }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
