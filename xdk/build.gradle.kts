@@ -71,6 +71,13 @@ private val semanticVersion: SemanticVersion by extra
 
 private val xdkDist = xdkBuildLogic.distro()
 
+/**
+ * Strip version suffix from jar names, matching the rename logic used in distribution
+ */
+private fun stripVersionFromJarName(jarName: String): String {
+    return jarName.replace(Regex("(.*)\\-${Regex.escape(semanticVersion.artifactVersion)}\\.jar"), "$1.jar")
+}
+
 // Application plugin used only for CreateStartScripts tasks, not for default launcher
 
 /**
@@ -87,9 +94,38 @@ val scriptTasks = launcherScripts.map { (scriptName, mainClassName) ->
         applicationName = "launch-$scriptName-script"
         mainClass = mainClassName
         outputDir = layout.buildDirectory.dir("launcher-scripts").get().asFile
-        classpath = configurations.runtimeClasspath.get()
+        // Fix: Use the actual javatools jar, but configure script generation
+        classpath = configurations.xdkJavaTools.get()
+        
+        doLast {
+            // Fix the generated scripts to use renamed jar paths (without version suffix)
+            val scriptFiles = listOf(
+                File(outputDir, "launch-$scriptName-script"),
+                File(outputDir, "launch-$scriptName-script.bat")
+            )
+            
+            scriptFiles.forEach { scriptFile ->
+                if (scriptFile.exists()) {
+                    var content = scriptFile.readText()
+                    
+                    // Replace each jar in the classpath with its version-stripped equivalent
+                    configurations.xdkJavaTools.get().forEach { jar ->
+                        val originalName = jar.name
+                        val strippedName = stripVersionFromJarName(originalName)
+                        // Replace lib/ paths with javatools/ paths and strip version
+                        content = content
+                            .replace("/lib/$originalName", "/javatools/$strippedName")
+                            .replace("\\lib\\$originalName", "\\javatools\\$strippedName")
+                    }
+                    
+                    scriptFile.writeText(content)
+                }
+            }
+        }
         defaultJvmOpts = buildList {
             add("-ea")
+            // Set XDK_HOME system property to APP_HOME
+            add("-DXDK_HOME=\$APP_HOME")
             if (getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)) {
                 add("--enable-preview")
             }
@@ -296,7 +332,7 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
         }
         // Strip the conventional version suffix from every jar file in the distribution
         from(configurations.xdkJavaTools) {
-            rename("(.*)\\-${semanticVersion.artifactVersion}\\.jar", "$1\\.jar" )
+            rename { originalName -> stripVersionFromJarName(originalName) }
             into("javatools")
         }
         from(tasks.xtcVersionFile)
