@@ -16,8 +16,9 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.SimpleCollector;
 import org.xvm.asm.ComponentResolver.ResolutionResult;
-import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
@@ -2836,10 +2837,17 @@ public class Context
                 MethodStructure  method    = getMethod();
                 MethodConstant   idMethod  = method == null ? null : method.getIdentityConstant();
 
-                if (typeLeft.resolveContributedName(sName, access, idMethod, collector) == ResolutionResult.RESOLVED)
+                if (typeLeft.resolveContributedName(sName, access, idMethod, collector) ==
+                        ResolutionResult.RESOLVED)
                     {
-                    // inference succeeded
-                    return collector.getResolvedConstant();
+                    // inference succeeded, but we can only use properties that are constants or
+                    // formal types
+                    Constant constant = collector.getResolvedConstant();
+                    if (!(constant instanceof PropertyConstant idProp) ||
+                            idProp.isConstant() || idProp.isFormalType())
+                        {
+                        return constant;
+                        }
                     }
                 }
 

@@ -833,9 +833,15 @@ public abstract class ClassTemplate
             return invokeNativeGet(frame, idProp.getName(), hTarget, iReturn);
             }
 
-        if (clzTarget.isStruct() || chain.isField())
+        if (chain.isField())
             {
             return clzTarget.getFieldValue(frame, hTarget, idProp, iReturn);
+            }
+
+        if (clzTarget.isStruct())
+            {
+            return frame.raiseException("Invalid property \"" + idProp.getName() +
+                    "\" access from " + clzTarget.getType().getValueString());
             }
 
         MethodStructure method = chain.getTop();
