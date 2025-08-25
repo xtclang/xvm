@@ -76,7 +76,7 @@ NOTES_EOF
         
         # Clean up temp file
         rm -f release_notes.md
-          
+        
         echo "✅ Snapshot release created successfully"
 
 branding:
