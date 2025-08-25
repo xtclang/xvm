@@ -382,3 +382,15 @@ val installWithLauncherScriptsDist by tasks.existing {
 val withLauncherScriptsDistZip by tasks.existing {
     dependsOn(createXccScript, createXecScript)
 }
+
+val withLauncherScriptsDistTar by tasks.existing {
+    dependsOn(createXccScript, createXecScript)
+}
+
+val withLaunchersDistZip by tasks.existing {
+    dependsOn(createXccScript, createXecScript)
+}
+
+val withLaunchersDistTar by tasks.existing {
+    dependsOn(createXccScript, createXecScript)
+}
