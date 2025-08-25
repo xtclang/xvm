@@ -63,7 +63,7 @@ runs:
     - name: Build and push multiplatform image
       uses: docker/build-push-action@v5
       with:
-        context: .
+        context: ./docker
         platforms: linux/amd64,linux/arm64
         push: true
         tags: ${{ fromJSON(steps.compute-tags.outputs.full-tags-json)[0] }},${{ fromJSON(steps.compute-tags.outputs.full-tags-json)[1] }}
