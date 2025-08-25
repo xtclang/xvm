@@ -1,16 +1,16 @@
 name: 'Create Snapshot Release'
 description: 'Creates or updates the xdk-latest-snapshot GitHub release with XDK zip file'
 inputs:
-  xdk-version:
+  xdk_version:
     description: 'XDK version (e.g., 0.4.4-SNAPSHOT)'
     required: true
-  commit-sha:
+  commit_sha:
     description: 'Full commit SHA for release tagging'
     required: true
-  xdk-zip-name:
+  xdk_zip_name:
     description: 'Name of the XDK zip file to upload'
     required: true
-  github-token:
+  github_token:
     description: 'GitHub token with release permissions'
     required: true
 
@@ -20,16 +20,16 @@ runs:
     - name: Create or update snapshot release
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
       run: |
         RELEASE_TAG="xdk-latest-snapshot"
         RELEASE_NAME="XDK Latest Snapshot"
-        ZIP_FILE="${{ inputs.xdk-zip-name }}"
+        ZIP_FILE="${{ inputs.xdk_zip_name }}"
         
         echo "Creating/updating snapshot release with:"
         echo "  Tag: $RELEASE_TAG"
-        echo "  Version: ${{ inputs.xdk-version }}"
-        echo "  Commit: ${{ inputs.commit-sha }}"
+        echo "  Version: ${{ inputs.xdk_version }}"
+        echo "  Commit: ${{ inputs.commit_sha }}"
         echo "  Zip file: $ZIP_FILE"
         
         # Delete existing release if it exists (to overwrite)
@@ -44,8 +44,8 @@ runs:
           --title "$RELEASE_NAME" \
           --notes "**Automated snapshot release**
 
-Built from commit: \`${{ inputs.commit-sha }}\`  
-Version: \`${{ inputs.xdk-version }}\`  
+Built from commit: \`${{ inputs.commit_sha }}\`  
+Version: \`${{ inputs.xdk_version }}\`  
 Build date: \`$(date -u '+%Y-%m-%d %H:%M:%S UTC')\`
 
 This is a snapshot release that gets automatically updated on every push to master. Use this for development and testing - stable releases will be tagged separately.
