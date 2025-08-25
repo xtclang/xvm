@@ -221,6 +221,26 @@ jobs:
           inspect_gradle_cache "before clean and withLauncherScriptsDistZip"
           ./gradlew ${{ env.gradle_options }} clean
           ./gradlew ${{ env.gradle_options }} :xdk:withLauncherScriptsDistZip
+          
+          # Run manual tests inline if enabled (avoids cache rebuild)
+          if [ "${{ env.run_manual_tests }}" = "true" ] && [ "${{ github.ref }}" != "refs/heads/lagergren/brew" ]; then
+            echo "🧪 Running manual tests inline (cache still hot)..."
+            inspect_gradle_cache "before manual tests (inline)"
+            
+            # Always run basic manual tests
+            ./gradlew ${{ env.gradle_options }} manualTests:runXtc
+            ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc
+            ./gradlew ${{ env.gradle_options }} manualTests:runTwoTestsInSequence
+            
+            # Run parallel or sequential tests based on setting
+            MANUAL_TASK=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runSequential" )
+            ./gradlew ${{ env.gradle_options }} manualTests:$MANUAL_TASK
+            
+            inspect_gradle_cache "after manual tests (inline)"
+            echo "✅ Manual tests completed inline"
+          else
+            echo "⏭️ Manual tests skipped (disabled or on lagergren/brew branch)"
+          fi
 
       - name: Upload XDK distribution for snapshot release
         if: ${{ success() && matrix.os == 'ubuntu-latest' }}
@@ -229,26 +249,6 @@ jobs:
           name: xdk-distribution
           path: xdk/build/distributions/xdk-*-scripts.zip
           retention-days: 1
-
-      - name: Manual tests
-        if: ${{ env.run_manual_tests == 'true' && github.ref != 'refs/heads/lagergren/brew' }}
-        timeout-minutes: 10
-        shell: bash
-        # No JAVA_OPTS needed for general builds
-        run: |
-          ${{ env.GRADLE_CACHE_INSPECT }}
-          
-          inspect_gradle_cache "before manual tests"
-          
-          # Always run basic manual tests
-          ./gradlew ${{ env.gradle_options }} manualTests:runXtc
-          ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc
-          ./gradlew ${{ env.gradle_options }} manualTests:runTwoTestsInSequence
-          
-          # Run parallel or sequential tests based on setting
-          MANUAL_TASK=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runSequential" )
-          ./gradlew ${{ env.gradle_options }} manualTests:$MANUAL_TASK
-
 
       - name: Get XDK version for Homebrew
         if: ${{ success() && matrix.os == 'ubuntu-latest' && github.ref == 'refs/heads/master' }}
