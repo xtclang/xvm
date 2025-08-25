@@ -23,6 +23,7 @@ plugins {
     signing
 }
 
+
 val xtcLauncherBinaries by configurations.registering {
     isCanBeResolved = true
     isCanBeConsumed = false

@@ -200,85 +200,7 @@ jobs:
           echo "*** Java system properties :" 
           java -XshowSettings:properties --version
 
-      - name: Check if only CI files changed and try to reuse previous build
-        id: check_ci_only
-        shell: bash
-        run: |
-          # Check if this is a push event and only .github/ files changed
-          if [ "${{ github.event_name }}" = "push" ] && [ -n "${{ github.event.before }}" ]; then
-            echo "🔍 Checking if only CI files changed since ${{ github.event.before }}"
-            
-            # Get list of changed files
-            git diff --name-only ${{ github.event.before }} ${{ github.sha }} > changed_files.txt
-            
-            # Check if only .github/ files changed (and README.md for documentation)
-            if [ -s changed_files.txt ]; then
-              non_ci_changes=$(grep -v '^\.github/' changed_files.txt | grep -v '^README\.md$' | wc -l)
-              
-              echo "Changed files:"
-              cat changed_files.txt
-              echo "Non-CI changes: $non_ci_changes"
-              
-              if [ "$non_ci_changes" -eq 0 ]; then
-                echo "only_ci_changes=true" >> $GITHUB_OUTPUT
-                echo "✅ Only CI/documentation files changed, will try to reuse previous build artifact"
-              else
-                echo "only_ci_changes=false" >> $GITHUB_OUTPUT
-                echo "🔧 Source code changes detected, will perform full build"
-              fi
-            else
-              echo "only_ci_changes=false" >> $GITHUB_OUTPUT
-              echo "🔧 No changed files detected or initial commit, will perform full build"
-            fi
-          else
-            echo "only_ci_changes=false" >> $GITHUB_OUTPUT
-            echo "🔧 Manual trigger or no previous commit, will perform full build"
-          fi
-
-      - name: Try to download previous build artifact
-        if: steps.check_ci_only.outputs.only_ci_changes == 'true' && matrix.os == 'ubuntu-latest'
-        uses: dawidd6/action-download-artifact@v6
-        continue-on-error: true
-        id: download_previous
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          workflow: ci.yml
-          branch: ${{ github.ref_name }}
-          name: xdk-distribution
-          path: ./
-          search_artifacts: true
-          check_artifacts: true
-          if_no_artifact_found: warn
-
-      - name: Verify downloaded artifact and extract
-        if: steps.check_ci_only.outputs.only_ci_changes == 'true' && matrix.os == 'ubuntu-latest' && steps.download_previous.outcome == 'success'
-        id: verify_artifact
-        shell: bash
-        run: |
-          if [ -f "xdk-"*".zip" ]; then
-            echo "✅ Previous build artifact found and downloaded"
-            # Create the expected build directory structure
-            mkdir -p xdk/build/distributions/
-            cp xdk-*.zip xdk/build/distributions/
-            echo "reuse_artifact=true" >> $GITHUB_OUTPUT
-            echo "🎯 Will reuse previous build artifact, skipping build steps"
-          else
-            echo "❌ Artifact download failed or no valid zip file found"
-            echo "reuse_artifact=false" >> $GITHUB_OUTPUT
-            echo "🔧 Will perform full build"
-          fi
-
-      - name: Using previous build artifact (CI-only changes detected)
-        if: steps.verify_artifact.outputs.reuse_artifact == 'true'
-        shell: bash
-        run: |
-          echo "🎯 Reusing previous build artifact since only CI/documentation files changed"
-          echo "✅ Skipping build steps to save time and resources"
-          ls -la xdk/build/distributions/
-          echo "📦 Artifact ready for downstream jobs"
-
       - name: Build the XDK and create a distribution layout
-        if: steps.verify_artifact.outputs.reuse_artifact != 'true'
         shell: bash
         # No JAVA_OPTS needed for general builds
         run: |
@@ -301,7 +223,6 @@ jobs:
           ./gradlew ${{ env.gradle_options }} :xdk:withLauncherScriptsDistZip
 
       - name: Build a machine specific XDK installation with native launchers, test run launchers on native platform
-        if: steps.verify_artifact.outputs.reuse_artifact != 'true'
         shell: bash
         # No JAVA_OPTS needed for general builds
         run: |

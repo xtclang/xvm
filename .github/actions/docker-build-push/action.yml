@@ -1,0 +1,111 @@
+name: 'Build and Push Docker Images'
+description: 'Complete Docker workflow - build multiplatform images, test, and cleanup'
+
+inputs:
+  base_image:
+    description: 'Base Docker image name'
+    required: false
+    default: 'ghcr.io/xtclang/xvm'
+  github_token:
+    description: 'GitHub token for container registry'
+    required: true
+  package_delete_token:
+    description: 'Token for cleaning up old packages (optional)'
+    required: false
+
+outputs:
+  image_tags:
+    description: 'JSON array of image tags that were built'
+    value: ${{ steps.compute-tags.outputs.tags-json }}
+  primary_tag:
+    description: 'Primary image tag'
+    value: ${{ steps.compute-tags.outputs.latest-tag }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Compute Docker Tags
+      id: compute-tags
+      uses: ./.github/actions/compute-docker-tags
+      with:
+        base-image: ${{ inputs.base_image }}
+
+    - name: Set up QEMU for multiplatform builds
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ inputs.github_token }}
+
+    - name: Download XDK from snapshot release
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      run: |
+        echo "📥 Downloading XDK from snapshot release..."
+        gh release download xdk-latest-snapshot --pattern "xdk-*.zip"
+        
+        if [ ! -f xdk-*.zip ]; then
+          echo "❌ Failed to download XDK from snapshot release"
+          exit 1
+        fi
+        
+        echo "✅ Downloaded XDK distribution"
+        ls -la xdk-*.zip
+
+    - name: Build and push multiplatform image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.compute-tags.outputs.full-tags-json }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Test Docker image functionality
+      shell: bash
+      env:
+        PRIMARY_IMAGE: ${{ inputs.base_image }}:${{ steps.compute-tags.outputs.latest-tag }}
+      run: |
+        echo "🧪 Testing Docker image: $PRIMARY_IMAGE"
+        
+        # Test basic functionality
+        docker run --rm $PRIMARY_IMAGE xcc --version
+        docker run --rm $PRIMARY_IMAGE xec --version
+        
+        echo "✅ Docker image tests passed"
+
+    - name: Clean up old package versions
+      if: inputs.package_delete_token != ''
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.package_delete_token }}
+      run: |
+        echo "🧹 Cleaning up old Docker package versions..."
+        
+        # Keep only the last 10 versions
+        gh api --paginate \
+          -H "Accept: application/vnd.github+json" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          "/orgs/xtclang/packages/container/xvm/versions" \
+          --jq '.[] | select(.metadata.container.tags | length == 0) | .id' \
+        | tail -n +11 \
+        | xargs -r -I {} gh api \
+          --method DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          "/orgs/xtclang/packages/container/xvm/versions/{}" \
+        || echo "⚠️ Package cleanup failed (non-fatal)"
+        
+        echo "✅ Package cleanup completed"
+
+branding:
+  icon: 'package'
+  color: 'purple'

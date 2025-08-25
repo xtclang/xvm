@@ -1,0 +1,164 @@
+name: 'Create and Publish Snapshot Release'
+description: 'Creates snapshot release and updates Homebrew tap - self-contained with build'
+
+inputs:
+  java_version:
+    description: 'Java version for build'
+    required: true
+  homebrew_tap_token:
+    description: 'GitHub token with access to homebrew-xvm repo'
+    required: true
+  github_token:
+    description: 'GitHub token for release creation'
+    required: true
+  gradle_options:
+    description: 'Gradle command line options'
+    required: false
+    default: '--stacktrace --warning-mode=all --console=plain'
+
+outputs:
+  release_url:
+    description: 'URL of the created snapshot release'
+    value: ${{ steps.create-release.outputs.url }}
+  xdk_version:
+    description: 'Version of XDK that was released'
+    value: ${{ steps.build.outputs.xdk_version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Build XDK
+      id: build
+      uses: ./.github/actions/build-xdk
+      with:
+        java_version: ${{ inputs.java_version }}
+        gradle_options: ${{ inputs.gradle_options }}
+
+    - name: Create Snapshot Release
+      id: create-release
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      run: |
+        RELEASE_TAG="xdk-latest-snapshot"
+        RELEASE_NAME="XDK Latest Snapshot"
+        ZIP_FILE="${{ steps.build.outputs.distribution_path }}"
+        XDK_VERSION="${{ steps.build.outputs.xdk_version }}"
+        COMMIT_SHA="${{ github.sha }}"
+        BUILD_DATE=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+        
+        echo "Creating/updating snapshot release with:"
+        echo "  Tag: $RELEASE_TAG"
+        echo "  Version: $XDK_VERSION"
+        echo "  Commit: $COMMIT_SHA"
+        echo "  Zip file: $ZIP_FILE"
+        
+        # Delete existing release if it exists (to overwrite)
+        if gh release view $RELEASE_TAG >/dev/null 2>&1; then
+          echo "Deleting existing snapshot release..."
+          gh release delete $RELEASE_TAG --yes
+        fi
+        
+        # Create new snapshot release
+        echo "Creating new snapshot release..."
+        
+        # Create release notes using echo to avoid YAML parsing issues
+        echo "Automated snapshot release" > release_notes.md
+        echo "" >> release_notes.md
+        echo "Built from commit: \`$COMMIT_SHA\`" >> release_notes.md
+        echo "Version: \`$XDK_VERSION\`" >> release_notes.md
+        echo "Build date: \`$BUILD_DATE\`" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "This is a snapshot release that gets automatically updated on every push to master. Use this for development and testing - stable releases will be tagged separately." >> release_notes.md
+        echo "" >> release_notes.md
+        echo "Installation via Homebrew:" >> release_notes.md
+        echo "\`\`\`sh" >> release_notes.md
+        echo "brew tap xtclang/xvm && brew install xdk-latest" >> release_notes.md
+        echo "\`\`\`" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "Direct download:" >> release_notes.md
+        echo "Download the zip file below and extract to your preferred location." >> release_notes.md
+
+        # Create the release
+        RELEASE_URL=$(gh release create $RELEASE_TAG \
+          --title "$RELEASE_NAME" \
+          --notes-file release_notes.md \
+          --prerelease \
+          "$ZIP_FILE" \
+          --json url -q .url)
+        
+        # Clean up temp file
+        rm -f release_notes.md
+        
+        echo "url=$RELEASE_URL" >> $GITHUB_OUTPUT
+        echo "✅ Snapshot release created successfully: $RELEASE_URL"
+
+    - name: Update Homebrew Tap
+      shell: bash
+      env:
+        HOMEBREW_TAP_TOKEN: ${{ inputs.homebrew_tap_token }}
+      run: |
+        echo "🍺 Updating Homebrew tap..."
+        
+        # Clone the homebrew tap repo
+        git clone https://oauth2:$HOMEBREW_TAP_TOKEN@github.com/xtclang/homebrew-xvm.git tap
+        cd tap && git checkout lagergren/brew-tap
+        
+        XDK_VERSION="${{ steps.build.outputs.xdk_version }}"
+        COMMIT_SHA="${{ github.sha }}"
+        
+        # Use commit SHA for dynamic versioning - ensures brew update works
+        DYNAMIC_VERSION="$XDK_VERSION.$(echo $COMMIT_SHA | cut -c1-8)"
+        
+        # Create GitHub release URL for the snapshot zip file
+        ZIP_NAME="xdk-$XDK_VERSION.zip"
+        RELEASE_URL="https://github.com/xtclang/xvm/releases/download/xdk-latest-snapshot/$ZIP_NAME"
+        
+        # Get SHA256 from the ZIP file
+        ZIP_PATH="${{ steps.build.outputs.distribution_path }}"
+        SHA256=$(sha256sum "$ZIP_PATH" | cut -d' ' -f1)
+        
+        # Update the Homebrew formula
+        cat > Formula/xdk-latest.rb << EOF
+        class XdkLatest < Formula
+          desc "Ecstasy Development Kit (XDK) - A revolutionary programming language and runtime"
+          homepage "https://github.com/xtclang/xvm/"
+          url "$RELEASE_URL"
+          version "$DYNAMIC_VERSION"
+          sha256 "$SHA256"
+          license "Apache-2.0"
+          depends_on "openjdk@${{ inputs.java_version }}"
+          
+          def install
+            libexec.install Dir["*"]
+            
+            # Install Unix launchers (xec = Ecstasy Execution, xcc = Ecstasy Compiler)
+            %w[xec xcc].each do |cmd|
+              (bin/cmd).write_env_script(libexec/"bin"/cmd, JAVA_HOME: Formula["openjdk@${{ inputs.java_version }}"].opt_prefix)
+            end
+          end
+          
+          test do
+            # Test that xec launcher works and shows expected error for missing module
+            output = shell_output("#{bin}/xec 2>&1", 1)
+            assert_match "Missing module file", output
+            
+            # Test that xcc launcher works and shows version info
+            output = shell_output("#{bin}/xcc --version 2>&1")
+            assert_match "Ecstasy", output
+          end
+        end
+        EOF
+        
+        # Commit and push changes
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add Formula/xdk-latest.rb
+        git commit -m "Update XDK to $DYNAMIC_VERSION (commit: $(echo $COMMIT_SHA | cut -c1-8))"
+        git push
+        
+        echo "✅ Homebrew tap updated to version $DYNAMIC_VERSION"
+
+branding:
+  icon: 'upload-cloud'
+  color: 'green'
