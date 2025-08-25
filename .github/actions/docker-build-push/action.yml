@@ -66,9 +66,7 @@ runs:
         context: .
         platforms: linux/amd64,linux/arm64
         push: true
-        tags: |
-          ${{ join(fromJSON(steps.compute-tags.outputs.full-tags-json), '
-          ') }}
+        tags: ${{ fromJSON(steps.compute-tags.outputs.full-tags-json)[0] }},${{ fromJSON(steps.compute-tags.outputs.full-tags-json)[1] }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
