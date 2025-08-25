@@ -78,6 +78,24 @@ This ensures:
 - ✅ `brew update` works correctly due to commit-qualified versioning
 - ✅ Always reflects the latest master commit
 
+#### Snapshots vs. Stable Releases
+
+**Current Status**: XTC is currently in active development using snapshot versioning (e.g., `0.4.4-SNAPSHOT`). 
+
+**Snapshots in Maven Ecosystem**:
+- **Snapshots** (`*-SNAPSHOT`) are development builds that can change frequently
+- Maven/Gradle automatically checks for newer snapshot versions during builds
+- Intended for active development, testing, and CI/CD pipelines
+- Not suitable for production use due to changing behavior
+
+**Stable Releases** (coming soon):
+- **Fixed versions** (e.g., `0.5.0`, `1.0.0`) are immutable once published
+- Provide stability guarantees and semantic versioning
+- Cached permanently by build systems - no automatic updates
+- Suitable for production applications
+
+**Next Release Timeline**: We will publish the next non-snapshot version of XTC as soon as all build infrastructure updates are complete. This will mark the transition from active development snapshots to stable, production-ready releases with proper semantic versioning.
+
 **Windows:**
 
 * Visit [http://xtclang.org/xdk-latest.html](http://xtclang.org/xdk-latest.html) for Windows installer
