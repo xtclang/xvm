@@ -22,7 +22,13 @@ runs:
   steps:
     - name: Update Homebrew formula
       shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.homebrew_tap_token }}
       run: |
+        # Download the XDK zip from snapshot release
+        echo "📥 Downloading XDK from snapshot release for SHA256 calculation..."
+        gh release download xdk-latest-snapshot --pattern "${{ inputs.xdk_zip_name }}"
+        
         # Clone the homebrew tap repo
         git clone https://oauth2:${{ inputs.homebrew_tap_token }}@github.com/xtclang/homebrew-xvm.git tap
         cd tap && git checkout lagergren/brew-tap
@@ -33,7 +39,7 @@ runs:
         # Create GitHub release URL for the snapshot zip file
         RELEASE_URL="https://github.com/xtclang/xvm/releases/download/xdk-latest-snapshot/${{ inputs.xdk_zip_name }}"
         
-        # Get SHA256 from the existing zip file
+        # Get SHA256 from the downloaded zip file
         SHA256=$(sha256sum ../${{ inputs.xdk_zip_name }} | cut -d' ' -f1)
         
         # Update the Homebrew formula
