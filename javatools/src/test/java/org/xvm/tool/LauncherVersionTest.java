@@ -52,9 +52,9 @@ public class LauncherVersionTest
 
             if (!gitCommit.isEmpty())
                 {
-                String shortCommit = gitCommit.length() >= 8 ? gitCommit.substring(0, 8) : gitCommit;
-                assertTrue(output.contains("[" + shortCommit + "]"),
-                          "Version output should contain git commit: [" + shortCommit + "]");
+                // Expect full commit ID for better traceability
+                assertTrue(output.contains("[" + gitCommit + "]"),
+                          "Version output should contain full git commit: [" + gitCommit + "]");
                 }
 
             if (!gitStatus.isEmpty())

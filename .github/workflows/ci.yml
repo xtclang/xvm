@@ -61,6 +61,7 @@ on:
 env:
   # TODO: Default should be disabled; we only want to be bothered by tagging and publishing for the master branch.
   always_publish_snapshot: ${{ github.event.inputs.always_publish_snapshot == 'true' }}
+  always_update_homebrew_tap: ${{ github.event.inputs.always_update_homebrew_tap == 'true' }}
 
   # Add manual tests as an included build to the composite build configuration, and also build them.
   ORG_GRADLE_PROJECT_includeBuildManualTests: true
@@ -693,7 +694,7 @@ jobs:
     name: Update Homebrew tap with latest XDK
     needs: build-verify
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_update_homebrew_tap == 'true') || (github.ref == 'refs/heads/lagergren/brew')) }}
+    if: ${{ success() && ((github.event.inputs.always_update_homebrew_tap == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
       - name: Checkout XVM repository
         uses: actions/checkout@v4
@@ -707,9 +708,17 @@ jobs:
         with:
           name: xdk-distribution
 
+      - name: Create Snapshot Release
+        uses: ./.github/actions/create-snapshot-release
+        with:
+          xdk-version: ${{ steps.version.outputs.version }}
+          commit-sha: ${{ github.sha }}
+          xdk-zip-name: "xdk-${{ steps.version.outputs.version }}.zip"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update Homebrew Tap
         uses: ./.github/actions/update-homebrew-tap
         with:
           xdk-version: ${{ steps.version.outputs.version }}
+          commit-sha: ${{ github.sha }}
           xdk-zip-name: "xdk-${{ steps.version.outputs.version }}.zip"
           homebrew-tap-token: ${{ secrets.HOMEBREW_TAP_TOKEN }}

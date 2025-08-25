@@ -4,6 +4,9 @@ inputs:
   xdk-version:
     description: 'XDK version (e.g., 0.4.4-SNAPSHOT)'
     required: true
+  commit-sha:
+    description: 'Full commit SHA for version qualification'
+    required: true
   xdk-zip-name:
     description: 'Name of the XDK zip file to upload'
     required: true
@@ -21,20 +24,22 @@ runs:
         git clone https://oauth2:${{ inputs.homebrew-tap-token }}@github.com/xtclang/homebrew-xvm.git tap
         cd tap && git checkout lagergren/brew-tap
         
-        # Create downloads directory and copy zip file (always same filename)
-        mkdir -p downloads
-        cp ../${{ inputs.xdk-zip-name }} downloads/xdk-latest.zip
+        # Use commit SHA for dynamic versioning - ensures brew update works
+        DYNAMIC_VERSION="${{ inputs.xdk-version }}.$(echo ${{ inputs.commit-sha }} | cut -c1-8)"
         
-        ZIP_URL="https://raw.githubusercontent.com/xtclang/homebrew-xvm/lagergren/brew-tap/downloads/xdk-latest.zip"
-        SHA256=$(sha256sum downloads/xdk-latest.zip | cut -d' ' -f1)
+        # Create GitHub release URL for the snapshot zip file
+        RELEASE_URL="https://github.com/xtclang/xvm/releases/download/xdk-latest-snapshot/${{ inputs.xdk-zip-name }}"
+        
+        # Get SHA256 from the existing zip file
+        SHA256=$(sha256sum ../${{ inputs.xdk-zip-name }} | cut -d' ' -f1)
         
         # Update the Homebrew formula
         cat > Formula/xdk-latest.rb << EOF
         class XdkLatest < Formula
           desc "Ecstasy Development Kit (XDK) - A revolutionary programming language and runtime"
           homepage "https://github.com/xtclang/xvm/"
-          url "$ZIP_URL"
-          version "${{ inputs.xdk-version }}"
+          url "$RELEASE_URL"
+          version "$DYNAMIC_VERSION"
           sha256 "$SHA256"
           license "Apache-2.0"
           depends_on "openjdk@24"
@@ -63,11 +68,11 @@ runs:
         # Commit and push changes
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
-        git add downloads/xdk-latest.zip Formula/xdk-latest.rb
-        git commit -m "Update XDK to ${{ inputs.xdk-version }}"
+        git add Formula/xdk-latest.rb
+        git commit -m "Update XDK to $DYNAMIC_VERSION (commit: $(echo ${{ inputs.commit-sha }} | cut -c1-8))"
         git push
         
-        echo "✅ Homebrew tap updated to version ${{ inputs.xdk-version }}"
+        echo "✅ Homebrew tap updated to version $DYNAMIC_VERSION"
 
 branding:
   icon: 'package'
