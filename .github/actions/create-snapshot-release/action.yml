@@ -55,7 +55,7 @@ Build date: `DATE_PLACEHOLDER`
 This is a snapshot release that gets automatically updated on every push to master. Use this for development and testing - stable releases will be tagged separately.
 
 **Installation via Homebrew:**
-```bash
+```sh
 brew tap xtclang/xvm && brew install xdk-latest
 ```
 
