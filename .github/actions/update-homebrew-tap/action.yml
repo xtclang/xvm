@@ -7,6 +7,9 @@ inputs:
   commit-sha:
     description: 'Full commit SHA for version qualification'
     required: true
+  java-version:
+    description: 'Java version for Homebrew dependency (e.g., 21, 24)'
+    required: true
   xdk-zip-name:
     description: 'Name of the XDK zip file to upload'
     required: true
@@ -42,14 +45,14 @@ runs:
           version "$DYNAMIC_VERSION"
           sha256 "$SHA256"
           license "Apache-2.0"
-          depends_on "openjdk@24"
+          depends_on "openjdk@${{ inputs.java-version }}"
           
           def install
             libexec.install Dir["*"]
             
             # Install Unix launchers (xec = Ecstasy Execution, xcc = Ecstasy Compiler)
             %w[xec xcc].each do |cmd|
-              (bin/cmd).write_env_script(libexec/"bin"/cmd, JAVA_HOME: Formula["openjdk@24"].opt_prefix)
+              (bin/cmd).write_env_script(libexec/"bin"/cmd, JAVA_HOME: Formula["openjdk@${{ inputs.java-version }}"].opt_prefix)
             end
           end
           
