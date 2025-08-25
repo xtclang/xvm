@@ -98,6 +98,7 @@ val generateBuildInfo by tasks.registering {
 }
 
 
+
 sourceSets {
     main {
         resources {

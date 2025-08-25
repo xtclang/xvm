@@ -1,0 +1,151 @@
+name: 'Build XDK Distribution'
+description: 'Builds the XDK and creates distribution packages with optional artifact reuse'
+
+inputs:
+  java_version:
+    description: 'Java version for build'
+    required: true
+  gradle_options:
+    description: 'Gradle command line options'
+    required: false
+    default: '--stacktrace --warning-mode=all --console=plain'
+  enable_artifact_reuse:
+    description: 'Enable artifact reuse for CI-only changes'
+    required: false
+    default: 'true'
+
+outputs:
+  xdk_version:
+    description: 'The XDK version that was built'
+    value: ${{ steps.extract-version.outputs.version }}
+  build_skipped:
+    description: 'Whether build was skipped due to artifact reuse'
+    value: ${{ steps.check-reuse.outputs.reuse_artifact == 'true' }}
+  distribution_path:
+    description: 'Path to the distribution ZIP file'
+    value: ${{ steps.find-zip.outputs.zip_path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check if only CI files changed and try to reuse previous build
+      if: inputs.enable_artifact_reuse == 'true'
+      id: check-reuse
+      shell: bash
+      run: |
+        # Check if this is a push event and only .github/ files changed
+        if [ "${{ github.event_name }}" = "push" ] && [ -n "${{ github.event.before }}" ]; then
+          echo "🔍 Checking if only CI files changed since ${{ github.event.before }}"
+          
+          # Get list of changed files
+          git diff --name-only ${{ github.event.before }} ${{ github.sha }} > changed_files.txt
+          
+          # Check if only .github/ files changed (and README.md for documentation)
+          if [ -s changed_files.txt ]; then
+            non_ci_changes=$(grep -v '^\.github/' changed_files.txt | grep -v '^README\.md$' | wc -l)
+            
+            echo "Changed files:"
+            cat changed_files.txt
+            echo "Non-CI changes: $non_ci_changes"
+            
+            if [ "$non_ci_changes" -eq 0 ]; then
+              echo "only_ci_changes=true" >> $GITHUB_OUTPUT
+              echo "✅ Only CI/documentation files changed, will try to reuse previous build artifact"
+            else
+              echo "only_ci_changes=false" >> $GITHUB_OUTPUT
+              echo "🔧 Source code changes detected, will perform full build"
+            fi
+          else
+            echo "only_ci_changes=false" >> $GITHUB_OUTPUT
+            echo "🔧 No changed files detected or initial commit, will perform full build"
+          fi
+        else
+          echo "only_ci_changes=false" >> $GITHUB_OUTPUT
+          echo "🔧 Manual trigger or no previous commit, will perform full build"
+        fi
+
+    - name: Try to download from snapshot release
+      if: steps.check-reuse.outputs.only_ci_changes == 'true'
+      id: download-snapshot
+      shell: bash
+      continue-on-error: true
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        echo "🔍 Attempting to download from snapshot release..."
+        if gh release view xdk-latest-snapshot >/dev/null 2>&1; then
+          echo "📥 Downloading from snapshot release..."
+          gh release download xdk-latest-snapshot --pattern "xdk-*-scripts.zip" || true
+          
+          SCRIPTS_ZIP=$(find . -name "xdk-*-scripts.zip" | head -1)
+          if [ -n "$SCRIPTS_ZIP" ]; then
+            echo "✅ Successfully downloaded snapshot release artifact: $SCRIPTS_ZIP"
+            mkdir -p xdk/build/distributions/
+            cp "$SCRIPTS_ZIP" xdk/build/distributions/
+            echo "reuse_artifact=true" >> $GITHUB_OUTPUT
+            echo "🎯 Will reuse snapshot release artifact, skipping build steps"
+          else
+            echo "❌ Download succeeded but no zip file found"
+            echo "reuse_artifact=false" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "❌ No snapshot release found"
+          echo "reuse_artifact=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Build XDK Distribution
+      if: steps.check-reuse.outputs.reuse_artifact != 'true'
+      shell: bash
+      run: |
+        echo "🔧 Building XDK distribution..."
+        echo "  Java version: ${{ inputs.java_version }}"
+        echo "  Gradle options: ${{ inputs.gradle_options }}"
+        
+        # Clean and build
+        ./gradlew ${{ inputs.gradle_options }} clean
+        ./gradlew ${{ inputs.gradle_options }} :xdk:withLauncherScriptsDistZip
+        
+        echo "✅ XDK distribution built successfully"
+
+    - name: Build Native Launchers  
+      if: steps.check-reuse.outputs.reuse_artifact != 'true'
+      shell: bash
+      run: |
+        echo "🔧 Building native launchers..."
+        ./gradlew ${{ inputs.gradle_options }} xdk:installWithLaunchersDist
+        
+        # Test the launchers
+        xcc_path=$(find xdk/build/install/ -name xcc)
+        xec_path=$(find xdk/build/install/ -name xec)
+        echo "Location of native launcher (xcc): $xcc_path"
+        echo "Location of native launcher (xec): $xec_path"
+        
+        # Verify they work
+        $xcc_path --version
+        $xec_path --version
+        echo "✅ Native launchers built and tested successfully"
+
+    - name: Extract XDK Version
+      id: extract-version
+      shell: bash
+      run: |
+        XDK_VERSION=$(grep "^xdk.version=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
+        echo "version=$XDK_VERSION" >> $GITHUB_OUTPUT
+        echo "📋 XDK Version: $XDK_VERSION"
+
+    - name: Find Distribution ZIP
+      id: find-zip
+      shell: bash
+      run: |
+        ZIP_PATH=$(find xdk/build/distributions/ -name "xdk-*.zip" | head -1)
+        if [ -n "$ZIP_PATH" ]; then
+          echo "zip_path=$ZIP_PATH" >> $GITHUB_OUTPUT
+          echo "📦 Distribution ZIP: $ZIP_PATH"
+        else
+          echo "❌ No distribution ZIP found"
+          exit 1
+        fi
+
+branding:
+  icon: 'package'
+  color: 'blue'

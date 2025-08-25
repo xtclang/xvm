@@ -81,7 +81,8 @@ public final class BuildInfo
      */
     public static String getGitCommit()
         {
-        return BUILD_INFO.getProperty("git.commit", "");
+        // Use full commit ID instead of abbreviated version
+        return BUILD_INFO.getProperty("git.commit.id", BUILD_INFO.getProperty("git.commit", ""));
         }
 
     /**

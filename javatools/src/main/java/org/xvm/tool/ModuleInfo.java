@@ -1834,10 +1834,6 @@ public class ModuleInfo
             }
         }
 
-    /**
-     * @return the version of the XDK that is answering this question, or null if this running code
-     *         is not part of a well-formed XDK image
-     */
     private static File getJarFile()
         {
         Class clz    = ModuleInfo.class;

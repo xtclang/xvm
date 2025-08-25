@@ -1,0 +1,88 @@
+name: 'Update Homebrew Tap'
+description: 'Updates the XVM Homebrew tap with a new XDK release'
+inputs:
+  xdk_version:
+    description: 'XDK version (e.g., 0.4.4-SNAPSHOT)'
+    required: true
+  commit_sha:
+    description: 'Full commit SHA for version qualification'
+    required: true
+  java_version:
+    description: 'Java version for Homebrew dependency (e.g., 21, 24)'
+    required: true
+  xdk_zip_name:
+    description: 'Name of the XDK zip file to upload'
+    required: true
+  homebrew_tap_token:
+    description: 'GitHub token with access to homebrew-xvm repo'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Update Homebrew formula
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.homebrew_tap_token }}
+      run: |
+        # Download the XDK zip from snapshot release
+        echo "📥 Downloading XDK from snapshot release for SHA256 calculation..."
+        gh release download xdk-latest-snapshot --pattern "${{ inputs.xdk_zip_name }}"
+        
+        # Clone the homebrew tap repo
+        git clone https://oauth2:${{ inputs.homebrew_tap_token }}@github.com/xtclang/homebrew-xvm.git tap
+        cd tap && git checkout lagergren/brew-tap
+        
+        # Use commit SHA for dynamic versioning - ensures brew update works
+        DYNAMIC_VERSION="${{ inputs.xdk_version }}.${{ inputs.commit_sha }}"
+        
+        # Create GitHub release URL for the snapshot zip file
+        RELEASE_URL="https://github.com/xtclang/xvm/releases/download/xdk-latest-snapshot/${{ inputs.xdk_zip_name }}"
+        
+        # Get SHA256 from the downloaded zip file
+        SHA256=$(sha256sum ../${{ inputs.xdk_zip_name }} | cut -d' ' -f1)
+        
+        # Update the Homebrew formula
+        cat > Formula/xdk-latest.rb << EOF
+        class XdkLatest < Formula
+          desc "Ecstasy Development Kit (XDK) - A revolutionary programming language and runtime"
+          homepage "https://github.com/xtclang/xvm/"
+          url "$RELEASE_URL"
+          version "$DYNAMIC_VERSION"
+          sha256 "$SHA256"
+          license "Apache-2.0"
+          depends_on "openjdk@${{ inputs.java_version }}"
+          
+          def install
+            libexec.install Dir["*"]
+            
+            # Install Unix launchers (xec = Ecstasy Execution, xcc = Ecstasy Compiler)
+            %w[xec xcc].each do |cmd|
+              (bin/cmd).write_env_script(libexec/"bin"/cmd, JAVA_HOME: Formula["openjdk@${{ inputs.java_version }}"].opt_prefix)
+            end
+          end
+          
+          test do
+            # Test that xec launcher works and shows expected error for missing module
+            output = shell_output("#{bin}/xec 2>&1", 1)
+            assert_match "Missing module file", output
+            
+            # Test that xcc launcher works and shows version info
+            output = shell_output("#{bin}/xcc --version 2>&1")
+            assert_match "Ecstasy", output
+          end
+        end
+        EOF
+        
+        # Commit and push changes
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add Formula/xdk-latest.rb
+        git commit -m "Update XDK to $DYNAMIC_VERSION (commit: ${{ inputs.commit_sha }})"
+        git push
+        
+        echo "✅ Homebrew tap updated to version $DYNAMIC_VERSION"
+
+branding:
+  icon: 'package'
+  color: 'orange'

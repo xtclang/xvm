@@ -23,6 +23,10 @@ plugins {
     signing
 }
 
+// Debug: Print project name and version
+println("Debug: Project name: ${project.name}, version: ${project.version}")
+
+
 val xtcLauncherBinaries by configurations.registering {
     isCanBeResolved = true
     isCanBeConsumed = false
@@ -71,6 +75,13 @@ private val semanticVersion: SemanticVersion by extra
 
 private val xdkDist = xdkBuildLogic.distro()
 
+/**
+ * Strip version suffix from jar names, matching the rename logic used in distribution
+ */
+private fun stripVersionFromJarName(jarName: String): String {
+    return jarName.replace(Regex("(.*)\\-${Regex.escape(semanticVersion.artifactVersion)}\\.jar"), "$1.jar")
+}
+
 // Application plugin used only for CreateStartScripts tasks, not for default launcher
 
 /**
@@ -87,9 +98,38 @@ val scriptTasks = launcherScripts.map { (scriptName, mainClassName) ->
         applicationName = "launch-$scriptName-script"
         mainClass = mainClassName
         outputDir = layout.buildDirectory.dir("launcher-scripts").get().asFile
-        classpath = configurations.runtimeClasspath.get()
+        // Fix: Use the actual javatools jar, but configure script generation
+        classpath = configurations.xdkJavaTools.get()
+        
+        doLast {
+            // Fix the generated scripts to use renamed jar paths (without version suffix)
+            val scriptFiles = listOf(
+                File(outputDir, "launch-$scriptName-script"),
+                File(outputDir, "launch-$scriptName-script.bat")
+            )
+            
+            scriptFiles.forEach { scriptFile ->
+                if (scriptFile.exists()) {
+                    var content = scriptFile.readText()
+                    
+                    // Replace each jar in the classpath with its version-stripped equivalent
+                    configurations.xdkJavaTools.get().forEach { jar ->
+                        val originalName = jar.name
+                        val strippedName = stripVersionFromJarName(originalName)
+                        // Replace lib/ paths with javatools/ paths and strip version
+                        content = content
+                            .replace("/lib/$originalName", "/javatools/$strippedName")
+                            .replace("\\lib\\$originalName", "\\javatools\\$strippedName")
+                    }
+                    
+                    scriptFile.writeText(content)
+                }
+            }
+        }
         defaultJvmOpts = buildList {
             add("-ea")
+            // Set XDK_HOME system property to APP_HOME
+            add("-DXDK_HOME=\$APP_HOME")
             if (getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)) {
                 add("--enable-preview")
             }
@@ -141,6 +181,13 @@ signing {
     mavenCentralSigning()
 }
 
+/*
+ * Distribution archives contain internal directory names like "xdk0.4.4SNAPSHOT" rather than "xdk-0.4.4-SNAPSHOT".
+ * This is intentional and follows Gradle's standard behavior - the Distribution plugin sanitizes version strings
+ * to remove special characters (hyphens, dots) for filesystem compatibility. This naming convention is used
+ * by many Gradle-built projects and should not be changed as it ensures compatibility across different
+ * operating systems and deployment tools.
+ */
 distributions {
     main {
         contentSpec(xdkDist.distributionName, xdkDist.distributionVersion)
@@ -247,10 +294,18 @@ val ensureTags by tasks.registering {
 /**
  * Enum to specify what type of launchers to install
  */
-enum class LauncherType {
-    None,           // No launchers (default installDist)
-    Binaries,       // Platform-specific binary launchers
-    Scripts         // Platform-independent script launchers
+enum class LauncherType(val classifier: String) {
+    None(""),               // No launchers (default installDist)
+    Binaries("native-"),    // Platform-specific binary launchers (prefix for OS classifier)
+    Scripts("scripts");     // Platform-independent script launchers
+    
+    fun getDistributionClassifier(osClassifier: String): String {
+        return when (this) {
+            None -> ""
+            Binaries -> "${classifier}${osClassifier}"
+            Scripts -> classifier
+        }
+    }
 }
 
 
@@ -261,21 +316,16 @@ enum class LauncherType {
  * and distributions with slightly different contents, for example, based o OS, and with
  * an OS specific launcher already in "bin".
  */
-private fun Distribution.contentSpec(distName: String, distVersion: String, distClassifier: String = "", launcherType: LauncherType = LauncherType.None) {
+private fun Distribution.contentSpec(distName: String, distVersion: String, osClassifier: String = "", launcherType: LauncherType = LauncherType.None) {
     distributionBaseName = distName
     version = distVersion
-    if (distClassifier.isNotEmpty()) {
+    val actualClassifier = launcherType.getDistributionClassifier(osClassifier)
+    if (actualClassifier.isNotEmpty()) {
         @Suppress("UnstableApiUsage")
-        distributionClassifier = distClassifier
+        distributionClassifier = actualClassifier
     }
-    // Override the internal directory name to be generic (without classifier)
-    contents.eachFile {
-        // This will be processed during archive creation, making the internal structure generic
-        if (relativePath.segments.first().contains("-$distClassifier")) {
-            val newFirstSegment = relativePath.segments.first().replace("-$distClassifier", "")
-            relativePath = RelativePath(true, *arrayOf(newFirstSegment) + relativePath.segments.drop(1))
-        }
-    }
+    // Note: Gradle automatically handles internal directory naming for archives
+    // The install tasks create flat directory structures while archive tasks create nested ones
     contents {
         val xdkTemplate = tasks.processResources.map {
             logger.info("$prefix Resolving processResources output (this should be during the execution phase).");
@@ -296,7 +346,7 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
         }
         // Strip the conventional version suffix from every jar file in the distribution
         from(configurations.xdkJavaTools) {
-            rename("(.*)\\-${semanticVersion.artifactVersion}\\.jar", "$1\\.jar" )
+            rename { originalName -> stripVersionFromJarName(originalName) }
             into("javatools")
         }
         from(tasks.xtcVersionFile)
@@ -305,10 +355,15 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
         exclude("**/xec")
         exclude("**/xcc.bat")
         exclude("**/xec.bat")
+        // Exclude platform config scripts when using platform-specific launchers
+        if (launcherType != LauncherType.None) {
+            exclude("**/cfg_*.sh")
+            exclude("**/cfg_*.cmd")
+        }
         when (launcherType) {
             LauncherType.Binaries -> {
                 // Install platform-specific binary launchers that work on the host system
-                assert(distClassifier.isNotEmpty()) { "No distribution given for host specific distribution, OS: ${XdkDistribution.currentOs}" }
+                assert(actualClassifier.isNotEmpty()) { "No distribution given for host specific distribution, OS: ${XdkDistribution.currentOs}" }
                 XdkDistribution.binaryLauncherNames.forEach {
                     val launcher = xdkDist.launcherFileName()
                     from(xtcLauncherBinaries) {
@@ -340,5 +395,21 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
 
 // Ensure script-based distribution depends on script generation tasks
 val installWithLauncherScriptsDist by tasks.existing {
+    dependsOn(createXccScript, createXecScript)
+}
+
+val withLauncherScriptsDistZip by tasks.existing {
+    dependsOn(createXccScript, createXecScript)
+}
+
+val withLauncherScriptsDistTar by tasks.existing {
+    dependsOn(createXccScript, createXecScript)
+}
+
+val withLaunchersDistZip by tasks.existing {
+    dependsOn(createXccScript, createXecScript)
+}
+
+val withLaunchersDistTar by tasks.existing {
     dependsOn(createXccScript, createXecScript)
 }

@@ -30,6 +30,11 @@ on:
         type: boolean
         required: false
         default: false
+      always_update_homebrew_tap:
+        description: 'Always update Homebrew tap regardless of branch'
+        type: boolean
+        required: false
+        default: false
       single_platform:
         description: 'Run only single platform (ubuntu-latest, windows-latest, or full matrix)'
         type: choice
@@ -56,6 +61,7 @@ on:
 env:
   # TODO: Default should be disabled; we only want to be bothered by tagging and publishing for the master branch.
   always_publish_snapshot: ${{ github.event.inputs.always_publish_snapshot == 'true' }}
+  always_update_homebrew_tap: ${{ github.event.inputs.always_update_homebrew_tap == 'true' }}
 
   # Add manual tests as an included build to the composite build configuration, and also build them.
   ORG_GRADLE_PROJECT_includeBuildManualTests: true
@@ -80,7 +86,7 @@ env:
   run_manual_tests: ${{ github.event.inputs.run_manual_tests != 'false' }}
   run_manual_tests_parallel: ${{ github.event.inputs.run_manual_tests_parallel != 'false' }}
 
-  java_version: 21
+  # java_version will be set dynamically from xdk.properties in each job
   java_distribution: temurin
   gradle_version: 8.14.2
 
@@ -88,6 +94,9 @@ env:
   GH_COMMIT: ${{ github.sha }}
   GH_BRANCH: ${{ github.ref_name }}
   DOCKER_BASE_IMAGE: ghcr.io/xtclang/xvm
+  
+  # Temporary override: check if on lagergren/brew branch
+  IS_BREW_BRANCH: ${{ github.ref == 'refs/heads/lagergren/brew' }}
 
   # Gradle cache inspection function
   GRADLE_CACHE_INSPECT: |
@@ -127,9 +136,11 @@ jobs:
 
     strategy:
       matrix:
-        os: ${{ github.event.inputs.single_platform == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.single_platform == 'windows-latest' && fromJSON('["windows-latest"]') || fromJSON('["ubuntu-latest", "windows-latest"]') }}
+        os: ${{ github.ref == 'refs/heads/lagergren/brew' && fromJSON('["ubuntu-latest"]') || (github.event.inputs.single_platform == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.single_platform == 'windows-latest' && fromJSON('["windows-latest"]') || fromJSON('["ubuntu-latest", "windows-latest"]')) }}
 
     runs-on: ${{ matrix.os }}
+    outputs:
+      xdk-version: ${{ steps.xdk-version.outputs.version }}
 
     steps:
       - name: Fetch Sources
@@ -137,10 +148,14 @@ jobs:
         with:
           show-progress: true
 
+      - name: Get Java version from XDK properties
+        id: java_version
+        uses: ./.github/actions/get-java-version
+
       - name: Setup XVM Build Environment
         uses: ./.github/actions/setup-xvm-build
         with:
-          java-version: ${{ env.java_version }}
+          java-version: ${{ steps.java_version.outputs.java_version }}
           java-distribution: ${{ env.java_distribution }}
           gradle-version: ${{ env.gradle_version }}
           cache-read-only: false
@@ -203,61 +218,46 @@ jobs:
           echo "🔍 JVM Flag Information:"
           java -XX:+PrintFlagsFinal -version 2>&1 || echo "  Flag printing failed (non-fatal)"
           
-          inspect_gradle_cache "before clean and installDist"
+          inspect_gradle_cache "before clean and withLauncherScriptsDistZip"
           ./gradlew ${{ env.gradle_options }} clean
-          ./gradlew ${{ env.gradle_options }} installDist xdk:distZip 
+          ./gradlew ${{ env.gradle_options }} :xdk:withLauncherScriptsDistZip
+          
+          # Run manual tests inline if enabled (avoids cache rebuild)
+          if [ "${{ env.run_manual_tests }}" = "true" ] && [ "${{ github.ref }}" != "refs/heads/lagergren/brew" ]; then
+            echo "🧪 Running manual tests inline (cache still hot)..."
+            inspect_gradle_cache "before manual tests (inline)"
+            
+            # Always run basic manual tests
+            ./gradlew ${{ env.gradle_options }} manualTests:runXtc
+            ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc
+            ./gradlew ${{ env.gradle_options }} manualTests:runTwoTestsInSequence
+            
+            # Run parallel or sequential tests based on setting
+            MANUAL_TASK=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runSequential" )
+            ./gradlew ${{ env.gradle_options }} manualTests:$MANUAL_TASK
+            
+            inspect_gradle_cache "after manual tests (inline)"
+            echo "✅ Manual tests completed inline"
+          else
+            echo "⏭️ Manual tests skipped (disabled or on lagergren/brew branch)"
+          fi
 
-      - name: Build a machine specific XDK installation with native launchers, test run launchers on native platform
-        shell: bash
-        # No JAVA_OPTS needed for general builds
-        run: |
-          ${{ env.GRADLE_CACHE_INSPECT }}
-          
-          inspect_gradle_cache "before native launcher build"
-          ./gradlew ${{ env.gradle_options }} xdk:installWithLaunchersDist
-          xcc_path=$(find xdk/build/install/ -name xcc)
-          xec_path=$(find xdk/build/install/ -name xec)
-          echo "Location of native launcher (xcc): $xcc_path"
-          echo "Location of native launcher (xec): $xec_path"
-          echo "*** Testing native launchers, verifying their binary format and that they run on this platform..."
-          xcc_file=$(file $xcc_path)
-          xec_file=$(file $xec_path)
-          xcc_version=$($xcc_path --version)
-          xec_version=$($xec_path --version)
-          echo "    xcc:"
-          echo "        file   : $xcc_file"
-          echo "        version: $xcc_version"
-          echo "    xec:"
-          echo "        file   : $xec_file"
-          echo "        version: $xec_version"
-          echo "*** Native launchers work."
-
-      - name: Manual tests
-        if: ${{ env.run_manual_tests == 'true' }}
-        timeout-minutes: 10
-        shell: bash
-        # No JAVA_OPTS needed for general builds
-        run: |
-          ${{ env.GRADLE_CACHE_INSPECT }}
-          
-          inspect_gradle_cache "before manual tests"
-          
-          # Always run basic manual tests
-          ./gradlew ${{ env.gradle_options }} manualTests:runXtc
-          ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc
-          ./gradlew ${{ env.gradle_options }} manualTests:runTwoTestsInSequence
-          
-          # Run parallel or sequential tests based on setting
-          MANUAL_TASK=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runSequential" )
-          ./gradlew ${{ env.gradle_options }} manualTests:$MANUAL_TASK
-
-      - name: Upload XDK distribution ZIP for Docker builds
+      - name: Upload XDK distribution for snapshot release
         if: ${{ success() && matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-artifact@v4
         with:
           name: xdk-distribution
-          path: xdk/build/distributions/xdk-*.zip
+          path: xdk/build/distributions/xdk-*-scripts.zip
           retention-days: 1
+
+      - name: Get XDK version for Homebrew
+        if: ${{ success() && matrix.os == 'ubuntu-latest' && github.ref == 'refs/heads/master' }}
+        id: xdk-version
+        run: |
+          # Extract XDK version from version.properties
+          XDK_VERSION=$(grep "^xdk.version=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
+          echo "version=$XDK_VERSION" >> $GITHUB_OUTPUT
+          echo "XDK Version: $XDK_VERSION"
 
   publish-snapshot:
     name: Publish to GitHub packages iff snapshot + non-redundant build platform + branch is master
@@ -270,10 +270,14 @@ jobs:
       - name: Fetch Sources
         uses: actions/checkout@v4
 
+      - name: Get Java version from XDK properties
+        id: java_version
+        uses: ./.github/actions/get-java-version
+
       - name: Setup XVM Build Environment
         uses: ./.github/actions/setup-xvm-build
         with:
-          java-version: ${{ env.java_version }}
+          java-version: ${{ steps.java_version.outputs.java_version }}
           java-distribution: ${{ env.java_distribution }}
           gradle-version: ${{ env.gradle_version }}
           cache-read-only: true  # Read-only since build-verify already populated cache
@@ -328,35 +332,37 @@ jobs:
     outputs:
       version: ${{ steps.compute.outputs.version }}
       branch-tag: ${{ steps.compute.outputs.branch-tag }}
-      tags-json: ${{ steps.compute.outputs.tags-json }}
-      is-master: ${{ steps.compute.outputs.is-master }}
+      tags-json: ${{ steps.generate.outputs.tags-json }}
+      is-master: ${{ steps.generate.outputs.is-master }}
     steps:
       - name: Fetch Sources
         uses: actions/checkout@v4
 
       - name: Compute tags and metadata
         id: compute
+        uses: ./.github/actions/compute-docker-tags
+        with:
+          base-image: ${{ env.DOCKER_BASE_IMAGE }}
+          branch: ${{ env.GH_BRANCH }}
+          commit: ${{ github.sha }}
+      
+      - name: Generate Docker tags and metadata
+        id: generate
         shell: bash
         run: |
-          set -euo pipefail
-          
-          # Read version from properties file
-          VERSION=$(grep "^xdk.version=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          
-          # Sanitize branch name for Docker tags
-          BRANCH_TAG=$(echo "${{ env.GH_BRANCH }}" | sed 's|.*/||' | sed 's/[^a-zA-Z0-9._-]/_/g')
-          echo "branch-tag=$BRANCH_TAG" >> $GITHUB_OUTPUT
-          
           # Determine if master branch
           IS_MASTER=${{ github.ref == 'refs/heads/master' }}
           echo "is-master=$IS_MASTER" >> $GITHUB_OUTPUT
           
+          # Get version and branch tag from compute action
+          VERSION="${{ steps.compute.outputs.version }}"
+          BRANCH_TAG="${{ steps.compute.outputs.branch-tag }}"
+          
           # Generate base tags
           if [ "$IS_MASTER" = "true" ]; then
-            BASE_TAGS='["latest", "'$VERSION'", "'${{ env.GH_COMMIT }}'"]'
+            BASE_TAGS='["latest","'$VERSION'","'${{ env.GH_COMMIT }}'"]'
           else
-            BASE_TAGS='["'$BRANCH_TAG'", "'${{ env.GH_COMMIT }}'"]'
+            BASE_TAGS='["'$BRANCH_TAG'","'${{ env.GH_COMMIT }}'"]'
           fi
           
           echo "tags-json=$BASE_TAGS" >> $GITHUB_OUTPUT
@@ -369,9 +375,9 @@ jobs:
 
   docker-build:
     name: Build and push Docker images
-    needs: compute-docker-tags
+    needs: [compute-docker-tags, create-snapshot-release]  # Depends on snapshot release being created
     runs-on: ${{ matrix.runner }}
-    if: ${{ success() }}
+    if: ${{ success() && ((github.event.inputs.always_build_docker_image == 'true') || (github.ref == 'refs/heads/master')) }}
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
     strategy:
@@ -387,122 +393,11 @@ jobs:
       - name: Fetch Sources
         uses: actions/checkout@v4
 
-      # Set up Java and Gradle to warm cache for Docker build
-      - name: Setup XVM Build Environment
-        uses: ./.github/actions/setup-xvm-build
+      - name: Build and push Docker image from snapshot release
+        uses: ./.github/actions/docker-build-push
         with:
-          java-version: ${{ env.java_version }}
-          java-distribution: ${{ env.java_distribution }}
-          gradle-version: ${{ env.gradle_version }}
-          cache-read-only: true  # Read-only since build-verify already populated cache
-          enable-debug: false
-
-      # Note: Dockerfile is self-contained and downloads source itself
-      # But now Docker build can benefit from Gradle cache via GitHub Actions cache
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download build artifacts from build-verify
-        uses: actions/download-artifact@v4
-        with:
-          name: xdk-distribution
-          path: .
-
-      - name: Build and push Docker image with pre-built artifacts (${{ matrix.arch }})
-        id: build
-        shell: bash
-        working-directory: docker
-        run: |
-          set -euo pipefail
-          
-          echo "Building and pushing ${{ matrix.arch }} Docker image with pre-built artifacts..."
-          
-          # Use computed metadata from previous job (single source of truth)
-          VERSION="${{ needs.compute-docker-tags.outputs.version }}"
-          BRANCH_TAG="${{ needs.compute-docker-tags.outputs.branch-tag }}"
-          BASE_TAGS='${{ needs.compute-docker-tags.outputs.tags-json }}'
-          
-          # Generate architecture-specific tags
-          TAGS=$(echo "$BASE_TAGS" | jq -r --arg base "${{ env.DOCKER_BASE_IMAGE }}" --arg arch "${{ matrix.arch }}" '.[] | $base + ":" + . + "-" + $arch')
-          TAG_ARGS=""
-          for tag in $TAGS; do
-            TAG_ARGS="$TAG_ARGS --tag $tag"
-          done
-          
-          echo "🏷️ Architecture-specific tags for ${{ matrix.arch }}:"
-          echo "$TAGS" | while read tag; do echo "  $tag"; done
-          
-          # Validate downloaded artifacts exist and show structure
-          echo "📋 Pre-built artifacts validation:"
-          echo "  Downloaded files in parent directory:"
-          ls -la ../ | grep -E '(xdk|zip)' || echo "No XDK files found"
-          
-          # Platform safety check
-          echo "🔍 Platform safety validation:"
-          echo "  Target platform: ${{ matrix.platform }}"
-          echo "  Target arch: ${{ matrix.arch }}"
-          echo "  Runner arch: $(uname -m)"
-          
-          # Build with pre-built artifacts (fast path - no Gradle execution in container)
-          # Find platform-agnostic distribution ZIP
-          DIST_ZIP_FILE=$(find ../ -name "xdk-*.zip" | head -1)
-          if [ -z "$DIST_ZIP_FILE" ]; then
-            echo "❌ No XDK distribution ZIP found in artifacts"
-            echo "Available files in parent directory:"
-            ls -la ../ || echo "No files"
-            exit 1
-          fi
-          
-          # Copy ZIP to Docker build context with standard name
-          cp "$DIST_ZIP_FILE" ci-dist.zip
-          echo "📦 Copied distribution to Docker context: $DIST_ZIP_FILE → ci-dist.zip"
-          
-          docker buildx build \
-            --platform ${{ matrix.platform }} \
-            --progress=plain \
-            $TAG_ARGS \
-            --build-arg DIST_ZIP_URL="ci-dist.zip" \
-            --build-arg GH_BRANCH=${{ env.GH_BRANCH }} \
-            --build-arg GH_COMMIT=${{ env.GH_COMMIT }} \
-            --label org.opencontainers.image.created=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
-            --label org.opencontainers.image.revision=${{ env.GH_COMMIT }} \
-            --label org.opencontainers.image.version="$VERSION" \
-            --label org.opencontainers.image.source=https://github.com/xtclang/xvm/tree/${{ env.GH_BRANCH }} \
-            --cache-from type=gha,scope=${{ matrix.arch }} \
-            --cache-to type=gha,mode=max,scope=${{ matrix.arch }} \
-            --provenance=false \
-            --output type=registry \
-            .
-
-      - name: Verify images pushed to registry
-        shell: bash
-        run: |
-          set -euo pipefail
-          
-          # Use computed metadata from previous job
-          BASE_TAGS='${{ needs.compute-docker-tags.outputs.tags-json }}'
-          
-          # Generate architecture-specific tags
-          TAGS=$(echo "$BASE_TAGS" | jq -r --arg base "${{ env.DOCKER_BASE_IMAGE }}" --arg arch "${{ matrix.arch }}" '.[] | $base + ":" + . + "-" + $arch')
-          
-          echo "Verifying ${{ matrix.arch }} images exist in registry..."
-          echo "$TAGS" | while read tag; do
-            echo "Checking: $tag"
-            if ! docker manifest inspect "$tag" > /dev/null 2>&1; then
-              echo "❌ ERROR: Image $tag not found in registry!"
-              echo "❌ Push failed for ${{ matrix.arch }} architecture!"
-              exit 1
-            fi
-            echo "✅ Confirmed: $tag"
-          done
+          base_image: ${{ env.DOCKER_BASE_IMAGE }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
   docker-manifest:
     name: Create multi-platform manifest
@@ -667,3 +562,55 @@ jobs:
         env:
           # Use organization-level PAT with delete:packages scope if available, fallback to default token
           GITHUB_TOKEN: ${{ secrets.PACKAGE_DELETE_TOKEN || secrets.GITHUB_TOKEN }}
+
+  create-snapshot-release:
+    name: Create GitHub snapshot release
+    needs: build-verify
+    runs-on: ubuntu-latest
+    if: ${{ success() && ((github.event.inputs.always_update_homebrew_tap == 'true') || (github.event.inputs.always_build_docker_image == 'true') || (github.ref == 'refs/heads/master')) }}
+    steps:
+      - name: Checkout XVM repository
+        uses: actions/checkout@v4
+
+      - name: Get XDK version
+        id: version
+        uses: ./.github/actions/get-xdk-version
+
+      - name: Download XDK distribution
+        uses: actions/download-artifact@v4
+        with:
+          name: xdk-distribution
+
+      - name: Create Snapshot Release
+        uses: ./.github/actions/create-snapshot-release
+        with:
+          xdk_version: ${{ steps.version.outputs.version }}
+          commit_sha: ${{ github.sha }}
+          xdk_zip_name: "xdk-${{ steps.version.outputs.version }}-scripts.zip"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  update-homebrew-tap:
+    name: Update Homebrew tap with latest XDK
+    needs: create-snapshot-release
+    runs-on: ubuntu-latest
+    if: ${{ success() && ((github.event.inputs.always_update_homebrew_tap == 'true') || (github.ref == 'refs/heads/master')) }}
+    steps:
+      - name: Checkout XVM repository
+        uses: actions/checkout@v4
+
+      - name: Get XDK version
+        id: version
+        uses: ./.github/actions/get-xdk-version
+
+      - name: Get Java version
+        id: java_version
+        uses: ./.github/actions/get-java-version
+
+      - name: Update Homebrew Tap
+        uses: ./.github/actions/update-homebrew-tap
+        with:
+          xdk_version: ${{ steps.version.outputs.version }}
+          commit_sha: ${{ github.sha }}
+          java_version: ${{ steps.java_version.outputs.java_version }}
+          xdk_zip_name: "xdk-${{ steps.version.outputs.version }}-scripts.zip"
+          homebrew_tap_token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
