@@ -134,6 +134,18 @@ public abstract class Launcher
             {
             log(Severity.INFO, "JVM version: " + Runtime.version());
             }
+
+        // Log XDK_HOME for debugging
+        String xdkHome = System.getProperty("XDK_HOME");
+        if (xdkHome != null)
+            {
+            log(Severity.INFO, "XDK_HOME: " + xdkHome);
+            }
+        else
+            {
+            log(Severity.WARNING, "XDK_HOME not set");
+            }
+            
         checkErrors(fHelp);
 
         if (opts.isVerbose())
@@ -1454,7 +1466,8 @@ public abstract class Launcher
         String gitStatus = org.xvm.asm.BuildInfo.getGitStatus();
         if (!gitCommit.isEmpty())
             {
-            version.append(" [").append(gitCommit.substring(0, Math.min(8, gitCommit.length()))).append("]");
+            // Use full commit ID for better traceability
+            version.append(" [").append(gitCommit).append("]");
             }
         if (!gitStatus.isEmpty())
             {
