@@ -86,7 +86,7 @@ env:
   run_manual_tests: ${{ github.event.inputs.run_manual_tests != 'false' }}
   run_manual_tests_parallel: ${{ github.event.inputs.run_manual_tests_parallel != 'false' }}
 
-  java_version: 21
+  # java_version will be set dynamically from xdk.properties in each job
   java_distribution: temurin
   gradle_version: 8.14.2
 
@@ -148,10 +148,14 @@ jobs:
         with:
           show-progress: true
 
+      - name: Get Java version from XDK properties
+        id: java-version
+        uses: ./.github/actions/get-java-version
+
       - name: Setup XVM Build Environment
         uses: ./.github/actions/setup-xvm-build
         with:
-          java-version: ${{ env.java_version }}
+          java-version: ${{ steps.java-version.outputs.java-version }}
           java-distribution: ${{ env.java_distribution }}
           gradle-version: ${{ env.gradle_version }}
           cache-read-only: false
@@ -290,10 +294,14 @@ jobs:
       - name: Fetch Sources
         uses: actions/checkout@v4
 
+      - name: Get Java version from XDK properties
+        id: java-version
+        uses: ./.github/actions/get-java-version
+
       - name: Setup XVM Build Environment
         uses: ./.github/actions/setup-xvm-build
         with:
-          java-version: ${{ env.java_version }}
+          java-version: ${{ steps.java-version.outputs.java-version }}
           java-distribution: ${{ env.java_distribution }}
           gradle-version: ${{ env.gradle_version }}
           cache-read-only: true  # Read-only since build-verify already populated cache
@@ -409,11 +417,15 @@ jobs:
       - name: Fetch Sources
         uses: actions/checkout@v4
 
+      - name: Get Java version from XDK properties
+        id: java-version
+        uses: ./.github/actions/get-java-version
+
       # Set up Java and Gradle to warm cache for Docker build
       - name: Setup XVM Build Environment
         uses: ./.github/actions/setup-xvm-build
         with:
-          java-version: ${{ env.java_version }}
+          java-version: ${{ steps.java-version.outputs.java-version }}
           java-distribution: ${{ env.java_distribution }}
           gradle-version: ${{ env.gradle_version }}
           cache-read-only: true  # Read-only since build-verify already populated cache
