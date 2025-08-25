@@ -136,6 +136,31 @@ Create `.devcontainer/devcontainer.json` in your project:
 }
 ```
 
+**IntelliJ IDEA Docker Integration:**
+
+IntelliJ IDEA provides Docker integration but doesn't use devcontainers directly. Instead, you can:
+
+1. **Docker Plugin**: Install the Docker plugin in IntelliJ IDEA
+2. **Docker Run Configuration**: Create a run configuration using the XDK Docker image:
+   - Image: `xtclang/xdk:latest`
+   - Bind mounts: Map your project directory to `/workspace`
+   - Working directory: `/workspace`
+3. **Docker Compose** (alternative): Create a `docker-compose.yml`:
+   ```yaml
+   version: '3.8'
+   services:
+     xdk-dev:
+       image: xtclang/xdk:latest
+       volumes:
+         - .:/workspace
+       working_dir: /workspace
+       stdin_open: true
+       tty: true
+   ```
+   Then use IntelliJ's Docker Compose integration to run and attach to the container.
+
+**Note**: IntelliJ's Docker support is more manual compared to VSCode's seamless devcontainer experience, but provides similar containerized development capabilities.
+
 ### Maven Artifacts and IDE Integration
 
 **For Most Developers:** Use the XTC Gradle plugin in your IDE instead of command-line tools:
