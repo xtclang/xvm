@@ -703,6 +703,10 @@ jobs:
         id: version
         uses: ./.github/actions/get-xdk-version
 
+      - name: Get Java version
+        id: java
+        uses: ./.github/actions/get-java-version
+
       - name: Download XDK distribution
         uses: actions/download-artifact@v4
         with:
@@ -720,5 +724,6 @@ jobs:
         with:
           xdk-version: ${{ steps.version.outputs.version }}
           commit-sha: ${{ github.sha }}
+          java-version: ${{ steps.java.outputs.java-version }}
           xdk-zip-name: "xdk-${{ steps.version.outputs.version }}.zip"
           homebrew-tap-token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
