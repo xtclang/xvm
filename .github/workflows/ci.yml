@@ -727,15 +727,15 @@ jobs:
       - name: Create Snapshot Release
         uses: ./.github/actions/create-snapshot-release
         with:
-          xdk-version: ${{ steps.version.outputs.version }}
-          commit-sha: ${{ github.sha }}
-          xdk-zip-name: "xdk-${{ steps.version.outputs.version }}.zip"
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          xdk_version: ${{ steps.version.outputs.version }}
+          commit_sha: ${{ github.sha }}
+          xdk_zip_name: "xdk-${{ steps.version.outputs.version }}.zip"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update Homebrew Tap
         uses: ./.github/actions/update-homebrew-tap
         with:
-          xdk-version: ${{ steps.version.outputs.version }}
-          commit-sha: ${{ github.sha }}
+          xdk_version: ${{ steps.version.outputs.version }}
+          commit_sha: ${{ github.sha }}
           java_version: ${{ steps.java_version.outputs.java_version }}
-          xdk-zip-name: "xdk-${{ steps.version.outputs.version }}.zip"
-          homebrew-tap-token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          xdk_zip_name: "xdk-${{ steps.version.outputs.version }}.zip"
+          homebrew_tap_token: ${{ secrets.HOMEBREW_TAP_TOKEN }}

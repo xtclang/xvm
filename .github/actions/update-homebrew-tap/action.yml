@@ -1,19 +1,19 @@
 name: 'Update Homebrew Tap'
 description: 'Updates the XVM Homebrew tap with a new XDK release'
 inputs:
-  xdk-version:
+  xdk_version:
     description: 'XDK version (e.g., 0.4.4-SNAPSHOT)'
     required: true
-  commit-sha:
+  commit_sha:
     description: 'Full commit SHA for version qualification'
     required: true
   java_version:
     description: 'Java version for Homebrew dependency (e.g., 21, 24)'
     required: true
-  xdk-zip-name:
+  xdk_zip_name:
     description: 'Name of the XDK zip file to upload'
     required: true
-  homebrew-tap-token:
+  homebrew_tap_token:
     description: 'GitHub token with access to homebrew-xvm repo'
     required: true
 
@@ -24,17 +24,17 @@ runs:
       shell: bash
       run: |
         # Clone the homebrew tap repo
-        git clone https://oauth2:${{ inputs.homebrew-tap-token }}@github.com/xtclang/homebrew-xvm.git tap
+        git clone https://oauth2:${{ inputs.homebrew_tap_token }}@github.com/xtclang/homebrew-xvm.git tap
         cd tap && git checkout lagergren/brew-tap
         
         # Use commit SHA for dynamic versioning - ensures brew update works
-        DYNAMIC_VERSION="${{ inputs.xdk-version }}.$(echo ${{ inputs.commit-sha }} | cut -c1-8)"
+        DYNAMIC_VERSION="${{ inputs.xdk_version }}.$(echo ${{ inputs.commit_sha }} | cut -c1-8)"
         
         # Create GitHub release URL for the snapshot zip file
-        RELEASE_URL="https://github.com/xtclang/xvm/releases/download/xdk-latest-snapshot/${{ inputs.xdk-zip-name }}"
+        RELEASE_URL="https://github.com/xtclang/xvm/releases/download/xdk-latest-snapshot/${{ inputs.xdk_zip_name }}"
         
         # Get SHA256 from the existing zip file
-        SHA256=$(sha256sum ../${{ inputs.xdk-zip-name }} | cut -d' ' -f1)
+        SHA256=$(sha256sum ../${{ inputs.xdk_zip_name }} | cut -d' ' -f1)
         
         # Update the Homebrew formula
         cat > Formula/xdk-latest.rb << EOF
@@ -72,7 +72,7 @@ runs:
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         git add Formula/xdk-latest.rb
-        git commit -m "Update XDK to $DYNAMIC_VERSION (commit: $(echo ${{ inputs.commit-sha }} | cut -c1-8))"
+        git commit -m "Update XDK to $DYNAMIC_VERSION (commit: $(echo ${{ inputs.commit_sha }} | cut -c1-8))"
         git push
         
         echo "✅ Homebrew tap updated to version $DYNAMIC_VERSION"
