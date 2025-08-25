@@ -113,6 +113,16 @@ docker run --rm -v $(pwd):/workspace xtclang/xdk:latest xec /workspace/MyModule
 docker run -it --rm -v $(pwd):/workspace xtclang/xdk:latest bash
 ```
 
+**Platform Support**: The XDK Docker image is a Linux-based multiplatform image supporting both `linux/amd64` and `linux/arm64` architectures. This covers all modern hardware:
+
+- **macOS**: Runs natively on Apple Silicon (arm64) and Intel Macs (amd64)
+- **Windows**: Runs via WSL2 on both Intel/AMD (amd64) and ARM processors 
+- **Linux**: Runs natively on x86_64 and ARM64 systems
+
+Docker automatically selects the native platform matching your CPU architecture for optimal performance. In rare cases where native support isn't available, Docker will use QEMU emulation (which will be slower but functional).
+
+**Podman Compatibility**: You can use Podman as a drop-in replacement for Docker - just replace `docker` with `podman` in any of the above commands.
+
 **VSCode Devcontainer:**
 
 Create `.devcontainer/devcontainer.json` in your project:
