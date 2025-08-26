@@ -41,6 +41,10 @@ public class ImmutableTypeConstant
             {
             throw new IllegalArgumentException("type required");
             }
+        if (!constType.isSingleDefiningConstant())
+            {
+            throw new IllegalArgumentException("immutability cannot be specified for a relational type");
+            }
 
         m_constType = constType;
         }
@@ -139,6 +143,26 @@ public class ImmutableTypeConstant
         return constResolved == constOriginal
                 ? this
                 : constResolved.freeze();
+        }
+
+    @Override
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
+                                             TypeConstant typeTarget, IdentityConstant idCtx)
+        {
+        return getUnderlyingType()
+                .resolveAutoNarrowing(pool, fRetainParams, typeTarget, idCtx).freeze();
+        }
+
+    @Override
+    protected Relation calculateRelationToLeft(TypeConstant typeLeft)
+        {
+        return getUnderlyingType().calculateRelationToLeft(typeLeft.removeImmutable());
+        }
+
+    @Override
+    protected Relation calculateRelationToRight(TypeConstant typeRight)
+        {
+        return getUnderlyingType().calculateRelationToRight(typeRight);
         }
 
 

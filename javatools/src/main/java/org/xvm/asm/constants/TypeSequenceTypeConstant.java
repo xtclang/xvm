@@ -115,7 +115,7 @@ public class TypeSequenceTypeConstant
     @Override
     public boolean isImmutable()
         {
-        return true;
+        return false;
         }
 
     @Override

@@ -444,7 +444,7 @@ public class TupleExpression
             ArrayConstant constVal = null;
             if (aFieldVals != null)
                 {
-                typeResult = pool.ensureImmutableTypeConstant(typeResult);
+                typeResult = typeResult.freeze();
                 constVal   = pool.ensureTupleConstant(typeResult, aFieldVals);
                 }
 

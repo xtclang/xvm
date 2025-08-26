@@ -713,6 +713,18 @@ public class IntersectionTypeConstant
         TypeConstant thisRight1 = getUnderlyingType();
         TypeConstant thisRight2 = getUnderlyingType2();
 
+        // if any of the right types is immutable, the entire intersection is immutable;
+        // don't discard that fact; for example:
+        // (immutable A) + B should be assignable to (immutable B)
+        if (thisRight1.isImmutable())
+            {
+            thisRight2 = thisRight2.freeze();
+            }
+        if (thisRight2.isImmutable())
+            {
+            thisRight1 = thisRight1.freeze();
+            }
+
         Relation rel1 = thisRight1.calculateRelation(typeLeft);
         Relation rel2 = thisRight2.calculateRelation(typeLeft);
         return rel1.bestOf(rel2);

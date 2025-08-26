@@ -109,6 +109,12 @@ public class DifferenceTypeConstant
         }
 
     @Override
+    public TypeConstant removeImmutable()
+        {
+        return cloneRelational(getConstantPool(), m_constType1.removeImmutable(), m_constType2);
+        }
+
+    @Override
     public TypeConstant freeze()
         {
         // the immutability of the second type is irrelevant
@@ -450,18 +456,21 @@ public class DifferenceTypeConstant
             TypeConstant typeCR   = ((FormalConstant) m_constType1.getDefiningConstant()).getConstraintType();
             TypeConstant typeSubR = typeCR.andNot(getConstantPool(), m_constType2);
 
-            if (typeLeft.isFormalType())
+            if (typeSubR != null)
                 {
-                // typeLeft is a formal type FL with a constraint of CL;
-                // the logic below implies that if (CR - X) is assignable to CL then (FR - X) is
-                // assignable to FL
-                TypeConstant typeCL = ((FormalConstant) typeLeft.getDefiningConstant()).getConstraintType();
-                return typeSubR.calculateRelation(typeCL);
-                }
-            else
-                {
-                // if (CR - X) is assignable to L then (FR - X) is assignable to L
-                return typeSubR.calculateRelation(typeLeft);
+                if (typeLeft.isFormalType())
+                    {
+                    // typeLeft is a formal type FL with a constraint of CL;
+                    // the logic below implies that if (CR - X) is assignable to CL then (FR - X) is
+                    // assignable to FL
+                    TypeConstant typeCL = ((FormalConstant) typeLeft.getDefiningConstant()).getConstraintType();
+                    return typeSubR.calculateRelation(typeCL);
+                    }
+                else
+                    {
+                    // if (CR - X) is assignable to L then (FR - X) is assignable to L
+                    return typeSubR.calculateRelation(typeLeft);
+                    }
                 }
             }
 

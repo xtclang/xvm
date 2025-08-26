@@ -2307,8 +2307,7 @@ public abstract class ClassTemplate
 
         if (sName.startsWith("immutable "))
             {
-            return pool.ensureImmutableTypeConstant(
-                    getClassType(sName.substring("immutable ".length()), template));
+            return getClassType(sName.substring("immutable ".length()), template).freeze();
             }
 
         if (sName.startsWith("@"))

@@ -235,7 +235,8 @@ public abstract class TypeConstant
      */
     public boolean isImmutableOnly()
         {
-        return isImmutable() && getUnderlyingType().equals(getConstantPool().typeObject());
+        return isImmutabilitySpecified() &&
+                getUnderlyingType().equals(getConstantPool().typeObject());
         }
 
     /**
@@ -951,13 +952,11 @@ public abstract class TypeConstant
         // if T1 == (immutable T0) and T2.isA(T0) then (T1 + T2) => immutable T2
         if (this instanceof ImmutableTypeConstant && that.isA(this.getUnderlyingType()))
             {
-            assert !that.isImmutable();
-            return pool.ensureImmutableTypeConstant(that);
+            return that.freeze();
             }
         if (that instanceof ImmutableTypeConstant && this.isA(that.getUnderlyingType()))
             {
-            assert !this.isImmutable();
-            return pool.ensureImmutableTypeConstant(this);
+            return this.freeze();
             }
 
         // if T1 == T0<E> and T2.isA(T0) then (T1 + T2) => T2<E + EC2>
@@ -1094,7 +1093,7 @@ public abstract class TypeConstant
                 TypeConstant typeUnion = typeThis.union(pool, typeThat);
                 if (typeUnion.isSingleUnderlyingClass(true))
                     {
-                    return pool.ensureImmutableTypeConstant(typeUnion);
+                    return typeUnion.freeze();
                     }
                 // atm, we don't allow (immutable (T1 | T2))
                 }
@@ -1454,8 +1453,8 @@ public abstract class TypeConstant
             }
 
         TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(
-                                                    pool, fRetainParams, typeTarget, idCtx);
+        TypeConstant constResolved = constOriginal.
+                resolveAutoNarrowing(pool, fRetainParams, typeTarget, idCtx);
         return constResolved == constOriginal
                 ? this
                 : cloneSingle(pool, constResolved);

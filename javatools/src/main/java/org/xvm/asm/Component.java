@@ -3276,11 +3276,12 @@ public abstract class Component
 
                         if (typeContrib.isAccessSpecified())
                             {
-                            typeContribNew = pool.ensureAccessTypeConstant(typeContribNew, typeContrib.getAccess());
+                            typeContribNew = pool.ensureAccessTypeConstant(typeContribNew,
+                                    typeContrib.getAccess());
                             }
                         if (typeContrib.isImmutabilitySpecified())
                             {
-                            typeContribNew = pool.ensureImmutableTypeConstant(typeContribNew);
+                            typeContribNew = typeContribNew.freeze();
                             }
                         typeContrib = typeContribNew;
                         fNormalize  = false;

@@ -900,7 +900,7 @@ public class NameExpression
                 }
             else
                 {
-                String sLabel = ((NameExpression) left).getName();
+                String sLabel = exprName.getName();
                 log(errs, Severity.ERROR, Compiler.LABEL_VARIABLE_ILLEGAL, sVar, sLabel);
                 return finishValidation(ctx, typeRequired, null, TypeFit.NoFit, null, errs);
                 }
