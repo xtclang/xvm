@@ -36,9 +36,9 @@ val xdkEcstasyResourcesConsumer by configurations.registering {
 }
 
 dependencies {
-    implementation(libs.javatools.utils)
+    implementation(project(":utils"))
     implementation(libs.jline)
-    testImplementation(libs.javatools.utils)
+    testImplementation(project(":utils"))
     // Note: We don't add this to sourceSets to avoid IntelliJ seeing cross-module paths
     xdkEcstasyResourcesConsumer(libs.xdk.ecstasy)
 }
@@ -111,53 +111,15 @@ tasks.processResources {
     dependsOn(copyEcstasyResources, generateBuildInfo)
 }
 
-/**
- * Sync (not copy) all dependencies from the compile classpath. This is to prevent
- * older versions of dependencies with different file names (due to version changed),
- * still being in the build output, as we have not cleaned.
- */
-val syncDependencies by tasks.registering(Sync::class) {
-    val taskPrefix = "[${project.name}:syncDependencies]"
-    from(configurations.compileClasspath) {
-        include("**/*.jar")
-    }
-    into(layout.buildDirectory.dir("javatools-dependencies"))
-    doLast {
-        outputs.files.asFileTree.forEach {
-            logger.info("$taskPrefix Resolved javatools dependency file: $it")
-        }
-    }
-}
-
 val jar by tasks.existing(Jar::class) {
-    inputs.property("manifestSemanticVersion") {
-        semanticVersion.toString()
-    }
-    inputs.property("manifestVersion") {
-        version
-    }
+    inputs.property("manifestSemanticVersion") { semanticVersion.toString() }
+    inputs.property("manifestVersion") { version }
 
-    /*
-     * This "from" statement will copy everything in the dependencies section, and our resources
-     * to the javatools-<version>.jar. In that respect it's a fat jar.
-     *
-     * The "copyDependencies" task will output a build directory containing all our dependencies,
-     * which are currently just javatools-utils-<version>.jar and jline.
-     *
-     * Map semantics guarantee that we resolve the "from" input only during the execution phase.
-     * We take the destination directory, known to be an output of copyDependencies, and a
-     * single directory. This is implicit from the "into" configuration of that task.
-     * Then we lazily (with "map") assume that every file in the destination tree is a jar/zip file
-     * (we will break if it isn't) and unpack that into the javatools jar that is being built.
-     *
-     * TODO: an alternative solution would be to leave the run-time dependent libraries "as is" and
-     *      use the "Class-Path" attribute of the manifest to point to them.
-     */
-    from(syncDependencies.map { fileTree(it.destinationDir).map { jarFile ->
-        logger.info("$prefix Resolving dependency: $jarFile for $version")
-        zipTree(jarFile)
-    }})
+    // Create fat jar: utils subproject + external dependencies (not project dependencies)
+    from(project(":utils").sourceSets["main"].output)  // utils subproject classes
+    from({ configurations.runtimeClasspath.get().filter { !it.name.contains("utils") }.map { zipTree(it) } })  // external deps only
 
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE  // handle any remaining duplicates safely
     archiveBaseName = "javatools"
 
     manifest {
@@ -221,7 +183,7 @@ val sanityCheckJar by tasks.registering {
             listOf(
                 "implicit.x",                       // verify the implicits are in the jar
                 "org/xvm/tool/Compiler.class",      // verify the javatools package inclusion
-                "org/xvm/util/Severity.class",      // verify the javatools_utils package inclusion
+                "org/xvm/util/Severity.class",      // verify the utils subproject package inclusion
                 "org/jline/reader/LineReader.class" // verify the jline library inclusion
             ),
             expectedEntryCount
