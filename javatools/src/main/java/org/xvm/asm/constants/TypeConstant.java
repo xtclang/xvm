@@ -6076,24 +6076,15 @@ public abstract class TypeConstant
             return Relation.INCOMPATIBLE;
             }
 
-        // check immutability modifiers
-        if (typeLeft.isImmutabilitySpecified())
+        // check immutability, but exclude formal type parameters and dynamic types that are handled
+        // quite specially in other assignability related methods. See for example:
+        // TypeConstant.calculateRelationToContribution(), ClassStructure.calculateAssignability(),
+        // TerminalTypeConstant.calculateRelationToLeft()
+        if (typeLeft.isImmutable() && !typeRight.isImmutable() &&
+                !typeLeft.isTypeParameter() && !typeLeft.isDynamicType())
             {
-            relation = typeRight.isImmutable()
-                    ? typeRight.removeImmutable().calculateRelation(typeLeft.removeImmutable())
-                    : Relation.INCOMPATIBLE;
-            mapRelations.put(typeLeft, relation);
-            return relation;
-            }
-
-        if (typeRight.isImmutabilitySpecified())
-            {
-            // even though we know that typeLeft doesn't specify immutability directly, relational
-            // types may contain components that do
-            relation = typeRight.removeImmutable().calculateRelation(typeLeft.removeImmutable());
-
-            mapRelations.put(typeLeft, relation);
-            return relation;
+            mapRelations.put(typeLeft, Relation.INCOMPATIBLE);
+            return Relation.INCOMPATIBLE;
             }
 
         // if either side is relational, defer the access test; it will come back for the underlying
