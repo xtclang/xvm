@@ -374,11 +374,11 @@ public class xRTType
         // hArg may be a Type, a Method, or a Property
         if (hArg instanceof TypeHandle hTypeThat)
             {
-            if (hTypeThis.getUnsafeDataType().isImmutableOnly())
+            if (hTypeThis.getUnsafeDataType().isOnlyImmutable())
                 {
                 return ensureImmutable(frame, hTypeThat, iReturn);
                 }
-            if (hTypeThat.getUnsafeDataType().isImmutableOnly())
+            if (hTypeThat.getUnsafeDataType().isOnlyImmutable())
                 {
                 return ensureImmutable(frame, hTypeThis, iReturn);
                 }

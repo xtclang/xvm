@@ -231,12 +231,11 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return true iff this TypeConstant refers to an immutable Object type
+     * @return true iff this TypeConstant refers to an "immutable Object" type
      */
-    public boolean isImmutableOnly()
+    public boolean isOnlyImmutable()
         {
-        return isImmutabilitySpecified() &&
-                getUnderlyingType().equals(getConstantPool().typeObject());
+        return false;
         }
 
     /**

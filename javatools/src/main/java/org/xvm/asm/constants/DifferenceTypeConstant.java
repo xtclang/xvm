@@ -73,7 +73,7 @@ public class DifferenceTypeConstant
             return typeDiff.andNotInternal(type2);
             }
 
-        if (type1.isImmutabilitySpecified() && type2.isImmutableOnly())
+        if (type1.isImmutabilitySpecified() && type2.isOnlyImmutable())
             {
             // ((immutable X) - immutable) -> X
             return type1.removeImmutable();
