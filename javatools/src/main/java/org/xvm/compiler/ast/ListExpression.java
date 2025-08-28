@@ -261,7 +261,7 @@ public class ListExpression
         typeActual = pool.ensureParameterizedTypeConstant(typeActual, typeElement);
         if (typeElement.isImmutable() || typeElement.isService())
             {
-            typeActual = pool.ensureImmutableTypeConstant(typeActual);
+            typeActual = typeActual.freeze();
             }
 
         if (cExprs > 0)

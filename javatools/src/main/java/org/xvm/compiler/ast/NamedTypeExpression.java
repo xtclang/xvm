@@ -458,7 +458,7 @@ public class NamedTypeExpression
 
         if (immutable != null)
             {
-            type = pool.ensureImmutableTypeConstant(type);
+            type = type.freeze();
             }
 
         return type;
@@ -807,7 +807,7 @@ public class NamedTypeExpression
 
         if (immutable != null)
             {
-            type = pool.ensureImmutableTypeConstant(type);
+            type = type.freeze();
             }
 
         TypeConstant typeType = type.getType();

@@ -311,12 +311,10 @@ public class xConst
                                 }
                             else
                                 {
-                                TypeConstant typeExpected = frameCaller.poolContext().
-                                    ensureImmutableTypeConstant(typeOld);
                                 return frameCaller.raiseException(
                                     "The freeze() result type for the \"" + field.getName() +
                                     "\" field was illegally changed; \"" +
-                                    typeExpected.getValueString() + "\" expected, \"" +
+                                    typeOld.freeze().getValueString() + "\" expected, \"" +
                                     typeNew.getValueString() + "\" returned");
                                 }
                             }

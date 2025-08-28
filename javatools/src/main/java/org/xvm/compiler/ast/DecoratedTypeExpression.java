@@ -62,7 +62,7 @@ public class DecoratedTypeExpression
         return switch (keyword.getId())
             {
             case IMMUTABLE ->
-                pool().ensureImmutableTypeConstant(type.ensureTypeConstant(ctx, errs));
+                type.ensureTypeConstant(ctx, errs).freeze();
 
             case CONDITIONAL ->
                 // TODO

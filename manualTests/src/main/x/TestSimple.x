@@ -1,21 +1,16 @@
-
 module TestSimple {
     @Inject Console console;
 
     void run() {
-        new Test().report();
+        Int[] ints = new Int[];
+        ints += 17;
+
+        assert ints.mutability == Mutable;
+        assert !ints.is(Const); // this used to throw
     }
 
-    class Base {
-        Object baseValue.get() = this;
-    }
+    interface DBMap<Key extends immutable Const, Value extends immutable Const> {}
 
-    class Test extends Base {
-        // this line below used to be allowed to compile and then would NPE at run-time
-        Base derivedValue = baseValue.as(Base);
-
-        void report() {
-            console.print(derivedValue);
-        }
-    }
+    // this used to be allowed to compile without "immutable" modifier
+    mixin FileChunkIds into DBMap<String, immutable Int[]> {}
 }
