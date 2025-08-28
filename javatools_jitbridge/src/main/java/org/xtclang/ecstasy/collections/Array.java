@@ -66,8 +66,8 @@ import org.xtclang.ecstasy.xType;
 public abstract class Array<Element extends xObj>
         extends xObj {
 
-    public Array(long containerId) {
-        super(containerId);
+    public Array(Ctx ctx) {
+        super(ctx);
     }
 
     // ----- fields --------------------------------------------------------------------------------

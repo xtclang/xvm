@@ -33,7 +33,6 @@ import org.xvm.util.Severity;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 
 import static org.xvm.javajit.Builder.CD_xObj;
-
 import static org.xvm.javajit.JitFlavor.*;
 
 import static org.xvm.util.Handy.appendList;

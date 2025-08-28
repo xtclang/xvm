@@ -9,8 +9,8 @@ import org.xvm.javajit.Ctx;
  */
 public abstract class xService extends xObj implements Service {
 
-    public xService(long containerId) {
-        super(containerId);
+    public xService(Ctx ctx) {
+        super(ctx);
     }
 
     @Override

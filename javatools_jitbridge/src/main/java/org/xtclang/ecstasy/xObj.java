@@ -5,9 +5,9 @@ import org.xvm.javajit.Ctx;
 import org.xvm.javajit.Xvm;
 
 public abstract class xObj implements org.xtclang.ecstasy.Object {
-    public xObj(long containerId) {
+    public xObj(Ctx ctx) {
         super();
-        $meta = containerId;
+        $meta = ctx == null ? -1 : ctx.container.id;
     }
 
     /**

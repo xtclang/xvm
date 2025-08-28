@@ -54,8 +54,8 @@ public class String
      * @param containerId  the container within which the string is being created
      * @param s            the Java String
      */
-    public String(long containerId, java.lang.String s) {
-        super(containerId);
+    public String(Ctx ctx, java.lang.String s) {
+        super(ctx);
 
         require("s", s);
         next = null;
@@ -144,9 +144,9 @@ public class String
      * @param containerId  the container within which the string is being created
      * @param utf8         UTF-8 data in a byte array
      */
-    public String(long containerId, byte[] utf8) {
+    public String(Ctx ctx, byte[] utf8) {
         // TODO
-        this(containerId, null, false, 0, 0, 0, null);
+        this(ctx, null, false, 0, 0, 0, null);
     }
 
     /**
@@ -160,8 +160,8 @@ public class String
      * @param end
      * @param next
      */
-    String(long containerId, long[] data, boolean unicode, long hash, int start, int end, String next) {
-        super(containerId);
+    String(Ctx ctx, long[] data, boolean unicode, long hash, int start, int end, String next) {
+        super(ctx);
         this.data       = data;
         this.unicode    = unicode;
         this.hash       = hash;
@@ -207,7 +207,7 @@ public class String
     /**
      * An empty string. All empty strings are identical.
      */
-    public static final String EmptyString = new String(0, new long[0], true, 0, 0, 0, null);
+    public static final String EmptyString = new String(null, new long[0], true, 0, 0, 0, null);
 
     // ----- xStr API ------------------------------------------------------------------------------
 
@@ -311,7 +311,7 @@ public class String
      */
     public static String of(Ctx ctx, java.lang.String s) {
         // TODO: intern Java style?
-        return new String(ctx.container.id, s);
+        return new String(ctx, s);
     }
 
     private StringBuilder toStringContinued(StringBuilder buf) {

@@ -7,7 +7,7 @@ public class Nullable
         extends xEnum {
 
     private Nullable() {
-        super(-1);
+        super(null);
     }
 
     @Override

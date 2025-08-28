@@ -76,7 +76,8 @@ public class JitConnector
             TypeSystemLoader loader = ts.loader;
             Class            clz    = loader.loadClass(typeName);
 
-            Object module = clz.getDeclaredConstructor(Long.TYPE).newInstance(-1L);
+            Ctx    ctx    = Ctx.get();
+            Object module = clz.getDeclaredConstructor(Ctx.class).newInstance(ctx);
 
             // dump the generated classes
             // xvm.nativeTypeSystem.loader.dump();
@@ -85,10 +86,10 @@ public class JitConnector
             Object result;
             if (asArg == null || asArg.length == 0) {
                 Method method = clz.getMethod("run", Ctx.class);
-                result = method.invoke(module, Ctx.get());
+                result = method.invoke(module, ctx);
             } else {
                 Method method = clz.getMethod("run", Ctx.class, String.class.arrayType());
-                result = method.invoke(module, Ctx.get(), asArg); // TODO create xStr args
+                result = method.invoke(module, ctx, asArg); // TODO create xStr args
             }
             if (result instanceof Long lr) {
                 this.result = lr;

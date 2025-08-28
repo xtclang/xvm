@@ -23,7 +23,7 @@ public class TerminalConsole
         implements Console {
 
     public TerminalConsole() {
-        super(-1);
+        super(Ctx.get());
     }
 
     @Override
@@ -65,10 +65,10 @@ public class TerminalConsole
 
         try {
             if (suppressEcho) {
-                return new String($ctx.container.id,  xTerminalConsole.CONSOLE_IN.readLine());
+                return new String($ctx,  xTerminalConsole.CONSOLE_IN.readLine());
             } else {
                 char[] achLine = xTerminalConsole.CONSOLE.readPassword();
-                return new String($ctx.container.id, new java.lang.String(achLine));
+                return new String($ctx, new java.lang.String(achLine));
             }
         } catch (IOException e) {
             throw new Exception(e); // TODO: IOException

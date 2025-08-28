@@ -6,7 +6,7 @@ package org.xtclang.ecstasy;
 public class Boolean
         extends xEnum {
     private Boolean(boolean value) {
-        super(-1);
+        super(null);
         $value = value;
     }
 

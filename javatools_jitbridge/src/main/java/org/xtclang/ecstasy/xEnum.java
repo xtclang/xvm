@@ -1,11 +1,13 @@
 package org.xtclang.ecstasy;
 
+import org.xvm.javajit.Ctx;
+
 /**
  * All Ecstasy `enum` types must extend this class.
  */
 public abstract class xEnum extends xObj implements Enum {
-    public xEnum(long containerId) {
-        super(containerId);
+    public xEnum(Ctx ctx) {
+        super(ctx);
     }
 
     @Override

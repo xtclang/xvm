@@ -13,7 +13,7 @@ public class Int64 extends xConst {
      * @param value  the 64-bit signed integer value
      */
     public Int64(long value) {
-        super(-1);
+        super(null);
         $value = value;
     }
 

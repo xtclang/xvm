@@ -11,8 +11,8 @@ import org.xtclang.ecstasy.numbers.Int64;
  */
 public class Range<Element extends xObj> extends xConst {
 
-    public Range(long containerId) {
-        super(containerId);
+    public Range(Ctx ctx) {
+        super(ctx);
     }
 
     // ----- primitive single-long encoding --------------------------------------------------------

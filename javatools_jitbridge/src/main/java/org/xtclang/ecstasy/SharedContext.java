@@ -1,16 +1,18 @@
 package org.xtclang.ecstasy;
 
+import org.xvm.javajit.Ctx;
+
 /**
  * Native shell for `ecstasy.SharedContext`.
  */
 public class SharedContext extends xConst {
-    public SharedContext(long containerId) {
-        super(containerId);
+    public SharedContext(Ctx ctx) {
+        super(ctx);
     }
 
     static public class Token extends xConst {
-        public Token(long containerId, SharedContext $outer) {
-            super(containerId);
+        public Token(Ctx ctx, SharedContext $outer) {
+            super(ctx);
             this.$outer = $outer;
         }
 

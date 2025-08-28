@@ -13,6 +13,7 @@ import java.lang.constant.MethodTypeDesc;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.Component.Contribution;
@@ -39,6 +40,7 @@ import org.xvm.javajit.TypeSystem;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
+import static java.lang.constant.ConstantDescs.INIT_NAME;
 
 /**
  * Generic Java class builder.
@@ -50,16 +52,17 @@ public class CommonBuilder
 
         ConstantPool pool = typeSystem.pool();
 
-        this.typeSystem = typeSystem;
-        this.typeInfo   = pool.ensureAccessTypeConstant(type, Access.PRIVATE).ensureTypeInfo();
-        this.structInfo = pool.ensureAccessTypeConstant(type, Access.STRUCT).ensureTypeInfo();
-        this.thisId     = typeInfo.getClassStructure().getIdentityConstant();
-
+        this.typeSystem  = typeSystem;
+        this.typeInfo    = pool.ensureAccessTypeConstant(type, Access.PRIVATE).ensureTypeInfo();
+        this.structInfo  = pool.ensureAccessTypeConstant(type, Access.STRUCT).ensureTypeInfo();
+        this.classStruct = typeInfo.getClassStructure();
+        this.thisId      = classStruct.getIdentityConstant();
     }
 
     protected final TypeSystem       typeSystem;
     protected final TypeInfo         typeInfo;
     protected final TypeInfo         structInfo;
+    protected final ClassStructure   classStruct;
     protected final IdentityConstant thisId;
 
     @Override
@@ -77,22 +80,28 @@ public class CommonBuilder
     }
 
     /**
+     * Compute the ClassDesc for the super class.
+     */
+    protected ClassDesc getSuperDesc() {
+        TypeConstant superType = typeInfo.getExtends();
+        return superType == null
+            ? CD_xObj
+            : ClassDesc.of(typeSystem.ensureJitClassName(superType));
+    }
+
+    /**
      * Assemble the class specific info for the "Impl" shape.
      */
     protected void assembleImplClass(String className, ClassBuilder classBuilder) {
         int flags = ClassFile.ACC_PUBLIC;
 
-        switch (typeInfo.getClassStructure().getFormat()) {
-            case CLASS, CONST, SERVICE, MIXIN, ENUMVALUE:
+        switch (classStruct.getFormat()) {
+            case CLASS, CONST, SERVICE, ENUMVALUE:
                 flags |= ClassFile.ACC_SUPER; // see JLS 4.1
-                TypeConstant superType = typeInfo.getExtends();
-                if (superType != null) {
-                    classBuilder.withSuperclass(
-                        ClassDesc.of(typeSystem.ensureJitClassName(superType)));
-                }
+                classBuilder.withSuperclass(getSuperDesc());
                 break;
 
-            case INTERFACE, ENUM:
+            case INTERFACE, MIXIN, ENUM:
                 flags |= ClassFile.ACC_INTERFACE | ClassFile.ACC_ABSTRACT;
                 break;
 
@@ -109,8 +118,7 @@ public class CommonBuilder
      * Assemble interfaces for the "Impl" shape.
      */
     protected void assembleImplInterfaces(ClassBuilder classBuilder) {
-        boolean isInterface =
-            typeInfo.getClassStructure().getFormat() == Component.Format.INTERFACE;
+        boolean isInterface = classStruct.getFormat() == Component.Format.INTERFACE;
         for (Contribution contrib : typeInfo.getContributionList()) {
             switch (contrib.getComposition()) {
                 case Implements:
@@ -147,11 +155,21 @@ public class CommonBuilder
             }
         }
 
-        if (!constProps.isEmpty()) {
+        boolean isSingleton = classStruct.isSingleton();
+        if (isSingleton) {
+            // public static final $INSTANCE;
+            classBuilder.withField(Instance, ClassDesc.of(className),
+                ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL);
+        }
+
+        if (!constProps.isEmpty() || isSingleton) {
             assembleStaticInitializer(className, classBuilder, constProps);
         }
-        if (!initProps.isEmpty()) {
+
+        switch (classStruct.getFormat()) {
+        case CLASS, CONST, SERVICE, MODULE, ENUMVALUE:
             assembleInitializer(className, classBuilder, initProps);
+            break;
         }
 
         for (PropertyInfo prop : typeInfo.getProperties().values()) {
@@ -234,19 +252,37 @@ public class CommonBuilder
                     } else {
                         throw new UnsupportedOperationException("Static field initializer");
                     }
-                code.labelBinding(endScope);
-            }
-        }));
+                }
+
+                if (classStruct.isSingleton()) {
+                    // $INSTANCE = Singleton.$new($ctx);
+                    invokeDefaultConstructor(className, code);
+                    code.putstatic(CD_this, Instance, CD_this);
+                }
+                code.labelBinding(endScope)
+                    .return_();
+            }));
     }
 
     /**
-     * Add fields initialization to the instance initializer {@code void $init(Ctx ctx)}.
+     * Call the default constructor.
+     */
+    protected void invokeDefaultConstructor(String className, CodeBuilder code) {
+        ClassDesc CD_this = ClassDesc.of(className);
+        code.new_(CD_this)
+            .dup()
+            .aload(0) // $ctx
+            .invokespecial(CD_this, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx));
+   }
+
+    /**
+     * Add fields initialization to the Java constructor {@code void <init>(Ctx ctx)}.
      */
     protected void assembleInitializer(String className, ClassBuilder classBuilder,
-                                        List<PropertyInfo> props) {
+                                       List<PropertyInfo> props) {
         ClassDesc CD_this = ClassDesc.of(className);
 
-        classBuilder.withMethod(Initializer,
+        classBuilder.withMethod(INIT_NAME,
             MD_Initializer,
             ClassFile.ACC_PUBLIC,
             methodBuilder -> methodBuilder.withCode(code -> {
@@ -254,7 +290,13 @@ public class CommonBuilder
                 Label endScope   = code.newLabel();
                 code.labelBinding(startScope);
 
-                code.localVariable(0, "$ctx", CD_Ctx, startScope, endScope);
+                int ctxSlot = code.parameterSlot(0);
+                code.localVariable(ctxSlot, "$ctx", CD_Ctx, startScope, endScope);
+
+                // super($ctx);
+                code.aload(0)
+                    .aload(ctxSlot)
+                    .invokespecial(getSuperDesc(), INIT_NAME, MD_Initializer);
 
                 // add field initialization
                 for (PropertyInfo prop : props) {
@@ -284,10 +326,11 @@ public class CommonBuilder
                     } else {
                         throw new UnsupportedOperationException("Field initializer");
                     }
+                }
                 code.labelBinding(endScope)
                     .return_();
-            }
-        }));
+            })
+        );
     }
 
     /**
@@ -324,6 +367,7 @@ public class CommonBuilder
             case Field:
                 generateTrivialSetter(className, classBuilder, prop);
                 break;
+
             case Explicit:
                 String         jitName = prop.getSetterId().ensureJitMethodName(typeSystem);
                 JitMethodDesc  jmDesc  = prop.getSetterJitDesc(typeSystem);
@@ -494,8 +538,7 @@ public class CommonBuilder
 
             code.aload(ctxSlot); // stack: Ctx
 
-            JitParamDesc[] optParams  = jmDesc.optimizedParams;
-            JitParamDesc[] stdParams  = jmDesc.standardParams;
+            JitParamDesc[] optParams = jmDesc.optimizedParams;
             for (int i = 0, c = optParams.length; i < c; i++) {
                 JitParamDesc optParamDesc = optParams[i];
                 int          stdParamIx   = optParamDesc.index;

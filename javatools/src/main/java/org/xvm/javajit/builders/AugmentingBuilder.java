@@ -6,6 +6,7 @@ import java.lang.classfile.ClassModel;
 import java.lang.classfile.FieldModel;
 import java.lang.classfile.MethodModel;
 
+import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.constants.MethodInfo;
@@ -30,6 +31,11 @@ public class AugmentingBuilder extends CommonBuilder {
      * The augmenting Classfile model.
      */
     public final ClassModel model;
+
+    @Override
+    protected ClassDesc getSuperDesc() {
+        return model.superclass().get().asSymbol();
+    }
 
     @Override
     public void assembleImplClass(String className, ClassBuilder classBuilder) {

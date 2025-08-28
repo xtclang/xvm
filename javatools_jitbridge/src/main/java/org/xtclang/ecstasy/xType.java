@@ -10,8 +10,9 @@ import org.xvm.javajit.Ctx;
 public abstract class xType
         extends xConst {
 
-    public xType(long containerId, TypeConstant type) {
-        super(containerId);
+    public xType(Ctx ctx, TypeConstant type) {
+        super(ctx);
+
         $type = type;
     }
 
