@@ -15,8 +15,7 @@ import org.xvm.util.Hash;
  * Represent a 32-bit binary floating point constant.
  */
 public class Float32Constant
-        extends FloatConstant
-    {
+        extends FloatConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -29,11 +28,10 @@ public class Float32Constant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public Float32Constant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
         m_flVal = in.readFloat();
-        }
+    }
 
     /**
      * Construct a constant whose value is a 32-bit binary floating point.
@@ -41,11 +39,10 @@ public class Float32Constant
      * @param pool   the ConstantPool that will contain this Constant
      * @param flVal  the floating point value
      */
-    public Float32Constant(ConstantPool pool, float flVal)
-        {
+    public Float32Constant(ConstantPool pool, float flVal) {
         super(pool);
         m_flVal = flVal;
-        }
+    }
 
 
     // ----- type-specific methods -----------------------------------------------------------------
@@ -57,10 +54,9 @@ public class Float32Constant
      *
      * @return the sum, as a Float32Constant
      */
-    public Float32Constant add(Float32Constant that)
-        {
+    public Float32Constant add(Float32Constant that) {
         return getConstantPool().ensureFloat32Constant(this.m_flVal + that.m_flVal);
-        }
+    }
 
 
     // ----- ValueConstant methods -----------------------------------------------------------------
@@ -70,67 +66,58 @@ public class Float32Constant
      * @return  the constant's value as a Java Float
      */
     @Override
-    public Float getValue()
-        {
+    public Float getValue() {
         return Float.valueOf(m_flVal);
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.Float32;
-        }
+    }
 
     @Override
-    protected Object getLocator()
-        {
+    protected Object getLocator() {
         return getValue();
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof Float32Constant))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof Float32Constant)) {
             return -1;
-            }
-        return Float.compare(this.m_flVal, ((Float32Constant) that).m_flVal);
         }
+        return Float.compare(this.m_flVal, ((Float32Constant) that).m_flVal);
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return Float.toString(m_flVal);
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         out.writeFloat(m_flVal);
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "value=" + getValueString();
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_flVal);
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -139,4 +126,4 @@ public class Float32Constant
      * The constant value.
      */
     private final float m_flVal;
-    }
+}

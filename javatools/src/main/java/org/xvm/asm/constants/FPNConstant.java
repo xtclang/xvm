@@ -16,8 +16,7 @@ import static org.xvm.util.Handy.byteArrayToHexString;
  * Represent a variable-length floating point constant.
  */
 public class FPNConstant
-        extends ValueConstant
-    {
+        extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -30,55 +29,41 @@ public class FPNConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public FPNConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         this(pool, format, readVarBytes(in));
-        }
+    }
 
     /**
-     * Construct a constant whose value is a 126-bit binary floating point.
+     * Construct a constant whose value is a n-bit binary or decimal floating point.
      *
      * @param pool   the ConstantPool that will contain this Constant
      * @param abVal  the floating point value, provided as an array of 16 bytes
      */
-    public FPNConstant(ConstantPool pool, Format format, byte[] abVal)
-        {
+    public FPNConstant(ConstantPool pool, Format format, byte[] abVal) {
         super(pool);
 
-        if (format == null)
-            {
+        if (format == null) {
             throw new IllegalStateException("format required");
-            }
+        }
 
-        int cbMin;
-        switch (format)
-            {
-            case DecN:
-                cbMin = 4;
-                break;
+        int cbMin = switch (format) {
+            case DecN -> 4;
+            case FloatN -> 2;
+            default -> throw new IllegalStateException("unsupported format: " + format);
+        };
 
-            case FloatN:
-                cbMin = 2;
-                break;
-
-            default:
-                throw new IllegalStateException("unsupported format: " + format);
-            }
-
-        if (abVal == null)
-            {
+        if (abVal == null) {
             throw new IllegalArgumentException("value required");
-            }
+        }
         int cbVal = abVal.length;
-        if (cbVal < cbMin || cbVal > 16384 || Integer.bitCount(cbVal) != 1)
-            {
+        if (cbVal < cbMin || cbVal > 16384 || Integer.bitCount(cbVal) != 1) {
             throw new IllegalArgumentException("value length (" + cbVal
                     + ") must be a power-of-two between " + cbMin + " and 16384");
-            }
+        }
 
         m_fmt   = format;
         m_abVal = abVal;
-        }
+    }
 
     /**
      * Helper to read in the bytes of the variable length floating point value.
@@ -90,13 +75,12 @@ public class FPNConstant
      * @throws IOException  if an error occurs while reading
      */
     private static byte[] readVarBytes(DataInput in)
-            throws IOException
-        {
+            throws IOException {
         int cb = 1 << in.readUnsignedByte();
         byte[] ab = new byte[cb];
         in.readFully(ab);
         return ab;
-        }
+    }
 
 
     // ----- ValueConstant methods -----------------------------------------------------------------
@@ -106,27 +90,23 @@ public class FPNConstant
      * @return  the constant's value as a byte array, which must be treated as an immutable
      */
     @Override
-    public byte[] getValue()
-        {
+    public byte[] getValue() {
         return m_abVal;
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return m_fmt;
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof FPNConstant))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof FPNConstant)) {
             return -1;
-            }
+        }
         // note: this is a simple byte-wise comparison; it does not actually determine the floating
         // point values represented by the bytes
 
@@ -135,55 +115,48 @@ public class FPNConstant
 
         int cbThis = abThis.length;
         int cbThat = abThat.length;
-        if (cbThis != cbThat)
-            {
+        if (cbThis != cbThat) {
             return cbThis - cbThat;
-            }
+        }
 
-        for (int of = 0; of < cbThis; ++of)
-            {
-            if (abThis[of] != abThat[of])
-                {
+        for (int of = 0; of < cbThis; ++of) {
+            if (abThis[of] != abThat[of]) {
                 return (abThis[of] & 0xFF) - (abThat[of] & 0xFF);
-                }
             }
+        }
 
         return 0;
-        }
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         // TODO format a variable length floating point value into a string
         return "(unsupported)";
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         out.writeByte(Integer.numberOfTrailingZeros(Integer.highestOneBit(m_abVal.length)));
         out.write(m_abVal);
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "bytes=" + byteArrayToHexString(m_abVal);
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_abVal);
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -197,4 +170,4 @@ public class FPNConstant
      * The constant value.
      */
     private final byte[] m_abVal;
-    }
+}

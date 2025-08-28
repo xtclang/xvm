@@ -22,8 +22,7 @@ import org.xvm.asm.constants.VersionMatchesCondition;
  * <p/>
  * The challenge is to factor out redundancy
  */
-public class AssemblerContext
-    {
+public class AssemblerContext {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -32,11 +31,10 @@ public class AssemblerContext
      * @param pool  the ConstantPool of the FileStructure that this AssemblerContext is being used
      *              for
      */
-    public AssemblerContext(ConstantPool pool)
-        {
+    public AssemblerContext(ConstantPool pool) {
         assert pool != null;
         m_pool = pool;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -46,8 +44,7 @@ public class AssemblerContext
      *
      * @param condition  a ConditionalConstant
      */
-    public void push(ConditionalConstant condition)
-        {
+    public void push(ConditionalConstant condition) {
         // store the condition
         m_listCondition.add(condition);
 
@@ -57,14 +54,13 @@ public class AssemblerContext
         // if recursing to a new depth for the first time (i.e. under the specific parent
         // condition), store off the modification count so that a subsequent pop() will restore the
         // current indicator value
-        if (m_listCondition.size() > m_listIndicators.size())
-            {
+        if (m_listCondition.size() > m_listIndicators.size()) {
             m_listIndicators.add(m_nIndicator);
-            }
+        }
 
         // update the modification counter and the modification indicator
         m_nIndicator = ++m_cMods;
-        }
+    }
 
     /**
      * Pop a condition off of the stack.
@@ -72,32 +68,29 @@ public class AssemblerContext
      * @return the ConditionalConstant that was on the top of the stack, or null if the stack is
      *         empty
      */
-    public ConditionalConstant pop()
-        {
+    public ConditionalConstant pop() {
         final int cOldDepth = m_listCondition.size();
-        if (cOldDepth == 0)
-            {
+        if (cOldDepth == 0) {
             return null;
-            }
+        }
 
         final int cNewDepth = cOldDepth - 1;
         final ConditionalConstant condition = m_listCondition.remove(cNewDepth);
         m_listLinkerContexts.remove(cNewDepth);
 
         int cIndicators = m_listIndicators.size();
-        if (cOldDepth > cIndicators)
-            {
+        if (cOldDepth > cIndicators) {
             // more than one pop() has occurred in a row, so the topmost modification indicator
             // corresponds to a branch that no longer exists
             m_listIndicators.remove(--cIndicators);
-            }
+        }
 
         // restore the indicator from before the corresponding push() occurred
         m_nIndicator = m_listIndicators.get(cIndicators - 1);
 
         ++m_cMods;
         return condition;
-        }
+    }
 
     /**
      * Obtain the modification count for the data structure. This allows the caller to determine if
@@ -105,10 +98,9 @@ public class AssemblerContext
      *
      * @return the number of modifications that have been made to this data structure
      */
-    public long getModificationCount()
-        {
+    public long getModificationCount() {
         return m_cMods;
-        }
+    }
 
     /**
      * Obtain a modification indicator for the data structure. The modification indicator provides a
@@ -121,10 +113,9 @@ public class AssemblerContext
      *
      * @return an opaque value that can be compared to another return value from this same method
      */
-    public long getModificationIndicator()
-        {
+    public long getModificationIndicator() {
         return m_nIndicator;
-        }
+    }
 
     /**
      * Determine the count of conditions currently tracked by this data structure. Each call to one
@@ -133,10 +124,9 @@ public class AssemblerContext
      *
      * @return the current number of conditions
      */
-    public int getConditionCount()
-        {
+    public int getConditionCount() {
         return m_listCondition.size();
-        }
+    }
 
     /**
      * Obtain a condition from the condition stack. Note that the element at index 0 is the first
@@ -148,11 +138,10 @@ public class AssemblerContext
      *
      * @return the specified condition
      */
-    public ConditionalConstant getCondition(int i)
-        {
+    public ConditionalConstant getCondition(int i) {
         assert i >= 0 && i < getConditionCount();
         return m_listCondition.get(i);
-        }
+    }
 
     /**
      * Get a condition that represents all of the conditions that have been introduced since the
@@ -162,87 +151,72 @@ public class AssemblerContext
      *
      * @return a condition, or null if no additional conditions have been introduced
      */
-    public ConditionalConstant getConditionSince(long nIndicator)
-        {
-        if (nIndicator == m_nIndicator)
-            {
+    public ConditionalConstant getConditionSince(long nIndicator) {
+        if (nIndicator == m_nIndicator) {
             return null;
-            }
+        }
 
         // find the indicator in the stack of indicators
         final ArrayList<Long> listIndicators = m_listIndicators;
-        for (int iLast = listIndicators.size() - 1, i = iLast; i >= 0; --i)
-            {
-            if (nIndicator == listIndicators.get(i))
-                {
-                if (i == iLast)
-                    {
+        for (int iLast = listIndicators.size() - 1, i = iLast; i >= 0; --i) {
+            if (nIndicator == listIndicators.get(i)) {
+                if (i == iLast) {
                     // only the last condition was added
                     return m_listCondition.get(iLast);
-                    }
-                else
-                    {
+                } else {
                     // multiple conditions were added
                     int cConditions = iLast - i + 1;
                     ConditionalConstant[] acondition = new ConditionalConstant[cConditions];
-                    for (int iCondition = 0; iCondition < cConditions; ++iCondition)
-                        {
+                    for (int iCondition = 0; iCondition < cConditions; ++iCondition) {
                         acondition[iCondition] = m_listCondition.get(i + iCondition);
-                        }
-                    m_pool.ensureAllCondition(acondition);
                     }
+                    m_pool.ensureAllCondition(acondition);
                 }
             }
+        }
 
         throw new IllegalStateException("condition indicator " + nIndicator + " no longer exists");
-        }
+    }
 
     /**
      * @return a ConditionalConstant iff the AssemblerContext has any conditions registered, or null
      */
-    public ConditionalConstant asCondition()
-        {
+    public ConditionalConstant asCondition() {
         ArrayList<ConditionalConstant> list = m_listCondition;
 
-        if (list.isEmpty())
-            {
+        if (list.isEmpty()) {
             return null;
-            }
+        }
 
-        if (list.size() == 1)
-            {
+        if (list.size() == 1) {
             return list.get(0);
-            }
+        }
 
         return m_pool.ensureAllCondition(list.toArray(new ConditionalConstant[0]));
-        }
+    }
 
     /**
      * @return a LinkerContext that corresponds to the current conditions specified in the
      *         AssemblerContext
      */
-    public SimulatedLinkerContext getLinkerContext()
-        {
+    public SimulatedLinkerContext getLinkerContext() {
         ArrayList<SimulatedLinkerContext> list = m_listLinkerContexts;
-        if (list.isEmpty())
-            {
+        if (list.isEmpty()) {
             return SimulatedLinkerContext.EMPTY;
-            }
+        }
 
         SimulatedLinkerContext ctx = list.getLast();
-        if (ctx == null)
-            {
+        if (ctx == null) {
             ConditionalConstant cond = asCondition();
             ctx = m_mapContextCache.get(cond);
-            if (ctx == null)
-                {
+            if (ctx == null) {
                 ctx = new SimulatedLinkerContext(cond);
                 m_mapContextCache.put(cond, ctx);   // for now, just cache them all
-                }
-            list.set(list.size() - 1, ctx);
             }
-        return ctx;
+            list.set(list.size() - 1, ctx);
         }
+        return ctx;
+    }
 
 
     // ----- public helpers ------------------------------------------------------------------------
@@ -255,10 +229,9 @@ public class AssemblerContext
      *
      * @param sName  the name that must be <i>defined</i>
      */
-    public void beginIfSpecified(String sName)
-        {
+    public void beginIfSpecified(String sName) {
         push(m_pool.ensureNamedCondition(sName));
-        }
+    }
 
     /**
      * End a section of the assembly that applies only if the specified name is <i>defined</i>. This
@@ -269,14 +242,12 @@ public class AssemblerContext
      *
      * @param sName  the name previously passed to {@link #beginIfSpecified}
      */
-    public void endIfSpecified(String sName)
-        {
+    public void endIfSpecified(String sName) {
         ConditionalConstant condition = pop();
-        if (!(condition instanceof NamedCondition && sName.equals(((NamedCondition) condition).getName())))
-            {
+        if (!(condition instanceof NamedCondition && sName.equals(((NamedCondition) condition).getName()))) {
             throw new IllegalStateException("expected NamedCondition(\"" + sName + "\"); found: " + condition);
-            }
         }
+    }
 
     /**
      * Start a section of the assembly that applies only if the specified XVM Constant is visible
@@ -287,10 +258,9 @@ public class AssemblerContext
      *
      * @param constId  the identity of the XVM Structure that must be visible
      */
-    public void beginIfVisible(IdentityConstant constId)
-        {
+    public void beginIfVisible(IdentityConstant constId) {
         push(m_pool.ensurePresentCondition(constId));
-        }
+    }
 
     /**
      * End a section of the assembly that applies only if the specified XVM Constant is visible
@@ -303,16 +273,14 @@ public class AssemblerContext
      * @param constId  the identity of the XVM Structure previously passed to
      *                 {@link #beginIfVisible}
      */
-    public void endIfVisible(Constant constId)
-        {
+    public void endIfVisible(Constant constId) {
         ConditionalConstant condition = pop();
 
         if (!(condition instanceof PresentCondition
-                && constId.equals(((PresentCondition) condition).getPresentConstant())))
-            {
+                && constId.equals(((PresentCondition) condition).getPresentConstant()))) {
             throw new IllegalStateException("expected PresentCondition(\"" + constId + "\"); found: " + condition);
-            }
         }
+    }
 
     /**
      * Start a section of the assembly that applies only if the specified version of the specified
@@ -324,10 +292,9 @@ public class AssemblerContext
      * @param constModule  the identity of the required module
      * @param constVer     the required version of the module
      */
-    public void beginIfVersion(ModuleConstant constModule, VersionConstant constVer)
-        {
+    public void beginIfVersion(ModuleConstant constModule, VersionConstant constVer) {
         push(m_pool.ensureImportVersionCondition(constModule, constVer));
-        }
+    }
 
     /**
      * End a section of the assembly that applies only if the specified version of the specified
@@ -340,24 +307,20 @@ public class AssemblerContext
      * @param constModule  the identity of the module previously passed to {@link #beginIfVersion}
      * @param constVer     the required version of the module
      */
-    public void endIfVersion(ModuleConstant constModule, VersionConstant constVer)
-        {
+    public void endIfVersion(ModuleConstant constModule, VersionConstant constVer) {
         ConditionalConstant condRaw = pop();
 
         boolean fMatch = false;
-        if (condRaw instanceof VersionMatchesCondition cond)
-            {
-            if (cond.getModuleConstant().equals(constModule) && cond.getVersionConstant().equals(constVer))
-                {
+        if (condRaw instanceof VersionMatchesCondition cond) {
+            if (cond.getModuleConstant().equals(constModule) && cond.getVersionConstant().equals(constVer)) {
                 fMatch = true;
-                }
-            }
-        if (!fMatch)
-            {
-            throw new IllegalStateException("expected VersionMatchesCondition(\"" + constModule
-                    + ", " + constVer + "\"); found: " + condRaw);
             }
         }
+        if (!fMatch) {
+            throw new IllegalStateException("expected VersionMatchesCondition(\"" + constModule
+                    + ", " + constVer + "\"); found: " + condRaw);
+        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -398,4 +361,4 @@ public class AssemblerContext
      * Modification indicator.
      */
     private long m_nIndicator;
-    }
+}

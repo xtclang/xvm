@@ -6,6 +6,8 @@
 +LINE_N     #lines                                  ; advance source code line counter by n lines
 +ENTER                                              ; variable scope begin
 +EXIT                                               ; variable scope end
++LOOP                                               ; loop start (implicit ENTER)
++LOOP_E                                             ; jumps backwards to LOOP (implicit EXIT)
 +GUARD      #handlers:(TYPE, STRING, addr)          ; try { (+ catch type, var name, handler address) (implicit ENTER)
 +GUARD_E    addr                                    ; } ... // ("E"=) end guarded block with a jump (implicit EXIT)
 +CATCH                                              ; begin an exception handler (implicit ENTER and VAR_IN for exception)
@@ -154,7 +156,7 @@
 +IS_TYPE    rvalue, rvalue-type, lvalue-return      ; T instanceof Type -> Boolean
 +IS_NTYPE   rvalue, rvalue-type, lvalue-return      ; !(T instanceof Type) -> Boolean
 
-// jumps (all addresses are relative to the PC of the jump op)
+// jumps (all addresses are relative to the PC of the jump op; all jumps (i) must be forward, (ii) may _leave_ (or jump over) one or more scopes, but (iii) may not enter a scope)
 // - rvalues support a local-property mode
 +JMP        addr                                    ; unconditional relative jump
 +JMP_EQ     type, rvalue1, rvalue2, addr            ; jump if value-1 is equal to value-2

@@ -1,8 +1,6 @@
 package org.xvm.javajit;
 
-
 import static org.xvm.util.Handy.require;
-
 
 /**
  * Represents an Ecstasy `Container`.
@@ -16,7 +14,7 @@ public class Container {
      *                    main container, and all other values (where n>0) indicate child containers
      *                    created by Ecstasy code
      * @param typeSystem  the TypeSystem for this Container
-     * @param injector
+     * @param injector    the resource provider
      */
     Container(Container parent, long id, TypeSystem typeSystem, Injector injector) {
         if (id < 0) {
@@ -94,4 +92,10 @@ public class Container {
     // TODO create child container
     // TODO control surface area
     // TODO stats surface area
+
+    // ----- memory accounting ---------------------------------------------------------------------
+
+    // TODO
+    // public long committed()
+    // public long allocated()
 }

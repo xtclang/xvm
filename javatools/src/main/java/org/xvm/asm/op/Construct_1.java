@@ -78,10 +78,9 @@ public class Construct_1
                 return R_EXCEPTION;
             }
 
-            if (constructor.isNative())
-                {
+            if (constructor.isNative()) {
                 return reportNonExtendable(frame, constructor);
-                }
+            }
 
             ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
             ahVar[0] = hArg;

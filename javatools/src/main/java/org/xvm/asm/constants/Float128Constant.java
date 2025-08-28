@@ -17,8 +17,7 @@ import static org.xvm.util.Handy.byteArrayToHexString;
  * Represent a 128-bit binary floating point constant.
  */
 public class Float128Constant
-        extends ValueConstant
-    {
+        extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -31,14 +30,13 @@ public class Float128Constant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public Float128Constant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
 
         byte[] ab = new byte[16];
         in.readFully(ab);
         m_abVal = ab;
-        }
+    }
 
     /**
      * Construct a constant whose value is a 126-bit binary floating point.
@@ -46,15 +44,13 @@ public class Float128Constant
      * @param pool   the ConstantPool that will contain this Constant
      * @param abVal  the floating point value, provided as an array of 16 bytes
      */
-    public Float128Constant(ConstantPool pool, byte[] abVal)
-        {
+    public Float128Constant(ConstantPool pool, byte[] abVal) {
         super(pool);
-        if (abVal == null || abVal.length != 16)
-            {
+        if (abVal == null || abVal.length != 16) {
             throw new IllegalArgumentException("Float128Constant requires an array of 16 bytes");
-            }
-        m_abVal = abVal;
         }
+        m_abVal = abVal;
+    }
 
 
     // ----- type-specific methods -----------------------------------------------------------------
@@ -66,10 +62,9 @@ public class Float128Constant
      *
      * @return the sum, as a Float128Constant
      */
-    public Float128Constant add(Float128Constant that)
-        {
+    public Float128Constant add(Float128Constant that) {
         throw new UnsupportedOperationException("(unsupported)");
-        }
+    }
 
 
     // ----- ValueConstant methods -----------------------------------------------------------------
@@ -79,78 +74,67 @@ public class Float128Constant
      * @return  the constant's value as a byte array, which must be treated as an immutable
      */
     @Override
-    public byte[] getValue()
-        {
+    public byte[] getValue() {
         return m_abVal;
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.Float128;
-        }
+    }
 
     @Override
-    protected Object getLocator()
-        {
+    protected Object getLocator() {
         return getValue();
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof Float128Constant))
-            {
+    protected int compareDetails(Constant that) {
+        if (!(that instanceof Float128Constant)) {
             return -1;
-            }
+        }
         byte[] abThis = this.m_abVal;
         byte[] abThat = ((Float128Constant) that).m_abVal;
 
-        for (int of = 0; of < 16; ++of)
-            {
-            if (abThis[of] != abThat[of])
-                {
+        for (int of = 0; of < 16; ++of) {
+            if (abThis[of] != abThat[of]) {
                 return (abThis[of] & 0xFF) - (abThat[of] & 0xFF);
-                }
             }
-        return 0;
         }
+        return 0;
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         // TODO format a 128-bit binary floating point value into a string
         return "(unsupported)";
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         out.write(m_abVal);
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "bytes=" + byteArrayToHexString(m_abVal);
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_abVal);
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -159,4 +143,4 @@ public class Float128Constant
      * The constant value.
      */
     private final byte[] m_abVal;
-    }
+}

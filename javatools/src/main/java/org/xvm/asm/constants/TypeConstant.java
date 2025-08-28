@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.constant.ClassDesc;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -51,6 +53,10 @@ import org.xvm.asm.constants.TypeInfo.Progress;
 
 import org.xvm.compiler.Compiler;
 
+import org.xvm.javajit.JitTypeDesc;
+import org.xvm.javajit.ModuleLoader;
+import org.xvm.javajit.TypeSystem;
+
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
@@ -69,6 +75,11 @@ import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 import org.xvm.util.TransientThreadLocal;
+
+import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
+import static org.xvm.javajit.JitFlavor.Primitive;
+import static org.xvm.javajit.JitFlavor.Specific;
+import static org.xvm.javajit.JitFlavor.Widened;
 
 
 /**
@@ -91,8 +102,7 @@ import org.xvm.util.TransientThreadLocal;
  */
 public abstract class TypeConstant
         extends Constant
-        implements GenericTypeResolver
-    {
+        implements GenericTypeResolver {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -102,29 +112,26 @@ public abstract class TypeConstant
      * @param format  the format of the Constant in the stream
      * @param in      the DataInput stream to read the Constant value from
      */
-    protected TypeConstant(ConstantPool pool, Constant.Format format, DataInput in)
-        {
+    protected TypeConstant(ConstantPool pool, Constant.Format format, DataInput in) {
         super(pool);
-        }
+    }
 
     /**
      * Construct a constant whose value is a data type.
      *
      * @param pool  the ConstantPool that will contain this Constant
      */
-    protected TypeConstant(ConstantPool pool)
-        {
+    protected TypeConstant(ConstantPool pool) {
         super(pool);
-        }
+    }
 
 
     // ----- GenericTypeResolver -------------------------------------------------------------------
 
     @Override
-    public TypeConstant resolveGenericType(String sFormalName)
-        {
+    public TypeConstant resolveGenericType(String sFormalName) {
         return getGenericParamType(sFormalName, Collections.emptyList());
-        }
+    }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
@@ -142,10 +149,9 @@ public abstract class TypeConstant
      *
      * @return true iff this is a modifying type constant
      */
-    public boolean isModifyingType()
-        {
+    public boolean isModifyingType() {
         return false;
-        }
+    }
 
     /**
      * Determine if the type represents a relation between two underlying types.
@@ -159,10 +165,9 @@ public abstract class TypeConstant
      *
      * @return true iff this is a relational type constant
      */
-    public boolean isRelationalType()
-        {
+    public boolean isRelationalType() {
         return false;
-        }
+    }
 
     /**
      * Obtain the underlying type, or the first of two underlying types if the type constant has
@@ -172,10 +177,9 @@ public abstract class TypeConstant
      *
      * @throws UnsupportedOperationException if there is no underlying type
      */
-    public TypeConstant getUnderlyingType()
-        {
+    public TypeConstant getUnderlyingType() {
         throw new UnsupportedOperationException();
-        }
+    }
 
     /**
      * Obtain the second underlying type if the type constant has two underlying types.
@@ -184,10 +188,9 @@ public abstract class TypeConstant
      *
      * @throws UnsupportedOperationException if there is no second underlying type
      */
-    public TypeConstant getUnderlyingType2()
-        {
+    public TypeConstant getUnderlyingType2() {
         throw new UnsupportedOperationException();
-        }
+    }
 
     /**
      * Determine if this TypeConstant is shared between its pool and the specified pool.
@@ -196,10 +199,9 @@ public abstract class TypeConstant
      *
      * @return true iff this TypeConstant is shared between its pool and the specified pool
      */
-    public boolean isShared(ConstantPool poolOther)
-        {
+    public boolean isShared(ConstantPool poolOther) {
         return poolOther == getConstantPool() || getUnderlyingType().isShared(poolOther);
-        }
+    }
 
     /**
      * Determine if this TypeConstant is composed of any of the specified identities.
@@ -209,66 +211,57 @@ public abstract class TypeConstant
      * @return true iff this TypeConstant references any of the specified IdentityConstants for its
      *         composition
      */
-    public boolean isComposedOfAny(Set<IdentityConstant> setIds)
-        {
+    public boolean isComposedOfAny(Set<IdentityConstant> setIds) {
         return isModifyingType() && getUnderlyingType().isComposedOfAny(setIds);
-        }
+    }
 
     /**
      * @return true iff the type specifies immutability
      */
-    public boolean isImmutabilitySpecified()
-        {
+    public boolean isImmutabilitySpecified() {
         return getUnderlyingType().isImmutabilitySpecified();
-        }
+    }
 
     /**
      * @return true iff this TypeConstant refers to an immutable type
      */
-    public boolean isImmutable()
-        {
+    public boolean isImmutable() {
         return getUnderlyingType().isImmutable();
-        }
+    }
 
     /**
      * @return true iff this TypeConstant refers to an "immutable Object" type
      */
-    public boolean isOnlyImmutable()
-        {
+    public boolean isOnlyImmutable() {
         return false;
-        }
+    }
 
     /**
      * Create a potentially new type that represents "this" immutable type.
      *
      * @return a type constant that represents an immutable type of this type constant
      */
-    public TypeConstant freeze()
-        {
+    public TypeConstant freeze() {
         return isImmutable()
                 ? this
                 : getConstantPool().ensureImmutableTypeConstant(this);
-        }
+    }
 
     /**
      * If this type is an Immutable type, calculate the type without the immutability.
      *
      * @return this TypeConstant without immutability
      */
-    public TypeConstant removeImmutable()
-        {
-        if (!isImmutabilitySpecified())
-            {
+    public TypeConstant removeImmutable() {
+        if (!isImmutabilitySpecified()) {
             return this;
-            }
+        }
 
         ConstantPool pool = getConstantPool();
 
         // replace the ImmutableType with the underlying type
-        Function<TypeConstant, TypeConstant> transformer = new Function<>()
-            {
-            public TypeConstant apply(TypeConstant type)
-                {
+        Function<TypeConstant, TypeConstant> transformer = new Function<>() {
+            public TypeConstant apply(TypeConstant type) {
                 return type instanceof TerminalTypeConstant
                             ? type
                      : type instanceof VirtualChildTypeConstant
@@ -276,38 +269,35 @@ public abstract class TypeConstant
                      : type instanceof ImmutableTypeConstant
                             ? type.getUnderlyingType()
                             : type.replaceUnderlying(pool, this);
-                }
-            };
+            }
+        };
         return transformer.apply(this);
-        }
+    }
 
     /**
      * @return true iff this TypeConstant refers to a service
      */
-    public boolean isService()
-        {
+    public boolean isService() {
         return isModifyingType() && getUnderlyingType().isService();
-        }
+    }
 
     /**
      * Create a potentially new type that represents "this" service type.
      *
      * @return a type constant that represents a service type of this type constant
      */
-    public TypeConstant ensureService()
-        {
+    public TypeConstant ensureService() {
         return isService()
                 ? this
                 : getConstantPool().ensureServiceTypeConstant(this);
-        }
+    }
 
     /**
      * @return true iff the type specifies accessibility
      */
-    public boolean isAccessSpecified()
-        {
+    public boolean isAccessSpecified() {
         return getUnderlyingType().isAccessSpecified();
-        }
+    }
 
     /**
      * @return the access, if it is specified, otherwise public
@@ -315,61 +305,54 @@ public abstract class TypeConstant
      * @throws UnsupportedOperationException if the type is relational and contains conflicting
      *         access specifiers
      */
-    public Access getAccess()
-        {
+    public Access getAccess() {
         return getUnderlyingType().getAccess();
-        }
+    }
 
     /**
      * @return true iff this type allows access modification (i.e. {@link #ensureAccess} can be
      *         called without throwing an exception)
      */
-    public boolean isAccessModifiable()
-        {
+    public boolean isAccessModifiable() {
         return getUnderlyingType().isAccessModifiable();
-        }
+    }
 
     /**
      * If this type has access specified, calculate the type without an access modifier.
      *
      * @return an equivalent TypeConstant without an access modifier
      */
-    public TypeConstant removeAccess()
-        {
-        if (!isAccessSpecified())
-            {
+    public TypeConstant removeAccess() {
+        if (!isAccessSpecified()) {
             return this;
-            }
+        }
 
         ConstantPool pool = getConstantPool();
 
         // replace the AccessType with the underlying type
-        Function<TypeConstant, TypeConstant> transformer = new Function<>()
-            {
-            public TypeConstant apply(TypeConstant type)
-                {
+        Function<TypeConstant, TypeConstant> transformer = new Function<>() {
+            public TypeConstant apply(TypeConstant type) {
                 return type instanceof TerminalTypeConstant ||
                        type instanceof VirtualChildTypeConstant
                         ? type
                         : type instanceof AccessTypeConstant
                             ? type.getUnderlyingType()
                             : type.replaceUnderlying(pool, this);
-                }
-            };
+            }
+        };
         return transformer.apply(this);
-        }
+    }
 
     /**
      * Ensure that this type has the specified access modifier.
      *
      * @return an equivalent TypeConstant with the specified access modifier
      */
-    public TypeConstant ensureAccess(Access access)
-        {
+    public TypeConstant ensureAccess(Access access) {
         return getAccess().isMoreAccessibleThan(access)
                 ? getConstantPool().ensureAccessTypeConstant(this, access)
                 : this;
-        }
+    }
 
     /**
      * Change the access modifier for this type or parts of this type (in a case of the relational
@@ -379,46 +362,41 @@ public abstract class TypeConstant
      *
      * @return the equivalent type that may have additional access modifier(s)
      */
-    public TypeConstant adjustAccess(IdentityConstant idClass)
-        {
+    public TypeConstant adjustAccess(IdentityConstant idClass) {
         return isAccessSpecified() || !isNestMateOf(idClass)
                 ? this
                 : ensureAccess(Access.PRIVATE);
-        }
+    }
 
     /**
      * @return true iff type parameters for the type are specified
      */
-    public boolean isParamsSpecified()
-        {
+    public boolean isParamsSpecified() {
         return isModifyingType() && getUnderlyingType().isParamsSpecified();
-        }
+    }
 
     /**
      * @return true iff type parameters for the type are specified at this level or any virtual
      *         parent
      */
-    public boolean isParameterizedDeep()
-        {
+    public boolean isParameterizedDeep() {
         return isParamsSpecified() ||
                 isVirtualChild() && getParentType().isParameterizedDeep();
-        }
+    }
 
     /**
      * @return the number of parameters specified
      */
-    public int getParamsCount()
-        {
+    public int getParamsCount() {
         return getParamTypesArray().length;
-        }
+    }
 
     /**
      * @return the actual number of type parameters declared by the underlying defining class
      */
-    public int getMaxParamsCount()
-        {
+    public int getMaxParamsCount() {
         return isModifyingType() ? getUnderlyingType().getMaxParamsCount() : 0;
-        }
+    }
 
     /**
      * There are types, such as {@link ParameterizedTypeConstant} and {@link AnnotatedTypeConstant}
@@ -429,12 +407,11 @@ public abstract class TypeConstant
      *
      * @return the depth of this type
      */
-    public int getTypeDepth()
-        {
+    public int getTypeDepth() {
         return isModifyingType()
                 ? 1 + getUnderlyingType().getTypeDepth()
                 : 1;
-        }
+    }
 
     /**
      * @return the type parameters, iff the type has parameters specified
@@ -442,12 +419,11 @@ public abstract class TypeConstant
      * @throws UnsupportedOperationException if there are no type parameters specified, or if the
      *         type is a relational type
      */
-    public List<TypeConstant> getParamTypes()
-        {
+    public List<TypeConstant> getParamTypes() {
         return isModifyingType()
                 ? getUnderlyingType().getParamTypes()
                 : Collections.emptyList();
-        }
+    }
 
     /**
      * @return the type parameters as an array, iff the type has parameters specified
@@ -455,30 +431,27 @@ public abstract class TypeConstant
      * @throws UnsupportedOperationException if there are no type parameters specified, or if the
      *         type is a relational type
      */
-    public TypeConstant[] getParamTypesArray()
-        {
+    public TypeConstant[] getParamTypesArray() {
         return isModifyingType()
                 ? getUnderlyingType().getParamTypesArray()
                 : ConstantPool.NO_TYPES;
-        }
+    }
 
     /**
      * @return the type parameter at the specified index (Object if there are none)
      */
-    public TypeConstant getParamType(int i)
-        {
+    public TypeConstant getParamType(int i) {
         return i < getParamsCount()
                 ? getParamTypesArray()[i]
                 : getConstantPool().typeObject();
-        }
+    }
 
     /**
      * @return true iff this type has a formal type parameter with the specified name
      */
-    public boolean containsGenericParam(String sName)
-        {
+    public boolean containsGenericParam(String sName) {
         return isModifyingType() && getUnderlyingType().containsGenericParam(sName);
-        }
+    }
 
     /**
      * Find the type of the specified formal parameter for this type.
@@ -494,71 +467,63 @@ public abstract class TypeConstant
      *
      * @return the corresponding actual type or null if there is no matching formal type
      */
-    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
-        {
+    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams) {
         return isModifyingType()
                 ? getUnderlyingType().getGenericParamType(sName, listParams)
                 : null;
-        }
+    }
 
     /**
      * @return true iff annotations of the type are specified
      */
-    public boolean isAnnotated()
-        {
+    public boolean isAnnotated() {
         return isModifyingType() && getUnderlyingType().isAnnotated();
-        }
+    }
 
     /**
      * @return true iff this type is annotated by the specified annotation class
      */
-    public boolean containsAnnotation(ClassConstant idAnno)
-        {
+    public boolean containsAnnotation(ClassConstant idAnno) {
         return isAnnotated() && getUnderlyingType().containsAnnotation(idAnno);
-        }
+    }
 
     /**
      * @return the array of annotations
      */
-    public Annotation[] getAnnotations()
-        {
+    public Annotation[] getAnnotations() {
         return isAnnotated()
                 ? getUnderlyingType().getAnnotations()
                 : Annotation.NO_ANNOTATIONS;
-        }
+    }
 
     /**
      * @return true iff the type represents an Enum value
      */
-    public boolean isEnumValue()
-        {
+    public boolean isEnumValue() {
         return isExplicitClassIdentity(false) &&
                getExplicitClassFormat() == Component.Format.ENUMVALUE;
-        }
+    }
 
     /**
      * @return true iff this type represents a virtual child type
      */
-    public boolean isVirtualChild()
-        {
+    public boolean isVirtualChild() {
         return isModifyingType() && getUnderlyingType().isVirtualChild();
-        }
+    }
 
     /**
      * @return true iff this type represents an anonymous class type
      */
-    public boolean isAnonymousClass()
-        {
+    public boolean isAnonymousClass() {
         return isModifyingType() && getUnderlyingType().isAnonymousClass();
-        }
+    }
 
     /**
      * @return true iff this type represents an inner child class type
      */
-    public boolean isInnerChildClass()
-        {
+    public boolean isInnerChildClass() {
         return isModifyingType() && getUnderlyingType().isInnerChildClass();
-        }
+    }
 
     /**
      * A virtual child type is said to be a "phantom" if it represents a child with a non-existing
@@ -569,12 +534,12 @@ public abstract class TypeConstant
      *       {
      *       class C // child of B
      *            {
-     *            }
-     *       }
+     *        }
+     *   }
      *   class D
      *       extends B
      *       {
-     *       }
+     *   }
      * </code></pre>
      *
      * In this case virtual child type VCT(D, "C") is a phantom virtual child type, but VCT(B, "C")
@@ -582,49 +547,43 @@ public abstract class TypeConstant
      *
      * @return true iff this type represents a phantom virtual child
      */
-    public boolean isPhantom()
-        {
+    public boolean isPhantom() {
         assert isVirtualChild();
         return getUnderlyingType().isPhantom();
-        }
+    }
 
     /**
      * @return true iff this type is the type of a decorated class constant
      */
-    public boolean isDecoratedClass()
-        {
-        if (!isExplicitClassIdentity(true))
-            {
+    public boolean isDecoratedClass() {
+        if (!isExplicitClassIdentity(true)) {
             return false;
-            }
+        }
 
-        if (isAnnotated() || getParamsCount() > 0)
-            {
+        if (isAnnotated() || getParamsCount() > 0) {
             return true;
-            }
+        }
 
         return (isVirtualChild() || isAnonymousClass()) && getParentType().isDecoratedClass();
-        }
+    }
 
     /**
      * @return return the virtual child type's or anonymous class type's parent type
      */
-    public TypeConstant getParentType()
-        {
+    public TypeConstant getParentType() {
         assert isVirtualChild() || isInnerChildClass() || isAnonymousClass();
         return getUnderlyingType().getParentType();
-        }
+    }
 
     /**
      * A VirtualChildType may have its parent type being different from its origin parent type.
      *
      * @return return the origin parent type for this virtual child type
      */
-    public TypeConstant getOriginParentType()
-        {
+    public TypeConstant getOriginParentType() {
         assert isVirtualChild();
         return getUnderlyingType().getOriginParentType();
-        }
+    }
 
     /**
      * Replace this VirtualChild's parent with the specified parent type.
@@ -647,21 +606,17 @@ public abstract class TypeConstant
      *
      * @return a new VirtualChild type that has the specified parent type
      */
-    public TypeConstant ensureVirtualParent(TypeConstant typeParent, boolean fPromote)
-        {
+    public TypeConstant ensureVirtualParent(TypeConstant typeParent, boolean fPromote) {
         assert isVirtualChild() && typeParent.isA(getParentType());
 
-        if (typeParent.equals(getParentType()))
-            {
+        if (typeParent.equals(getParentType())) {
             return this;
-            }
+        }
 
         ConstantPool pool = typeParent.getConstantPool();
 
-        Function<TypeConstant, TypeConstant> transformer = new Function<>()
-            {
-            public TypeConstant apply(TypeConstant type)
-                {
+        Function<TypeConstant, TypeConstant> transformer = new Function<>() {
+            public TypeConstant apply(TypeConstant type) {
                 return type instanceof VirtualChildTypeConstant typeChild
                     ? fPromote
                         ? pool.ensureVirtualChildTypeConstant(typeParent, typeChild.getChildName())
@@ -671,59 +626,54 @@ public abstract class TypeConstant
                         : new VirtualChildTypeConstant(pool,
                                 type.getParentType(), typeChild.getChildName(), typeParent)
                     : type.replaceUnderlying(pool, this);
-                }
-            };
+            }
+        };
         return transformer.apply(this);
-        }
+    }
 
     /**
      * @return true iff there is a single defining constant, which means that the type does not
      *         contain any relational type constants
      */
-    public boolean isSingleDefiningConstant()
-        {
+    public boolean isSingleDefiningConstant() {
         return isModifyingType() && getUnderlyingType().isSingleDefiningConstant();
-        }
+    }
 
     /**
      * @return the defining constant, iff there is a single defining constant
      *
      * @throws UnsupportedOperationException if there is not a single defining constant
      */
-    public Constant getDefiningConstant()
-        {
+    public Constant getDefiningConstant() {
         return getUnderlyingType().getDefiningConstant();
-        }
+    }
 
     /**
      * @return true iff this TypeConstant is a "const" type
      */
-    public boolean isConst()
-        {
+    public boolean isConst() {
         return getUnderlyingType().isConst();
-        }
+    }
 
     /**
      * @return true iff this type constant is a non-relational type constant for the Ecstasy Type
      *         type
      */
-    public boolean isTypeOfType()
-        {
+    public boolean isTypeOfType() {
         return getUnderlyingType().isTypeOfType();
-        }
+    }
 
     /**
      * Determine if this TypeConstant represents the public type from the core Ecstasy module.
      *
      * @return true iff this TypeConstant is a public type from the Ecstasy core module
      */
-    public boolean isPublicEcstasyType()
-        {
+    public boolean isPublicEcstasyType() {
         return isSingleDefiningConstant()
                 && getDefiningConstant() instanceof ClassConstant idClass
                 && idClass.getModuleConstant().isEcstasyModule()
                 && getAccess() == Access.PUBLIC;
-        }
+    }
 
     /**
      * Determine if this TypeConstant represents a core, implicitly-imported Ecstasy type denoted
@@ -733,45 +683,40 @@ public abstract class TypeConstant
      *
      * @return true iff this TypeConstant is the Ecstasy core type identified by the passed name
      */
-    public boolean isEcstasy(String sName)
-        {
+    public boolean isEcstasy(String sName) {
         IdentityConstant constId = getConstantPool().getImplicitlyImportedIdentity(sName);
-        if (constId == null)
-            {
+        if (constId == null) {
             throw new IllegalArgumentException("no such implicit name: " + sName);
-            }
+        }
 
         return isSingleDefiningConstant() && getDefiningConstant().equals(constId);
-        }
+    }
 
     /**
      * @return the Ecstasy class name, including package name(s), otherwise "?"
      */
-    public String getEcstasyClassName()
-        {
+    public String getEcstasyClassName() {
         return isPublicEcstasyType()
                 ? ((ClassConstant) getDefiningConstant()).getPathString()
                 : "?";
-        }
+    }
 
     /**
      * @return true iff this type is a nullable type
      */
-    public boolean isNullable()
-        {
+    public boolean isNullable() {
         // a type is only considered nullable if it is a "(nullable | type)"
         return false;
-        }
+    }
 
     /**
      * @return true iff the type is the Nullable type itself, or a simple modification of the same
      */
-    public boolean isOnlyNullable()
-        {
+    public boolean isOnlyNullable() {
         // a type is considered only nullable if it is the Nullable type itself, or a simple
         // modification of the same
         return getUnderlyingType().isOnlyNullable();
-        }
+    }
 
     /**
      * If null cannot be assigned to this type, then create a new type that minimally encompasses
@@ -779,20 +724,18 @@ public abstract class TypeConstant
      *
      * @return the type, modified if necessary to allow it to support Null values
      */
-    public TypeConstant ensureNullable()
-        {
+    public TypeConstant ensureNullable() {
         return getConstantPool().ensureNullableTypeConstant(this);
-        }
+    }
 
     /**
      * If this type is a nullable type, calculate the type without the nullability.
      *
      * @return this TypeConstant without Nullable
      */
-    public TypeConstant removeNullable()
-        {
+    public TypeConstant removeNullable() {
         return this;
-        }
+    }
 
     /**
      * Determine if this type is known to not be combinable (as an intersection) with the specified
@@ -802,56 +745,44 @@ public abstract class TypeConstant
      *
      * @return true if this type is non-combinable with the specified type
      */
-    public boolean isIncompatibleCombo(TypeConstant that)
-        {
-        if (that instanceof RelationalTypeConstant && !(this instanceof RelationalTypeConstant))
-            {
+    public boolean isIncompatibleCombo(TypeConstant that) {
+        if (that instanceof RelationalTypeConstant && !(this instanceof RelationalTypeConstant)) {
             // let the relational type a chance to decompose first
             return that.isIncompatibleCombo(this);
-            }
+        }
 
-        if (this.isFormalType() || that.isFormalType())
-            {
+        if (this.isFormalType() || that.isFormalType()) {
             // with formal types we cannot make a determination
             return false;
-            }
+        }
 
         // quick "isA" check
-        if (this.isA(that) || that.isA(this))
-            {
+        if (this.isA(that) || that.isA(this)) {
             return false;
-            }
+        }
 
-        if (this.isTypeOfType())
-            {
-            if (that.isTypeOfType())
-                {
+        if (this.isTypeOfType()) {
+            if (that.isTypeOfType()) {
                 return this.getParamType(0).isIncompatibleCombo(that.getParamType(0));
-                }
-            else
-                {
+            } else {
                 // type is only compatible with another type
                 return true;
-                }
             }
-        else if (that.isTypeOfType())
-            {
+        } else if (that.isTypeOfType()) {
             // ditto
             return true;
-            }
+        }
 
         // remove all modifiers; we only concerned with the class types
         TypeConstant typeThis = this;
-        while (typeThis.isModifyingType())
-            {
+        while (typeThis.isModifyingType()) {
             typeThis = typeThis.getUnderlyingType();
-            }
+        }
 
         TypeConstant typeThat = that;
-        while (typeThat.isModifyingType())
-            {
+        while (typeThat.isModifyingType()) {
             typeThat = typeThat.getUnderlyingType();
-            }
+        }
 
         // There are two scenarios of non-combinable types:
         // - class types (not interfaces or annotations or mixins) in which one doesn't extend the other
@@ -860,55 +791,47 @@ public abstract class TypeConstant
         return !typeThis.isA(typeThat) && !typeThat.isA(typeThis) &&
                 (typeThis.isIncompatibleComboImpl(typeThat) ||
                  typeThat.isIncompatibleComboImpl(typeThis));
-        }
+    }
 
-    private boolean isIncompatibleComboImpl(TypeConstant that)
-        {
-        if (isSingleUnderlyingClass(false))
-            {
+    private boolean isIncompatibleComboImpl(TypeConstant that) {
+        if (isSingleUnderlyingClass(false)) {
             Component clzThis = getSingleUnderlyingClass(false).getComponent();
-            switch (clzThis.getFormat())
-                {
-                case ENUMVALUE, PACKAGE, MODULE:
-                    // those can neither be extended, implemented nor mixed-in
-                    return true;
+            switch (clzThis.getFormat()) {
+            case ENUMVALUE, PACKAGE, MODULE:
+                // those can neither be extended, implemented nor mixed-in
+                return true;
 
-                case ENUM:
-                    {
-                    // most likely, it's not compatible either, but for extremely exoteric cases
-                    // we need to scan every value to validate
-                    for (Component child : clzThis.children())
-                        {
-                        if (child.getFormat() == Component.Format.ENUMVALUE &&
-                                child.getIdentityConstant().getType().isA(that))
-                            {
-                            return false;
-                            }
-                        }
-                    return true;
+            case ENUM: {
+                // most likely, it's not compatible either, but for extremely exoteric cases
+                // we need to scan every value to validate
+                for (Component child : clzThis.children()) {
+                    if (child.getFormat() == Component.Format.ENUMVALUE &&
+                            child.getIdentityConstant().getType().isA(that)) {
+                        return false;
                     }
-
-                case CLASS, CONST, SERVICE:
-                    // we already tested "isA" relationship, so if "this" and "that" are both
-                    // classes, then they are incompatible
-                    if (that.isSingleUnderlyingClass(false))
-                        {
-                        return switch (that.getSingleUnderlyingClass(false).getComponent().getFormat())
-                            {
-                            case ENUMVALUE, PACKAGE, MODULE,
-                                 ENUM,
-                                 CLASS, CONST, SERVICE -> true;
-                            default -> false;
-                            };
-                        }
-                    break;
-
-                default:
-                    break;
                 }
+                return true;
             }
-        return false;
+
+            case CLASS, CONST, SERVICE:
+                // we already tested "isA" relationship, so if "this" and "that" are both
+                // classes, then they are incompatible
+                if (that.isSingleUnderlyingClass(false)) {
+                    return switch (that.getSingleUnderlyingClass(false).getComponent().getFormat()) {
+                        case ENUMVALUE, PACKAGE, MODULE,
+                             ENUM,
+                             CLASS, CONST, SERVICE -> true;
+                        default -> false;
+                    };
+                }
+                break;
+
+            default:
+                break;
+            }
         }
+        return false;
+    }
 
     /**
      * Produce a minimal representation of a type that is known to be assignable to both this
@@ -923,77 +846,64 @@ public abstract class TypeConstant
      *
      * @return a reduction for the intersection of two types
      */
-    public TypeConstant combine(ConstantPool pool, TypeConstant that)
-        {
+    public TypeConstant combine(ConstantPool pool, TypeConstant that) {
         TypeConstant thisResolved = this.resolveTypedefs();
         TypeConstant thatResolved = that.resolveTypedefs();
-        if (thisResolved != this || thatResolved != that)
-            {
+        if (thisResolved != this || thatResolved != that) {
             return thisResolved.combine(pool, thatResolved);
-            }
+        }
 
         if (that instanceof UnionTypeConstant        && !(this instanceof UnionTypeConstant) ||
-            that instanceof TypeSequenceTypeConstant && !(this instanceof TypeSequenceTypeConstant))
-            {
+            that instanceof TypeSequenceTypeConstant && !(this instanceof TypeSequenceTypeConstant)) {
             // the union and turtle types have more information and can produce a better result
             return that.combine(pool, this);
-            }
+        }
 
-        if (this.isA(that))
-            {
+        if (this.isA(that)) {
             return this;
-            }
-        if (that.isA(this))
-            {
+        }
+        if (that.isA(this)) {
             return that;
-            }
+        }
 
         // if T1 == (immutable T0) and T2.isA(T0) then (T1 + T2) => immutable T2
-        if (this instanceof ImmutableTypeConstant && that.isA(this.getUnderlyingType()))
-            {
+        if (this instanceof ImmutableTypeConstant && that.isA(this.getUnderlyingType())) {
             return that.freeze();
-            }
-        if (that instanceof ImmutableTypeConstant && this.isA(that.getUnderlyingType()))
-            {
+        }
+        if (that instanceof ImmutableTypeConstant && this.isA(that.getUnderlyingType())) {
             return this.freeze();
-            }
+        }
 
         // if T1 == T0<E> and T2.isA(T0) then (T1 + T2) => T2<E + EC2>
         // where EC2 is a constraint for E on T2
-        if (combineOneParameterized(pool, this, that) instanceof TypeConstant typeCombined)
-            {
+        if (combineOneParameterized(pool, this, that) instanceof TypeConstant typeCombined) {
             return typeCombined;
-            }
-        if (combineOneParameterized(pool, that, this) instanceof TypeConstant typeCombined)
-            {
+        }
+        if (combineOneParameterized(pool, that, this) instanceof TypeConstant typeCombined) {
             return typeCombined;
-            }
+        }
 
-        if (this.getClass() == that.getClass() && isSingleUnderlyingClass(true))
-            {
-            if (this instanceof ParameterizedTypeConstant)
-                {
+        if (this.getClass() == that.getClass() && isSingleUnderlyingClass(true)) {
+            if (this instanceof ParameterizedTypeConstant) {
                 TypeConstant typeThis = this.getUnderlyingType();
                 TypeConstant typeThat = that.getUnderlyingType();
-                if (typeThis.equals(typeThat))
-                    {
+                if (typeThis.equals(typeThat)) {
                     // Parameterized types are known to have a distributive property:
                     // T<E1> + T<E2> == T<E1 + E2>
                     TypeConstant[] atypeThis  = this.getParamTypesArray();
                     TypeConstant[] atypeThat  = that.getParamTypesArray();
                     int            cTypes     = Math.max(atypeThis.length, atypeThat.length);
                     TypeConstant[] atypeInter = new TypeConstant[cTypes];
-                    for (int i = 0; i < cTypes; i++)
-                        {
+                    for (int i = 0; i < cTypes; i++) {
                         atypeInter[i] = this.getParamType(i).combine(pool, that.getParamType(i));
-                        }
-                    return pool.ensureParameterizedTypeConstant(typeThis, atypeInter);
                     }
+                    return pool.ensureParameterizedTypeConstant(typeThis, atypeInter);
                 }
             }
+        }
 
         return pool.ensureIntersectionTypeConstant(this, that);
-        }
+    }
 
     /**
      * If T1 == T0<E> and T2.isA(T0) then return (T1 + T2) => T2<E + EC2>, where EC2 is a constraint
@@ -1002,41 +912,35 @@ public abstract class TypeConstant
      * Note: this obviously doesn't apply to Class<T> and "into class" annotations.
      */
     private static TypeConstant combineOneParameterized(ConstantPool pool,
-                                                        TypeConstant t1, TypeConstant t2)
-        {
+                                                        TypeConstant t1, TypeConstant t2) {
         if (t1 instanceof ParameterizedTypeConstant &&
                 t1.isA(pool.typeClass()) == t2.isA(pool.typeClass()) &&
                 t2.isA(t1.getUnderlyingType()) &&
-                t2.isSingleUnderlyingClass(true) && !t2.isParamsSpecified())
-            {
+                t2.isSingleUnderlyingClass(true) && !t2.isParamsSpecified()) {
             TypeConstant[] atype1 = t1.getParamTypesArray();
             ClassStructure clz2   = (ClassStructure) t2.getSingleUnderlyingClass(true).getComponent();
-            if (!clz2.isParameterized())
-                {
+            if (!clz2.isParameterized()) {
                 // nothing we can do here
                 return null;
-                }
+            }
 
             TypeConstant[] atype2 = clz2.getCanonicalType().getParamTypesArray();
             boolean        fClone = false;
-            for (int i = 0, c = atype2.length; i < c; i++)
-                {
+            for (int i = 0, c = atype2.length; i < c; i++) {
                 TypeConstant te1 = atype1[i];
                 TypeConstant te2 = atype2[i];
-                if (!te1.equals(te2))
-                    {
-                    if (!fClone)
-                        {
+                if (!te1.equals(te2)) {
+                    if (!fClone) {
                         atype2 = atype2.clone();
                         fClone = true;
-                        }
-                    atype2[i] = te1.combine(pool, te2);
                     }
+                    atype2[i] = te1.combine(pool, te2);
                 }
-            return pool.ensureParameterizedTypeConstant(t2, atype2);
             }
-        return null;
+            return pool.ensureParameterizedTypeConstant(t2, atype2);
         }
+        return null;
+    }
 
     /**
      * Produce a minimal representation of a type that both this type and the specified type are
@@ -1044,72 +948,58 @@ public abstract class TypeConstant
      *
      * @return a reduction for the union of two types
      */
-    public TypeConstant union(ConstantPool pool, TypeConstant that)
-        {
+    public TypeConstant union(ConstantPool pool, TypeConstant that) {
         TypeConstant thisResolved = this.resolveTypedefs();
         TypeConstant thatResolved = that.resolveTypedefs();
-        if (thisResolved != this || thatResolved != that)
-            {
+        if (thisResolved != this || thatResolved != that) {
             return thisResolved.union(pool, thatResolved);
-            }
+        }
 
-        if (this.isA(that))
-            {
+        if (this.isA(that)) {
             return that;
-            }
-        if (that.isA(this))
-            {
+        }
+        if (that.isA(this)) {
             return this;
-            }
+        }
 
-        if (this.getClass() == that.getClass() && isSingleUnderlyingClass(true))
-            {
-            if (this instanceof ParameterizedTypeConstant)
-                {
+        if (this.getClass() == that.getClass() && isSingleUnderlyingClass(true)) {
+            if (this instanceof ParameterizedTypeConstant) {
                 TypeConstant typeThis = this.getUnderlyingType();
                 TypeConstant typeThat = that.getUnderlyingType();
-                if (typeThis.equals(typeThat))
-                    {
+                if (typeThis.equals(typeThat)) {
                     // Parameterized types are known to have a distributive property:
                     // T<E1> | T<E2> == T<E1 | E2>
                     TypeConstant[] atypeThis  = this.getParamTypesArray();
                     TypeConstant[] atypeThat  = that.getParamTypesArray();
                     int            cTypes     = Math.max(atypeThis.length, atypeThat.length);
                     TypeConstant[] atypeUnion = new TypeConstant[cTypes];
-                    for (int i = 0; i < cTypes; i++)
-                        {
+                    for (int i = 0; i < cTypes; i++) {
                         atypeUnion[i] = this.getParamType(i).union(pool, that.getParamType(i));
-                        }
-                    return pool.ensureParameterizedTypeConstant(typeThis, atypeUnion);
                     }
+                    return pool.ensureParameterizedTypeConstant(typeThis, atypeUnion);
                 }
-            else if (this instanceof ImmutableTypeConstant)
-                {
+            } else if (this instanceof ImmutableTypeConstant) {
                 // if (T1 | T2) is a single underlying class type, then
                 // (immutable T1) | (immutable T2) == (immutable (T1 | T2))
                 TypeConstant typeThis  = this.getUnderlyingType();
                 TypeConstant typeThat  = that.getUnderlyingType();
                 TypeConstant typeUnion = typeThis.union(pool, typeThat);
-                if (typeUnion.isSingleUnderlyingClass(true))
-                    {
+                if (typeUnion.isSingleUnderlyingClass(true)) {
                     return typeUnion.freeze();
-                    }
-                // atm, we don't allow (immutable (T1 | T2))
                 }
-            else if (this.isEnumValue() && that.isEnumValue())
-                {
+                // atm, we don't allow (immutable (T1 | T2))
+            } else if (this.isEnumValue() && that.isEnumValue()) {
                 // if both T1 and T2 are enum values of the same enum, then use the enum type
                 IdentityConstant idEnumThis = this.getSingleUnderlyingClass(false).getNamespace();
                 IdentityConstant idEnumThat = that.getSingleUnderlyingClass(false).getNamespace();
-                if (idEnumThis.equals(idEnumThat))
-                    {
+                if (idEnumThis.equals(idEnumThat)) {
                     return idEnumThis.getType();
-                    }
                 }
             }
+        }
 
         return pool.ensureUnionTypeConstant(this, that);
-        }
+    }
 
     /**
      * Produce a minimal representation the type that is known to be assignable to this type but
@@ -1122,19 +1012,16 @@ public abstract class TypeConstant
      * @return a type that is equal or narrower than this type or null if such a representation is
      *         impossible, e.g. {@code this.isA(that)}
      */
-    public TypeConstant andNot(ConstantPool pool, TypeConstant that)
-        {
+    public TypeConstant andNot(ConstantPool pool, TypeConstant that) {
         TypeConstant thisResolved = this.resolveTypedefs();
         TypeConstant thatResolved = that.resolveTypedefs();
-        if (thisResolved != this || thatResolved != that)
-            {
+        if (thisResolved != this || thatResolved != that) {
             return thisResolved.andNot(pool, thatResolved);
-            }
+        }
 
-        if (thisResolved.isA(thatResolved))
-            {
+        if (thisResolved.isA(thatResolved)) {
             return null;
-            }
+        }
 
         // type "Type" is known to have a distributive property:
         // Type<X> - Type<Y> == Type<X - Y>
@@ -1142,7 +1029,7 @@ public abstract class TypeConstant
                that.isTypeOfType() && that.getParamsCount() > 0
                 ? this.getParamType(0).andNot(pool, that.getParamType(0)).getType()
                 : this;
-        }
+    }
 
     /**
      * Create a copy of this single defining type that is based on the specified underlying type.
@@ -1151,10 +1038,9 @@ public abstract class TypeConstant
      *
      * @return clone this type based on the underlying type
      */
-    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
-        {
+    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type) {
         throw new UnsupportedOperationException();
-        }
+    }
 
     /**
      * Determine if the specified name is referring to a name introduced by any of the contributions
@@ -1168,20 +1054,18 @@ public abstract class TypeConstant
      * @return the resolution result
      */
     public ResolutionResult resolveContributedName(
-            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector)
-        {
+            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
         return getUnderlyingType().resolveContributedName(sName, access, idMethod, collector);
-        }
+    }
 
     @Override
-    public TypeConstant resolveTypedefs()
-        {
+    public TypeConstant resolveTypedefs() {
         TypeConstant constOriginal = getUnderlyingType();
         TypeConstant constResolved = constOriginal.resolveTypedefs();
         return constResolved == constOriginal
                 ? this
                 : cloneSingle(getConstantPool(), constResolved);
-        }
+    }
 
     /**
      * Create a semantically equivalent type that resolves the formal type parameters
@@ -1193,25 +1077,23 @@ public abstract class TypeConstant
      *
      * @return a semantically equivalent type with resolved formal parameters
      */
-    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
-        {
+    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver) {
         TypeConstant constOriginal = getUnderlyingType();
         TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
 
         return constResolved == constOriginal
                 ? this
                 : cloneSingle(pool, constResolved);
-        }
+    }
 
     /**
      * If this type contains any formal type, replace that formal type with its constraint type.
      *
      * @return the resulting type
      */
-    public TypeConstant resolveConstraints()
-        {
+    public TypeConstant resolveConstraints() {
         return resolveConstraints(false);
-        }
+    }
 
     /**
      * If this type contains any formal type, replace that formal type with its constraint type.
@@ -1220,14 +1102,13 @@ public abstract class TypeConstant
      *
      * @return the resulting type
      */
-    public TypeConstant resolveConstraints(boolean fPendingOnly)
-        {
+    public TypeConstant resolveConstraints(boolean fPendingOnly) {
         TypeConstant constOriginal = getUnderlyingType();
         TypeConstant constResolved = constOriginal.resolveConstraints(fPendingOnly);
         return constResolved == constOriginal
                 ? this
                 : cloneSingle(getConstantPool(), constResolved);
-        }
+    }
 
     /**
      * If this type contains any dynamic formal type for the specified register, replace that
@@ -1239,33 +1120,29 @@ public abstract class TypeConstant
      *
      * @return the resulting type
      */
-    public TypeConstant resolveDynamicConstraints(Register register)
-        {
+    public TypeConstant resolveDynamicConstraints(Register register) {
         TypeConstant constOriginal = getUnderlyingType();
         TypeConstant constResolved = constOriginal.resolveDynamicConstraints(register);
         return constResolved == constOriginal
                 ? this
                 : cloneSingle(getConstantPool(), constResolved);
-        }
+    }
 
     /**
      * @return this same type, but with the number of parameters equal to the number of
      *         formal parameters for the underlying terminal type, assigning missing
      *         type parameters to the corresponding canonical types
      */
-    public TypeConstant normalizeParameters()
-        {
+    public TypeConstant normalizeParameters() {
         TypeConstant typeNormalized = m_typeNormalized;
-        if (typeNormalized == null)
-            {
+        if (typeNormalized == null) {
             typeNormalized = adoptParameters(getConstantPool(), (TypeConstant[]) null);
-            if (!typeNormalized.containsUnresolved())
-                {
+            if (!typeNormalized.containsUnresolved()) {
                 m_typeNormalized = typeNormalized;
-                }
             }
-        return typeNormalized;
         }
+        return typeNormalized;
+    }
 
     /**
      * Create a semantically equivalent type that is annotated by the annotations of the specified
@@ -1276,22 +1153,19 @@ public abstract class TypeConstant
      *
      * @return potentially new annotated type
      */
-    public TypeConstant adoptAnnotations(ConstantPool pool, TypeConstant typeFrom)
-        {
+    public TypeConstant adoptAnnotations(ConstantPool pool, TypeConstant typeFrom) {
         assert !this.isAnnotated() && typeFrom.isAnnotated();
 
         TypeConstant typeBase = this;
-        Function<TypeConstant, TypeConstant> transformer = new Function<>()
-            {
-            public TypeConstant apply(TypeConstant type)
-                {
+        Function<TypeConstant, TypeConstant> transformer = new Function<>() {
+            public TypeConstant apply(TypeConstant type) {
                 return type.isAnnotated()
                     ? type.replaceUnderlying(pool, this)
                     : typeBase;
-                }
-            };
+            }
+        };
         return transformer.apply(typeFrom);
-        }
+    }
 
     /**
      * Create a semantically equivalent type that is parameterized by the parameters of the
@@ -1304,45 +1178,36 @@ public abstract class TypeConstant
      *
      * @return potentially new normalized type parameterized by the specified type parameters
      */
-    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant typeFrom)
-        {
+    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant typeFrom) {
         assert !this.isParamsSpecified();
 
         TypeConstant typeSansParams = typeFrom;
-        if (typeFrom.isParamsSpecified())
-            {
-            do
-                {
+        if (typeFrom.isParamsSpecified()) {
+            do {
                 typeSansParams = typeSansParams.getUnderlyingType();
-                }
-            while (typeSansParams.isParamsSpecified());
-            }
+            } while (typeSansParams.isParamsSpecified());
+        }
 
-        if (this.isA(typeSansParams))
-            {
+        if (this.isA(typeSansParams)) {
             return adoptParameters(pool, typeFrom.getParamTypesArray());
-            }
+        }
 
-        if (!this.isVirtualChild() && typeSansParams.isVirtualChild())
-            {
+        if (!this.isVirtualChild() && typeSansParams.isVirtualChild()) {
             // adopt from the first parameterized parent
             TypeConstant typeParent = typeSansParams.getParentType();
-            while (true)
-                {
-                if (typeParent.isParamsSpecified())
-                    {
+            while (true) {
+                if (typeParent.isParamsSpecified()) {
                     return adoptParameters(pool, typeParent.getParamTypesArray());
-                    }
-                if (!typeParent.isVirtualChild())
-                    {
-                    break;
-                    }
-                typeParent = typeParent.getParentType();
                 }
+                if (!typeParent.isVirtualChild()) {
+                    break;
+                }
+                typeParent = typeParent.getParentType();
             }
+        }
 
         return this;
-        }
+    }
 
     /**
      * Create a semantically equivalent type that is parameterized by the specified type parameters,
@@ -1356,15 +1221,14 @@ public abstract class TypeConstant
      *
      * @return potentially new normalized type that is parameterized by the specified types
      */
-    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
-        {
+    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams) {
         TypeConstant constOriginal = getUnderlyingType();
         TypeConstant constResolved = constOriginal.adoptParameters(pool, atypeParams);
 
         return constResolved == constOriginal
                 ? this
                 : cloneSingle(pool, constResolved);
-        }
+    }
 
     /**
      * Collect an array of generic type parameters for this "formalizable" type.
@@ -1381,10 +1245,9 @@ public abstract class TypeConstant
      *         have generic type parameters; or null if the type is not formalizable for any other
      *         reason
      */
-    public TypeConstant[] collectGenericParameters()
-        {
+    public TypeConstant[] collectGenericParameters() {
         return getUnderlyingType().collectGenericParameters();
-        }
+    }
 
     /**
      * Check if this type contains any auto-narrowing portion.
@@ -1394,20 +1257,18 @@ public abstract class TypeConstant
      *
      * @return true iff any portion of this TypeConstant represents an auto-narrowing type
      */
-    public boolean containsAutoNarrowing(boolean fAllowVirtChild)
-        {
+    public boolean containsAutoNarrowing(boolean fAllowVirtChild) {
         return getUnderlyingType().containsAutoNarrowing(fAllowVirtChild);
-        }
+    }
 
     /**
      * This method is only used to check if the type's base is auto-narrowing, for any other purpose
      * use {@link #containsAutoNarrowing} API.
      */
     @Override
-    public boolean isAutoNarrowing()
-        {
+    public boolean isAutoNarrowing() {
         return isModifyingType() && getUnderlyingType().isAutoNarrowing();
-        }
+    }
 
     /**
      * If this type has {@link #isExplicitClassIdentity an explicity class identity}, create an
@@ -1415,8 +1276,7 @@ public abstract class TypeConstant
      *
      * @return the TypeConstant that has an auto-narrowing base and the same class identity
      */
-    public TypeConstant ensureAutoNarrowing()
-        {
+    public TypeConstant ensureAutoNarrowing() {
         assert isModifyingType();
 
         TypeConstant constOriginal = getUnderlyingType();
@@ -1425,7 +1285,7 @@ public abstract class TypeConstant
         return constResolved == constOriginal
                 ? this
                 : cloneSingle(getConstantPool(), constResolved);
-        }
+    }
 
     /**
      * If this type is auto-narrowing (or has any references to auto-narrowing types), replace any
@@ -1444,12 +1304,10 @@ public abstract class TypeConstant
      *         identities
      */
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
-                                             TypeConstant typeTarget, IdentityConstant idCtx)
-        {
-        if (!isModifyingType())
-            {
+                                             TypeConstant typeTarget, IdentityConstant idCtx) {
+        if (!isModifyingType()) {
             return this;
-            }
+        }
 
         TypeConstant constOriginal = getUnderlyingType();
         TypeConstant constResolved = constOriginal.
@@ -1457,7 +1315,7 @@ public abstract class TypeConstant
         return constResolved == constOriginal
                 ? this
                 : cloneSingle(pool, constResolved);
-        }
+    }
 
     /**
      * Helper method that replaces an auto-narrowing "base" portion of the type, but doesn't
@@ -1466,10 +1324,9 @@ public abstract class TypeConstant
      * @return the TypeConstant with explicit base identity swapped in for an auto-narrowing
      *         base identity
      */
-    public TypeConstant resolveAutoNarrowingBase()
-        {
+    public TypeConstant resolveAutoNarrowingBase() {
         return resolveAutoNarrowing(getConstantPool(), true, null, null);
-        }
+    }
 
     /**
      * Helper method that replaces all auto-narrowing portions of the type with the corresponding
@@ -1477,10 +1334,9 @@ public abstract class TypeConstant
      *
      * @return the TypeConstant with all auto-narrowing types resolved
      */
-    public TypeConstant removeAutoNarrowing()
-        {
+    public TypeConstant removeAutoNarrowing() {
         return resolveAutoNarrowing(getConstantPool(), false, null, null);
-        }
+    }
 
     /**
      * Create a new type by replacing the underlying type for this one according to the specified
@@ -1493,15 +1349,14 @@ public abstract class TypeConstant
      *
      * @return potentially transformed type
      */
-    public TypeConstant replaceUnderlying(ConstantPool pool, Function<TypeConstant, TypeConstant> transformer)
-        {
+    public TypeConstant replaceUnderlying(ConstantPool pool, Function<TypeConstant, TypeConstant> transformer) {
         TypeConstant constOriginal = getUnderlyingType();
         TypeConstant constResolved = transformer.apply(constOriginal);
 
         return constResolved == constOriginal
                 ? this
                 : cloneSingle(pool, constResolved);
-        }
+    }
 
     /**
      * Given this (formal) type A<B<C>, D<R>> that may contain a type parameter "R" and an actual
@@ -1511,10 +1366,9 @@ public abstract class TypeConstant
      *         tha actual type topology is not the same as this type and doesn't provide enough
      *         fidelity (e.g.: formal is Array<R> and actual is Object)
      */
-    public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
-        {
+    public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName) {
         return getUnderlyingType().resolveTypeParameter(typeActual, sFormalName);
-        }
+    }
 
     /**
      * Given this (formal) type A<P> that may contain a pending type "P" and an actual
@@ -1527,41 +1381,37 @@ public abstract class TypeConstant
      * @return a semantically equivalent type with resolved {@link PendingTypeConstant} parameters
      *         if possible
      */
-    public TypeConstant resolvePending(ConstantPool pool, TypeConstant typeActual)
-        {
+    public TypeConstant resolvePending(ConstantPool pool, TypeConstant typeActual) {
         return this;
-        }
+    }
 
     /**
      * @return true iff the type is a Tuple type
      */
-    public boolean isTuple()
-        {
+    public boolean isTuple() {
         return isSingleDefiningConstant() && getUnderlyingType().isTuple();
-        }
+    }
 
     /**
      * @return the list of type parameters for this Tuple type
      */
-    public List<TypeConstant> getTupleParamTypes()
-        {
+    public List<TypeConstant> getTupleParamTypes() {
         assert isTuple();
 
         IdentityConstant idTuple  = getSingleUnderlyingClass(true);
         ClassStructure   clzTuple = (ClassStructure) idTuple.getComponent();
 
         return clzTuple.getTupleParamTypes(getConstantPool(), getParamTypes());
-        }
+    }
 
     /**
      * @return true iff the type is an Array type
      */
-    public boolean isArray()
-        {
+    public boolean isArray() {
         TypeConstant constThis = resolveTypedefs();
         assert !constThis.containsUnresolved();
         return constThis.isA(getConstantPool().typeArray());
-        }
+    }
 
     /**
      * Determine compatibility for purposes of comparing equality.
@@ -1572,33 +1422,28 @@ public abstract class TypeConstant
      * @return true iff a value of this type can be compared with a value of the other type for
      *         equality
      */
-    public boolean supportsEquals(TypeConstant that, boolean fThatIsConstant)
-        {
+    public boolean supportsEquals(TypeConstant that, boolean fThatIsConstant) {
         assert that != null;
 
         ConstantPool pool = getConstantPool();
 
         if (this.isTypeOfType()      && that.isTypeOfType() ||
-            this.isA(pool.typeRef()) && that.isA(pool.typeRef()))
-            {
+            this.isA(pool.typeRef()) && that.isA(pool.typeRef())) {
             // Type and Ref objects are always comparable
             return true;
-            }
+        }
 
-        if (this.isTuple() && that.isTuple())
-            {
+        if (this.isTuple() && that.isTuple()) {
             // tuples can be comparable if the types are not explicitly specified
             TypeConstant[] atypeThis = this.getParamTypesArray();
             TypeConstant[] atypeThat = that.getParamTypesArray();
-            for (int i = 0, c = Math.min(atypeThis.length, atypeThat.length); i < c; i++)
-                {
-                if (!atypeThis[i].supportsEquals(atypeThat[i], false))
-                    {
+            for (int i = 0, c = Math.min(atypeThis.length, atypeThat.length); i < c; i++) {
+                if (!atypeThis[i].supportsEquals(atypeThat[i], false)) {
                     return false;
-                    }
                 }
-            return true;
             }
+            return true;
+        }
 
         TypeConstant typeThis = this.removeAutoNarrowing();
         TypeConstant typeThat = that.removeAutoNarrowing();
@@ -1612,24 +1457,21 @@ public abstract class TypeConstant
         //   Constant c = ...
         //   if (c == "hello") // a valid comparison
         //
-        if (typeThat.isA(typeThis) && (fThatIsConstant || typeThis.isA(typeThat)))
-            {
+        if (typeThat.isA(typeThis) && (fThatIsConstant || typeThis.isA(typeThat))) {
             return true;
-            }
+        }
 
         // we allow comparison of "immutable T" with "T"
-        if (typeThis.isImmutabilitySpecified() ^ typeThat.isImmutabilitySpecified())
-            {
+        if (typeThis.isImmutabilitySpecified() ^ typeThat.isImmutabilitySpecified()) {
             return typeThis.isImmutabilitySpecified()
                     ? typeThis.removeImmutable().supportsEquals(typeThat, fThatIsConstant)
                     : typeThis.supportsEquals(typeThat.removeImmutable(), false);
-            }
+        }
 
         // and we allow comparison of "T:access" with "T"
-        if (typeThat.isAccessSpecified() || typeThis.isAccessSpecified())
-            {
+        if (typeThat.isAccessSpecified() || typeThis.isAccessSpecified()) {
             return typeThis.removeAccess().supportsEquals(typeThat.removeAccess(), fThatIsConstant);
-            }
+        }
 
         // we also allow comparison of a nullable type with the base type; for example:
         // String? s1 = ...
@@ -1637,16 +1479,14 @@ public abstract class TypeConstant
         // if (s1 == s2) // is allowed despite the types are not equal
         // TODO: consider allowing this for any UnionType: (T1 | T2) == T1
 
-        if (typeThis.isNullable())
-            {
+        if (typeThis.isNullable()) {
             return typeThis.removeNullable().supportsEquals(typeThat, fThatIsConstant);
-            }
-        if (typeThat.isNullable())
-            {
-            return typeThis.supportsEquals(typeThat.removeNullable(), false);
-            }
-        return false;
         }
+        if (typeThat.isNullable()) {
+            return typeThis.supportsEquals(typeThat.removeNullable(), false);
+        }
+        return false;
+    }
 
     /**
      * Determine compatibility for purposes of comparing order.
@@ -1657,66 +1497,59 @@ public abstract class TypeConstant
      * @return true iff a value of this type can be compared with a value of the other type for
      *         order
      */
-    public boolean supportsCompare(TypeConstant that, boolean fThatIsConstant)
-        {
+    public boolean supportsCompare(TypeConstant that, boolean fThatIsConstant) {
         assert that != null;
 
-        if (this.isTypeOfType() && that.isTypeOfType())
-            {
+        if (this.isTypeOfType() && that.isTypeOfType()) {
             // Type objects are always orderable
             return true;
-            }
+        }
 
         TypeConstant typeThis = this.removeAutoNarrowing();
         TypeConstant typeThat = that.removeAutoNarrowing();
 
         // see the comment in supportsEquals() method
-        if (typeThat.isA(typeThis) && (fThatIsConstant || typeThis.isA(typeThat)))
-            {
+        if (typeThat.isA(typeThis) && (fThatIsConstant || typeThis.isA(typeThat))) {
             return findFunctionInfo(getConstantPool().sigCompare()) != null;
-            }
+        }
 
         // we allow comparison of "immutable T" with "T"
-        if (typeThis.isImmutabilitySpecified() ^ typeThat.isImmutabilitySpecified())
-            {
+        if (typeThis.isImmutabilitySpecified() ^ typeThat.isImmutabilitySpecified()) {
             return typeThis.isImmutabilitySpecified()
                     ? typeThis.removeImmutable().supportsCompare(typeThat, fThatIsConstant)
                     : typeThis.supportsCompare(typeThat.removeImmutable(), false);
-            }
+        }
 
         // and we allow comparison of "T:access" with "T"
-        if (typeThat.isAccessSpecified() || typeThis.isAccessSpecified())
-            {
+        if (typeThat.isAccessSpecified() || typeThis.isAccessSpecified()) {
             return typeThis.removeAccess().supportsCompare(typeThat.removeAccess(), fThatIsConstant);
-            }
+        }
 
         return false;
-        }
+    }
 
     /**
      * Check whether this type represents a "nest mate" of the specified class.
      *
      * @param idClass  the identity of the class
      */
-    public boolean isNestMateOf(IdentityConstant idClass)
-        {
+    public boolean isNestMateOf(IdentityConstant idClass) {
         return !isFormalType() &&
                 isExplicitClassIdentity(true) &&
                 isSingleUnderlyingClass(false) &&
                 getSingleUnderlyingClass(false).isNestMateOf(idClass);
-        }
+    }
 
     /**
      * If the type is an enum value (except Null), widen it to its parent Enumeration.
      *
      * @return a widened type or this type if this type does not represent an enum value
      */
-    public TypeConstant widenEnumValueTypes()
-        {
+    public TypeConstant widenEnumValueTypes() {
         return isModifyingType()
                 ? cloneSingle(getConstantPool(), getUnderlyingType().widenEnumValueTypes())
                 : this;
-        }
+    }
 
 
     // ----- TypeInfo support ----------------------------------------------------------------------
@@ -1726,10 +1559,9 @@ public abstract class TypeConstant
      *
      * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
      */
-    public TypeInfo ensureTypeInfo()
-        {
+    public TypeInfo ensureTypeInfo() {
         return ensureTypeInfo(getErrorListener());
-        }
+    }
 
     /**
      * Obtain the information about this type, while being used in a context of the specified class.
@@ -1740,10 +1572,9 @@ public abstract class TypeConstant
      * @return the flattened TypeInfo that represents all aspects of this type when used in
      *         a given class context
      */
-    public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs)
-        {
+    public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs) {
         return adjustAccess(idClass).ensureTypeInfo(errs);
-        }
+    }
 
     /**
      * Obtain the information about this type, resolved from its recursive composition.
@@ -1752,29 +1583,24 @@ public abstract class TypeConstant
      *
      * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
      */
-    public TypeInfo ensureTypeInfo(ErrorListener errs)
-        {
+    public TypeInfo ensureTypeInfo(ErrorListener errs) {
         TypeInfo info = getTypeInfo();
-        if (isComplete(info) && isUpToDate(info))
-            {
+        if (isComplete(info) && isUpToDate(info)) {
             return info;
-            }
-
-        return ensureTypeInfo(info, errs);
         }
 
-    private synchronized TypeInfo ensureTypeInfo(TypeInfo info, ErrorListener errs)
-        {
+        return ensureTypeInfo(info, errs);
+    }
+
+    private synchronized TypeInfo ensureTypeInfo(TypeInfo info, ErrorListener errs) {
         ConstantPool pool = getConstantPool();
-        if (info == null)
-            {
+        if (info == null) {
             // validate this TypeConstant (necessary before we build the TypeInfo)
-            if (validate(errs) || containsUnresolved())
-                {
+            if (validate(errs) || containsUnresolved()) {
                 log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, getValueString());
                 return pool.typeObject().ensureTypeInfo(errs);
-                }
             }
+        }
 
         // since we're producing a lot of information for the TypeInfo, there is no reason to do
         // it unless the type is registered (which resolves typedefs)
@@ -1784,12 +1610,11 @@ public abstract class TypeConstant
         // - resolve the auto-narrowing;
         // - normalize the type to make sure that all formal parameters are filled in
         typeResolved = typeResolved.removeAutoNarrowing().normalizeParameters();
-        if (typeResolved != this)
-            {
+        if (typeResolved != this) {
             info = typeResolved.ensureTypeInfo(errs);
             typeResolved.setTypeInfo(info);
             return info;
-            }
+        }
 
         // this is where things get very, very complicated. this method is responsible for returning
         // a "completed" TypeInfo, but there are (theoretically) lots of threads trying to do the
@@ -1810,62 +1635,52 @@ public abstract class TypeConstant
 
         // since this can only be used "from the outside", there should be no deferred TypeInfo
         // objects at this point
-        if (hasDeferredTypeInfo())
-            {
+        if (hasDeferredTypeInfo()) {
             throw new IllegalStateException("Infinite loop while producing a TypeInfo for "
                     + this + "; deferred types=" + takeDeferredTypeInfo());
-            }
+        }
 
         errs = errs.branch(null);
 
         Set<TypeConstant> setInvalidate = null;
-        try
-            {
+        try {
             // build the TypeInfo for this type
             info = buildTypeInfo(errs);
-            if (info != null)
-                {
+            if (info != null) {
                 setTypeInfo(info);
-                }
+            }
 
-            for (int cDeferredPrev = 0, iTry = 0; hasDeferredTypeInfo(); iTry++)
-                {
+            for (int cDeferredPrev = 0, iTry = 0; hasDeferredTypeInfo(); iTry++) {
                 // any downstream TypeInfo that could not be completed during the building of
                 // this TypeInfo is considered to be "deferred", but now that we've built
                 // something (even if it isn't complete), we should be able to complete the
                 // deferred TypeInfo building in a couple of iterations
                 List<TypeConstant> listDeferred = takeDeferredTypeInfo();
                 int                cDeferred    = listDeferred.size();
-                if (iTry > 2 && cDeferred >= cDeferredPrev)
-                    {
+                if (iTry > 2 && cDeferred >= cDeferredPrev) {
                     errs.merge();
                     throw new IllegalStateException("Failure to make progress on a TypeInfo for "
                             + this + "; deferred types=" + listDeferred + "\nErrors: " + errs);
-                    }
+                }
                 cDeferredPrev = cDeferred;
 
-                for (TypeConstant typeDeferred : listDeferred)
-                    {
-                    if (typeDeferred != this)
-                        {
-                        if (typeDeferred.getConstantPool() != pool)
-                            {
+                for (TypeConstant typeDeferred : listDeferred) {
+                    if (typeDeferred != this) {
+                        if (typeDeferred.getConstantPool() != pool) {
                             typeDeferred = (TypeConstant) pool.register(typeDeferred);
-                            }
+                        }
 
                         TypeInfo infoDeferred = typeDeferred.getTypeInfo();
-                        if (!isComplete(infoDeferred))
-                            {
+                        if (!isComplete(infoDeferred)) {
                             // if there's something wrong with this logic, we'll end up with infinite
                             // recursion, so be very careful about what can allow a TypeInfo to be built
                             // "incomplete" (it needs to be impossible to rebuild a TypeInfo and have it
                             // be incomplete for the second time)
-                            if (m_cRecursiveDepth.getAndIncrement() > 2)
-                                {
+                            if (m_cRecursiveDepth.getAndIncrement() > 2) {
                                 // an infinite loop
                                 throw new IllegalStateException("Infinite loop while producing a TypeInfo for "
                                         + this + "; deferred type=" + typeDeferred);
-                                }
+                            }
 
                             // merge the errors only after the completed "buildTypeInfo" run
                             ErrorListener errsTemp = errs.branch(null);
@@ -1873,56 +1688,46 @@ public abstract class TypeConstant
                             infoDeferred = typeDeferred.buildTypeInfo(errsTemp);
                             m_cRecursiveDepth.getAndDecrement();
 
-                            if (isComplete(infoDeferred))
-                                {
-                                if (errsTemp.hasSeriousErrors())
-                                    {
-                                    if (setInvalidate == null)
-                                        {
+                            if (isComplete(infoDeferred)) {
+                                if (errsTemp.hasSeriousErrors()) {
+                                    if (setInvalidate == null) {
                                         setInvalidate = new HashSet<>();
-                                        }
-                                    setInvalidate.add(typeDeferred);
                                     }
+                                    setInvalidate.add(typeDeferred);
+                                }
                                 errsTemp.merge();
-                                }
-                            if (infoDeferred != null)
-                                {
+                            }
+                            if (infoDeferred != null) {
                                 typeDeferred.setTypeInfo(infoDeferred);
-                                }
                             }
                         }
                     }
+                }
 
                 // now that all deferred types are done building, rebuild this if necessary
-                if (!isComplete(info))
-                    {
+                if (!isComplete(info)) {
                     info = buildTypeInfo(errs);
-                    if (info != null)
-                        {
+                    if (info != null) {
                         setTypeInfo(info);
-                        }
                     }
                 }
             }
-        catch (Exception | Error e)
-            {
+        } catch (Exception | Error e) {
             // clean up the deferred types
             takeDeferredTypeInfo();
             throw e;
-            }
+        }
 
-        if (errs.hasSeriousErrors())
-            {
+        if (errs.hasSeriousErrors()) {
             // we need to return what we've got, but don't cache it
             invalidateTypeInfo();
-            if (setInvalidate != null)
-                {
+            if (setInvalidate != null) {
                 setInvalidate.forEach(TypeConstant::invalidateTypeInfo);
-                }
             }
+        }
         errs.merge();
         return info;
-        }
+    }
 
     /**
      * Build the TypeInfo, but if necessary, return an incomplete TypeInfo, or even worse, null.
@@ -1932,11 +1737,9 @@ public abstract class TypeConstant
      * @return a TypeInfo that may or may not be complete, or may be null if it's impossible to
      *         build the TypeInfo at this point due to recursion
      */
-    protected TypeInfo ensureTypeInfoInternal(ErrorListener errs)
-        {
+    protected TypeInfo ensureTypeInfoInternal(ErrorListener errs) {
         TypeInfo info = getTypeInfo();
-        if (info != null && info.isPlaceHolder())
-            {
+        if (info != null && info.isPlaceHolder()) {
             // the TypeInfo is already being built, so we're in the catch-22 situation; note that it
             // is even more complicated, because it could be being built by a different thread, so
             // always add it to the deferred list _on this thread_ so that we will force the rebuild
@@ -1945,29 +1748,25 @@ public abstract class TypeConstant
             // the other thread)
             addDeferredTypeInfo(this);
             return null;
-            }
+        }
 
-        if (info == null || !isUpToDate(info))
-            {
+        if (info == null || !isUpToDate(info)) {
             setTypeInfo(getConstantPool().infoPlaceholder());
             info = buildTypeInfo(errs);
-            if (info != null)
-                {
+            if (info != null) {
                 setTypeInfo(info);
-                if (errs.hasSeriousErrors())
-                    {
+                if (errs.hasSeriousErrors()) {
                     info.markWithError();
-                    }
                 }
             }
+        }
 
-        if (!isComplete(info))
-            {
+        if (!isComplete(info)) {
             addDeferredTypeInfo(this);
-            }
+        }
 
         return info;
-        }
+    }
 
     /**
      * Obtain the TypeInfo associated with this type.
@@ -1975,10 +1774,9 @@ public abstract class TypeConstant
      * @return one of: null, a place-holder TypeInfo (if the TypeInfo is currently being built), an
      *         "incomplete" TypeInfo, or a finished TypeInfo
      */
-    protected TypeInfo getTypeInfo()
-        {
+    protected TypeInfo getTypeInfo() {
         return s_typeinfo.get(this);
-        }
+    }
 
     /**
      * Store the specified TypeInfo for this type. Note that this is a "one way" setter, in that
@@ -1986,71 +1784,61 @@ public abstract class TypeConstant
      *
      * @param info  the new TypeInfo
      */
-    protected void setTypeInfo(TypeInfo info)
-        {
+    protected void setTypeInfo(TypeInfo info) {
         TypeInfo infoOld;
         while (rankTypeInfo(info) > rankTypeInfo(infoOld = s_typeinfo.get(this))
-                || info.isPlaceHolder())
-            {
+                || info.isPlaceHolder()) {
             // update the TypeInfo
-            if (s_typeinfo.compareAndSet(this, infoOld, info))
-                {
+            if (s_typeinfo.compareAndSet(this, infoOld, info)) {
                 // update the invalidation count that we have caught up to at this point
                 setInvalidationCount(info.getInvalidationCount());
                 break;
-                }
             }
         }
+    }
 
     /**
      * @return the invalidation count that this TypeConstant has already processed
      */
-    protected int getInvalidationCount()
-        {
+    protected int getInvalidationCount() {
         return s_cInvalidations.get(this);
-        }
+    }
 
     /**
      * Modify the invalidation count (but don't ever regress it).
      *
      * @param cNew  the new invalidation count
      */
-    protected void setInvalidationCount(int cNew)
-        {
+    protected void setInvalidationCount(int cNew) {
         int cOld;
-        while ((cOld = s_cInvalidations.get(this)) < cNew)
-            {
+        while ((cOld = s_cInvalidations.get(this)) < cNew) {
             s_cInvalidations.compareAndSet(this, cOld, cNew);
-            }
         }
+    }
 
     /**
      * Specify that the TypeInfo held by this type is no longer valid, as is any other TypeInfo
      * built from the underlying class of this type.
      */
-    public void invalidateTypeInfo()
-        {
+    public void invalidateTypeInfo() {
         clearTypeInfo();
 
-        if (isSingleUnderlyingClass(true))
-            {
+        if (isSingleUnderlyingClass(true)) {
             getConstantPool().invalidateTypeInfos(getSingleUnderlyingClass(true));
-            }
+        }
 
-        if (isSingleDefiningConstant() && !isAccessSpecified())
-            {
+        if (isSingleDefiningConstant() && !isAccessSpecified()) {
             // clear the TypeInfo for the PRIVATE type
             getConstantPool().ensureAccessTypeConstant(this, Access.PRIVATE).clearTypeInfo();
-            }
         }
+    }
 
     /**
      * Clear out any cached TypeInfo for this one specific TypeConstant.
      */
-    protected void clearTypeInfo()
-        {
+    protected void clearTypeInfo() {
         s_typeinfo.set(this, null);
-        }
+    }
 
     /**
      * Rank is null, place-holder, incomplete, complete.
@@ -2059,22 +1847,20 @@ public abstract class TypeConstant
      *
      * @return the rank of the TypeInfo
      */
-    private static int rankTypeInfo(TypeInfo info)
-        {
+    private static int rankTypeInfo(TypeInfo info) {
         return info == null
                 ? 0
                 : info.getProgress().ordinal();
-        }
+    }
 
     /**
      * @param info  the TypeInfo to evaluate
      *
      * @return true iff the passed TypeInfo is non-null, not the place-holder, and not incomplete
      */
-    public static boolean isComplete(TypeInfo info)
-        {
+    public static boolean isComplete(TypeInfo info) {
         return rankTypeInfo(info) == 3;
-        }
+    }
 
     /**
      * Determine if the passed TypeInfo is up-to-date for this type.
@@ -2083,24 +1869,21 @@ public abstract class TypeConstant
      *
      * @return true iff the TypeInfo can be used as-is
      */
-    protected boolean isUpToDate(TypeInfo info)
-        {
+    protected boolean isUpToDate(TypeInfo info) {
         ConstantPool pool       = getConstantPool();
         int          cOldInvals = getInvalidationCount();
         int          cNewInvals = pool.getInvalidationCount();
-        if (cNewInvals == cOldInvals)
-            {
+        if (cNewInvals == cOldInvals) {
             return true;
-            }
+        }
 
-        if (info.needsRebuild(pool.invalidationsSince(cOldInvals)))
-            {
+        if (info.needsRebuild(pool.invalidationsSince(cOldInvals))) {
             return false;
-            }
+        }
 
         setInvalidationCount(cNewInvals);
         return true;
-        }
+    }
 
     /**
      * Create a TypeInfo for this type.
@@ -2111,63 +1894,56 @@ public abstract class TypeConstant
      *         this type is currently impossible because it requires a different TypeInfo that is
      *         already in the process of being built
      */
-    protected TypeInfo buildTypeInfo(ErrorListener errs)
-        {
+    protected TypeInfo buildTypeInfo(ErrorListener errs) {
         // any newly created derivative types and various constants should be placed into the same
         // pool where this type comes from
-        try (var ignore = ConstantPool.withPool(getConstantPool()))
-            {
+        try (var ignore = ConstantPool.withPool(getConstantPool())) {
             return buildTypeInfoImpl(errs);
-            }
         }
+    }
 
     /**
      * Actual buildTypeInfo implementation.
      */
-    private TypeInfo buildTypeInfoImpl(ErrorListener errs)
-        {
+    private TypeInfo buildTypeInfoImpl(ErrorListener errs) {
         // the raw type-info has to be built as either ":private" or ":struct", so delegate the
         // building for ":public" to ":private", and then strip out the non-accessible members
-        switch (getAccess())
-            {
-            case STRUCT:
-                return buildStructInfo(errs);
+        switch (getAccess()) {
+        case STRUCT:
+            return buildStructInfo(errs);
 
-            case PRIVATE:
-                // this is the one type that actually gets built by this method
-                break;
+        case PRIVATE:
+            // this is the one type that actually gets built by this method
+            break;
 
-            case PROTECTED:
-                // this should have been handled by the AccessTypeConstant
-                throw new IllegalStateException();
+        case PROTECTED:
+            // this should have been handled by the AccessTypeConstant
+            throw new IllegalStateException();
 
-            case PUBLIC:
-                assert !isAccessSpecified();
-                TypeInfo info = getConstantPool().ensureAccessTypeConstant(this, Access.PRIVATE)
-                        .ensureTypeInfoInternal(errs);
-                return info == null
-                        ? null
-                        : info.limitAccess(Access.PUBLIC);
-            }
+        case PUBLIC:
+            assert !isAccessSpecified();
+            TypeInfo info = getConstantPool().ensureAccessTypeConstant(this, Access.PRIVATE)
+                    .ensureTypeInfoInternal(errs);
+            return info == null
+                    ? null
+                    : info.limitAccess(Access.PUBLIC);
+        }
 
         // annotated and property class types require special handling
         TypeConstant typeUnderlying = getUnderlyingType(); // remove "Access:PRIVATE"
-        if (typeUnderlying.isAnnotated())
-            {
-            if (typeUnderlying instanceof AnnotatedTypeConstant typeAnno)
-                {
+        if (typeUnderlying.isAnnotated()) {
+            if (typeUnderlying instanceof AnnotatedTypeConstant typeAnno) {
                 return typeAnno.buildPrivateInfo(errs);
-                }
+            }
 
             log(errs, Severity.ERROR, VE_ANNOTATION_UNEXPECTED,
                     getAnnotations()[0], typeUnderlying.getValueString());
             return null;
-            }
+        }
 
-        if (typeUnderlying instanceof PropertyClassTypeConstant typePropClass)
-            {
+        if (typeUnderlying instanceof PropertyClassTypeConstant typePropClass) {
             return typePropClass.buildTypeInfo(errs);
-            }
+        }
 
         // this implementation only deals with modifying (not including immutable) and terminal type
         // constants (not including typedefs, type parameters, auto-narrowing types, and unresolved
@@ -2176,41 +1952,36 @@ public abstract class TypeConstant
         ConstantPool     pool = getConstantPool();
         IdentityConstant constId;
         ClassStructure   struct;
-        try
-            {
+        try {
             constId = (IdentityConstant) getDefiningConstant();
             struct  = (ClassStructure)   constId.getComponent();
-            }
-        catch (RuntimeException e)
-            {
+        } catch (RuntimeException e) {
             throw new IllegalStateException("Unable to determine class for " + getValueString(), e);
-            }
+        }
 
-        if (struct instanceof PackageStructure pkg && pkg.isModuleImport())
-            {
+        if (struct instanceof PackageStructure pkg && pkg.isModuleImport()) {
             ModuleStructure module = pkg.getImportedModule();
             module = module.isFingerprint() ? module.getFingerprintOrigin() : module;
 
             return pool.ensureAccessTypeConstant(module.getCanonicalType(), Access.PRIVATE).
                     buildTypeInfoImpl(errs);
-            }
+        }
 
         // get a snapshot of the current invalidation count BEFORE building the TypeInfo
         int cInvals = pool.getInvalidationCount();
 
         Annotation[] aAnnoMixin = struct.collectAnnotations(false);
         Annotation[] aAnnoClass = struct.collectAnnotations(true);
-        if (aAnnoMixin.length > 0)
-            {
+        if (aAnnoMixin.length > 0) {
             // build a partial info without the annotations
             TypeInfo infoBase = buildBaseTypeInfoImpl(constId, struct, Annotation.NO_ANNOTATIONS,
                     cInvals, /*fComplete*/ false, errs);
 
             return layerOnAnnotations(constId, struct, infoBase, aAnnoMixin, aAnnoClass, cInvals, errs);
-            }
+        }
 
         return buildBaseTypeInfoImpl(constId, struct, aAnnoClass, cInvals, /*fComplete*/ true, errs);
-        }
+    }
 
     /**
      * Actual buildTypeInfo implementation for this type.
@@ -2226,8 +1997,7 @@ public abstract class TypeConstant
      */
     private TypeInfo buildBaseTypeInfoImpl(IdentityConstant constId, ClassStructure struct,
                                    Annotation[] aAnnoClass, int cInvalidations,
-                                   boolean fComplete, ErrorListener errs)
-        {
+                                   boolean fComplete, ErrorListener errs) {
         List<Contribution> listContribs = struct.getContributionsAsList();
         TypeConstant[]     atypeContrib = resolveContributionTypes(listContribs);
         TypeConstant[]     atypeCondInc = extractConditionalContributes(
@@ -2285,11 +2055,9 @@ public abstract class TypeConstant
                 setDepends.isEmpty() ? null : setDepends,
                 fComplete ? Progress.Complete : Progress.Incomplete);
 
-        if (fComplete)
-            {
+        if (fComplete) {
             MethodInfo methodInvalid = info.validateCapped();
-            if (methodInvalid != null)
-                {
+            if (methodInvalid != null) {
                 MethodConstant id = methodInvalid.getIdentity();
                 // TODO GG create a dedicated error
                 id.log(errs, Severity.ERROR, VE_METHOD_NARROWING_AMBIGUOUS,
@@ -2297,62 +2065,53 @@ public abstract class TypeConstant
                     id.getValueString(),
                     methodInvalid.getHead().getNarrowingNestedIdentity()
                     );
-                }
             }
+        }
 
         return atypeCondInc == null || !fComplete
                 ? info
                 : mergeConditionalIncorporates(cInvalidations, constId, info, atypeCondInc, errs);
-        }
+    }
 
     /**
      * Recursively collect all the annotations for the contributions in the specified list.
      * Note: the annotations must be collected in the inverse order.
      */
-    private Annotation[] collectMixinAnnotations(List<Contribution> listContrib)
-        {
+    private Annotation[] collectMixinAnnotations(List<Contribution> listContrib) {
         List<Annotation> listAnnos = null;
-        for (int c = listContrib.size(), i = c - 1; i >= 0; i--)
-            {
+        for (int c = listContrib.size(), i = c - 1; i >= 0; i--) {
             Contribution contrib = listContrib.get(i);
-            switch (contrib.getComposition())
-                {
-                case Annotation:
-                    {
-                    Annotation   anno     = contrib.getAnnotation();
-                    TypeConstant typeInto = anno.getAnnotationType().getExplicitClassInto().
-                                                resolveGenerics(getConstantPool(), this);
-                    if (this.isA(typeInto))
-                        {
-                        if (listAnnos == null)
-                            {
-                            listAnnos = new ArrayList<>();
-                            }
-                        listAnnos.add(anno);
-                        }
-                    break;
+            switch (contrib.getComposition()) {
+            case Annotation: {
+                Annotation   anno     = contrib.getAnnotation();
+                TypeConstant typeInto = anno.getAnnotationType().getExplicitClassInto().
+                                            resolveGenerics(getConstantPool(), this);
+                if (this.isA(typeInto)) {
+                    if (listAnnos == null) {
+                        listAnnos = new ArrayList<>();
                     }
-
-                case Extends:
-                    {
-                    TypeInfo     infoExtend  = contrib.getTypeConstant().ensureTypeInfo();
-                    Annotation[] aAnnoExtend = infoExtend.getMixinAnnotations();
-                    if (aAnnoExtend.length > 0)
-                        {
-                        if (listAnnos == null)
-                            {
-                            listAnnos = new ArrayList<>();
-                            }
-                        listAnnos.addAll(Arrays.asList(aAnnoExtend));
-                        }
-                    break;
-                    }
+                    listAnnos.add(anno);
                 }
+                break;
             }
+
+            case Extends: {
+                TypeInfo     infoExtend  = contrib.getTypeConstant().ensureTypeInfo();
+                Annotation[] aAnnoExtend = infoExtend.getMixinAnnotations();
+                if (aAnnoExtend.length > 0) {
+                    if (listAnnos == null) {
+                        listAnnos = new ArrayList<>();
+                    }
+                    listAnnos.addAll(Arrays.asList(aAnnoExtend));
+                }
+                break;
+            }
+            }
+        }
         return listAnnos == null
                 ? Annotation.NO_ANNOTATIONS
                 : listAnnos.toArray(Annotation.NO_ANNOTATIONS);
-        }
+    }
 
     /**
      * Layer on the specified annotations on top of the base TypeInfo using this type as a target.
@@ -2367,14 +2126,12 @@ public abstract class TypeConstant
     protected TypeInfo layerOnAnnotations(IdentityConstant constId, ClassStructure struct,
                                           TypeInfo infoBase,
                                           Annotation[] aAnnoMixin, Annotation[] aAnnoClass,
-                                          int cInvalidations, ErrorListener errs)
-        {
+                                          int cInvalidations, ErrorListener errs) {
         ConstantPool pool     = getConstantPool();
         TypeInfo     infoNext = infoBase;
         TypeConstant typeNext = infoBase.getType();
 
-        for (int c = aAnnoMixin.length, i = c-1; i >= 0; --i)
-            {
+        for (int c = aAnnoMixin.length, i = c-1; i >= 0; --i) {
             Annotation            anno      = aAnnoMixin[i];
             AnnotatedTypeConstant constAnno = pool.ensureAnnotatedTypeConstant(typeNext, anno);
 
@@ -2382,14 +2139,13 @@ public abstract class TypeConstant
             TypeConstant typeAnnoPrivate = pool.ensureAccessTypeConstant(typeAnno, Access.PRIVATE);
             TypeInfo     infoAnno        = typeAnnoPrivate.ensureTypeInfoInternal(errs);
 
-            if (infoAnno == null)
-                {
+            if (infoAnno == null) {
                 // we are always called with an incomplete infoBase when building an annotated class
                 // (e.g. @M1 @M2 class TestM {}), rather than a run-time annotated type
                 // (e.g. new @M1 @M2 Test()), so it's permissible to return it if the annotation
                 // info cannot yet be calculated at this time
                 return isComplete(infoBase) ? null : infoBase;
-                }
+            }
 
             // even if infoMixin is incomplete, it's only incomplete because it lacks information
             // about the "into" type (which is probably this type), so the assumption is that
@@ -2399,11 +2155,11 @@ public abstract class TypeConstant
                     struct, infoNext, infoAnno,
                     i == 0 ? aAnnoClass : Annotation.NO_ANNOTATIONS, anno, errs);
             typeNext = constAnno;
-            }
+        }
 
         assert infoNext.getType().equals(this);
         return infoNext;
-        }
+    }
 
     /**
      * Create a TypeInfo for this struct of this type.
@@ -2412,8 +2168,7 @@ public abstract class TypeConstant
      *
      * @return a new TypeInfo representing the struct of this TypeConstant
      */
-    private TypeInfo buildStructInfo(ErrorListener errs)
-        {
+    private TypeInfo buildStructInfo(ErrorListener errs) {
         // this is a helper method that only supports being called on AccessTypeConstant of STRUCT
         assert this instanceof AccessTypeConstant && getAccess() == Access.STRUCT;
 
@@ -2426,93 +2181,75 @@ public abstract class TypeConstant
         int          cInvals = pool.getInvalidationCount();
         TypeInfo     infoPri = pool.ensureAccessTypeConstant(getUnderlyingType(), Access.PRIVATE)
                                .ensureTypeInfoInternal(errs);
-        if (!isComplete(infoPri))
-            {
+        if (!isComplete(infoPri)) {
             return infoPri;
-            }
+        }
 
         ClassStructure struct = infoPri.getClassStructure();
 
-        for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoPri.getProperties().entrySet())
-            {
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoPri.getProperties().entrySet()) {
             // the properties that show up in structure types are those that have a field; however,
             // we also need to retain both type params and constants, even though they technically
             // are not "in" the structure itself
             PropertyInfo prop = entry.getValue();
-            if (prop.isFormalType() || prop.isConstant() || prop.hasField())
-                {
+            if (prop.isFormalType() || prop.isConstant() || prop.hasField()) {
                 PropertyConstant id = entry.getKey();
-                if (prop.hasField() && prop.isRefAnnotated())
-                    {
+                if (prop.hasField() && prop.isRefAnnotated()) {
                     // in the same way as we make private properties of the contributions visible
                     // below, we need to "promote" the visibility of Ref-annotated properties
                     // that have only the "ref" access at this level
                     prop = prop.ensureVar();
-                    }
-
-                if (prop.isVirtual())
-                    {
-                    mapVirtProps.put(id.resolveNestedIdentity(pool, null), prop);
-                    }
-                mapProps.put(id, prop);
                 }
-            else if ("outer".equals(prop.getName()) && struct.isInstanceChild())
-                {
+
+                if (prop.isVirtual()) {
+                    mapVirtProps.put(id.resolveNestedIdentity(pool, null), prop);
+                }
+                mapProps.put(id, prop);
+            } else if ("outer".equals(prop.getName()) && struct.isInstanceChild()) {
                 // the "outer" property should be available in the child structure at
                 // compile time and the outer reference will be supplied by the run-time
                 mapProps.put(entry.getKey(), prop);
-                }
             }
+        }
 
-        for (Map.Entry<MethodConstant, MethodInfo> entry : infoPri.getMethods().entrySet())
-            {
+        for (Map.Entry<MethodConstant, MethodInfo> entry : infoPri.getMethods().entrySet()) {
             MethodInfo method = entry.getValue();
-            if (method.isFunction() || method.isConstructor())
-                {
+            if (method.isFunction() || method.isConstructor()) {
                 mapMethods.put(entry.getKey(), method);
-                }
             }
+        }
 
         // now go through all the contributions and "vacuum" any fields from those contributions
         // that were not visible to (i.e. from within) the private form of this type
         boolean fIncomplete = false;
-        for (Contribution contrib : infoPri.getContributionList())
-            {
-            switch (contrib.getComposition())
-                {
-                case Annotation:
-                case Incorporates:
-                case Extends:
-                case RebasesOnto:
-                    {
-                    // obtain the struct type of the contribution and copy any missing fields from it
-                    TypeConstant typeContrib = contrib.getTypeConstant();
-                    typeContrib = typeContrib.removeAccess();
-                    typeContrib = pool.ensureAccessTypeConstant(typeContrib, Access.STRUCT);
+        for (Contribution contrib : infoPri.getContributionList()) {
+            switch (contrib.getComposition()) {
+            case Annotation:
+            case Incorporates:
+            case Extends:
+            case RebasesOnto: {
+                // obtain the struct type of the contribution and copy any missing fields from it
+                TypeConstant typeContrib = contrib.getTypeConstant();
+                typeContrib = typeContrib.removeAccess();
+                typeContrib = pool.ensureAccessTypeConstant(typeContrib, Access.STRUCT);
 
-                    TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(errs);
-                    if (isComplete(infoContrib))
-                        {
-                        for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoContrib.getProperties().entrySet())
-                            {
-                            PropertyInfo prop = entry.getValue();
+                TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(errs);
+                if (isComplete(infoContrib)) {
+                    for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoContrib.getProperties().entrySet()) {
+                        PropertyInfo prop = entry.getValue();
 
-                            if (prop.hasField() && prop.getRefAccess() == Access.PRIVATE &&
-                                    prop.getHead().getImplementation() != Implementation.Implicit)
-                                {
-                                mapProps.putIfAbsent(entry.getKey(), prop);
-                                }
-                            }
+                        if (prop.hasField() && prop.getRefAccess() == Access.PRIVATE &&
+                                prop.getHead().getImplementation() != Implementation.Implicit) {
+                            mapProps.putIfAbsent(entry.getKey(), prop);
                         }
-                    else
-                        {
-                        fIncomplete = true;
-                        errs        = ErrorListener.BLACKHOLE;
-                        }
-                    break;
                     }
+                } else {
+                    fIncomplete = true;
+                    errs        = ErrorListener.BLACKHOLE;
                 }
-            }
+                break;
+            }}
+        }
 
         // add Object.toString() method
         MethodInfo infoToString = pool.typeObject().ensureTypeInfo(errs).
@@ -2525,7 +2262,7 @@ public abstract class TypeConstant
                 infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
                 mapProps, mapMethods, mapVirtProps, Collections.emptyMap(), ListMap.EMPTY,
                 null, fIncomplete ? Progress.Incomplete : Progress.Complete);
-        }
+    }
 
     /**
      * Populate the type parameter map with the type parameters of this type (not counting any
@@ -2540,21 +2277,17 @@ public abstract class TypeConstant
     private Map<Object, ParamInfo> collectTypeParameters(
             IdentityConstant constId,
             ClassStructure   struct,
-            ErrorListener    errs)
-        {
+            ErrorListener    errs) {
         ConstantPool           pool          = getConstantPool();
         Map<Object, ParamInfo> mapTypeParams = new HashMap<>();
 
-        if (isTuple())
-            {
+        if (isTuple()) {
             // warning: turtles
             TypeConstant typeConstraint = pool.ensureTypeSequenceTypeConstant();
 
             ParamInfo param = new ParamInfo("ElementTypes", typeConstraint, null);
             mapTypeParams.put(param.getName(), param);
-            }
-        else
-            {
+        } else {
             // obtain the type parameters encoded in this type constant
             TypeConstant[] atypeParams = getParamTypesArray();
             int            cTypeParams = atypeParams.length;
@@ -2563,64 +2296,53 @@ public abstract class TypeConstant
             List<Entry<StringConstant, TypeConstant>> listClassParams = struct.getTypeParamsAsList();
             int                                       cClassParams    = listClassParams.size();
 
-            if (cTypeParams > cClassParams)
-                {
-                if (cClassParams == 0)
-                    {
+            if (cTypeParams > cClassParams) {
+                if (cClassParams == 0) {
                     log(errs, Severity.ERROR, VE_TYPE_PARAMS_UNEXPECTED,
                             constId.getPathString());
-                    }
-                else
-                    {
+                } else {
                     log(errs, Severity.ERROR, VE_TYPE_PARAMS_WRONG_NUMBER,
                             constId.getPathString(), cClassParams, cTypeParams);
-                    }
                 }
+            }
 
             TypeConstant typeNormalized = this.normalizeParameters();
 
-            for (int i = 0; i < cClassParams; ++i)
-                {
+            for (int i = 0; i < cClassParams; ++i) {
                 Entry<StringConstant, TypeConstant> entryClassParam = listClassParams.get(i);
                 String                              sName           = entryClassParam.getKey().getValue();
                 TypeConstant                        typeConstraint  = entryClassParam.getValue();
                 TypeConstant                        typeActual      = null;
 
                 // resolve any generic dependencies in the type constraint
-                if (!typeConstraint.isFormalTypeSequence())
-                    {
+                if (!typeConstraint.isFormalTypeSequence()) {
                     typeConstraint = typeConstraint.resolveGenerics(pool, typeNormalized);
-                    }
+                }
 
                 // validate the actual type, if there is one
-                if (i < cTypeParams)
-                    {
+                if (i < cTypeParams) {
                     typeActual = atypeParams[i];
                     assert typeActual != null;
 
-                    if (!typeActual.isA(typeConstraint))
-                        {
+                    if (!typeActual.isA(typeConstraint)) {
                         log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_TYPE,
                                 constId.getPathString(), sName,
                                 typeConstraint.getValueString(),
                                 typeActual.getValueString(), this.removeAccess().getValueString());
-                        }
-                    }
-
-                if (mapTypeParams.containsKey(sName))
-                    {
-                    log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_COLLISION,
-                            struct.getIdentityConstant().getValueString(), sName);
-                    }
-                else
-                    {
-                    mapTypeParams.put(sName, new ParamInfo(sName, typeConstraint, typeActual));
                     }
                 }
+
+                if (mapTypeParams.containsKey(sName)) {
+                    log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_COLLISION,
+                            struct.getIdentityConstant().getValueString(), sName);
+                } else {
+                    mapTypeParams.put(sName, new ParamInfo(sName, typeConstraint, typeActual));
+                }
             }
+        }
 
         return mapTypeParams;
-        }
+    }
 
     /**
      * Fill in the passed list of contributions to process, and also collect a list of all the
@@ -2640,8 +2362,7 @@ public abstract class TypeConstant
             ClassStructure      struct,
             TypeConstant[]      aContribType,
             List<Contribution>  listProcess,
-            ErrorListener       errs)
-        {
+            ErrorListener       errs) {
         ConstantPool       pool         = getConstantPool();
         List<Contribution> listContribs = struct.getContributionsAsList();
         int                cContribs    = listContribs.size();
@@ -2656,306 +2377,266 @@ public abstract class TypeConstant
         TypeConstant     typeExtends = null;
         TypeConstant     typeRebase  = null;
         Component.Format format      = struct.getFormat();
-        switch (format)
-            {
-            case PACKAGE, MODULE, ENUMVALUE, ENUM, CLASS, CONST, SERVICE:
-                {
-                // check for re-basing; this occurs when a class format changes and the system has
-                // to insert a layer of code between this class and the class being extended, such
-                // as when a service (which is a Service format) extends Object (which is a Class
-                // format)
-                typeRebase = (TypeConstant) pool.register(struct.getRebaseType());
+        switch (format) {
+        case PACKAGE, MODULE, ENUMVALUE, ENUM, CLASS, CONST, SERVICE: {
+            // check for re-basing; this occurs when a class format changes and the system has
+            // to insert a layer of code between this class and the class being extended, such
+            // as when a service (which is a Service format) extends Object (which is a Class
+            // format)
+            typeRebase = (TypeConstant) pool.register(struct.getRebaseType());
 
-                // next up, for any class type, there may be an "extends" contribution that
-                // specifies a "super" class
-                Contribution contrib = iContrib < cContribs ? listContribs.get(iContrib) : null;
-                boolean fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
+            // next up, for any class type, there may be an "extends" contribution that
+            // specifies a "super" class
+            Contribution contrib = iContrib < cContribs ? listContribs.get(iContrib) : null;
+            boolean fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
 
-                if (!fExtends)
-                    {
-                    if (format == Component.Format.ENUMVALUE)
-                        {
-                        log(errs, Severity.ERROR, VE_EXTENDS_EXPECTED, constId.getPathString());
-                        }
+            if (!fExtends) {
+                if (format == Component.Format.ENUMVALUE) {
+                    log(errs, Severity.ERROR, VE_EXTENDS_EXPECTED, constId.getPathString());
+                }
 
-                    // a class hierarchy root implicitly implements the root Object interface
-                    ++cContribs;
-                    break;
-                    }
+                // a class hierarchy root implicitly implements the root Object interface
+                ++cContribs;
+                break;
+            }
 
+            typeExtends = aContribType[iContrib];
+            ++iContrib;
+
+            // the "extends" clause must specify a class identity
+            if (!typeExtends.isExplicitClassIdentity(true)) {
+                log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS, constId.getPathString(),
+                        typeExtends.getValueString());
+                typeExtends = null;
+                break;
+            }
+
+            if (typeExtends.isAccessSpecified() || typeExtends.isAnnotated()) {
+                log(errs, Severity.ERROR, VE_TYPE_MODIFIER_ILLEGAL, constId.getPathString(),
+                        typeExtends.getValueString());
+                typeExtends = null;
+                break;
+            }
+
+            if (typeExtends.extendsClass(constId)) {
+                // some sort of circular loop
+                log(errs, Severity.ERROR, VE_CYCLICAL_CONTRIBUTION, constId.getPathString(),
+                        "extends");
+                typeExtends = null;
+                break;
+            }
+
+            // the class structure will have to verify its "extends" clause in more detail, but
+            // for now perform a quick sanity check
+            IdentityConstant constExtends  = typeExtends.getSingleUnderlyingClass(true);
+            ClassStructure   structExtends = (ClassStructure) constExtends.getComponent();
+            if (!format.isExtendsLegal(structExtends.getFormat())) {
+                log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
+                        constId.getPathString(), format,
+                        constExtends.getPathString(), structExtends.getFormat());
+                typeExtends = null;
+                break;
+            }
+
+            if (typeExtends.isVirtualChild()) {
+                if (this.isVirtualChild() &&
+                        getParentType().isA(typeExtends.getOriginParentType())) {
+                    typeExtends = typeExtends.ensureVirtualParent(this.getOriginParentType(),
+                        !struct.getName().equals(structExtends.getName()));
+                } else {
+                    // TODO: need a better error indicating that the parent is not parameterized,
+                    //       parameterized incorrectly or a non-virtual extension of a virtual child
+                    log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
+                            this.removeAccess().getValueString(), format,
+                            typeExtends.getValueString(), "virtual " + structExtends.getFormat());
+                    typeExtends = null;
+                }
+            }
+            break;
+        }
+
+        case ANNOTATION, MIXIN: {
+            // a mixin can extend another mixin, and it can specify an "into" that defines a
+            // base type that defines the environment that it will be working within. if neither
+            // is present, then there is an implicit "into Object"
+            Contribution contrib = iContrib < cContribs ? listContribs.get(iContrib) : null;
+
+            // check "into"
+            boolean fInto = contrib != null && contrib.getComposition() == Composition.Into;
+            if (fInto) {
+                typeInto = aContribType[iContrib];
+
+                // load the next contribution
+                ++iContrib;
+                contrib = iContrib < cContribs ? listContribs.get(iContrib) : null;
+            }
+
+            // check "extends"
+            boolean fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
+            if (fExtends) {
                 typeExtends = aContribType[iContrib];
                 ++iContrib;
 
-                // the "extends" clause must specify a class identity
-                if (!typeExtends.isExplicitClassIdentity(true))
-                    {
-                    log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS, constId.getPathString(),
+                if (!typeExtends.isExplicitClassIdentity(true)) {
+                    log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
+                            constId.getPathString(),
                             typeExtends.getValueString());
                     typeExtends = null;
                     break;
-                    }
+                }
 
-                if (typeExtends.isAccessSpecified() || typeExtends.isAnnotated())
-                    {
-                    log(errs, Severity.ERROR, VE_TYPE_MODIFIER_ILLEGAL, constId.getPathString(),
-                            typeExtends.getValueString());
+                // verify that it is an annotation or mixin
+                if (typeExtends.getExplicitClassFormat() != format) {
+                    log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
+                            constId.getPathString(), format,
+                            typeExtends.getValueString(), typeExtends.getExplicitClassFormat());
                     typeExtends = null;
                     break;
-                    }
+                }
 
-                if (typeExtends.extendsClass(constId))
-                    {
+                if (typeExtends.extendsClass(constId)) {
                     // some sort of circular loop
                     log(errs, Severity.ERROR, VE_CYCLICAL_CONTRIBUTION, constId.getPathString(),
                             "extends");
                     typeExtends = null;
                     break;
-                    }
-
-                // the class structure will have to verify its "extends" clause in more detail, but
-                // for now perform a quick sanity check
-                IdentityConstant constExtends  = typeExtends.getSingleUnderlyingClass(true);
-                ClassStructure   structExtends = (ClassStructure) constExtends.getComponent();
-                if (!format.isExtendsLegal(structExtends.getFormat()))
-                    {
-                    log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
-                            constId.getPathString(), format,
-                            constExtends.getPathString(), structExtends.getFormat());
-                    typeExtends = null;
-                    break;
-                    }
-
-                if (typeExtends.isVirtualChild())
-                    {
-                    if (this.isVirtualChild() &&
-                            getParentType().isA(typeExtends.getOriginParentType()))
-                        {
-                        typeExtends = typeExtends.ensureVirtualParent(this.getOriginParentType(),
-                            !struct.getName().equals(structExtends.getName()));
-                        }
-                    else
-                        {
-                        // TODO: need a better error indicating that the parent is not parameterized,
-                        //       parameterized incorrectly or a non-virtual extension of a virtual child
-                        log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
-                                this.removeAccess().getValueString(), format,
-                                typeExtends.getValueString(), "virtual " + structExtends.getFormat());
-                        typeExtends = null;
-                        }
-                    }
-                break;
                 }
 
-            case ANNOTATION, MIXIN:
-                {
-                // a mixin can extend another mixin, and it can specify an "into" that defines a
-                // base type that defines the environment that it will be working within. if neither
-                // is present, then there is an implicit "into Object"
-                Contribution contrib = iContrib < cContribs ? listContribs.get(iContrib) : null;
-
-                // check "into"
-                boolean fInto = contrib != null && contrib.getComposition() == Composition.Into;
-                if (fInto)
-                    {
-                    typeInto = aContribType[iContrib];
-
-                    // load the next contribution
-                    ++iContrib;
-                    contrib = iContrib < cContribs ? listContribs.get(iContrib) : null;
-                    }
-
-                // check "extends"
-                boolean fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
-                if (fExtends)
-                    {
-                    typeExtends = aContribType[iContrib];
-                    ++iContrib;
-
-                    if (!typeExtends.isExplicitClassIdentity(true))
-                        {
-                        log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
-                                constId.getPathString(),
-                                typeExtends.getValueString());
-                        typeExtends = null;
-                        break;
-                        }
-
-                    // verify that it is an annotation or mixin
-                    if (typeExtends.getExplicitClassFormat() != format)
-                        {
-                        log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
-                                constId.getPathString(), format,
-                                typeExtends.getValueString(), typeExtends.getExplicitClassFormat());
-                        typeExtends = null;
-                        break;
-                        }
-
-                    if (typeExtends.extendsClass(constId))
-                        {
-                        // some sort of circular loop
-                        log(errs, Severity.ERROR, VE_CYCLICAL_CONTRIBUTION, constId.getPathString(),
-                                "extends");
-                        typeExtends = null;
-                        break;
-                        }
-
-                    if (!fInto)
-                        {
-                        typeInto = typeExtends.getExplicitClassInto(true);
-                        }
-                    }
-                else if (!fInto)
-                    {
-                    // add fake "into Object"
-                    typeInto = pool.typeObject();
-                    }
-                break;
+                if (!fInto) {
+                    typeInto = typeExtends.getExplicitClassInto(true);
                 }
-
-            case INTERFACE:
-                if (constId instanceof NativeRebaseConstant idNative)
-                    {
-                    // for a native rebase, the interface becomes a class, and that class implements
-                    // the original interface and Object
-                    TypeConstant typeNatural = (TypeConstant) pool.register(
-                            idNative.getClassConstant().getType());
-                    if (isParamsSpecified())
-                        {
-                        typeNatural = pool.ensureParameterizedTypeConstant(typeNatural, getParamTypesArray());
-                        }
-                    listProcess.add(struct.new Contribution(Composition.Implements, typeNatural));
-                    listProcess.add(struct.new Contribution(Composition.Implements, pool.typeObject()));
-                    }
-                else
-                    {
-                    // Object does not (and must not) implement anything despite what it says
-                    if (constId.equals(pool.clzObject()))
-                        {
-                        cContribs = 0;
-                        }
-                    else
-                        {
-                        // an interface implies the set of methods present in Object
-                        // (use the "Into" composition to make the Object methods implicit-only, as
-                        // opposed to explicitly being present in this interface)
-                        typeInto = pool.typeObject();
-                        }
-                    }
-                break;
-
-            default:
-                throw new IllegalStateException(getValueString() + "=" + format);
+            } else if (!fInto) {
+                // add fake "into Object"
+                typeInto = pool.typeObject();
             }
+            break;
+        }
+
+        case INTERFACE:
+            if (constId instanceof NativeRebaseConstant idNative) {
+                // for a native rebase, the interface becomes a class, and that class implements
+                // the original interface and Object
+                TypeConstant typeNatural = (TypeConstant) pool.register(
+                        idNative.getClassConstant().getType());
+                if (isParamsSpecified()) {
+                    typeNatural = pool.ensureParameterizedTypeConstant(typeNatural, getParamTypesArray());
+                }
+                listProcess.add(struct.new Contribution(Composition.Implements, typeNatural));
+                listProcess.add(struct.new Contribution(Composition.Implements, pool.typeObject()));
+            } else {
+                // Object does not (and must not) implement anything despite what it says
+                if (constId.equals(pool.clzObject())) {
+                    cContribs = 0;
+                } else {
+                    // an interface implies the set of methods present in Object
+                    // (use the "Into" composition to make the Object methods implicit-only, as
+                    // opposed to explicitly being present in this interface)
+                    typeInto = pool.typeObject();
+                }
+            }
+            break;
+
+        default:
+            throw new IllegalStateException(getValueString() + "=" + format);
+        }
 
         // go through the rest of the contributions, and add the ones that need to be processed to
         // the list to do
-        for ( ; iContrib < cContribs; ++iContrib)
-            {
+        for ( ; iContrib < cContribs; ++iContrib) {
             Contribution contrib;
             TypeConstant typeContrib;
-            if (iContrib < listContribs.size())
-                {
+            if (iContrib < listContribs.size()) {
                 contrib     = listContribs.get(iContrib);
                 typeContrib = aContribType[iContrib];
-                }
-            else
-                {
+            } else {
                 // it's the implicit "implements Object" contribution
                 assert iContrib == listContribs.size();
                 typeContrib = pool.typeObject();
                 contrib     = struct.new Contribution(Composition.Implements, typeContrib);
-                }
-
-            switch (contrib.getComposition())
-                {
-                case Annotation:
-                    // validation only; the "mixin" annotations will be processed separately at the
-                    // end of buildTypeInfoImpl() method
-                    validateAnnotation(constId, typeContrib, errs);
-                    break;
-
-                case Into:
-                    // only applicable on annotations or mixins, only one allowed, and it should
-                    // have been earlier in the list of contributions
-                    log(errs, Severity.ERROR, VE_INTO_UNEXPECTED,
-                            typeContrib.getValueString(), constId.getPathString());
-                    break;
-
-                case Extends:
-                    // not applicable on an interface, only one allowed, and it should have been
-                    // earlier in the list of contributions
-                    log(errs, Severity.ERROR, VE_EXTENDS_UNEXPECTED,
-                            typeContrib.getValueString(), constId.getPathString());
-                    break;
-
-                case Incorporates:
-                    if (contrib.getTypeParams() != null)
-                        {
-                        // conditional incorporates have already been processed
-                        break;
-                        }
-
-                    processMixins(constId, typeContrib, struct, listProcess, errs);
-                    break;
-
-                case Delegates:
-                    processDelegates(constId, typeContrib, contrib, struct, listProcess, errs);
-                    break;
-
-                case Implements:
-                    processImplements(constId, typeContrib, struct, listProcess, errs);
-                    break;
-
-                case Import:
-                    // ignore
-                    break;
-
-                default:
-                    throw new IllegalStateException(constId.getPathString()
-                            + ", contribution=" + contrib);
-                }
             }
+
+            switch (contrib.getComposition()) {
+            case Annotation:
+                // validation only; the "mixin" annotations will be processed separately at the
+                // end of buildTypeInfoImpl() method
+                validateAnnotation(constId, typeContrib, errs);
+                break;
+
+            case Into:
+                // only applicable on annotations or mixins, only one allowed, and it should
+                // have been earlier in the list of contributions
+                log(errs, Severity.ERROR, VE_INTO_UNEXPECTED,
+                        typeContrib.getValueString(), constId.getPathString());
+                break;
+
+            case Extends:
+                // not applicable on an interface, only one allowed, and it should have been
+                // earlier in the list of contributions
+                log(errs, Severity.ERROR, VE_EXTENDS_UNEXPECTED,
+                        typeContrib.getValueString(), constId.getPathString());
+                break;
+
+            case Incorporates:
+                if (contrib.getTypeParams() != null) {
+                    // conditional incorporates have already been processed
+                    break;
+                }
+
+                processMixins(constId, typeContrib, struct, listProcess, errs);
+                break;
+
+            case Delegates:
+                processDelegates(constId, typeContrib, contrib, struct, listProcess, errs);
+                break;
+
+            case Implements:
+                processImplements(constId, typeContrib, struct, listProcess, errs);
+                break;
+
+            case Import:
+                // ignore
+                break;
+
+            default:
+                throw new IllegalStateException(constId.getPathString()
+                        + ", contribution=" + contrib);
+            }
+        }
 
         // virtual children implement an implicit "Inner" interface, and are contained inside a
         // container class that implements an implicit "Outer" interface
-        if (struct.containsVirtualChild() && !constId.equals(pool.clzOuter()))
-            {
+        if (struct.containsVirtualChild() && !constId.equals(pool.clzOuter())) {
             listProcess.add(struct.new Contribution(Composition.Implements, pool.typeOuter()));
-            }
-        if (isVirtualChild() && !constId.equals(pool.clzInner()))
-            {
+        }
+        if (isVirtualChild() && !constId.equals(pool.clzInner())) {
             listProcess.add(struct.new Contribution(Composition.Implements, pool.typeInner()));
-            }
+        }
 
         // the last three contributions to get processed are the "into" (which we also use for
         // filling out the implied methods under interfaces, i.e. "into Object"),  the "extends",
         // and the "re-base", which should be added at the bottom (and processed first)
-        if (typeInto != null)
-            {
+        if (typeInto != null) {
             if (!typeInto.equals(pool.typeObject()) && !typeInto.isAccessSpecified() &&
-                    typeInto.isSingleUnderlyingClass(true))
-                {
+                    typeInto.isSingleUnderlyingClass(true)) {
                 // annotation or mixin should have at least protected access to the "into" class
                 Access access = struct.isDescendant(typeInto.getSingleUnderlyingClass(true))
                         ? Access.PRIVATE
                         : Access.PROTECTED;
                 typeInto = pool.ensureAccessTypeConstant(typeInto, access);
-                }
-            listProcess.add(struct.new Contribution(Composition.Into, typeInto));
             }
-        if (typeExtends != null)
-            {
+            listProcess.add(struct.new Contribution(Composition.Into, typeInto));
+        }
+        if (typeExtends != null) {
             listProcess.add(struct.new Contribution(Composition.Extends,
                     pool.ensureAccessTypeConstant(typeExtends, Access.PROTECTED)));
-            }
-        if (typeRebase != null)
-            {
+        }
+        if (typeRebase != null) {
             listProcess.add(struct.new Contribution(Composition.RebasesOnto,
                     pool.ensureAccessTypeConstant(typeRebase, Access.PROTECTED)));
-            }
+        }
 
         return new TypeConstant[] {typeInto, typeExtends, typeRebase};
-        }
+    }
 
     /**
      * Extract the types of conditional incorporates.
@@ -2973,81 +2654,66 @@ public abstract class TypeConstant
             ClassStructure     struct,
             List<Contribution> listContribs,
             TypeConstant[]     aContribType,
-            ErrorListener      errs)
-        {
+            ErrorListener      errs) {
         List<TypeConstant> listCondContribs = null;
 
         // process the annotations and conditional incorporates at the front of the contribution list
-        for (int iContrib = 0, cContribs = listContribs.size(); iContrib < cContribs; ++iContrib)
-            {
+        for (int iContrib = 0, cContribs = listContribs.size(); iContrib < cContribs; ++iContrib) {
             // only process conditional incorporates
             Contribution contrib   = listContribs.get(iContrib);
             TypeConstant typeMixin = aContribType[iContrib];
             Composition  compose   = contrib.getComposition();
 
-            if (compose == Composition.Incorporates)
-                {
-                if (contrib.getTypeParams() == null)
-                    {
+            if (compose == Composition.Incorporates) {
+                if (contrib.getTypeParams() == null) {
                     // a regular "incorporates"; process later
                     assert typeMixin != null;
                     continue;
-                    }
-                else if (typeMixin == null)
-                    {
+                } else if (typeMixin == null) {
                     // the conditional incorporates does not apply to "this" type
                     continue;
-                    }
-                // process now
                 }
-            else
-                {
+                // process now
+            } else {
                 // not now
                 continue;
-                }
+            }
 
             // has to be an explicit class identity
-            if (!typeMixin.isExplicitClassIdentity(true))
-                {
+            if (!typeMixin.isExplicitClassIdentity(true)) {
                 log(errs, Severity.ERROR, VE_INCORPORATES_NOT_CLASS,
                         constId.getPathString(), typeMixin.getValueString());
                 continue;
-                }
+            }
 
             // has to be a mixin
-            if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
-                {
+            if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN) {
                 log(errs, Severity.ERROR, VE_CLASS_NOT_MIXIN, typeMixin.getValueString());
                 continue;
-                }
+            }
 
-            if (listCondContribs == null)
-                {
+            if (listCondContribs == null) {
                 listCondContribs = new ArrayList<>();
-                }
-            else
-                {
+            } else {
                 // check if this mixin extends any of the already collected ones
-                for (Iterator<TypeConstant> iter = listCondContribs.iterator(); iter.hasNext();)
-                    {
+                for (Iterator<TypeConstant> iter = listCondContribs.iterator(); iter.hasNext();) {
                     TypeConstant     typeOther = iter.next();
                     IdentityConstant idOther   = typeOther.getSingleUnderlyingClass(true);
-                    if (typeMixin.extendsClass(idOther))
-                        {
+                    if (typeMixin.extendsClass(idOther)) {
                         iter.remove();
-                        }
                     }
                 }
+            }
             listCondContribs.add(typeMixin);
 
             // call processMixins() for validation only
             processMixins(constId, typeMixin, struct, new ArrayList<>(), errs);
-            }
+        }
 
         return listCondContribs == null
                 ? null
                 : listCondContribs.toArray(TypeConstant.NO_TYPES);
-        }
+    }
 
     /**
      * Resolve and collect contribution types for the specified list if contributions.
@@ -3057,220 +2723,192 @@ public abstract class TypeConstant
      * @return an array of resolved TypeConstants where some elements could be null for conditional
      *         incorporates
      */
-    private TypeConstant[] resolveContributionTypes(List<Contribution> listContribs)
-        {
+    private TypeConstant[] resolveContributionTypes(List<Contribution> listContribs) {
         ConstantPool   pool         = getConstantPool();
         int            cContribs    = listContribs.size();
         TypeConstant[] aContribType = new TypeConstant[cContribs];
 
-        for (int iContrib = 0; iContrib < cContribs; ++iContrib)
-            {
+        for (int iContrib = 0; iContrib < cContribs; ++iContrib) {
             aContribType[iContrib] = listContribs.get(iContrib).resolveGenerics(pool, this);
-            }
-        return aContribType;
         }
+        return aContribType;
+    }
 
     /**
      * Process the "annotation" contributions.
      */
     private void validateAnnotation(IdentityConstant constId, TypeConstant typeContrib,
-                                    ErrorListener errs)
-        {
-        if (!typeContrib.isExplicitClassIdentity(true))
-            {
+                                    ErrorListener errs) {
+        if (!typeContrib.isExplicitClassIdentity(true)) {
             log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
                 typeContrib.getValueString(),
                 constId.getPathString());
             return;
-            }
+        }
 
         // validate that the class is an annotation
-        if (typeContrib.getExplicitClassFormat() != Component.Format.ANNOTATION)
-            {
+        if (typeContrib.getExplicitClassFormat() != Component.Format.ANNOTATION) {
             log(errs, Severity.ERROR, VE_CLASS_NOT_ANNOTATION, typeContrib.getValueString());
             return;
-            }
+        }
 
         TypeConstant typeInto = typeContrib.getExplicitClassInto(true);
         // annotations into Class are "synthetic" (e.g. Abstract, Override); the only
         // exception is Enumeration, which needs to be processed naturally
-        if (!typeInto.isIntoClassType() || typeInto.isA(getConstantPool().typeEnumeration()))
-            {
+        if (!typeInto.isIntoClassType() || typeInto.isA(getConstantPool().typeEnumeration())) {
             if (typeContrib.isVirtualChild()
                 && (!this.isVirtualChild() ||
-                    !this.getParentType().isA(typeContrib.getParentType())))
-                {
+                    !this.getParentType().isA(typeContrib.getParentType()))) {
                 log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE_PARENT,
                     constId.getPathString(), typeContrib.getValueString(),
                     typeContrib.getParentType().getValueString());
                 return;
-                }
+            }
 
             // the annotation must be compatible with this type, as specified by its "into"
             // clause; note: not 100% correct because the presence of this annotation may affect
             // the answer, so this requires an eventual fix
-            if (!this.isA(typeInto))
-                {
+            if (!this.isA(typeInto)) {
                 log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
                     constId.getPathString(), typeContrib.getValueString(),
                     typeInto.getValueString());
-                }
             }
         }
+    }
 
     /**
      * Process the "incorporates" contributions.
      */
     private void processMixins(IdentityConstant constId, TypeConstant typeContrib,
                                ClassStructure struct,
-                               List<Contribution> listProcess, ErrorListener errs)
-        {
-        if (struct.getFormat() == Component.Format.INTERFACE)
-            {
+                               List<Contribution> listProcess, ErrorListener errs) {
+        if (struct.getFormat() == Component.Format.INTERFACE) {
             log(errs, Severity.ERROR, VE_INCORPORATES_UNEXPECTED,
                 typeContrib.getValueString(),
                 constId.getPathString());
             return;
-            }
+        }
 
-        if (!typeContrib.isExplicitClassIdentity(true))
-            {
+        if (!typeContrib.isExplicitClassIdentity(true)) {
             log(errs, Severity.ERROR, VE_INCORPORATES_NOT_CLASS,
                 typeContrib.getValueString(),
                 constId.getPathString());
             return;
-            }
+        }
 
         // validate that the class is a mixin
-        if (typeContrib.getExplicitClassFormat() != Component.Format.MIXIN)
-            {
+        if (typeContrib.getExplicitClassFormat() != Component.Format.MIXIN) {
             log(errs, Severity.ERROR, VE_INCORPORATES_NOT_MIXIN,
                 typeContrib.getValueString(),
                 constId.getPathString());
             return;
-            }
+        }
 
         TypeConstant typeInto = typeContrib.getExplicitClassInto(true);
         if (typeContrib.isVirtualChild()
             && (!this.isVirtualChild() ||
-                !this.getParentType().isA(typeContrib.getParentType())))
-            {
+                !this.getParentType().isA(typeContrib.getParentType()))) {
             log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE_PARENT,
                 constId.getPathString(), typeContrib.getValueString(),
                 typeContrib.getParentType().getValueString());
             return;
-            }
+        }
 
         // the mixin must be compatible with this type, as specified by its "into"
         // clause; note: not 100% correct because the presence of this mixin may affect
         // the answer, so this requires an eventual fix
-        if (!this.isA(typeInto))
-            {
+        if (!this.isA(typeInto)) {
             log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE,
                 constId.getPathString(), typeContrib.getValueString(),
                 typeInto.getValueString());
             return;
-            }
+        }
 
         // check for duplicate mixin
         if (listProcess.stream().anyMatch(contribPrev ->
-                contribPrev.getTypeConstant().equals(typeContrib)))
-            {
+                contribPrev.getTypeConstant().equals(typeContrib))) {
             log(errs, Severity.ERROR, VE_DUP_INCORPORATES,
                 constId.getPathString(), typeContrib.getValueString());
             return;
-            }
+        }
 
         listProcess.add(struct.new Contribution(Composition.Incorporates,
             getConstantPool().ensureAccessTypeConstant(typeContrib, Access.PROTECTED)));
-        }
+    }
 
     /**
      * Process the "delegates" contribution.
      */
     private void processDelegates(IdentityConstant constId, TypeConstant typeContrib,
                                   Contribution contrib, ClassStructure struct,
-                                  List<Contribution> listProcess, ErrorListener errs)
-        {
+                                  List<Contribution> listProcess, ErrorListener errs) {
         // not applicable on an interface
-        if (struct.getFormat() == Component.Format.INTERFACE)
-            {
+        if (struct.getFormat() == Component.Format.INTERFACE) {
             log(errs, Severity.ERROR, VE_DELEGATES_UNEXPECTED,
                 typeContrib.getValueString(),
                 constId.getPathString());
             return;
-            }
+        }
 
         // must be an "interface type" (not a class type)
         if (typeContrib.isExplicitClassIdentity(true)
-            && typeContrib.getExplicitClassFormat() != Component.Format.INTERFACE)
-            {
+            && typeContrib.getExplicitClassFormat() != Component.Format.INTERFACE) {
             log(errs, Severity.ERROR, VE_DELEGATES_NOT_INTERFACE,
                 typeContrib.getValueString(),
                 constId.getPathString());
             return;
-            }
+        }
 
         // check for duplicate delegates
         if (listProcess.stream().anyMatch(contribPrev ->
             contribPrev.getComposition() == Composition.Delegates &&
-                contribPrev.getTypeConstant().equals(typeContrib)))
-            {
+                contribPrev.getTypeConstant().equals(typeContrib))) {
             log(errs, Severity.ERROR, VE_DUP_DELEGATES,
                 constId.getPathString(), typeContrib.getValueString());
-            }
-        else
-            {
+        } else {
             listProcess.add(struct.new Contribution(typeContrib,
                 contrib.getDelegatePropertyConstant()));
-            }
         }
+    }
 
     /**
      * Process the "implements" contribution.
      */
     private void processImplements(IdentityConstant constId, TypeConstant typeContrib,
                                    ClassStructure struct,
-                                   List<Contribution> listProcess, ErrorListener errs)
-        {
-        if (!typeContrib.isExplicitClassIdentity(true))
-            {
+                                   List<Contribution> listProcess, ErrorListener errs) {
+        if (!typeContrib.isExplicitClassIdentity(true)) {
             log(errs, Severity.ERROR, VE_IMPLEMENTS_NOT_CLASS,
                     constId.getPathString(),
                     typeContrib.getValueString());
             return;
-            }
+        }
 
         // must be an "interface type" (not a class type)
-        if (typeContrib.isSingleUnderlyingClass(false))
-            {
+        if (typeContrib.isSingleUnderlyingClass(false)) {
             log(errs, Severity.ERROR, VE_IMPLEMENTS_NOT_INTERFACE,
                     typeContrib.getValueString(),
                     constId.getPathString());
             return;
-            }
+        }
 
-        if (typeContrib.isAccessSpecified() || typeContrib.isAnnotated())
-            {
+        if (typeContrib.isAccessSpecified() || typeContrib.isAnnotated()) {
             log(errs, Severity.ERROR, VE_TYPE_MODIFIER_ILLEGAL, constId.getPathString(),
                     typeContrib.getValueString());
             return;
-            }
+        }
 
         // check for duplicate implements
         if (listProcess.stream().anyMatch(contribPrev ->
                 contribPrev.getComposition() == Composition.Implements &&
-                contribPrev.getTypeConstant().equals(typeContrib)))
-            {
+                contribPrev.getTypeConstant().equals(typeContrib))) {
             log(errs, Severity.ERROR, VE_DUP_IMPLEMENTS,
                     constId.getPathString(), typeContrib.getValueString());
-            }
-        else
-            {
+        } else {
             listProcess.add(struct.new Contribution(Composition.Implements,
                     typeContrib.ensureAccess(Access.PROTECTED)));
-            }
         }
+    }
 
     /**
      * Build the "potential call chain" from the list of contributions.
@@ -3294,70 +2932,62 @@ public abstract class TypeConstant
             Set<TypeConstant>                 setDepends,
             ListMap<IdentityConstant, Origin> listmapClassChain,
             ListMap<IdentityConstant, Origin> listmapDefaultChain,
-            ErrorListener                     errs)
-        {
+            ErrorListener                     errs) {
         boolean fIncomplete = false;
 
-        for (Contribution contrib : listProcess)
-            {
+        for (Contribution contrib : listProcess) {
             Composition composition = contrib.getComposition();
-            switch (composition)
-                {
-                case Equal: // i.e. "this" type
-                    {
-                    assert !listmapClassChain.containsKey(constId);
-                    assert !listmapDefaultChain.containsKey(constId);
+            switch (composition) {
+            case Equal: { // i.e. "this" type
+                assert !listmapClassChain.containsKey(constId);
+                assert !listmapDefaultChain.containsKey(constId);
 
-                    // append self to the call chain
-                    (isInterface(constId, struct)
-                            ? listmapDefaultChain
-                            : listmapClassChain
-                        ).put(constId, new Origin(true));
+                // append self to the call chain
+                (isInterface(constId, struct)
+                        ? listmapDefaultChain
+                        : listmapClassChain
+                    ).put(constId, new Origin(true));
 
-                    // this type's type parameters were already collected
-                    }
-                    break;
-
-                case Implements:
-                case Incorporates:
-                case Delegates:
-                case Extends:
-                case RebasesOnto:
-                // while "into" contains only implicit virtual methods, it may contribute type
-                // parameters or private properties and methods (if private visibility applies)
-                case Into:
-                    {
-                    // append to the call chain
-                    TypeConstant typeContrib = contrib.getTypeConstant(); // already resolved
-                    TypeInfo     infoContrib = typeContrib.adjustAccess(constId).ensureTypeInfoInternal(errs);
-
-                    if (!isComplete(infoContrib))
-                        {
-                        fIncomplete = computeIncomplete(composition, typeContrib, infoContrib, setDepends);
-                        if (fIncomplete)
-                            {
-                            errs = ErrorListener.BLACKHOLE;
-                            if (infoContrib == null || composition == Composition.Into)
-                                {
-                                // see the comment at the similar block at "collectMemberInfo"
-                                break;
-                                }
-                            }
-                        }
-
-                    infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, composition);
-
-                    layerOnTypeParams(mapTypeParams, typeContrib, infoContrib.getTypeParams(), errs);
-                    break;
-                    }
-
-                default:
-                    throw new IllegalStateException("composition=" + composition);
-                }
+                // this type's type parameters were already collected
+                break;
             }
 
-        return !fIncomplete;
+            case Implements:
+            case Incorporates:
+            case Delegates:
+            case Extends:
+            case RebasesOnto:
+            // while "into" contains only implicit virtual methods, it may contribute type
+            // parameters or private properties and methods (if private visibility applies)
+            case Into: {
+                // append to the call chain
+                TypeConstant typeContrib = contrib.getTypeConstant(); // already resolved
+                TypeInfo     infoContrib = typeContrib.adjustAccess(constId).ensureTypeInfoInternal(errs);
+
+                if (!isComplete(infoContrib)) {
+                    fIncomplete = computeIncomplete(composition, typeContrib, infoContrib, setDepends);
+                    if (fIncomplete) {
+                        errs = ErrorListener.BLACKHOLE;
+                        if (infoContrib == null || composition == Composition.Into) {
+                            // see the comment at the similar block at "collectMemberInfo"
+                            break;
+                        }
+                    }
+                }
+
+                infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, composition);
+
+                layerOnTypeParams(mapTypeParams, typeContrib, infoContrib.getTypeParams(), errs);
+                break;
+            }
+
+            default:
+                throw new IllegalStateException("composition=" + composition);
+            }
         }
+
+        return !fIncomplete;
+    }
 
     /**
      * Given the incomplete TypeInfo for the specified contribution, check if this type could
@@ -3366,49 +2996,39 @@ public abstract class TypeConstant
      * @return true iff the TypeInfo for this type cannot be completed
      */
     private boolean computeIncomplete(Composition composition, TypeConstant typeContrib,
-                                      TypeInfo infoContrib, Set<TypeConstant> setDepends)
-        {
-        if (composition == Composition.Into || infoContrib == null)
-            {
+                                      TypeInfo infoContrib, Set<TypeConstant> setDepends) {
+        if (composition == Composition.Into || infoContrib == null) {
             // if this type represents a mixin we cannot complete until the "into" type does
-            if (typeContrib instanceof UnionTypeConstant typeUnion)
-                {
+            if (typeContrib instanceof UnionTypeConstant typeUnion) {
                 typeUnion.decompose(setDepends);
-                }
-            else
-                {
+            } else {
                 setDepends.add(typeContrib.removeAccess());
-                }
             }
-        else
-            {
-            if (composition == Composition.Incorporates)
-                {
+        } else {
+            if (composition == Composition.Incorporates) {
                 // this type incorporates the specified mixin; if that mixin TypeInfo computation
                 // depends on this type itself, it can only mean that the mixin is "into" i) this
                 // type, or ii) "into" a union that includes this type, and in either case we can
                 // take the partial mixin's info, which contains properties and methods of the mixin
                 // itself, and may miss the information from the "into" type(s), which we already
                 // have (i) or don't care about (ii)
-                if (infoContrib.dependsOn(this.removeAccess()))
-                    {
+                if (infoContrib.dependsOn(this.removeAccess())) {
                     return !setDepends.isEmpty();
-                    }
                 }
-            infoContrib.collectDependTypes(setDepends);
             }
-        return true;
+            infoContrib.collectDependTypes(setDepends);
         }
+        return true;
+    }
 
     /**
      * @return true iff the type defined by the constId and corresponding struct refers to an
      *         interface type
      */
-    private static boolean isInterface(IdentityConstant constId, ClassStructure struct)
-        {
+    private static boolean isInterface(IdentityConstant constId, ClassStructure struct) {
         return struct.getFormat() == Component.Format.INTERFACE
                 && !(constId instanceof NativeRebaseConstant);
-        }
+    }
 
     /**
      * Collect the properties and methods (including scoped properties and method) for this type.
@@ -3442,14 +3062,12 @@ public abstract class TypeConstant
             Map<Object, PropertyInfo>           mapVirtProps,
             Map<Object, MethodInfo  >           mapVirtMethods,
             Map<String, ChildInfo   >           mapChildren,
-            ErrorListener                       errs)
-        {
+            ErrorListener                       errs) {
         ConstantPool pool        = getConstantPool();
         boolean      fIncomplete = false;
         boolean      fNative     = constId instanceof NativeRebaseConstant;
 
-        for (int i = listProcess.size()-1; i >= 0; --i)
-            {
+        for (int i = listProcess.size()-1; i >= 0; --i) {
             Contribution contrib = listProcess.get(i);
 
             Map<PropertyConstant, PropertyInfo> mapContribProps;
@@ -3461,8 +3079,7 @@ public abstract class TypeConstant
             PropertyConstant idDelegate  = contrib.getDelegatePropertyConstant();
             boolean          fSelf       = composition == Composition.Equal;
 
-            if (fSelf)
-                {
+            if (fSelf) {
                 mapContribProps    = new HashMap<>();
                 mapContribMethods  = new HashMap<>();
                 mapContribChildren = new ListMap<>();
@@ -3470,21 +3087,19 @@ public abstract class TypeConstant
                 int nBasePropRank = mapProps.size();
                 int nBaseMethRank = mapMethods.size();
 
-                if (!collectSelfTypeParameters(struct, mapTypeParams, mapContribProps, nBasePropRank, errs))
-                    {
+                if (!collectSelfTypeParameters(struct, mapTypeParams, mapContribProps, nBasePropRank, errs)) {
                     fIncomplete = true;
                     errs        = ErrorListener.BLACKHOLE;
-                    }
+                }
 
                 ArrayList<PropertyConstant> listExplode = new ArrayList<>();
                 boolean                     fInterface  = struct.getFormat() == Component.Format.INTERFACE;
                 if (!collectChildInfo(constId, fInterface, struct, mapTypeParams,
                         mapContribProps, mapContribMethods, mapContribChildren, listExplode,
-                        nBasePropRank, nBaseMethRank, errs))
-                    {
+                        nBasePropRank, nBaseMethRank, errs)) {
                     fIncomplete = true;
                     errs        = ErrorListener.BLACKHOLE;
-                    }
+                }
 
                 // the order in which the properties are layered on and exploded is extremely
                 // important in order for (a) the result to be correct and (b) errors to be
@@ -3497,8 +3112,7 @@ public abstract class TypeConstant
                 // done with this will naturally layer on top of any artifacts from the explosion,
                 // we only have to process the specific properties that explode here, and make sure
                 // that they don't get processed later when we process the rest of the properties
-                for (PropertyConstant idProp : listExplode)
-                    {
+                for (PropertyConstant idProp : listExplode) {
                     // remove the property from the contrib map (so that we can process it now)
                     PropertyInfo prop = mapContribProps.remove(idProp);
                     assert prop != null;
@@ -3508,113 +3122,95 @@ public abstract class TypeConstant
                     layerOnProp(constId, true, null, mapProps, mapVirtProps,
                             typeContrib, idProp, prop, errs);
 
-                    if (!fNative)
-                        {
+                    if (!fNative) {
                         // now that the necessary data is in place, explode the property
                         if (!explodeProperty(constId, struct, idProp, prop,
-                                mapProps, mapVirtProps, mapMethods, mapVirtMethods, errs))
-                            {
+                                mapProps, mapVirtProps, mapMethods, mapVirtMethods, errs)) {
                             fIncomplete = true;
                             errs        = ErrorListener.BLACKHOLE;
-                            }
                         }
                     }
                 }
-            else
-                {
+            } else {
                 TypeInfo infoContrib = typeContrib.adjustAccess(constId).ensureTypeInfoInternal(errs);
-                if (!isComplete(infoContrib))
-                    {
+                if (!isComplete(infoContrib)) {
                     fIncomplete = computeIncomplete(composition, typeContrib, infoContrib, setDepends);
-                    if (fIncomplete)
-                        {
+                    if (fIncomplete) {
                         errs = ErrorListener.BLACKHOLE;
-                        if (infoContrib == null || composition == Composition.Into)
-                            {
+                        if (infoContrib == null || composition == Composition.Into) {
                             // even if the contribution has an incomplete info we can still proceed
                             // collecting [non-complete] information, except when this type
                             // represents a mixin, in which case we must discard the incomplete
                             // "into" info and apply it only when the "left side" info is complete
                             continue;
-                            }
                         }
                     }
+                }
 
-                switch (composition)
-                    {
-                    case Into:
-                        infoContrib = infoContrib.asInto();
-                        break;
+                switch (composition) {
+                case Into:
+                    infoContrib = infoContrib.asInto();
+                    break;
 
-                    case Delegates:
-                        infoContrib = infoContrib.asDelegates();
-                        break;
-                    }
+                case Delegates:
+                    infoContrib = infoContrib.asDelegates();
+                    break;
+                }
 
                 mapContribProps    = infoContrib.getProperties();
                 mapContribMethods  = infoContrib.getMethods();
                 mapContribChildren = infoContrib.getChildInfosByName();
 
-                if (composition != Composition.Into)
-                    {
+                if (composition != Composition.Into) {
                     // collect all the IdentityConstants in the potential call chain that map to
                     // this particular contribution
                     HashSet<IdentityConstant> setClass = new HashSet<>();
-                    for (Entry<IdentityConstant, Origin> entry : listmapClassChain.entrySet())
-                        {
-                        if (entry.getValue().getType().equals(typeContrib))
-                            {
+                    for (Entry<IdentityConstant, Origin> entry : listmapClassChain.entrySet()) {
+                        if (entry.getValue().getType().equals(typeContrib)) {
                             setClass.add(entry.getKey());
-                            }
                         }
+                    }
                     HashSet<IdentityConstant> setDefault = new HashSet<>();
-                    for (Entry<IdentityConstant, Origin> entry : listmapDefaultChain.entrySet())
-                        {
-                        if (entry.getValue().getType().equals(typeContrib))
-                            {
+                    for (Entry<IdentityConstant, Origin> entry : listmapDefaultChain.entrySet()) {
+                        if (entry.getValue().getType().equals(typeContrib)) {
                             setDefault.add(entry.getKey());
-                            }
                         }
+                    }
 
                     // reduce the TypeInfo to only contain methods appropriate to the reduced call
                     // chain for the contribution
                     if (setClass.size() < infoContrib.getClassChain().size()
-                            || setDefault.size() < infoContrib.getDefaultChain().size())
-                        {
+                            || setDefault.size() < infoContrib.getDefaultChain().size()) {
                         Map<PropertyConstant, PropertyInfo> mapReducedProps = new HashMap<>();
-                        for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
-                            {
+                        for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet()) {
                             // REVIEW: consider removing the "retainOnly" call with a simple check:
                             //
                             // IdentityConstant idProp = entry.getKey().getClassIdentity();
                             // if (!setClass.contains(idProp) && !setDefault.contains(idProp))
                             //    {
                             //    iter.remove();
-                            //    }
+                            //}
                             PropertyInfo infoReduced = entry.getValue().
                                     retainOnly(entry.getKey(), setClass, setDefault);
-                            if (infoReduced != null)
-                                {
+                            if (infoReduced != null) {
                                 mapReducedProps.put(entry.getKey(), infoReduced);
-                                }
                             }
+                        }
                         mapContribProps = mapReducedProps;
 
                         Map<MethodConstant, MethodInfo> mapReducedMethods = new HashMap<>();
-                        for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
-                            {
+                        for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet()) {
                             // REVIEW: ditto
                             MethodInfo infoReduced = entry.getValue()
                                     .retainOnly(entry.getKey(), setClass, setDefault);
-                            if (infoReduced != null)
-                                {
+                            if (infoReduced != null) {
                                 mapReducedMethods.put(entry.getKey(), infoReduced);
-                                }
                             }
-                        mapContribMethods = mapReducedMethods;
                         }
+                        mapContribMethods = mapReducedMethods;
                     }
                 }
+            }
 
             // basically, we're building from the bottom up, in columns. if we build from the top
             // down, we may make the wrong "narrowing" choice, because the right choice might not
@@ -3639,86 +3235,71 @@ public abstract class TypeConstant
             // if there are any remaining declared-but-not-overridden properties originating from
             // an interface on a class once the "self" layer is applied, then those need to be
             // analyzed to determine if they require fields, etc.
-            if (fSelf && !isInterface(constId, struct) && !struct.isExplicitlyAbstract())
-                {
-                for (Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
-                    {
+            if (fSelf && !isInterface(constId, struct) && !struct.isExplicitlyAbstract()) {
+                for (Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet()) {
                     PropertyInfo infoOld = entry.getValue();
                     PropertyInfo infoNew = infoOld.finishAdoption(fNative, errs);
-                    if (infoNew != infoOld)
-                        {
+                    if (infoNew != infoOld) {
                         entry.setValue(infoNew);
-                        if (infoNew.isVirtual())
-                            {
+                        if (infoNew.isVirtual()) {
                             assert infoOld.isVirtual();
                             Object       nid       = entry.getKey().resolveNestedIdentity(pool, this);
                             PropertyInfo infoCheck = mapVirtProps.put(nid, infoNew);
                             assert infoOld == infoCheck;
-                            }
-                        }
-                    }
-                }
-
-            // process methods
-            if (!mapContribMethods.isEmpty())
-                {
-                layerOnMethods(constId, fSelf ? ContribSource.Self : ContribSource.Regular,
-                        idDelegate, mapMethods, mapVirtMethods, typeContrib, mapContribMethods, errs);
-                }
-
-            // process children
-            if (!mapContribChildren.isEmpty())
-                {
-                for (Entry<String, ChildInfo> entry : mapContribChildren.entrySet())
-                    {
-                    String    sName       = entry.getKey();
-                    ChildInfo infoContrib = entry.getValue();
-                    ChildInfo infoPrev    = mapChildren.putIfAbsent(sName, infoContrib);
-                    if (infoPrev != null)
-                        {
-                        ChildInfo infoNew = infoPrev.layerOn(infoContrib);
-                        if (infoNew == null)
-                            {
-                            log(errs, Severity.ERROR, VE_CHILD_COLLISION,
-                                    constId,
-                                    sName,
-                                    contrib.getTypeConstant(),
-                                    infoPrev.getIdentity());
-                            }
-                        else
-                            {
-                            mapChildren.put(sName, infoNew);
-                            }
-                        }
-                    }
-                }
-
-            if (fSelf && fNative)
-                {
-                // the type info that we are creating is a "native rebase"; it may have already
-                // accumulated declared methods from interfaces that it implements, so they need
-                // to be processed by "finishAdoption"
-                for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
-                    {
-                    MethodInfo infoOld = entry.getValue();
-                    MethodInfo infoNew = infoOld.finishAdoption(fNative, errs);
-                    if (infoNew != infoOld)
-                        {
-                        entry.setValue(infoNew);
-                        if (infoNew.isVirtual())
-                            {
-                            assert infoOld.isVirtual();
-                            Object     nid       = entry.getKey().getNestedIdentity();
-                            MethodInfo infoCheck = mapVirtMethods.put(nid, infoNew);
-                            assert infoOld == infoCheck;
-                            }
                         }
                     }
                 }
             }
 
-        return !fIncomplete;
+            // process methods
+            if (!mapContribMethods.isEmpty()) {
+                layerOnMethods(constId, fSelf ? ContribSource.Self : ContribSource.Regular,
+                        idDelegate, mapMethods, mapVirtMethods, typeContrib, mapContribMethods, errs);
+            }
+
+            // process children
+            if (!mapContribChildren.isEmpty()) {
+                for (Entry<String, ChildInfo> entry : mapContribChildren.entrySet()) {
+                    String    sName       = entry.getKey();
+                    ChildInfo infoContrib = entry.getValue();
+                    ChildInfo infoPrev    = mapChildren.putIfAbsent(sName, infoContrib);
+                    if (infoPrev != null) {
+                        ChildInfo infoNew = infoPrev.layerOn(infoContrib);
+                        if (infoNew == null) {
+                            log(errs, Severity.ERROR, VE_CHILD_COLLISION,
+                                    constId,
+                                    sName,
+                                    contrib.getTypeConstant(),
+                                    infoPrev.getIdentity());
+                        } else {
+                            mapChildren.put(sName, infoNew);
+                        }
+                    }
+                }
+            }
+
+            if (fSelf && fNative) {
+                // the type info that we are creating is a "native rebase"; it may have already
+                // accumulated declared methods from interfaces that it implements, so they need
+                // to be processed by "finishAdoption"
+                for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet()) {
+                    MethodInfo infoOld = entry.getValue();
+                    MethodInfo infoNew = infoOld.finishAdoption(fNative, errs);
+                    if (infoNew != infoOld) {
+                        entry.setValue(infoNew);
+                        if (infoNew.isVirtual()) {
+                            assert infoOld.isVirtual();
+                            Object     nid       = entry.getKey().getNestedIdentity();
+                            MethodInfo infoCheck = mapVirtMethods.put(nid, infoNew);
+                            assert infoOld == infoCheck;
+                        }
+                    }
+                }
+            }
         }
+
+        return !fIncomplete;
+    }
 
     /**
      * Explode a single property that could be composed of (1) an "into Ref" or "into Var", (2) a
@@ -3747,8 +3328,7 @@ public abstract class TypeConstant
             Map<Object, PropertyInfo>           mapVirtProps,
             Map<MethodConstant, MethodInfo>     mapMethods,
             Map<Object, MethodInfo>             mapVirtMethods,
-            ErrorListener                       errs)
-        {
+            ErrorListener                       errs) {
         boolean fComplete = true;
 
         // layer on an "into" of either "into Ref" or "into Var"
@@ -3762,121 +3342,98 @@ public abstract class TypeConstant
 
         TypeConstant typeInto;
         TypeInfo     infoInto;
-        if (typeBase == null)
-            {
+        if (typeBase == null) {
             // NakedRef belongs to a different pool
             infoInto = pool.getNakedRefInfo(typeProp);
             typeInto = infoInto.getType();
-            }
-        else
-            {
+        } else {
             typeInto = pool.ensureAccessTypeConstant(
                         pool.ensureParameterizedTypeConstant(typeBase, typeProp), Access.PROTECTED);
             infoInto = typeInto.ensureTypeInfoInternal(errs);
-            }
+        }
 
-        if (isComplete(infoInto))
-            {
+        if (isComplete(infoInto)) {
             nestAndLayerOn(constId, idProp, mapProps, mapVirtProps, mapMethods,
                 mapVirtMethods, typeInto, infoInto, errs);
-            }
-        else
-            {
+        } else {
             fComplete = false;
             errs      = ErrorListener.BLACKHOLE;
-            }
+        }
 
         // layer on any annotations, if any
         Annotation[] aAnnos = info.getRefAnnotations();
         int          cAnnos = aAnnos.length;
-        for (int i = cAnnos - 1; i >= 0; --i)
-            {
+        for (int i = cAnnos - 1; i >= 0; --i) {
             Annotation   anno     = aAnnos[i];
             TypeConstant typeAnno = anno.getAnnotationType();
-            if (typeAnno.isIntoPropertyType())
-                {
+            if (typeAnno.isIntoPropertyType()) {
                 ClassStructure clzAnno = (ClassStructure)
                     ((IdentityConstant) anno.getAnnotationClass()).getComponent();
-                if (clzAnno.isParameterized())
-                    {
+                if (clzAnno.isParameterized()) {
                     typeAnno = pool.ensureParameterizedTypeConstant(typeAnno, typeProp);
-                    }
                 }
+            }
             typeAnno = pool.ensureAccessTypeConstant(typeAnno, Access.PROTECTED);
 
             TypeInfo infoAnno = typeAnno.ensureTypeInfoInternal(errs);
-            if (infoAnno == null)
-                {
+            if (infoAnno == null) {
                 fComplete = false;
                 errs      = ErrorListener.BLACKHOLE;
-                }
-            else
-                {
+            } else {
                 nestAndLayerOn(constId, idProp, mapProps, mapVirtProps, mapMethods,
                     mapVirtMethods, typeAnno, infoAnno, errs);
-                }
             }
+        }
 
         // the custom logic will get overlaid later by layerOnMethods(); the base accessors need to
         // be added at this point so that they will get picked up in that layer-on processing
-        if (struct.getFormat() != Component.Format.INTERFACE)
-            {
+        if (struct.getFormat() != Component.Format.INTERFACE) {
             PropertyStructure prop = (PropertyStructure) idProp.getComponent();
-            if (prop != null)
-                {
+            if (prop != null) {
                 MethodConstant idGet   = info.getGetterId();
                 MethodConstant idSet   = info.getSetterId();
                 MethodInfo     infoGet = mapMethods.get(idGet);
                 MethodInfo     infoSet = mapMethods.get(idSet);
                 int            nRank   = mapMethods.size();
 
-                if (prop.isNative())
-                    {
+                if (prop.isNative()) {
                     // replace the entire chain with a native body
                     infoGet = new MethodInfo(
                         new MethodBody(idGet, idGet.getSignature(), Implementation.Native), nRank);
-                    if (infoSet != null)
-                        {
+                    if (infoSet != null) {
                         infoSet = new MethodInfo(
                             new MethodBody(idSet, idSet.getSignature(), Implementation.Native), nRank+1);
-                        }
                     }
-                else
-                    {
+                } else {
                     // layer on "implicit" property accessors on top of the base chains;
                     // if explicit accessors exist, they will be placed on top later
-                    if (infoGet == null)
-                        {
-                        if (!fComplete)
-                            {
+                    if (infoGet == null) {
+                        if (!fComplete) {
                             return false;
-                            }
+                        }
                         throw new IllegalStateException("Missing getter for " +
                                 idGet.getValueString() + " at " + this.getValueString());
-                        }
-
+                    }
                     infoGet = infoGet.layerOn(new MethodInfo(new MethodBody(
                             idGet, idGet.getSignature(), Implementation.Implicit), nRank), false, errs);
 
-                    if (infoSet != null)
-                        {
+                    if (infoSet != null) {
                         infoSet = infoSet.layerOn(new MethodInfo(new MethodBody(
                                 idSet, idSet.getSignature(), Implementation.Implicit), nRank+1), false, errs);
-                        }
                     }
+                }
 
                 mapMethods.put(idGet, infoGet);
                 mapVirtMethods.put(idGet.resolveNestedIdentity(pool, null), infoGet);
-                if (infoSet != null)
-                    {
+                if (infoSet != null) {
                     mapMethods.put(idSet, infoSet);
                     mapVirtMethods.put(idSet.resolveNestedIdentity(pool, null), infoSet);
-                    }
                 }
             }
+        }
 
         return fComplete;
-        }
+    }
 
     /**
      * Take information being contributed to a property from a class, and "indent" that information
@@ -3902,45 +3459,39 @@ public abstract class TypeConstant
             Map<Object, MethodInfo>             mapVirtMethods,
             TypeConstant                        typeContrib,
             TypeInfo                            infoContrib,
-            ErrorListener                       errs)
-        {
+            ErrorListener                       errs) {
         ConstantPool pool = getConstantPool();
 
         // basically, everything in infoContrib needs to be "indented" (nested) within the nested
         // identity of the property *without* resolving generic types (to avoid double-dipping)
         Map<PropertyConstant, PropertyInfo> mapOrigProps = infoContrib.getProperties();
-        if (!mapOrigProps.isEmpty())
-            {
+        if (!mapOrigProps.isEmpty()) {
             Map<PropertyConstant, PropertyInfo> mapContribProps = new HashMap<>(mapOrigProps.size());
-            for (Entry<PropertyConstant, PropertyInfo> entry : mapOrigProps.entrySet())
-                {
+            for (Entry<PropertyConstant, PropertyInfo> entry : mapOrigProps.entrySet()) {
                 Object           nidContrib = entry.getKey().resolveNestedIdentity(pool, null);
                 PropertyConstant idContrib  = (PropertyConstant) idProp.appendNestedIdentity(pool, nidContrib);
                 mapContribProps.put(idContrib, entry.getValue());
-                }
+            }
             layerOnProps(constId, false, null, mapProps, mapVirtProps, typeContrib,
                     mapContribProps, errs);
-            }
+        }
 
         Map<MethodConstant, MethodInfo> mapOrigMethods = infoContrib.getMethods();
-        if (!mapOrigMethods.isEmpty())
-            {
+        if (!mapOrigMethods.isEmpty()) {
             Map<MethodConstant, MethodInfo> mapContribMethods = new HashMap<>(mapOrigMethods.size());
-            for (Entry<MethodConstant, MethodInfo> entry : mapOrigMethods.entrySet())
-                {
+            for (Entry<MethodConstant, MethodInfo> entry : mapOrigMethods.entrySet()) {
                 Object         nidContrib = entry.getKey().resolveNestedIdentity(pool, null);
                 MethodConstant idContrib  = (MethodConstant) idProp.appendNestedIdentity(pool, nidContrib);
                 MethodInfo     infoMethod = entry.getValue();
-                if (infoMethod.isCapped())
-                    {
+                if (infoMethod.isCapped()) {
                     infoMethod = infoMethod.nestNarrowingIdentity(pool, idProp);
-                    }
-                mapContribMethods.put(idContrib, infoMethod);
                 }
+                mapContribMethods.put(idContrib, infoMethod);
+            }
             layerOnMethods(constId, ContribSource.Regular, null, mapMethods, mapVirtMethods,
                     typeContrib, mapContribMethods, errs);
-            }
         }
+    }
 
     /**
      * Layer on the passed type parameter contributions onto the type parameter information already
@@ -3955,69 +3506,52 @@ public abstract class TypeConstant
             Map<Object, ParamInfo> mapTypeParams,
             TypeConstant           typeContrib,
             Map<Object, ParamInfo> mapContribParams,
-            ErrorListener          errs)
-        {
-        for (ParamInfo paramContrib : mapContribParams.values())
-            {
+            ErrorListener          errs) {
+        for (ParamInfo paramContrib : mapContribParams.values()) {
             Object    nid       = paramContrib.getNestedIdentity();
             ParamInfo paramCurr = mapTypeParams.get(nid);
-            if (paramCurr == null)
-                {
+            if (paramCurr == null) {
                 mapTypeParams.put(nid, paramContrib);
-                }
-            else
-                {
+            } else {
                 // check that everything matches between the current and contributed parameter
-                if (paramContrib.isActualTypeSpecified() != paramCurr.isActualTypeSpecified())
-                    {
+                if (paramContrib.isActualTypeSpecified() != paramCurr.isActualTypeSpecified()) {
                     if (paramContrib.isFormalType() &&
                             paramContrib.getFormalTypeName().equals(paramCurr.getName())
-                        || paramContrib.isFormalTypeSequence())
-                        {
+                        || paramContrib.isFormalTypeSequence()) {
                         // TODO both the current and contributed parameters have a constraint type;
                         //      if those types are different, then keep the narrower of the two; if
                         //      there is no "narrower of the two", then keep the intersection of the two;
                         //      if there is no intersection of the two (e.g. 2 class types), then it's an error
                         continue;
-                        }
+                    }
 
-                    if (paramCurr.isActualTypeSpecified())
-                        {
+                    if (paramCurr.isActualTypeSpecified()) {
                         log(errs, Severity.ERROR, VE_TYPE_PARAM_CONTRIB_NO_SPEC,
                                 this.removeAccess().getValueString(), nid,
                                 paramCurr.getActualType().getValueString(),
                                 typeContrib.getValueString());
-                        }
-                    else
-                        {
+                    } else {
                         log(errs, Severity.ERROR, VE_TYPE_PARAM_CONTRIB_HAS_SPEC,
                                 this.removeAccess().getValueString(), nid,
                                 typeContrib.getValueString(),
                                 paramContrib.getActualType().getValueString());
-                        }
                     }
-                else
-                    {
-                    if (paramCurr.getActualType().isA(paramContrib.getActualType()))
-                        {
+                } else {
+                    if (paramCurr.getActualType().isA(paramContrib.getActualType())) {
                         // keep current
-                        }
-                    else if (paramContrib.getActualType().isA(paramCurr.getActualType()))
-                        {
+                    } else if (paramContrib.getActualType().isA(paramCurr.getActualType())) {
                         mapTypeParams.put(nid, paramContrib);
-                        }
-                    else
-                        {
+                    } else {
                         log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONTRIB,
                             this.removeAccess().getValueString(), nid,
                             paramCurr.getActualType().getValueString(),
                             typeContrib.getValueString(),
                             paramContrib.getActualType().getValueString());
-                        }
                     }
                 }
             }
         }
+    }
 
     /**
      * Layer on the passed property contributions onto the property information already collected.
@@ -4040,14 +3574,12 @@ public abstract class TypeConstant
             Map<Object, PropertyInfo>           mapVirtProps,
             TypeConstant                        typeContrib,
             Map<PropertyConstant, PropertyInfo> mapContribProps,
-            ErrorListener                       errs)
-        {
-        for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
-            {
+            ErrorListener                       errs) {
+        for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet()) {
             layerOnProp(constId, fSelf, idDelegate, mapProps, mapVirtProps,
                     typeContrib, entry.getKey(), entry.getValue(), errs);
-            }
         }
+    }
 
     /**
      * Layer on the passed property contribution onto the property information already collected.
@@ -4072,8 +3604,7 @@ public abstract class TypeConstant
             TypeConstant                        typeContrib,
             PropertyConstant                    idContrib,
             PropertyInfo                        propContrib,
-            ErrorListener                       errs)
-        {
+            ErrorListener                       errs) {
         ConstantPool     pool       = getConstantPool();
         Object           nidContrib = idContrib.resolveNestedIdentity(pool, this);
         PropertyConstant idResult   = (PropertyConstant) constId.appendNestedIdentity(pool, nidContrib);
@@ -4088,13 +3619,12 @@ public abstract class TypeConstant
         // composable properties are registered using their nested identities
         PropertyInfo propBase = mapVirtProps.get(nidContrib);
 
-        if (propContrib.getRefAccess() == Access.PRIVATE && propBase != null)
-            {
+        if (propContrib.getRefAccess() == Access.PRIVATE && propBase != null) {
             constId.log(errs, Severity.ERROR, VE_PROPERTY_ACCESS_LESSENED,
                     propBase.getIdentity().getParentConstant().getValueString(),
                     propContrib.getName());
             propBase = null;
-            }
+        }
 
         PropertyInfo propResult = propBase == null
                 ? propContrib
@@ -4103,8 +3633,7 @@ public abstract class TypeConstant
                         : propBase.layerOn(propContrib, fSelf, false, errs);
 
         // formal properties don't delegate
-        if (idDelegate != null && !propResult.isFormalType())
-            {
+        if (idDelegate != null && !propResult.isFormalType()) {
             PropertyBody head = propResult.getHead();
             TypeConstant type = propResult.getType();
 
@@ -4114,24 +3643,22 @@ public abstract class TypeConstant
                     Effect.BlocksSuper, head.isRO() ? Effect.None : Effect.BlocksSuper,
                     /*fReqField*/ false, /*fConstant*/ false, null, null);
             propResult = new PropertyInfo(propResult, bodyDelegate);
-            }
+        }
 
         // check if there's supposed to be a property by this same identity
-        if (propBase == null && propContrib.isOverride())
-            {
+        if (propBase == null && propContrib.isOverride()) {
             log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_NO_SPEC,
                     typeContrib.removeAccess().getValueString(), propContrib.getName());
-            }
+        }
 
         // the property is stored both by its absolute (fully qualified) ID and its nested
         // ID, which is useful for example when trying to find it when building the actual
         // call chains
         mapProps.put(idResult, propResult);
-        if (fVirtual)
-            {
+        if (fVirtual) {
             mapVirtProps.put(nidContrib, propResult);
-            }
         }
+    }
 
     /**
      * Layer on the passed method contributions onto the method information already collected.
@@ -4155,8 +3682,7 @@ public abstract class TypeConstant
             Map<Object, MethodInfo>         mapVirtMethods,
             TypeConstant                    typeContrib,
             Map<MethodConstant, MethodInfo> mapContribMethods,
-            ErrorListener                   errs)
-        {
+            ErrorListener                   errs) {
         // the challenge here is that the methods being contributed may @Override a method that
         // does not have the same exact signature, in which case the method signature is
         // _narrowed_. there are a few different possible outcomes when this occurs:
@@ -4203,8 +3729,7 @@ public abstract class TypeConstant
         boolean                  fOnTop          = fAnnotation ||
                                                    contribSource == ContribSource.ConditionalIncorp;
 
-        for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
-            {
+        for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet()) {
             MethodConstant    idContrib       = entry.getKey();
             MethodInfo        methodContrib   = entry.getValue();
             MethodBody        bodyContrib     = methodContrib.getHead();
@@ -4214,37 +3739,30 @@ public abstract class TypeConstant
             // the method is not virtual if it is a function, if it is private, or if it is
             // contained inside a method or property that is non-virtual;
             // however, the processing for property accessors is the same as for virtual methods
-            if (!methodContrib.isVirtual() && !methodContrib.isPotentialPropertyOverlay())
-                {
+            if (!methodContrib.isVirtual() && !methodContrib.isPotentialPropertyOverlay()) {
                 // TODO (e.g. 2 modules, 1 introduces a virtual method in a new version that collides
                 //       with a function in the other)
                 // TODO we'll also have to check similar conditions below
 
                 boolean fKeep      = true;
                 Object  nidContrib = idContrib.resolveNestedIdentity(pool, this);
-                if (methodContrib.isConstructor())
-                    {
+                if (methodContrib.isConstructor()) {
                     // not top-level or annotation constructors are not part of this type
                     // constructor call chains; however the annotation "validators" are
-                    if (!idContrib.isTopLevel())
-                        {
+                    if (!idContrib.isTopLevel()) {
                         continue;
-                        }
+                    }
 
                     idContrib = (MethodConstant) constId.appendNestedIdentity(
                                                     pool, idContrib.getSignature());
                     // for all other purposes validators are treated as constructors, except we need
                     // to chain them (based on the same resolved id)
-                    if (methodContrib.isValidator())
-                        {
+                    if (methodContrib.isValidator()) {
                         MethodInfo methodBase = mapMethods.get(idContrib);
-                        if (methodBase != null)
-                            {
+                        if (methodBase != null) {
                             methodContrib = methodBase.layerOnValidator(methodContrib);
-                            }
                         }
-                    else if (!fAnnotation)
-                        {
+                    } else if (!fAnnotation) {
                         // In general constructors are not virtual, unless a class, annotation or
                         // mixin implements an interface that declares a virtual constructor or the
                         // class is a virtual child.
@@ -4266,121 +3784,93 @@ public abstract class TypeConstant
 
                         List<MethodConstant> listMatches =
                                 collectConstructors(methodContrib, mapMethods);
-                        if (listMatches.isEmpty())
-                            {
-                            if (fSelf && bodyContrib.isOverride())
-                                {
+                        if (listMatches.isEmpty()) {
+                            if (fSelf && bodyContrib.isOverride()) {
                                 MethodConstant id = methodContrib.getIdentity();
                                 id.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_ILLEGAL,
                                         constId.getValueString(),
                                         id.getSignature().getValueString(),
                                         id.getNamespace().getValueString());
-                                }
                             }
-                        else
-                            {
-                            for (MethodConstant idBase : listMatches)
-                                {
+                        } else {
+                            for (MethodConstant idBase : listMatches) {
                                 MethodInfo ctor = mapMethods.get(idBase);
-                                if (ctor.containsVirtualConstructor())
-                                    {
-                                    if (ctor.containsBody(idContrib))
-                                        {
+                                if (ctor.containsVirtualConstructor()) {
+                                    if (ctor.containsBody(idContrib)) {
                                         // it's a duplicate; ignore
                                         continue;
-                                        }
+                                    }
 
-                                    if (!bodyContrib.isOverride())
-                                        {
+                                    if (!bodyContrib.isOverride()) {
                                         // the constructor is not marked as "@Override", which makes
                                         // it non-virtual, and it can only be called explicitly
                                         // (via "new" or "construct");
                                         // the fact that its "substitutable" just means that the
                                         // run-time will need to choose the correct one
                                         continue;
-                                        }
+                                    }
                                     methodContrib = ctor.layerOnVirtualConstructor(methodContrib);
                                     fKeep         = true;
 
-                                    if (!idBase.equals(idContrib))
-                                        {
+                                    if (!idBase.equals(idContrib)) {
                                         mapNarrowedNids = addNarrowingNid(mapNarrowedNids,
                                                             idBase.getSignature(), nidContrib);
-                                        }
                                     }
-                                else if (isVirtualChild() && fSelf &&
-                                        ctor.getHead().getImplementation() == Implementation.Implicit)
-                                    {
+                                } else if (isVirtualChild() && fSelf &&
+                                        ctor.getHead().getImplementation() == Implementation.Implicit) {
                                     mapMethods.remove(idBase);
-                                    }
                                 }
                             }
+                        }
 
-                        if (isVirtualChild() && !fSelf)
-                            {
+                        if (isVirtualChild() && !fSelf) {
                             // keep the virtual constructor *only* for the "extend" class chain
                             ClassConstant idContribClz = (ClassConstant)
                                                         methodContrib.getIdentity().getNamespace();
-                            if (constId.extendsClass(idContribClz))
-                                {
+                            if (constId.extendsClass(idContribClz)) {
                                 methodContrib = methodContrib.markImplicitConstructor();
                                 fKeep         = true;
-                                }
                             }
                         }
                     }
-                else if (idContrib.isTopLevel())
-                    {
+                } else if (idContrib.isTopLevel()) {
                     List<MethodConstant> listMatches = collectCoveredMethods(sigContrib, mapMethods);
-                    if (listMatches != null && !listMatches.isEmpty())
-                        {
-                        for (MethodConstant idMethod : listMatches)
-                            {
+                    if (listMatches != null && !listMatches.isEmpty()) {
+                        for (MethodConstant idMethod : listMatches) {
                             MethodInfo method = mapMethods.get(idMethod);
-                            if (method.isFunction())
-                                {
+                            if (method.isFunction()) {
                                 methodContrib = methodContrib.
                                     subsumeFunction(mapMethods.remove(idMethod));
-                                }
-                            else
-                                {
+                            } else {
                                 constId.log(errs, Severity.ERROR, VE_METHOD_ACCESS_LESSENED,
                                         constId.getValueString(),
                                         method.getIdentity().getValueString());
-                                }
                             }
                         }
-                    else if (fSelf && bodyContribTail.isOverride() &&
-                            !constId.equals(pool.clzObject()))
-                        {
+                    } else if (fSelf && bodyContribTail.isOverride() &&
+                            !constId.equals(pool.clzObject())) {
                         log(errs, Severity.ERROR, VE_SUPER_MISSING,
                                 methodContrib.getIdentity().getPathString(),
                                 constId.getValueString());
 
-                        }
                     }
-                else
-                    {
+                } else {
                     // don't collect any abstract functions on nested structures
                     fKeep = fSelf && !methodContrib.isAbstract();
-                    }
+                }
 
-                if (fKeep)
-                    {
-                    if (methodContrib.containsVirtualConstructor())
-                        {
+                if (fKeep) {
+                    if (methodContrib.containsVirtualConstructor()) {
                         mapVirtMods.put(nidContrib, methodContrib);
-                        }
-                    else
-                        {
+                    } else {
                         // unlike the virtual methods, we don't re-resolve nested identity
                         // (via constId.appendNestedIdentity(pool, nidContrib)
                         // and instead keep all functions keyed by their "original" id
                         mapMethods.put(idContrib, methodContrib);
-                        }
                     }
-                continue;
                 }
+                continue;
+            }
 
             // look for a method of the same signature (using its nested identity); only
             // virtual methods are registered using their nested identities
@@ -4390,55 +3880,42 @@ public abstract class TypeConstant
                                         ? idContrib.resolveNestedIdentity(pool, this)
                                         : idContrib.getNestedIdentity();
 
-            if (fAnnotation)
-                {
-                if (methodContrib.isAbstract())
-                    {
+            if (fAnnotation) {
+                if (methodContrib.isAbstract()) {
                     // this was added synthetically by "asInto" processing; ignore
                     continue;
-                    }
-                if (methodContrib.isCapped())
-                    {
+                }
+                if (methodContrib.isCapped()) {
                     // the cap was introduced by the annotation itself; keep it as is
                     mapVirtMods.put(nidContrib, methodContrib);
                     continue;
-                    }
                 }
+            }
 
             List<Object> listMatches = collectPotentialSuperMethods(
                     methodContrib, nidContrib, mapVirtMethods);
-            if (bodyContribTail.isOverride())
-                {
+            if (bodyContribTail.isOverride()) {
                 // the @Override tag gives us permission to look for a method with a
                 // different signature that can be narrowed to the signature of the
                 // contribution (because @Override means there MUST be a super method)
-                if (listMatches.isEmpty())
-                    {
-                    if (bodyContribTail.isNative())
-                        {
+                if (listMatches.isEmpty()) {
+                    if (bodyContribTail.isNative()) {
                         // take it as is
                         mapVirtMods.put(nidContrib, methodResult);
-                        }
-                    else if (bodyContribTail.getImplementation() != Implementation.Implicit)
-                        {
+                    } else if (bodyContribTail.getImplementation() != Implementation.Implicit) {
                         log(errs, Severity.ERROR, VE_SUPER_MISSING,
                                 methodContrib.getIdentity().getPathString(),
                                 constId.getValueString());
-                        }
                     }
-                else
-                    {
+                } else {
                     Object     nidBase = null;
                     MethodInfo methodBase;
 
-                    if (listMatches.size() == 1)
-                        {
+                    if (listMatches.size() == 1) {
                         nidBase      = listMatches.get(0);
                         methodBase   = mapVirtMethods.get(nidBase);
-                        if (methodBase.isCapped())
-                            {
-                            if (fAnnotation)
-                                {
+                        if (methodBase.isCapped()) {
+                            if (fAnnotation) {
                                 // the "super" method we found is capped, but the cap itself apparently
                                 // didn't match; this can happen for "into (A | B)" annotations
                                 // replace the capped method with the narrowing one
@@ -4446,9 +3923,7 @@ public abstract class TypeConstant
 
                                 assert nidBase != null;
                                 methodResult = mapVirtMethods.get(nidBase);
-                                }
-                            else
-                                {
+                            } else {
                                 // the "super" method we found is capped, but the cap itself apparently
                                 // didn't match; this means that the attempted override is illegal
                                 MethodConstant id = methodBase.getIdentity();
@@ -4457,106 +3932,83 @@ public abstract class TypeConstant
                                         id.getSignature().getValueString(),
                                         id.getNamespace().getValueString());
                                 nidBase = null;
-                                }
                             }
-                        else
-                            {
+                        } else {
                             methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
-                            }
                         }
-                    else
-                        {
+                    } else {
                         // now we need find a method that would be the unambiguously best choice;
                         // collect the nids into a lookup map (sig->nid)
                         Map<SignatureConstant, Object> mapNids  = new HashMap<>();
-                        for (Object nid : listMatches)
-                            {
+                        for (Object nid : listMatches) {
                             MethodInfo info = mapVirtMethods.get(nid);
-                            if (!info.isCapped())
-                                {
+                            if (!info.isCapped()) {
                                 mapNids.put(info.getSignature(), nid);
-                                }
                             }
+                        }
                         SignatureConstant sigBest = selectBest(mapNids.keySet(), bodyContrib.getSignature());
-                        if (sigBest == null)
-                            {
-                            if (bodyContrib.usesSuper())
-                                {
+                        if (sigBest == null) {
+                            if (bodyContrib.usesSuper()) {
                                 log(errs, Severity.ERROR, VE_SUPER_AMBIGUOUS,
                                         methodContrib.getIdentity().getPathString());
                                 continue;
-                                }
                             }
-                        else
-                            {
+                        } else {
                             nidBase    = mapNids.get(sigBest);
                             methodBase = mapVirtMethods.get(nidBase);
-                            if (methodBase.isCapped())
-                                {
+                            if (methodBase.isCapped()) {
                                 // replace the capped method with the narrowing (non-capped)
                                 nidBase    = methodBase.getNarrowingMethod(mapVirtMethods);
                                 methodBase = mapVirtMethods.get(nidBase);
 
                                 assert nidBase != null;
                                 listMatches.remove(sigBest);
-                                }
-                            methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
                             }
+                            methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
+                        }
 
                         // there are multiple non-ambiguous "super" methods
-                        for (Object nid : listMatches)
-                            {
-                            if (nid.equals(nidBase))
-                                {
+                        for (Object nid : listMatches) {
+                            if (nid.equals(nidBase)) {
                                 continue;
-                                }
+                            }
 
                             MethodInfo method = mapVirtMethods.get(nid);
-                            if (!method.isCapped())
-                                {
+                            if (!method.isCapped()) {
                                 // we have a method on the super that is covered by this method;
                                 // let's reflect this fact
                                 method = method.layerOn(methodContrib, fSelf, errs);
                                 mapVirtMods.put(nid, method);
-                                }
                             }
                         }
+                    }
 
-                    if (nidBase != null)
-                        {
-                        if (nidBase.equals(nidContrib))
-                            {
+                    if (nidBase != null) {
+                        if (nidBase.equals(nidContrib)) {
                             // while the ids are "equal", they are not the same;
                             // one of them may have a resolver and the other may not;
                             // as a result, the call to
                             //      constId.appendNestedIdentity(pool, nid)
                             // below may produce different results
                             nidContrib = nidBase;
-                            }
-                        else if (!mapVirtMods.containsKey(nidBase))
-                            {
+                        } else if (!mapVirtMods.containsKey(nidBase)) {
                             // there exists a method that this method will narrow that did *not*
                             // receive a contribution of its own, so add this method to the set of
                             // methods that are narrowing the super method
                             mapNarrowedNids = addNarrowingNid(mapNarrowedNids, nidBase, nidContrib);
-                            }
                         }
                     }
                 }
-            else
-                {
+            } else {
                 // override is not specified by the tail
                 if (fSelf ||
-                        fOnTop && !methodContrib.isCapped() && !bodyContrib.isOverride())
-                    {
+                        fOnTop && !methodContrib.isCapped() && !bodyContrib.isOverride()) {
                     // report "override required" if necessary
-                    for (Object nid : listMatches)
-                        {
+                    for (Object nid : listMatches) {
                         MethodInfo methodMatch = mapVirtMethods.get(nid);
-                        if (methodMatch == null)
-                            {
+                        if (methodMatch == null) {
                             continue;
-                            }
+                        }
 
                         // the fact that @Override is not specified, but there is a match
                         // among the underlying methods is almost always wrong except two
@@ -4570,115 +4022,94 @@ public abstract class TypeConstant
                         MethodBody     bodyHead = methodMatch.getHead();
                         MethodBody     bodyTail = methodMatch.getTail();
                         if (!bodyHead.getIdentity().equals(idMethod) &&
-                                (bodyTail == bodyHead || !bodyTail.getIdentity().equals(idMethod)))
-                            {
-                            if (fAnnotation)
-                                {
+                                (bodyTail == bodyHead || !bodyTail.getIdentity().equals(idMethod))) {
+                            if (fAnnotation) {
                                 // the annotation sits on top of the annotated class and makes the
                                 // underlying call chain inaccessible
-                                if (!errs.hasSeriousErrors() && !bodyHead.isAbstract())
-                                    {
+                                if (!errs.hasSeriousErrors() && !bodyHead.isAbstract()) {
                                     log(errs, Severity.WARNING, VE_METHOD_UNREACHABLE,
                                         bodyHead.getIdentity().getNamespace().getValueString(),
                                         bodyContrib.getIdentity().getNamespace().getValueString(),
                                         bodyHead.getIdentity().getPathString()
                                         );
-                                    }
                                 }
-                            else
-                                {
+                            } else {
                                 MethodBody bodyOverride = fOnTop ? bodyHead : bodyTail;
                                 log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
                                         idMethod.getNamespace().getValueString(),
                                         bodyOverride.getSignature().getValueString(),
                                         bodyOverride.getIdentity().getNamespace().getValueString()
                                         );
-                                }
                             }
-                        }
-                    }
-
-                // find the best base method to layer on; use a capped base method only if nothing
-                // else matches
-                MethodInfo methodBase = mapVirtMethods.get(nidContrib);
-                if (methodBase == null || methodBase.isCapped())
-                    {
-                    if (methodBase != null && methodBase.containsBody(idContrib))
-                        {
-                        // this has already been processed and capped, which can occur when a method
-                        // on a natural contribution comes after a rebase or an "into" contribution
-                        // has already provided that same method; skip the dup
-                        continue;
-                        }
-
-                    Object nidBase = null;
-                    for (Object nid : listMatches)
-                        {
-                        MethodInfo methodMatch = mapVirtMethods.get(nid);
-                        if (methodMatch != null && !nid.equals(nidContrib))
-                            {
-                            if (methodMatch.isCapped())
-                                {
-                                if (methodBase == null)
-                                    {
-                                    // take a possible match, but keep looking
-                                    methodBase = methodMatch;
-                                    nidBase    = nid;
-                                    }
-                                }
-                            else
-                                {
-                                methodBase = methodMatch;
-                                nidBase    = nid;
-                                break;
-                                }
-                            }
-                        }
-
-                    if (methodBase != null &&
-                            methodBase.getHead().getImplementation() == Implementation.Implicit)
-                        {
-                        // we are replacing an implicit base, which could be just a remnant of
-                        // the "asInto" transformation; no need to keep it any longer
-                        mapMethods.remove((MethodConstant) constId.appendNestedIdentity(pool, nidBase));
-                        }
-                    }
-                else
-                    {
-                    // nidContrib directly points to a "super" method, so it must be in the list
-                    // unless the contributing method is already capped
-                    if (!methodContrib.isCapped() && !listMatches.contains(nidContrib))
-                        {
-                        log(errs, Severity.ERROR, VE_SUPER_AMBIGUOUS,
-                                methodContrib.getIdentity().getValueString());
-                        }
-                    }
-
-                if (methodBase != null)
-                    {
-                    methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
-                    }
-
-                if (idDelegate != null && !methodResult.isCapped())
-                    {
-                    // ensure that the delegating body "belongs" to this layer in the chain
-                    MethodBody     head     = methodResult.getHead();
-                    MethodConstant idMethod = head.getIdentity().ensureNestedIdentity(pool, constId);
-                    if (idMethod.isTopLevel())
-                        {
-                        MethodBody bodyDelegate = new MethodBody(
-                            idMethod, head.getSignature(), Implementation.Delegating, idDelegate);
-                        methodResult = new MethodInfo(
-                            Handy.prepend(methodResult.getChain(), bodyDelegate), methodResult.getRank());
                         }
                     }
                 }
 
-            mapVirtMods.put(nidContrib, methodResult);
+                // find the best base method to layer on; use a capped base method only if nothing
+                // else matches
+                MethodInfo methodBase = mapVirtMethods.get(nidContrib);
+                if (methodBase == null || methodBase.isCapped()) {
+                    if (methodBase != null && methodBase.containsBody(idContrib)) {
+                        // this has already been processed and capped, which can occur when a method
+                        // on a natural contribution comes after a rebase or an "into" contribution
+                        // has already provided that same method; skip the dup
+                        continue;
+                    }
+
+                    Object nidBase = null;
+                    for (Object nid : listMatches) {
+                        MethodInfo methodMatch = mapVirtMethods.get(nid);
+                        if (methodMatch != null && !nid.equals(nidContrib)) {
+                            if (methodMatch.isCapped()) {
+                                if (methodBase == null) {
+                                    // take a possible match, but keep looking
+                                    methodBase = methodMatch;
+                                    nidBase    = nid;
+                                }
+                            } else {
+                                methodBase = methodMatch;
+                                nidBase    = nid;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (methodBase != null &&
+                            methodBase.getHead().getImplementation() == Implementation.Implicit) {
+                        // we are replacing an implicit base, which could be just a remnant of
+                        // the "asInto" transformation; no need to keep it any longer
+                        mapMethods.remove((MethodConstant) constId.appendNestedIdentity(pool, nidBase));
+                    }
+                } else {
+                    // nidContrib directly points to a "super" method, so it must be in the list
+                    // unless the contributing method is already capped
+                    if (!methodContrib.isCapped() && !listMatches.contains(nidContrib)) {
+                        log(errs, Severity.ERROR, VE_SUPER_AMBIGUOUS,
+                                methodContrib.getIdentity().getValueString());
+                    }
+                }
+
+                if (methodBase != null) {
+                    methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
+                }
+
+                if (idDelegate != null && !methodResult.isCapped()) {
+                    // ensure that the delegating body "belongs" to this layer in the chain
+                    MethodBody     head     = methodResult.getHead();
+                    MethodConstant idMethod = head.getIdentity().ensureNestedIdentity(pool, constId);
+                    if (idMethod.isTopLevel()) {
+                        MethodBody bodyDelegate = new MethodBody(
+                            idMethod, head.getSignature(), Implementation.Delegating, idDelegate);
+                        methodResult = new MethodInfo(
+                            Handy.prepend(methodResult.getChain(), bodyDelegate), methodResult.getRank());
+                    }
+                }
             }
 
-        if (mapNarrowedNids != null)
-            {
+            mapVirtMods.put(nidContrib, methodResult);
+        }
+
+        if (mapNarrowedNids != null) {
             // find every narrowed method signature that did *not* receive a contribution of its
             // own (i.e. same method signature), because any that did receive a contribution at
             // this level can be safely ignored
@@ -4687,12 +4118,10 @@ public abstract class TypeConstant
             // for each remaining nid that was narrowed, if it was narrowed by exactly one
             // method, then cap the nid by redirecting to the narrowed method, otherwise it is
             // an error
-            for (Entry<Object, Set<Object>> entry : mapNarrowedNids.entrySet())
-                {
+            for (Entry<Object, Set<Object>> entry : mapNarrowedNids.entrySet()) {
                 Object      nidNarrowed  = entry.getKey();
                 Set<Object> setNarrowing = entry.getValue();
-                if (setNarrowing.size() == 1)
-                    {
+                if (setNarrowing.size() == 1) {
                     // cap the method
                     Object     nidNarrowing  = setNarrowing.iterator().next();
                     MethodInfo infoNarrowing = mapVirtMods.get(nidNarrowing);
@@ -4700,59 +4129,50 @@ public abstract class TypeConstant
 
                     assert !nidNarrowing.equals(nidNarrowed);
 
-                    if (infoNarrowing.getAccess().isAsAccessibleAs(infoNarrowed.getAccess()))
-                        {
+                    if (infoNarrowing.getAccess().isAsAccessibleAs(infoNarrowed.getAccess())) {
                         mapVirtMods.put(nidNarrowed, infoNarrowed.capWith(this, infoNarrowing));
-                        }
-                    else
-                        {
+                    } else {
                         log(errs, Severity.ERROR, VE_METHOD_ACCESS_LESSENED,
                                 constId.getValueString(),
                                 infoNarrowing.getIdentity().getValueString());
-                        }
                     }
-                else
-                    {
-                    for (Object nidNarrowing : setNarrowing)
-                        {
+                } else {
+                    for (Object nidNarrowing : setNarrowing) {
                         log(errs, Severity.ERROR, VE_METHOD_NARROWING_AMBIGUOUS,
                                 constId.getValueString(),
                                 mapVirtMethods.get(nidNarrowed).getIdentity().getValueString(),
                                 mapVirtMods.get(nidNarrowing).getIdentity().getSignature().getValueString());
-                        }
                     }
                 }
             }
+        }
 
         // the method is stored both by its absolute (fully qualified) ID and its nested
         // ID, which is useful for example when trying to find it when building the actual
         // call chains
-        for (Entry<Object, MethodInfo> entry : mapVirtMods.entrySet())
-            {
+        for (Entry<Object, MethodInfo> entry : mapVirtMods.entrySet()) {
             Object         nid  = entry.getKey();
             MethodInfo     info = entry.getValue();
             MethodConstant id   = (MethodConstant) constId.appendNestedIdentity(pool, nid);
 
             mapMethods.put(id, info);
             mapVirtMethods.put(nid, info);
-            }
         }
+    }
 
     /**
      * Helper method to add a narrowing nid.
      */
     private Map<Object, Set<Object>> addNarrowingNid(Map<Object, Set<Object>> mapNarrowedNids,
-                                                     Object nidBase, Object nidContrib)
-        {
-        if (mapNarrowedNids == null)
-            {
+                                                     Object nidBase, Object nidContrib) {
+        if (mapNarrowedNids == null) {
             mapNarrowedNids = new HashMap<>();
-            }
+        }
 
         Set<Object> setNarrowing = mapNarrowedNids.computeIfAbsent(nidBase, key_ -> new HashSet<>());
         setNarrowing.add(nidContrib);
         return mapNarrowedNids;
-        }
+    }
 
     /**
      * Collect all methods from the base that would be "hidden" by the specified method, which is
@@ -4765,28 +4185,23 @@ public abstract class TypeConstant
      */
     protected List<MethodConstant> collectCoveredMethods(
             SignatureConstant               sigSub,
-            Map<MethodConstant, MethodInfo> mapBase)
-
-        {
+            Map<MethodConstant, MethodInfo> mapBase) {
         List<MethodConstant> listMatch = new ArrayList<>();
-        for (Entry<MethodConstant, MethodInfo> entry : mapBase.entrySet())
-            {
+        for (Entry<MethodConstant, MethodInfo> entry : mapBase.entrySet()) {
             MethodConstant id   = entry.getKey();
             MethodInfo     info = entry.getValue();
 
             if (id.getName().equals(sigSub.getName()) && id.isTopLevel()
                     && !info.getHead().isVisibilityReductionAllowed()
-                    && sigSub.isSubstitutableFor(id.getSignature(), this))
-                {
-                if (listMatch == null)
-                    {
+                    && sigSub.isSubstitutableFor(id.getSignature(), this)) {
+                if (listMatch == null) {
                     listMatch = new ArrayList<>();
-                    }
-                listMatch.add(id);
                 }
+                listMatch.add(id);
             }
-        return listMatch;
         }
+        return listMatch;
+    }
 
     /**
      * Collect all methods that could be the "super" of the specified method signature.
@@ -4800,54 +4215,43 @@ public abstract class TypeConstant
     protected List<Object> collectPotentialSuperMethods(
             MethodInfo              methodInfo,
             Object                  nidSub,
-            Map<Object, MethodInfo> mapSupers)
-        {
+            Map<Object, MethodInfo> mapSupers) {
         MethodStructure   method    = methodInfo.getHead().getMethodStructure();
         SignatureConstant sigSub    = methodInfo.getSignature();
         int               cDefaults = method == null ? 0 : method.getDefaultParamCount();
         List<Object>      listMatch = null;
 
-        for (Entry<Object, MethodInfo> entry : mapSupers.entrySet())
-            {
+        for (Entry<Object, MethodInfo> entry : mapSupers.entrySet()) {
             Object nidCandidate = entry.getKey();
-            if (IdentityConstant.isNestedSibling(nidSub, nidCandidate))
-                {
+            if (IdentityConstant.isNestedSibling(nidSub, nidCandidate)) {
                 MethodInfo        infoCandidate = entry.getValue();
                 SignatureConstant sigCandidate  = infoCandidate.getSignature(); // resolved
-                if (sigCandidate.getName().equals(sigSub.getName()))
-                    {
+                if (sigCandidate.getName().equals(sigSub.getName())) {
                     if (infoCandidate.containsBody(methodInfo.getIdentity()) ||
-                            sigSub.isSubstitutableFor(sigCandidate, this))
-                        {
-                        if (listMatch == null)
-                            {
+                            sigSub.isSubstitutableFor(sigCandidate, this)) {
+                        if (listMatch == null) {
                             listMatch = new ArrayList<>();
-                            }
-                        listMatch.add(nidCandidate);
                         }
-                    else if (cDefaults > 0)
-                        {
+                        listMatch.add(nidCandidate);
+                    } else if (cDefaults > 0) {
                         // allow default parameters (but only if there is no "exact" match)
                         int cParamsReq = sigCandidate.getParamCount();
                         int cParamsSub = sigSub.getParamCount();
-                        if (cParamsSub > cParamsReq && cParamsSub - cDefaults <= cParamsReq)
-                            {
+                        if (cParamsSub > cParamsReq && cParamsSub - cDefaults <= cParamsReq) {
                             SignatureConstant sigSubReq = sigSub.truncateParams(0, cParamsReq);
-                            if (sigSubReq.isSubstitutableFor(sigCandidate, this))
-                                {
-                                if (listMatch == null)
-                                    {
+                            if (sigSubReq.isSubstitutableFor(sigCandidate, this)) {
+                                if (listMatch == null) {
                                     listMatch = new ArrayList<>();
-                                    }
-                                listMatch.add(nidCandidate);
                                 }
+                                listMatch.add(nidCandidate);
                             }
                         }
                     }
                 }
             }
-        return listMatch == null ? Collections.emptyList() : listMatch;
         }
+        return listMatch == null ? Collections.emptyList() : listMatch;
+    }
 
     /**
      * Collect all virtual constructors that may serve as a base contract for the specified
@@ -4862,66 +4266,53 @@ public abstract class TypeConstant
      */
     protected List<MethodConstant> collectConstructors(
                 MethodInfo                      infoConstruct,
-                Map<MethodConstant, MethodInfo> mapMethods)
-        {
+                Map<MethodConstant, MethodInfo> mapMethods) {
         MethodStructure      method    = infoConstruct.getHead().getMethodStructure();
         SignatureConstant    sigSub    = infoConstruct.getSignature();
         List<MethodConstant> listMatch = null;
         boolean              fExact    = true;
 
-        for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
-            {
+        for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet()) {
             MethodConstant idCandidate = entry.getKey();
-            if (!idCandidate.isTopLevel())
-                {
+            if (!idCandidate.isTopLevel()) {
                 continue;
-                }
+            }
 
             MethodInfo        infoCandidate = entry.getValue();
             SignatureConstant sigCandidate  = infoCandidate.getSignature(); // resolved
 
-            if (sigCandidate.getName().equals(sigSub.getName()))
-                {
-                if (sigSub.isSubstitutableFor(sigCandidate, this))
-                    {
-                    if (!fExact && listMatch != null)
-                        {
+            if (sigCandidate.getName().equals(sigSub.getName())) {
+                if (sigSub.isSubstitutableFor(sigCandidate, this)) {
+                    if (!fExact && listMatch != null) {
                         // we found an exact match; get rid of non-exact ones
                         listMatch.clear();
-                        }
-                    if (listMatch == null)
-                        {
-                        listMatch = new ArrayList<>();
-                        }
-                    listMatch.add(idCandidate);
                     }
-                else if (method != null && (listMatch == null || !fExact))
-                    {
+                    if (listMatch == null) {
+                        listMatch = new ArrayList<>();
+                    }
+                    listMatch.add(idCandidate);
+                } else if (method != null && (listMatch == null || !fExact)) {
                     // allow default parameters (but only if there is no "exact" match)
                     int cDefault = method.getDefaultParamCount();
-                    if (cDefault > 0)
-                        {
+                    if (cDefault > 0) {
                         int cParamsReq = sigCandidate.getParamCount();
                         int cParamsSub = sigSub.getParamCount();
-                        if (cParamsSub > cParamsReq && cParamsSub - cDefault <= cParamsReq)
-                            {
+                        if (cParamsSub > cParamsReq && cParamsSub - cDefault <= cParamsReq) {
                             SignatureConstant sigSubReq = sigSub.truncateParams(0, cParamsReq);
-                            if (sigSubReq.isSubstitutableFor(sigCandidate, this))
-                                {
-                                if (listMatch == null)
-                                    {
+                            if (sigSubReq.isSubstitutableFor(sigCandidate, this)) {
+                                if (listMatch == null) {
                                     listMatch = new ArrayList<>();
-                                    }
+                                }
                                 listMatch.add(idCandidate);
                                 fExact = false;
-                                }
                             }
                         }
                     }
                 }
             }
-        return listMatch == null ? Collections.emptyList() : listMatch;
         }
+        return listMatch == null ? Collections.emptyList() : listMatch;
+    }
 
     /**
      * Helper to select the "best" signature from an array of signatures; in other words, choose
@@ -4932,69 +4323,55 @@ public abstract class TypeConstant
      *
      * @return the "best" signature to use
      */
-    public SignatureConstant selectBest(Set<SignatureConstant> setSigs, SignatureConstant sigSub)
-        {
+    public SignatureConstant selectBest(Set<SignatureConstant> setSigs, SignatureConstant sigSub) {
         SignatureConstant sigBest     = null;
         int               cParamsBest = -1;
 
         nextCandidate:
-        for (Iterator<SignatureConstant> iter = setSigs.iterator(); iter.hasNext();)
-            {
+        for (Iterator<SignatureConstant> iter = setSigs.iterator(); iter.hasNext();) {
             SignatureConstant sigCandidate = iter.next();
             int               cParams      = sigCandidate.getParamCount();
 
-            if (sigCandidate.equals(sigSub))
-                {
+            if (sigCandidate.equals(sigSub)) {
                 // it's definitely the best
                 return sigCandidate;
-                }
+            }
 
-            if (cParams > cParamsBest)
-                {
+            if (cParams > cParamsBest) {
                 // signatures with more parameters (representing methods with default parameters)
                 // always take precedence
                 sigBest     = sigCandidate;
                 cParamsBest = cParams;
-                }
-            else if (cParams == cParamsBest)
-                {
-                if (sigBest == null) // that means that "best" is ambiguous thus far
-                    {
+            } else if (cParams == cParamsBest) {
+                if (sigBest == null) { // that means that "best" is ambiguous thus far
                     // have to back-test all the ones in front of us
-                    for (Iterator<SignatureConstant> iterPrev = setSigs.iterator(); iter.hasNext();)
-                        {
+                    for (Iterator<SignatureConstant> iterPrev = setSigs.iterator(); iter.hasNext();) {
                         SignatureConstant sigPrev = iterPrev.next();
-                        if (sigPrev == sigCandidate)
-                            {
+                        if (sigPrev == sigCandidate) {
                             break;
-                            }
+                        }
 
                         if (sigPrev.getParamCount() == cParamsBest &&
-                                !sigPrev.isSubstitutableFor(sigCandidate, this))
-                            {
+                                !sigPrev.isSubstitutableFor(sigCandidate, this)) {
                             // still ambiguous
                             continue nextCandidate;
-                            }
                         }
+                    }
 
                     // so far, this candidate is the best
                     sigBest = sigCandidate;
-                    }
-                else if (sigBest.isSubstitutableFor(sigCandidate, this))
-                    {
+                } else if (sigBest.isSubstitutableFor(sigCandidate, this)) {
                     // this assumes that "best" is a transitive concept, i.e. we don't need to
                     // re-test other candidates
                     sigBest = sigCandidate;
-                    }
-                else if (!sigCandidate.isSubstitutableFor(sigBest, this))
-                    {
+                } else if (!sigCandidate.isSubstitutableFor(sigBest, this)) {
                     sigBest = null;
-                    }
                 }
             }
+        }
 
         return sigBest;
-        }
+    }
 
     /**
      * Collect type parameters for "this" class of "this" type and all its instance parents.
@@ -5011,59 +4388,46 @@ public abstract class TypeConstant
             Map<Object, ParamInfo>              mapTypeParams,
             Map<PropertyConstant, PropertyInfo> mapProps,
             int                                 nBaseRank,
-            ErrorListener                       errs)
-        {
+            ErrorListener                       errs) {
         boolean fComplete = true;
 
-        if (isVirtualChild() || isInnerChildClass() || isAnonymousClass())
-            {
+        if (isVirtualChild() || isInnerChildClass() || isAnonymousClass()) {
             // virtual child has access to the parent's type parameters
             TypeInfo infoParent = getParentType().ensureTypeInfoInternal(errs);
-            if (isComplete(infoParent))
-                {
-                for (ParamInfo param : infoParent.getTypeParams().values())
-                    {
-                    if (!(param.getNestedIdentity() instanceof NestedIdentity))
-                        {
+            if (isComplete(infoParent)) {
+                for (ParamInfo param : infoParent.getTypeParams().values()) {
+                    if (!(param.getNestedIdentity() instanceof NestedIdentity)) {
                         String sParam = param.getName();
 
                         mapTypeParams.put(sParam, param);
 
                         PropertyInfo infoProp = infoParent.findProperty(sParam);
-                        if (infoProp == null)
-                            {
+                        if (infoProp == null) {
                             log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,
                                     getParentType().getValueString(), sParam);
-                            }
-                        else
-                            {
+                        } else {
                             mapProps.put(infoProp.getIdentity(), infoProp);
-                            }
                         }
                     }
                 }
-            else
-                {
+            } else {
                 fComplete = false;
-                }
             }
+        }
 
         int nRank = nBaseRank + mapProps.size();
-        for (Component child : struct.children())
-            {
-            if (child instanceof PropertyStructure prop)
-                {
-                if (prop.isGenericTypeParameter())
-                    {
+        for (Component child : struct.children()) {
+            if (child instanceof PropertyStructure prop) {
+                if (prop.isGenericTypeParameter()) {
                     PropertyConstant id = prop.getIdentityConstant();
 
                     mapProps.put(id, new PropertyInfo(new PropertyBody(prop,
                                         mapTypeParams.get(id.getName())), nRank++));
-                    }
                 }
             }
-        return fComplete;
         }
+        return fComplete;
+    }
 
     /**
      * Generate the info for the child structures of the specified contributed structure.
@@ -5093,19 +4457,14 @@ public abstract class TypeConstant
             List<PropertyConstant>              listExplode,
             int                                 nBasePropRank,
             int                                 nBaseMethRank,
-            ErrorListener                       errs)
-        {
+            ErrorListener                       errs) {
         boolean fComplete = true;
 
         // recurse through children
-        for (Component child : structContrib.children())
-            {
-            if (child instanceof MultiMethodStructure mms)
-                {
-                for (MethodStructure method : mms.methods())
-                    {
-                    if (!method.isLambda())
-                        {
+        for (Component child : structContrib.children()) {
+            if (child instanceof MultiMethodStructure mms) {
+                for (MethodStructure method : mms.methods()) {
+                    if (!method.isLambda()) {
                         // a finalizer is not a stand-alone method, but its children are
                         fComplete &= method.isConstructorFinalizer()
                             ? collectChildInfo(constId, fInterface, method, mapTypeParams,
@@ -5114,32 +4473,26 @@ public abstract class TypeConstant
                             : createMemberInfo(constId, fInterface, method, mapTypeParams,
                                     mapProps, mapMethods, mapChildren, listExplode,
                                     nBasePropRank, nBaseMethRank, errs);
-                        }
                     }
                 }
-            else if (child instanceof PropertyStructure)
-                {
+            } else if (child instanceof PropertyStructure) {
                 fComplete &= createMemberInfo(constId, fInterface, child, mapTypeParams,
                                 mapProps, mapMethods, mapChildren, listExplode,
                                 nBasePropRank, nBaseMethRank, errs);
-                }
-            else if (child instanceof ClassStructure || child instanceof TypedefStructure)
-                {
+            } else if (child instanceof ClassStructure || child instanceof TypedefStructure) {
                 String sName = child.getIdentityConstant().getNestedName();
-                if (sName != null)
-                    {
+                if (sName != null) {
                     // it should not be possible for there to be more than one at this level with
                     // the same name
-                    if (mapChildren.containsKey(sName))
-                        {
+                    if (mapChildren.containsKey(sName)) {
                         log(errs, Severity.ERROR, VE_NAME_COLLISION, constId, sName);
-                        }
-                    mapChildren.put(sName, new ChildInfo(child));
                     }
+                    mapChildren.put(sName, new ChildInfo(child));
                 }
             }
-        return fComplete;
         }
+        return fComplete;
+    }
 
     /**
      * Generate the members of the "this" class of "this" type.
@@ -5169,16 +4522,14 @@ public abstract class TypeConstant
             List<PropertyConstant>              listExplode,
             int                                 nBasePropRank,
             int                                 nBaseMethRank,
-            ErrorListener                       errs)
-        {
+            ErrorListener                       errs) {
         ConstantPool pool    = getConstantPool();
         boolean      fRebase = constId instanceof NativeRebaseConstant;
 
         // all rebase types are interfaces
         assert fInterface || !fRebase;
 
-        if (structContrib instanceof MethodStructure method)
-            {
+        if (structContrib instanceof MethodStructure method) {
             boolean           fHasNoCode   = !method.hasCode();
             boolean           fNative      = method.isNative();
             boolean           fStatic      = method.isStatic();
@@ -5186,13 +4537,12 @@ public abstract class TypeConstant
             MethodConstant    id           = method.getIdentityConstant();
             SignatureConstant sig          = id.getSignature().resolveGenericTypes(pool,
                                                     method.isFunction() ? null : this);
-            if (fRebase && fHasNoCode && !fNative)
-                {
+            if (fRebase && fHasNoCode && !fNative) {
                 // align the structure with the info (may be used by the runtime)
                 fNative = true;
                 method.markNative();
                 pool.invalidateTypeInfos(id.getNamespace());
-                }
+            }
 
             MethodBody body = new MethodBody(id, sig,
                     fNative                  ? Implementation.Native   :
@@ -5203,14 +4553,11 @@ public abstract class TypeConstant
                                                Implementation.Explicit);
             MethodInfo infoNew = new MethodInfo(body, nBaseMethRank + mapMethods.size());
             mapMethods.put(id, infoNew);
-            }
-        else if (structContrib instanceof PropertyStructure prop)
-            {
-            if (prop.isGenericTypeParameter())
-                {
+        } else if (structContrib instanceof PropertyStructure prop) {
+            if (prop.isGenericTypeParameter()) {
                 // type parameters have been processed by collectSelfTypeParameters()
                 return true;
-                }
+            }
 
             // rebase properties should be computed as they were *not* from an interface
             boolean fFromIface = fInterface && !fRebase;
@@ -5221,8 +4568,7 @@ public abstract class TypeConstant
                                             fRebase | prop.isNative(), fFromIface, nRank, errs);
             mapProps.put(id, info);
 
-            if (info.isCustomLogic() || info.isRefAnnotated())
-                {
+            if (info.isCustomLogic() || info.isRefAnnotated()) {
                 // this property needs to be "exploded"
                 listExplode.add(id);
 
@@ -5241,12 +4587,12 @@ public abstract class TypeConstant
                 PropertyInfo     propParam = new PropertyInfo(new PropertyBody(null, param), nRank + 1);
                 mapTypeParams.put(nidParam, param);
                 mapProps.put(idParam, propParam);
-                }
             }
+        }
         return collectChildInfo(constId, fInterface, structContrib,
                 mapTypeParams, mapProps, mapMethods, mapChildren, listExplode,
                 nBasePropRank, nBaseMethRank, errs);
-        }
+    }
 
     /**
      * Create the PropertyInfo for the specified property.
@@ -5266,8 +4612,7 @@ public abstract class TypeConstant
             boolean           fNative,
             boolean           fInterface,
             int               nRank,
-            ErrorListener     errs)
-        {
+            ErrorListener     errs) {
         ConstantPool pool  = getConstantPool();
         String       sName = prop.getName();
 
@@ -5277,21 +4622,19 @@ public abstract class TypeConstant
         boolean      fHasAbstract = false;
         boolean      fHasOverride = false;
         boolean      fHasInject   = false;
-        for (int i = 0, c = aPropAnno.length; i < c; ++i)
-            {
+        for (int i = 0, c = aPropAnno.length; i < c; ++i) {
             Annotation annotation = aPropAnno[i];
             Constant   constMixin = annotation.getAnnotationClass();
-            if (scanForDups(aPropAnno, i, constMixin))
-                {
+            if (scanForDups(aPropAnno, i, constMixin)) {
                 log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
                         prop.getIdentityConstant().getValueString(),
                         constMixin.getValueString());
-                }
+            }
 
             fHasRO       |= constMixin.equals(pool.clzRO());
             fHasAbstract |= constMixin.equals(pool.clzAbstract());
             fHasOverride |= constMixin.equals(pool.clzOverride());
-            }
+        }
 
         // check the non-Property annotations (including checking for verifier errors, since the
         // property dumps anything that isn't a well-formed "into Property" annotation into this
@@ -5299,27 +4642,24 @@ public abstract class TypeConstant
         Annotation[] aRefAnno    = prop.getRefAnnotations();
         boolean      fHasRefAnno = false;
         boolean      fHasVarAnno = false;
-        for (int i = 0, c = aRefAnno.length; i < c; ++i)
-            {
+        for (int i = 0, c = aRefAnno.length; i < c; ++i) {
             Annotation   annotation = aRefAnno[i];
             Constant     constAnno  = annotation.getAnnotationClass();
             TypeConstant typeAnno   = pool.ensureTerminalTypeConstant(constAnno);
 
             if (!typeAnno.isExplicitClassIdentity(true)
-                    || typeAnno.getExplicitClassFormat() != Component.Format.ANNOTATION)
-                {
+                    || typeAnno.getExplicitClassFormat() != Component.Format.ANNOTATION) {
                 log(errs, Severity.ERROR, VE_CLASS_NOT_ANNOTATION, typeAnno.getValueString());
                 continue;
-                }
+            }
 
             TypeConstant typeInto    = typeAnno.getExplicitClassInto(true);
             TypeConstant typeIntoCat = typeInto.getIntoPropertyType();
-            if (typeIntoCat == null || typeIntoCat.equals(pool.typeProperty()))
-                {
+            if (typeIntoCat == null || typeIntoCat.equals(pool.typeProperty())) {
                 log(errs, Severity.ERROR, VE_PROPERTY_ANNOTATION_INCOMPATIBLE,
                         sName, constId.getPathString(), typeAnno.getValueString());
                 continue;
-                }
+            }
 
             // we've already processed the "into Property" annotations, so this has to be an
             // "into Ref" (or some sub-class of Ref, e.g. Var) annotation
@@ -5330,56 +4670,49 @@ public abstract class TypeConstant
 // TODO does the annotation class provide a hard-coded value for Referent? because if it does,
 //      we need to "isA()" test it against the type of the property
 
-            if (scanForDups(aRefAnno, i, constAnno))
-                {
+            if (scanForDups(aRefAnno, i, constAnno)) {
                 log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
                         prop.getIdentityConstant().getValueString(),
                         constAnno.getValueString());
-                }
+            }
 
-            if (constAnno.equals(pool.clzInject()))
-                {
+            if (constAnno.equals(pool.clzInject())) {
                 fHasInject = true;
-                }
-            else
-                {
+            } else {
                 fHasRefAnno = true;
                 fHasVarAnno |= typeInto.isA(pool.typeVar());
-                }
             }
+        }
 
         // functions and constants cannot have properties; methods cannot have constants
         IdentityConstant constParent = prop.getIdentityConstant().getParentConstant();
         boolean          fConstant   = prop.isStatic();
-        switch (constParent.getFormat())
-            {
-            case Property:
-                if (!fConstant && prop.getParent().isStatic())
-                    {
-                    log(errs, Severity.ERROR, VE_CONST_CODE_ILLEGAL,
-                            constParent.getValueString(), sName);
-                    }
-                break;
-
-            case Method:
-                if (!fConstant && prop.getParent().isStatic())
-                    {
-                    // a function cannot contain properties
-                    log(errs, Severity.ERROR, VE_FUNCTION_CONTAINS_PROPERTY,
-                            constParent.getValueString(), sName);
-                    }
-                break;
-
-            case Module:
-            case Package:
-            case Class:
-                break;
-
-            default:
-                throw new IllegalStateException("a property (" + sName
-                        + ") cannot be nested under a " + constParent.getFormat()
-                        + " (on " + constId.getValueString() + ")");
+        switch (constParent.getFormat()) {
+        case Property:
+            if (!fConstant && prop.getParent().isStatic()) {
+                log(errs, Severity.ERROR, VE_CONST_CODE_ILLEGAL,
+                        constParent.getValueString(), sName);
             }
+            break;
+
+        case Method:
+            if (!fConstant && prop.getParent().isStatic()) {
+                // a function cannot contain properties
+                log(errs, Severity.ERROR, VE_FUNCTION_CONTAINS_PROPERTY,
+                        constParent.getValueString(), sName);
+            }
+            break;
+
+        case Module:
+        case Package:
+        case Class:
+            break;
+
+        default:
+            throw new IllegalStateException("a property (" + sName
+                    + ") cannot be nested under a " + constParent.getFormat()
+                    + " (on " + constId.getValueString() + ")");
+        }
 
         // check the methods to see if get() and set() call super
         MethodStructure  methodInit     = null;
@@ -5388,104 +4721,79 @@ public abstract class TypeConstant
         MethodStructure  methodBadGet   = null;
         MethodStructure  methodBadSet   = null;
         int              cCustomMethods = 0;
-        for (Component child : prop.children())
-            {
-            if (child instanceof MultiMethodStructure mms)
-                {
-                for (MethodStructure method : mms.methods())
-                    {
-                    if (method.isPotentialInitializer())
-                        {
-                        if (methodInit == null && method.isInitializer(prop.getType(), this))
-                            {
+        for (Component child : prop.children()) {
+            if (child instanceof MultiMethodStructure mms) {
+                for (MethodStructure method : mms.methods()) {
+                    if (method.isPotentialInitializer()) {
+                        if (methodInit == null && method.isInitializer(prop.getType(), this)) {
                             methodInit = method;
-                            }
-                        else
-                            {
+                        } else {
                             // there can only be one initializer function, and it must exactly match a very
                             // specific signature
                             log(errs, Severity.ERROR, VE_DUP_INITIALIZER,
                                     getValueString(), sName);
-                            }
+                        }
 
                         // an initializer is not counted as custom code
                         continue;
-                        }
+                    }
 
-                    if (fConstant)
-                        {
+                    if (fConstant) {
                         // the only method allowed under a static property is the initializer
                         log(errs, Severity.ERROR, VE_CONST_CODE_ILLEGAL,
                                 getValueString(), sName);
                         continue;
-                        }
+                    }
 
-                    if (method.isPotentialGetter())
-                        {
-                        if (method.isGetter(prop.getType(), this))
-                            {
-                            if (methodGet != null)
-                                {
+                    if (method.isPotentialGetter()) {
+                        if (method.isGetter(prop.getType(), this)) {
+                            if (methodGet != null) {
                                 log(errs, Severity.ERROR, VE_PROPERTY_GET_AMBIGUOUS,
                                         getValueString(), sName);
-                                }
+                            }
                             methodGet = method;
-                            }
-                        else
-                            {
+                        } else {
                             methodBadGet = method;
-                            }
                         }
-                    else if (method.isPotentialSetter())
-                        {
-                        if (method.isSetter(prop.getType(), this))
-                            {
-                            if (methodSet != null)
-                                {
+                    } else if (method.isPotentialSetter()) {
+                        if (method.isSetter(prop.getType(), this)) {
+                            if (methodSet != null) {
                                 log(errs, Severity.ERROR, VE_PROPERTY_SET_AMBIGUOUS,
                                         getValueString(), sName);
-                                }
+                            }
                             methodSet = method;
-                            }
-                        else
-                            {
+                        } else {
                             methodBadSet = method;
-                            }
                         }
+                    }
 
                     // regardless of what the code does, there is custom code in the property
                     // Note: any code in the native interfaces(Ref, Enum, etc.) is for show only
-                    if (!method.isAbstract() && !method.isStatic() && !fNative)
-                        {
+                    if (!method.isAbstract() && !method.isStatic() && !fNative) {
                         ++cCustomMethods;
-                        }
                     }
                 }
             }
+        }
 
         // check for incorrect get/set method declarations
-        if (methodBadGet != null && methodGet == null)
-            {
+        if (methodBadGet != null && methodGet == null) {
             log(errs, Severity.ERROR, VE_PROPERTY_GET_INCOMPATIBLE, getValueString(), sName);
-            }
-        if (methodBadSet != null && methodSet == null)
-            {
+        }
+        if (methodBadSet != null && methodSet == null) {
             log(errs, Severity.ERROR, VE_PROPERTY_SET_INCOMPATIBLE, getValueString(), sName);
-            }
+        }
 
         // check access flags
         Access accessRef = prop.getAccess();
         Access accessVar = prop.getVarAccess();
-        if (accessRef == Access.STRUCT | accessVar == Access.STRUCT)
-            {
+        if (accessRef == Access.STRUCT | accessVar == Access.STRUCT) {
             log(errs, Severity.ERROR, VE_PROPERTY_ACCESS_STRUCT,
                     getValueString(), sName);
-            }
-        else if (accessVar != null && accessRef.isLessAccessibleThan(accessVar))
-            {
+        } else if (accessVar != null && accessRef.isLessAccessibleThan(accessVar)) {
             log(errs, Severity.ERROR, VE_PROPERTY_ACCESS_ILLEGAL,
                     getValueString(), sName);
-            }
+        }
 
         boolean         fRW       = false;
         boolean         fRO       = false;
@@ -5493,112 +4801,89 @@ public abstract class TypeConstant
         Effect          effectGet = Effect.None;
         Effect          effectSet = Effect.None;
         Implementation  impl;
-        if (fConstant)
-            {
+        if (fConstant) {
             impl = Implementation.Native;
 
             // static properties of a type are language-level constant values, e.g. "Int KB = 1024;"
             if (!fHasInject && !prop.hasInitialValue() &&
-                    (prop.getInitialValue() == null) == (methodInit == null))
-                {
-                if (methodInit == null)
-                    {
+                    (prop.getInitialValue() == null) == (methodInit == null)) {
+                if (methodInit == null) {
                     // it is an error for a static property to not have an initial value
                     log(errs, Severity.ERROR, VE_CONST_VALUE_REQUIRED,
                             getValueString(), sName);
-                    }
-                else
-                    {
+                } else {
                     // it is an error for a static property to have both an initial value that is
                     // specified by a constant and by an initializer function
                     log(errs, Severity.ERROR, VE_CONST_VALUE_REDUNDANT,
                             getValueString(), sName);
-                    }
                 }
+            }
 
-            if (fHasAbstract)
-                {
+            if (fHasAbstract) {
                 // it is an error for a constant to be annotated by "@Abstract"
                 log(errs, Severity.ERROR, VE_CONST_ABSTRACT_ILLEGAL,
                         getValueString(), sName);
-                }
+            }
 
-            if (fHasOverride)
-                {
+            if (fHasOverride) {
                 // it is an error for a constant to be annotated by "@Override"
                 log(errs, Severity.ERROR, VE_CONST_OVERRIDE_ILLEGAL,
                         getValueString(), sName);
-                }
+            }
 
-            if (fHasRefAnno)
-                {
+            if (fHasRefAnno) {
                 // it is an error for a constant to be annotated in a manner that affects the Ref
                 log(errs, Severity.ERROR, VE_CONST_ANNOTATION_ILLEGAL,
                         getValueString(), sName);
-                }
+            }
 
-            if (accessVar != null)
-                {
+            if (accessVar != null) {
                 // it is an error for a static property to have both reader and writer access
                 // specified, e.g. "public/private"
                 log(errs, Severity.ERROR, VE_CONST_READWRITE_ILLEGAL,
                         getValueString(), sName);
-                }
             }
-        else if (fInterface)
-            {
+        } else if (fInterface) {
             impl   = Implementation.Declared;
             fRO   |= fHasRO;
             fRW   |= !fRO | accessVar != null;
             fField = false;
 
-            if (cCustomMethods > 0)
-                {
+            if (cCustomMethods > 0) {
                 // interface is not allowed to implement a property, other than it may have a
                 // default implementation of get()
-                if (cCustomMethods == 1 && methodGet != null)
-                    {
+                if (cCustomMethods == 1 && methodGet != null) {
                     // the @RO annotation is required in this case
-                    if (fHasRO)
-                        {
+                    if (fHasRO) {
                         effectGet = Effect.BlocksSuper;
-                        }
-                    else
-                        {
+                    } else {
                         log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_GET_REQUIRES_RO,
                                 getValueString(), sName);
-                        }
                     }
-                else
-                    {
+                } else {
                     log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_IMPLEMENTED,
                             getValueString(), sName);
-                    }
                 }
+            }
 
-            if (fHasRefAnno)
-                {
+            if (fHasRefAnno) {
                 // interface is not allowed to specify ref/var annotations
                 log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_ANNOTATED,
                         getValueString(), sName);
-                }
+            }
 
-            if (fHasInject)
-                {
+            if (fHasInject) {
                 // interface is not allowed to use @Inject
                 log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_INJECTED,
                         getValueString(), sName);
-                }
+            }
 
-            if (fHasAbstract && prop.getParent().getFormat() == Component.Format.INTERFACE)
-                {
+            if (fHasAbstract && prop.getParent().getFormat() == Component.Format.INTERFACE) {
                 // it is an error for an interface property to be annotated by "@Abstract"
                 log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_ABSTRACT_ILLEGAL,
                         getValueString(), sName);
-                }
             }
-        else
-            {
+        } else {
             impl = Implementation.Explicit;
 
             // determine if the get explicitly calls super, or explicitly blocks super
@@ -5607,8 +4892,7 @@ public abstract class TypeConstant
             boolean fGetBlocksSuper = methodGet != null && !methodGet.isAbstract() && !fGetSupers;
             boolean fSetBlocksSuper = methodSet != null && !methodSet.isAbstract() && !fSetSupers;
 
-            if (fNative)
-                {
+            if (fNative) {
                 // native property:
                 // - if there is a natural getter, it never calls super;
                 // - also, the natural code may pretend there is a field, in which case there is no
@@ -5620,39 +4904,33 @@ public abstract class TypeConstant
                 fField          = !fHasRO && !fGetBlocksSuper || fHasVarAnno;
                 fRO             = fHasRO;
                 fRW             = !fHasRO;
-                }
-            else
-                {
-                if (fHasRO && (fSetSupers || fHasVarAnno))
-                    {
+            } else {
+                if (fHasRO && (fSetSupers || fHasVarAnno)) {
                     // the @RO conflicts with the annotations that require a Var
                     log(errs, Severity.ERROR, VE_PROPERTY_READONLY_NOT_VAR,
                             getValueString(), sName);
-                    }
+                }
 
-                if (fSetSupers && fGetBlocksSuper)
-                    {
+                if (fSetSupers && fGetBlocksSuper) {
                     // there is no way to get to the "set" value; may need a better error
                     log(errs, Severity.ERROR, VE_PROPERTY_READONLY_NOT_VAR,
                             getValueString(), sName);
-                    }
+                }
 
                  // see PropertyBody#isImplicitAbstract()
                 boolean fAbstractClass = prop.getContainingClass().isExplicitlyAbstract();
 
                 if (fHasRO && !fAbstractClass && !fHasAbstract && !fHasOverride && !fHasInject &&
-                        methodGet == null)
-                    {
+                        methodGet == null) {
                     log(errs, Severity.ERROR, VE_PROPERTY_READONLY_NO_SPEC,
                             getValueString(), sName);
-                    }
+                }
 
                 // @Inject should not have ANY other Ref/Var annotations, and shouldn't override get/set
-                if (fHasInject && (methodGet != null || methodSet != null || fHasRefAnno))
-                    {
+                if (fHasInject && (methodGet != null || methodSet != null || fHasRefAnno)) {
                     log(errs, Severity.ERROR, VE_PROPERTY_INJECT_NOT_OVERRIDEABLE,
                             getValueString(), sName);
-                    }
+                }
 
                 // we assume a field if @RO is not specified, it's not explicitly abstract and get()
                 // doesn't block going to its super (see PropertyBody.impliesField())
@@ -5663,18 +4941,17 @@ public abstract class TypeConstant
                 fRO |= !fHasVarAnno && (fHasRO || (fGetBlocksSuper && methodSet == null));
 
                 fRW |= fHasVarAnno | accessVar != null | methodSet != null;
-                }
+            }
 
             effectGet = effectOf(fGetSupers, fGetBlocksSuper);
             effectSet = effectOf(fSetSupers, fSetBlocksSuper);
-            }
+        }
 
-        if (fRO && fRW)
-            {
+        if (fRO && fRW) {
             log(errs, Severity.ERROR, VE_PROPERTY_READWRITE_READONLY,
                     getValueString(), sName);
             fRO = false;
-            }
+        }
 
         TypeConstant typeProp = prop.getType().resolveGenerics(pool, this);
 
@@ -5682,14 +4959,13 @@ public abstract class TypeConstant
                 typeProp, fRO, fRW, cCustomMethods > 0,
                 effectGet, effectSet,  fField, fConstant, prop.getInitialValue(),
                 methodInit == null ? null : methodInit.getIdentityConstant()), nRank);
-        }
+    }
 
-    private Effect effectOf(boolean fSupers, boolean fBlocks)
-        {
+    private Effect effectOf(boolean fSupers, boolean fBlocks) {
         return fSupers ? Effect.MayUseSuper :
                fBlocks ? Effect.BlocksSuper :
                          Effect.None;
-        }
+    }
 
     /**
      * Scan the array of annotations for a duplicate annotation.
@@ -5700,17 +4976,14 @@ public abstract class TypeConstant
      *
      * @return true iff a duplicate was found
      */
-    private boolean scanForDups(Annotation[] aAnno, int cScan, Constant constScanFor)
-        {
-        for (int i = 0; i < cScan; ++i)
-            {
-            if (aAnno[i].getAnnotationClass().equals(constScanFor))
-                {
+    private boolean scanForDups(Annotation[] aAnno, int cScan, Constant constScanFor) {
+        for (int i = 0; i < cScan; ++i) {
+            if (aAnno[i].getAnnotationClass().equals(constScanFor)) {
                 return true;
-                }
             }
-        return false;
         }
+        return false;
+    }
 
     /**
      * Verify that properties exist for each of the type parameters.
@@ -5722,30 +4995,24 @@ public abstract class TypeConstant
     private void checkTypeParameterProperties(
             Map<Object, ParamInfo>    mapTypeParams,
             Map<Object, PropertyInfo> mapProps,
-            ErrorListener             errs)
-        {
-        for (ParamInfo param : mapTypeParams.values())
-            {
-            if (param.getNestedIdentity() instanceof NestedIdentity)
-                {
+            ErrorListener             errs) {
+        for (ParamInfo param : mapTypeParams.values()) {
+            if (param.getNestedIdentity() instanceof NestedIdentity) {
                 continue;
-                }
+            }
 
             String       sParam = param.getName();
             PropertyInfo info   = mapProps.get(sParam);
-            if (info == null)
-                {
+            if (info == null) {
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,
                         this.removeAccess().getValueString(), sParam);
-                }
-            else if (!info.isFormalType() ||
-                     !info.getType().getParamType(0).isA(param.getConstraintType()))
-                {
+            } else if (!info.isFormalType() ||
+                     !info.getType().getParamType(0).isA(param.getConstraintType())) {
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE,
                         this.removeAccess().getValueString(), sParam);
-                }
             }
         }
+    }
 
 
     // ----- type info for mixins ---------------------------------------------------------------
@@ -5767,16 +5034,13 @@ public abstract class TypeConstant
             IdentityConstant idBase,
             TypeInfo         infoBase,
             TypeConstant[]   atypeCondInc,
-            ErrorListener    errs)
-        {
+            ErrorListener    errs) {
         ConstantPool pool = getConstantPool();
         TypeInfo     info = infoBase;
-        for (TypeConstant typeMixin : atypeCondInc)
-            {
+        for (TypeConstant typeMixin : atypeCondInc) {
             TypeConstant typePrivate = pool.ensureAccessTypeConstant(typeMixin, Access.PRIVATE);
             TypeInfo infoMixin = typePrivate.ensureTypeInfoInternal(errs);
-            if (infoMixin == null)
-                {
+            if (infoMixin == null) {
                 // return the incomplete info of for we've got so far
                 return new TypeInfo(this, cInvalidations, infoBase.getClassStructure(), 0, false,
                     info.getTypeParams(), Annotation.NO_ANNOTATIONS, Annotation.NO_ANNOTATIONS,
@@ -5785,13 +5049,13 @@ public abstract class TypeConstant
                     info.getProperties(), info.getMethods(),
                     info.getVirtProperties(), info.getVirtMethods(), info.getChildInfosByName(),
                     Collections.singleton(typePrivate.removeAccess()), Progress.Incomplete);
-                }
+            }
 
             info = mergeMixinTypeInfo(this, cInvalidations, idBase, infoBase.getClassStructure(),
                 info, infoMixin, Annotation.NO_ANNOTATIONS, null, errs);
-            }
-        return info;
         }
+        return info;
+    }
 
     /**
      * For this type representing a base for an annotated type or a conditional incorporation,
@@ -5818,8 +5082,7 @@ public abstract class TypeConstant
             TypeInfo         infoMixin,
             Annotation[]     aAnnoClass,
             Annotation       annotation,
-            ErrorListener    errs)
-        {
+            ErrorListener    errs) {
         ConstantPool pool = getConstantPool();
 
         // merge the private view of the annotation on top if the specified view of the underlying type
@@ -5839,48 +5102,39 @@ public abstract class TypeConstant
         typeTarget.layerOnTypeParams(mapTypeParams, typeMixin, mapMixinParams, errs);
 
         Map<String, Constant> mapDefaults = null;
-        if (annotation != null)
-            {
+        if (annotation != null) {
             Constant[]      aconstArgs = annotation.getParams();
             MethodStructure ctor       = infoMixin.getClassStructure().findConstructor(
                                                 aconstArgs, typeTarget);
-            if (ctor == null)
-                {
+            if (ctor == null) {
                 log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
                         annotation.getValueString(), typeTarget.getValueString());
-                }
-            else
-                {
+            } else {
                 mapDefaults = new HashMap<>();
                 ctor.collectDefaultParams(aconstArgs, mapDefaults);
-                }
             }
+        }
 
         int nBaseRank = mapProps.values().stream().
                             map(PropertyInfo::getRank).max(Integer::compare).orElse(0);
-        for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapMixinProps.entrySet())
-            {
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapMixinProps.entrySet()) {
             PropertyConstant idProp = entry.getKey();
 
             layerOnMixinProp(pool, infoSource, idBase, mapProps, mapVirtProps, idProp, entry.getValue(),
                     mapDefaults == null ? null : mapDefaults.get(idProp.getName()), nBaseRank, errs);
-            }
+        }
 
-        for (Map.Entry<String, ChildInfo> entry : mapMixinChildren.entrySet())
-            {
+        for (Map.Entry<String, ChildInfo> entry : mapMixinChildren.entrySet()) {
             String    sName    = entry.getKey();
             ChildInfo childNew = entry.getValue();
             ChildInfo childOld = mapChildren.get(sName);
 
-            if (childOld == null)
-                {
+            if (childOld == null) {
                 mapChildren.put(entry.getKey(), entry.getValue());
-                }
-            else if (!childOld.equals(childNew))
-                {
+            } else if (!childOld.equals(childNew)) {
                 // TODO: layer on the ChildInfo
-                }
             }
+        }
 
         ContribSource contribSource = annotation == null
                 ? ContribSource.ConditionalIncorp
@@ -5889,15 +5143,12 @@ public abstract class TypeConstant
                 typeMixin, mapMixinMethods, errs);
 
         List<Contribution> listProcess = new ArrayList<>(infoSource.getContributionList());
-        if (annotation == null)
-            {
+        if (annotation == null) {
             // we don't pass the constraints since the type is known to satisfy the "condition"
             listProcess.add(structBase.new Contribution(typeMixin, (ListMap) null));
-            }
-        else
-            {
+        } else {
             listProcess.add(structBase.new Contribution(annotation, typeMixin));
-            }
+        }
 
         Annotation[] aAnnoMixin = collectMixinAnnotations(listProcess);
 
@@ -5907,7 +5158,7 @@ public abstract class TypeConstant
                 listProcess, infoSource.getClassChain(), infoSource.getDefaultChain(),
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
                 null, Progress.Complete);
-        }
+    }
 
     /**
      * Layer on the passed mixin's property contributions onto the base properties.
@@ -5933,47 +5184,39 @@ public abstract class TypeConstant
             PropertyInfo                        propMixin,
             Constant                            constInit,
             int                                 nBaseRank,
-            ErrorListener                       errs)
-        {
+            ErrorListener                       errs) {
         Object           nidContrib = idMixinProp.getNestedIdentity(); // resolved
         PropertyConstant idResult   = (PropertyConstant) idBaseClass.appendNestedIdentity(pool, nidContrib);
         PropertyInfo     propBase   = infoBase.findPropertyByNid(nidContrib);
 
-        if (constInit != null)
-            {
+        if (constInit != null) {
             propMixin = propMixin.withInitialValue(constInit);
-            }
+        }
 
-        if (!propMixin.isVirtual())
-            {
+        if (!propMixin.isVirtual()) {
             // replace the base with the new info; despite the fact that the property is not virtual
             // (private), the old id may refer to a different mixin, so unfortunately we have to
             // scan the entire map to find the entry to remove
-            if (propBase != null)
-                {
+            if (propBase != null) {
                 mapProps.values().remove(propBase);
-                }
+            }
             mapProps.put(idMixinProp, propMixin);
             return;
-            }
+        }
 
         PropertyInfo propResult;
-        if (propBase == null)
-            {
-            if (nBaseRank > 0)
-                {
+        if (propBase == null) {
+            if (nBaseRank > 0) {
                 propMixin = propMixin.withRank(nBaseRank + propMixin.getRank());
-                }
+            }
             propResult = propMixin;
-            }
-        else
-            {
+        } else {
             propResult = propBase.layerOn(propMixin, false, true, errs);
-            }
+        }
 
         mapProps.put(idResult, propResult);
         mapVirtProps.put(nidContrib, propResult);
-        }
+    }
 
 
     // ----- type comparison support ---------------------------------------------------------------
@@ -5986,10 +5229,9 @@ public abstract class TypeConstant
      *
      * See Type.x # isA()
      */
-    public boolean isA(TypeConstant typeLeft)
-        {
+    public boolean isA(TypeConstant typeLeft) {
         return calculateRelation(typeLeft) != Relation.INCOMPATIBLE;
-        }
+    }
 
     /**
      * Calculate the type relationship between the specified TypeConstant (L-value) and the type
@@ -5999,21 +5241,18 @@ public abstract class TypeConstant
      *
      * See Type.x # isA()
      */
-    public Relation calculateRelation(TypeConstant typeLeft)
-        {
+    public Relation calculateRelation(TypeConstant typeLeft) {
         ConstantPool pool = getConstantPool();
-        if (this.equals(typeLeft) || typeLeft.equals(pool.typeObject()))
-            {
+        if (this.equals(typeLeft) || typeLeft.equals(pool.typeObject())) {
             return Relation.IS_A;
-            }
+        }
 
         ConstantPool poolLeft = typeLeft.getConstantPool();
-        if (pool != poolLeft && !typeLeft.isShared(pool))
-            {
+        if (pool != poolLeft && !typeLeft.isShared(pool)) {
             return this.isShared(poolLeft)
                 ? ((TypeConstant) poolLeft.register(this)).calculateRelation(typeLeft)
                 : Relation.INCOMPATIBLE;
-            }
+        }
 
         // since we're caching the relations on the constant itself, there is no reason to do it
         // unless it's registered; also make sure the left type is registered to the same pool
@@ -6024,28 +5263,24 @@ public abstract class TypeConstant
                 ? typeLeft
                 : (TypeConstant) pool.register(typeLeft);
 
-        if (typeRight != this || typeLeftResolved != typeLeft)
-            {
+        if (typeRight != this || typeLeftResolved != typeLeft) {
             return typeRight.calculateRelation(typeLeftResolved);
-            }
+        }
 
-        if (typeLeft instanceof RecursiveTypeConstant typeRecursive)
-            {
+        if (typeLeft instanceof RecursiveTypeConstant typeRecursive) {
             return calculateRelation(typeRecursive.getReferredToType());
-            }
+        }
 
         Map<TypeConstant, Relation> mapRelations = ensureRelationMap();
 
         Relation relation = mapRelations.get(typeLeft);
-        if (relation != null)
-            {
+        if (relation != null) {
             return relation;
-            }
+        }
 
         Set<TypeConstant> setInProgress = m_tloInProgress.get();
 
-        if (setInProgress != null && setInProgress.contains(typeLeft))
-            {
+        if (setInProgress != null && setInProgress.contains(typeLeft)) {
             // we are in recursion; this can only happen for duck-typing, for example:
             //
             //    interface I { I! foo(); }
@@ -6062,146 +5297,122 @@ public abstract class TypeConstant
             //
             // Quite naturally, a similar recursion may occur with recursive types.
             if (!typeLeft.isInterfaceType() &&
-                    !typeLeft.containsRecursiveType() && !typeRight.containsRecursiveType())
-                {
+                    !typeLeft.containsRecursiveType() && !typeRight.containsRecursiveType()) {
                 String sRecursion = "left=" + typeLeft.getValueString()
                                   + "; right=" + typeRight.getValueString();
-                if (s_setRecursions.add(sRecursion))
-                    {
+                if (s_setRecursions.add(sRecursion)) {
                     System.err.println("rejecting isA() due to a recursion: " + sRecursion);
-                    }
                 }
+            }
             mapRelations.put(typeLeft, Relation.INCOMPATIBLE);
             return Relation.INCOMPATIBLE;
-            }
+        }
 
         // check immutability, but exclude formal type parameters and dynamic types that are handled
         // quite specially in other assignability related methods. See for example:
         // TypeConstant.calculateRelationToContribution(), ClassStructure.calculateAssignability(),
         // TerminalTypeConstant.calculateRelationToLeft()
         if (typeLeft.isImmutable() && !typeRight.isImmutable() &&
-                !typeLeft.isTypeParameter() && !typeLeft.isDynamicType())
-            {
+                !typeLeft.isTypeParameter() && !typeLeft.isDynamicType()) {
             mapRelations.put(typeLeft, Relation.INCOMPATIBLE);
             return Relation.INCOMPATIBLE;
-            }
+        }
 
         // if either side is relational, defer the access test; it will come back for the underlying
         // parts of the relation type
         if (!(typeLeft instanceof RelationalTypeConstant) &&
-            !(typeRight instanceof RelationalTypeConstant))
-            {
+            !(typeRight instanceof RelationalTypeConstant)) {
             // check the access modifier
-            if (typeLeft.isAccessSpecified() || typeRight.isAccessSpecified())
-                {
+            if (typeLeft.isAccessSpecified() || typeRight.isAccessSpecified()) {
                 Access accessLeft  = typeLeft.getAccess();
                 Access accessRight = typeRight.getAccess();
-                switch (accessRight)
-                    {
-                    case STRUCT:
-                        if (typeLeft.equals(getConstantPool().typeStruct()))
-                            {
-                            relation = Relation.IS_A;
-                            }
-                        else if (accessLeft != Access.STRUCT)
-                            {
-                            // struct is not assignable to anything but a struct
-                            relation = Relation.INCOMPATIBLE;
-                            }
-                        break;
-
-                    case PUBLIC:
-                    case PROTECTED:
-                    case PRIVATE:
-                        if (accessLeft == Access.STRUCT ||
-                                accessLeft.isLessAccessibleThan(accessRight))
-                            {
-                            // for now, disallow any access widening
-                            relation = Relation.INCOMPATIBLE;
-                            }
-                        break;
+                switch (accessRight) {
+                case STRUCT:
+                    if (typeLeft.equals(getConstantPool().typeStruct())) {
+                        relation = Relation.IS_A;
+                    } else if (accessLeft != Access.STRUCT) {
+                        // struct is not assignable to anything but a struct
+                        relation = Relation.INCOMPATIBLE;
                     }
+                    break;
 
-                if (relation == null)
-                    {
-                    relation = typeRight.removeAccess().calculateRelation(typeLeft.removeAccess());
-
-                    if (relation == Relation.INCOMPATIBLE && accessRight != Access.PUBLIC)
-                        {
-                        relation = calculateDuckTypeRelation(typeLeft, typeRight, accessRight);
-                        }
+                case PUBLIC:
+                case PROTECTED:
+                case PRIVATE:
+                    if (accessLeft == Access.STRUCT ||
+                            accessLeft.isLessAccessibleThan(accessRight)) {
+                        // for now, disallow any access widening
+                        relation = Relation.INCOMPATIBLE;
                     }
-                mapRelations.put(typeLeft, relation);
-                return relation;
+                    break;
                 }
 
+                if (relation == null) {
+                    relation = typeRight.removeAccess().calculateRelation(typeLeft.removeAccess());
+
+                    if (relation == Relation.INCOMPATIBLE && accessRight != Access.PUBLIC) {
+                        relation = calculateDuckTypeRelation(typeLeft, typeRight, accessRight);
+                    }
+                }
+                mapRelations.put(typeLeft, relation);
+                return relation;
+            }
+
             // ServiceTypeConstant cannot be augmented by any other modifier
-            if (typeLeft instanceof ServiceTypeConstant)
-                {
+            if (typeLeft instanceof ServiceTypeConstant) {
                 relation = typeRight.isService()
                         ? typeRight.calculateRelation(typeLeft.getUnderlyingType())
                         : Relation.INCOMPATIBLE;
                 mapRelations.put(typeLeft, relation);
                 return relation;
-                }
+            }
 
             // then check various "reserved" scenarios
             relation = checkReservedCompatibility(typeLeft, typeRight);
-            if (relation != null)
-                {
+            if (relation != null) {
                 mapRelations.put(typeLeft, relation);
                 return relation;
-                }
             }
+        }
 
         // now - a long journey
-        if (setInProgress == null)
-            {
+        if (setInProgress == null) {
             m_tloInProgress.set(setInProgress = new HashSet<>());
-            }
+        }
         setInProgress.add(typeLeft);
-        try
-            {
+        try {
             relation = typeRight.calculateRelationToLeft(typeLeft);
 
-            if (relation == Relation.INCOMPATIBLE)
-                {
+            if (relation == Relation.INCOMPATIBLE) {
                 relation = calculateDuckTypeRelation(typeLeft, typeRight, Access.PUBLIC);
-                }
+            }
 
             mapRelations.put(typeLeft, relation);
-            }
-        catch (RuntimeException | Error e)
-            {
+        } catch (RuntimeException | Error e) {
             mapRelations.remove(typeLeft);
             throw e;
-            }
-        finally
-            {
+        } finally {
             setInProgress.remove(typeLeft);
-            if (setInProgress.isEmpty())
-                {
+            if (setInProgress.isEmpty()) {
                 m_tloInProgress.remove();
-                }
             }
-        return relation;
         }
+        return relation;
+    }
 
     /**
      * @return a relation between this (R-Value) and specified (L-Value) types
      */
-    protected Relation calculateRelationToLeft(TypeConstant typeLeft)
-        {
+    protected Relation calculateRelationToLeft(TypeConstant typeLeft) {
         return typeLeft.calculateRelationToRight(this);
-        }
+    }
 
     /**
      * @return a relation between this (L-Value) and specified (R-Value) types
      */
-    protected Relation calculateRelationToRight(TypeConstant typeRight)
-        {
+    protected Relation calculateRelationToRight(TypeConstant typeRight) {
         return typeRight.calculateRelationToContribution(this);
-        }
+    }
 
     /**
      * Find any contribution for this (R-Value) type that is assignable to the specified (L-Value)
@@ -6209,8 +5420,7 @@ public abstract class TypeConstant
      *
      * @return a relation between this and the specified types
      */
-    protected Relation calculateRelationToContribution(TypeConstant typeLeft)
-        {
+    protected Relation calculateRelationToContribution(TypeConstant typeLeft) {
         TypeConstant typeRight = this;
 
         assert !typeLeft.isRelationalType() && typeLeft.isSingleDefiningConstant();
@@ -6220,151 +5430,139 @@ public abstract class TypeConstant
         Constant constIdRight = typeRight.getDefiningConstant();
 
         Format format;
-        switch (format = constIdRight.getFormat())
-            {
-            case Module:
-            case Package:
-            case Class:
-            case NativeClass:
-                {
-                ClassStructure clzRight = (ClassStructure)
-                    ((IdentityConstant) constIdRight).getComponent();
+        switch (format = constIdRight.getFormat()) {
+        case Module:
+        case Package:
+        case Class:
+        case NativeClass: {
+            ClassStructure clzRight = (ClassStructure)
+                ((IdentityConstant) constIdRight).getComponent();
 
-                // continue recursively with the right side analysis
-                return clzRight.calculateRelation(getConstantPool(), typeLeft, typeRight);
-                }
-
-            case Property:
-                {
-                // scenarios we can handle here are:
-                // 1. r-value (this) = T (formal parameter type)
-                //    l-value (that) = T (formal parameter type, equal by name only)
-
-                // 2. r-value (this) = T (formal parameter type), constrained by U (other formal type)
-                //    l-value (that) = U (formal parameter type)
-                //
-                // 3. r-value (this) = T (formal parameter type), constrained by U (real type)
-                //    l-value (that) = V (real type), where U "is a" V
-                PropertyConstant idRight = (PropertyConstant) constIdRight;
-                if (constIdLeft.getFormat() == format &&
-                    (((PropertyConstant) constIdLeft).getName().equals(idRight.getName())))
-                    {
-                    return Relation.IS_A;
-                    }
-
-                // the typeRight is a generic type and cannot have any modifiers
-                assert typeRight.resolveTypedefs() instanceof TerminalTypeConstant;
-                return idRight.getConstraintType().calculateRelation(typeLeft);
-                }
-
-            case TypeParameter:
-                {
-                // scenarios we can handle here are:
-                // 1. r-value (this) = T (type parameter type)
-                //    l-value (that) = T (type parameter type, equal by register only)
-
-                // 2. r-value (this) = T (type parameter type), constrained by U (other type parameter type)
-                //    l-value (that) = U (type parameter type)
-                //
-                // 3. r-value (this) = T (type parameter type), constrained by U (real type)
-                //    l-value (that) = V (real type), where U "is a" V
-                TypeParameterConstant idRight = (TypeParameterConstant) constIdRight;
-                if (constIdLeft.getFormat() == format)
-                    {
-                    TypeParameterConstant idLeft = (TypeParameterConstant) constIdLeft;
-                    if (idLeft.getName().equals(idRight.getName()) ||
-                        idLeft.equals(idRight))
-                        {
-                        // Note: it's quite opportunistic to assume that type parameters with the
-                        // same name are compatible regardless of the enclosing method, but we need
-                        // to assume that the caller has already (or will have) checked for the
-                        // compatibility all other elements of the containing method
-                        return Relation.IS_A;
-                        }
-                    }
-
-                // the typeRight is a type parameter and cannot have any modifiers
-                assert typeRight instanceof TerminalTypeConstant;
-                return idRight.getConstraintType().calculateRelation(typeLeft);
-                }
-
-            case FormalTypeChild:
-                {
-                // scenarios we can handle here are:
-                // 1. r-value (this) = T.X (formal child type)
-                //    l-value (that) = T.X (formal child type, equal by name only)
-
-                // 2. r-value (this) = T.X (formal child type), constrained by U (other formal type)
-                //    l-value (that) = U (type parameter type)
-                //
-                // 3. r-value (this) = T.X (formal child type), constrained by U (real type)
-                //    l-value (that) = V (real type), where U "is a" V
-                FormalTypeChildConstant idRight = (FormalTypeChildConstant) constIdRight;
-                if (constIdLeft.getFormat() == format &&
-                    (((FormalTypeChildConstant) constIdLeft).getName().equals(idRight.getName())))
-                    {
-                    // Note: it's quite opportunistic to assume that formal type parameters with the same
-                    // name are compatible regardless of the enclosing parent type, but we need to
-                    // assume that the caller has already (or will have) checked for the compatibility
-                    // all other elements of the containing type and the only thing left is the
-                    // name itself
-                    return Relation.IS_A;
-                    }
-
-                // the typeRight is a type parameter and cannot have any modifiers
-                assert typeRight instanceof TerminalTypeConstant;
-                return idRight.getConstraintType().calculateRelation(typeLeft);
-                }
-
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                {
-                PseudoConstant idRight = (PseudoConstant) constIdRight;
-                if (constIdLeft.getFormat() == format
-                        && idRight.isCongruentWith((PseudoConstant) constIdLeft))
-                    {
-                    // without any additional context, it should be assignable in some direction
-                    typeRight = typeRight.removeAutoNarrowing();
-                    typeLeft  = typeLeft .removeAutoNarrowing();
-
-                    Relation relRightIsLeft = typeRight.calculateRelation(typeLeft);
-                    return relRightIsLeft == Relation.INCOMPATIBLE
-                        ? typeLeft.calculateRelation(typeRight)
-                        : relRightIsLeft;
-                    }
-
-                ClassStructure clzRight = (ClassStructure)
-                        idRight.getDeclarationLevelClass().getComponent();
-                return clzRight.calculateRelation(getConstantPool(), typeLeft, typeRight);
-                }
-
-            case Typedef:
-                return ((TypedefConstant) constIdRight).
-                        getReferredToType().calculateRelation(typeLeft);
-
-            case IsConst:
-            case IsEnum:
-            case IsModule:
-            case IsPackage:
-            case IsClass:
-                return ((KeywordConstant) constIdRight).
-                        getBaseType().calculateRelationToContribution(typeLeft);
-
-            case UnresolvedName:
-                return Relation.INCOMPATIBLE;
-
-            default:
-                throw new IllegalStateException("unexpected constant: " + constIdRight);
-            }
+            // continue recursively with the right side analysis
+            return clzRight.calculateRelation(getConstantPool(), typeLeft, typeRight);
         }
+
+        case Property: {
+            // scenarios we can handle here are:
+            // 1. r-value (this) = T (formal parameter type)
+            //    l-value (that) = T (formal parameter type, equal by name only)
+
+            // 2. r-value (this) = T (formal parameter type), constrained by U (other formal type)
+            //    l-value (that) = U (formal parameter type)
+            //
+            // 3. r-value (this) = T (formal parameter type), constrained by U (real type)
+            //    l-value (that) = V (real type), where U "is a" V
+            PropertyConstant idRight = (PropertyConstant) constIdRight;
+            if (constIdLeft.getFormat() == format &&
+                (((PropertyConstant) constIdLeft).getName().equals(idRight.getName()))) {
+                return Relation.IS_A;
+            }
+
+            // the typeRight is a generic type and cannot have any modifiers
+            assert typeRight.resolveTypedefs() instanceof TerminalTypeConstant;
+            return idRight.getConstraintType().calculateRelation(typeLeft);
+        }
+
+        case TypeParameter: {
+            // scenarios we can handle here are:
+            // 1. r-value (this) = T (type parameter type)
+            //    l-value (that) = T (type parameter type, equal by register only)
+
+            // 2. r-value (this) = T (type parameter type), constrained by U (other type parameter type)
+            //    l-value (that) = U (type parameter type)
+            //
+            // 3. r-value (this) = T (type parameter type), constrained by U (real type)
+            //    l-value (that) = V (real type), where U "is a" V
+            TypeParameterConstant idRight = (TypeParameterConstant) constIdRight;
+            if (constIdLeft.getFormat() == format) {
+                TypeParameterConstant idLeft = (TypeParameterConstant) constIdLeft;
+                if (idLeft.getName().equals(idRight.getName()) ||
+                    idLeft.equals(idRight)) {
+                    // Note: it's quite opportunistic to assume that type parameters with the
+                    // same name are compatible regardless of the enclosing method, but we need
+                    // to assume that the caller has already (or will have) checked for the
+                    // compatibility all other elements of the containing method
+                    return Relation.IS_A;
+                }
+            }
+
+            // the typeRight is a type parameter and cannot have any modifiers
+            assert typeRight instanceof TerminalTypeConstant;
+            return idRight.getConstraintType().calculateRelation(typeLeft);
+        }
+
+        case FormalTypeChild: {
+            // scenarios we can handle here are:
+            // 1. r-value (this) = T.X (formal child type)
+            //    l-value (that) = T.X (formal child type, equal by name only)
+
+            // 2. r-value (this) = T.X (formal child type), constrained by U (other formal type)
+            //    l-value (that) = U (type parameter type)
+            //
+            // 3. r-value (this) = T.X (formal child type), constrained by U (real type)
+            //    l-value (that) = V (real type), where U "is a" V
+            FormalTypeChildConstant idRight = (FormalTypeChildConstant) constIdRight;
+            if (constIdLeft.getFormat() == format &&
+                (((FormalTypeChildConstant) constIdLeft).getName().equals(idRight.getName()))) {
+                // Note: it's quite opportunistic to assume that formal type parameters with the same
+                // name are compatible regardless of the enclosing parent type, but we need to
+                // assume that the caller has already (or will have) checked for the compatibility
+                // all other elements of the containing type and the only thing left is the
+                // name itself
+                return Relation.IS_A;
+            }
+
+            // the typeRight is a type parameter and cannot have any modifiers
+            assert typeRight instanceof TerminalTypeConstant;
+            return idRight.getConstraintType().calculateRelation(typeLeft);
+        }
+
+        case ThisClass:
+        case ParentClass:
+        case ChildClass: {
+            PseudoConstant idRight = (PseudoConstant) constIdRight;
+            if (constIdLeft.getFormat() == format
+                    && idRight.isCongruentWith((PseudoConstant) constIdLeft)) {
+                // without any additional context, it should be assignable in some direction
+                typeRight = typeRight.removeAutoNarrowing();
+                typeLeft  = typeLeft .removeAutoNarrowing();
+
+                Relation relRightIsLeft = typeRight.calculateRelation(typeLeft);
+                return relRightIsLeft == Relation.INCOMPATIBLE
+                    ? typeLeft.calculateRelation(typeRight)
+                    : relRightIsLeft;
+            }
+
+            ClassStructure clzRight = (ClassStructure)
+                    idRight.getDeclarationLevelClass().getComponent();
+            return clzRight.calculateRelation(getConstantPool(), typeLeft, typeRight);
+        }
+
+        case Typedef:
+            return ((TypedefConstant) constIdRight).
+                    getReferredToType().calculateRelation(typeLeft);
+
+        case IsConst:
+        case IsEnum:
+        case IsModule:
+        case IsPackage:
+        case IsClass:
+            return ((KeywordConstant) constIdRight).
+                    getBaseType().calculateRelationToContribution(typeLeft);
+
+        case UnresolvedName:
+            return Relation.INCOMPATIBLE;
+
+        default:
+            throw new IllegalStateException("unexpected constant: " + constIdRight);
+        }
+    }
 
     /**
      * @return a "duck-type" relation between the specified (L-Value) and (R-value) types
      */
     protected Relation calculateDuckTypeRelation(TypeConstant typeLeft,
-                                                 TypeConstant typeRight, Access accessRight)
-        {
+                                                 TypeConstant typeRight, Access accessRight) {
         TypeConstant typeLeftN  = typeLeft.normalizeParameters();
         TypeConstant typeRightN = typeRight.normalizeParameters();
 
@@ -6373,7 +5571,7 @@ public abstract class TypeConstant
                         typeRightN, accessRight, Collections.emptyList()).isEmpty()
                 ? Relation.IS_A
                 : Relation.INCOMPATIBLE;
-        }
+    }
 
     /**
      * Let's assume the following:
@@ -6392,12 +5590,10 @@ public abstract class TypeConstant
      * @param typeBase  the type to determine the covariance with
      * @param typeCtx   (optional) the type within which context the covariance is to be determined
      */
-    public boolean isCovariantReturn(TypeConstant typeBase, TypeConstant typeCtx)
-        {
-        if (this.isA(typeBase))
-            {
+    public boolean isCovariantReturn(TypeConstant typeBase, TypeConstant typeCtx) {
+        if (this.isA(typeBase)) {
             return true;
-            }
+        }
 
         ConstantPool pool = ConstantPool.getCurrentPool();
 
@@ -6408,26 +5604,23 @@ public abstract class TypeConstant
                 ? typeBase.resolveAutoNarrowing(pool, false, typeCtx, null)
                 : typeBase;
 
-        if (typeThisR != this || typeBaseR != typeBase)
-            {
+        if (typeThisR != this || typeBaseR != typeBase) {
             return typeThisR.isA(typeBaseR);
-            }
+        }
 
-        if (typeCtx != null && typeBase.containsGenericType(true))
-            {
+        if (typeCtx != null && typeBase.containsGenericType(true)) {
             // check if generic types could be resolved in the specified context without
             // producing self referring cycles, e.g. List<Element> -> List<List<Element>>
             // or @AutoFreezable Element -> @AutoFreezable @AutoFreezable Element
             // (TODO need to make this algorithm more precise)
             typeBaseR = typeBase.resolveGenerics(pool, typeCtx);
             if (typeBaseR != typeBase &&
-                        typeBaseR.getTypeDepth() == typeBase.getTypeDepth())
-                {
+                        typeBaseR.getTypeDepth() == typeBase.getTypeDepth()) {
                 return isCovariantReturn(typeBaseR, typeCtx);
-                }
             }
-        return false;
         }
+        return false;
+    }
 
     /**
      * Let's assume the following:
@@ -6448,12 +5641,10 @@ public abstract class TypeConstant
      * @param typeBase  the type to determine the contravariance with
      * @param typeCtx   (optional) the type within which context the covariance is to be determined
      */
-    public boolean isContravariantParameter(TypeConstant typeBase, TypeConstant typeCtx)
-        {
-        if (typeBase.isA(this))
-            {
+    public boolean isContravariantParameter(TypeConstant typeBase, TypeConstant typeCtx) {
+        if (typeBase.isA(this)) {
             return true;
-            }
+        }
 
         ConstantPool pool = ConstantPool.getCurrentPool();
 
@@ -6465,24 +5656,21 @@ public abstract class TypeConstant
                 : typeBase;
 
         if ((typeThisR != this || typeBaseR != typeBase) &&
-                typeBaseR.isA(typeThisR) && typeThisR.isA(typeBaseR))
-            {
+                typeBaseR.isA(typeThisR) && typeThisR.isA(typeBaseR)) {
             return true;
-            }
+        }
 
-        if (typeCtx != null && typeBase.containsGenericType(true))
-            {
+        if (typeCtx != null && typeBase.containsGenericType(true)) {
             // check if generic types could be resolved in the specified context without
             // producing self referring cycles (see above)
             typeBaseR = typeBase.resolveGenerics(pool, typeCtx);
             if (typeBaseR != typeBase &&
-                    typeBaseR.getTypeDepth() == typeBase.getTypeDepth())
-                {
+                    typeBaseR.getTypeDepth() == typeBase.getTypeDepth()) {
                 return isContravariantParameter(typeBaseR, typeCtx);
-                }
             }
-        return false;
         }
+        return false;
+    }
 
     /**
      * Find any contribution for this (R-Value) type that is assignable to the specified (L-Value)
@@ -6490,8 +5678,7 @@ public abstract class TypeConstant
      *
      * @return a relation between this and the specified types
      */
-    protected Relation findUnionContribution(UnionTypeConstant typeLeft)
-        {
+    protected Relation findUnionContribution(UnionTypeConstant typeLeft) {
         assert !(this instanceof UnionTypeConstant);
 
         ConstantPool pool      = getConstantPool();
@@ -6502,105 +5689,94 @@ public abstract class TypeConstant
         assert !typeRight.isRelationalType() && typeRight.isSingleDefiningConstant();
 
         Constant constIdRight = typeRight.getDefiningConstant();
-        switch (constIdRight.getFormat())
-            {
-            case Module:
-            case Package:
-            case Property:
-            case TypeParameter:
-            case FormalTypeChild:
-            case DynamicFormal:
-                return Relation.INCOMPATIBLE;
+        switch (constIdRight.getFormat()) {
+        case Module:
+        case Package:
+        case Property:
+        case TypeParameter:
+        case FormalTypeChild:
+        case DynamicFormal:
+            return Relation.INCOMPATIBLE;
 
-            case Class:
-            case NativeClass:
-                {
-                ClassStructure clzRight = (ClassStructure)
-                    ((IdentityConstant) constIdRight).getComponent();
+        case Class:
+        case NativeClass: {
+            ClassStructure clzRight = (ClassStructure)
+                ((IdentityConstant) constIdRight).getComponent();
 
-                // continue recursively with the right side analysis
-                return clzRight.findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
-                }
-
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                {
-                PseudoConstant idRight  = (PseudoConstant) constIdRight;
-                ClassStructure clzRight = (ClassStructure)
-                        idRight.getDeclarationLevelClass().getComponent();
-                return clzRight.findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
-                }
-
-            case Typedef:
-                return ((TypedefConstant) constIdRight).
-                        getReferredToType().findUnionContribution(typeLeft);
-
-            case IsConst:
-            case IsEnum:
-            case IsModule:
-            case IsPackage:
-            case IsClass:
-                {
-                TypeConstant   typeBase = ((KeywordConstant) constIdRight).getBaseType();
-                ClassStructure clzRight = (ClassStructure)
-                        typeBase.getSingleUnderlyingClass(true).getComponent();
-                return clzRight.findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
-                }
-
-            default:
-                throw new IllegalStateException("unexpected constant: " + constIdRight);
-            }
+            // continue recursively with the right side analysis
+            return clzRight.findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
         }
+
+        case ThisClass:
+        case ParentClass:
+        case ChildClass: {
+            PseudoConstant idRight  = (PseudoConstant) constIdRight;
+            ClassStructure clzRight = (ClassStructure)
+                    idRight.getDeclarationLevelClass().getComponent();
+            return clzRight.findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
+        }
+
+        case Typedef:
+            return ((TypedefConstant) constIdRight).
+                    getReferredToType().findUnionContribution(typeLeft);
+
+        case IsConst:
+        case IsEnum:
+        case IsModule:
+        case IsPackage:
+        case IsClass: {
+            TypeConstant   typeBase = ((KeywordConstant) constIdRight).getBaseType();
+            ClassStructure clzRight = (ClassStructure)
+                    typeBase.getSingleUnderlyingClass(true).getComponent();
+            return clzRight.findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
+        }
+
+        default:
+            throw new IllegalStateException("unexpected constant: " + constIdRight);
+        }
+    }
 
     /**
      * Check for any reserved types relations.
      *
      * @return the calculated relation or null if no judgement can be made
      */
-    protected static Relation checkReservedCompatibility(TypeConstant typeLeft, TypeConstant typeRight)
-        {
+    protected static Relation checkReservedCompatibility(TypeConstant typeLeft, TypeConstant typeRight) {
         if (!typeLeft.isSingleUnderlyingClass(true) || !typeRight.isSingleUnderlyingClass(true) ||
-            !typeLeft.isExplicitClassIdentity(true) || !typeRight.isExplicitClassIdentity(true))
-            {
+            !typeLeft.isExplicitClassIdentity(true) || !typeRight.isExplicitClassIdentity(true)) {
             return null;
-            }
+        }
 
         ConstantPool     pool   = typeLeft.getConstantPool();
         IdentityConstant idLeft = typeLeft.getSingleUnderlyingClass(true);
 
-        if (idLeft.getFormat() == Format.NativeClass)
-            {
+        if (idLeft.getFormat() == Format.NativeClass) {
             idLeft = ((NativeRebaseConstant) idLeft).getClassConstant();
-            }
+        }
 
-        if (idLeft.equals(pool.clzFunction()))
-            {
+        if (idLeft.equals(pool.clzFunction())) {
             return pool.checkFunctionCompatibility(typeLeft, typeRight);
-            }
+        }
 
-        if (idLeft.equals(pool.clzMethod()))
-            {
+        if (idLeft.equals(pool.clzMethod())) {
             return pool.checkMethodCompatibility(typeLeft, typeRight);
-            }
+        }
 
-        if (typeLeft.isTuple())
-            {
+        if (typeLeft.isTuple()) {
             // nothing is assignable to a Tuple except another Tuple
             return typeRight.isTuple()
                 ? pool.checkTupleCompatibility(typeLeft, typeRight)
                 : Relation.INCOMPATIBLE;
-            }
+        }
 
         if (typeRight.isTypeOfType() && typeRight.getParamType(0).isTuple() &&
-                pool.ensureIndexedType(pool.typeType()).isA(typeLeft))
-            {
+                pool.ensureIndexedType(pool.typeType()).isA(typeLeft)) {
             // Type<TurtleType> is assignable to UniformIndexed<Int, Type>
             return Relation.IS_A;
-            }
+        }
 
         return null;
-        }
+    }
 
     /**
      * Check if this TypeConstant (L-value), which is know to be an interface, represents a type
@@ -6614,10 +5790,9 @@ public abstract class TypeConstant
      *         in the specified type
      */
     protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight,
-                                                               Access accessLeft, List<TypeConstant> listLeft)
-        {
+                                                               Access accessLeft, List<TypeConstant> listLeft) {
         return getUnderlyingType().isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
-        }
+    }
 
     /**
      * Check if this type contains a method or a property substitutable for the specified one.
@@ -6630,10 +5805,9 @@ public abstract class TypeConstant
      *  @return true iff the specified type could be assigned to this interface type
      */
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
-                                               boolean fFunction, List<TypeConstant> listParams)
-        {
+                                               boolean fFunction, List<TypeConstant> listParams) {
         return getUnderlyingType().containsSubstitutableMethod(signature, access, fFunction, listParams);
-        }
+    }
 
     /**
      * Determine if this type consumes a formal type with the specified name in a context
@@ -6644,35 +5818,28 @@ public abstract class TypeConstant
      *
      * @return true iff this type is a consumer of the specified formal type
      */
-    public boolean consumesFormalType(String sTypeName, Access access)
-        {
+    public boolean consumesFormalType(String sTypeName, Access access) {
         Map<String, Usage> mapUsage = ensureConsumesMap();
 
         // WARNING: thread-unsafe
         Usage usage = mapUsage.get(sTypeName);
-        if (usage == null)
-            {
+        if (usage == null) {
             mapUsage.put(sTypeName, Usage.IN_PROGRESS);
-            try
-                {
+            try {
                 usage = checkConsumption(sTypeName, access, Collections.emptyList());
-                }
-            catch (RuntimeException | Error e)
-                {
+            } catch (RuntimeException | Error e) {
                 mapUsage.remove(sTypeName);
                 throw e;
-                }
+            }
 
             mapUsage.put(sTypeName, usage);
-            }
-        else if (usage == Usage.IN_PROGRESS)
-            {
+        } else if (usage == Usage.IN_PROGRESS) {
             // we are in recursion; the answer is "no"
             mapUsage.put(sTypeName, usage = Usage.NO);
-            }
+        }
 
         return usage == Usage.YES;
-        }
+    }
 
     /**
      * Calculate the consumption usage for the specified formal type in a context
@@ -6684,10 +5851,9 @@ public abstract class TypeConstant
      *
      * @return {@link Usage#YES} if this type consumes the formal type; {@link Usage#NO} otherwise
      */
-    protected Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
-        {
+    protected Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams) {
         return getUnderlyingType().checkConsumption(sTypeName, access, listParams);
-        }
+    }
 
    /**
     * Determine if this type produces a formal type with the specified name in a context
@@ -6698,35 +5864,28 @@ public abstract class TypeConstant
     *
     * @return {@link Usage#YES} if this type produces the formal type; {@link Usage#NO} otherwise
     */
-    public boolean producesFormalType(String sTypeName, Access access)
-        {
+    public boolean producesFormalType(String sTypeName, Access access) {
         Map<String, Usage> mapUsage = ensureProducesMap();
 
         // WARNING: thread-unsafe
         Usage usage = mapUsage.get(sTypeName);
-        if (usage == null)
-            {
+        if (usage == null) {
             mapUsage.put(sTypeName, Usage.IN_PROGRESS);
-            try
-                {
+            try {
                 usage = checkProduction(sTypeName, access, Collections.emptyList());
-                }
-            catch (RuntimeException | Error e)
-                {
+            } catch (RuntimeException | Error e) {
                 mapUsage.remove(sTypeName);
                 throw e;
-                }
+            }
 
             mapUsage.put(sTypeName, usage);
-            }
-        else if (usage == Usage.IN_PROGRESS)
-            {
+        } else if (usage == Usage.IN_PROGRESS) {
             // we are in recursion; the answer is "no"
             mapUsage.put(sTypeName, usage = Usage.NO);
-            }
+        }
 
         return usage == Usage.YES;
-        }
+    }
 
     /**
      * Determine if this type produces a formal type with the specified name in a context
@@ -6738,10 +5897,9 @@ public abstract class TypeConstant
      *
      * @return one of the {@link Usage} values
      */
-    protected Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
-        {
+    protected Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams) {
         return getUnderlyingType().checkProduction(sTypeName, access, listParams);
-        }
+    }
 
     /**
      * Determine if this type can be directly assigned to or automatically converted to a specified
@@ -6752,10 +5910,9 @@ public abstract class TypeConstant
      * @return true iff the compiler can either directly assign the one type to the other, or can
      *         automatically convert the one type to something that is assignable to the other
      */
-    public boolean isAssignableTo(TypeConstant that)
-        {
+    public boolean isAssignableTo(TypeConstant that) {
         return isA(that) || getConverterTo(that) != null;
-        }
+    }
 
     /**
      * Find a method on "this" type that converts from "this" type to "that" type.
@@ -6765,10 +5922,9 @@ public abstract class TypeConstant
      * @return the MethodConstant that performs the desired conversion, or null if none exists (or
      *         multiple ambiguous answers exist)
      */
-    public MethodConstant getConverterTo(TypeConstant that)
-        {
+    public MethodConstant getConverterTo(TypeConstant that) {
         return ensureTypeInfo().findConversion(that);
-        }
+    }
 
     /**
      * Test for sub-classing.
@@ -6777,54 +5933,48 @@ public abstract class TypeConstant
      *
      * @return true if this type represents a sub-classing of the specified class
      */
-    public boolean extendsClass(IdentityConstant constClass)
-        {
+    public boolean extendsClass(IdentityConstant constClass) {
         return getUnderlyingType().extendsClass(constClass);
-        }
+    }
 
     /**
      * @return true iff the TypeConstant represents a "class type", which is any type that is not an
      *         "interface type" and not a "formal type"
      */
-    public boolean isClassType()
-        {
+    public boolean isClassType() {
         return getCategory() == Category.CLASS;
-        }
+    }
 
     /**
      * @return true iff the TypeConstant represents an "interface type", which is a type that is not
      *         a "class type" and not a "formal type"
      */
-    public boolean isInterfaceType()
-        {
+    public boolean isInterfaceType() {
         return getCategory() == Category.IFACE;
-        }
+    }
 
     /**
      * @return true iff the TypeConstant represents a "formal type", which is based on a
      *              {@link FormalConstant}
      */
-    public boolean isFormalType()
-        {
+    public boolean isFormalType() {
         return getCategory() == Category.FORMAL;
-        }
+    }
 
     /**
      * @return true iff the TypeConstant represents a type of "formal type"
      */
-    public boolean isFormalTypeType()
-        {
+    public boolean isFormalTypeType() {
         return isTypeOfType() && getParamType(0).isFormalType();
-        }
+    }
 
     /**
      * @return true iff the TypeConstant represents a "dynamic type", which is based on a
      *              {@link DynamicFormalConstant}
      */
-    public boolean isDynamicType()
-        {
+    public boolean isDynamicType() {
         return false;
-        }
+    }
 
     /**
      * Check if this type contains a "formal type", which could be either a generic type or a
@@ -6834,10 +5984,9 @@ public abstract class TypeConstant
      *
      * @return true iff the TypeConstant contains a formal type
      */
-    public boolean containsFormalType(boolean fAllowParams)
-        {
+    public boolean containsFormalType(boolean fAllowParams) {
         return getUnderlyingType().containsFormalType(fAllowParams);
-        }
+    }
 
     /**
      * Collect formal types that are contained by this type into the passed-in set.
@@ -6846,10 +5995,9 @@ public abstract class TypeConstant
      * @param setFormal     a set to add formal constants to; will be filled iff the
      *                      {@link #isFormalType} method returns "true"
      */
-    public void collectFormalTypes(boolean fAllowParams, Set<TypeConstant> setFormal)
-        {
+    public void collectFormalTypes(boolean fAllowParams, Set<TypeConstant> setFormal) {
         getUnderlyingType().collectFormalTypes(fAllowParams, setFormal);
-        }
+    }
 
     /**
      * Check if this type contains a dynamic formal type based on the specified register.
@@ -6858,39 +6006,34 @@ public abstract class TypeConstant
      *
      * @return true iff the TypeConstant contains a dynamic formal type
      */
-    public boolean containsDynamicType(Register register)
-        {
+    public boolean containsDynamicType(Register register) {
         return getUnderlyingType().containsDynamicType(register);
-        }
+    }
 
     /**
      * @return true iff this type contains any dynamic formal type
      */
-    public boolean containsDynamicType()
-        {
+    public boolean containsDynamicType() {
         return containsDynamicType(null);
-        }
+    }
 
     /**
      * @return true iff the TypeConstant represents a generic type
      */
-    public boolean isGenericType()
-        {
-        if (getCategory() == Category.FORMAL)
-            {
+    public boolean isGenericType() {
+        if (getCategory() == Category.FORMAL) {
             Constant constant = getDefiningConstant();
-            switch (constant.getFormat())
-                {
-                case Property:
-                    return true;
+            switch (constant.getFormat()) {
+            case Property:
+                return true;
 
-                case FormalTypeChild:
-                    return ((FormalTypeChildConstant) constant).
-                        getTopParent().getFormat() == Format.Property;
-                }
+            case FormalTypeChild:
+                return ((FormalTypeChildConstant) constant).
+                    getTopParent().getFormat() == Format.Property;
             }
-        return false;
         }
+        return false;
+    }
 
     /**
      * Check if this type contains a generic type.
@@ -6899,19 +6042,17 @@ public abstract class TypeConstant
      *
      * @return true iff the TypeConstant contains a generic type
      */
-    public boolean containsGenericType(boolean fAllowParams)
-        {
+    public boolean containsGenericType(boolean fAllowParams) {
         return getUnderlyingType().containsGenericType(fAllowParams);
-        }
+    }
 
     /**
      * @return true iff the TypeConstant represents a type parameter
      */
-    public boolean isTypeParameter()
-        {
+    public boolean isTypeParameter() {
         return isSingleDefiningConstant() &&
                 getDefiningConstant().getFormat() == Format.TypeParameter;
-        }
+    }
 
     /**
      * Check if this TypeConstant contains a formal type parameter type.
@@ -6920,57 +6061,51 @@ public abstract class TypeConstant
      *
      * @return true iff the TypeConstant contains a type parameter type
      */
-    public boolean containsTypeParameter(boolean fAllowParams)
-        {
+    public boolean containsTypeParameter(boolean fAllowParams) {
         return getUnderlyingType().containsTypeParameter(fAllowParams);
-        }
+    }
 
     /**
      * Check if this TypeConstant contains a recursive type.
      *
      * @return true iff the TypeConstant contains a recursive type
      */
-    public boolean containsRecursiveType()
-        {
+    public boolean containsRecursiveType() {
         return getUnderlyingType().containsRecursiveType();
-        }
+    }
 
     /**
      * Check if this TypeConstant contains a function type.
      *
      * @return true iff the TypeConstant contains a function type
      */
-    public boolean containsFunctionType()
-        {
+    public boolean containsFunctionType() {
         return getUnderlyingType().containsFunctionType();
-        }
+    }
 
     /**
      * @return true iff the TypeConstant represents a "formal type" that materializes into a type
      *         sequence
      */
-    public boolean isFormalTypeSequence()
-        {
+    public boolean isFormalTypeSequence() {
         return false;
-        }
+    }
 
     /**
      * @return the category of this TypeConstant
      */
-    public Category getCategory()
-        {
+    public Category getCategory() {
         return getUnderlyingType().getCategory();
-        }
+    }
 
     /**
      * @param fAllowInterface if true, the returning identity constant could represent an interface
      *
      * @return true iff there is exactly one underlying class that makes this a class type
      */
-    public boolean isSingleUnderlyingClass(boolean fAllowInterface)
-        {
+    public boolean isSingleUnderlyingClass(boolean fAllowInterface) {
         return getUnderlyingType().isSingleUnderlyingClass(fAllowInterface);
-        }
+    }
 
     /**
      * Note: Only use this method if {@link #isSingleUnderlyingClass(boolean)} returns true.
@@ -6979,12 +6114,11 @@ public abstract class TypeConstant
      *
      * @return the one underlying class that makes this a class type
      */
-    public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface)
-        {
+    public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface) {
         assert isSingleUnderlyingClass(fAllowInterface);
 
         return getUnderlyingType().getSingleUnderlyingClass(fAllowInterface);
-        }
+    }
 
     /**
      * Determine if this type refers to a class that can be used in an annotation, an extends
@@ -6995,20 +6129,18 @@ public abstract class TypeConstant
      * @return true iff this type is just a class identity, and the class identity refers to a
      *         class structure
      */
-    public boolean isExplicitClassIdentity(boolean fAllowParams)
-        {
+    public boolean isExplicitClassIdentity(boolean fAllowParams) {
         return isModifyingType() && getUnderlyingType().isExplicitClassIdentity(fAllowParams);
-        }
+    }
 
     /**
      * Determine the format of the explicit class, iff the type is an explicit class identity.
      *
      * @return a {@link Component.Format Component Format} value
      */
-    public Component.Format getExplicitClassFormat()
-        {
+    public Component.Format getExplicitClassFormat() {
         return getUnderlyingType().getExplicitClassFormat();
-        }
+    }
 
     /**
      * Determine the "into" type of the explicit class, iff the type is an explicit class identity
@@ -7016,10 +6148,9 @@ public abstract class TypeConstant
      *
      * @return a TypeConstant
      */
-    public TypeConstant getExplicitClassInto()
-        {
+    public TypeConstant getExplicitClassInto() {
         return getExplicitClassInto(false);
-        }
+    }
 
     /**
      * Determine the "into" type of the explicit class, iff the type is an explicit class identity
@@ -7029,38 +6160,34 @@ public abstract class TypeConstant
      *
      * @return a TypeConstant
      */
-    public TypeConstant getExplicitClassInto(boolean fResolve)
-        {
+    public TypeConstant getExplicitClassInto(boolean fResolve) {
         return getUnderlyingType().getExplicitClassInto(fResolve);
-        }
+    }
 
     /**
      * @return true iff this type can be used in an "into" clause for an annotation for a class to
      *         signify that the annotation applies to the meta-data of the class and is not actually
      *         mixed into the class functionality itself
      */
-    public boolean isIntoClassType()
-        {
+    public boolean isIntoClassType() {
         return isIntoMetaData(getConstantPool().typeClass(), true);
-        }
+    }
 
     /**
      * @return true iff this type can be used in an "into" clause for an annotation for a method,
      *         which means that the mix-in applies to the meta-data of the method
      */
-    public boolean isIntoMethodType()
-        {
+    public boolean isIntoMethodType() {
         return isIntoMetaData(getConstantPool().typeMethod(), false);
-        }
+    }
 
     /**
      * @return true iff this type can be used in an "into" clause for an annotation for a method
      *         parameter, which means that the mix-in applies to the meta-data of the parameter
      */
-    public boolean isIntoMethodParameterType()
-        {
+    public boolean isIntoMethodParameterType() {
         return isIntoMetaData(getConstantPool().typeParameter(), false);
-        }
+    }
 
     /**
      * Check if this type can be used in an "into" clause for an annotation for the specified target
@@ -7073,58 +6200,50 @@ public abstract class TypeConstant
      *
      * @return true iff this type can be used in an "into" clause for an annotation on the target type
      */
-    public boolean isIntoMetaData(TypeConstant typeTarget, boolean fStrict)
-        {
+    public boolean isIntoMetaData(TypeConstant typeTarget, boolean fStrict) {
         return getUnderlyingType().isIntoMetaData(typeTarget, fStrict);
-        }
+    }
 
     /**
      * @return true iff this type can be used in an "into" clause for an annotation for a property,
      *         which means that the mix-in applies to the meta-data of the property or to the
      *         Ref/Var instance used for the property
      */
-    public boolean isIntoPropertyType()
-        {
+    public boolean isIntoPropertyType() {
         return getUnderlyingType().isIntoPropertyType();
-        }
+    }
 
     /**
      * @return one of: Property, Ref, Var, or null
      */
-    public TypeConstant getIntoPropertyType()
-        {
+    public TypeConstant getIntoPropertyType() {
         return getUnderlyingType().getIntoPropertyType();
-        }
+    }
 
     /**
      * @return true iff this type can be used in an "into" clause for an annotation for a local variable
      */
-    public boolean isIntoVariableType()
-        {
+    public boolean isIntoVariableType() {
         return getUnderlyingType().isIntoVariableType();
-        }
+    }
 
     /**
      * @return one of: Ref, Var, or null
      */
-    public TypeConstant getIntoVariableType()
-        {
+    public TypeConstant getIntoVariableType() {
         return getUnderlyingType().getIntoVariableType();
-        }
+    }
 
     /**
      * @return true iff this type is considered to be convertible to an Int for purposes of the
      *         compiler and runtime
      */
-    public boolean isIntConvertible()
-        {
-        if (!isExplicitClassIdentity(false))
-            {
+    public boolean isIntConvertible() {
+        if (!isExplicitClassIdentity(false)) {
             return false;
-            }
+        }
 
-        return switch (getEcstasyClassName())
-            {
+        return switch (getEcstasyClassName()) {
             case "numbers.Bit",
                  "numbers.Nibble",
                  "text.Char",
@@ -7139,156 +6258,203 @@ public abstract class TypeConstant
                  "numbers.UInt32",
                  "numbers.UInt64",
                  "numbers.UInt128",
-                 "numbers.UIntN" ->
-                    true;
+                 "numbers.UIntN" -> true;
 
-            default ->
-                    getExplicitClassFormat() == Component.Format.ENUM;
-            };
-        }
+            default -> getExplicitClassFormat() == Component.Format.ENUM;
+        };
+    }
 
     /**
      * @return the cardinality of the integer representation for this set of constants, or
      *         {@link Integer#MAX_VALUE} if the range is too large to express with an int
      */
-    public int getIntCardinality()
-        {
+    public int getIntCardinality() {
         assert isIntConvertible();
 
-        switch (getEcstasyClassName())
-            {
-            case "numbers.Bit":
-                return 2;
+        switch (getEcstasyClassName()) {
+        case "numbers.Bit":
+            return 2;
 
-            case "numbers.Nibble":
-                return 0x10;
+        case "numbers.Nibble":
+            return 0x10;
 
-            case "text.Char":
-                // unicode goes from 0 to 10FFFF
-                return 0x10FFFF + 1;
+        case "text.Char":
+            // unicode goes from 0 to 10FFFF
+            return 0x10FFFF + 1;
 
-            case "numbers.Int8":
-            case "numbers.UInt8":
-                return 0x100;
+        case "numbers.Int8":
+        case "numbers.UInt8":
+            return 0x100;
 
-            case "numbers.Int16":
-            case "numbers.UInt16":
-                return 0x10000;
+        case "numbers.Int16":
+        case "numbers.UInt16":
+            return 0x10000;
 
-            case "numbers.Int32":
-            case "numbers.UInt32":
-            case "numbers.Int64":
-            case "numbers.UInt64":
-            case "numbers.Int128":
-            case "numbers.UInt128":
-            case "numbers.IntN":
-            case "numbers.UIntN":
-                return Integer.MAX_VALUE;
+        case "numbers.Int32":
+        case "numbers.UInt32":
+        case "numbers.Int64":
+        case "numbers.UInt64":
+        case "numbers.Int128":
+        case "numbers.UInt128":
+        case "numbers.IntN":
+        case "numbers.UIntN":
+            return Integer.MAX_VALUE;
 
-            default:
-                // count the enum values (each ordinal value)
-                // (note: enum-to-int conversion is no longer used for compiling to JumpInt)
-                ClassStructure clzEnum = (ClassStructure) getSingleUnderlyingClass(false).getComponent();
-                int c = 0;
-                for (Component child : clzEnum.children())
-                    {
-                    if (child.getFormat() == Component.Format.ENUMVALUE)
-                        {
-                        ++c;
-                        }
-                    }
-                return c;
+        default:
+            // count the enum values (each ordinal value)
+            // (note: enum-to-int conversion is no longer used for compiling to JumpInt)
+            ClassStructure clzEnum = (ClassStructure) getSingleUnderlyingClass(false).getComponent();
+            int c = 0;
+            for (Component child : clzEnum.children()) {
+                if (child.getFormat() == Component.Format.ENUMVALUE) {
+                    ++c;
+                }
             }
+            return c;
         }
+    }
 
     /**
      * @return the constant representing the minimum value for this cardinal type; null if the
      *         range is too large to express with an int
      */
-    public Constant getCardinalBase()
-        {
+    public Constant getCardinalBase() {
         assert isIntConvertible();
 
         ConstantPool pool = getConstantPool();
-        switch (getEcstasyClassName())
-            {
-            case "numbers.Bit":
-                return pool.ensureBitConstant(0);
+        switch (getEcstasyClassName()) {
+        case "numbers.Bit":
+            return pool.ensureBitConstant(0);
 
-            case "numbers.Nibble":
-                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.Nibble);
+        case "numbers.Nibble":
+            return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.Nibble);
 
-            case "text.Char":
-                return pool.ensureCharConstant(0);
+        case "text.Char":
+            return pool.ensureCharConstant(0);
 
-            case "numbers.Int8":
-                return pool.ensureIntConstant(PackedInteger.valueOf(Byte.MIN_VALUE), Format.Int8);
+        case "numbers.Int8":
+            return pool.ensureIntConstant(PackedInteger.valueOf(Byte.MIN_VALUE), Format.Int8);
 
-            case "numbers.UInt8":
-                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt8);
+        case "numbers.UInt8":
+            return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt8);
 
-            case "numbers.Int16":
-                return pool.ensureIntConstant(PackedInteger.valueOf(Short.MIN_VALUE), Format.Int16);
+        case "numbers.Int16":
+            return pool.ensureIntConstant(PackedInteger.valueOf(Short.MIN_VALUE), Format.Int16);
 
-            case "numbers.UInt16":
-                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt16);
+        case "numbers.UInt16":
+            return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt16);
 
-            case "numbers.UInt32":
-                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt32);
+        case "numbers.UInt32":
+            return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt32);
 
-            case "numbers.UInt64":
-                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt64);
+        case "numbers.UInt64":
+            return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt64);
 
-            case "numbers.UInt128":
-                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt128);
+        case "numbers.UInt128":
+            return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt128);
 
-            case "numbers.Int32":
-            case "numbers.Int64":
-            case "numbers.Int128":
-            case "numbers.IntN":
-                return null;
+        case "numbers.Int32":
+        case "numbers.Int64":
+        case "numbers.Int128":
+        case "numbers.IntN":
+            return null;
 
-            default:
-                ClassStructure clzEnum = (ClassStructure) getSingleUnderlyingClass(false).getComponent();
-                for (Component child : clzEnum.children())
-                    {
-                    if (child.getFormat() == Component.Format.ENUMVALUE)
-                        {
-                        return pool.ensureSingletonConstConstant(child.getIdentityConstant());
-                        }
-                    }
+        default:
+            ClassStructure clzEnum = (ClassStructure) getSingleUnderlyingClass(false).getComponent();
+            for (Component child : clzEnum.children()) {
+                if (child.getFormat() == Component.Format.ENUMVALUE) {
+                    return pool.ensureSingletonConstConstant(child.getIdentityConstant());
+                }
             }
-        return null;
         }
+        return null;
+    }
 
     /**
      * @return the default value for this type, or null if there is none
      */
-    public Constant getDefaultValue()
-        {
-        if (isExplicitClassIdentity(false) && isSingleUnderlyingClass(false))
-            {
+    public Constant getDefaultValue() {
+        if (isExplicitClassIdentity(false) && isSingleUnderlyingClass(false)) {
             IdentityConstant id   = getSingleUnderlyingClass(false);
             ClassStructure   clz  = (ClassStructure) id.getComponent();
             Component        prop = clz.getChild("default");
-            if (prop instanceof PropertyStructure propDefault)
-                {
+            if (prop instanceof PropertyStructure propDefault) {
                 Constant constDefault = propDefault.getInitialValue();
-                if (constDefault == null)
-                    {
+                if (constDefault == null) {
                     constDefault = getConstantPool().
                             ensureSingletonConstConstant(prop.getIdentityConstant());
-                    }
-                return constDefault;
                 }
+                return constDefault;
             }
-        else if (isNullable())
-            {
+        } else if (isNullable()) {
             return getConstantPool().valNull();
-            }
+        }
 
         return null;
+    }
+
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    /**
+     * Ensure a unique ClassDesc for this type for the specified TypeSystem.
+     */
+    public ClassDesc ensureClassDesc(TypeSystem ts) {
+        return ClassDesc.of(ensureJitClassName(ts));
+    }
+
+    /**
+     * Ensure a unique Java class name for this type for the specified TypeSystem.
+     */
+    public String ensureJitClassName(TypeSystem ts) {
+        String sJitName = m_sJitName;
+        if (sJitName == null) {
+            // get the master instance of the type constant
+            ModuleLoader loader = ts.findOwnerLoader(this);
+            TypeConstant type   = (TypeConstant) loader.module.getConstantPool().register(this);
+
+            synchronized (type) {
+                sJitName = type.m_sJitName;
+                if (sJitName == null) {
+                    String name = ts.xvm.nativeTypeSystem.nativeByType.get(type);
+                    if (name == null) {
+                        // TODO: check for collisions, reserved keywords etc.
+                        sJitName = loader.prefix + getSingleUnderlyingClass(true).getJitName(ts);
+                    } else {
+                        sJitName = name;
+                    }
+                }
+                type.m_sJitName = sJitName;
+            }
         }
+        return sJitName;
+    }
+
+    /**
+     * @return true iff this type may represent a primitive JIT type
+     */
+    public boolean isPrimitive() {
+        return false;
+    }
+
+    /**
+     * @return the JitTypeDesc for this type
+     */
+    public JitTypeDesc getJitDesc(TypeSystem ts) {
+        ClassDesc cd;
+        if ((cd = JitTypeDesc.getPrimitiveClass(this)) != null) {
+            return new JitTypeDesc(this, Primitive, cd);
+        }
+        if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(this)) != null) {
+            return new JitTypeDesc(this.removeNullable(), MultiSlotPrimitive, cd);
+        }
+        if ((cd = JitTypeDesc.getWidenedClass(this)) != null) {
+            return new JitTypeDesc(this, Widened, cd);
+        }
+        assert isSingleUnderlyingClass(true);
+
+        return new JitTypeDesc(this, Specific, ClassDesc.of(ts.ensureJitClassName(this)));
+    }
 
 
     // ----- run-time support ----------------------------------------------------------------------
@@ -7296,18 +6462,16 @@ public abstract class TypeConstant
     /**
      * @return a {@link ClassTemplate} instance for this type in the context of the specified container
      */
-    public ClassTemplate getTemplate(Container container)
-        {
+    public ClassTemplate getTemplate(Container container) {
         return getUnderlyingType().getTemplate(container);
-        }
+    }
 
     /**
      * @return a TypeComposition for this type
      */
-    public TypeComposition ensureClass(Frame frame)
-        {
+    public TypeComposition ensureClass(Frame frame) {
         return frame.f_context.f_container.resolveClass(this);
-        }
+    }
 
     /**
      * Obtain a run-time handle representing this type.
@@ -7316,31 +6480,25 @@ public abstract class TypeConstant
      *
      * @return a handle for the Type object represented by this TypeConstant
      */
-    public TypeHandle ensureTypeHandle(Container container)
-        {
+    public TypeHandle ensureTypeHandle(Container container) {
         ConstantPool poolThat = container.getConstantPool();
-        if (isShared(poolThat))
-            {
+        if (isShared(poolThat)) {
             TypeHandle hType = m_handle;
-            if (hType == null)
-                {
-                if (poolThat == this.getConstantPool())
-                    {
+            if (hType == null) {
+                if (poolThat == this.getConstantPool()) {
                     hType = m_handle = xRTType.makeHandle(container, this, true);
                     assert getConstantPool() == hType.getComposition().getConstantPool();
-                    }
-                else
-                    {
+                } else {
                     // don't cache a foreign handle
                     return ((TypeConstant) poolThat.register(this)).ensureTypeHandle(container);
-                    }
                 }
-            return hType;
             }
+            return hType;
+        }
 
         // don't cache a "foreign" handle
         return xRTType.makeForeignHandle(this);
-        }
+    }
 
     /**
      * Compare for equality (==) two object handles that both belong to this type.
@@ -7352,12 +6510,10 @@ public abstract class TypeConstant
      *
      * @return one of Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION values
      */
-    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        if (hValue1 == hValue2)
-            {
+    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
+        if (hValue1 == hValue2) {
             return frame.assignValue(iReturn, xBoolean.TRUE);
-            }
+        }
 
         // this type is a common [compile time] type that should be used for the comparison
         TypeComposition clz1 = hValue1.getComposition();
@@ -7371,7 +6527,7 @@ public abstract class TypeConstant
                     clz1.getType().getValueString() + " and " +
                     clz2.getType().getValueString())
                 : clz.getTemplate().callEquals(frame, clz, hValue1, hValue2, iReturn);
-        }
+    }
 
     /**
      * Compare for order (<=>) two object handles that both belong to this type.
@@ -7383,12 +6539,10 @@ public abstract class TypeConstant
      *
      * @return one of Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION values
      */
-    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        if (hValue1 == hValue2)
-            {
+    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
+        if (hValue1 == hValue2) {
             return frame.assignValue(iReturn, xOrdered.EQUAL);
-            }
+        }
 
         // this type is a common [compile time] type that should be used for the comparison
         TypeComposition clz1 = hValue1.getComposition();
@@ -7402,7 +6556,7 @@ public abstract class TypeConstant
                     clz1.getType().getValueString() + " and " +
                     clz2.getType().getValueString())
                 : clz.getTemplate().callCompare(frame, clz, hValue1, hValue2, iReturn);
-        }
+    }
 
     /**
      * Call "hashCode" function for the object handle that belongs to this type.
@@ -7413,11 +6567,10 @@ public abstract class TypeConstant
      *
      * @return one of Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION values
      */
-    public int callHashCode(Frame frame, ObjectHandle hValue, int iReturn)
-        {
+    public int callHashCode(Frame frame, ObjectHandle hValue, int iReturn) {
         xConst template = (xConst) frame.f_context.f_container.getTemplate(this);
         return template.callHashCode(frame, this, hValue, iReturn);
-        }
+    }
 
     /**
      * Find a callable function with the specified signature. Note: this method is called *only*
@@ -7427,14 +6580,13 @@ public abstract class TypeConstant
      *
      * @return the method structure for the function or null if none was found
      */
-    public MethodStructure findCallable(SignatureConstant sig)
-        {
+    public MethodStructure findCallable(SignatureConstant sig) {
         TypeInfo   infoType = ensureTypeInfo();
         MethodInfo infoFn   = infoType.getMethodBySignature(sig, true);
         return infoFn == null || infoFn.isAbstract()
                 ? null
                 : infoFn.getTopmostMethodStructure(infoType);
-        }
+    }
 
     /**
      * Find a MethodInfo for a function with the specified signature.
@@ -7443,10 +6595,9 @@ public abstract class TypeConstant
      *
      * @return the MethodInfo for the function or null if none was found
      */
-    public MethodInfo findFunctionInfo(SignatureConstant sig)
-        {
+    public MethodInfo findFunctionInfo(SignatureConstant sig) {
         return ensureTypeInfo().getMethodBySignature(sig);
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
@@ -7455,8 +6606,7 @@ public abstract class TypeConstant
     public abstract Constant.Format getFormat();
 
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         ConstantPool pool = getConstantPool();
 
         TypeConstant typeParent = isVirtualChild()
@@ -7464,13 +6614,12 @@ public abstract class TypeConstant
                 : pool.typeObject();
 
         return pool.ensureParameterizedTypeConstant(pool.typeType(), this, typeParent);
-        }
+    }
 
     @Override
-    public boolean isValueCacheable()
-        {
+    public boolean isValueCacheable() {
         return !containsFormalType(true);
-        }
+    }
 
     @Override
     protected abstract int compareDetails(Constant that);
@@ -7479,8 +6628,7 @@ public abstract class TypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void setContaining(XvmStructure pool)
-        {
+    protected void setContaining(XvmStructure pool) {
         assert isShared((ConstantPool) pool);
 
         super.setContaining(pool);
@@ -7491,7 +6639,7 @@ public abstract class TypeConstant
         m_mapRelations   = null;
         m_handle         = null;
         m_typeNormalized = null;
-        }
+    }
 
     @Override
     protected abstract void registerConstants(ConstantPool pool);
@@ -7501,33 +6649,29 @@ public abstract class TypeConstant
             throws IOException;
 
     @Override
-    public boolean validate(ErrorListener errs)
-        {
+    public boolean validate(ErrorListener errs) {
         boolean fHalt = false;
 
-        if (!m_fValidated)
-            {
+        if (!m_fValidated) {
             fHalt |= super.validate(errs);
             fHalt |= isModifyingType() && getUnderlyingType().validate(errs);
             m_fValidated = !fHalt;
-            }
+        }
 
         return fHalt;
-        }
+    }
 
     /**
      * @return true iff this type constant has been validated
      */
-    protected boolean isValidated()
-        {
+    protected boolean isValidated() {
         return m_fValidated;
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "type=" + getValueString();
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
@@ -7536,17 +6680,14 @@ public abstract class TypeConstant
     protected abstract int computeHashCode();
 
     @Override
-    public boolean equals(Object obj)
-        {
-        if (obj == this)
-            {
+    public boolean equals(Object obj) {
+        if (obj == this) {
             return true;
-            }
+        }
 
-        if (!(obj instanceof TypeConstant that))
-            {
+        if (!(obj instanceof TypeConstant that)) {
             return false;
-            }
+        }
 
         TypeConstant typeThis = this instanceof UnresolvedTypeConstant typeUnresolvedThis
                 ? typeUnresolvedThis.getResolvedType()
@@ -7558,95 +6699,81 @@ public abstract class TypeConstant
         return typeThis != null     && typeThat != null
             && typeThis.getFormat() == typeThat.getFormat()
             && typeThis.compareDetails(typeThat) == 0;
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
 
-    private Map<TypeConstant, Relation> ensureRelationMap()
-        {
+    private Map<TypeConstant, Relation> ensureRelationMap() {
         Map<TypeConstant, Relation> mapRelations = m_mapRelations;
-        if (mapRelations == null)
-            {
+        if (mapRelations == null) {
             s_tloInProgress.compareAndSet(this, null, new TransientThreadLocal<>());
             mapRelations = m_mapRelations = new ConcurrentHashMap<>();
-            }
+        }
         return mapRelations;
-        }
+    }
 
-    private Map<String, Usage> ensureConsumesMap()
-        {
+    private Map<String, Usage> ensureConsumesMap() {
         Map<String, Usage> mapConsumes = m_mapConsumes;
-        if (mapConsumes == null)
-            {
+        if (mapConsumes == null) {
             mapConsumes = m_mapConsumes = new HashMap<>();
-            }
+        }
         return mapConsumes;
-        }
+    }
 
-    private Map<String, Usage> ensureProducesMap()
-        {
+    private Map<String, Usage> ensureProducesMap() {
         Map<String, Usage> mapProduces = m_mapProduces;
-        if (mapProduces == null)
-            {
+        if (mapProduces == null) {
             mapProduces = m_mapProduces = new HashMap<>();
-            }
-        return mapProduces;
         }
+        return mapProduces;
+    }
 
     /**
      * Note: both this type and the typeRight are already normalized.
      *
      * @return false iff the duck-typing is known to be impossible
      */
-    protected boolean isDuckTypeAbleFrom(TypeConstant typeRight)
-        {
+    protected boolean isDuckTypeAbleFrom(TypeConstant typeRight) {
         // interfaces are duck-type able except Tuple, Function and Orderable
         // (the later due to the fact that it has no abstract methods and
         //  is well-known by the runtime only by its "compare" function)
-        if (!isInterfaceType() || isVirtualChild() || isTuple())
-            {
+        if (!isInterfaceType() || isVirtualChild() || isTuple()) {
             return false;
-            }
+        }
 
         TypeConstant typeLeft = this;
         if (typeLeft.isSingleDefiningConstant() && typeRight.isSingleDefiningConstant()
-            && typeRight.getDefiningConstant().equals(typeLeft.getDefiningConstant()))
-            {
+            && typeRight.getDefiningConstant().equals(typeLeft.getDefiningConstant())) {
             // we have just tested the relationship between C<T1> and C<T2> and got
             // a negative answer; there is no logical way for the duck-typing to
             // produce a different result
             return false;
-            }
+        }
 
         ConstantPool pool = getConstantPool();
 
-        if (typeRight.equals(pool.typeObject()) || typeRight.isFormalTypeSequence())
-            {
+        if (typeRight.equals(pool.typeObject()) || typeRight.isFormalTypeSequence()) {
             // Object requires special treatment here for a number of reasons;
             // let's disallow it to be assigned to anything for now
             // TODO: allow an "empty" interface to be duck-typed to Object
             // the "turtle" type also is not duck-typeable to anything
             return false;
-            }
+        }
 
-        if (typeLeft.isExplicitClassIdentity(true))
-            {
+        if (typeLeft.isExplicitClassIdentity(true)) {
             IdentityConstant idLeft = typeLeft.getSingleUnderlyingClass(true);
             if (idLeft.equals(pool.clzFunction()) ||
-                idLeft.equals(pool.clzOrderable()))
-                {
+                idLeft.equals(pool.clzOrderable())) {
                 return false;
-                }
+            }
 
             ClassStructure clzLeft     = (ClassStructure) idLeft.getComponent();
             int            cParamsLeft = clzLeft.getTypeParamCount();
 
-            if (typeRight.isExplicitClassIdentity(true))
-                {
+            if (typeRight.isExplicitClassIdentity(true)) {
                 IdentityConstant idRight = typeRight.getSingleUnderlyingClass(true);
-                if (clzLeft.hasContribution(idRight))
-                    {
+                if (clzLeft.hasContribution(idRight)) {
                     // the left type is known to be not equal to the right, but contains the right
                     // type as a contribution; even though the method/property set could be
                     // identical, the interface designers clearly didn't mean the contributing
@@ -7655,59 +6782,65 @@ public abstract class TypeConstant
                     // Ref.Identity interface doesn't add any features to Hashable interface, an
                     // "immutable Hashable" type should not be assignable to Ref.Identity
                     return false;
-                    }
+                }
 
                 ClassStructure clzRight = (ClassStructure) idRight.getComponent();
-                if (cParamsLeft > clzRight.getTypeParamCount())
-                    {
+                if (cParamsLeft > clzRight.getTypeParamCount()) {
                     return false;
-                    }
+                }
 
-                if (cParamsLeft > 0)
-                    {
+                if (cParamsLeft > 0) {
                     ListMap<StringConstant, TypeConstant> mapParamsLeft  = clzLeft.getTypeParams();
                     ListMap<StringConstant, TypeConstant> mapParamsRight = clzRight.getTypeParams();
 
-                    for (StringConstant constName : mapParamsLeft.keySet())
-                        {
-                        if (!mapParamsRight.containsKey(constName))
-                            {
+                    for (StringConstant constName : mapParamsLeft.keySet()) {
+                        if (!mapParamsRight.containsKey(constName)) {
                             return false;
-                            }
+                        }
 
                         String       sName      = constName.getValue();
                         TypeConstant typePLeft  = typeLeft.getGenericParamType(sName, Collections.emptyList());
                         TypeConstant typePRight = typeRight.getGenericParamType(sName, Collections.emptyList());
 
-                        if (!typePRight.equals(typePLeft))
-                            {
+                        if (!typePRight.equals(typePLeft)) {
                             return false;
-                            }
                         }
                     }
                 }
-            else
-                {
+            } else {
                 // the right type is relational; no duck typing for parameterized left
                 return cParamsLeft <= 0;
-                }
             }
-        return true;
         }
+        return true;
+    }
 
     /**
      * Helper method for registering an array of TypeConstants.
      */
-    protected static TypeConstant[] registerTypeConstants(ConstantPool pool, TypeConstant[] atype)
-        {
+    protected static TypeConstant[] registerTypeConstants(ConstantPool pool, TypeConstant[] atype) {
         atype = (TypeConstant[]) registerConstants(pool, atype);
 
-        for (TypeConstant typeConstant : atype)
-            {
+        for (TypeConstant typeConstant : atype) {
             typeConstant.registerConstants(pool);
-            }
-        return atype;
         }
+        return atype;
+    }
+
+    /**
+     * Obtain a run-time object representing this type.
+     *
+     * @param container  the Container to make the xType for
+     *
+     * @return an xType object represented by this TypeConstant
+     */
+    public Object ensureXType(org.xvm.javajit.Container container) {
+        Object type = m_xType;
+        if (type == null) {
+            // TODO: type = m_xType = container.makeType(this);
+        }
+        return type;
+    }
 
 
     // ----- inner class: Origin -------------------------------------------------------------------
@@ -7715,35 +6848,30 @@ public abstract class TypeConstant
     /**
      * Used during "potential call chain" creation.
      */
-    public class Origin
-        {
-        public Origin(boolean fAnchored)
-            {
+    public class Origin {
+        public Origin(boolean fAnchored) {
             m_fAnchored = fAnchored;
-            }
+        }
 
-        public TypeConstant getType()
-            {
+        public TypeConstant getType() {
             return TypeConstant.this;
-            }
+        }
 
-        public boolean isAnchored()
-            {
+        public boolean isAnchored() {
             return m_fAnchored;
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return "Origin{type="
                     + getType()
                     + ", anchored="
                     + isAnchored()
                     + '}';
-            }
+        }
 
         private final boolean m_fAnchored;
-        }
+    }
 
 
     // ----- enums ---------------------------------------------------------------------------------
@@ -7751,33 +6879,28 @@ public abstract class TypeConstant
     /**
      * Relationship options.
      */
-    public enum Relation
-        {
+    public enum Relation {
         IS_A, IS_A_WEAK, INCOMPATIBLE;
 
-        public Relation bestOf(Relation that)
-            {
+        public Relation bestOf(Relation that) {
             return this.ordinal() < that.ordinal() ? this : that;
-            }
-
-        public Relation worseOf(Relation that)
-            {
-            return this.ordinal() < that.ordinal() ? that : this;
-            }
         }
+
+        public Relation worseOf(Relation that) {
+            return this.ordinal() < that.ordinal() ? that : this;
+        }
+    }
 
     /**
      * Consumption/production options.
      */
-    public enum Usage
-        {
+    public enum Usage {
         IN_PROGRESS, YES, NO;
 
-        public static Usage valueOf(boolean f)
-            {
+        public static Usage valueOf(boolean f) {
             return f ? YES : NO;
-            }
         }
+    }
 
     /**
      * TypeConstant categories.
@@ -7853,6 +6976,16 @@ public abstract class TypeConstant
     private transient xRTType.TypeHandle m_handle;
 
     /**
+     * Cached xType object.
+     */
+    private transient Object m_xType;
+
+    /**
+     * Cached JIT class name.
+     */
+    private transient String m_sJitName;
+
+    /**
      * Cached normalized representation.
      */
     private transient TypeConstant m_typeNormalized;
@@ -7861,10 +6994,9 @@ public abstract class TypeConstant
      * The cache of recursion pairs.
      */
     private static final Set<String> s_setRecursions;
-    static
-        {
+    static {
         // add well known recursions
         s_setRecursions = new HashSet<>();
         s_setRecursions.add("left=this:class(Array); right=this:class(Hashable)");
-        }
     }
+}

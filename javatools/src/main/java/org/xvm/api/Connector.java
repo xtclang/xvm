@@ -1,19 +1,26 @@
 package org.xvm.api;
 
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.FileStructure;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.MultiMethodStructure;
 
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.MainContainer;
 import org.xvm.runtime.NativeContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Runtime;
+import org.xvm.runtime.Utils;
+import org.xvm.runtime.template.text.xString;
 
 
 /**
@@ -101,18 +108,69 @@ public class Connector
         }
 
     /**
-     * Invoke a method with a void return and specified arguments.
-     *
-     * @param sMethodName  the method name
-     * @param ahArg        arguments
+     * Find any possible entry points for a given name in the main module.
      */
-    public void invoke0(String sMethodName, ObjectHandle... ahArg)
+    public Set<MethodStructure> findMethods(String sMethodName)
+        {
+        return findMethods(m_containerMain.getModule(), sMethodName);
+        }
+
+    /**
+     * Find an entry points for a given name in the specified module.
+     */
+    protected Set<MethodStructure> findMethods(ModuleConstant idModule, String sMethodName)
+        {
+        MultiMethodStructure mms = (MultiMethodStructure)
+                idModule.getComponent().getChildByNameMap().get(sMethodName);
+
+        return new HashSet<>(mms.getMethodByConstantMap().values());
+        }
+
+
+    /**
+     * Invoke an XTC method with a void return and specified arguments.
+     *
+     * @param method  the method structure
+     * @param asArg   arguments
+     */
+    public void invoke0(MethodStructure method, String... asArg)
         {
         if (!m_fStarted)
             {
             throw new IllegalStateException("The container has not been started");
             }
-        m_containerMain.invoke0(sMethodName, ahArg);
+
+        ConstantPool   pool        = ConstantPool.getCurrentPool();
+        TypeConstant   typeStrings = pool.ensureArrayType(pool.typeString());
+        ObjectHandle[] ahArg       = Utils.OBJECTS_NONE;
+
+        switch (method.getRequiredParamCount())
+            {
+            case 0:
+                if (asArg != null)
+                    {
+                    assert method.getParamCount() > 0;
+                    TypeConstant typeArg = method.getParam(0).getType();
+
+                    assert typeStrings.isA(typeArg);
+                    ahArg = new ObjectHandle[]{xString.makeArrayHandle(asArg)};
+                    }
+                break;
+
+            case 1:
+                {
+                TypeConstant typeArg = method.getParam(0).getType();
+                assert typeStrings.isA(typeArg);
+                // the method requires an array that we can supply
+                ahArg = new ObjectHandle[] {
+                    asArg == null
+                        ? xString.ensureEmptyArray()
+                        : xString.makeArrayHandle(asArg)};
+                break;
+                }
+            }
+
+        m_containerMain.invoke0(method.getName(), ahArg);
         }
 
     /**
@@ -141,7 +199,7 @@ public class Connector
     /**
      * The module repository.
      */
-    private final ModuleRepository f_repository;
+    protected final ModuleRepository f_repository;
 
     /**
      * The runtime associated with this Connector.
