@@ -313,7 +313,62 @@ distributions {
         }
     }
     val withLaunchers by registering {
-        contentSpec(xdkDist.distributionName, xdkDist.distributionVersion, xdkDist.osClassifier(), LauncherType.Binaries)
+        distributionBaseName = xdkDist.distributionName
+        version = xdkDist.distributionVersion
+        @Suppress("UnstableApiUsage") 
+        distributionClassifier = "native-${xdkDist.osClassifier()}"
+        
+        contents {
+            // Handle potential script duplicates
+            duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+            
+            // Core XDK content (same as main distribution)
+            val xdkTemplate = tasks.processResources.map {
+                logger.info("$prefix Resolving processResources output (this should be during the execution phase).")
+                File(it.outputs.files.singleFile, "xdk")
+            }
+            from(xdkTemplate) {
+                exclude("**/bin/**")  // Exclude bin directory to avoid conflicts with generated scripts  
+                eachFile {
+                    includeEmptyDirs = false
+                }
+            }
+            
+            // XTC modules
+            from(configurations.xtcModule) {
+                into("lib")
+                exclude(JAVATOOLS_PREFIX_PATTERN) // *.xtc, but not javatools_*.xtc
+            }
+            from(configurations.xtcModule) {
+                into("javatools")
+                include(JAVATOOLS_PREFIX_PATTERN) // only javatools_*.xtc
+            }
+            
+            // Java tools (strip version from jar names)
+            from(configurations.xdkJavaTools) {
+                rename { originalName -> stripVersionFromJarName(originalName) }
+                into("javatools")
+            }
+            
+            // Version file
+            from(tasks.xtcVersionFile)
+            
+            // Install platform-specific binary launchers that work on the host system
+            XdkDistribution.binaryLauncherNames.forEach {
+                val launcher = xdkDist.launcherFileName()
+                from(xtcLauncherBinaries) {
+                    include(launcher)
+                    rename(launcher, it)
+                    into("bin")
+                }
+            }
+            
+            // Exclude unwanted files and prevent auto-inclusion of script task outputs
+            exclude("**/scripts/**")  // Exclude any script build directories
+            exclude("**/cfg_*.sh")
+            exclude("**/cfg_*.cmd") 
+            exclude("**/bin/README.md")
+        }
     }
 }
 
@@ -408,93 +463,6 @@ val ensureTags by tasks.registering {
     }
 }
 
-/**
- * Enum to specify what type of launchers to install
- */
-enum class LauncherType(val classifier: String) {
-    Default(""),            // Default distribution with script launchers (no suffix)
-    Binaries("native-");    // Platform-specific binary launchers (prefix for OS classifier)  
-    
-    fun getDistributionClassifier(osClassifier: String): String {
-        return when (this) {
-            Default -> ""
-            Binaries -> "${classifier}${osClassifier}"
-        }
-    }
-}
-
-
-/**
- * Creates distribution contents based on a distribution name, version and classifier.
- * This logic is used for the nain distribution artifact (named "xdk"), and the contents
- * has been broken out into this function so that we can easily generate ore installations
- * and distributions with slightly different contents, for example, based o OS, and with
- * an OS specific launcher already in "bin".
- */
-private fun Distribution.contentSpec(distName: String, distVersion: String, osClassifier: String = "", launcherType: LauncherType = LauncherType.Default) {
-    distributionBaseName = distName
-    version = distVersion
-    val actualClassifier = launcherType.getDistributionClassifier(osClassifier)
-    if (actualClassifier.isNotEmpty()) {
-        @Suppress("UnstableApiUsage")
-        distributionClassifier = actualClassifier
-    }
-    // Note: Gradle automatically handles internal directory naming for archives
-    // The install tasks create flat directory structures while archive tasks create nested ones
-    contents {
-        val xdkTemplate = tasks.processResources.map {
-            logger.info("$prefix Resolving processResources output (this should be during the execution phase).");
-            File(it.outputs.files.singleFile, "xdk")
-        }
-        from(xdkTemplate) {
-            eachFile {
-                includeEmptyDirs = false
-            }
-        }
-        from(configurations.xtcModule) {
-            into("lib")
-            exclude(JAVATOOLS_PREFIX_PATTERN) // *.xtc, but not javatools_*.xtc
-        }
-        from(configurations.xtcModule) {
-            into("javatools")
-            include(JAVATOOLS_PREFIX_PATTERN) // only javatools_*.xtc
-        }
-        // Strip the conventional version suffix from every jar file in the distribution
-        from(configurations.xdkJavaTools) {
-            rename { originalName -> stripVersionFromJarName(originalName) }
-            into("javatools")
-        }
-        from(tasks.xtcVersionFile)
-        // Exclude launcher scripts by default - only include them based on LauncherType
-        exclude("**/xcc")
-        exclude("**/xec")
-        exclude("**/xcc.bat")
-        exclude("**/xec.bat")
-        // Exclude platform config scripts when using platform-specific launchers
-        // All launcher types exclude config scripts (only legacy None type included them)
-        exclude("**/cfg_*.sh")
-        exclude("**/cfg_*.cmd")
-        // Exclude README.md files from bin directories in distributions
-        exclude("**/bin/README.md")
-        when (launcherType) {
-            LauncherType.Default -> {
-                // Default distribution includes script launchers - handled by distributions block
-            }
-            LauncherType.Binaries -> {
-                // Install platform-specific binary launchers that work on the host system
-                assert(actualClassifier.isNotEmpty()) { "No distribution given for host specific distribution, OS: ${XdkDistribution.currentOs}" }
-                XdkDistribution.binaryLauncherNames.forEach {
-                    val launcher = xdkDist.launcherFileName()
-                    from(xtcLauncherBinaries) {
-                        include(launcher)
-                        rename(launcher, it)
-                        into("bin")
-                    }
-                }
-            }
-        }
-    }
-}
 
 // Let the Distribution plugin handle installDist dependencies according to Gradle standards
 
