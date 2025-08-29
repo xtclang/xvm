@@ -10,6 +10,8 @@ plugins {
     alias(libs.plugins.xdk.build.java)
 }
 
+private val semanticVersion: SemanticVersion by extra
+
 val processResources by tasks.existing {
     // Make the task depend on environment variables so Gradle knows when to re-run it
     inputs.property("GH_COMMIT", providers.environmentVariable("GH_COMMIT").orElse(""))
@@ -23,19 +25,16 @@ val processResources by tasks.existing {
         val gitProtocol = GitHubProtocol(project)
         val props = gitProtocol.getGitInfo().toMutableMap()
         props["git.build.version"] = version.toString()
-        logger.info(">>> GIT PROPS: $props")
+        logger.info("Calculated git properties: $props")
         val gitPropsFile = layout.buildDirectory.file("generated/resources/main/git.properties").get().asFile
-        logger.info(">>> WRITING TO: ${gitPropsFile.absolutePath}")
-        logger.info(">>> PARENT DIR EXISTS: ${gitPropsFile.parentFile.exists()}")
+        logger.info("Writing git properties file: ${gitPropsFile.absolutePath}")
+        logger.debug("  Parent dir exists: ${gitPropsFile.parentFile.exists()}")
         gitPropsFile.parentFile.mkdirs()
-        logger.info(">>> PARENT DIR EXISTS AFTER MKDIRS: ${gitPropsFile.parentFile.exists()}")
+        logger.debug("  Parent dir exists after mkdirs: ${gitPropsFile.parentFile.exists()}")
         gitPropsFile.writeText(props.map { "${it.key}=${it.value}" }.joinToString("\n"))
-        logger.info(">>> FILE EXISTS AFTER WRITE: ${gitPropsFile.exists()}")
-        logger.info(">>> FILE CONTENT: ${gitPropsFile.readText()}")
+        logger.info("Git configuration properties:: ${gitPropsFile.readText()}")
     }
 }
-
-private val semanticVersion: SemanticVersion by extra
 
 // TODO: Move these to common-plugins, the XDK composite build does use them in some different places.
 val xdkJavaToolsProvider by configurations.registering {
