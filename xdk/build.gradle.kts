@@ -121,10 +121,8 @@ fun createLauncherScriptTask(scriptName: String, mainClassName: String) = tasks.
                 configurations.xdkJavaTools.get().forEach { jar ->
                     val originalName = jar.name
                     val strippedName = stripVersionFromJarName(originalName)
-                    // Replace lib/ paths with javatools/ paths and strip version
-                    content = content
-                        .replace("/lib/$originalName", "/javatools/$strippedName")
-                        .replace("\\lib\\$originalName", "\\javatools\\$strippedName")
+                    // Replace lib/ paths with javatools/ paths and strip version using proper cross-platform function
+                    content = XdkDistribution.replaceJarPaths(content, originalName, strippedName)
                 }
                 
                 // Add XTC module paths using utility from XdkDistribution
@@ -199,6 +197,16 @@ signing {
     mavenCentralSigning()
 }
 
+/**
+ * Common exclude patterns for unwanted files in distributions
+ */
+private val distributionExcludes = listOf(
+    "**/scripts/**",    // Exclude any script build directories
+    "**/cfg_*.sh",
+    "**/cfg_*.cmd", 
+    "**/bin/README.md"
+)
+
 /*
  * Distribution archives contain internal directory names like "xdk0.4.4SNAPSHOT" rather than "xdk-0.4.4-SNAPSHOT".
  * This is intentional and follows Gradle's standard behavior - the Distribution plugin sanitizes version strings
@@ -257,10 +265,7 @@ distributions {
             }
             
             // Exclude unwanted files and prevent auto-inclusion of script task outputs
-            exclude("**/scripts/**")  // Exclude any script build directories
-            exclude("**/cfg_*.sh")
-            exclude("**/cfg_*.cmd") 
-            exclude("**/bin/README.md")
+            distributionExcludes.forEach { exclude(it) }
         }
     }
     val withLaunchers by registering {
@@ -315,10 +320,7 @@ distributions {
             }
             
             // Exclude unwanted files and prevent auto-inclusion of script task outputs
-            exclude("**/scripts/**")  // Exclude any script build directories
-            exclude("**/cfg_*.sh")
-            exclude("**/cfg_*.cmd") 
-            exclude("**/bin/README.md")
+            distributionExcludes.forEach { exclude(it) }
         }
     }
 }
@@ -413,15 +415,6 @@ val ensureTags by tasks.registering {
         }
     }
 }
-
-
-// Let the Distribution plugin handle installDist dependencies according to Gradle standards
-
-// Main distribution now includes launcher scripts by default
-// Distribution tasks automatically depend on content tasks - no explicit dependencies needed
-
-// Distribution tasks automatically depend on content tasks - no explicit dependencies needed
-
 
 val withLaunchersDistZip by tasks.existing {
     dependsOn(createXccScript, createXecScript)

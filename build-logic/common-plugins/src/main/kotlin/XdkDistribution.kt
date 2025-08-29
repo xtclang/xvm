@@ -208,6 +208,21 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         }
         
         /**
+         * Replace jar paths in script content, handling both Unix and Windows path separators.
+         * Replaces `/lib/originalName` with `/javatools/strippedName` and Windows equivalents.
+         * 
+         * @param scriptContent the script content to modify
+         * @param originalName the original jar name with version
+         * @param strippedName the jar name without version
+         * @return modified script content with updated jar paths
+         */
+        fun replaceJarPaths(scriptContent: String, originalName: String, strippedName: String): String {
+            return scriptContent
+                .replace("/lib/$originalName", "/javatools/$strippedName")
+                .replace("\\lib\\$originalName", "\\javatools\\$strippedName")
+        }
+
+        /**
          * Inject XTC module paths into a generated launcher script.
          * 
          * @param scriptContent the original script content
@@ -263,29 +278,10 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         append(project.version)
     }
 
-    fun configScriptFilename(installDir: Provider<Directory>, os: String = getOsName()): RegularFile {
-        val config = when (os) {
-            "macos" -> "cfg_macos.sh"
-            "linux" -> "cfg_linux.sh"
-            "windows" -> "cfg_windows.bat"
-            else -> throw UnsupportedOperationException("Cannot find launcher config script for OS: $os")
-        }
-        return installDir.get().file(config)
-    }
-
     @Suppress("MemberVisibilityCanBePrivate")
     fun launcherFileName(os: String = getOsName(), arch: String = currentArch): String {
         val extension = if (os == "windows") ".exe" else ""
         return "${os}_launcher_$arch$extension"
-    }
-
-    fun resolveLauncherFile(dir: Provider<Directory>, os: String = getOsName(), arch: String = currentArch): RegularFile {
-        return dir.get().file("bin/${launcherFileName(os, arch)}")
-    }
-    
-    // Build for current platform 
-    fun isCurrentPlatform(os: String = getOsName(), arch: String = currentArch): Boolean {
-        return os == getOsName() && arch == currentArch
     }
 
     /*
