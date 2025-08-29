@@ -136,9 +136,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
             "distTar",
             "distZip",
             "withLaunchersDistTar",
-            "withLaunchersDistZip",
-            "withLauncherScriptsDistTar",
-            "withLauncherScriptsDistZip"
+            "withLaunchersDistZip"
         )
         val binaryLauncherNames = listOf("xcc", "xec")
 
@@ -181,6 +179,81 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         fun isPlatformSupported(os: String, arch: String): Boolean {
             return getSupportedPlatforms().contains(os to arch)
         }
+        
+        /**
+         * Required XTC modules that must be in the module path for launchers to work.
+         * This matches the native launcher's module path setup.
+         */
+        val REQUIRED_XTC_MODULES = listOf(
+            XtcModulePath("lib"),                              // Main library directory
+            XtcModulePath("javatools", "javatools_turtle.xtc"), // Mack library  
+            XtcModulePath("javatools", "javatools_bridge.xtc")  // Native bridge library
+        )
+        
+        /**
+         * Generate module path arguments for XTC launchers (-L arguments).
+         * 
+         * @param isWindows true for Windows batch files, false for Unix shell scripts
+         * @return formatted module path arguments string
+         */
+        fun generateXtcModulePathArgs(isWindows: Boolean): String {
+            val envVarFormat = if (isWindows) "%XDK_HOME:APP_HOME=%" else "\${XDK_HOME:-\$APP_HOME}"
+            val pathSeparator = if (isWindows) "\\" else "/"
+            val lineContinuation = if (isWindows) " " else " \\\n        "
+            
+            return REQUIRED_XTC_MODULES.joinToString(lineContinuation) { module ->
+                val path = module.toPath(isWindows)
+                "-L \"$envVarFormat$pathSeparator$path\""
+            }
+        }
+        
+        /**
+         * Replace jar paths in script content, handling both Unix and Windows path separators.
+         * Replaces `/lib/originalName` with `/javatools/strippedName` and Windows equivalents.
+         * 
+         * @param scriptContent the script content to modify
+         * @param originalName the original jar name with version
+         * @param strippedName the jar name without version
+         * @return modified script content with updated jar paths
+         */
+        fun replaceJarPaths(scriptContent: String, originalName: String, strippedName: String): String {
+            return scriptContent
+                .replace("/lib/$originalName", "/javatools/$strippedName")
+                .replace("\\lib\\$originalName", "\\javatools\\$strippedName")
+        }
+
+        /**
+         * Inject XTC module paths into a generated launcher script.
+         * 
+         * @param scriptContent the original script content
+         * @param scriptName the script name (xcc, xec, etc.)
+         * @param mainClassName the main class name (e.g., org.xvm.tool.Compiler)
+         * @param isWindowsBatch true for .bat files, false for Unix shell scripts
+         * @return modified script content with module paths injected
+         */
+        fun injectXtcModulePaths(
+            scriptContent: String, 
+            scriptName: String, 
+            mainClassName: String, 
+            isWindowsBatch: Boolean
+        ): String {
+            val modulePathArgs = generateXtcModulePathArgs(isWindowsBatch)
+            val mainClassSimple = mainClassName.substringAfterLast('.')
+            
+            val targetPattern = if (isWindowsBatch) {
+                "org.xvm.tool.$mainClassSimple"
+            } else {
+                "        org.xvm.tool.$mainClassSimple \\"
+            }
+            
+            val replacement = if (isWindowsBatch) {
+                "org.xvm.tool.$mainClassSimple $modulePathArgs"
+            } else {
+                "        org.xvm.tool.$mainClassSimple \\\n        $modulePathArgs \\"
+            }
+            
+            return scriptContent.replace(targetPattern, replacement)
+        }
     }
 
     init {
@@ -205,29 +278,10 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         append(project.version)
     }
 
-    fun configScriptFilename(installDir: Provider<Directory>, os: String = getOsName()): RegularFile {
-        val config = when (os) {
-            "macos" -> "cfg_macos.sh"
-            "linux" -> "cfg_linux.sh"
-            "windows" -> "cfg_windows.bat"
-            else -> throw UnsupportedOperationException("Cannot find launcher config script for OS: $os")
-        }
-        return installDir.get().file(config)
-    }
-
     @Suppress("MemberVisibilityCanBePrivate")
     fun launcherFileName(os: String = getOsName(), arch: String = currentArch): String {
         val extension = if (os == "windows") ".exe" else ""
         return "${os}_launcher_$arch$extension"
-    }
-
-    fun resolveLauncherFile(dir: Provider<Directory>, os: String = getOsName(), arch: String = currentArch): RegularFile {
-        return dir.get().file("bin/${launcherFileName(os, arch)}")
-    }
-    
-    // Build for current platform 
-    fun isCurrentPlatform(os: String = getOsName(), arch: String = currentArch): Boolean {
-        return os == getOsName() && arch == currentArch
     }
 
     /*
@@ -239,5 +293,16 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
 
     override fun toString(): String {
         return "$distributionName-$distributionVersion"
+    }
+    
+    /**
+     * Module path configuration for XTC launchers.
+     * Replicates the behavior from os_unux.c lines 84-91 in the native launcher.
+     */
+    data class XtcModulePath(val directory: String, val fileName: String = "") {
+        fun toPath(isWindows: Boolean): String {
+            val separator = if (isWindows) "\\" else "/"
+            return if (fileName.isEmpty()) directory else "$directory$separator$fileName"
+        }
     }
 }

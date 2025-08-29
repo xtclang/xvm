@@ -134,6 +134,8 @@ public abstract class Launcher
             {
             log(Severity.INFO, "JVM version: " + Runtime.version());
             }
+
+            
         checkErrors(fHelp);
 
         if (opts.isVerbose())
@@ -1454,7 +1456,8 @@ public abstract class Launcher
         String gitStatus = org.xvm.asm.BuildInfo.getGitStatus();
         if (!gitCommit.isEmpty())
             {
-            version.append(" [").append(gitCommit.substring(0, Math.min(8, gitCommit.length()))).append("]");
+            // Use full commit ID for better traceability
+            version.append(" [").append(gitCommit).append("]");
             }
         if (!gitStatus.isEmpty())
             {
