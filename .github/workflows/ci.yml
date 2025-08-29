@@ -620,12 +620,62 @@ jobs:
       - name: Test Docker image functionality with compilation and execution
         shell: bash
         run: |
-          # Always use the commit-specific tag to ensure we test the freshly built image from this CI run
-          # This avoids Docker registry caching issues where branch tags might point to stale images
-          IMAGE="${{ env.DOCKER_BASE_IMAGE }}:${{ github.sha }}"
+          # Use commit-specific tag for deterministic testing of the freshly built image
+          COMMIT_IMAGE="${{ env.DOCKER_BASE_IMAGE }}:${{ github.sha }}"
+          IMAGE="$COMMIT_IMAGE"
           
           echo "🧪 Testing Docker image: $IMAGE"
           echo "This tests compilation and execution of XTC programs with different parameters"
+          
+          # Verify we're testing the correct image that was just built in this pipeline
+          echo "🔍 Verifying image matches current CI run..."
+          echo "  Expected commit: ${{ github.sha }}"
+          echo "  Expected branch: ${{ github.ref_name }}"
+          
+          # Check that the commit-tagged image version info matches the current CI context
+          version_output=$(docker run --rm ${IMAGE} xec --version)
+          echo "📋 Commit-tagged image version info:"
+          echo "$version_output"
+          
+          if echo "$version_output" | grep -q "${{ github.sha }}"; then
+            echo "✅ Commit-tagged image contains correct commit SHA: ${{ github.sha }}"
+          else
+            echo "❌ ERROR: Commit-tagged image does not contain expected commit SHA!"
+            echo "Expected: ${{ github.sha }}"
+            echo "Actual version output: $version_output"
+            exit 1
+          fi
+          
+          # For master branch, verify that 'latest' tag points to the same image
+          # For non-master branches, verify that branch tag points to the same image  
+          if [ "${{ needs.compute-docker-tags.outputs.is-master }}" = "true" ]; then
+            echo "🔍 Verifying 'latest' tag for master branch..."
+            BRANCH_IMAGE="${{ env.DOCKER_BASE_IMAGE }}:latest"
+          else
+            echo "🔍 Verifying branch tag for non-master branch..."
+            BRANCH_IMAGE="${{ env.DOCKER_BASE_IMAGE }}:${{ needs.compute-docker-tags.outputs.branch-tag }}"
+          fi
+          
+          branch_version_output=$(docker run --rm ${BRANCH_IMAGE} xec --version)
+          echo "📋 Branch-tagged image version info:"
+          echo "$branch_version_output"
+          
+          if echo "$branch_version_output" | grep -q "${{ github.sha }}"; then
+            if [ "${{ needs.compute-docker-tags.outputs.is-master }}" = "true" ]; then
+              echo "✅ Latest tag contains correct commit SHA: ${{ github.sha }}"
+            else
+              echo "✅ Branch tag '${{ needs.compute-docker-tags.outputs.branch-tag }}' contains correct commit SHA: ${{ github.sha }}"
+            fi
+          else
+            if [ "${{ needs.compute-docker-tags.outputs.is-master }}" = "true" ]; then
+              echo "❌ ERROR: Latest tag does not contain expected commit SHA!"
+            else
+              echo "❌ ERROR: Branch tag '${{ needs.compute-docker-tags.outputs.branch-tag }}' does not contain expected commit SHA!"
+            fi
+            echo "Expected: ${{ github.sha }}"
+            echo "Branch-tagged image version output: $branch_version_output"
+            exit 1
+          fi
           
           # Test launcher versions
           echo "🔧 Testing launchers..."

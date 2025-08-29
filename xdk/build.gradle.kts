@@ -18,8 +18,8 @@ plugins {
     alias(libs.plugins.xtc)
     alias(libs.plugins.versions)
     alias(libs.plugins.sonatype.publish)
-    distribution // TODO: If we turn this into an application plugin instead, we can automatically get third party dependency jars with e.g. javatools resolved.
     application
+    distribution // TODO: If we turn this into an application plugin instead, we can automatically get third party dependency jars with e.g. javatools resolved.
     signing
 }
 
@@ -82,68 +82,130 @@ private fun stripVersionFromJarName(jarName: String): String {
     return jarName.replace(Regex("(.*)\\-${Regex.escape(semanticVersion.artifactVersion)}\\.jar"), "$1.jar")
 }
 
-// Application plugin used only for CreateStartScripts tasks, not for default launcher
+// Configure application plugin to create multiple scripts instead of default single script
+application {
+    applicationName = "xdk"
+    mainClass.set("org.xvm.tool.Compiler") // Will be overridden by individual scripts
+}
+
+// Disable default single script generation
+tasks.startScripts {
+    enabled = false
+}
 
 /**
- * Create simple launcher scripts that call Compiler and Runner directly
+ * Create individual script tasks for xcc and xec with different main classes
  */
+val createXccScript = tasks.register("createXccScript", CreateStartScripts::class) {
+    applicationName = "xcc"
+    mainClass.set("org.xvm.tool.Compiler")
+    outputDir = layout.buildDirectory.dir("scripts/xcc").get().asFile
+    classpath = configurations.xdkJavaTools.get()
+    defaultJvmOpts = buildList {
+        add("-ea")
+        add("-DXDK_HOME=\${XDK_HOME:-\$APP_HOME}")
+        if (getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)) {
+            add("--enable-preview")
+        }
+    }
+    
+    // Declare outputs explicitly
+    outputs.files(File(outputDir, "xcc"), File(outputDir, "xcc.bat"))
+    
+    doLast {
+        // Fix the generated scripts to use renamed jar paths and add XTC module paths
+        listOf(
+            File(outputDir, "xcc"),
+            File(outputDir, "xcc.bat")
+        ).forEach { scriptFile ->
+            if (scriptFile.exists()) {
+                var content = scriptFile.readText()
+                
+                // Replace each jar in the classpath with its version-stripped equivalent
+                configurations.xdkJavaTools.get().forEach { jar ->
+                    val originalName = jar.name
+                    val strippedName = stripVersionFromJarName(originalName)
+                    // Replace lib/ paths with javatools/ paths and strip version
+                    content = content
+                        .replace("/lib/$originalName", "/javatools/$strippedName")
+                        .replace("\\lib\\$originalName", "\\javatools\\$strippedName")
+                }
+                
+                // Add XTC module paths using utility from XdkDistribution
+                content = XdkDistribution.injectXtcModulePaths(
+                    content, "xcc", "org.xvm.tool.Compiler", scriptFile.name.endsWith(".bat")
+                )
+                
+                scriptFile.writeText(content)
+            }
+        }
+    }
+}
+
+val createXecScript = tasks.register("createXecScript", CreateStartScripts::class) {
+    applicationName = "xec" 
+    mainClass.set("org.xvm.tool.Runner")
+    outputDir = layout.buildDirectory.dir("scripts/xec").get().asFile
+    classpath = configurations.xdkJavaTools.get()
+    defaultJvmOpts = buildList {
+        add("-ea")
+        add("-DXDK_HOME=\${XDK_HOME:-\$APP_HOME}")
+        if (getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)) {
+            add("--enable-preview")
+        }
+    }
+    
+    // Declare outputs explicitly
+    outputs.files(File(outputDir, "xec"), File(outputDir, "xec.bat"))
+    
+    doLast {
+        // Fix the generated scripts to use renamed jar paths and add XTC module paths
+        listOf(
+            File(outputDir, "xec"),
+            File(outputDir, "xec.bat")
+        ).forEach { scriptFile ->
+            if (scriptFile.exists()) {
+                var content = scriptFile.readText()
+                
+                // Replace each jar in the classpath with its version-stripped equivalent
+                configurations.xdkJavaTools.get().forEach { jar ->
+                    val originalName = jar.name
+                    val strippedName = stripVersionFromJarName(originalName)
+                    // Replace lib/ paths with javatools/ paths and strip version
+                    content = content
+                        .replace("/lib/$originalName", "/javatools/$strippedName")
+                        .replace("\\lib\\$originalName", "\\javatools\\$strippedName")
+                }
+                
+                // Add XTC module paths using utility from XdkDistribution
+                content = XdkDistribution.injectXtcModulePaths(
+                    content, "xec", "org.xvm.tool.Runner", scriptFile.name.endsWith(".bat")
+                )
+                
+                scriptFile.writeText(content)
+            }
+        }
+    }
+}
+
+// Create scripts directly in distribution-ready location
+val prepareDistributionScripts = tasks.register("prepareDistributionScripts", Copy::class) {
+    dependsOn(createXccScript, createXecScript)
+    from(createXccScript.map { it.outputDir!! }) {
+        include("xcc*")
+    }
+    from(createXecScript.map { it.outputDir!! }) {
+        include("xec*")
+    }
+    into(layout.buildDirectory.dir("distribution-scripts"))
+}
+
+
+// Map of script names for distribution configuration
 val launcherScripts = mapOf(
     "xcc" to "org.xvm.tool.Compiler",
     "xec" to "org.xvm.tool.Runner"
 )
-
-val scriptTasks = launcherScripts.map { (scriptName, mainClassName) ->
-    val taskName = "create${scriptName.replaceFirstChar { it.uppercase() }}Script"
-    taskName to tasks.register(taskName, CreateStartScripts::class) {
-        applicationName = "launch-$scriptName-script"
-        mainClass = mainClassName
-        outputDir = layout.buildDirectory.dir("launcher-scripts").get().asFile
-        // Fix: Use the actual javatools jar, but configure script generation
-        classpath = configurations.xdkJavaTools.get()
-        
-        doLast {
-            // Fix the generated scripts to use renamed jar paths (without version suffix)
-            val scriptFiles = listOf(
-                File(outputDir, "launch-$scriptName-script"),
-                File(outputDir, "launch-$scriptName-script.bat")
-            )
-            
-            scriptFiles.forEach { scriptFile ->
-                if (scriptFile.exists()) {
-                    var content = scriptFile.readText()
-                    
-                    // Replace each jar in the classpath with its version-stripped equivalent
-                    configurations.xdkJavaTools.get().forEach { jar ->
-                        val originalName = jar.name
-                        val strippedName = stripVersionFromJarName(originalName)
-                        // Replace lib/ paths with javatools/ paths and strip version
-                        content = content
-                            .replace("/lib/$originalName", "/javatools/$strippedName")
-                            .replace("\\lib\\$originalName", "\\javatools\\$strippedName")
-                    }
-                    
-                    // Add XTC module paths using utility from XdkDistribution
-                    content = XdkDistribution.injectXtcModulePaths(
-                        content, scriptName, mainClassName, scriptFile.name.endsWith(".bat")
-                    )
-                    
-                    scriptFile.writeText(content)
-                }
-            }
-        }
-        defaultJvmOpts = buildList {
-            add("-ea")
-            // Use XDK_HOME if already set, otherwise default to APP_HOME
-            add("-DXDK_HOME=\${XDK_HOME:-\$APP_HOME}")
-            if (getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)) {
-                add("--enable-preview")
-            }
-        }
-    }
-}.toMap()
-
-val createXccScript = scriptTasks["createXccScript"]!!
-val createXecScript = scriptTasks["createXecScript"]!!
 
 /**
  * Propagate the "version" part of the semanticVersion to all XTC compilers in all subprojects (the XDK modules
@@ -195,8 +257,60 @@ signing {
  */
 distributions {
     main {
-        // Default distribution includes launcher scripts
-        contentSpec(xdkDist.distributionName, xdkDist.distributionVersion, launcherType = LauncherType.Default)
+        // Configure as "xdk" distribution with launcher scripts
+        distributionBaseName = xdkDist.distributionName  // "xdk"
+        version = xdkDist.distributionVersion
+        
+        contents {
+            // Handle potential script duplicates
+            duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+            
+            // Core XDK content
+            val xdkTemplate = tasks.processResources.map {
+                logger.info("$prefix Resolving processResources output (this should be during the execution phase).")
+                File(it.outputs.files.singleFile, "xdk")
+            }
+            from(xdkTemplate) {
+                exclude("**/bin/**")  // Exclude bin directory to avoid conflicts with generated scripts  
+                eachFile {
+                    includeEmptyDirs = false
+                }
+            }
+            
+            // XTC modules
+            from(configurations.xtcModule) {
+                into("lib")
+                exclude(JAVATOOLS_PREFIX_PATTERN) // *.xtc, but not javatools_*.xtc
+            }
+            from(configurations.xtcModule) {
+                into("javatools")
+                include(JAVATOOLS_PREFIX_PATTERN) // only javatools_*.xtc
+            }
+            
+            // Java tools (strip version from jar names)
+            from(configurations.xdkJavaTools) {
+                rename { originalName -> stripVersionFromJarName(originalName) }
+                into("javatools")
+            }
+            
+            // Version file
+            from(tasks.xtcVersionFile)
+            
+            // Include launcher scripts directly in bin/
+            from(prepareDistributionScripts.map { it.destinationDir }) {
+                include("xcc")
+                include("xcc.bat")
+                include("xec")
+                include("xec.bat")
+                into("bin")
+            }
+            
+            // Exclude unwanted files and prevent auto-inclusion of script task outputs
+            exclude("**/scripts/**")  // Exclude any script build directories
+            exclude("**/cfg_*.sh")
+            exclude("**/cfg_*.cmd") 
+            exclude("**/bin/README.md")
+        }
     }
     val withLaunchers by registering {
         contentSpec(xdkDist.distributionName, xdkDist.distributionVersion, xdkDist.osClassifier(), LauncherType.Binaries)
@@ -364,15 +478,7 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, osCl
         exclude("**/bin/README.md")
         when (launcherType) {
             LauncherType.Default -> {
-                // Default distribution includes script launchers
-                launcherScripts.keys.forEach { scriptName ->
-                    from(layout.buildDirectory.dir("launcher-scripts")) {
-                        include("launch-$scriptName-script", "launch-$scriptName-script.bat")
-                        rename("launch-$scriptName-script", scriptName)
-                        rename("launch-$scriptName-script.bat", "$scriptName.bat")
-                        into("bin")
-                    }
-                }
+                // Default distribution includes script launchers - handled by distributions block
             }
             LauncherType.Binaries -> {
                 // Install platform-specific binary launchers that work on the host system
@@ -393,17 +499,9 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, osCl
 // Let the Distribution plugin handle installDist dependencies according to Gradle standards
 
 // Main distribution now includes launcher scripts by default
-val installDist by tasks.existing {
-    dependsOn(createXccScript, createXecScript)
-}
+// Distribution tasks automatically depend on content tasks - no explicit dependencies needed
 
-val distZip by tasks.existing {
-    dependsOn(createXccScript, createXecScript)
-}
-
-val distTar by tasks.existing {
-    dependsOn(createXccScript, createXecScript)
-}
+// Distribution tasks automatically depend on content tasks - no explicit dependencies needed
 
 
 val withLaunchersDistZip by tasks.existing {
