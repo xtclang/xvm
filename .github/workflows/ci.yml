@@ -620,12 +620,9 @@ jobs:
       - name: Test Docker image functionality with compilation and execution
         shell: bash
         run: |
-          # Use the appropriate image tag based on branch
-          if [ "${{ needs.compute-docker-tags.outputs.is-master }}" = "true" ]; then
-            IMAGE="${{ env.DOCKER_BASE_IMAGE }}:latest"
-          else
-            IMAGE="${{ env.DOCKER_BASE_IMAGE }}:${{ needs.compute-docker-tags.outputs.branch-tag }}"
-          fi
+          # Always use the commit-specific tag to ensure we test the freshly built image from this CI run
+          # This avoids Docker registry caching issues where branch tags might point to stale images
+          IMAGE="${{ env.DOCKER_BASE_IMAGE }}:${{ github.sha }}"
           
           echo "🧪 Testing Docker image: $IMAGE"
           echo "This tests compilation and execution of XTC programs with different parameters"
