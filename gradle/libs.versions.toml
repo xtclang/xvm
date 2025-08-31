@@ -29,7 +29,6 @@ rewrite-lib = "1.3.1"
 jline="3.30.4"
 ktlint = "12.1.1"
 junit = "5.13.1"
-git-properties = "2.4.2"
 
 [plugins]
 xtc = { id = "org.xtclang.xtc-plugin", version.ref = "xtc-plugin" }
@@ -43,7 +42,6 @@ versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
 gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-portal-publish" }
 sonatype-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "sonatype-publish" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
-git-properties = { id = "com.gorylenko.gradle-git-properties", version.ref = "git-properties" }
 
 [libraries]
 xdk = { group = "org.xtclang", name = "xdk", version.ref = "xdk" }

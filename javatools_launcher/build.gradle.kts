@@ -17,7 +17,7 @@ plugins {
 
 val launcherExecutableDir = layout.projectDirectory.dir("src/main/resources/exe")
 
-val processResources by tasks.registering(Copy::class) {
+val processLauncherResources by tasks.registering(Copy::class) {
     from(files(launcherExecutableDir))
     // TODO: This may cause a warning in IDEA with non-delegated compilation, but it is safe.
     //   "Cannot resolve resource filtering of . IDEA may fail to build project. Consider using delegated build (enabled by default)."
@@ -30,7 +30,7 @@ val processResources by tasks.registering(Copy::class) {
 }
 
 val assemble by tasks.existing {
-    dependsOn(processResources)
+    dependsOn(processLauncherResources)
     doLast {
         logger.info("$prefix Finished assembling launcher resources into Gradle build.")
     }
@@ -39,5 +39,5 @@ val assemble by tasks.existing {
 val xtcLauncherBinaries by configurations.registering {
     isCanBeResolved = false
     isCanBeConsumed = true
-    outgoing.artifact(processResources)
+    outgoing.artifact(processLauncherResources)
 }

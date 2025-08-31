@@ -1,0 +1,84 @@
+name: 'Update Homebrew Tap'
+description: 'Updates the XVM Homebrew tap with a new XDK release'
+inputs:
+  xdk_version:
+    description: 'XDK version (e.g., 0.4.4-SNAPSHOT)'
+    required: true
+  commit_sha:
+    description: 'Full commit SHA for version qualification'
+    required: true
+  java_version:
+    description: 'Java version for Homebrew dependency (e.g., 21, 24)'
+    required: true
+  xdk_zip_name:
+    description: 'Name of the XDK zip file to upload'
+    required: true
+  homebrew_tap_token:
+    description: 'GitHub token with access to homebrew-xvm repo'
+    required: true
+  homebrew_tap_branch:
+    description: 'Branch to use in homebrew-xvm repo'
+    required: false
+    default: 'master'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Update Homebrew formula
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.homebrew_tap_token }}
+      run: |
+        # Download the XDK zip from snapshot release
+        echo "📥 Downloading XDK from snapshot release for SHA256 calculation..."
+        gh release download xdk-latest-snapshot --pattern "${{ inputs.xdk_zip_name }}"
+        
+        # Store commit info for reuse
+        BUILD_COMMIT_SHA="${{ inputs.commit_sha }}"
+        XDK_VERSION="${{ inputs.xdk_version }}"
+        
+        echo "📦 Snapshot release built from commit:"
+        echo "   Version: $XDK_VERSION"
+        echo "   Commit: $BUILD_COMMIT_SHA"
+        echo "   Repository: https://github.com/xtclang/xvm/commit/$BUILD_COMMIT_SHA"
+        
+        # Clone the homebrew tap repo
+        HOMEBREW_TAP_BRANCH="${{ inputs.homebrew_tap_branch }}"
+        echo "🍺 Using Homebrew tap branch: $HOMEBREW_TAP_BRANCH"
+        
+        git clone https://oauth2:${{ inputs.homebrew_tap_token }}@github.com/xtclang/homebrew-xvm.git tap
+        cd tap && git checkout "$HOMEBREW_TAP_BRANCH"
+        
+        # Use timestamp for dynamic versioning - ensures brew upgrade works correctly
+        # Format: YYYYMMDDHHMMSS for proper version comparison
+        BUILD_TIMESTAMP=$(date -u +%Y%m%d%H%M%S)
+        DYNAMIC_VERSION="$XDK_VERSION.$BUILD_TIMESTAMP"
+        
+        # Create GitHub release URL for the snapshot zip file
+        RELEASE_URL="https://github.com/xtclang/xvm/releases/download/xdk-latest-snapshot/${{ inputs.xdk_zip_name }}"
+        
+        # Get SHA256 from the downloaded zip file
+        SHA256=$(sha256sum ../${{ inputs.xdk_zip_name }} | cut -d' ' -f1)
+        
+        # Update the Homebrew formula using template
+        cp "${GITHUB_WORKSPACE}/.github/scripts/xdk-latest.rb.template" Formula/xdk-latest.rb
+        sed -i.bak \
+          -e "s|{{RELEASE_URL}}|$RELEASE_URL|g" \
+          -e "s|{{DYNAMIC_VERSION}}|$DYNAMIC_VERSION|g" \
+          -e "s|{{SHA256}}|$SHA256|g" \
+          -e "s|{{JAVA_VERSION}}|${{ inputs.java_version }}|g" \
+          Formula/xdk-latest.rb
+        rm Formula/xdk-latest.rb.bak
+        
+        # Commit and push changes
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add Formula/xdk-latest.rb
+        git commit -m "Update XDK to $DYNAMIC_VERSION (commit: $BUILD_COMMIT_SHA)"
+        git push
+        
+        echo "✅ Homebrew tap updated to version $DYNAMIC_VERSION"
+
+branding:
+  icon: 'package'
+  color: 'orange'

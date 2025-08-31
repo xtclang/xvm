@@ -39,7 +39,7 @@ ARG DIST_ZIP_URL
 
 ENV JAVA_OPTS="-XX:+UseContainerSupport" \
     GRADLE_USER_HOME="/root/.gradle" \
-    GRADLE_OPTS="-Dorg.gradle.daemon=false" \
+    GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=${NPROC} -Dorg.gradle.vfs.watch=false -Dorg.gradle.configureondemand=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dkotlin.compiler.execution.strategy=in-process -Dorg.gradle.project.git.properties.enabled=false" \
     NPROC=${NPROC} \
     XDK_INSTALL_DIR="/workspace/xdk/build/install"
 
@@ -48,6 +48,7 @@ WORKDIR /workspace
 
 # Copy source and build script
 COPY --from=source-cloner /source .
+COPY --from=source-cloner /tmp/git-info.env /tmp/git-info.env
 COPY scripts/build-xdk.sh /build-xdk.sh
 # Copy CI distribution if it exists (optional - for CI builds)  
 COPY ci-dist.zi[p] /workspace/
@@ -59,30 +60,10 @@ RUN --mount=type=cache,target=/root/.gradle/caches,sharing=locked \
     chmod +x /build-xdk.sh && \
     /build-xdk.sh
 
-# *** STAGE 5 (Native Launcher Builder - ensures compatibility with target runtime)
-FROM alpine:latest AS launcher-builder
-ARG TARGETARCH
-ARG TARGETOS
+# Native launcher build stages removed - we now use script launchers from the distribution
+# This simplifies the build and ensures script/native launcher consistency
 
-# Install build tools for C compilation
-RUN apk add --no-cache gcc musl-dev make
-
-WORKDIR /launcher-build
-COPY --from=source-cloner /source .
-
-# Build the native launcher from C source for the container's architecture
-RUN echo "🔧 Building native launcher for ${TARGETOS}/${TARGETARCH} (musl libc)" && \
-    cd javatools_launcher/src/main/c && \
-    gcc -static -O2 -o launcher launcher.c os_linux.c os_unux.c && \
-    echo "✅ Launcher build complete" && \
-    ls -la launcher
-
-# *** STAGE 6 (Export stage to copy launcher to host filesystem)
-FROM scratch AS launcher-export
-# Copy the container-built launcher
-COPY --from=launcher-builder /launcher-build/javatools_launcher/src/main/c/launcher /
-
-# *** STAGE 7 (Final Runtime Image)
+# *** STAGE 5 (Final Runtime Image)
 FROM bellsoft/liberica-runtime-container:jre-21-slim-musl
 
 ENV XDK_HOME=/opt/xdk
@@ -94,11 +75,14 @@ COPY --from=builder /workspace/xdk/ /opt/xdk/
 # Copy Docker test program
 COPY test/DockerTest.x /opt/xdk/test/
 
-# Copy container-built native launcher (overwrites any pre-built launchers)
-COPY --from=launcher-builder /launcher-build/javatools_launcher/src/main/c/launcher /opt/xdk/bin/xec
-COPY --from=launcher-builder /launcher-build/javatools_launcher/src/main/c/launcher /opt/xdk/bin/xcc
-
-# Ensure launchers are executable
-RUN chmod +x /opt/xdk/bin/xec /opt/xdk/bin/xcc
+# Script launchers are already present from the distribution and should be working
+# No need to overwrite with native launchers - let's test the script launchers!
+RUN echo "✅ Using script launchers from distribution" && \
+    chmod +x /opt/xdk/bin/xcc /opt/xdk/bin/xec && \
+    ls -la /opt/xdk/bin/ && \
+    echo "📋 Testing script launcher functionality..." && \
+    /opt/xdk/bin/xcc --version && \
+    /opt/xdk/bin/xec --version && \
+    echo "✅ Script launchers are working correctly!"
 
 CMD ["xec"]

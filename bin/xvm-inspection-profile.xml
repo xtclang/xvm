@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<profile version="1.0">
+  <option name="myName" value="NoTypos" />
+  <option name="myDescription" value="Default inspection profile with typos/spelling checks disabled" />
+  <inspection_tool class="SpellCheckingInspection" enabled="false" level="TYPO" enabled_by_default="true" />
+</profile>

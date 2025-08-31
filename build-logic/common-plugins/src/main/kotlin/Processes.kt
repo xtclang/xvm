@@ -29,7 +29,7 @@ data class ProcessResult(val execResult: Pair<Int, String>, val failure: Throwab
     }
 }
 
-fun spawn(command: String, vararg args: String, env: Map<String, String> = emptyMap(), workingDir: File? = null, throwOnError: Boolean = true, logger: Logger? = null): ProcessResult {
+fun spawn(command: String, vararg args: String, env: Map<String, String> = emptyMap(), workingDir: File? = null, throwOnError: Boolean = true, logger: Logger? = null, redirectErrorStream: Boolean = true): ProcessResult {
     fun InputStream.readTextAndClose(charset: Charset = Charsets.UTF_8): String {
         return this.bufferedReader(charset).use { it.readText() }
     }
@@ -50,7 +50,7 @@ fun spawn(command: String, vararg args: String, env: Map<String, String> = empty
 
     val commandPath = pathFor(command)
     val commandLine = listOf(commandPath, *args)
-    val builder = ProcessBuilder(commandLine).redirectErrorStream(true)
+    val builder = ProcessBuilder(commandLine).redirectErrorStream(redirectErrorStream)
 
     // Add environment variables if provided
     env.forEach { (key, value) ->

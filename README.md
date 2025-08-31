@@ -41,32 +41,226 @@ Find out more about [how you can contribute to Ecstasy](CONTRIBUTING.md).
 
 And please respect our [code of conduct](CODE_OF_CONDUCT.md) and each other.
 
-## Binary Installation
+## Installation Options
 
-For **macOS** and **Linux**:
+### Package Managers (Recommended for Development)
 
-1. If you do not already have the `brew` command available, install [Homebrew](https://brew.sh/)
+**Homebrew (macOS/Linux) - CI Snapshots:**
 
-2. Add a "tap" to access the XDK CI builds, and install the latest XDK CI build:
+Homebrew provides continuously updated `xdk-latest` builds from our CI pipeline:
 
-```
+```bash
+# Install Homebrew if not available: https://brew.sh/
 brew tap xtclang/xvm && brew install xdk-latest
-```
-
-3. To upgrade to the latest XDK CI build at any time:
-
-```
+# Upgrade to latest CI build:
 brew update && brew upgrade xdk-latest
 ```
 
-For **Windows**:
+Note: Homebrew delivers CI snapshots for development. Each snapshot gets a unique timestamp-based version (e.g., `0.4.4-SNAPSHOT.20250831181403`) ensuring `brew upgrade` detects newer builds correctly. Stable releases will be available through other package managers.
 
-* Visit [http://xtclang.org/xdk-latest.html](http://xtclang.org/xdk-latest.html) to download a
-  Windows installer for the latest XDK build
+#### How Snapshot Releases Work
+
+Our CI system maintains a single, continuously updated snapshot release:
+
+- **Release Name**: `XDK Latest Snapshot`  
+- **GitHub Tag**: `xdk-latest-snapshot`
+- **Download URL**: `https://github.com/xtclang/xvm/releases/download/xdk-latest-snapshot/xdk-0.4.4-SNAPSHOT.zip`
+
+**Automatic Overwrite Process:**
+1. Every push to `master` triggers the CI pipeline
+2. The existing `xdk-latest-snapshot` release is **completely deleted**
+3. A new release with the same tag is created with the latest build
+4. The Homebrew formula gets dynamic versioning: `0.4.4-SNAPSHOT.{commitSHA}`
+
+This ensures:
+- ✅ Only **one** snapshot release exists (never accumulates old releases)
+- ✅ Download URL remains consistent for automation
+- ✅ `brew update` works correctly due to commit-qualified versioning
+- ✅ Always reflects the latest master commit
+
+#### Snapshots vs. Stable Releases
+
+**Current Status**: XTC is currently in active development using snapshot versioning (e.g., `0.4.4-SNAPSHOT`). 
+
+**Snapshots in Maven Ecosystem**:
+- **Snapshots** (`*-SNAPSHOT`) are development builds that can change frequently
+- Maven/Gradle automatically checks for newer snapshot versions during builds
+- Intended for active development, testing, and CI/CD pipelines
+- Not suitable for production use due to changing behavior
+
+**Stable Releases** (coming soon):
+- **Fixed versions** (e.g., `0.5.0`, `1.0.0`) are immutable once published
+- Provide stability guarantees and semantic versioning
+- Cached permanently by build systems - no automatic updates
+- Suitable for production applications
+
+**Next Release Timeline**: We will publish the next non-snapshot version of XTC as soon as all build infrastructure updates are complete. This will mark the transition from active development snapshots to stable, production-ready releases with proper semantic versioning.
+
+#### CI/CD Pipeline and Homebrew Integration
+
+Our continuous integration system automatically maintains the Homebrew tap to ensure developers always have access to the latest XDK builds.
+
+**Pipeline Overview**:
+1. **Build & Test**: On every push to `master`, CI builds and verifies the XDK across multiple platforms
+2. **Snapshot Release**: Creates/updates the `xdk-latest-snapshot` GitHub release with the XDK distribution ZIP  
+3. **Homebrew Update**: Automatically updates the [xtclang/homebrew-xvm](https://github.com/xtclang/homebrew-xvm) tap with the new release
+4. **Docker Images**: Builds and pushes multi-platform Docker images to `ghcr.io/xtclang/xvm`
+
+**Homebrew Tap Automation**:
+
+The CI pipeline automatically maintains the Homebrew formula in the [xtclang/homebrew-xvm](https://github.com/xtclang/homebrew-xvm) repository:
+
+- **Formula Path**: `Formula/xdk-latest.rb` 
+- **Auto-generated**: Version, SHA256, download URL are computed automatically
+- **Java Dependency**: Dynamically sourced from `xdk.properties` (`org.xtclang.java.jdk=21`)
+- **Branch Configuration**: Controlled by GitHub variable `HOMEBREW_TAP_BRANCH` (currently: `lagergren/brew-tap`)
+
+**For Maintainers**:
+
+The target branch for Homebrew updates can be configured using a GitHub repository variable:
+
+```bash
+# Set the target branch (requires repo admin access)
+gh variable set HOMEBREW_TAP_BRANCH --body "master"
+
+# Or set to a development branch for testing
+gh variable set HOMEBREW_TAP_BRANCH --body "feature-branch"
+
+# View current setting  
+gh variable list
+```
+
+If `HOMEBREW_TAP_BRANCH` is not set, it defaults to `master`. The CI workflow logs the target branch: `"🍺 Using Homebrew tap branch: <branch>"`.
+
+**CI Workflow Location**: See `.github/workflows/ci.yml` and `.github/actions/update-homebrew-tap/` for the complete automation logic.
+
+*Last updated: 2025-08-25*
+
+**Windows:**
+
+* Visit [http://xtclang.org/xdk-latest.html](http://xtclang.org/xdk-latest.html) for Windows installer
+
+### Docker Container
+
+Use the official XDK Docker image for development or CI:
+
+```bash
+# Run XDK commands in container
+docker run --rm -v $(pwd):/workspace xtclang/xdk:latest xcc /workspace/MyModule.x
+docker run --rm -v $(pwd):/workspace xtclang/xdk:latest xec /workspace/MyModule
+
+# Interactive development shell
+docker run -it --rm -v $(pwd):/workspace xtclang/xdk:latest bash
+```
+
+**Platform Support**: The XDK Docker image is a Linux-based multiplatform image supporting both `linux/amd64` and `linux/arm64` architectures. This covers all modern hardware:
+
+- **macOS**: Runs natively on Apple Silicon (arm64) and Intel Macs (amd64)
+- **Windows**: Runs via WSL2 on both Intel/AMD (amd64) and ARM processors 
+- **Linux**: Runs natively on x86_64 and ARM64 systems
+
+Docker automatically selects the native platform matching your CPU architecture for optimal performance. In rare cases where native support isn't available, Docker will use QEMU emulation (which will be slower but functional).
+
+**Podman Compatibility**: You can use Podman as a drop-in replacement for Docker - just replace `docker` with `podman` in any of the above commands.
+
+**VSCode Devcontainer:**
+
+Create `.devcontainer/devcontainer.json` in your project:
+
+```json
+{
+  "name": "XTC Development",
+  "image": "xtclang/xdk:latest",
+  "workspaceFolder": "/workspace",
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.vscode-json"
+      ]
+    }
+  },
+  "postCreateCommand": "echo 'XDK ready for development'"
+}
+```
+
+**IntelliJ IDEA Docker Integration:**
+
+IntelliJ IDEA provides Docker integration but doesn't use devcontainers directly. Instead, you can:
+
+1. **Docker Plugin**: Install the Docker plugin in IntelliJ IDEA
+2. **Docker Run Configuration**: Create a run configuration using the XDK Docker image:
+   - Image: `xtclang/xdk:latest`
+   - Bind mounts: Map your project directory to `/workspace`
+   - Working directory: `/workspace`
+3. **Docker Compose** (alternative): Create a `docker-compose.yml`:
+   ```yaml
+   version: '3.8'
+   services:
+     xdk-dev:
+       image: xtclang/xdk:latest
+       volumes:
+         - .:/workspace
+       working_dir: /workspace
+       stdin_open: true
+       tty: true
+   ```
+   Then use IntelliJ's Docker Compose integration to run and attach to the container.
+
+**Note**: IntelliJ's Docker support is more manual compared to VSCode's seamless devcontainer experience, but provides similar containerized development capabilities.
+
+### Maven Artifacts and IDE Integration
+
+**For Most Developers:** Use the XTC Gradle plugin in your IDE instead of command-line tools:
+
+```kotlin
+// In your build.gradle.kts
+plugins {
+    id("org.xtclang.xtc") version "0.4.4-SNAPSHOT"
+}
+```
+
+**Maven Repository Access:**
+
+```kotlin
+repositories {
+    // For snapshots and releases (current)
+    maven {
+        url = uri("https://maven.pkg.github.com/xtclang/xvm")
+        credentials {
+            username = System.getenv("GITHUB_USERNAME")
+            password = System.getenv("GITHUB_TOKEN") // needs read:packages scope
+        }
+    }
+    // For local development builds
+    mavenLocal()
+    // Maven Central (coming soon - will eliminate need for GitHub credentials)
+    mavenCentral()
+}
+```
+
+**Future Repository Access:** We plan to publish Maven artifacts to Maven Central (Sonatype OSSRH), which will eliminate the need for GitHub user/token configuration. This will make XDK artifacts available through standard Maven Central without authentication.
+
+**Gradle Plugin Portal:** The XTC language plugin is published to the [Gradle Plugin Portal](https://plugins.gradle.org/) and we're moving toward continuous publication of plugin updates. This means you can use the plugin without any special repository configuration:
+
+```kotlin
+// No special repositories needed - fetched from Gradle Plugin Portal
+plugins {
+    id("org.xtclang.xtc") version "0.4.4-SNAPSHOT"
+}
+```
+
+The plugin handles all XDK dependencies automatically - most XTC developers won't need the command-line tools.
 
 Manual local build for **any computer** (for advanced users):
 
-* Install Java (version 17 or later) and Gradle
+* **Bootstrap JVM**: Any Java 8+ to run the Gradle wrapper (just to bootstrap the build)
+* **Target JDK**: Gradle toolchain automatically provisions the correct JDK version for building XTC
+* **Gradle**: Not required to be pre-installed (project includes Gradle Wrapper)
+
+The build system uses Gradle's toolchain support to automatically download and configure the exact JDK version needed for compilation, so you only need a basic Java installation to get started.
 
 * Use `git` to obtain the XDK:
 
@@ -81,6 +275,8 @@ Manual local build for **any computer** (for advanced users):
   ./gradlew build
 ```
 
+**Note:** The Gradle build system uses a toolchain to automatically download and configure the correct Java version if it's not already installed. No manual Java installation is typically required.
+
 ## Gradle Build Tasks and XDK Setup
 
 The XVM project uses Gradle for building and distribution management. Understanding the different build tasks and installation options is essential for development and deployment.
@@ -89,50 +285,94 @@ The XVM project uses Gradle for building and distribution management. Understand
 
 - **`./gradlew build`** - Executes the complete build lifecycle including compilation, testing, and packaging. This creates all XDK components but doesn't install them locally.
 
-- **`./gradlew installDist`** - Installs the basic XDK distribution to `xdk/build/install/xdk/`. This creates a complete XDK installation without executable launchers in the `bin/` directory.
+- **`./gradlew xdk:installDist`** - Installs the complete XDK distribution to `xdk/build/install/xdk/` with cross-platform shell script launchers (`xec`, `xcc`) ready to use immediately. This is the recommended installation method for development.
 
-### Distribution Tasks with Launchers
+### Distribution Tasks
 
-The project provides three main distribution variants, each available as both installation and archive tasks:
+The project provides two main distribution variants:
 
 #### Installation Tasks (creates local installations):
 
-1. **`./gradlew installDist`** - Basic installation without launchers (default)
+1. **`./gradlew xdk:installDist`** - **Recommended** default installation with cross-platform shell script launchers
+   - **Output**: `xdk/build/install/xdk/` 
+   - **Contents**: Cross-platform script launchers (`xec`, `xcc`, `xec.bat`, `xcc.bat`)
+   - **Ready to use**: Just add `bin/` to your PATH - no configuration needed
 
-2. **`./gradlew xdk:installWithLaunchersDist`** - Installs XDK with platform-specific native binary launchers (`xec`, `xcc`) in the `bin/` directory. These are optimized for the current platform.
+2. **`./gradlew xdk:installWithLaunchersDist`** - Platform-specific native binary launchers
+   - **Output**: `xdk/build/install/xdk-native-{os}_{arch}/` (e.g., `xdk-native-linux_amd64/`)
+   - **Contents**: Platform-specific native binary launchers (`xec`, `xcc`)  
+   - **Ready to use**: Just add `bin/` to your PATH - no configuration needed
 
-3. **`./gradlew xdk:installWithLauncherScriptsDist`** - Installs XDK with cross-platform shell script launchers in the `bin/` directory. These scripts work across different operating systems but require the correct Java classpath setup.
 
 #### Archive Tasks (creates distributable archives):
 
-1. **`./gradlew distZip`** / **`./gradlew distTar`** - Creates archived versions of the basic installation (without launchers) in `xdk/build/distributions/`
+1. **`./gradlew xdk:distZip`** / **`./gradlew xdk:distTar`** - **Recommended** default archives with cross-platform script launchers
+   - **Output**: `xdk-{version}.zip` / `xdk-{version}.tar.gz`
+   - **Contents**: Cross-platform script launchers (`xec`, `xcc`, `xec.bat`, `xcc.bat`)
+   - **Ready to use**: Extract and add `bin/` to PATH
 
-2. **`./gradlew xdk:withLaunchersDistZip`** / **`./gradlew xdk:withLaunchersDistTar`** - Creates archived versions with native binary launchers
+2. **`./gradlew xdk:withLaunchersDistZip`** / **`./gradlew xdk:withLaunchersDistTar`** - Platform-specific native binary launchers  
+   - **Output**: `xdk-{version}-native-{os}_{arch}.zip` / `xdk-{version}-native-{os}_{arch}.tar.gz`
+   - **Contents**: Platform-specific native launchers (`xec`, `xcc`)
+   - **Ready to use**: Extract and add `bin/` to PATH
 
-3. **`./gradlew xdk:withLauncherScriptsDistZip`** / **`./gradlew xdk:withLauncherScriptsDistTar`** - Creates archived versions with shell script launchers
+
+#### Distribution Differences
+
+**Default Distribution** (`installDist`, `distZip`, `distTar`):
+- ✅ Cross-platform shell script launchers (`xec`, `xcc`, `xec.bat`, `xcc.bat`)
+- ✅ Ready to use immediately - just add `bin/` to your PATH
+- ✅ **Recommended for all users**
+
+**Native Launcher Distribution** (`withLaunchers*`):
+- ✅ Platform-specific native binary launchers (`xec`, `xcc`)  
+- ✅ Ready to use immediately - just add `bin/` to your PATH
+- ℹ️ **Alternative for specific platform requirements**
 
 The archive tasks produce the same XDK installation content as their corresponding installation tasks, but package them as ZIP and tar.gz files in the `xdk/build/distributions/` directory. These archives are suitable for distribution and deployment to other systems.
+
+**Example archive filenames** (for version `0.4.4-SNAPSHOT`):
+- `xdk-0.4.4-SNAPSHOT.zip` - **Default**: Cross-platform script launchers  
+- `xdk-0.4.4-SNAPSHOT-native-macos_arm64.zip` - macOS ARM64 native launchers
 
 ### Quick Development Setup
 
 For developers who want a working XDK installation on their local machine:
 
-1. **Build and install with launchers:**
+1. **Build and install:**
    ```bash
-   ./gradlew xdk:installWithLauncherScriptsDist
+   ./gradlew xdk:installDist
    ```
 
 2. **Add the XDK bin directory to your PATH:**
    ```bash
+   # Default installation with script launchers (recommended):
    export PATH="/path/to/xvm/xdk/build/install/xdk/bin:$PATH"
+   
+   # Alternative: Platform-specific binary launchers (adjust {os}_{arch} as needed):
+   export PATH="/path/to/xvm/xdk/build/install/xdk-native-linux_amd64/bin:$PATH"
    ```
 
 3. **Set XDK_HOME environment variable:**
    ```bash
+   # Default installation (recommended):
    export XDK_HOME="/path/to/xvm/xdk/build/install/xdk"
+   
+   # Alternative: Platform-specific binary launchers (adjust {os}_{arch} as needed):
+   export XDK_HOME="/path/to/xvm/xdk/build/install/xdk-native-linux_amd64"
    ```
 
-**Note:** If you use the launcher installation tasks (`installWithLaunchersDist` or `installWithLauncherScriptsDist`), there's no need to run the platform-specific configuration scripts (`cfg_macos.sh`, `cfg_linux.sh`) that you may find in some documentation. These scripts are only needed when working with basic XDK distributions that don't include pre-configured launchers.
+**Tip for Local Development:** You can create a symlink from your home directory to simplify path management:
+```bash
+# Recommended for development:
+ln -sf "/path/to/xvm/xdk/build/install/xdk" ~/xdk-latest
+export PATH="~/xdk-latest/bin:$PATH"
+export XDK_HOME="~/xdk-latest"
+```
+
+This approach shouldn't be controversial since production installations are handled by package managers anyway.
+
+**Important:** The default `installDist` task creates a complete, self-contained XDK installation with proper classpath configuration and ready-to-use launchers. There's no need to run platform-specific configuration scripts like `cfg_macos.sh` - these are legacy approaches that have been superseded by the current Gradle-based distribution system.
 
 ### Environment Configuration
 
@@ -557,14 +797,11 @@ pipeline can very likely handle this automatically.
 
 ## Bleeding Edge for Developers
 
-If you would like to contribute to the Ecstasy Project, it might be an idea to use the
-very latest version by invoking:
+If you would like to contribute to the Ecstasy Project, use the latest development version by building and installing locally:
 
 ```
-./gradlew installLocalDist
+./gradlew xdk:installDist
 ```
-
-**Note:** The `installLocalDist` task is deprecated. Use the installation tasks documented in the "Gradle Build Tasks and XDK Setup" section above instead.
 
 *Note*: this would be done after installing the XDK via `brew`, or through any other installation
 utility, depending on your platform. This will overwrite several libraries and files in any

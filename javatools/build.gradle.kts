@@ -8,10 +8,33 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.xdk.build.java)
-    alias(libs.plugins.git.properties)
 }
 
 private val semanticVersion: SemanticVersion by extra
+
+val processResources by tasks.existing {
+    // Make the task depend on environment variables so Gradle knows when to re-run it
+    inputs.property("GH_COMMIT", providers.environmentVariable("GH_COMMIT").orElse(""))
+    inputs.property("GH_BRANCH", providers.environmentVariable("GH_BRANCH").orElse("master"))
+    inputs.property("version", version)
+    
+    outputs.file(layout.buildDirectory.file("generated/resources/main/git.properties"))
+    
+    doFirst {
+        logger.info(">>> GENERATING GIT PROPERTIES")
+        val gitProtocol = GitHubProtocol(project)
+        val props = gitProtocol.getGitInfo().toMutableMap()
+        props["git.build.version"] = version.toString()
+        logger.info("Calculated git properties: $props")
+        val gitPropsFile = layout.buildDirectory.file("generated/resources/main/git.properties").get().asFile
+        logger.info("Writing git properties file: ${gitPropsFile.absolutePath}")
+        logger.debug("  Parent dir exists: ${gitPropsFile.parentFile.exists()}")
+        gitPropsFile.parentFile.mkdirs()
+        logger.debug("  Parent dir exists after mkdirs: ${gitPropsFile.parentFile.exists()}")
+        gitPropsFile.writeText(props.map { "${it.key}=${it.value}" }.joinToString("\n"))
+        logger.info("Git configuration properties:: ${gitPropsFile.readText()}")
+    }
+}
 
 // TODO: Move these to common-plugins, the XDK composite build does use them in some different places.
 val xdkJavaToolsProvider by configurations.registering {
@@ -63,23 +86,23 @@ val copyEcstasyResources by tasks.registering(Copy::class) {
 
 val generateBuildInfo by tasks.registering {
     description = "Generate build-info.properties with version and git information"
+    dependsOn(processResources)
     
     val versionPropsFile = compositeRootProjectDirectory.file("version.properties")
-    val outputFile = layout.buildDirectory.file("generated/resources/main/build-info.properties")
+    val outputFile = layout.buildDirectory.file("resources/main/build-info.properties")
     val gitPropsFile = layout.buildDirectory.file("resources/main/git.properties")
     
     inputs.file(versionPropsFile)
     inputs.file(gitPropsFile).optional()
     outputs.file(outputFile)
     
-    dependsOn(tasks.named("generateGitProperties"))
     
     doLast {
         // Read version properties as base
         val buildInfo = Properties()
         versionPropsFile.asFile.inputStream().use { buildInfo.load(it) }
         
-        // Add git information from git.properties if available
+        // Add git information from git.properties
         if (gitPropsFile.get().asFile.exists()) {
             val gitProps = Properties()
             gitPropsFile.get().asFile.inputStream().use { gitProps.load(it) }
@@ -108,7 +131,7 @@ sourceSets {
 }
 
 tasks.processResources {
-    dependsOn(copyEcstasyResources, generateBuildInfo)
+    dependsOn(copyEcstasyResources)
 }
 
 /**
@@ -130,6 +153,7 @@ val syncDependencies by tasks.registering(Sync::class) {
 }
 
 val jar by tasks.existing(Jar::class) {
+    dependsOn(processResources, generateBuildInfo)
     inputs.property("manifestSemanticVersion") {
         semanticVersion.toString()
     }

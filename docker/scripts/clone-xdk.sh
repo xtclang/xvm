@@ -15,12 +15,12 @@ readonly GH_COMMIT="${2:-${GH_COMMIT:-}}"
 readonly CACHE_DIR="${CACHE_DIR:-/git-cache/xvm}"
 readonly GITHUB_REPO="xtclang/xvm"
 
-# Logging functions
-log_info() { echo "🔄 $*"; }
-log_success() { echo "✅ $*"; }
-log_cache() { echo "📁 $*"; }
-log_warning() { echo "⚠️ $*"; }
-log_error() { echo "❌ ERROR: $*"; }
+# Logging functions - all output to stderr to avoid contaminating return values
+log_info() { echo "🔄 $*" >&2; }
+log_success() { echo "✅ $*" >&2; }
+log_cache() { echo "📁 $*" >&2; }
+log_warning() { echo "⚠️ $*" >&2; }
+log_error() { echo "❌ ERROR: $*" >&2; }
 
 # Ultra-fast source download using GitHub API (NO GIT OPERATIONS)
 download_github_tarball() {
@@ -47,7 +47,7 @@ resolve_commit_hash() {
     
     command -v curl >/dev/null || { echo "unknown"; return 0; }
     
-    log_info "Resolving commit hash for '$target_ref' via GitHub API"
+    log_info "Resolving commit hash for '$target_ref' via GitHub API" >&2
     # URL-encode the ref to handle branch names with special characters like slashes
     local encoded_ref=$(printf "%s" "$target_ref" | sed 's|/|%2F|g')
     local api_url="https://api.github.com/repos/$GITHUB_REPO/commits/$encoded_ref"
@@ -57,7 +57,7 @@ resolve_commit_hash() {
     
     [[ -n "$commit_hash" ]] && { echo "$commit_hash"; return 0; }
     
-    log_warning "Could not resolve commit hash for '$target_ref'"
+    log_warning "Could not resolve commit hash for '$target_ref'" >&2
     echo "unknown"
 }
 
@@ -88,18 +88,19 @@ use_cache() {
     log_cache "Using valid cache for branch '$GH_BRANCH'"
     cp -r "$CACHE_DIR/." .
     
-    # Get cached commit for consistency
+    # Get cached commit for consistency - return only the clean commit hash
     local cache_info="$CACHE_DIR/.cache-info"
     [[ -f "$cache_info" ]] && {
         local cached_commit
         cached_commit=$(grep "^COMMIT=" "$cache_info" 2>/dev/null | cut -d= -f2-)
-        [[ -n "$cached_commit" ]] && echo "$cached_commit"
+        # Ensure we only return the full 40-character commit hash, no emoji or log text
+        [[ -n "$cached_commit" ]] && echo "$cached_commit" | grep -oE '^[a-f0-9]{40}$' | head -1
     }
 }
 
 # Fresh source fetch - TARBALL ONLY, NO GIT OPERATIONS
 fresh_fetch() {
-    log_info "Fetching fresh source via GitHub API"
+    log_info "Fetching fresh source via GitHub API" >&2
     
     local target_ref actual_commit
     
@@ -107,19 +108,20 @@ fresh_fetch() {
     if [[ -n "$GH_COMMIT" ]]; then
         target_ref="$GH_COMMIT"
         actual_commit="$GH_COMMIT"
-        log_info "Using specific commit: $actual_commit"
+        log_info "Using specific commit: $actual_commit" >&2
     else
         target_ref="$GH_BRANCH" 
         actual_commit=$(resolve_commit_hash "$GH_BRANCH")
-        log_info "Resolved branch '$GH_BRANCH' to commit: $actual_commit"
+        log_info "Resolved branch '$GH_BRANCH' to commit: $actual_commit" >&2
     fi
     
     # Download tarball
     download_github_tarball "$target_ref" "$([ -n "$GH_COMMIT" ] && echo "commit $target_ref" || echo "branch $target_ref")" || {
-        log_error "Failed to download source from GitHub API"
+        log_error "Failed to download source from GitHub API" >&2
         exit 1
     }
     
+    # Return only the clean commit hash - no emojis or log messages
     echo "$actual_commit"
 }
 
@@ -149,9 +151,9 @@ EOF
 # Main execution - PURE TARBALL APPROACH, NO GIT OPERATIONS
 main() {
     log_info "Ultra-fast XVM source fetching (GitHub API only)"
-    echo "📍 Branch: $GH_BRANCH"
-    echo "📍 Commit: ${GH_COMMIT:-<will be resolved from branch>}"
-    echo "💾 Cache dir: $CACHE_DIR"
+    echo "📍 Branch: $GH_BRANCH" >&2
+    echo "📍 Commit: ${GH_COMMIT:-<will be resolved from branch>}" >&2
+    echo "💾 Cache dir: $CACHE_DIR" >&2
     
     local final_commit
     
@@ -164,19 +166,24 @@ main() {
         update_cache "$final_commit"
     fi
     
-    # Always ensure we have a resolved commit (never empty)
+    # Always ensure we have a resolved commit (never empty) and clean it of any emojis
     [[ -z "$final_commit" || "$final_commit" = "unknown" ]] && {
         log_warning "Commit resolution failed, attempting to resolve from branch"
         final_commit=$(resolve_commit_hash "$GH_BRANCH")
     }
     
-    # Export final commit for Docker build
+    # Clean the commit hash - extract only the full 40-character hash, removing any emoji or log text
+    final_commit=$(echo "$final_commit" | grep -oE '[a-f0-9]{40}' | head -1)
+    [[ -z "$final_commit" ]] && final_commit="unknown"
+    
+    # Export final commit for Docker build - ensure it's clean
     echo "export GH_COMMIT=$final_commit" > /tmp/git-info.env
+    echo "export GH_BRANCH=$GH_BRANCH" >> /tmp/git-info.env
     
     log_success "Source setup completed successfully"
-    echo "📊 Final branch: $GH_BRANCH"
-    echo "📊 Final commit: $final_commit ($(echo "$final_commit" | cut -c1-8))"
-    echo "📊 Source type: GitHub tarball (zero git operations)"
+    echo "📊 Final branch: $GH_BRANCH" >&2
+    echo "📊 Final commit: $final_commit ($(echo "$final_commit" | cut -c1-8))" >&2
+    echo "📊 Source type: GitHub tarball (zero git operations)" >&2
 }
 
 # Execute main function

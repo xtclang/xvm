@@ -1,0 +1,36 @@
+name: 'Get XDK Version'
+description: 'Gets XDK version from version.properties file'
+inputs:
+  version-file:
+    description: 'Path to version.properties file'
+    required: false
+    default: 'version.properties'
+
+outputs:
+  version:
+    description: 'Project version from version.properties file'
+    value: ${{ steps.get-version.outputs.version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Get XDK version
+      id: get-version
+      shell: bash
+      run: |
+        if [ -f "${{ inputs.version-file }}" ]; then
+          VERSION=$(grep "^xdk.version=" "${{ inputs.version-file }}" | cut -d'=' -f2 | tr -d '\n\r ')
+          if [ -z "$VERSION" ]; then
+            echo "❌ xdk.version not found in ${{ inputs.version-file }}"
+            exit 1
+          fi
+        else
+          echo "❌ Version file not found: ${{ inputs.version-file }}"
+          exit 1
+        fi
+        echo "📋 XDK Version: $VERSION"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+branding:
+  icon: 'tag'
+  color: 'green'

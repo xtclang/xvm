@@ -2,8 +2,9 @@ name: 'Compute Docker Tags'
 description: 'Computes Docker image tags and metadata based on branch, version, and commit information'
 inputs:
   base-image:
-    description: 'Base Docker image name (e.g., ghcr.io/xtclang/xvm)'
-    required: true
+    description: 'Base Docker image name (e.g., ghcr.io/xtclang/xvm) - optional, only needed for Docker tag generation'
+    required: false
+    default: ''
   version-file:
     description: 'Path to version.properties file'
     required: false
@@ -95,20 +96,28 @@ runs:
         echo "tags-json=$BASE_TAGS" >> $GITHUB_OUTPUT
         echo "latest-tag=$LATEST_TAG" >> $GITHUB_OUTPUT
         
-        # Generate full tags with image prefix
-        FULL_TAGS=$(echo "$BASE_TAGS" | jq -r --arg img "${{ inputs.base-image }}" 'map($img + ":" + .)')
-        echo "  🖼️ Full image tags: $FULL_TAGS"
-        echo "full-tags-json=$FULL_TAGS" >> $GITHUB_OUTPUT
+        # Generate full tags with image prefix (only if base-image provided)
+        if [ -n "${{ inputs.base-image }}" ]; then
+          FULL_TAGS=$(echo "$BASE_TAGS" | jq -c --arg img "${{ inputs.base-image }}" 'map($img + ":" + .)')
+          echo "  🖼️ Full image tags: $FULL_TAGS"
+          echo "full-tags-json=$FULL_TAGS" >> $GITHUB_OUTPUT
+        else
+          echo "full-tags-json=[]" >> $GITHUB_OUTPUT
+        fi
         
         # Summary
         echo ""
-        echo "✅ Docker metadata computed:"
-        echo "   Base image: ${{ inputs.base-image }}"
+        if [ -n "${{ inputs.base-image }}" ]; then
+          echo "✅ Docker metadata computed:"
+          echo "   Base image: ${{ inputs.base-image }}"
+          echo "   Primary tag: ${{ inputs.base-image }}:$LATEST_TAG"
+        else
+          echo "✅ Version metadata computed:"
+        fi
         echo "   Version: $VERSION"
         echo "   Branch: ${{ inputs.branch }} → $BRANCH_TAG"
         echo "   Commit: ${{ inputs.commit }}"
         echo "   Is master: $IS_MASTER"
-        echo "   Primary tag: ${{ inputs.base-image }}:$LATEST_TAG"
 
 branding:
   icon: 'tag'
