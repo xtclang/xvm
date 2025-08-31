@@ -577,7 +577,10 @@ public class xTuple
             return frame.raiseException(xException.outOfBounds(frame, lIndex, cElements));
             }
 
-        return frame.assignValue(iReturn, hTuple.m_ahValue[(int) lIndex]);
+        ObjectHandle hValue = hTuple.m_ahValue[(int) lIndex];
+        return Op.isDeferred(hValue)
+                ? frame.assignDeferredValue(iReturn, hValue)
+                : frame.assignValue(iReturn, hValue);
         }
 
     @Override

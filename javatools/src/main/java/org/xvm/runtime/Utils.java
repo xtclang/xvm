@@ -41,12 +41,15 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xOrdered;
 
+import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
+import org.xvm.runtime.template.annotations.xFutureVar.FutureTupleHandle;
 import org.xvm.runtime.template.annotations.xInjectedRef;
 import org.xvm.runtime.template.annotations.xInjectedRef.InjectedHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
+import org.xvm.runtime.template.collections.xTuple;
 
 import org.xvm.runtime.template.maps.xListMap;
 
@@ -552,6 +555,101 @@ public abstract class Utils
             }
 
         private final int[]          aiReturn;
+        private final ObjectHandle[] ahValue;
+        private final boolean[]      afDynamic;
+
+        private int     index        = -1;
+        private boolean fAllAssigned = true;
+        }
+    public static class ReturnTuple
+            implements Frame.Continuation
+        {
+        public ReturnTuple(int iReturn, TypeConstant typeTuple, ObjectHandle[] ahValue, boolean[] afDynamic)
+            {
+            this.iReturn   = iReturn;
+            this.typeTuple = typeTuple;
+            this.ahValue   = ahValue;
+            this.afDynamic = afDynamic;
+            }
+
+        public int proceed(Frame frameCaller)
+            {
+            while (++index < ahValue.length)
+                {
+                ObjectHandle hValue = ahValue[index];
+                if (hValue == null)
+                    {
+                    // a "null" value can only occur in a conditional assignment; we need to
+                    // avoid the scenario in which some values are assigned and others are not
+                    assert index == 1 && ahValue[0] == xBoolean.FALSE;
+                    return Op.R_RETURN;
+                    }
+
+                if (hValue instanceof DeferredCallHandle hDeferred)
+                    {
+                    hDeferred.addContinuation(this::updateDeferredValue);
+                    return hDeferred.proceed(frameCaller, this);
+                    }
+
+                boolean fDynamic = afDynamic != null && afDynamic[index];
+                if (fDynamic && !((RefHandle) hValue).isAssigned())
+                    {
+                    if (hValue instanceof InjectedHandle hRef)
+                        {
+                        int iResult = ((xInjectedRef) hRef.getTemplate()).
+                                getReferent(frameCaller, hRef, Op.A_STACK);
+                        switch (iResult)
+                            {
+                            case Op.R_NEXT:
+                                afDynamic[index]   = false;
+                                ahValue  [index--] = frameCaller.popStack();
+                                continue;
+
+                            case Op.R_CALL:
+                                frameCaller.m_frameNext.addContinuation(frame ->
+                                    {
+                                    afDynamic[index]   = false;
+                                    ahValue  [index--] = frame.popStack();
+                                    return proceed(frame);
+                                    });
+                                return Op.R_CALL;
+
+                            case Op.R_EXCEPTION:
+                                return Op.R_EXCEPTION;
+                            }
+                        }
+                    Frame framePrev = frameCaller.f_framePrev;
+                    if (!framePrev.isDynamicVar(iReturn))
+                        {
+                        // dynamic -> regular will create a FutureTuple
+                        fAllAssigned = false;
+                        }
+                    }
+
+                }
+
+            if (fAllAssigned)
+                {
+                return frameCaller.returnValue(iReturn,
+                    xTuple.makeHandle(typeTuple.ensureClass(frameCaller), ahValue), false);
+                }
+
+            // at this point we have all deferred values resolved and some (not yet completed)
+            // future returns that the caller (previous frame) expects to be "realized"
+            TypeConstant typeFuture = frameCaller.poolContext().ensureFutureVar(typeTuple);
+            FutureHandle hFuture    = new FutureTupleHandle(typeFuture.ensureClass(frameCaller),
+                                                            ahValue);
+            return frameCaller.returnValue(iReturn, hFuture, true);
+            }
+
+        protected int updateDeferredValue(Frame frameCaller)
+            {
+            ahValue[index--] = frameCaller.popStack();
+            return Op.R_NEXT;
+            }
+
+        private final int            iReturn;
+        private final TypeConstant   typeTuple;
         private final ObjectHandle[] ahValue;
         private final boolean[]      afDynamic;
 

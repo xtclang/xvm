@@ -2,15 +2,13 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        Int[] ints = new Int[];
-        ints += 17;
-
-        assert ints.mutability == Mutable;
-        assert !ints.is(Const); // this used to throw
+        console.print(getDirs().as(Tuple)); // this used to assert at run-time
     }
 
-    interface DBMap<Key extends immutable Const, Value extends immutable Const> {}
-
-    // this used to be allowed to compile without "immutable" modifier
-    mixin FileChunkIds into DBMap<String, immutable Int[]> {}
+    (Directory, Directory, Directory) getDirs() {
+        @Inject Directory rootDir;
+        @Inject Directory curDir;
+        @Inject Directory tmpDir;
+        return rootDir, curDir, tmpDir;
+    }
 }

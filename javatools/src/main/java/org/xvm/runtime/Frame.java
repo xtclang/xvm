@@ -1369,52 +1369,7 @@ public class Frame
                             : framePrev.getRegisterType(iReturn);
 
                 assert typeRet.isTuple();
-
-                if (afDynamic != null)
-                    {
-                    int     cValues = ahValue.length;
-                    boolean fFuture = false;
-                    for (int i = 0; i < cValues; i++)
-                        {
-                        if (afDynamic[i])
-                            {
-                            RefHandle hValue = (RefHandle) ahValue[i];
-                            if (hValue instanceof FutureHandle)
-                                {
-                                fFuture = true;
-                                }
-                            else
-                                {
-                                switch (hValue.getVarSupport().getReferent(framePrev, hValue, Op.A_STACK))
-                                    {
-                                    case Op.R_NEXT:
-                                        ahValue[i] = framePrev.popStack();
-                                        break;
-
-                                    case Op.R_CALL:
-                                        ahValue[i] = new DeferredCallHandle(framePrev);
-                                        break;
-
-                                    case Op.R_EXCEPTION:
-                                        return Op.R_RETURN_EXCEPTION;
-
-                                    default:
-                                        throw new IllegalArgumentException();
-                                    }
-                                }
-                            }
-                        }
-
-                    if (fFuture)
-                        {
-                        TypeConstant typeFuture = poolContext().ensureFutureVar(typeRet);
-                        FutureHandle hFuture    = new FutureTupleHandle(typeFuture.ensureClass(this),
-                                                                        ahValue);
-                        return returnValue(iReturn, hFuture, true);
-                        }
-                    }
-                return returnValue(iReturn,
-                    xTuple.makeHandle(typeRet.ensureClass(this), ahValue), false);
+                return new Utils.ReturnTuple(iReturn, typeRet, ahValue, afDynamic).proceed(this);
                 }
 
             default:
