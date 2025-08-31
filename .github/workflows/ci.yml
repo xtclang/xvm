@@ -139,7 +139,7 @@ jobs:
 
     strategy:
       matrix:
-        os: ${{ github.event.inputs.single_platform == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.single_platform == 'windows-latest' && fromJSON('["windows-latest"]') || (github.ref == 'refs/heads/master' || github.event.inputs.as_master == 'true') && fromJSON('["ubuntu-latest", "windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
+        os: ${{ github.event.inputs.single_platform == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.single_platform == 'windows-latest' && fromJSON('["windows-latest"]') || fromJSON('["ubuntu-latest", "windows-latest"]') }}
 
     runs-on: ${{ matrix.os }}
     
