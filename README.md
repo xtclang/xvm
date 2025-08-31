@@ -56,7 +56,7 @@ brew tap xtclang/xvm && brew install xdk-latest
 brew update && brew upgrade xdk-latest
 ```
 
-Note: Homebrew delivers CI snapshots for development. Stable releases will be available through other package managers.
+Note: Homebrew delivers CI snapshots for development. Each snapshot gets a unique timestamp-based version (e.g., `0.4.4-SNAPSHOT.20250831181403`) ensuring `brew upgrade` detects newer builds correctly. Stable releases will be available through other package managers.
 
 #### How Snapshot Releases Work
 
