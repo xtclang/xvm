@@ -610,6 +610,9 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ success() && ((github.event.inputs.always_build_docker_image == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
+      - name: Fetch Sources
+        uses: actions/checkout@v4
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -620,135 +623,15 @@ jobs:
       - name: Test Docker image functionality with compilation and execution
         shell: bash
         run: |
-          # Use commit-specific tag for deterministic testing of the freshly built image
-          COMMIT_IMAGE="${{ env.DOCKER_BASE_IMAGE }}:${{ github.sha }}"
-          IMAGE="$COMMIT_IMAGE"
+          IMAGE="${{ env.DOCKER_BASE_IMAGE }}:${{ github.sha }}"
+          BRANCH_IMAGE="${{ env.DOCKER_BASE_IMAGE }}:${{ needs.compute-docker-tags.outputs.is-master == 'true' && 'latest' || needs.compute-docker-tags.outputs.branch-tag }}"
           
-          echo "🧪 Testing Docker image: $IMAGE"
-          echo "This tests compilation and execution of XTC programs with different parameters"
-          
-          # Verify we're testing the correct image that was just built in this pipeline
-          echo "🔍 Verifying image matches current CI run..."
-          echo "  Expected commit: ${{ github.sha }}"
-          echo "  Expected branch: ${{ github.ref_name }}"
-          
-          # Check that the commit-tagged image version info matches the current CI context
-          version_output=$(docker run --rm ${IMAGE} xec --version)
-          echo "📋 Commit-tagged image version info:"
-          echo "$version_output"
-          
-          if echo "$version_output" | grep -q "${{ github.sha }}"; then
-            echo "✅ Commit-tagged image contains correct commit SHA: ${{ github.sha }}"
-          else
-            echo "❌ ERROR: Commit-tagged image does not contain expected commit SHA!"
-            echo "Expected: ${{ github.sha }}"
-            echo "Actual version output: $version_output"
-            exit 1
-          fi
-          
-          # For master branch, verify that 'latest' tag points to the same image
-          # For non-master branches, verify that branch tag points to the same image  
-          if [ "${{ needs.compute-docker-tags.outputs.is-master }}" = "true" ]; then
-            echo "🔍 Verifying 'latest' tag for master branch..."
-            BRANCH_IMAGE="${{ env.DOCKER_BASE_IMAGE }}:latest"
-          else
-            echo "🔍 Verifying branch tag for non-master branch..."
-            BRANCH_IMAGE="${{ env.DOCKER_BASE_IMAGE }}:${{ needs.compute-docker-tags.outputs.branch-tag }}"
-          fi
-          
-          branch_version_output=$(docker run --rm ${BRANCH_IMAGE} xec --version)
-          echo "📋 Branch-tagged image version info:"
-          echo "$branch_version_output"
-          
-          if echo "$branch_version_output" | grep -q "${{ github.sha }}"; then
-            if [ "${{ needs.compute-docker-tags.outputs.is-master }}" = "true" ]; then
-              echo "✅ Latest tag contains correct commit SHA: ${{ github.sha }}"
-            else
-              echo "✅ Branch tag '${{ needs.compute-docker-tags.outputs.branch-tag }}' contains correct commit SHA: ${{ github.sha }}"
-            fi
-          else
-            if [ "${{ needs.compute-docker-tags.outputs.is-master }}" = "true" ]; then
-              echo "❌ ERROR: Latest tag does not contain expected commit SHA!"
-            else
-              echo "❌ ERROR: Branch tag '${{ needs.compute-docker-tags.outputs.branch-tag }}' does not contain expected commit SHA!"
-            fi
-            echo "Expected: ${{ github.sha }}"
-            echo "Branch-tagged image version output: $branch_version_output"
-            exit 1
-          fi
-          
-          # Test launcher versions
-          echo "🔧 Testing launchers..."
-          docker run --rm ${IMAGE} xec --version
-          docker run --rm ${IMAGE} xcc --version
-          
-          # Verify we're using script launchers, not native launchers
-          echo "🔍 Verifying Docker image uses script launchers..."
-          echo "📋 Showing launcher content preview:"
-          launcher_content=$(docker run --rm ${IMAGE} head -5 /opt/xdk/bin/xcc)
-          echo "$launcher_content"
-          if echo "$launcher_content" | grep -q "#!/bin/sh\|#!/bin/bash\|exec.*java"; then
-            echo "✅ Docker image is using script launchers (as expected after fix)"
-          else
-            echo "❌ Launcher doesn't appear to be a shell script - this indicates the distribution changes didn't work"
-            echo "Full launcher content:"
-            docker run --rm ${IMAGE} head -20 /opt/xdk/bin/xcc
-            exit 1
-          fi
-          
-          # Verify script launchers contain XTC module paths
-          echo "🔍 Verifying script launchers contain XTC module paths..."
-          script_content=$(docker run --rm ${IMAGE} cat /opt/xdk/bin/xcc)
-          if echo "$script_content" | grep -q "XDK_HOME.*APP_HOME" && \
-             echo "$script_content" | grep -q "\-L.*lib" && \
-             echo "$script_content" | grep -q "javatools_turtle.xtc" && \
-             echo "$script_content" | grep -q "javatools_bridge.xtc"; then
-            echo "✅ Script launchers contain expected XTC module paths"
-          else
-            echo "❌ Script launchers missing XTC module paths - critical bug detected!"
-            echo "📋 Script launcher content:"
-            echo "$script_content"
-            exit 1
-          fi
-          
-          # Test compilation and execution with different argument patterns (like original EchoTest)
-          echo "🧪 Testing XTC program compilation and execution..."
-          
-          echo "📋 Testing with no arguments..."
-          output_0=$(docker run --rm ${IMAGE} xec /opt/xdk/test/DockerTest.x 2>&1)
-          echo "$output_0"
-          if ! echo "$output_0" | grep -q "DockerTest invoked with 0 arguments\."; then
-            echo "❌ No arguments test failed"
-            exit 1
-          fi
-          echo "✅ No arguments test passed"
-          
-          echo "📋 Testing with single argument..."
-          output_1=$(docker run --rm ${IMAGE} xec /opt/xdk/test/DockerTest.x "hello" 2>&1)
-          echo "$output_1"
-          if ! echo "$output_1" | grep -q "DockerTest invoked with 1 arguments:" || ! echo "$output_1" | grep -q '\[1\]="hello"'; then
-            echo "❌ Single argument test failed"
-            exit 1
-          fi
-          echo "✅ Single argument test passed"
-          
-          echo "📋 Testing with multiple arguments..."
-          output_3=$(docker run --rm ${IMAGE} xec /opt/xdk/test/DockerTest.x "arg1" "arg with spaces" "arg3" 2>&1)
-          echo "$output_3"
-          if ! echo "$output_3" | grep -q "DockerTest invoked with 3 arguments:" || \
-             ! echo "$output_3" | grep -q '\[1\]="arg1"' || \
-             ! echo "$output_3" | grep -q '\[2\]="arg with spaces"' || \
-             ! echo "$output_3" | grep -q '\[3\]="arg3"'; then
-            echo "❌ Multiple arguments test failed"
-            exit 1
-          fi
-          echo "✅ Multiple arguments test passed"
-          
-          echo "🎉 All Docker image functionality tests passed!"
-          echo "✅ Script launcher functionality validated (fixed and now working!)"
-          echo "✅ XTC module path injection verified"
-          echo "✅ XTC program compilation validated" 
-          echo "✅ Program execution with 0, 1, and multiple arguments validated"
+          ./.github/scripts/test-docker-image.sh \
+            "$IMAGE" \
+            "${{ github.sha }}" \
+            "${{ github.ref_name }}" \
+            "$BRANCH_IMAGE" \
+            "${{ needs.compute-docker-tags.outputs.is-master }}"
 
   docker-cleanup:
     name: Clean up old Docker package versions
