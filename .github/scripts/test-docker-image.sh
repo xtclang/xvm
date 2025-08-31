@@ -39,30 +39,19 @@ fi
 # For master branch, verify that 'latest' tag points to the same image
 # For non-master branches, verify that branch tag points to the same image  
 if [[ -n "$BRANCH_IMAGE" ]]; then
-    if [[ "$IS_MASTER" == "true" ]]; then
-        echo "🔍 Verifying 'latest' tag for master branch..."
-    else
-        echo "🔍 Verifying branch tag for non-master branch..."
-    fi
+    TAG_TYPE=$([[ "$IS_MASTER" == "true" ]] && echo "Latest tag" || echo "Branch tag")
+    echo "🔍 Verifying $TAG_TYPE for $([ "$IS_MASTER" = "true" ] && echo "master" || echo "non-master") branch..."
     
     branch_version_output=$(docker run --rm ${BRANCH_IMAGE} xec --version)
-    echo "📋 Branch-tagged image version info:"
+    echo "📋 $TAG_TYPE image version info:"
     echo "$branch_version_output"
     
     if echo "$branch_version_output" | grep -q "$EXPECTED_COMMIT"; then
-        if [[ "$IS_MASTER" == "true" ]]; then
-            echo "✅ Latest tag contains correct commit SHA: $EXPECTED_COMMIT"
-        else
-            echo "✅ Branch tag contains correct commit SHA: $EXPECTED_COMMIT"
-        fi
+        echo "✅ $TAG_TYPE contains correct commit SHA: $EXPECTED_COMMIT"
     else
-        if [[ "$IS_MASTER" == "true" ]]; then
-            echo "❌ ERROR: Latest tag does not contain expected commit SHA!"
-        else
-            echo "❌ ERROR: Branch tag does not contain expected commit SHA!"
-        fi
+        echo "❌ ERROR: $TAG_TYPE does not contain expected commit SHA!"
         echo "Expected: $EXPECTED_COMMIT"
-        echo "Branch-tagged image version output: $branch_version_output"
+        echo "$TAG_TYPE image version output: $branch_version_output"
         exit 1
     fi
 fi
