@@ -306,7 +306,7 @@ data class GitHubProtocol(private val project: Project) {
             logger.info("$prefix Using git info from $source (branch: $branch, commit: ${commit.take(8)})")
             
         } catch (e: Exception) {
-            props["git.branch"] = ghBranch ?: "unknown"
+            props["git.branch"] = ghBranch
             props["git.commit.id"] = ghCommit ?: "unknown" 
             props["git.dirty"] = "false"
             logger.warn("$prefix Failed to get git info: ${e.message}")

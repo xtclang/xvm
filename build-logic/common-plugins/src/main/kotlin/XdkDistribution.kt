@@ -226,14 +226,12 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
          * Inject XTC module paths into a generated launcher script.
          * 
          * @param scriptContent the original script content
-         * @param scriptName the script name (xcc, xec, etc.)
          * @param mainClassName the main class name (e.g., org.xvm.tool.Compiler)
          * @param isWindowsBatch true for .bat files, false for Unix shell scripts
          * @return modified script content with module paths injected
          */
         fun injectXtcModulePaths(
             scriptContent: String, 
-            scriptName: String, 
             mainClassName: String, 
             isWindowsBatch: Boolean
         ): String {

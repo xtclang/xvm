@@ -140,7 +140,7 @@ fun createLauncherScriptTask(scriptName: String, mainClassName: String) = tasks.
                 
                 // Add XTC module paths using utility from XdkDistribution
                 content = XdkDistribution.injectXtcModulePaths(
-                    content, scriptName, mainClassName, scriptFile.name.endsWith(".bat")
+                    content, mainClassName, scriptFile.name.endsWith(".bat")
                 )
                 
                 scriptFile.writeText(content)
