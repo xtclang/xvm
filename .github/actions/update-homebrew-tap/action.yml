@@ -49,8 +49,10 @@ runs:
         git clone https://oauth2:${{ inputs.homebrew_tap_token }}@github.com/xtclang/homebrew-xvm.git tap
         cd tap && git checkout "$HOMEBREW_TAP_BRANCH"
         
-        # Use commit SHA for dynamic versioning - ensures brew update works
-        DYNAMIC_VERSION="$XDK_VERSION.$BUILD_COMMIT_SHA"
+        # Use timestamp for dynamic versioning - ensures brew upgrade works correctly
+        # Format: YYYYMMDDHHMMSS for proper version comparison
+        BUILD_TIMESTAMP=$(date -u +%Y%m%d%H%M%S)
+        DYNAMIC_VERSION="$XDK_VERSION.$BUILD_TIMESTAMP"
         
         # Create GitHub release URL for the snapshot zip file
         RELEASE_URL="https://github.com/xtclang/xvm/releases/download/xdk-latest-snapshot/${{ inputs.xdk_zip_name }}"
