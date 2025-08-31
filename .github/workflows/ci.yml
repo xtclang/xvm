@@ -191,6 +191,10 @@ jobs:
           echo "*** Workflow dispatch inputs:"
           echo "    always_publish_snapshot: '${{ github.event.inputs.always_publish_snapshot }}'"
           echo "    always_build_docker_image: '${{ github.event.inputs.always_build_docker_image }}'"
+          echo "    always_clean_docker: '${{ github.event.inputs.always_clean_docker }}'"
+          echo "    always_update_homebrew_tap: '${{ github.event.inputs.always_update_homebrew_tap }}'"
+          echo "    as_master: '${{ github.event.inputs.as_master }}'"
+          echo "    single_platform: '${{ github.event.inputs.single_platform }}'"
           echo "    run_manual_tests: '${{ github.event.inputs.run_manual_tests }}'"
           echo "    run_manual_tests_parallel: '${{ github.event.inputs.run_manual_tests_parallel }}'"
           echo "    extra_gradle_options: '${{ github.event.inputs.extra_gradle_options }}'"
@@ -277,7 +281,7 @@ jobs:
     # Only run if ALL build-verify matrix jobs succeed (both ubuntu-latest and windows-latest)
     needs: build-verify
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master')) }}
+    if: ${{ success() && ((github.event.inputs.always_publish_snapshot == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
       # Check out current repository
       - name: Fetch Sources
@@ -307,12 +311,6 @@ jobs:
           echo "✅ All build-verify matrix jobs (Ubuntu + Windows) completed successfully"
           echo "✅ All tests passed - proceeding with publication"
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: xdk-distribution
-          path: .
-
       - name: Dump environment info
         shell: bash
         run: |
@@ -326,7 +324,7 @@ jobs:
           java -XshowSettings:properties --version
 
       - name: Create or Update Snapshot (if pushed to 'master', or env.always_publish_snapshot is true)
-        if: ${{ (github.event.inputs.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
+        if: ${{ (github.event.inputs.always_publish_snapshot == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master') }}
         shell: bash
         run: |
           ${{ env.GRADLE_CACHE_INSPECT }}

@@ -23,7 +23,7 @@ if [[ -n "$EXPECTED_BRANCH" ]]; then
 fi
 
 # Check that the commit-tagged image version info matches the current CI context
-version_output=$(docker run --rm ${IMAGE} xec --version)
+version_output=$(docker run --rm "$IMAGE" xec --version)
 echo "📋 Commit-tagged image version info:"
 echo "$version_output"
 
@@ -42,7 +42,7 @@ if [[ -n "$BRANCH_IMAGE" ]]; then
     TAG_TYPE=$([[ "$IS_MASTER" == "true" ]] && echo "Latest tag" || echo "Branch tag")
     echo "🔍 Verifying $TAG_TYPE for $([ "$IS_MASTER" = "true" ] && echo "master" || echo "non-master") branch..."
     
-    branch_version_output=$(docker run --rm ${BRANCH_IMAGE} xec --version)
+    branch_version_output=$(docker run --rm "$BRANCH_IMAGE" xec --version)
     echo "📋 $TAG_TYPE image version info:"
     echo "$branch_version_output"
     
@@ -58,26 +58,26 @@ fi
 
 # Test launcher versions
 echo "🔧 Testing launchers..."
-docker run --rm ${IMAGE} xec --version
-docker run --rm ${IMAGE} xcc --version
+docker run --rm "$IMAGE" xec --version
+docker run --rm "$IMAGE" xcc --version
 
 # Verify we're using script launchers, not native launchers
 echo "🔍 Verifying Docker image uses script launchers..."
 echo "📋 Showing launcher content preview:"
-launcher_content=$(docker run --rm ${IMAGE} head -5 /opt/xdk/bin/xcc)
+launcher_content=$(docker run --rm "$IMAGE" head -5 /opt/xdk/bin/xcc)
 echo "$launcher_content"
 if echo "$launcher_content" | grep -q "#!/bin/sh\|#!/bin/bash\|exec.*java"; then
     echo "✅ Docker image is using script launchers (as expected after fix)"
 else
     echo "❌ Launcher doesn't appear to be a shell script - this indicates the distribution changes didn't work"
     echo "Full launcher content:"
-    docker run --rm ${IMAGE} head -20 /opt/xdk/bin/xcc
+    docker run --rm "$IMAGE" head -20 /opt/xdk/bin/xcc
     exit 1
 fi
 
 # Verify script launchers contain XTC module paths
 echo "🔍 Verifying script launchers contain XTC module paths..."
-script_content=$(docker run --rm ${IMAGE} cat /opt/xdk/bin/xcc)
+script_content=$(docker run --rm "$IMAGE" cat /opt/xdk/bin/xcc)
 if echo "$script_content" | grep -q "XDK_HOME.*APP_HOME" && \
    echo "$script_content" | grep -q "\-L.*lib" && \
    echo "$script_content" | grep -q "javatools_turtle.xtc" && \
@@ -94,8 +94,7 @@ fi
 echo "🧪 Testing XTC program compilation and execution..."
 
 echo "📋 Testing with no arguments..."
-output_0=$(docker run --rm ${IMAGE} xec /opt/xdk/test/DockerTest.x 2>&1)
-echo "$output_0"
+output_0=$(docker run --rm "$IMAGE" xec /opt/xdk/test/DockerTest.x 2>&1)
 if ! echo "$output_0" | grep -q "DockerTest invoked with 0 arguments\."; then
     echo "❌ No arguments test failed"
     exit 1
@@ -103,8 +102,7 @@ fi
 echo "✅ No arguments test passed"
 
 echo "📋 Testing with single argument..."
-output_1=$(docker run --rm ${IMAGE} xec /opt/xdk/test/DockerTest.x "hello" 2>&1)
-echo "$output_1"
+output_1=$(docker run --rm "$IMAGE" xec /opt/xdk/test/DockerTest.x "hello" 2>&1)
 if ! echo "$output_1" | grep -q "DockerTest invoked with 1 arguments:" || ! echo "$output_1" | grep -q '\[1\]="hello"'; then
     echo "❌ Single argument test failed"
     exit 1
@@ -112,8 +110,7 @@ fi
 echo "✅ Single argument test passed"
 
 echo "📋 Testing with multiple arguments..."
-output_3=$(docker run --rm ${IMAGE} xec /opt/xdk/test/DockerTest.x "arg1" "arg with spaces" "arg3" 2>&1)
-echo "$output_3"
+output_3=$(docker run --rm "$IMAGE" xec /opt/xdk/test/DockerTest.x "arg1" "arg with spaces" "arg3" 2>&1)
 if ! echo "$output_3" | grep -q "DockerTest invoked with 3 arguments:" || \
    ! echo "$output_3" | grep -q '\[1\]="arg1"' || \
    ! echo "$output_3" | grep -q '\[2\]="arg with spaces"' || \

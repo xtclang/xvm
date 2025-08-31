@@ -1,5 +1,4 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE
-import XdkDistribution.Companion.JAVATOOLS_INSTALLATION_NAME
 import XdkDistribution.Companion.JAVATOOLS_PREFIX_PATTERN
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
@@ -172,7 +171,7 @@ subprojects {
 }
 
 publishing {
-    // TODO: Set up a hook to the maven central/ossrh/sonatype repository here, once the keys have been recovered.
+    // TODO: Set up a hook to the maven central/osasrh/sonatype repository here, once the keys have been recovered.
     publications {
         val xdkArchive by registering(MavenPublication::class) {
             with(project) {
@@ -271,7 +270,6 @@ distributions {
     val withLaunchers by registering {
         distributionBaseName = xdkDist.distributionName
         version = xdkDist.distributionVersion
-        @Suppress("UnstableApiUsage") 
         distributionClassifier = "native-${xdkDist.osClassifier()}"
         
         contents {
