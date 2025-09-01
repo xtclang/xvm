@@ -77,6 +77,7 @@ val copyEcstasyResources by tasks.registering(Copy::class) {
     description = "Copy ecstasy resources to avoid IntelliJ cross-module path issues"
     from(xdkEcstasyResourcesConsumer)
     into(layout.buildDirectory.dir("generated/resources/main"))
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     // Only copy when source changes or destination doesn't exist
     onlyIf { 
         !destinationDir.exists() || 
@@ -86,37 +87,51 @@ val copyEcstasyResources by tasks.registering(Copy::class) {
 
 val generateBuildInfo by tasks.registering {
     description = "Generate build-info.properties with version and git information"
-    dependsOn(processResources)
+    
+    // Make the task depend on environment variables so Gradle knows when to re-run it
+    inputs.property("GH_COMMIT", providers.environmentVariable("GH_COMMIT").orElse(""))
+    inputs.property("GH_BRANCH", providers.environmentVariable("GH_BRANCH").orElse("master"))
+    inputs.property("version", version)
     
     val versionPropsFile = compositeRootProjectDirectory.file("version.properties")
-    val outputFile = layout.buildDirectory.file("resources/main/build-info.properties")
-    val gitPropsFile = layout.buildDirectory.file("resources/main/git.properties")
+    val generatedOutputFile = layout.buildDirectory.file("generated/resources/main/build-info.properties")
+    val srcOutputFile = layout.projectDirectory.file("src/main/resources/build-info.properties")
     
     inputs.file(versionPropsFile)
-    inputs.file(gitPropsFile).optional()
-    outputs.file(outputFile)
-    
+    outputs.files(generatedOutputFile, srcOutputFile)
     
     doLast {
+        logger.info(">>> GENERATING BUILD INFO PROPERTIES")
+        
         // Read version properties as base
         val buildInfo = Properties()
         versionPropsFile.asFile.inputStream().use { buildInfo.load(it) }
         
-        // Add git information from git.properties
-        if (gitPropsFile.get().asFile.exists()) {
-            val gitProps = Properties()
-            gitPropsFile.get().asFile.inputStream().use { gitProps.load(it) }
-            
-            gitProps.getProperty("git.commit.id")?.let { buildInfo.setProperty("git.commit", it) }
-            
-            val isDirty = gitProps.getProperty("git.dirty")?.toBoolean() ?: false
-            buildInfo.setProperty("git.status", if (isDirty) "detached-head" else "clean")
+        // Add git information directly
+        val gitProtocol = GitHubProtocol(project)
+        val gitInfo = gitProtocol.getGitInfo()
+        
+        gitInfo["git.commit.id"]?.let { buildInfo.setProperty("git.commit", it) }
+        
+        val isDirty = gitInfo["git.dirty"]?.toBoolean() ?: false
+        buildInfo.setProperty("git.status", if (isDirty) "detached-head" else "clean")
+        
+        val buildInfoContent = buildInfo.entries.joinToString("\n") { "${it.key}=${it.value}" }
+        val header = "# Build information generated at build time\n"
+        val fullContent = header + buildInfoContent
+        
+        // Write to both locations for compatibility
+        generatedOutputFile.get().asFile.apply {
+            parentFile.mkdirs()
+            writeText(fullContent)
         }
         
-        outputFile.get().asFile.apply {
+        srcOutputFile.asFile.apply {
             parentFile.mkdirs()
-            outputStream().use { buildInfo.store(it, "Build information generated at build time") }
+            writeText(fullContent)
         }
+        
+        logger.info("Generated build info properties in both locations")
     }
 }
 
@@ -126,12 +141,15 @@ sourceSets {
         resources {
             // Use build-time copied resources instead of direct reference
             srcDir(copyEcstasyResources.map { it.destinationDir })
+            // Include generated resources directory for build-info.properties
+            srcDir(layout.buildDirectory.dir("generated/resources/main"))
         }
     }
 }
 
 tasks.processResources {
-    dependsOn(copyEcstasyResources)
+    dependsOn(copyEcstasyResources, generateBuildInfo)
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 /**
