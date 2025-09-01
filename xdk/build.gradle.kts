@@ -140,7 +140,7 @@ fun createLauncherScriptTask(scriptName: String, mainClassName: String) = tasks.
                 
                 // Add XTC module paths using utility from XdkDistribution
                 content = XdkDistribution.injectXtcModulePaths(
-                    content, scriptName, mainClassName, scriptFile.name.endsWith(".bat")
+                    content, mainClassName, scriptFile.name.endsWith(".bat")
                 )
                 
                 scriptFile.writeText(content)
@@ -198,7 +198,7 @@ publishing {
                 description = "XTC Language Software Development Kit (XDK) Distribution Archive"
                 url = "https://xtclang.org"
             }
-            logger.info("$prefix Publication '$name' configured for '$groupId:$artifactId:$version'")
+            logger.info("[xdk] Publication '$name' configured for '$groupId:$artifactId:$version'")
             artifact(tasks.distZip) {
                 extension = "zip"
             }
@@ -239,7 +239,7 @@ distributions {
             
             // Core XDK content
             val xdkTemplate = tasks.processResources.map {
-                logger.info("$prefix Resolving processResources output (this should be during the execution phase).")
+                logger.info("[xdk] Resolving processResources output (this should be during the execution phase).")
                 File(it.outputs.files.singleFile, "xdk")
             }
             from(xdkTemplate) {
@@ -298,7 +298,7 @@ distributions {
             
             // Core XDK content (same as main distribution)
             val xdkTemplate = tasks.processResources.map {
-                logger.info("$prefix Resolving processResources output (this should be during the execution phase).")
+                logger.info("[xdk] Resolving processResources output (this should be during the execution phase).")
                 File(it.outputs.files.singleFile, "xdk")
             }
             from(xdkTemplate) {
@@ -362,7 +362,7 @@ val cleanXdk by tasks.registering(Delete::class) {
 val clean by tasks.existing {
     dependsOn(cleanXdk)
     doLast {
-        logger.info("$prefix WARNING: Note that running 'clean' is often unnecessary with a properly configured build cache.")
+        logger.info("[xdk] WARNING: Note that running 'clean' is often unnecessary with a properly configured build cache.")
     }
 }
 
@@ -374,7 +374,7 @@ tasks.withType<Sign>().configureEach {
     val sign = getXdkPropertyBoolean("org.xtclang.signing.enabled", isRelease())
     // TODO: Before mavenCentral access tokens are sorted, signing should never be enabled:
     require(!sign) { "Signing is not enabled, and should not be enabled until we are sure default configs work." }
-    logger.info("$prefix Publication for project '${project.name}' will ${if (sign) "" else "NOT "}be signed.")
+    logger.info("[xdk] Publication will ${if (sign) "" else "NOT "}be signed.")
     onlyIf {
         sign
     }
@@ -419,23 +419,21 @@ val ensureTags by tasks.registering {
     val snapshotOnly = snapshotOnly()
     val currentVersion = semanticVersion
     val gitHubProtocol = xdkBuildLogic.gitHubProtocol()
-    val logPrefix = prefix  // Capture prefix to avoid project access during execution
-
     if (!allowPublication()) {
-        logger.lifecycle("$logPrefix Skipping publication task, snapshotOnly=${snapshotOnly} for version: '$currentVersion")
+        logger.lifecycle("[xdk] Skipping publication task, snapshotOnly=${snapshotOnly} for version: '$currentVersion")
     }
     onlyIf {
         allowPublication()
     }
     doLast {
         logger.lifecycle("""
-            $logPrefix Ensuring that the current commit is tagged with version.
-            $logPrefix     version: $currentVersion
-            $logPrefix     snapshotOnly: $snapshotOnly
+            [xdk] Ensuring that the current commit is tagged with version.
+            [xdk]     version: $currentVersion
+            [xdk]     snapshotOnly: $snapshotOnly
         """.trimIndent())
         val tag = gitHubProtocol.ensureTags(snapshotOnly)
         if (GitHubProtocol.tagCreated(tag)) {
-            logger.lifecycle("$logPrefix Created or updated tag '$tag' for version: '$currentVersion'")
+            logger.lifecycle("[xdk] Created or updated tag '$tag' for version: '$currentVersion'")
         }
     }
 }

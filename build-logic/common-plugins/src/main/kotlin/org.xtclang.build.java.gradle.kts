@@ -20,7 +20,7 @@ private val jdkVersion: Provider<Int> = provider {
     val isBuildLogic = project.rootDir.absolutePath.contains("build-logic")
     val isPlugin = project.rootDir.absolutePath.endsWith("plugin")
     val shouldUseCurrentJVM = isBuildLogic || isPlugin
-    logger.debug("$prefix Project '${project.path}' at '${project.rootDir.absolutePath}' - shouldUseCurrentJVM: $shouldUseCurrentJVM")
+    logger.debug("[java] Project '${project.path}' at '${project.rootDir.absolutePath}' - shouldUseCurrentJVM: $shouldUseCurrentJVM")
     if (shouldUseCurrentJVM) {
         JavaVersion.current().majorVersion.toInt()
     } else {
@@ -35,7 +35,7 @@ java {
         if (!buildProcessJavaVersion.canCompileOrRun(xdkJavaVersion)) {
             logger.warn("NOTE: We are using a more modern Java tool chain than the build process. $buildProcessJavaVersion < $xdkJavaVersion")
         }
-        logger.info("$prefix Java Toolchain config; binary format version: 'JDK $xdkJavaVersion' (build process version: 'JDK $buildProcessJavaVersion')")
+        logger.info("[java] Java Toolchain config; binary format version: 'JDK $xdkJavaVersion' (build process version: 'JDK $buildProcessJavaVersion')")
         languageVersion.set(xdkJavaVersion)
     }
 }
@@ -50,20 +50,20 @@ testing {
 
 tasks.withType<JavaExec>().configureEach {
     inputs.property("jdkVersion", jdkVersion)
-    logger.info("$prefix Configuring JavaExec task $name from toolchain (Java version: ${java.toolchain.languageVersion})")
+    logger.info("[java] Configuring JavaExec task $name from toolchain (Java version: ${java.toolchain.languageVersion})")
     javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
     if (enablePreview()) {
         jvmArgs("--enable-preview")
     }
     doLast {
-        logger.info("$prefix JVM arguments: $jvmArgs")
+        logger.info("[java] JVM arguments: $jvmArgs")
     }
 }
 
 val checkWarnings by tasks.registering {
     if (!getXdkPropertyBoolean(lintProperty, false)) {
         val lintPropertyHasValue = isXdkPropertySet(lintProperty)
-        logger.info("$prefix Java warnings are ${if (lintPropertyHasValue) "explicitly" else ""} disabled for project.")
+        logger.info("[java] Java warnings are ${if (lintPropertyHasValue) "explicitly" else ""} disabled for project.")
     }
 }
 
@@ -84,7 +84,7 @@ tasks.withType<JavaCompile>().configureEach {
     val warningsAsErrors = getXdkPropertyBoolean("$pprefix.warningsAsErrors", true)
     inputs.property("warningsAsErrors", warningsAsErrors)
     if (!warningsAsErrors) {
-        logger.warn("$prefix WARNING: Task '$name' XTC Java convention warnings are not treated as errors, which is best practice (Enable -Werror).")
+        logger.warn("[java] WARNING: Task '$name' XTC Java convention warnings are not treated as errors, which is best practice (Enable -Werror).")
     }
 
     val args = buildList {
@@ -138,7 +138,7 @@ private fun enablePreview(): Boolean {
     // Only enable preview features when explicitly requested
     val enablePreview = getXdkPropertyBoolean("$pprefix.enablePreview")
     if (enablePreview) {
-        logger.info("$prefix WARNING: Project has Java preview features enabled (JDK $jdkVersion).")
+        logger.info("[java] WARNING: Project has Java preview features enabled (JDK $jdkVersion).")
     }
     return enablePreview
 }

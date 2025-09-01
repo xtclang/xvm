@@ -41,13 +41,12 @@ listOf(
     fun projectName(name: String): String {
         return name.replace('_', '-')
     }
-    val prefix = "[xdk]"
     val path = File(xdkProjectPath.parentFile, p)
     val projectName = projectName(p)
     if (!path.exists()) {
-        throw GradleException("$prefix Can't find expected XDK project: '$projectName' (at: ${path.absolutePath})")
+        throw GradleException("[xdk] Can't find expected XDK project: '$projectName' (at: ${path.absolutePath})")
     }
-    logger.info("$prefix Resolved XDK subproject '$projectName' (at: '${path.absolutePath}')")
+    logger.info("[xdk] Resolved XDK subproject '$projectName' (at: '${path.absolutePath}')")
     include(":$p")
     project(":$p").projectDir = path
     project(":$p").name = projectName

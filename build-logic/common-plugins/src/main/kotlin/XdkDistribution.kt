@@ -20,7 +20,7 @@ import java.io.File
  */
 fun PublishingExtension.configureMavenPublications(project: Project) = project.run {
     publications.withType<MavenPublication>().configureEach {
-        logger.info("$prefix Configuring publication '$name' for project '${project.name}'.")
+        logger.info("[build-logic] Configuring publication '$name' for project '${project.name}'.")
         pom {
             licenses {
                 license {
@@ -58,19 +58,19 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
     fun resolveGpgSecret(): Boolean {
         val sign = getXdkPropertyBoolean("org.xtclang.signing.enabled", isRelease())
         if (!sign) {
-            logger.info("$prefix Signing is disabled. Will not try to resolve any keys.")
+            logger.info("[build-logic] Signing is disabled. Will not try to resolve any keys.")
             return false
         }
         val password = (project.findProperty("signing.password") ?: System.getenv("GPG_SIGNING_PASSWORD") ?: "") as String
         val key = (project.findProperty("signing.key") ?: System.getenv("GPG_SIGNING_KEY") ?: readKeyFile()) as String
         if (key.isEmpty() || password.isEmpty()) {
-            logger.warn("$prefix WARNING: Could not resolve a GPG signing key or a passphrase.")
+            logger.warn("[build-logic] WARNING: Could not resolve a GPG signing key or a passphrase.")
             if (XdkDistribution.isCiEnabled) {
                 throw buildException("No GPG signing key or password found in CI build, and no manual way to set them.")
             }
             return false
         }
-        logger.info("$prefix Signature: In-memory GPG keys successfully configured.")
+        logger.info("[build-logic] Signature: In-memory GPG keys successfully configured.")
         assert(key.isNotEmpty() && password.isNotEmpty())
         useInMemoryPgpKeys(key, password)
         return true
@@ -81,9 +81,9 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
     val publications = publishing.publications
     return sign(publications).also {
         if (publications.isEmpty()) {
-            logger.warn("$prefix WARNING: No publications found, but signature are still enabled.")
+            logger.warn("[build-logic] WARNING: No publications found, but signature are still enabled.")
         } else {
-            logger.info("$prefix Signature: Configured sign tasks publications in '${project.name}', publications: ${publications.map { it.name }}.")
+            logger.info("[build-logic] Signature: Configured sign tasks publications in '${project.name}', publications: ${publications.map { it.name }}.")
         }
     }
 }
@@ -98,7 +98,7 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
 fun PublishingExtension.mavenGitHubPackages(project: Project): Boolean = project.run {
     val gitHubToken = project.getXtclangGitHubMavenPackageRepositoryToken()
     if (gitHubToken.isEmpty()) {
-        logger.warn("$prefix WARNING: No GitHub token found, either in config or environment. publishRemote won't work.")
+        logger.warn("[build-logic] WARNING: No GitHub token found, either in config or environment. publishRemote won't work.")
         return false
     }
 
@@ -110,7 +110,7 @@ fun PublishingExtension.mavenGitHubPackages(project: Project): Boolean = project
                 username = "xtclang-bot"
                 password = gitHubToken
             }
-            logger.info("$prefix Configured '$name' package repository for project '${project.name}'.")
+            logger.info("[build-logic] Configured '$name' package repository for project '${project.name}'.")
         }
     }
 
@@ -226,14 +226,12 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
          * Inject XTC module paths into a generated launcher script.
          * 
          * @param scriptContent the original script content
-         * @param scriptName the script name (xcc, xec, etc.)
          * @param mainClassName the main class name (e.g., org.xvm.tool.Compiler)
          * @param isWindowsBatch true for .bat files, false for Unix shell scripts
          * @return modified script content with module paths injected
          */
         fun injectXtcModulePaths(
             scriptContent: String, 
-            scriptName: String, 
             mainClassName: String, 
             isWindowsBatch: Boolean
         ): String {
@@ -258,15 +256,15 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
 
     init {
         logger.info("""
-            $prefix Configuring XVM distribution: '$this'
-            $prefix   Name        : '$distributionName'
-            $prefix   Version     : '$distributionVersion'
-            $prefix   Target OS   : '${getOsName()}'
-            $prefix   Target Arch : '$currentArch'
-            $prefix   Platform    : '${getOsName()}_$currentArch'
-            $prefix   Environment:
-            $prefix       CI             : '$isCiEnabled' (CI property can be overwritten)
-            $prefix       GITHUB_ACTIONS : '${System.getenv("GITHUB_ACTIONS") ?: "[not set]"}'
+            [build-logic] Configuring XVM distribution: '$this'
+            [build-logic]   Name        : '$distributionName'
+            [build-logic]   Version     : '$distributionVersion'
+            [build-logic]   Target OS   : '${getOsName()}'
+            [build-logic]   Target Arch : '$currentArch'
+            [build-logic]   Platform    : '${getOsName()}_$currentArch'
+            [build-logic]   Environment:
+            [build-logic]       CI             : '$isCiEnabled' (CI property can be overwritten)
+            [build-logic]       GITHUB_ACTIONS : '${System.getenv("GITHUB_ACTIONS") ?: "[not set]"}'
         """.trimIndent())
     }
 

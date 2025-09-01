@@ -13,6 +13,7 @@ plugins {
 }
 
 private val semanticVersion: SemanticVersion by extra
+private val javaVersion = getXdkPropertyInt("org.xtclang.java.jdk")
 
 // Docker configuration
 data class DockerConfig(
@@ -28,10 +29,10 @@ data class DockerConfig(
     
     fun tagsForArch(arch: String) = (listOf("${tagPrefix}-$arch") + versionTags.map { "${it}-$arch" } + listOf("${commit}-$arch"))
     fun multiPlatformTags() = listOf(tagPrefix) + versionTags + listOf(commit)
-    fun buildArgs(distZipUrl: String? = null) = mapOf(
+    fun buildArgs(distZipUrl: String? = null, javaVersion: Int) = mapOf(
         "GH_BRANCH" to branch,
         "GH_COMMIT" to commit,
-        "JAVA_VERSION" to getXdkPropertyInt("org.xtclang.java.jdk").toString()
+        "JAVA_VERSION" to javaVersion.toString()
     ).let { baseArgs ->
         if (distZipUrl != null) baseArgs + ("DIST_ZIP_URL" to distZipUrl) else baseArgs
     }
@@ -69,6 +70,7 @@ fun createDockerConfig(): DockerConfig {
     return DockerConfig(version, branch, commit)
 }
 
+
 fun execDockerCommand(cmd: List<String>) {
     logger.info("Docker: ${cmd.joinToString(" ")}")
     
@@ -91,11 +93,11 @@ fun execDockerCommand(cmd: List<String>) {
     }
 }
 
-fun buildDockerImage(config: DockerConfig, platforms: List<String>, tags: List<String>, action: String, distZipUrl: String? = null) {
+fun buildDockerImage(config: DockerConfig, platforms: List<String>, tags: List<String>, action: String, distZipUrl: String? = null, javaVersion: Int) {
     val platformArg = platforms.joinToString(",")
     val cmd = listOf("docker", "buildx", "build", "--platform", platformArg) +
               listOf("--progress=${System.getenv("DOCKER_BUILDX_PROGRESS") ?: "plain"}") +
-              config.buildArgs(distZipUrl).flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
+              config.buildArgs(distZipUrl, javaVersion).flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
               config.metadataLabels().flatMap { listOf("--label", "${it.key}=${it.value}") } +
               config.cacheArgs(if (platforms.size == 1) platforms[0].substringAfter("/") else null) +
               tags.flatMap { listOf("--tag", "${config.baseImage}:${it}") } +
@@ -105,12 +107,12 @@ fun buildDockerImage(config: DockerConfig, platforms: List<String>, tags: List<S
 
 fun checkCrossPlatformBuild(targetArch: String, taskName: String): Boolean {
     val hostArch = normalizeArchitecture(System.getProperty("os.arch"))
-    val allowEmulation = project.findProperty("docker_emulated_build")?.toString()?.toBoolean() ?: false
+    val allowEmulation = getXdkPropertyBoolean("org.xtclang.docker.allowEmulation", false)
     
     if (targetArch != hostArch && !allowEmulation) {
-        logger.warn("Skipping cross-platform build $taskName ($targetArch on $hostArch)")
-        logger.warn("Use -Pdocker_emulated_build=true to enable emulation")
-        return false
+        throw GradleException("Cannot build for $targetArch on $hostArch architecture. " +
+            "Set org.xtclang.docker.allowEmulation=true in xdk.properties or use " +
+            "-Porg.xtclang.docker.allowEmulation=true to enable emulation")
     }
     return true
 }
@@ -128,7 +130,7 @@ val buildAmd64 by tasks.registering {
         } else {
             logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
         }
-        buildDockerImage(config, listOf("linux/amd64"), config.tagsForArch("amd64"), "load", distZipUrl)
+        buildDockerImage(config, listOf("linux/amd64"), config.tagsForArch("amd64"), "load", distZipUrl, javaVersion)
     }
 }
 
@@ -144,7 +146,7 @@ val buildArm64 by tasks.registering {
         } else {
             logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
         }
-        buildDockerImage(config, listOf("linux/arm64"), config.tagsForArch("arm64"), "load", distZipUrl)
+        buildDockerImage(config, listOf("linux/arm64"), config.tagsForArch("arm64"), "load", distZipUrl, javaVersion)
     }
 }
 
@@ -159,7 +161,7 @@ val buildAll by tasks.registering {
         } else {
             logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
         }
-        buildDockerImage(config, listOf("linux/amd64", "linux/arm64"), config.multiPlatformTags(), "load", distZipUrl)
+        buildDockerImage(config, listOf("linux/amd64", "linux/arm64"), config.multiPlatformTags(), "load", distZipUrl, javaVersion)
     }
 }
 
@@ -175,7 +177,7 @@ val pushAmd64 by tasks.registering {
         } else {
             logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
         }
-        buildDockerImage(config, listOf("linux/amd64"), config.tagsForArch("amd64"), "push", distZipUrl)
+        buildDockerImage(config, listOf("linux/amd64"), config.tagsForArch("amd64"), "push", distZipUrl, javaVersion)
     }
 }
 
@@ -191,7 +193,7 @@ val pushArm64 by tasks.registering {
         } else {
             logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
         }
-        buildDockerImage(config, listOf("linux/arm64"), config.tagsForArch("arm64"), "push", distZipUrl)
+        buildDockerImage(config, listOf("linux/arm64"), config.tagsForArch("arm64"), "push", distZipUrl, javaVersion)
     }
 }
 
@@ -206,7 +208,7 @@ val pushAll by tasks.registering {
         } else {
             logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
         }
-        buildDockerImage(config, listOf("linux/amd64", "linux/arm64"), config.multiPlatformTags(), "push", distZipUrl)
+        buildDockerImage(config, listOf("linux/amd64", "linux/arm64"), config.multiPlatformTags(), "push", distZipUrl, javaVersion)
     }
 }
 

@@ -121,16 +121,16 @@ data class GitHubProtocol(private val project: Project) {
         val unchanged = "" to ""
 
         if (snapshotOnly && isRelease) {
-            logger.warn("$prefix ensureTags was called with snapshotOnly set. Skipping publication of non-snapshot: $semanticVersion")
+            logger.warn("[git] ensureTags was called with snapshotOnly set. Skipping publication of non-snapshot: $semanticVersion")
             return unchanged
         }
         if (isRelease && tags.remoteTagExists()) {
-            logger.warn("$prefix The VERSION file specifies a release version, but the tag already exists in the repository. No publication will be made.")
+            logger.warn("[git] The VERSION file specifies a release version, but the tag already exists in the repository. No publication will be made.")
             return unchanged
         }
 
         if (tags.localTagExists() || tags.remoteTagExists()) {
-            logger.lifecycle("$prefix Tag $localTag already exists.")
+            logger.lifecycle("[git] Tag $localTag already exists.")
         }
 
         if (isSnapshot) {
@@ -176,7 +176,7 @@ data class GitHubProtocol(private val project: Project) {
 
             for (packageName in selectedNames) {
                 if (packageVersions.isEmpty()) {
-                    logger.warn("$prefix No versions given, will delete complete package: '$packageName'.")
+                    logger.warn("[git] No versions given, will delete complete package: '$packageName'.")
                     gh(
                         "api",
                         "--method",
@@ -192,9 +192,9 @@ data class GitHubProtocol(private val project: Project) {
                 val versionInfo = all[packageName] ?: continue
                 for ((version, versionId) in versionInfo.keys) {
                     if (version in packageVersions) {
-                        logger.lifecycle("$prefix Deleting package $packageName (versionName: $version, versionId: $versionId)")
+                        logger.lifecycle("[git] Deleting package $packageName (versionName: $version, versionId: $versionId)")
                         if (isDryRun()) {
-                            logger.warn("$prefix [dryRun] Skipping API call 'delete $packageName'.")
+                            logger.warn("[git] [dryRun] Skipping API call 'delete $packageName'.")
                         }
                         val result = gh(
                             "api", "--method", "DELETE",
@@ -204,13 +204,13 @@ data class GitHubProtocol(private val project: Project) {
                         )
                         changes++
                         if (!result.isSuccessful()) {
-                            logger.error("$prefix ERROR: Failed to delete package $packageName")
-                            result.output.lines().forEach { line -> logger.error("$prefix   $line") }
+                            logger.error("[git] ERROR: Failed to delete package $packageName")
+                            result.output.lines().forEach { line -> logger.error("[git]   $line") }
                         }
                     }
                 }
             }
-            logger.lifecycle("$prefix Deleted $changes packages")
+            logger.lifecycle("[git] Deleted $changes packages")
             return changes > 0
     }
 
@@ -226,7 +226,7 @@ data class GitHubProtocol(private val project: Project) {
             packages.map { obj -> (obj as JsonObject) }.forEach { node ->
                 val packageName = node["name"]!!.jsonPrimitive.content.removeSurrounding("\"")
                 if (names.isNotEmpty() && packageName !in names) {
-                    logger.info("$prefix Skipping package: '$packageName'")
+                    logger.info("[git] Skipping package: '$packageName'")
                     return@forEach
                 }
 
@@ -303,13 +303,13 @@ data class GitHubProtocol(private val project: Project) {
             props["git.dirty"] = isDirty.toString()
             
             val source = if (!ghCommit.isNullOrEmpty() || !ghBranch.isNullOrEmpty()) "environment variables" else "git commands"
-            logger.info("$prefix Using git info from $source (branch: $branch, commit: ${commit.take(8)})")
+            logger.info("[git] Using git info from $source (branch: $branch, commit: ${commit.take(8)})")
             
         } catch (e: Exception) {
-            props["git.branch"] = ghBranch ?: "unknown"
+            props["git.branch"] = ghBranch
             props["git.commit.id"] = ghCommit ?: "unknown" 
             props["git.dirty"] = "false"
-            logger.warn("$prefix Failed to get git info: ${e.message}")
+            logger.warn("[git] Failed to get git info: ${e.message}")
         }
         
         return props

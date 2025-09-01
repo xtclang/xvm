@@ -18,7 +18,7 @@ private val pluginName = project.name
 private val pluginGroup = getXdkProperty("$pprefix.plugin.group", group.toString())
 private val pluginVersion = getXdkProperty("$pprefix.plugin.version", version.toString())
 
-logger.info("$prefix Plugin (id: '$pluginId') artifact version identifier: '$pluginGroup:$pluginName:$pluginVersion'")
+logger.info("[plugin] Plugin (id: '$pluginId') artifact version identifier: '$pluginGroup:$pluginName:$pluginVersion'")
 
 private val shouldBundleJavaTools = getXdkPropertyBoolean("$pprefix.plugin.bundle.javatools")
 private val javaToolsContents = project.objects.fileCollection()
@@ -47,7 +47,7 @@ publishing {
             artifact(tasks.jar)
             // we have two more jar artifacts with "javadoc" and "source" classifiers, respectively. Tell Gradle we do NOT want those to be part of the
             // publication (i.e. don't use from(components["java"])
-            logger.info("$prefix Publication '$groupId:$artifactId:$version' (name: '$name') configured.")
+            logger.info("[plugin] Publication '$groupId:$artifactId:$version' (name: '$name') configured.")
         }
     }
 }
@@ -60,7 +60,7 @@ gradlePlugin {
     // get three artifacts.
     isAutomatedPublishing = getXdkPropertyBoolean("$pprefix.plugin.isAutomatedPublishing", true)
 
-    logger.info("$prefix Configuring Gradle Plugin; isAutomatedPublishing=$isAutomatedPublishing")
+    logger.info("[plugin] Configuring Gradle Plugin; isAutomatedPublishing=$isAutomatedPublishing")
 
     vcsUrl = getXdkProperty("$pprefix.plugin.vcs.url")
     website = getXdkProperty("$pprefix.plugin.website")
@@ -72,7 +72,7 @@ gradlePlugin {
             implementationClass = getXdkProperty("$pprefix.plugin.implementation.class")
             displayName = getXdkProperty("$pprefix.plugin.display.name")
             description = getXdkProperty("$pprefix.plugin.description")
-            logger.info("$prefix Configuring gradlePlugin; pluginId=$pluginId, implementationClass=$implementationClass, displayName=$displayName, description=$description")
+            logger.info("[plugin] Configuring gradlePlugin; pluginId=$pluginId, implementationClass=$implementationClass, displayName=$displayName, description=$description")
             tags = listOf("xtc", "language", "ecstasy", "xdk")
         }
     }
@@ -81,14 +81,14 @@ gradlePlugin {
 tasks.withType<Javadoc>().configureEach {
     enabled = false
     // TODO: Write JavaDocs for plugin.
-    logger.info("$prefix Note: JavaDoc task is currently disabled, but certain publication methods, such as for the Gradle plugin portal will still generate and publish JavaDocs.")
+    logger.info("[plugin] Note: JavaDoc task is currently disabled, but certain publication methods, such as for the Gradle plugin portal will still generate and publish JavaDocs.")
 }
 
 tasks.withType<PublishToMavenRepository>().matching { it.name.startsWith("publishPluginMaven") }.configureEach {
     enabled = false
     // TODO: Reuse the existing PluginMaven task instead, because that is the one gradlePluginPortal hardcodes.
     logger.info(
-        "$prefix Disabled default publication task: '$name'. The task '${name.replace("PluginMaven", "XtcPlugin")}' should be equivalent."
+        "[plugin] Disabled default publication task: '$name'. The task '${name.replace("PluginMaven", "XtcPlugin")}' should be equivalent."
     )
 }
 

@@ -501,6 +501,7 @@ jobs:
             --platform ${{ matrix.platform }} \
             --progress=plain \
             $TAG_ARGS \
+            --build-arg JAVA_VERSION=${{ steps.java_version.outputs.java_version }} \
             --build-arg DIST_ZIP_URL="ci-dist.zip" \
             --build-arg GH_BRANCH=${{ env.GH_BRANCH }} \
             --build-arg GH_COMMIT=${{ env.GH_COMMIT }} \

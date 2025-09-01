@@ -11,6 +11,7 @@ plugins {
 }
 
 private val semanticVersion: SemanticVersion by extra
+private val gitProtocol = xdkBuildLogic.gitHubProtocol()
 
 val processResources by tasks.existing {
     // Make the task depend on environment variables so Gradle knows when to re-run it
@@ -22,7 +23,6 @@ val processResources by tasks.existing {
     
     doFirst {
         logger.info(">>> GENERATING GIT PROPERTIES")
-        val gitProtocol = GitHubProtocol(project)
         val props = gitProtocol.getGitInfo().toMutableMap()
         props["git.build.version"] = version.toString()
         logger.info("Calculated git properties: $props")
@@ -91,11 +91,15 @@ val generateBuildInfo by tasks.registering {
     val versionPropsFile = compositeRootProjectDirectory.file("version.properties")
     val outputFile = layout.buildDirectory.file("resources/main/build-info.properties")
     val gitPropsFile = layout.buildDirectory.file("resources/main/git.properties")
+    val intellijOutputFile = project.file("out/production/resources/build-info.properties")
     
     inputs.file(versionPropsFile)
     inputs.file(gitPropsFile).optional()
     outputs.file(outputFile)
-    
+    // Conditionally add IntelliJ output if directory exists
+    if (intellijOutputFile.parentFile.exists()) {
+        outputs.file(intellijOutputFile)
+    }
     
     doLast {
         // Read version properties as base
@@ -113,9 +117,18 @@ val generateBuildInfo by tasks.registering {
             buildInfo.setProperty("git.status", if (isDirty) "detached-head" else "clean")
         }
         
+        // Write to Gradle build directory
         outputFile.get().asFile.apply {
             parentFile.mkdirs()
             outputStream().use { buildInfo.store(it, "Build information generated at build time") }
+        }
+        
+        // Also write to IntelliJ output directory if it exists
+        if (intellijOutputFile.parentFile.exists()) {
+            intellijOutputFile.apply {
+                parentFile.mkdirs()
+                outputStream().use { buildInfo.store(it, "Build information generated at build time") }
+            }
         }
     }
 }
@@ -132,6 +145,11 @@ sourceSets {
 
 tasks.processResources {
     dependsOn(copyEcstasyResources)
+}
+
+// Ensure test compilation has access to generated build info
+tasks.compileTestJava {
+    dependsOn(generateBuildInfo)
 }
 
 /**
@@ -178,7 +196,7 @@ val jar by tasks.existing(Jar::class) {
      *      use the "Class-Path" attribute of the manifest to point to them.
      */
     from(syncDependencies.map { fileTree(it.destinationDir).map { jarFile ->
-        logger.info("$prefix Resolving dependency: $jarFile for $version")
+        logger.info("[javatools] Resolving dependency: $jarFile for $version")
         zipTree(jarFile)
     }})
 
@@ -214,7 +232,8 @@ val versionOutputTest by tasks.registering(Test::class) {
     include("**/BuildInfoTest.class", "**/LauncherVersionTest.class")
     
     doFirst {
-        logger.lifecycle("$prefix Verifying version output contains expected git and API information")
+        logger.lifecycle("[javatools] Verifying version output contains expected git and API information")
     }
 }
 
+// "assemble" already depends on jar by default in the Java build life cycle

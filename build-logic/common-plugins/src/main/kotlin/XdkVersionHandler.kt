@@ -49,12 +49,12 @@ class XdkVersionHandler(project: Project): XdkProjectBuildLogic(project) {
             return semanticVersion
         }
 
-        logger.info("$prefix XDK Project '$name' versioned as: '$semanticVersion'")
+        logger.info("[build-logic] XDK Project '$name' versioned as: '$semanticVersion'")
         with (project) {
             logger.info("""
-                $prefix    project.group  : $group
-                $prefix    project.name   : $name
-                $prefix    project.version: $version
+                [build-logic]    project.group  : $group
+                [build-logic]    project.name   : $name
+                [build-logic]    project.version: $version
             """.trimIndent()
             )
         }
@@ -79,7 +79,7 @@ class XdkVersionHandler(project: Project): XdkProjectBuildLogic(project) {
             val versionCatalog = catalogs.named(catalog)
             val value = versionCatalog.findVersion(name)
             if (value.isPresent) {
-                logger.info("$prefix Version catalog '$catalog': '$name' = '${value.get()}'")
+                logger.info("[build-logic] Version catalog '$catalog': '$name' = '${value.get()}'")
                 return value.get().toString()
             }
         }
@@ -92,7 +92,7 @@ class XdkVersionHandler(project: Project): XdkProjectBuildLogic(project) {
         val hasGroup = group.isNotEmpty() // Not always empty by default. Can be parent project hierarchy too.
         val hasVersion = Project.DEFAULT_VERSION == version
         if ((hasGroup || hasVersion) && group.indexOf('.') != -1) {
-            logger.warn("$prefix Project '$name' is not expected to have hierarchical group and version configured at init: (version: group='$group', name='$name', version='$version')")
+            logger.warn("[build-logic] Project '$name' is not expected to have hierarchical group and version configured at init: (version: group='$group', name='$name', version='$version')")
         }
     }
 }
