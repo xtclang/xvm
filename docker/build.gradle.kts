@@ -107,12 +107,12 @@ fun buildDockerImage(config: DockerConfig, platforms: List<String>, tags: List<S
 
 fun checkCrossPlatformBuild(targetArch: String, taskName: String): Boolean {
     val hostArch = normalizeArchitecture(System.getProperty("os.arch"))
-    val allowEmulation = project.findProperty("docker_emulated_build")?.toString()?.toBoolean() ?: false
+    val allowEmulation = getXdkPropertyBoolean("org.xtclang.docker.allowEmulation", false)
     
     if (targetArch != hostArch && !allowEmulation) {
-        logger.warn("Skipping cross-platform build $taskName ($targetArch on $hostArch)")
-        logger.warn("Use -Pdocker_emulated_build=true to enable emulation")
-        return false
+        throw GradleException("Cannot build for $targetArch on $hostArch architecture. " +
+            "Set org.xtclang.docker.allowEmulation=true in xdk.properties or use " +
+            "-Porg.xtclang.docker.allowEmulation=true to enable emulation")
     }
     return true
 }
