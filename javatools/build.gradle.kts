@@ -91,11 +91,15 @@ val generateBuildInfo by tasks.registering {
     val versionPropsFile = compositeRootProjectDirectory.file("version.properties")
     val outputFile = layout.buildDirectory.file("resources/main/build-info.properties")
     val gitPropsFile = layout.buildDirectory.file("resources/main/git.properties")
+    val intellijOutputFile = project.file("out/production/resources/build-info.properties")
     
     inputs.file(versionPropsFile)
     inputs.file(gitPropsFile).optional()
     outputs.file(outputFile)
-    
+    // Conditionally add IntelliJ output if directory exists
+    if (intellijOutputFile.parentFile.exists()) {
+        outputs.file(intellijOutputFile)
+    }
     
     doLast {
         // Read version properties as base
@@ -113,9 +117,18 @@ val generateBuildInfo by tasks.registering {
             buildInfo.setProperty("git.status", if (isDirty) "detached-head" else "clean")
         }
         
+        // Write to Gradle build directory
         outputFile.get().asFile.apply {
             parentFile.mkdirs()
             outputStream().use { buildInfo.store(it, "Build information generated at build time") }
+        }
+        
+        // Also write to IntelliJ output directory if it exists
+        if (intellijOutputFile.parentFile.exists()) {
+            intellijOutputFile.apply {
+                parentFile.mkdirs()
+                outputStream().use { buildInfo.store(it, "Build information generated at build time") }
+            }
         }
     }
 }
@@ -132,6 +145,11 @@ sourceSets {
 
 tasks.processResources {
     dependsOn(copyEcstasyResources)
+}
+
+// Ensure test compilation has access to generated build info
+tasks.compileTestJava {
+    dependsOn(generateBuildInfo)
 }
 
 /**
