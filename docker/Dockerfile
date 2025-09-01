@@ -5,7 +5,7 @@
 #
 
 # Build arguments (JAVA_VERSION passed from CI/Gradle build)
-ARG JAVA_VERSION
+ARG JAVA_VERSION=REQUIRED
 ARG GH_BRANCH=master
 ARG GH_COMMIT
 ARG TARGETARCH
@@ -27,7 +27,7 @@ RUN --mount=type=cache,target=/git-cache,sharing=shared \
     /clone-xdk.sh "${GH_BRANCH}" "${GH_COMMIT}"
 
 # *** STAGE 4 (Dual-Mode Builder: Use pre-built artifacts from CI or build from source)
-ARG JAVA_VERSION
+ARG JAVA_VERSION=REQUIRED
 FROM bellsoft/liberica-openjdk-alpine:${JAVA_VERSION} AS builder
 ARG GH_BRANCH
 ARG GH_COMMIT
@@ -65,7 +65,7 @@ RUN --mount=type=cache,target=/root/.gradle/caches,sharing=locked \
 # This simplifies the build and ensures script/native launcher consistency
 
 # *** STAGE 5 (Final Runtime Image)
-ARG JAVA_VERSION
+ARG JAVA_VERSION=REQUIRED
 FROM bellsoft/liberica-runtime-container:jre-${JAVA_VERSION}-slim-musl
 
 ENV XDK_HOME=/opt/xdk
