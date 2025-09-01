@@ -1,14 +1,20 @@
 module TestSimple {
-    @Inject Console console;
+
+    @Lazy function void() log.calc() = () -> {
+        @Inject Console console;
+        console.print("run");
+    };
 
     void run() {
-        console.print(getDirs().as(Tuple)); // this used to assert at run-time
+        new Runner() {
+            @Override
+            void run() {
+                log(); // this used to fail to compile
+            }
+        }.run();
     }
 
-    (Directory, Directory, Directory) getDirs() {
-        @Inject Directory rootDir;
-        @Inject Directory curDir;
-        @Inject Directory tmpDir;
-        return rootDir, curDir, tmpDir;
+    interface Runner {
+        void run();
     }
 }

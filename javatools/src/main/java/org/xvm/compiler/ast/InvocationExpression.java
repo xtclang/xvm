@@ -2527,7 +2527,7 @@ public class InvocationExpression
                         return null;
                         }
 
-                    if (prop.isConstant() || target.hasThis())
+                    if (prop.isConstant() || infoTarget.isSingleton() || target.hasThis())
                         {
                         m_targetInfo = target; // (only used for non-constants)
                         m_argMethod  = id;
