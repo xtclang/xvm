@@ -15,15 +15,11 @@ import java.util.Arrays;
  *            Hash.of(d))));
  * }
  * </pre>
- * 
- * @author mf
  */
-public final class Hash
-    {
-    private Hash()
-        {
+public final class Hash {
+    private Hash() {
         // blocked constructor
-        }
+    }
 
     /**
      * Incorporate a value into a running hash.
@@ -33,10 +29,9 @@ public final class Hash
      *
      * @return the compound hash
      */
-    public static int of(int v, int h)
-        {
+    public static int of(int v, int h) {
         return 31 * h + v;
-        }
+    }
 
     /**
      * Incorporate a value into a running hash.
@@ -46,10 +41,9 @@ public final class Hash
      *
      * @return the compound hash
      */
-    public static int of(boolean v, int h)
-        {
+    public static int of(boolean v, int h) {
         return of(of(v), h);
-        }
+    }
 
     /**
      * Incorporate a value into a running hash.
@@ -59,10 +53,9 @@ public final class Hash
      *
      * @return the compound hash
      */
-    public static int of(byte v, int h)
-        {
+    public static int of(byte v, int h) {
         return of(of(v), h);
-        }
+    }
 
     /**
      * Incorporate a value into a running hash.
@@ -72,10 +65,9 @@ public final class Hash
      *
      * @return the compound hash
      */
-    public static int of(char v, int h)
-        {
+    public static int of(char v, int h) {
         return of(of(v), h);
-        }
+    }
 
     /**
      * Incorporate a value into a running hash.
@@ -85,10 +77,9 @@ public final class Hash
      *
      * @return the compound hash
      */
-    public static int of(short v, int h)
-        {
+    public static int of(short v, int h) {
         return of(of(v), h);
-        }
+    }
 
     /**
      * Incorporate a value into a running hash.
@@ -98,10 +89,9 @@ public final class Hash
      *
      * @return the compound hash
      */
-    public static int of(float v, int h)
-        {
+    public static int of(float v, int h) {
         return of(of(v), h);
-        }
+    }
 
     /**
      * Incorporate a value into a running hash.
@@ -111,10 +101,9 @@ public final class Hash
      *
      * @return the compound hash
      */
-    public static int of(long v, int h)
-        {
+    public static int of(long v, int h) {
         return of(of(v), h);
-        }
+    }
 
     /**
      * Incorporate a value into a running hash.
@@ -124,10 +113,9 @@ public final class Hash
      *
      * @return the compound hash
      */
-    public static int of(double v, int h)
-        {
+    public static int of(double v, int h) {
         return of(of(v), h);
-        }
+    }
 
     /**
      * Incorporate a value into a running hash.
@@ -137,10 +125,9 @@ public final class Hash
      *
      * @return the compound hash
      */
-    public static int of(Object v, int h)
-        {
+    public static int of(Object v, int h) {
         return of(of(v), h);
-        }
+    }
 
     /**
      * Return a hash of the value.
@@ -149,10 +136,9 @@ public final class Hash
      *
      * @return the hash
      */
-    public static int of(boolean v)
-        {
+    public static int of(boolean v) {
         return Boolean.hashCode(v);
-        }
+    }
 
     /**
      * Return a hash of the value.
@@ -161,10 +147,9 @@ public final class Hash
      *
      * @return the hash
      */
-    public static int of(byte v)
-        {
+    public static int of(byte v) {
         return Byte.hashCode(v);
-        }
+    }
 
     /**
      * Return a hash of the value.
@@ -173,10 +158,9 @@ public final class Hash
      *
      * @return the hash
      */
-    public static int of(short v)
-        {
+    public static int of(short v) {
         return Short.hashCode(v);
-        }
+    }
 
     /**
      * Return a hash of the value.
@@ -185,10 +169,9 @@ public final class Hash
      *
      * @return the hash
      */
-    public static int of(char v)
-        {
+    public static int of(char v) {
         return Character.hashCode(v);
-        }
+    }
 
     /**
      * Return a hash of the value.
@@ -197,10 +180,9 @@ public final class Hash
      *
      * @return the hash
      */
-    public static int of(int v)
-        {
+    public static int of(int v) {
         return Integer.hashCode(v);
-        }
+    }
 
     /**
      * Return a hash of the value.
@@ -209,10 +191,9 @@ public final class Hash
      *
      * @return the hash
      */
-    public static int of(float v)
-        {
+    public static int of(float v) {
         return Float.hashCode(v);
-        }
+    }
 
     /**
      * Return a hash of the value.
@@ -221,10 +202,9 @@ public final class Hash
      *
      * @return the hash
      */
-    public static int of(long v)
-        {
+    public static int of(long v) {
         return Long.hashCode(v);
-        }
+    }
 
     /**
      * Return a hash of the value.
@@ -233,10 +213,9 @@ public final class Hash
      *
      * @return the hash
      */
-    public static int of(double v)
-        {
+    public static int of(double v) {
         return Double.hashCode(v);
-        }
+    }
 
     /**
      * Return a hash of the value.
@@ -248,14 +227,13 @@ public final class Hash
      *
      * @return the hash
      */
-    public static int of(Object v)
-        {
+    public static int of(Object v) {
         return v == null
             ? 0
             : v.getClass().isArray()
                 ? ofArray(v)
                 : v.hashCode();
-        }
+    }
 
     /**
      * Return the hash of an array.
@@ -264,8 +242,7 @@ public final class Hash
      *
      * @return the hash
      */
-    private static int ofArray(Object v)
-        {
+    private static int ofArray(Object v) {
         Class<?> clzComp = v.getClass().getComponentType();
         return
             clzComp.isPrimitive()
@@ -278,5 +255,5 @@ public final class Hash
                 : clzComp == short .class ? Arrays.hashCode(  (short[]) v)
                                           : Arrays.hashCode((boolean[]) v)
             : Arrays.hashCode((Object[]) v);
-        }
     }
+}

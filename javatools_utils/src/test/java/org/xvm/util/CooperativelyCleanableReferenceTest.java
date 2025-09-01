@@ -16,8 +16,8 @@ public class CooperativelyCleanableReferenceTest {
         while (cleaned.get() == 0) {
             new CooperativelyCleanableReference<>(new Object(), cleaned::incrementAndGet);
             System.gc();
-        }
     }
+}
 
     @Test
     void shouldIgnoreExceptionsWhileCleaning() {
@@ -26,10 +26,10 @@ public class CooperativelyCleanableReferenceTest {
             new CooperativelyCleanableReference<>(new Object(), () -> {
                 cleaned.incrementAndGet();
                 throw new NullPointerException();
-            });
+        });
             System.gc();
-        }
     }
+}
 
     @Test
     void shouldIgnoreAndRestoreInterruptExceptionsWhileCleaning() {
@@ -38,9 +38,9 @@ public class CooperativelyCleanableReferenceTest {
             new CooperativelyCleanableReference<>(new Object(), () -> {
                 cleaned.incrementAndGet();
                 throw new RuntimeException(new InterruptedException());
-            });
+        });
             System.gc();
-        }
-        assertTrue(Thread.interrupted());
     }
+        assertTrue(Thread.interrupted());
+}
 }

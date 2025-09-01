@@ -848,38 +848,38 @@ public final class Handy {
         while (of < cch) {
             char ch = s.charAt(of);
             switch (ch) {
-                case '\"':
-                case '\'':
-                case '`':
-                    if (ch == quote) {
-                        return of;
-                    }
-                    break;
-
-                case '\\': {
-                    if (cch <= of + 2) {
-                        // string is not long enough to contain an escaped char and a closing quote
-                        return -1;
-                    }
-
-                    switch (s.charAt(of+1)) {
-                        case '\\':
-                        case '\'':
-                        case '\"':
-                        case '0':
-                        case 'b':
-                        case 'd':
-                        case 'e':
-                        case 'f':
-                        case 'n':
-                        case 'r':
-                        case 't':
-                        case 'v':
-                        case 'z':
-                            // valid escape
-                            ++of;
-                    }
+            case '\"':
+            case '\'':
+            case '`':
+                if (ch == quote) {
+                    return of;
                 }
+                break;
+
+            case '\\': {
+                if (cch <= of + 2) {
+                    // string is not long enough to contain an escaped char and a closing quote
+                    return -1;
+                }
+
+                switch (s.charAt(of+1)) {
+                case '\\':
+                case '\'':
+                case '\"':
+                case '0':
+                case 'b':
+                case 'd':
+                case 'e':
+                case 'f':
+                case 'n':
+                case 'r':
+                case 't':
+                case 'v':
+                case 'z':
+                    // valid escape
+                    ++of;
+                }
+            }
             }
 
             ++of;
@@ -913,52 +913,52 @@ public final class Handy {
             if (ch == '\\' && of + 1 < cch) {
                 char escaped = s.charAt(++of);
                 switch (escaped) {
-                    case '\\':
-                        buf.append('\\');
-                        break;
-                    case '\'':
-                        buf.append('\'');
-                        break;
-                    case '\"':
-                        buf.append('\"');
-                        break;
-                    case '0':
-                        buf.append('\000');
-                        break;
-                    case 'b':
-                        buf.append('\b');
-                        break;
-                    case 'd':
-                        buf.append('\177');
-                        break;
-                    case 'e':
-                        buf.append('\033');
-                        break;
-                    case 'f':
-                        buf.append('\f');
-                        break;
-                    case 'n':
-                        buf.append('\n');
-                        break;
-                    case 'r':
-                        buf.append('\r');
-                        break;
-                    case 't':
-                        buf.append('\t');
-                        break;
-                    case 'v':
-                        buf.append('\013');
-                        break;
-                    case 'z':
-                        buf.append('\032');
-                        break;
+                case '\\':
+                    buf.append('\\');
+                    break;
+                case '\'':
+                    buf.append('\'');
+                    break;
+                case '\"':
+                    buf.append('\"');
+                    break;
+                case '0':
+                    buf.append('\000');
+                    break;
+                case 'b':
+                    buf.append('\b');
+                    break;
+                case 'd':
+                    buf.append('\177');
+                    break;
+                case 'e':
+                    buf.append('\033');
+                    break;
+                case 'f':
+                    buf.append('\f');
+                    break;
+                case 'n':
+                    buf.append('\n');
+                    break;
+                case 'r':
+                    buf.append('\r');
+                    break;
+                case 't':
+                    buf.append('\t');
+                    break;
+                case 'v':
+                    buf.append('\013');
+                    break;
+                case 'z':
+                    buf.append('\032');
+                    break;
 
-                    default:
-                        // do not treat the slash as an escape (it's an error, but we choose to
-                        // ignore it here)
-                        --of;
-                        buf.append('\\');
-                        break;
+                default:
+                    // do not treat the slash as an escape (it's an error, but we choose to
+                    // ignore it here)
+                    --of;
+                    buf.append('\\');
+                    break;
                 }
             } else {
                 buf.append(ch);
@@ -1122,18 +1122,18 @@ public final class Handy {
         //  5  111110xx    10xxxxxx      4        26   U+200000  - U+3FFFFFF
         //  6  1111110x    10xxxxxx      5        31   U+4000000 - U+7FFFFFFF
         switch (Integer.highestOneBit(~(0xFFFFFF00 | b))) {
-            case 0b00100000: // 2-byte format
-                return (b & 0b00011111) <<  6 | nextCharBits(in);
-            case 0b00010000: // 3-byte format
-                return (b & 0b00001111) << 12 | nextCharBits(in) <<  6 | nextCharBits(in);
-            case 0b00001000: // 4-byte format
-                return (b & 0b00000111) << 18 | nextCharBits(in) << 12 | nextCharBits(in) <<  6 | nextCharBits(in);
-            case 0b00000100: // 5-byte format
-                return (b & 0b00000011) << 24 | nextCharBits(in) << 18 | nextCharBits(in) << 12 | nextCharBits(in) <<  6 | nextCharBits(in);
-            case 0b00000010: // 6-byte format
-                return (b & 0b00000001) << 30 | nextCharBits(in) << 24 | nextCharBits(in) << 18 | nextCharBits(in) << 12 | nextCharBits(in) << 6 | nextCharBits(in);
-            default:
-                throw new UTFDataFormatException("initial byte: " + byteToHexString(b));
+        case 0b00100000: // 2-byte format
+            return (b & 0b00011111) <<  6 | nextCharBits(in);
+        case 0b00010000: // 3-byte format
+            return (b & 0b00001111) << 12 | nextCharBits(in) <<  6 | nextCharBits(in);
+        case 0b00001000: // 4-byte format
+            return (b & 0b00000111) << 18 | nextCharBits(in) << 12 | nextCharBits(in) <<  6 | nextCharBits(in);
+        case 0b00000100: // 5-byte format
+            return (b & 0b00000011) << 24 | nextCharBits(in) << 18 | nextCharBits(in) << 12 | nextCharBits(in) <<  6 | nextCharBits(in);
+        case 0b00000010: // 6-byte format
+            return (b & 0b00000001) << 30 | nextCharBits(in) << 24 | nextCharBits(in) << 18 | nextCharBits(in) << 12 | nextCharBits(in) << 6 | nextCharBits(in);
+        default:
+            throw new UTFDataFormatException("initial byte: " + byteToHexString(b));
         }
     }
 
@@ -1187,49 +1187,49 @@ public final class Handy {
         //  31   U+4000000 - U+7FFFFFFF  1111110x    10xxxxxx      5
         int cTrail;
         switch (Integer.highestOneBit(ch)) {
-            case 0b00000000000000000000000010000000:
-            case 0b00000000000000000000000100000000:
-            case 0b00000000000000000000001000000000:
-            case 0b00000000000000000000010000000000:
-                out.write(0b11000000 | ch >>> 6);
-                cTrail = 1;
-                break;
+        case 0b00000000000000000000000010000000:
+        case 0b00000000000000000000000100000000:
+        case 0b00000000000000000000001000000000:
+        case 0b00000000000000000000010000000000:
+            out.write(0b11000000 | ch >>> 6);
+            cTrail = 1;
+            break;
 
-            case 0b00000000000000000000100000000000:
-            case 0b00000000000000000001000000000000:
-            case 0b00000000000000000010000000000000:
-            case 0b00000000000000000100000000000000:
-            case 0b00000000000000001000000000000000:
-                out.write(0b11100000 | ch >>> 12);
-                cTrail = 2;
-                break;
-            case 0b00000000000000010000000000000000:
-            case 0b00000000000000100000000000000000:
-            case 0b00000000000001000000000000000000:
-            case 0b00000000000010000000000000000000:
-            case 0b00000000000100000000000000000000:
-                out.write(0b11110000 | ch >>> 18);
-                cTrail = 3;
-                break;
-            case 0b00000000001000000000000000000000:
-            case 0b00000000010000000000000000000000:
-            case 0b00000000100000000000000000000000:
-            case 0b00000001000000000000000000000000:
-            case 0b00000010000000000000000000000000:
-                out.write(0b11111000 | ch >>> 24);
-                cTrail = 4;
-                break;
-            case 0b00000100000000000000000000000000:
-            case 0b00001000000000000000000000000000:
-            case 0b00010000000000000000000000000000:
-            case 0b00100000000000000000000000000000:
-            case 0b01000000000000000000000000000000:
-                out.write(0b11111100 | ch >>> 30);
-                cTrail = 5;
-                break;
+        case 0b00000000000000000000100000000000:
+        case 0b00000000000000000001000000000000:
+        case 0b00000000000000000010000000000000:
+        case 0b00000000000000000100000000000000:
+        case 0b00000000000000001000000000000000:
+            out.write(0b11100000 | ch >>> 12);
+            cTrail = 2;
+            break;
+        case 0b00000000000000010000000000000000:
+        case 0b00000000000000100000000000000000:
+        case 0b00000000000001000000000000000000:
+        case 0b00000000000010000000000000000000:
+        case 0b00000000000100000000000000000000:
+            out.write(0b11110000 | ch >>> 18);
+            cTrail = 3;
+            break;
+        case 0b00000000001000000000000000000000:
+        case 0b00000000010000000000000000000000:
+        case 0b00000000100000000000000000000000:
+        case 0b00000001000000000000000000000000:
+        case 0b00000010000000000000000000000000:
+            out.write(0b11111000 | ch >>> 24);
+            cTrail = 4;
+            break;
+        case 0b00000100000000000000000000000000:
+        case 0b00001000000000000000000000000000:
+        case 0b00010000000000000000000000000000:
+        case 0b00100000000000000000000000000000:
+        case 0b01000000000000000000000000000000:
+            out.write(0b11111100 | ch >>> 30);
+            cTrail = 5;
+            break;
 
-            default:
-                throw new UTFDataFormatException("illegal character: " + intToHexString(ch));
+        default:
+            throw new UTFDataFormatException("illegal character: " + intToHexString(ch));
         }
 
         // write out trailing bytes; each has the same "10xxxxxx" format with 6
@@ -1353,42 +1353,42 @@ public final class Handy {
         }
 
         switch (Integer.highestOneBit(ch)) {
-            case 0b00000000000000000000000010000000:
-            case 0b00000000000000000000000100000000:
-            case 0b00000000000000000000001000000000:
-            case 0b00000000000000000000010000000000:
-                return 2;
+        case 0b00000000000000000000000010000000:
+        case 0b00000000000000000000000100000000:
+        case 0b00000000000000000000001000000000:
+        case 0b00000000000000000000010000000000:
+            return 2;
 
-            case 0b00000000000000000000100000000000:
-            case 0b00000000000000000001000000000000:
-            case 0b00000000000000000010000000000000:
-            case 0b00000000000000000100000000000000:
-            case 0b00000000000000001000000000000000:
-                return 3;
+        case 0b00000000000000000000100000000000:
+        case 0b00000000000000000001000000000000:
+        case 0b00000000000000000010000000000000:
+        case 0b00000000000000000100000000000000:
+        case 0b00000000000000001000000000000000:
+            return 3;
 
-            case 0b00000000000000010000000000000000:
-            case 0b00000000000000100000000000000000:
-            case 0b00000000000001000000000000000000:
-            case 0b00000000000010000000000000000000:
-            case 0b00000000000100000000000000000000:
-                return 4;
+        case 0b00000000000000010000000000000000:
+        case 0b00000000000000100000000000000000:
+        case 0b00000000000001000000000000000000:
+        case 0b00000000000010000000000000000000:
+        case 0b00000000000100000000000000000000:
+            return 4;
 
-            case 0b00000000001000000000000000000000:
-            case 0b00000000010000000000000000000000:
-            case 0b00000000100000000000000000000000:
-            case 0b00000001000000000000000000000000:
-            case 0b00000010000000000000000000000000:
-                return 5;
+        case 0b00000000001000000000000000000000:
+        case 0b00000000010000000000000000000000:
+        case 0b00000000100000000000000000000000:
+        case 0b00000001000000000000000000000000:
+        case 0b00000010000000000000000000000000:
+            return 5;
 
-            case 0b00000100000000000000000000000000:
-            case 0b00001000000000000000000000000000:
-            case 0b00010000000000000000000000000000:
-            case 0b00100000000000000000000000000000:
-            case 0b01000000000000000000000000000000:
-                return 6;
+        case 0b00000100000000000000000000000000:
+        case 0b00001000000000000000000000000000:
+        case 0b00010000000000000000000000000000:
+        case 0b00100000000000000000000000000000:
+        case 0b01000000000000000000000000000000:
+            return 6;
 
-            default:
-                throw new UTFDataFormatException("illegal character: " + intToHexString(ch));
+        default:
+            throw new UTFDataFormatException("illegal character: " + intToHexString(ch));
         }
     }
 
@@ -1696,34 +1696,38 @@ public final class Handy {
         int cbBOM = 0;
         if (sEncoding == null) {
             switch (cb) {
-                default:
-                    if (ab[0] == 0x00 && ab[1] == 0x00 && (ab[2] & 0xFF) == 0xFE && (ab[3] & 0xFF) == 0xFF) {
-                        sEncoding = "UTF-32BE";
-                        cbBOM = 4;
-                        break;
-                    } else if ((ab[0] & 0xFF) == 0xFF && (ab[1] & 0xFF) == 0xFE && ab[2] == 0x00 && ab[3] == 0x00) {
-                        sEncoding = "UTF-32LE";
-                        cbBOM = 4;
-                        break;
-                    }
-                case 3:
-                    if ((ab[0] & 0xFF) == 0xEF && (ab[1] & 0xFF) == 0xBB && (ab[2] & 0xFF) == 0xBF) {
-                        sEncoding = "UTF-8";
-                        cbBOM = 3;
-                        break;
-                    }
-                case 2:
-                    if ((ab[0] & 0xFF) == 0xFE && (ab[1] & 0xFF) == 0xFF) {
-                        sEncoding = "UTF-16BE";
-                        cbBOM = 2;
-                        break;
-                    } else if ((ab[0] & 0xFF) == 0xFF && (ab[1] & 0xFF) == 0xFE) {
-                        sEncoding = "UTF-16LE";
-                        cbBOM = 2;
-                        break;
-                    }
-                case 1:
-                case 0:
+            default:
+                if (ab[0] == 0x00 && ab[1] == 0x00 && (ab[2] & 0xFF) == 0xFE && (ab[3] & 0xFF) == 0xFF) {
+                    sEncoding = "UTF-32BE";
+                    cbBOM = 4;
+                    break;
+                } else if ((ab[0] & 0xFF) == 0xFF && (ab[1] & 0xFF) == 0xFE && ab[2] == 0x00 && ab[3] == 0x00) {
+                    sEncoding = "UTF-32LE";
+                    cbBOM = 4;
+                    break;
+                }
+                // fall through
+            case 3:
+                if ((ab[0] & 0xFF) == 0xEF && (ab[1] & 0xFF) == 0xBB && (ab[2] & 0xFF) == 0xBF) {
+                    sEncoding = "UTF-8";
+                    cbBOM = 3;
+                    break;
+                }
+                // fall through
+            case 2:
+                if ((ab[0] & 0xFF) == 0xFE && (ab[1] & 0xFF) == 0xFF) {
+                    sEncoding = "UTF-16BE";
+                    cbBOM = 2;
+                    break;
+                } else if ((ab[0] & 0xFF) == 0xFF && (ab[1] & 0xFF) == 0xFE) {
+                    sEncoding = "UTF-16LE";
+                    cbBOM = 2;
+                    break;
+                }
+                // fall through
+            case 1:
+            case 0:
+                // fall through
             }
         }
 

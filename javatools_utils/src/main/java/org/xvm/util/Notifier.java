@@ -3,8 +3,7 @@ package org.xvm.util;
 /**
  * A simplified version of {@link java.util.concurrent.locks.Condition} abstraction.
  */
-public interface Notifier
-    {
+public interface Notifier {
     /**
      * Block the caller's thread until it is signalled, interrupted or the
      * specified time period has elapsed.
@@ -21,4 +20,4 @@ public interface Notifier
      * Wake up at least one of the awaiting thread(s).
      */
     void signal();
-    }
+}

@@ -8,13 +8,10 @@ import java.util.function.Consumer;
  * A {@link java.lang.ref.Reference Reference} like object which is also {@link AutoCloseable}.
  *
  * @param <T> the value type
- *
- * @author mf
  */
 @FunctionalInterface
 public interface Sentry<T>
-        extends AutoCloseable
-    {
+        extends AutoCloseable {
     @Override
     void close();
 
@@ -26,10 +23,9 @@ public interface Sentry<T>
      *
      * @return the value
      */
-    default T get()
-        {
+    default T get() {
         return null;
-        }
+    }
 
     /**
      * Return a new {@link Sentry} holding the specified value.
@@ -39,22 +35,18 @@ public interface Sentry<T>
      *
      * @return the sentry
      */
-    static <T> Sentry<T> of(T value)
-        {
-        return new Sentry<>()
-            {
+    static <T> Sentry<T> of(T value) {
+        return new Sentry<>() {
             @Override
-            public void close()
-                {
-                }
+            public void close() {
+            }
 
             @Override
-            public T get()
-                {
+            public T get() {
                 return value;
-                }
-            };
-        }
+            }
+        };
+    }
 
     /**
      * Return a new {@link Sentry} holding the specified value.
@@ -65,21 +57,17 @@ public interface Sentry<T>
      *
      * @return the sentry
      */
-    static <T> Sentry<T> of(T value, Consumer<? super T> closer)
-        {
-        return new Sentry<>()
-            {
+    static <T> Sentry<T> of(T value, Consumer<? super T> closer) {
+        return new Sentry<>() {
             @Override
-            public void close()
-                {
+            public void close() {
                 closer.accept(get());
-                }
+            }
 
             @Override
-            public T get()
-                {
+            public T get() {
                 return value;
-                }
-            };
-        }
+            }
+        };
     }
+}

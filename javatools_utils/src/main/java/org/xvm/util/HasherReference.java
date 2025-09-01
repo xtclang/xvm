@@ -4,11 +4,8 @@ import java.util.function.Supplier;
 
 /**
  * A {@code Reference} like class which uses {@link Hasher} for equality.
- *
- * @author falcom
  */
-public class HasherReference<T> implements Supplier<T>
-    {
+public class HasherReference<T> implements Supplier<T> {
     /**
      * The hasher being used to compare referents.
      */
@@ -25,10 +22,9 @@ public class HasherReference<T> implements Supplier<T>
      * @param referent the referent
      * @param hasher   the {@link Hasher} used to determine equality
      */
-    public HasherReference(T referent, Hasher<? super T> hasher)
-        {
+    public HasherReference(T referent, Hasher<? super T> hasher) {
         reset(referent, hasher);
-        }
+    }
 
     /**
      * Reset the referent
@@ -36,30 +32,26 @@ public class HasherReference<T> implements Supplier<T>
      * @param referent the new referent
      * @param hasher   the hasher
      */
-    protected void reset(T referent, Hasher<? super T> hasher)
-        {
+    protected void reset(T referent, Hasher<? super T> hasher) {
         this.referent = referent;
         this.hasher = hasher;
-        }
+    }
 
     /**
      * @return the referent
      */
-    public T get()
-        {
+    public T get() {
         return referent;
-        }
+    }
 
     @Override
-    public int hashCode()
-        {
+    public int hashCode() {
         return hasher.hash(referent);
-        }
+    }
 
     @Override
     @SuppressWarnings("unchecked")
-    public boolean equals(Object obj)
-        {
+    public boolean equals(Object obj) {
         return obj == this || (obj instanceof Supplier<?> that && hasher.equals(get(), (T) that.get()));
-        }
     }
+}

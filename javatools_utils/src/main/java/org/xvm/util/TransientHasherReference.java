@@ -7,12 +7,9 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
  * <p>
  * {@link TransientHasherReference} are obtained from the pool via {@link #of} and returned to the pool via
  * {@link #close}.
- *
- * @author falcom
  */
 class TransientHasherReference<T>
-        extends HasherReference<T> implements AutoCloseable
-    {
+        extends HasherReference<T> implements AutoCloseable {
     /**
      * Stacks of {@link TransientHasherReference}s.
      */
@@ -30,10 +27,9 @@ class TransientHasherReference<T>
      * @param referent the referent
      * @param hasher   the hasher
      */
-    protected TransientHasherReference(T referent, Hasher<? super T> hasher)
-        {
+    protected TransientHasherReference(T referent, Hasher<? super T> hasher) {
         super(referent, hasher);
-        }
+    }
 
     /**
      * Return a {@link TransientHasherReference}.
@@ -41,19 +37,16 @@ class TransientHasherReference<T>
      * @param referent the referent
      * @return the reference
      */
-    public static <T> TransientHasherReference<T> of(T referent, Hasher<? super T> hasher)
-        {
+    public static <T> TransientHasherReference<T> of(T referent, Hasher<? super T> hasher) {
         int slot = Thread.currentThread().hashCode() & (HEADS.length() - 1);
         TransientHasherReference<?> ref = HEADS.get(slot);
-        while (ref != null && !HEADS.compareAndSet(slot, ref, ref.next))
-            {
+        while (ref != null && !HEADS.compareAndSet(slot, ref, ref.next)) {
             ref = HEADS.get(slot);
-            }
+        }
 
-        if (ref == null)
-            {
+        if (ref == null) {
             return new TransientHasherReference<>(referent, hasher);
-            }
+        }
 
         @SuppressWarnings("unchecked")
         TransientHasherReference<T> keyRef = (TransientHasherReference<T>) ref;
@@ -61,20 +54,18 @@ class TransientHasherReference<T>
         keyRef.next = null;
         keyRef.reset(referent, hasher);
         return keyRef;
-        }
+    }
 
     /**
      * Recycle this ref.
      */
     @Override
-    public void close()
-        {
+    public void close() {
         reset(null, null);
         int slot = Thread.currentThread().hashCode() & (HEADS.length() - 1);
         next = HEADS.get(slot);
-        while (!HEADS.compareAndSet(slot, next, this))
-            {
+        while (!HEADS.compareAndSet(slot, next, this)) {
             next = HEADS.get(slot);
-            }
         }
     }
+}

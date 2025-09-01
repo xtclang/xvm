@@ -4,8 +4,6 @@ import org.xvm.util.ShallowSizeOf;
 
 /**
  * An {@link ObjectManager} implementation which stores objects in {@code long[]}s.
- *
- * @author mf
  */
 public class LongArrayObjectManager
     implements ObjectManager<long[]>

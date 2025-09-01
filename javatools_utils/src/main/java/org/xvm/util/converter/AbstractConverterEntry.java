@@ -7,11 +7,8 @@ import java.util.Objects;
 
 /**
  * A delegating {@link Map.Entry} which converts keys and values.
- *
- * @author falcom
  */
-public abstract class AbstractConverterEntry<K, V, SK, SV> implements Map.Entry<K, V>
-    {
+public abstract class AbstractConverterEntry<K, V, SK, SV> implements Map.Entry<K, V> {
     /**
      * The entry storage.
      */
@@ -27,26 +24,23 @@ public abstract class AbstractConverterEntry<K, V, SK, SV> implements Map.Entry<
      *
      * @param storage the storage entry
      */
-    protected AbstractConverterEntry(Map.Entry<SK, SV> storage)
-        {
+    protected AbstractConverterEntry(Map.Entry<SK, SV> storage) {
         this.storage = storage;
-        }
+    }
 
     /**
      * @return the storage entry for read operations.
      */
-    protected Map.Entry<SK, SV> read()
-        {
+    protected Map.Entry<SK, SV> read() {
         return storage;
-        }
+    }
 
     /**
      * @return the storage entry for read operations.
      */
-    protected Map.Entry<SK, SV> write()
-        {
+    protected Map.Entry<SK, SV> write() {
         return storage;
-        }
+    }
 
     /**
      * Convert from storage key to the public key.
@@ -73,34 +67,29 @@ public abstract class AbstractConverterEntry<K, V, SK, SV> implements Map.Entry<
     abstract protected V valueUp(SV value);
 
     @Override
-    public K getKey()
-        {
+    public K getKey() {
         K key = this.key;
         return key == null ? this.key = keyUp(read().getKey()) : key;
-        }
+    }
 
     @Override
-    public V getValue()
-        {
+    public V getValue() {
         return valueUp(read().getValue());
-        }
+    }
 
     @Override
-    public V setValue(V value)
-        {
+    public V setValue(V value) {
         return valueUp(write().setValue(valueDown(value)));
-        }
+    }
 
     @Override
-    public int hashCode()
-        {
+    public int hashCode() {
         return Hash.of(getKey());
-        }
+    }
 
     @Override
-    public boolean equals(Object obj)
-        {
+    public boolean equals(Object obj) {
         return obj instanceof Map.Entry<?, ?> that
                 && Objects.equals(getKey(), that.getKey()) && Objects.equals(getValue(), that.getValue());
-        }
     }
+}

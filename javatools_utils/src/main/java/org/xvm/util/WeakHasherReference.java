@@ -6,11 +6,8 @@ import java.util.function.Supplier;
 
 /**
  * A {@link WeakReference} which uses {@link Hasher} for its equality.
- *
- * @author falcom
  */
-public class WeakHasherReference<T> extends WeakReference<T> implements Supplier<T>
-    {
+public class WeakHasherReference<T> extends WeakReference<T> implements Supplier<T> {
     /**
      * The hasher being used to compare referents.
      */
@@ -28,23 +25,20 @@ public class WeakHasherReference<T> extends WeakReference<T> implements Supplier
      * @param hasher   the hasher to use in comparing
      * @param queue    the queue to add cleared references to
      */
-    public WeakHasherReference(T referent, Hasher<? super T> hasher, ReferenceQueue<? super T> queue)
-        {
+    public WeakHasherReference(T referent, Hasher<? super T> hasher, ReferenceQueue<? super T> queue) {
         super(referent, queue);
         this.hasher = hasher;
         this.hash = hasher.hash(referent);
-        }
+    }
 
     @Override
-    public int hashCode()
-        {
+    public int hashCode() {
         return hash;
-        }
+    }
 
     @Override
     @SuppressWarnings("unchecked")
-    public boolean equals(Object obj)
-        {
+    public boolean equals(Object obj) {
         return obj == this || (obj instanceof Supplier<?> that && hasher.equals(get(), (T) that.get()));
-        }
     }
+}

@@ -86,8 +86,7 @@ import static org.xvm.util.PackedInteger.writeLong;
  * with this data structure, so could be implemented separately.
  */
 public class ConstOrdinalList
-        extends AbstractList<Integer>
-    {
+        extends AbstractList<Integer> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -95,32 +94,29 @@ public class ConstOrdinalList
      *
      * @param list  the List of Integer values to compress
      */
-    public ConstOrdinalList(List<Integer> list)
-        {
+    public ConstOrdinalList(List<Integer> list) {
         this(list.stream().mapToInt(n -> n).toArray());
-        }
+    }
 
     /**
      * Construct a new ConstIntList from an array of int values.
      *
      * @param an  the compressed form of a bit-set
      */
-    public ConstOrdinalList(int[] an)
-        {
+    public ConstOrdinalList(int[] an) {
         assert an != null;
         m_ab = compress(an, 0);
-        }
+    }
 
     /**
      * Construct a new ConstIntList from the already-compressed form.
      *
      * @param ab  the compressed form of a bit-set
      */
-    public ConstOrdinalList(byte[] ab)
-        {
+    public ConstOrdinalList(byte[] ab) {
         assert ab != null;
         m_ab = ab;
-        }
+    }
 
 
     // ----- accessors --------------------------------------------------------------------------
@@ -128,45 +124,39 @@ public class ConstOrdinalList
     /**
      * @return a Java int array containing a copy of the same data
      */
-    public int[] toIntArray()
-        {
+    public int[] toIntArray() {
         return decompress(m_ab);
-        }
+    }
 
     /**
      * @return a copy of this ConstIntList's compressed data in its binary form
      */
-    public byte[] getBytes()
-        {
+    public byte[] getBytes() {
         return m_ab.clone();
-        }
+    }
 
 
     // ----- List API ------------------------------------------------------------------------------
 
     @Override
-    public int size()
-        {
+    public int size() {
         long lCount = unpackInt(m_ab, 0);
         return (int) lCount;
-        }
+    }
 
     @Override
-    public Integer get(int index)
-        {
-        if (index < 0)
-            {
+    public Integer get(int index) {
+        if (index < 0) {
             throw new IndexOutOfBoundsException("negative index: " + index);
-            }
+        }
 
         long lIntVal = unpackInt(m_ab, 0);
         int  ofCur   = (int) (lIntVal >>> 32);
         int  nCount  = (int) lIntVal;
-        if (index >= nCount)
-            {
+        if (index >= nCount) {
             throw new IndexOutOfBoundsException("requested index=" + index
                     + ", highest legal index=" + (nCount-1));
-            }
+        }
 
         lIntVal      = unpackInt(m_ab, ofCur);
         ofCur       += (int) (lIntVal >>> 32);
@@ -180,30 +170,24 @@ public class ConstOrdinalList
         ofCur       += (int) (lIntVal >>> 32);
         int idCur    = (int) lIntVal;
 
-        if (index < idCur)
-            {
+        if (index < idCur) {
             return nDefault;
-            }
-
-        while (true)
-            {
+        } while (true) {
             lIntVal    = unpackInt(m_ab, ofCur);
             ofCur     += (int) (lIntVal >>> 32);
             int idSkip = (int) lIntVal;
 
-            if (idSkip != 0)
-                {
+            if (idSkip != 0) {
                 lIntVal    = unpackInt(m_ab, ofCur);
                 ofCur     += (int) (lIntVal >>> 32);
                 int ofSkip = (int) lIntVal;
 
-                if (index >= idCur + idSkip)
-                    {
+                if (index >= idCur + idSkip) {
                     idCur += idSkip;
                     ofCur += ofSkip;
                     continue;
-                    }
                 }
+            }
 
             // three possibilities for the value's position at this point:
             // 1) between the current point and the end of values present in this node
@@ -217,48 +201,38 @@ public class ConstOrdinalList
             ofCur     += (int) (lIntVal >>> 32);
             int nLen   = (int) lIntVal;
 
-            if (nLen < 0)
-                {
+            if (nLen < 0) {
                 lIntVal    = unpackInt(m_ab, ofCur);
                 ofCur     += (int) (lIntVal >>> 32);
                 int nVal   = (int) lIntVal;
 
-                if (index < idCur - nLen)
-                    {
+                if (index < idCur - nLen) {
                     return nVal;
-                    }
                 }
-            else
-                {
-                if (index < idCur + nLen)
-                    {
+            } else {
+                if (index < idCur + nLen) {
                     return unpackOne(m_ab, ofCur, cBitsPer, index - idCur);
-                    }
+                }
 
                 ofCur += (nLen * cBitsPer + 7) / 8;
-                }
+            }
 
-            if (idNext != 0 && index >= idCur + idNext)
-                {
+            if (idNext != 0 && index >= idCur + idNext) {
                 idCur += idNext;
-                }
-            else
-                {
+            } else {
                 return nDefault;
-                }
             }
         }
+    }
 
     @Override
-    public Iterator<Integer> iterator()
-        {
+    public Iterator<Integer> iterator() {
         long lIntVal = unpackInt(m_ab, 0);
         int  ofCur   = (int) (lIntVal >>> 32);
         int  nCount  = (int) lIntVal;
-        if (nCount == 0)
-            {
+        if (nCount == 0) {
             return Collections.emptyIterator();
-            }
+        }
 
         lIntVal      = unpackInt(m_ab, ofCur);
         ofCur       += (int) (lIntVal >>> 32);
@@ -273,8 +247,7 @@ public class ConstOrdinalList
         int idFirst  = (int) lIntVal;
         int ofFirst  = ofCur;
 
-        return new Iterator<Integer>()
-            {
+        return new Iterator<Integer>() {
             final byte[] ab      = m_ab;
             int          idNode  = 0;
             RawNode      nodeCur = null;
@@ -282,77 +255,66 @@ public class ConstOrdinalList
             int          iNext   = 0;               // counter *within* the current node
 
             @Override
-            public boolean hasNext()
-                {
+            public boolean hasNext() {
                 return currentNode() != null;
-                }
+            }
 
             @Override
-            public Integer next()
-                {
+            public Integer next() {
                 RawNode node = currentNode();
-                if (node == null)
-                    {
+                if (node == null) {
                     throw new NoSuchElementException();
-                    }
+                }
 
                 // RLE mode
-                if (node.cVals < 0)
-                    {
+                if (node.cVals < 0) {
                     return (iNext++ >= -node.cVals)
                             ? nDefault
                             : node.nVal;
-                    }
+                }
 
                 // array mode
-                if (iNext < node.cVals)
-                    {
+                if (iNext < node.cVals) {
                     return unpackOne(node.abVals, node.ofVals, cBitsPer, iNext++);
-                    }
+                }
 
                 ++iNext;
                 return nDefault;
-                }
+            }
 
-            RawNode currentNode()
-                {
+            RawNode currentNode() {
                 RawNode node = nodeCur;
-                if (node == null)
-                    {
+                if (node == null) {
                     nodeCur = node = new RawNode();
-                    if (idFirst > 0)
-                        {
+                    if (idFirst > 0) {
                         // configure the node to be an RLE of the default value
                         node.cVals  = -idFirst;
                         node.nVal   = nDefault;
                         node.idNext = idFirst;
                         return node;
-                        }
                     }
+                }
 
-                if (iNext >= node.idNext)
-                    {
-                    if (ofNext >= ab.length)
-                        {
+                if (iNext >= node.idNext) {
+                    if (ofNext >= ab.length) {
                         return null;
-                        }
+                    }
 
                     idNode += node.idNext;
                     ofNext += fromBytes(node, ab, ofNext, cBitsPer);
                     iNext   = 0;
 
-                    if (node.idNext == 0)
-                        {
+                    if (node.idNext == 0) {
                         // extend the last node to the end of the array by pretending that it has
                         // a next node that follows it
                         node.idNext = nCount - idNode;
-                        }
                     }
+                }
 
                 return node;
-                }
-            };
-        }
+            }
+        };
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -365,32 +327,26 @@ public class ConstOrdinalList
      *
      * @return the ConstIntList's compressed data in its binary form
      */
-    public static byte[] compress(int[] an, int cFast)
-        {
+    public static byte[] compress(int[] an, int cFast) {
         assert an != null;
         assert cFast >= 0 && cFast <= an.length;
 
         int cVals = an.length;
-        if (cVals == 0)
-            {
-            try
-                {
+        if (cVals == 0) {
+            try {
                 ByteArrayOutputStream outRaw = new ByteArrayOutputStream();
                 DataOutputStream out = new DataOutputStream(outRaw);
 
                 writeLong(out, cVals);
                 return outRaw.toByteArray();
-                }
-            catch (IOException e)
-                {
+            } catch (IOException e) {
                 throw new RuntimeException(e);
-                }
             }
+        }
 
         Map<Integer, Integer> mapN = new HashMap<>();
         int nHigh = -1;
-        for (int i = 0; i < cVals; ++i)
-            {
+        for (int i = 0; i < cVals; ++i) {
             // verify all values >0
             int n = an[i];
             assert n >= 0;
@@ -399,23 +355,20 @@ public class ConstOrdinalList
             mapN.compute(n, (k, v) -> (v==null?0:v) + 1);
 
             // determine highest magnitude value
-            if (n > nHigh)
-                {
+            if (n > nHigh) {
                 nHigh = n;
-                }
             }
+        }
 
         // determine which value can be omitted (i.e. pick an implicit value)
         int nDefault = -1;
         int cDefault = 0;
-        for (Entry<Integer, Integer> entry : mapN.entrySet())
-            {
-            if (entry.getValue() > cDefault)
-                {
+        for (Entry<Integer, Integer> entry : mapN.entrySet()) {
+            if (entry.getValue() > cDefault) {
                 nDefault = entry.getKey();
                 cDefault = entry.getValue();
-                }
             }
+        }
 
         // calculate bits per value
         int cBitsPer = (Integer.numberOfTrailingZeros(Integer.highestOneBit(nHigh)) + 1) & 0x1F;
@@ -433,10 +386,9 @@ public class ConstOrdinalList
         // link "next node" pointers
         Node[] aNode  = list.toArray(new Node[0]);
         int    cNodes = aNode.length;
-        for (int i = 1; i < cNodes; ++i)
-            {
+        for (int i = 1; i < cNodes; ++i) {
             aNode[i-1].next = aNode[i];
-            }
+        }
 
         // link "skip node" pointers
         createSkips(aNode, 0, aNode.length-1);
@@ -444,8 +396,7 @@ public class ConstOrdinalList
         // turn each node into a byte array
         byte[][] aabNode = toBytes(aNode, cBitsPer);
 
-        try
-            {
+        try {
             ByteArrayOutputStream outRaw = new ByteArrayOutputStream();
             DataOutputStream      out    = new DataOutputStream(outRaw);
 
@@ -459,18 +410,15 @@ public class ConstOrdinalList
             writeLong(out, cBitsPer);
             writeLong(out, aNode.length == 0 ? cVals : aNode[0].id);
 
-            for (int i = 0; i < cNodes; ++i)
-                {
+            for (int i = 0; i < cNodes; ++i) {
                 out.write(aabNode[i]);
-                }
+            }
 
             return outRaw.toByteArray();
-            }
-        catch (IOException e)
-            {
+        } catch (IOException e) {
             throw new RuntimeException(e);
-            }
         }
+    }
 
     /**
      * Decompress a ConstIntList's compressed data in its binary form into a Java <tt>int[]</tt>.
@@ -479,72 +427,58 @@ public class ConstOrdinalList
      *
      * @return the corresponding Java <tt>int[]</tt>
      */
-    public static int[] decompress(byte[] ab)
-        {
-        try
-            {
+    public static int[] decompress(byte[] ab) {
+        try {
             ByteArrayInputStream inRaw = new ByteArrayInputStream(ab);
             DataInputStream      in    = new DataInputStream(inRaw);
 
             int   cVals = readPackedInt(in);
             int[] anVal = new int[cVals];
-            if (cVals == 0)
-                {
+            if (cVals == 0) {
                 return anVal;
-                }
+            }
 
             int nDefault = readPackedInt(in);
-            if (nDefault != 0)
-                {
+            if (nDefault != 0) {
                 Arrays.fill(anVal, nDefault);
-                }
+            }
 
             int cBitsPer = readPackedInt(in);
             assert cBitsPer > 0 && cBitsPer <= 32;
 
             int iCur = readPackedInt(in);
-            while (iCur < cVals)
-                {
+            while (iCur < cVals) {
                 RawNode node = readRawNode(in, cBitsPer);
 
-                if (node.cVals < 0)
-                    {
-                    for (int i = 0, c = -node.cVals; i < c; ++i)
-                        {
+                if (node.cVals < 0) {
+                    for (int i = 0, c = -node.cVals; i < c; ++i) {
                         anVal[iCur + i] = node.nVal;
-                        }
                     }
-                else
-                    {
+                } else {
                     int[] anNode = unpack(node.abVals, node.ofVals, node.cVals, cBitsPer);
-                    for (int i = 0, c = node.cVals; i < c; ++i)
-                        {
+                    for (int i = 0, c = node.cVals; i < c; ++i) {
                         anVal[iCur + i] = anNode[i];
-                        }
                     }
-
-                int iAdd = node.idNext;
-                if (iAdd == 0)
-                    {
-                    break;
-                    }
-
-                iCur += iAdd;
                 }
 
+                int iAdd = node.idNext;
+                if (iAdd == 0) {
+                    break;
+                }
+
+                iCur += iAdd;
+            }
+
             return anVal;
-            }
-        catch (IOException e)
-            {
+        } catch (IOException e) {
             throw new RuntimeException(e);
-            }
         }
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
 
-    private static List<Node> buildNodeList(int[] an, int cMinRun, int nDefault)
-        {
+    private static List<Node> buildNodeList(int[] an, int cMinRun, int nDefault) {
         // identify the runs within the array
         // build a sequence of nodes (run length encoded nodes, and compressed array nodes)
         int cVals     = an.length;
@@ -553,62 +487,50 @@ public class ConstOrdinalList
         int nPrev     = -1;
         int cRun      = 0;
         List<Node> list = new ArrayList<>();
-        for (int i = 0; i < cVals; ++i)
-            {
+        for (int i = 0; i < cVals; ++i) {
             int n = an[i];
-            if (n == nPrev)
-                {
+            if (n == nPrev) {
                 ++cRun;
-                }
-            else
-                {
-                if (cRun >= cMinRun)
-                    {
+            } else {
+                if (cRun >= cMinRun) {
                     createNodes(list, an, i, nPrev, cRun, cMinRun, iFirstN, iLastN, nDefault);
                     iFirstN = -1;
                     iLastN  = -1;
-                    }
+                }
                 cRun = 1;
-                }
+            }
 
-            if (n != nDefault)
-                {
-                if (iFirstN < 0)
-                    {
+            if (n != nDefault) {
+                if (iFirstN < 0) {
                     iFirstN = i;
-                    }
-                iLastN = i;
                 }
+                iLastN = i;
+            }
 
             nPrev = n;
-            }
+        }
         createNodes(list, an, cVals, nPrev, cRun, cMinRun, iFirstN, iLastN, nDefault);
 
         return list;
-        }
+    }
 
     private static void createNodes(List<Node> list, int[] an, int i, int nRun, int cRun, int cMinRun,
-                                    int iFirstN, int iLastN, int nDefault)
-        {
-        if (cRun >= cMinRun)
-            {
+                                    int iFirstN, int iLastN, int nDefault) {
+        if (cRun >= cMinRun) {
             int iRun = i - cRun;
 
             // the last `cRun` values form a run, so we will create an RLE node for it, but
             // first we need to create an array node in front of it if there were any values
             // that appeared before the run that we did not previously capture in a node
-            if (iFirstN >= 0 && iFirstN < iRun)
-                {
+            if (iFirstN >= 0 && iFirstN < iRun) {
                 // only take numbers up to the beginning of the run (and don't keep any trailing
                 // default values)
-                if (iLastN >= iRun)
-                    {
+                if (iLastN >= iRun) {
                     iLastN = iRun - 1;
-                    while (iLastN > iFirstN && an[iLastN] == nDefault)
-                        {
+                    while (iLastN > iFirstN && an[iLastN] == nDefault) {
                         --iLastN;
-                        }
                     }
+                }
 
                 Node node   = new Node();
                 node.rle    = false;
@@ -617,10 +539,9 @@ public class ConstOrdinalList
                 node.ofVals = iFirstN;
                 node.cVals  = iLastN - iFirstN + 1;
                 list.add(node);
-                }
+            }
 
-            if (an[iRun] != nDefault)
-                {
+            if (an[iRun] != nDefault) {
                 // create the RLE node
                 Node node  = new Node();
                 node.rle   = true;
@@ -628,10 +549,8 @@ public class ConstOrdinalList
                 node.val   = nRun;
                 node.cVals = cRun;
                 list.add(node);
-                }
             }
-        else if (iFirstN >= 0)
-            {
+        } else if (iFirstN >= 0) {
             // create an array node
             Node node   = new Node();
             node.rle    = false;
@@ -640,30 +559,25 @@ public class ConstOrdinalList
             node.ofVals = iFirstN;
             node.cVals  = iLastN - iFirstN + 1;
             list.add(node);
-            }
         }
+    }
 
-    private static void ensureFastNode(List<Node> list, int cFast, int cMinRun, int[] an)
-        {
+    private static void ensureFastNode(List<Node> list, int cFast, int cMinRun, int[] an) {
         // make sure that the initial block covers the entire "fast" range as a single block
-        if (cFast > 0)
-            {
+        if (cFast > 0) {
             // figure out how many nodes have to be combined to create the "fast" node
             int cNodes = 0;
-            for (Node node : list)
-                {
-                if (node.id >= cFast)
-                    {
+            for (Node node : list) {
+                if (node.id >= cFast) {
                     break;
-                    }
+                }
 
                 ++cNodes;
-                }
+            }
 
-            if (cNodes <= 1)
-                {
+            if (cNodes <= 1) {
                 return;
-                }
+            }
 
             // if the last node to combine to make the fast node is an RLE node, then see if the RLE
             // node represents a run that is long enough to be split into a portion that goes into
@@ -671,22 +585,20 @@ public class ConstOrdinalList
             Node nodeLast = list.get(cNodes - 1);
             int iFirst = list.get(0).id;
             int iLast = nodeLast.id + nodeLast.cVals - 1;
-            if (nodeLast.rle && iLast - cFast > cMinRun)
-                {
+            if (nodeLast.rle && iLast - cFast > cMinRun) {
                 iLast = cFast - 1;
                 int cAdjust = cFast - nodeLast.id;
                 assert cAdjust > 0;
                 nodeLast.id    += cAdjust;
                 nodeLast.cVals -= cAdjust;
                 --cNodes;
-                }
+            }
 
             // drop the extra nodes that we're collapsing into the fast node
-            while (cNodes > 1)
-                {
+            while (cNodes > 1) {
                 list.remove(0);
                 --cNodes;
-                }
+            }
 
             // build the fast node and use it in place of the first node
             Node nodeFast   = new Node();
@@ -696,18 +608,16 @@ public class ConstOrdinalList
             nodeFast.cVals  = iLast - iFirst + 1;
             nodeFast.rle    = false;
             list.set(0, nodeFast);
-            }
         }
+    }
 
-    private static byte[][] toBytes(Node[] aNode, int cBitsPer)
-        {
+    private static byte[][] toBytes(Node[] aNode, int cBitsPer) {
         // turn the nodes into bytes
         int      cNodes  = aNode.length;
         byte[][] aabNode = new byte[cNodes][];
 
         Node nodeNext = null;
-        for (int i = cNodes - 1; i >= 0; --i)
-            {
+        for (int i = cNodes - 1; i >= 0; --i) {
             Node node = aNode[i];
 
             RawNode nodeRaw = new RawNode();
@@ -716,39 +626,34 @@ public class ConstOrdinalList
             //            it works now due to the "ofNext >= ab.length" in "currentNode()" method
             nodeRaw.idNext  = nodeNext == null ? 0 : nodeNext.id - node.id;
 
-            if (node.rle)
-                {
+            if (node.rle) {
                 nodeRaw.cVals = -node.cVals;
                 nodeRaw.nVal  = node.val;
-                }
-            else
-                {
+            } else {
                 nodeRaw.cVals  = node.cVals;
                 nodeRaw.abVals = pack(node.vals, node.ofVals, node.cVals, cBitsPer);
-                }
+            }
 
             Node nodeJmp = node.jmp;
-            if (nodeJmp != null)
-                {
+            if (nodeJmp != null) {
                 int iJmp = findNode(aNode, nodeJmp);
                 assert iJmp > i;
                 nodeRaw.idJmp = nodeJmp.id - node.id;
                 nodeRaw.ofJmp = calcSkip(aabNode, i, nodeRaw, iJmp);
-                }
+            }
 
             aabNode[i] = toBytes(nodeRaw, cBitsPer);
 
             nodeNext = node;
-            }
+        }
 
         return aabNode;
-        }
+    }
 
 
     // ----- inner class: Node ---------------------------------------------------------------------
 
-    private static class Node
-        {
+    private static class Node {
         int     id;
         boolean rle;
         int     cVals;
@@ -757,27 +662,22 @@ public class ConstOrdinalList
         int     ofVals;
         Node    jmp;
         Node    next;
-        }
+    }
 
-    private static int findNode(Node[] aNode, Node node)
-        {
-        for (int i = 0, c = aNode.length; i < c; ++i)
-            {
-            if (aNode[i] == node)
-                {
+    private static int findNode(Node[] aNode, Node node) {
+        for (int i = 0, c = aNode.length; i < c; ++i) {
+            if (aNode[i] == node) {
                 return i;
-                }
             }
-        throw new IllegalStateException();
         }
+        throw new IllegalStateException();
+    }
 
-    private static void createSkips(Node[] aNode, int iFirst, int iLast)
-        {
+    private static void createSkips(Node[] aNode, int iFirst, int iLast) {
         int cNodes = iLast - iFirst + 1;
-        if (cNodes <= 2)
-            {
+        if (cNodes <= 2) {
             return;
-            }
+        }
 
         Node node = aNode[iFirst];
         assert node.jmp == null;
@@ -787,13 +687,12 @@ public class ConstOrdinalList
 
         createSkips(aNode, iFirst + 1, iFirst + ofJmp - 1);
         createSkips(aNode, iFirst + ofJmp, iLast);
-        }
+    }
 
 
     // ----- inner class: RawNode ------------------------------------------------------------------
 
-    private static class RawNode
-        {
+    private static class RawNode {
         int     idJmp;
         int     ofJmp;
         int     idNext;
@@ -801,69 +700,59 @@ public class ConstOrdinalList
         int     nVal;       // run length node only
         byte[]  abVals;     // value array node only
         int     ofVals;
-        }
+    }
 
     private static RawNode readRawNode(DataInputStream in, int cBitsPer)
-            throws IOException
-        {
+            throws IOException {
         RawNode node = new RawNode();
 
         node.idJmp = readPackedInt(in);
-        if (node.idJmp != 0)
-            {
+        if (node.idJmp != 0) {
             node.ofJmp = readPackedInt(in);
-            }
+        }
 
         node.idNext = readPackedInt(in);
 
         node.cVals = readPackedInt(in);
-        if (node.cVals < 0)
-            {
+        if (node.cVals < 0) {
             // the run-length node form adds:
             // - the run length (encoded as a negative value to indicate RLE)
             // - the run value
             node.nVal = readPackedInt(in);
-            }
-        else
-            {
+        } else {
             // the array node form adds:
             // - the number of values;
             // - the bytes necessary to hold those values
             int cb = (node.cVals * cBitsPer + 7) / 8;
             node.abVals = new byte[cb];
             in.readFully(node.abVals);
-            }
-
-        return node;
         }
 
-    private static int fromBytes(RawNode node, byte[] ab, int of, int cBitsPer)
-        {
+        return node;
+    }
+
+    private static int fromBytes(RawNode node, byte[] ab, int of, int cBitsPer) {
         int  ofOrig  = of;
         long lIntVal = unpackInt(ab, of); of += (int) (lIntVal >>> 32);
         node.idJmp = (int) lIntVal;
 
-        if (node.idJmp != 0)
-            {
+        if (node.idJmp != 0) {
             lIntVal = unpackInt(ab, of); of += (int) (lIntVal >>> 32);
             node.ofJmp = (int) lIntVal;
-            }
+        }
 
         lIntVal = unpackInt(ab, of); of += (int) (lIntVal >>> 32);
         node.idNext = (int) lIntVal;
 
         lIntVal = unpackInt(ab, of); of += (int) (lIntVal >>> 32);
         node.cVals = (int) lIntVal;
-        if (node.cVals < 0)
-            {
+        if (node.cVals < 0) {
             // the run-length node form adds:
             // - the run length (encoded as a negative value to indicate RLE)
             // - the run value
             lIntVal = unpackInt(ab, of); of += (int) (lIntVal >>> 32);
             node.nVal = (int) lIntVal;
-            }
-        else
-            {
+        } else {
             // the array node form adds:
             // - the number of values;
             // - the bytes necessary to hold those values
@@ -871,13 +760,12 @@ public class ConstOrdinalList
             node.abVals = ab;
             node.ofVals = of;
             of += cb;
-            }
-
-        return of - ofOrig;
         }
 
-    private static byte[] toBytes(RawNode node, int cBitsPer)
-        {
+        return of - ofOrig;
+    }
+
+    private static byte[] toBytes(RawNode node, int cBitsPer) {
         // - a skip byte id (encoded as a relative value to this node's implicit byte id)
         // - the number of bytes to skip forward (exists if the skip byte id is non-zero)
         // - the next byte id (encoded as a relative value to this node's implicit byte id)
@@ -891,73 +779,58 @@ public class ConstOrdinalList
         // - the bytes necessary to hold the LSBs of the values
         ByteArrayOutputStream outRaw = new ByteArrayOutputStream();
         DataOutputStream      out    = new DataOutputStream(outRaw);
-        try
-            {
+        try {
             writeLong(out, node.idJmp);
-            if (node.idJmp > 0)
-                {
+            if (node.idJmp > 0) {
                 writeLong(out, node.ofJmp);
-                }
+            }
             writeLong(out, node.idNext);
             writeLong(out, node.cVals);
-            if (node.cVals < 0)
-                {
+            if (node.cVals < 0) {
                 writeLong(out, node.nVal);
-                }
-            else
-                {
+            } else {
                 int cb = (node.cVals * cBitsPer + 7) / 8;
                 out.write(node.abVals, node.ofVals, cb);
-                }
             }
-        catch (IOException e)
-            {
+        } catch (IOException e) {
             throw new RuntimeException(e);
-            }
-        return outRaw.toByteArray();
         }
+        return outRaw.toByteArray();
+    }
 
-    private static int calcSkip(byte[][] aabNode, int iFrom, RawNode nodeFrom, int iTo)
-        {
+    private static int calcSkip(byte[][] aabNode, int iFrom, RawNode nodeFrom, int iTo) {
         assert iTo > iFrom + 1;
 
         // first we have to skip over the remainder of the "from" node
         int cb = packedLength(nodeFrom.idNext)
                + packedLength(nodeFrom.cVals);
 
-        if (nodeFrom.cVals < 0)
-            {
+        if (nodeFrom.cVals < 0) {
             cb += packedLength(nodeFrom.nVal);
-            }
-        else
-            {
+        } else {
             assert nodeFrom.ofVals == 0;
             cb += nodeFrom.abVals.length;
-            }
+        }
 
         // then we have to skip over any nodes in between the "from" and "to" nodes
-        for (int i = iFrom + 1; i < iTo; ++i)
-            {
+        for (int i = iFrom + 1; i < iTo; ++i) {
             cb += aabNode[i].length;
-            }
+        }
 
         return cb;
-        }
+    }
 
 
     // ----- packed array --------------------------------------------------------------------------
 
-    private static byte[] pack(int[] an, int of, int cn, int cBitsPer)
-        {
+    private static byte[] pack(int[] an, int of, int cn, int cBitsPer) {
         int    cBytes = (cn * cBitsPer + 7) / 8;
         byte[] ab     = new byte[cBytes];
 
-        for (int i = 0; i < cn; ++i)
-            {
+        for (int i = 0; i < cn; ++i) {
             int n     = an[of+i];
             int ofBit = i * cBitsPer;
-            while (n != 0)
-                {
+            while (n != 0) {
                 int ofByte = ofBit / 8;
                 int nByte  = ab[ofByte];
 
@@ -970,31 +843,27 @@ public class ConstOrdinalList
 
                 n   >>>= cStore;
                 ofBit += cStore;
-                }
             }
+        }
 
         return ab;
-        }
+    }
 
-    private static int[] unpack(byte[] ab, int of, int cVals, int cBitsPer)
-        {
+    private static int[] unpack(byte[] ab, int of, int cVals, int cBitsPer) {
         int[] an = new int[cVals];
-        for (int i = 0; i < cVals; ++i)
-            {
+        for (int i = 0; i < cVals; ++i) {
             an[i] = unpackOne(ab, of, cBitsPer, i);
-            }
+        }
 
         return an;
-        }
+    }
 
-    private static int unpackOne(byte[] ab, int of, int cBitsPer, int idVal)
-        {
+    private static int unpackOne(byte[] ab, int of, int cBitsPer, int idVal) {
         int n = 0;
 
         int ofReadBit   = idVal * cBitsPer;
         int cBitsRemain = cBitsPer;
-        while (cBitsRemain > 0)
-            {
+        while (cBitsRemain > 0) {
             int b = ab[of + ofReadBit / 8];
 
             int ofPartBit = ofReadBit & 0x7;
@@ -1004,10 +873,10 @@ public class ConstOrdinalList
 
             ofReadBit   += cPartBits;
             cBitsRemain -= cPartBits;
-            }
+        }
 
         return n;
-        }
+    }
 
 // Test code for pack/unpack:
 //
@@ -1019,7 +888,7 @@ public class ConstOrdinalList
 //            if (iTest % 1000 == 0)
 //                {
 //                System.out.println("test #" + iTest);
-//                }
+//            }
 //            int   cBitsPer = 1+rnd.nextInt(31);
 //            int   nMax  = (1 << cBitsPer) - 1;
 //            int   cVals = 1+rnd.nextInt(100000);
@@ -1027,7 +896,7 @@ public class ConstOrdinalList
 //            for (int i = 0; i < cVals; ++i)
 //                {
 //                anVal[i] = rnd.nextInt(nMax);
-//                }
+//            }
 //
 //            byte[] ab     = pack(anVal, 0, cVals, cBitsPer);
 //            int[]  anVal2 = unpack(ab, 0, cVals, cBitsPer);
@@ -1035,7 +904,7 @@ public class ConstOrdinalList
 //            if (anVal.length != anVal2.length)
 //                {
 //                sErr = "Different lengths: orig=" + anVal.length + ", new=" + anVal2.length;
-//                }
+//            }
 //            else
 //                {
 //                for (int i = 0; i < cVals; ++i)
@@ -1044,15 +913,15 @@ public class ConstOrdinalList
 //                        {
 //                        sErr = "Value " + i + " differs: orig=" + anVal[i] + ", new=" + anVal2[i];
 //                        break;
-//                        }
 //                    }
 //                }
+//            }
 //            if (sErr != null)
 //                {
 //                throw new IllegalStateException("test failed for array=" + Arrays.asList(anVal) + "\n" + sErr);
-//                }
 //            }
 //        }
+//    }
 
 
     // ----- data members --------------------------------------------------------------------------
@@ -1061,4 +930,4 @@ public class ConstOrdinalList
      * The compressed form.
      */
     private final byte[] m_ab;
-    }
+}

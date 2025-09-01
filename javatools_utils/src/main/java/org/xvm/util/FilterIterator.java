@@ -6,11 +6,8 @@ import java.util.function.Predicate;
 
 /**
  * A filtering {@link java.util.Iterator}.
- *
- * @author falcom
  */
-public class FilterIterator<T> implements Iterator<T>
-    {
+public class FilterIterator<T> implements Iterator<T> {
     /**
      * The delegate iterator.
      */
@@ -31,52 +28,42 @@ public class FilterIterator<T> implements Iterator<T>
      */
     private boolean removeReady;
 
-    public FilterIterator(Iterator<T> delegate, Predicate<? super T> filter)
-        {
+    public FilterIterator(Iterator<T> delegate, Predicate<? super T> filter) {
         this.delegate = delegate;
         this.filter = filter;
-        }
+    }
 
     @Override
-    public boolean hasNext()
-        {
+    public boolean hasNext() {
         removeReady = false;
-        while (next == null && delegate.hasNext())
-            {
+        while (next == null && delegate.hasNext()) {
             T item = delegate.next();
-            if (filter.test(item))
-                {
+            if (filter.test(item)) {
                 next = item;
-                }
             }
+        }
 
         return next != null;
-        }
+    }
 
     @Override
-    public T next()
-        {
-        if (hasNext())
-            {
+    public T next() {
+        if (hasNext()) {
             T result = next;
             next = null;
             removeReady = true;
             return result;
-            }
-        throw new NoSuchElementException();
         }
+        throw new NoSuchElementException();
+    }
 
     @Override
-    public void remove()
-        {
-        if (removeReady)
-            {
+    public void remove() {
+        if (removeReady) {
             removeReady = false;
             delegate.remove();
-            }
-        else
-            {
+        } else {
             throw new IllegalStateException();
-            }
         }
     }
+}

@@ -9,12 +9,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * {@link java.util.concurrent.ConcurrentLinkedQueue ConcurrentLinkedQueue}.
  *
  * @param <E> the element type
- * @author mf
  */
-public class ConcurrentLinkedBlockingQueue<E> extends BlockingQueueAdapter<E>
-    {
-    public ConcurrentLinkedBlockingQueue()
-        {
+public class ConcurrentLinkedBlockingQueue<E> extends BlockingQueueAdapter<E> {
+    public ConcurrentLinkedBlockingQueue() {
         super(new ConcurrentLinkedQueue<>());
-        }
     }
+}

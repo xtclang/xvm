@@ -6,8 +6,7 @@ package org.xvm.util;
  */
 @FunctionalInterface
 public interface Auto
-    extends AutoCloseable
-    {
+    extends AutoCloseable {
     @Override
     void close();
-    }
+}

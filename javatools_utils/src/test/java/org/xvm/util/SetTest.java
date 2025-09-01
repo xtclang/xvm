@@ -23,225 +23,176 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Tests of the Handy class.
  */
-public class SetTest
-    {
-    public static void main(String[] args)
-        {
+public class SetTest {
+    public static void main(String[] args) {
         int    cSteps = 1000;
         int    cIters = 1;
         String sFile  = null;
-        if (args != null && args.length > 0)
-            {
-            try
-                {
+        if (args != null && args.length > 0) {
+            try {
                 cSteps = Math.max(1, Integer.parseInt(args[0]));
-                try
-                    {
+                try {
                     cIters = Math.max(1, Integer.parseInt(args[1]));
-                    }
-                catch (Exception ignore) {}
-                }
-            catch (Exception e)
-                {
+                } catch (Exception ignore) {}
+            } catch (Exception e) {
                 sFile = args[0];
-                }
             }
+        }
 
         String sTest = null;
-        if (sFile != null)
-            {
-            if ("speed".equals(sFile))
-                {
+        if (sFile != null) {
+            if ("speed".equals(sFile)) {
                 speedTest();
                 return;
-                }
+            }
 
-            try
-                {
+            try {
                 File file = new File(sFile);
-                if (!file.isFile() || !file.canRead())
-                    {
+                if (!file.isFile() || !file.canRead()) {
                     throw new IOException("no such file: " + sFile);
-                    }
+                }
 
                 int    cb = (int) Math.min(file.length(), 1_000_000_000);
                 byte[] ab = new byte[cb];
 
                 new DataInputStream(new FileInputStream(sFile)).readFully(ab);
                 sTest = new String(ab);
-                }
-            catch (IOException e)
-                {
+            } catch (IOException e) {
                 out("Error reading file: " + sFile);
                 return;
-                }
             }
+        }
 
-        if (sTest == null)
-            {
-            for (int i = 1; i <= cIters; ++i)
-                {
+        if (sTest == null) {
+            for (int i = 1; i <= cIters; ++i) {
                 out("Running test# " + i);
-                if (!randomTest(cSteps))
-                    {
+                if (!randomTest(cSteps)) {
                     break;
-                    }
                 }
             }
-        else
-            {
+        } else {
             replayTest(sTest);
-            }
         }
+    }
 
     @Test @Disabled
-    public void sizeTestHashSet()
-        {
+    public void sizeTestHashSet() {
         sizeTest(new HashSet<>());
-        }
+    }
 
     @Test @Disabled
-    public void sizeTestListSet()
-        {
+    public void sizeTestListSet() {
         sizeTest(new ListSet<>());
-        }
+    }
 
-    static void sizeTest(Set<Integer> set)
-        {
+    static void sizeTest(Set<Integer> set) {
         int  c     = 0;
         long start = System.currentTimeMillis();
-        while (true)
-            {
+        while (true) {
             set.add(++c);
-            if (c % 1000000 == 0)
-                {
+            if (c % 1000000 == 0) {
                 out((c/1000000) + "m in " + (System.currentTimeMillis()-start) + "ms");
                 break;
-                }
             }
         }
+    }
 
-    static void speedTest()
-        {
-        for (int i = 0, p=990, c = 1000; i < c; ++i)
-            {
+    static void speedTest() {
+        for (int i = 0, p=990, c = 1000; i < c; ++i) {
             speedTest(i>p);
-            }
         }
+    }
 
-    static void speedTest(boolean fPrint)
-        {
+    static void speedTest(boolean fPrint) {
         int cIters = fPrint ? 1000 : 100;
         long l0 = System.currentTimeMillis();
-        for (int i = 0; i < cIters; ++i)
-            {
+        for (int i = 0; i < cIters; ++i) {
             speedTest(new HashSet<>());
-            }
+        }
         long l1 = System.currentTimeMillis();
-        for (int i = 0; i < cIters; ++i)
-            {
+        for (int i = 0; i < cIters; ++i) {
             speedTest(new ListSet<>());
-            }
+        }
         long l2 = System.currentTimeMillis();
-        if (fPrint)
-            {
+        if (fPrint) {
             out("HashSet @" + (l1-l0) + "ms vs. ListSet @" + (l2-l1) + "ms");
-            }
         }
+    }
 
-    static void speedTest(Set<Integer> set)
-        {
-        for (int i = 0, c = 1000; i <= c; ++i)
-            {
+    static void speedTest(Set<Integer> set) {
+        for (int i = 0, c = 1000; i <= c; ++i) {
             set.add(i);
-            }
         }
+    }
 
-    static boolean randomTest(int cSteps)
-        {
+    static boolean randomTest(int cSteps) {
         ArrayList<Op> listOps = new ArrayList<>(cSteps);
         Data data = new StringData(1+rnd.nextInt(1+rnd.nextInt(100000)));
         Set   setControl = createControlSet();
         Set[] aTestSets  = createTestSets();
-        for (int iStep = 0; iStep < cSteps; ++iStep)
-            {
+        for (int iStep = 0; iStep < cSteps; ++iStep) {
             Op op = randomOp(setControl, data);
             listOps.add(op);
             op.init(setControl);
-            for (int iSet = 0, cSets = aTestSets.length; iSet < cSets; ++iSet)
-                {
+            for (int iSet = 0, cSets = aTestSets.length; iSet < cSets; ++iSet) {
                 Set set = aTestSets[iSet];
-                try
-                    {
+                try {
                     op.test(set);
-                    }
-                catch (Exception | AssertionError e)
-                    {
+                } catch (Exception | AssertionError e) {
                     displayErr(listOps, iSet, iStep, e);
                     return false;
-                    }
                 }
             }
+        }
 
         return true;
-        }
+    }
 
     static boolean fReplay;
 
-    static void replayTest(String sTest)
-        {
+    static void replayTest(String sTest) {
         fReplay = true;
 
         String[]      asLine  = Handy.parseDelimitedString(sTest, '\n');
         int           cLines  = asLine.length;
         ArrayList<Op> listOps = new ArrayList<>(cLines);
-        for (String sLine : asLine)
-            {
-            if (!sLine.isEmpty() && sLine.charAt(0) == '[')
-                {
+        for (String sLine : asLine) {
+            if (!sLine.isEmpty() && sLine.charAt(0) == '[') {
                 int of = sLine.indexOf(']');
                 assert of > 0;
                 String sOp = sLine.substring(of + 1).trim();
                 Op op = parseOp(sOp);
                 listOps.add(op);
-                }
-            }
-
-        Set[] aSet = createTestSets();
-        for (int i = 0, cOps = listOps.size(); i < cOps; ++i)
-            {
-            Op op = listOps.get(i);
-            for (int iSet = 0, cSets = aSet.length; iSet < cSets; ++iSet)
-                {
-                Set set = aSet[iSet];
-                try
-                    {
-                    op.test(set);
-                    }
-                catch (Exception | AssertionError e)
-                    {
-                    displayErr(listOps, iSet, i, e);
-                    return;
-                    }
-                }
             }
         }
 
-    static void displayErr(List<Op> listOps, int iSet, int iOp, Throwable e)
-        {
+        Set[] aSet = createTestSets();
+        for (int i = 0, cOps = listOps.size(); i < cOps; ++i) {
+            Op op = listOps.get(i);
+            for (int iSet = 0, cSets = aSet.length; iSet < cSets; ++iSet) {
+                Set set = aSet[iSet];
+                try {
+                    op.test(set);
+                } catch (Exception | AssertionError e) {
+                    displayErr(listOps, iSet, i, e);
+                    return;
+                }
+            }
+        }
+    }
+
+    static void displayErr(List<Op> listOps, int iSet, int iOp, Throwable e) {
         out();
         out("Exception on set# " + iSet + " in step# " + iOp + ": " + e.getMessage());
         e.printStackTrace(System.out);
         out();
         out("Test steps:");
-        for (int i = 0, c = listOps.size(); i < c; ++i)
-            {
+        for (int i = 0, c = listOps.size(); i < c; ++i) {
             out("[" + i + "] " + listOps.get(i));
-            }
         }
+    }
 
-    static Op parseOp(String sLine)
-        {
+    static Op parseOp(String sLine) {
         int of = sLine.indexOf(' ');
         assert of > 0;
         String   sOp     = sLine.substring(0, of);
@@ -249,113 +200,102 @@ public class SetTest
         String[] asParams = Handy.parseDelimitedString(sParams, ' ');
 
         Op op;
-        switch (sOp)
-            {
-            case "add":
-                op = new OpAdd();
-                break;
+        switch (sOp) {
+        case "add":
+            op = new OpAdd();
+            break;
 
-            case "size":
-                op = new OpSize();
-                break;
+        case "size":
+            op = new OpSize();
+            break;
 
-            case "remove":
-                op = new OpRemove();
-                break;
+        case "remove":
+            op = new OpRemove();
+            break;
 
-            case "clear":
-                op = new OpClear();
-                break;
+        case "clear":
+            op = new OpClear();
+            break;
 
-            case "iterate":
-                op = new OpIter();
-                break;
+        case "iterate":
+            op = new OpIter();
+            break;
 
-            case "iterate-partial":
-                op = new OpIterPart();
-                break;
+        case "iterate-partial":
+            op = new OpIterPart();
+            break;
 
-            default:
-                throw new IllegalStateException("unknown op: " + sOp);
-            }
+        default:
+            throw new IllegalStateException("unknown op: " + sOp);
+        }
 
         op.parse(asParams);
         return op;
-        }
+    }
 
-    static Op randomOp(Set set, Data data)
-        {
-        while (true)
-            {
-            switch (rnd.nextInt(10))
-                {
-                default:
-                case 0:         // add random
-                    return new OpAdd(data.rnd());
+    static Op randomOp(Set set, Data data) {
+        while (true) {
+            switch (rnd.nextInt(10)) {
+            default:
+            case 0:         // add random
+                return new OpAdd(data.rnd());
 
-                case 1:         // add existing
-                    if (set.isEmpty()) break;
-                    return new OpAdd(randomElement(set));
+            case 1:         // add existing
+                if (set.isEmpty()) break;
+                return new OpAdd(randomElement(set));
 
-                case 2:         // remove random
-                    return new OpRemove(data.rnd());
+            case 2:         // remove random
+                return new OpRemove(data.rnd());
 
-                case 3:         // remove existing
-                    if (set.isEmpty()) break;
-                    return new OpRemove(randomElement(set));
+            case 3:         // remove existing
+                if (set.isEmpty()) break;
+                return new OpRemove(randomElement(set));
 
-                case 4:         // check the size
-                    return new OpSize();
+            case 4:         // check the size
+                return new OpSize();
 
-                case 5:
-                    return new OpIter();
+            case 5:
+                return new OpIter();
 
-                case 6:
-                    return new OpIterPart(set.isEmpty() ? 0 : rnd.nextInt(set.size()));
+            case 6:
+                return new OpIterPart(set.isEmpty() ? 0 : rnd.nextInt(set.size()));
 
-                case 7:
-                    if (rnd.nextInt(10000) != 7) break;
-                    return new OpClear();
-                }
+            case 7:
+                if (rnd.nextInt(10000) != 7) break;
+                return new OpClear();
             }
         }
+    }
 
-    static Object randomElement(Set set)
-        {
+    static Object randomElement(Set set) {
         return set.toArray()[rnd.nextInt(set.size())];
-        }
+    }
 
-    static Set createControlSet()
-        {
+    static Set createControlSet() {
         return new HashSet<>();
-        }
+    }
 
-    static Set[] createTestSets()
-        {
+    static Set[] createTestSets() {
         return fReplay
-                ? new Set[]
-                        {
+                ? new Set[] {
                         new ListSet(),
                         new ListSet().disableHashIndex(),
-                        }
-                : new Set[]
-                        {
+                    }
+                : new Set[] {
                         new ListSet(),
                         new ListSet().disableHashIndex(),
                         new ListSet().useIdentityEquality(),
                         new ListSet().disableHashIndex().useIdentityEquality(),
-                        };
-        }
+                    };
+    }
 
     @FunctionalInterface
-    public interface Data
-        {
+    public interface Data {
         Object rnd();
-        }
+    }
 
     @Test
-    public void testSimple()
-        {
+    public void testSimple() {
         ListSet<String> set = new ListSet<>();
 
         assertTrue(set.isEmpty());
@@ -365,10 +305,9 @@ public class SetTest
         assertFalse(set.contains("z"));
         assertFalse(set.contains("Z"));
 
-        for (char ch = 'a'; ch <= 'z'; ++ch)
-            {
+        for (char ch = 'a'; ch <= 'z'; ++ch) {
             set.add(String.valueOf(ch));
-            }
+        }
 
         assertFalse(set.isEmpty());
         assertEquals(26, set.size());
@@ -379,262 +318,222 @@ public class SetTest
 
         assertEquals("b", set.get(1));
         assertEquals("y", set.get(24));
-        }
+    }
 
-    public interface Op
-        {
+    public interface Op {
         void parse(String[] sParams);
         void init(Set set);
         void test(Set set);
 
         @Override
         String toString();
-        }
+    }
 
     public static class OpAdd
-            implements Op
-        {
+            implements Op {
         OpAdd() {}
 
-        public OpAdd(Object oAdd)
-            {
+        public OpAdd(Object oAdd) {
             this.oAdd = oAdd;
-            }
+        }
 
         @Override
-        public void parse(String[] asParams)
-            {
+        public void parse(String[] asParams) {
             oAdd = asParams[0];
             assert "->".equals(asParams[1]);
             fExpect = Boolean.valueOf(asParams[2]);
-            }
+        }
 
         @Override
-        public void init(Set set)
-            {
+        public void init(Set set) {
             fExpect = set.add(oAdd);
-            }
+        }
 
         @Override
-        public void test(Set set)
-            {
+        public void test(Set set) {
             assertEquals(fExpect, set.add(oAdd));
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return "add " + oAdd + " -> " + fExpect;
-            }
+        }
 
         Object  oAdd;
         boolean fExpect;
-        }
+    }
 
     public static class OpRemove
-            implements Op
-        {
+            implements Op {
         OpRemove() {}
 
-        public OpRemove(Object oRemove)
-            {
+        public OpRemove(Object oRemove) {
             this.oRemove = oRemove;
-            }
+        }
 
         @Override
-        public void parse(String[] asParams)
-            {
+        public void parse(String[] asParams) {
             oRemove = asParams[0];
             assert "->".equals(asParams[1]);
             fExpect = Boolean.valueOf(asParams[2]);
-            }
+        }
 
         @Override
-        public void init(Set set)
-            {
+        public void init(Set set) {
             fExpect = set.remove(oRemove);
-            }
+        }
 
         @Override
-        public void test(Set set)
-            {
+        public void test(Set set) {
             assertEquals(fExpect, set.remove(oRemove));
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return "remove " + oRemove + " -> " + fExpect;
-            }
+        }
 
         Object  oRemove;
         boolean fExpect;
-        }
+    }
 
     public static class OpSize
-            implements Op
-        {
+            implements Op {
         OpSize() {}
 
         @Override
-        public void parse(String[] asParams)
-            {
+        public void parse(String[] asParams) {
             assert "->".equals(asParams[0]);
             nExpect = Integer.valueOf(asParams[1]);
-            }
-
-        @Override
-        public void init(Set set)
-            {
-            nExpect = set.size();
-            }
-
-        @Override
-        public void test(Set set)
-            {
-            assertEquals(nExpect, set.size());
-            }
-
-        @Override
-        public String toString()
-            {
-            return "size -> " + nExpect;
-            }
-
-        int nExpect;
         }
 
+        @Override
+        public void init(Set set) {
+            nExpect = set.size();
+        }
+
+        @Override
+        public void test(Set set) {
+            assertEquals(nExpect, set.size());
+        }
+
+        @Override
+        public String toString() {
+            return "size -> " + nExpect;
+        }
+
+        int nExpect;
+    }
+
     public static class OpClear
-            implements Op
-        {
+            implements Op {
         OpClear() {}
 
         @Override
-        public void parse(String[] asParams)
-            {
+        public void parse(String[] asParams) {
             assert "->".equals(asParams[0]);
-            }
-
-        @Override
-        public void init(Set set)
-            {
-            set.clear();
-            }
-
-        @Override
-        public void test(Set set)
-            {
-            set.clear();
-            }
-
-        @Override
-        public String toString()
-            {
-            return "clear ->";
-            }
         }
 
+        @Override
+        public void init(Set set) {
+            set.clear();
+        }
+
+        @Override
+        public void test(Set set) {
+            set.clear();
+        }
+
+        @Override
+        public String toString() {
+            return "clear ->";
+        }
+    }
+
     public static class OpIter
-            implements Op
-        {
+            implements Op {
         OpIter() {}
 
         @Override
-        public void parse(String[] asParams)
-            {
+        public void parse(String[] asParams) {
             assert "->".equals(asParams[0]);
             nExpect = Integer.valueOf(asParams[1]);
-            }
+        }
 
         @Override
-        public void init(Set set)
-            {
+        public void init(Set set) {
             nExpect = iter(set);
-            }
+        }
 
         @Override
-        public void test(Set set)
-            {
+        public void test(Set set) {
             assertEquals(nExpect, iter(set));
-            }
+        }
 
-        int iter(Set set)
-            {
+        int iter(Set set) {
             int c = 0;
-            for (Iterator iter = set.iterator(); iter.hasNext(); )
-                {
+            for (Iterator iter = set.iterator(); iter.hasNext(); ) {
                 iter.next();
                 ++c;
-                }
-            return c;
             }
+            return c;
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return "iterate -> " + nExpect;
-            }
+        }
 
         int nExpect;
-        }
+    }
 
     public static class OpIterPart
-            implements Op
-        {
+            implements Op {
         OpIterPart() {}
 
-        OpIterPart(int cIter)
-            {
+        OpIterPart(int cIter) {
             this.cIter = cIter;
-            }
+        }
 
         @Override
-        public void parse(String[] asParams)
-            {
+        public void parse(String[] asParams) {
             cIter = Integer.valueOf(asParams[0]);
             assert "->".equals(asParams[1]);
-            }
+        }
 
         @Override
-        public void init(Set set)
-            {
+        public void init(Set set) {
             iter(set);
-            }
+        }
 
         @Override
-        public void test(Set set)
-            {
+        public void test(Set set) {
             iter(set);
-            }
+        }
 
-        void iter(Set set)
-            {
+        void iter(Set set) {
             Iterator iter = set.iterator();
-            for (int c = 0; c < cIter; ++c)
-                {
+            for (int c = 0; c < cIter; ++c) {
                 assertTrue(iter.hasNext());
                 iter.next();
-                }
             }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return "iterate-partial " + cIter + " ->";
-            }
+        }
 
         int cIter;
-        }
+    }
 
-    static void out()
-        {
+    static void out() {
         out("");
-        }
+    }
 
-    static void out(String s)
-        {
+    static void out(String s) {
         System.out.println(s);
-        }
+    }
 
     static final Random rnd = new Random();
 
@@ -642,21 +541,16 @@ public class SetTest
     // ----- unit tests ----------------------------------------------------------------------------
 
     public static class StringData
-            implements Data
-        {
-        StringData(int count)
-            {
+            implements Data {
+        StringData(int count) {
             assert count > 0;
             HashSet<String> set = new HashSet<>(count);
-            for (int i = 0; i < count; ++i)
-                {
+            for (int i = 0; i < count; ++i) {
                 StringBuilder sb = new StringBuilder();
-                do
-                    {
+                do {
                     sb.append((char) ('A' + rnd.nextInt(26)));
-                    }
-                while (!set.add(sb.toString()));
-                }
+                } while (!set.add(sb.toString()));
+            }
             strings = set.toArray(new String[count]);
 
             // Inexplicably this exception occurred once in the rnd() method below, which could only
@@ -673,38 +567,33 @@ public class SetTest
             //    at org.xvm.util.SetTest.randomTest(SetTest.java:96)
             //    at org.xvm.util.SetTest.main(SetTest.java:76)
             assert strings.length > 0;
-            }
-
-        public String rnd()
-            {
-            return strings[rnd.nextInt(strings.length)];
-            }
-
-        String[] strings;
         }
 
+        public String rnd() {
+            return strings[rnd.nextInt(strings.length)];
+        }
+
+        String[] strings;
+    }
+
     @Test
-    public void testIterator()
-        {
+    public void testIterator() {
         ListSet<String> set = new ListSet<>();
-        for (char ch = 'a'; ch <= 'z'; ++ch)
-            {
+        for (char ch = 'a'; ch <= 'z'; ++ch) {
             set.add(String.valueOf(ch));
-            }
+        }
 
         Iterator<String> iter = set.iterator();
         assertEquals("z", set.last());
-        for (char ch = 'a'; ch <= 'z'; ++ch)
-            {
+        for (char ch = 'a'; ch <= 'z'; ++ch) {
             assertTrue(iter.hasNext());
             assertEquals(String.valueOf(ch), iter.next());
-            }
-        assertFalse(iter.hasNext());
         }
+        assertFalse(iter.hasNext());
+    }
 
     @Test
-    public void repro1()
-        {
+    public void repro1() {
         // Exception on set# 0 in step# 49: null
         // java.lang.NullPointerException
         // 	at org.xvm.util.ListSet.indexSearch(ListSet.java:770)
@@ -769,11 +658,10 @@ public class SetTest
           .append("[47] add BZX -> true\n")
           .append("[48] iterate -> 14\n");
         replayTest(sb.toString());
-        }
+    }
 
     @Test
-    public void repro2()
-        {
+    public void repro2() {
         // Exception on set# 0 in step# 31: expected:<false> but was:<true>
 
         // Exception on set# 0 in step# 27: null
@@ -821,11 +709,10 @@ public class SetTest
           .append("[30] add ADX -> false\n")
           .append("[31] add UAY -> false\n");
         replayTest(sb.toString());
-        }
+    }
 
     @Test
-    public void repro3()
-        {
+    public void repro3() {
         // Exception on set# 0 in step# 71: expected:<true> but was:<false>
 
         // Exception on set# 0 in step# 59: null
@@ -913,11 +800,10 @@ public class SetTest
           .append("[70] add RN -> true\n")
           .append("[71] remove EXF -> true\n");
         replayTest(sb.toString());
-        }
+    }
 
     @Test
-    public void repro4()
-        {
+    public void repro4() {
         // Exception on set# 0 in step# 116: null
         // java.lang.NullPointerException
         //     at org.xvm.util.ListSet.indexSearch(ListSet.java:785)
@@ -1046,11 +932,10 @@ public class SetTest
           .append("[115] remove PN -> true\n")
           .append("[116] add AU -> true\n");
         replayTest(sb.toString());
-        }
+    }
 
     @Test
-    public void repro5()
-        {
+    public void repro5() {
         // Exception on set# 0 in step# 41: expected:<false> but was:<true>
         StringBuilder sb = new StringBuilder();
         sb.append("[0] size -> 0\n")
@@ -1096,11 +981,10 @@ public class SetTest
           .append("[40] add XGU -> false\n")
           .append("[41] add LRSY -> false\n");
         replayTest(sb.toString());
-        }
+    }
 
     @Test
-    public void repro6()
-        {
+    public void repro6() {
         // Exception on set# 0 in step# 34: expected:<true> but was:<false>
         StringBuilder sb = new StringBuilder();
         sb.append("[0] remove SD -> false\n")
@@ -1139,11 +1023,10 @@ public class SetTest
           .append("[33] add WK -> true\n")
           .append("[34] remove ARQ -> true\n");
         replayTest(sb.toString());
-        }
+    }
 
     @Test
-    public void repro7()
-        {
+    public void repro7() {
         // Exception on set# 0 in step# 55: expected:<true> but was:<false>
         StringBuilder sb = new StringBuilder();
         sb.append("[0] add SAN -> true\n")
@@ -1203,11 +1086,10 @@ public class SetTest
           .append("[54] add UP -> false\n")
           .append("[55] remove NQQ -> true\n");
         replayTest(sb.toString());
-        }
+    }
 
     @Test
-    public void repro8()
-        {
+    public void repro8() {
         // Exception on set# 0 in step# 39: expected:<true> but was:<false>
         StringBuilder sb = new StringBuilder();
         sb.append("[0] add JWD -> true\n")
@@ -1251,11 +1133,10 @@ public class SetTest
           .append("[38] add ZPZZ -> false\n")
           .append("[39] remove GOD -> true\n");          // sacrilege?
         replayTest(sb.toString());
-        }
+    }
 
     @Test
-    public void repro9()
-        {
+    public void repro9() {
         // Exception on set# 0 in step# 13: expected:<7> but was:<6>
         StringBuilder sb = new StringBuilder();
         sb.append("[0] iterate -> 0\n")
@@ -1273,5 +1154,5 @@ public class SetTest
           .append("[12] add ZVN -> true\n")
           .append("[13] size -> 7\n");
         replayTest(sb.toString());
-        }
     }
+}

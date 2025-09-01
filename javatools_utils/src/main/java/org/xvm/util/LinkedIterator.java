@@ -11,8 +11,7 @@ import java.util.Objects;
  * An Iterator over multiple Iterators.
  */
 public class LinkedIterator<E>
-        implements Iterator<E>
-    {
+        implements Iterator<E> {
     // ----- constructors ------------------------------------------------------
 
     /**
@@ -21,46 +20,38 @@ public class LinkedIterator<E>
      *
      * @param aIter  the Iterators containing the elements to iterate over
      */
-    public LinkedIterator(Iterator<E>... aIter)
-        {
+    public LinkedIterator(Iterator<E>... aIter) {
         f_aIter = Objects.requireNonNullElse(aIter, NO_ITERATORS);
-        }
+    }
 
 
     // ----- Iterator interface ------------------------------------------------
 
     @Override
-    public boolean hasNext()
-        {
+    public boolean hasNext() {
         return m_nState == HAS_NEXT || prepareNextElement();
-        }
+    }
 
     @Override
-    public E next()
-        {
-        if (m_nState == HAS_NEXT || prepareNextElement())
-            {
+    public E next() {
+        if (m_nState == HAS_NEXT || prepareNextElement()) {
             final E eNext = m_iterCur.next();
             m_nState = CAN_REMOVE;
             return eNext;
-            }
+        }
 
         throw new NoSuchElementException();
-        }
+    }
 
     @Override
-    public void remove()
-        {
-        if (m_nState == CAN_REMOVE)
-            {
+    public void remove() {
+        if (m_nState == CAN_REMOVE) {
             m_iterCur.remove();
             m_nState = NOT_READY;
-            }
-        else
-            {
+        } else {
             throw new IllegalStateException();
-            }
         }
+    }
 
 
     // ----- internal ----------------------------------------------------------
@@ -72,37 +63,29 @@ public class LinkedIterator<E>
      * @return true iff a current Iterator could be prepared, or false iff all
      *         elements to iterate have been exhausted
      */
-    private boolean prepareNextElement()
-        {
-        do
-            {
-            if (m_iterCur.hasNext())
-                {
+    private boolean prepareNextElement() {
+        do {
+            if (m_iterCur.hasNext()) {
                 m_nState = HAS_NEXT;
                 return true;
-                }
+            }
 
             m_nState = NOT_READY;
-            if (!prepareNextIterator())
-                {
+            if (!prepareNextIterator()) {
                 return false;
-                }
             }
-        while (true);
-        }
+        } while (true);
+    }
 
     /**
      * Load the next Iterator to use.
      *
      * @return true iff a next Iterator exists
      */
-    private boolean prepareNextIterator()
-        {
-        for (int i = 0, c = f_aIter.length; i < c; ++i)
-            {
+    private boolean prepareNextIterator() {
+        for (int i = 0, c = f_aIter.length; i < c; ++i) {
             Iterator<E> iter = f_aIter[i];
-            if (iter != null)
-                {
+            if (iter != null) {
                 m_iterCur = iter;
                 m_nState  = NOT_READY;
 
@@ -113,8 +96,8 @@ public class LinkedIterator<E>
                 f_aIter[i] = null;
 
                 return true;
-                }
             }
+        }
 
         // by setting the current iterator to a reference to an empty iterator,
         // the reference to any previous iterator is not retained, allowing it
@@ -122,7 +105,7 @@ public class LinkedIterator<E>
         m_iterCur = Collections.emptyIterator();
 
         return false;
-        }
+    }
 
 
     // ----- data members ------------------------------------------------------
@@ -166,4 +149,4 @@ public class LinkedIterator<E>
      * Empty array of Iterators (to avoid unnecessary allocation).
      */
     private static final Iterator[] NO_ITERATORS = new Iterator[0];
-    }
+}

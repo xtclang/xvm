@@ -4,7 +4,6 @@ package org.xvm.runtime.gc;
  * Provides a means by which to modify the raw storage of an object.
  *
  * @param <V> the storage type
- * @author mf
  */
 public interface ObjectManager<V>
     {

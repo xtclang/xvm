@@ -21,8 +21,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests of the {@link MarkAndSweepGcSpace}.
- *
- * @author mf
  */
 public class MarkAndSweepGcSpaceTests
     {

@@ -8,8 +8,6 @@ import java.util.function.Supplier;
  * An interface describing an automatic memory manager for objects with {@code long} addresses.
  * <p>
  * {@link #allocate allocated} objects are considered to be garbage once they are not reachable from a {@link #addRoot root}.
- *
- * @author mf
  */
 public interface GcSpace
     {

@@ -7,8 +7,6 @@ import java.lang.reflect.Modifier;
 
 /**
  * Helper class for easily obtaining {@link VarHandle} instances.
- *
- * @author mf
  */
 public class VarHandles {
     /**
@@ -24,10 +22,10 @@ public class VarHandles {
             return Modifier.isStatic(field.getModifiers())
                     ? lookup.findStaticVarHandle(clz, fieldName, field.getType())
                     : lookup.findVarHandle(clz, fieldName, field.getType());
-        } catch (ReflectiveOperationException e) {
+    } catch (ReflectiveOperationException e) {
             throw new IllegalStateException(e);
-        }
     }
+}
 
     /**
      * Return a {@link VarHandle} for accessing the element of an array of the specified type.
@@ -37,5 +35,5 @@ public class VarHandles {
      */
     public static VarHandle ofArray(Class<?> arrayClz) {
         return MethodHandles.arrayElementVarHandle(arrayClz);
-    }
+}
 }

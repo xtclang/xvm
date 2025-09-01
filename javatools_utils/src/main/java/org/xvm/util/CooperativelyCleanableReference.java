@@ -38,7 +38,6 @@ import java.util.logging.Logger;
  * itself into a thread-pool to avoid holding the cooperative thread for an extended period.
  *
  * @param <V> the referent type
- * @author falcom
  */
 public class CooperativelyCleanableReference<V> extends WeakReference<V> {
     /**
@@ -56,8 +55,8 @@ public class CooperativelyCleanableReference<V> extends WeakReference<V> {
     static {
         for (int i = 0; i < QUEUE.length; ++i) {
             QUEUE[i] = new ReferenceQueue<>();
-        }
     }
+}
 
     /**
      * A set of refs which have yet to be cleaned, this ensures the refs don't get GC'd before their referent is cleaned.
@@ -79,7 +78,7 @@ public class CooperativelyCleanableReference<V> extends WeakReference<V> {
         super(referent, clean(QUEUE[ThreadLocalRandom.current().nextInt(QUEUE.length)]));
         this.cleaner = Objects.requireNonNull(cleaner, "null cleaner");
         KEEP_ALIVE.add(this);
-    }
+}
 
     /**
      * Perform cleanup for at least some unreachable referents in the specified queue.
@@ -98,24 +97,24 @@ public class CooperativelyCleanableReference<V> extends WeakReference<V> {
                 try {
                     if (KEEP_ALIVE.remove(ref)) {
                         ref.cleaner.close();
-                    }
-                } catch (Exception e) {
+                }
+            } catch (Exception e) {
                     LOGGER.log(Level.INFO, "ignoring exception during cooperative cleanup", e);
                     Throwable t = e;
                     while (!restoreInterrupt && t != null) {
                         if (t instanceof InterruptedException || t instanceof InterruptedIOException) {
                             restoreInterrupt = true;
-                        }
-                        t = t.getCause();
                     }
+                        t = t.getCause();
                 }
-            } while (ref != null && (c < 2 || System.currentTimeMillis() <= startMillis + 1));
-        } finally {
+            }
+        } while (ref != null && (c < 2 || System.currentTimeMillis() <= startMillis + 1));
+    } finally {
             if (restoreInterrupt) {
                 Thread.currentThread().interrupt();
-            }
         }
+    }
 
         return queue;
-    }
+}
 }

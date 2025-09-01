@@ -10,28 +10,25 @@ import java.util.BitSet;
  *  </pre></code>
  * where <i>Di</i> is a size of dimension <i>i</i>.
  */
-public class BitCube
-    {
+public class BitCube {
     /**
      * Construct a BitCube of given dimension sizes.
      *
      * @param acSize  the dimension sizes of the cube
      */
-    public BitCube(int[] acSize)
-        {
+    public BitCube(int[] acSize) {
         f_cDims  = acSize.length;
         f_acSize = acSize;
 
         assert f_cDims >= 2;
 
         int cTotal = 1;
-        for (int i = 0; i < f_cDims; i++)
-            {
+        for (int i = 0; i < f_cDims; i++) {
             cTotal *= acSize[i];
-            }
+        }
         f_cTotal = cTotal;
         f_bs     = new BitSet(cTotal);
-        }
+    }
 
 
     // ----- BitCube API ---------------------------------------------------------------------------
@@ -39,36 +36,32 @@ public class BitCube
     /**
      * @return the number of cube dimensions
      */
-    public int getDimensions()
-        {
+    public int getDimensions() {
         return f_cDims;
-        }
+    }
 
     /**
      * @return the size of the specified dimension
      */
-    public int getSize(int nDim)
-        {
+    public int getSize(int nDim) {
         return f_acSize[nDim];
-        }
+    }
 
     /**
      * Set a bit for the specified multi-dimensional point.
      *
      * @param an  the point coordinates
      */
-    public void set(int[] an)
-        {
+    public void set(int[] an) {
         f_bs.set(toId(an));
-        }
+    }
 
     /**
      * @return true iff all the bits are set
      */
-    public boolean isFull()
-        {
+    public boolean isFull() {
         return f_bs.cardinality() == f_cTotal;
-        }
+    }
 
 
     // ---- helpers --------------------------------------------------------------------------------
@@ -76,32 +69,28 @@ public class BitCube
     /**
      * Convert a multi-dimensional point to a bit id.
      */
-    private int toId(int[] an)
-        {
+    private int toId(int[] an) {
         int n = an[f_cDims - 1];
-        for (int i = f_cDims - 2; i >= 0; i--)
-            {
+        for (int i = f_cDims - 2; i >= 0; i--) {
             n *= f_acSize[i];
             n += an[i];
-            }
-        return n;
         }
+        return n;
+    }
 
     /**
      * Convert a bit id to a multi-dimensional point.
      */
-    private int[] fromId(int n)
-        {
+    private int[] fromId(int n) {
         int[] an = new int[f_cDims];
-        for (int i = 0; i < f_cDims; i++)
-            {
+        for (int i = 0; i < f_cDims; i++) {
             int c = f_acSize[i];
 
             an[i] = n % c;
             n     = n / c;
-            }
-        return an;
         }
+        return an;
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -110,5 +99,5 @@ public class BitCube
     private final int    f_cTotal;
     private final int[]  f_acSize;
     private final BitSet f_bs;
-    }
+}
 
