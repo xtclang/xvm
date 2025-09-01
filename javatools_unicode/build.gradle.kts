@@ -77,7 +77,7 @@ val rebuildUnicodeTables by tasks.registering {
             val unicodeJar = jar.get().archiveFile
             val localUcdZip = downloadUcdFlatZip.get().outputs.files.singleFile
             logger.lifecycle("$prefix Downloaded unicode file: ${localUcdZip.absolutePath}")
-            project.extensions.getByType<ExecOperations>().javaexec {
+            javaexec {
                 mainClass.set("org.xvm.tool.BuildUnicodeTables")
                 classpath = files(configurations.runtimeClasspath, unicodeJar)
                 args = listOf(localUcdZip.absolutePath, File(processedResourcesDir, "ecstasy/text").absolutePath)
