@@ -29,13 +29,12 @@ data class DockerConfig(
     
     fun tagsForArch(arch: String) = (listOf("${tagPrefix}-$arch") + versionTags.map { "${it}-$arch" } + listOf("${commit}-$arch"))
     fun multiPlatformTags() = listOf(tagPrefix) + versionTags + listOf(commit)
-    fun buildArgs(distZipUrl: String? = null, javaVersion: Int? = null) = mapOf(
+    fun buildArgs(distZipUrl: String? = null, javaVersion: Int) = mapOf(
         "GH_BRANCH" to branch,
         "GH_COMMIT" to commit,
-        "JAVA_VERSION" to getXdkPropertyInt("org.xtclang.java.jdk").toString()
+        "JAVA_VERSION" to javaVersion.toString()
     ).let { baseArgs ->
-        val withJava = if (javaVersion != null) baseArgs + ("JAVA_VERSION" to javaVersion.toString()) else baseArgs
-        if (distZipUrl != null) withJava + ("DIST_ZIP_URL" to distZipUrl) else withJava
+        if (distZipUrl != null) baseArgs + ("DIST_ZIP_URL" to distZipUrl) else baseArgs
     }
     fun metadataLabels() = mapOf(
         "org.opencontainers.image.created" to Instant.now().toString(),
@@ -94,7 +93,7 @@ fun execDockerCommand(cmd: List<String>) {
     }
 }
 
-fun buildDockerImage(config: DockerConfig, platforms: List<String>, tags: List<String>, action: String, distZipUrl: String? = null, javaVersion: Int? = null) {
+fun buildDockerImage(config: DockerConfig, platforms: List<String>, tags: List<String>, action: String, distZipUrl: String? = null, javaVersion: Int) {
     val platformArg = platforms.joinToString(",")
     val cmd = listOf("docker", "buildx", "build", "--platform", platformArg) +
               listOf("--progress=${System.getenv("DOCKER_BUILDX_PROGRESS") ?: "plain"}") +
