@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
+
 import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.Argument;
@@ -19,6 +20,7 @@ import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 
@@ -147,7 +149,7 @@ public class P_Get
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        BuildContext.Slot targetSlot = bctx.loadArgument(code, m_nTarget);
+        Slot targetSlot = bctx.loadArgument(code, m_nTarget);
         if (!targetSlot.isSingle()) {
             throw new UnsupportedOperationException("Multislot get");
         }
@@ -165,6 +167,7 @@ public class P_Get
             fOptimized  = true;
         }
 
+        bctx.introduceVar(code, m_nRetValue, infoProp.getType(), "");
         bctx.loadCtx(code);
         code.invokevirtual(targetSlot.cd(), methodName, md);
         bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue}, fOptimized);
