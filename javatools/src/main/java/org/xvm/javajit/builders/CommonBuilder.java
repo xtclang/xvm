@@ -227,10 +227,11 @@ public class CommonBuilder
                     .astore(0);
 
                 // add static field initialization
+                TypeSystem ts = typeSystem;
                 for (PropertyInfo prop : props) {
                     if (prop.getInitializer() == null) {
-                        Slot   slot         = BuildContext.loadConstant(code, prop.getInitialValue());
-                        String jitFieldName = prop.getIdentity().ensureJitPropertyName(typeSystem);
+                        Slot   slot    = BuildContext.loadConstant(ts, code, prop.getInitialValue());
+                        String jitName = prop.getIdentity().ensureJitPropertyName(ts);
                         if (slot instanceof DoubleSlot doubleSlot) {
                             assert doubleSlot.flavor() == JitFlavor.MultiSlotPrimitive;
                             // loadConstant() has already loaded the value and the boolean
@@ -239,15 +240,15 @@ public class CommonBuilder
                             code
                                 .iconst_0()
                                 .if_icmpne(ifTrue);
-                                code.putstatic(CD_this, jitFieldName+EXT, CD_boolean);
+                                code.putstatic(CD_this, jitName +EXT, CD_boolean);
                             code.goto_(endIf)
                                 .labelBinding(ifTrue);
                                 pop(code, doubleSlot.cd());
-                                code.putstatic(CD_this, jitFieldName, slot.cd());
+                                code.putstatic(CD_this, jitName, slot.cd());
                             code.labelBinding(endIf);
                         } else {
                             assert slot.isSingle();
-                            code.putstatic(CD_this, jitFieldName, slot.cd());
+                            code.putstatic(CD_this, jitName, slot.cd());
                         }
                     } else {
                         throw new UnsupportedOperationException("Static field initializer");
@@ -299,12 +300,13 @@ public class CommonBuilder
                     .invokespecial(getSuperDesc(), INIT_NAME, MD_Initializer);
 
                 // add field initialization
+                TypeSystem ts = typeSystem;
                 for (PropertyInfo prop : props) {
                     if (prop.getInitializer() == null) {
                         code.aload(0); // Stack: { this }
 
-                        Slot   slot         = BuildContext.loadConstant(code, prop.getInitialValue());
-                        String jitFieldName = prop.getIdentity().ensureJitPropertyName(typeSystem);
+                        Slot   slot    = BuildContext.loadConstant(ts, code, prop.getInitialValue());
+                        String jitName = prop.getIdentity().ensureJitPropertyName(ts);
                         if (slot instanceof DoubleSlot doubleSlot) {
                             assert doubleSlot.flavor() == JitFlavor.MultiSlotPrimitive;
                             // loadConstant() has already loaded the value and the boolean
@@ -313,15 +315,15 @@ public class CommonBuilder
                             code
                                 .iconst_0()
                                 .if_icmpne(ifTrue)
-                                .putfield(CD_this, jitFieldName+EXT, CD_boolean);
+                                .putfield(CD_this, jitName +EXT, CD_boolean);
                             code.goto_(endIf)
                                 .labelBinding(ifTrue);
                                 pop(code, doubleSlot.cd());
-                                code.putfield(CD_this, jitFieldName, doubleSlot.cd());
+                                code.putfield(CD_this, jitName, doubleSlot.cd());
                             code.labelBinding(endIf);
                         } else {
                             assert slot.isSingle();
-                            code.putfield(CD_this, jitFieldName, slot.cd());
+                            code.putfield(CD_this, jitName, slot.cd());
                         }
                     } else {
                         throw new UnsupportedOperationException("Field initializer");
@@ -352,6 +354,9 @@ public class CommonBuilder
                 JitMethodDesc  jmDesc  = prop.getGetterJitDesc(typeSystem);
                 boolean        isOpt   = jmDesc.optimizedMD != null;
                 MethodTypeDesc md      = isOpt ? jmDesc.optimizedMD : jmDesc.standardMD;
+                if (isOpt) {
+                    jitName += OPT;
+                }
                 assemblePropertyAccessor(className, classBuilder, prop, jitName, md, isOpt, true);
                 break;
             }
@@ -373,6 +378,9 @@ public class CommonBuilder
                 JitMethodDesc  jmDesc  = prop.getSetterJitDesc(typeSystem);
                 boolean        isOpt   = jmDesc.optimizedMD != null;
                 MethodTypeDesc md      = isOpt ? jmDesc.optimizedMD : jmDesc.standardMD;
+                if (isOpt) {
+                    jitName += OPT;
+                }
                 assemblePropertyAccessor(className, classBuilder, prop, jitName, md, isOpt, false);
                 break;
             }

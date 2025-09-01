@@ -26,6 +26,7 @@ import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -41,6 +42,8 @@ import static org.xvm.javajit.Builder.CD_String;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_xObj;
 import static org.xvm.javajit.Builder.EXT;
+import static org.xvm.javajit.Builder.Instance;
+import static org.xvm.javajit.Builder.toTypeKind;
 
 /**
  * Whatever is necessary for the Ops compilation.
@@ -92,11 +95,6 @@ public class BuildContext {
     public final Map<Integer, Slot> slots = new HashMap<>();
 
     /**
-     * The stack of {@link Slot}s.
-     */
-    private final Deque<Slot> stack = new ArrayDeque<>();
-
-    /**
      * The current line number.
      */
     public int lineNumber;
@@ -110,6 +108,17 @@ public class BuildContext {
      * The end-of-method label.
      */
     public Label endScope;
+
+    /**
+     * The Java slot past the last one used by the numbered XTC registers. The slots from this point
+     * up are used for un-numbered XTC registers {@link Op#A_STACK}
+     */
+    private int tailSlot;
+
+    /**
+     * The stack of {@link Slot}s that are kept below the {@link #tailSlot}.
+     */
+    private final Deque<Slot> tailStack = new ArrayDeque<>();
 
     /**
      * @return the ConstantPool used by this {@link BuildContext}.
@@ -204,6 +213,12 @@ public class BuildContext {
                 break;
             }
         }
+
+        // compute the tailSlot
+        // TODO: this will be done using a pass over all the ops to compute the total number
+        //       of Java slots used by the numbered XTC registers
+        // For now, we don't mind to overshoot... ("this", "$ctx", ...)
+        tailSlot = (isStatic ? 0 : 1) + 1 + methodStruct.getMaxVars() * 2;
     }
 
     /**
@@ -254,7 +269,7 @@ public class BuildContext {
                         .loadLocal(Builder.toTypeKind(cd), doubleSlot.slot)
                     .goto_(endIf)
                     .labelBinding(ifTrue);
-                        loadConstant(code, parameter.getDefaultValue());
+                        loadConstant(typeSystem, code, parameter.getDefaultValue());
                     code.labelBinding(endIf);
                     return new SingleSlot(Op.A_STACK, slot.type(), cd, slot.name());
 
@@ -311,7 +326,7 @@ public class BuildContext {
      * We **always** load a primitive value if possible.
      */
     public Slot loadConstant(CodeBuilder code, int argId) {
-        return loadConstant(code, getConstant(argId));
+        return loadConstant(typeSystem, code, getConstant(argId));
     }
 
     /**
@@ -319,7 +334,7 @@ public class BuildContext {
      *
      * We **always** load a primitive value if possible.
      */
-    public static Slot loadConstant(CodeBuilder code, Constant constant) {
+    public static Slot loadConstant(TypeSystem ts, CodeBuilder code, Constant constant) {
         // see NativeContainer#getConstType()
 
         if (constant instanceof StringConstant stringConst) {
@@ -360,6 +375,16 @@ public class BuildContext {
                 break;
             }
         }
+        if (constant instanceof SingletonConstant singleton) {
+            TypeConstant type = singleton.getType();
+            JitTypeDesc  jtd  = type.getJitDesc(ts);
+            assert jtd.flavor == JitFlavor.Specific;
+
+            // retrieve from Singleton.$INSTANCE (see CommonBuilder.assembleStaticInitializer)
+            ClassDesc cd = jtd.cd;
+            code.getstatic(cd, Instance, cd);
+            return new SingleSlot(-1, type, cd, "");
+        }
         throw new UnsupportedOperationException(constant.toString());
         // return code;
     }
@@ -370,7 +395,9 @@ public class BuildContext {
     public Slot loadPredefineArgument(CodeBuilder code, int argId) {
         switch (argId) {
         case Op.A_STACK:
-            return popSlot();
+            Slot slot = popSlot();
+            loadValue(code, slot);
+            return slot;
 
         case Op.A_THIS:
             return loadThis(code);
@@ -381,16 +408,44 @@ public class BuildContext {
     }
 
     /**
+     * Load one or two values at the specified slot onto the Java stack.
+     */
+    public void loadValue(CodeBuilder code, Slot slot) {
+        if (slot instanceof DoubleSlot doubleSlot) {
+            code.iload(doubleSlot.extSlot()); // load the boolean flag
+        }
+
+        ClassDesc cd = slot.cd();
+        if (slot.isIgnore()) {
+            throw new IllegalStateException();
+        } else if (cd.isPrimitive()) {
+            switch (cd.descriptorString()) {
+            case "I", "S", "B", "C", "Z":
+                code.iload(slot.slot());
+                break;
+            case "J":
+                code.lload(slot.slot());
+                break;
+            case "F":
+                code.fload(slot.slot());
+                break;
+            case "D":
+                code.dload(slot.slot());
+                break;
+            default:
+                throw new IllegalStateException();
+            }
+        } else {
+            code.aload(slot.slot());
+        }
+    }
+
+    /**
      * Store one or two values at the Java stack into the specified slot.
      */
     public void storeValue(CodeBuilder code, Slot slot) {
         if (slot instanceof DoubleSlot doubleSlot) {
             code.istore(doubleSlot.extSlot()); // store the boolean flag
-        }
-
-        if (slot.isStack()) {
-            // the value(s) is already on Java stack; keep it there
-            return;
         }
 
         ClassDesc cd = slot.cd();
@@ -431,6 +486,21 @@ public class BuildContext {
         TypeConstant type = (TypeConstant) getConstant(typeId);
         String       name = nameId == 0 ? "" : ((StringConstant) getConstant(nameId)).getValue();
 
+        return introduceVar(code, varIndex, type, name);
+    }
+
+    /**
+     * Introduce a new variable for the specified type id, name id style and an optional value.
+     *
+     * @param varIndex  the variable index
+     * @param type      the variable type
+     * @param name      the variable name
+     */
+    public Slot introduceVar(CodeBuilder code, int varIndex, TypeConstant type, String name) {
+        if (name.isEmpty()) {
+            name = "v$" + varIndex;
+        }
+
         ClassDesc cd;
         Slot      slot;
         if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null) {
@@ -438,13 +508,18 @@ public class BuildContext {
             Label varStartScope = code.newLabel();
             code.labelBinding(varStartScope);
 
-            int slotIndex = code.allocateLocal(Builder.toTypeKind(cd));
-            int slotExt   = code.allocateLocal(TypeKind.BOOLEAN);
+            if (varIndex == Op.A_STACK) {
+                slot = pushExtSlot(type, cd, JitFlavor.MultiSlotPrimitive, name);
+            } else {
+                int slotIndex = code.allocateLocal(Builder.toTypeKind(cd));
+                int slotExt   = code.allocateLocal(TypeKind.BOOLEAN);
 
-            code.localVariable(slotIndex, name, cd, varStartScope, endScope);
-            code.localVariable(slotExt,   name+EXT, CD_boolean, varStartScope, endScope);
+                code.localVariable(slotIndex, name, cd, varStartScope, endScope);
+                code.localVariable(slotExt,   name+EXT, CD_boolean, varStartScope, endScope);
+                slot = new DoubleSlot(slotIndex, slotExt, JitFlavor.MultiSlotPrimitive, type, cd, name);
+                slots.put(varIndex, slot);
+            }
 
-            slot = new DoubleSlot(slotIndex, slotExt, JitFlavor.MultiSlotPrimitive, type, cd, name);
         } else {
             cd = type.isPrimitive()
                 ? JitParamDesc.getPrimitiveClass(type)
@@ -455,14 +530,18 @@ public class BuildContext {
             Label varStartScope = code.newLabel();
             code.labelBinding(varStartScope);
 
-            int slotIndex = code.allocateLocal(Builder.toTypeKind(cd));
-            code.localVariable(slotIndex, name, cd, varStartScope, endScope);
+            if (varIndex == Op.A_STACK) {
+                slot = pushSlot(type, cd, name);
+            } else {
+                int slotIndex = code.allocateLocal(Builder.toTypeKind(cd));
+                code.localVariable(slotIndex, name, cd, varStartScope, endScope);
 
-            slot = new SingleSlot(slotIndex, type, cd, name);
+                slot = new SingleSlot(slotIndex, type, cd, name);
+                slots.put(varIndex, slot);
             }
-        slots.put(varIndex, slot);
-        return slot;
         }
+        return slot;
+    }
 
     /**
      * Build the code that creates a `Ref` object for the specified type and name and stores it in
@@ -535,9 +614,7 @@ public class BuildContext {
                     // if the value is `True`, then the return value is Ecstasy `Null`
                     Builder.loadFromContext(code, CD_boolean, pdExt.altIndex);
 
-                    if (slot instanceof DoubleSlot doubleSlot) {
-                        storeValue(code, slot);
-                    } else {
+                    if (slot.isSingle()) {
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
                         code.iconst_0()
@@ -548,8 +625,8 @@ public class BuildContext {
                             .pop()
                             .getstatic(CD_Nullable, "Null", CD_Nullable)
                             .labelBinding(endIf);
-                        storeValue(code, slot);
                     }
+                    storeValue(code, slot);
                     break;
 
                 default:
@@ -566,9 +643,7 @@ public class BuildContext {
                     // if the value is `True`, then the return value is Ecstasy `Null`
                     Builder.loadFromContext(code, cdRet, pdExt.altIndex);
 
-                    if (slot instanceof DoubleSlot doubleSlot) {
-                        storeValue(code, slot);
-                    } else {
+                    if (slot.isSingle()) {
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
                         code.iconst_0()
@@ -579,8 +654,8 @@ public class BuildContext {
                             .pop()
                             .getstatic(CD_Nullable, "Null", CD_Nullable)
                             .labelBinding(endIf);
-                        storeValue(code, slot);
                     }
+                    storeValue(code, slot);
                     break;
 
                 default:
@@ -603,28 +678,44 @@ public class BuildContext {
      * Ensure a Slot the specified var index.
      */
     public Slot ensureSlot(int varIndex, TypeConstant type, ClassDesc cd, String name) {
-        if (varIndex == Op.A_STACK) {
-            return pushSlot(new SingleSlot(Op.A_STACK, type, cd, name));
-        } else {
-            Slot slot = getSlot(varIndex);
-            assert slot.cd().equals(cd);
-            return slot;
-        }
+        Slot slot = varIndex == Op.A_STACK
+            ? tailStack.peek()
+            : getSlot(varIndex);
+        assert slot.cd().equals(cd);
+        return slot;
     }
 
     /**
-     * Pop a Slot from the context stack.
+     * Push a Slot onto the tail stack.
+     */
+    public Slot pushSlot(TypeConstant type, ClassDesc cd, String name) {
+        Slot slot = new SingleSlot(tailSlot, type, cd, name);
+        tailSlot += toTypeKind(cd).slotSize();
+        tailStack.push(slot);
+        return slot;
+    }
+    /**
+     * Push an extended Slot onto the tail stack.
+     */
+    public Slot pushExtSlot(TypeConstant type, ClassDesc cd, JitFlavor flavor, String name) {
+        int slotIndex = tailSlot;
+        tailSlot += toTypeKind(cd).slotSize();
+        int slotExt = tailSlot++;
+
+        Slot slot = new DoubleSlot(slotIndex, slotExt, flavor, type, cd, name);
+        tailStack.push(slot);
+        return slot;
+    }
+
+    /**
+     * Pop a Slot from the tail stack.
      */
     public Slot popSlot() {
-        return stack.pop();
-    }
-
-    /**
-     * Push a Slot onto the context stack.
-     */
-    public Slot pushSlot(Slot slot) {
-        assert slot.slot() == Op.A_STACK;
-        stack.push(slot);
+        Slot slot = tailStack.pop();
+        tailSlot -= toTypeKind(slot.cd()).slotSize();
+        if (slot instanceof DoubleSlot) {
+            tailSlot--;
+        }
         return slot;
     }
 
@@ -635,9 +726,6 @@ public class BuildContext {
         String       name();
         boolean      isSingle();
 
-        default boolean isStack() {
-            return slot() == Op.A_STACK;
-        }
         default boolean isIgnore() {
             return slot() == Op.A_IGNORE;
         }
