@@ -15,8 +15,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * A "throw" expression.
  */
 public class ThrowExprAST
-        extends ExprAST
-    {
+        extends ExprAST {
     private ExprAST throwable;
     private ExprAST message; // could be null
     private transient TypeConstant type;
@@ -31,15 +30,13 @@ public class ThrowExprAST
         this.message   = message;
     }
 
-    public ExprAST getThrowable()
-        {
+    public ExprAST getThrowable() {
         return throwable;
-        }
+    }
 
-    public ExprAST getMessage()
-        {
+    public ExprAST getMessage() {
         return message;
-        }
+    }
 
     @Override
     public NodeType nodeType() {

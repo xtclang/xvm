@@ -8,8 +8,7 @@ import org.xvm.compiler.ast.AstNode;
  * ComponentResolver represents the name resolution functionality of the Component.
  */
 @FunctionalInterface
-public interface ComponentResolver
-    {
+public interface ComponentResolver {
     /**
      * Determine what the specified name is referring to.
      *
@@ -21,8 +20,7 @@ public interface ComponentResolver
      */
     ResolutionResult resolveName(String sName, Constants.Access access, ResolutionCollector collector);
 
-    enum ResolutionResult
-        {
+    enum ResolutionResult {
         UNKNOWN, RESOLVED, POSSIBLE, ERROR;
 
         /**
@@ -32,20 +30,17 @@ public interface ComponentResolver
          *
          * @return a combined result
          */
-        public ResolutionResult combine(ResolutionResult that)
-            {
-            return switch (this)
-                {
+        public ResolutionResult combine(ResolutionResult that) {
+            return switch (this) {
                 case POSSIBLE, ERROR -> this;
                 default              -> that;
-                };
-            }
+            };
         }
+    }
     /**
      * A callback interface used by the name resolution functionality of the Component.
      */
-    interface ResolutionCollector
-        {
+    interface ResolutionCollector {
         /**
          * Invoked when a name resolves to a child component.
          *
@@ -64,17 +59,15 @@ public interface ComponentResolver
         /**
          * Provide an AstNode to report resolution issues for.
          */
-        default AstNode getNode()
-            {
+        default AstNode getNode() {
             return null;
-            }
+        }
 
         /**
          * Provide an ErrorListener to report resolution issues to.
          */
-        default ErrorListener getErrorListener()
-            {
+        default ErrorListener getErrorListener() {
             return ErrorListener.BLACKHOLE;
-            }
         }
     }
+}

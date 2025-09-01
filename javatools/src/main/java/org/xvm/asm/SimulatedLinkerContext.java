@@ -33,8 +33,7 @@ import org.xvm.util.Handy;
  * returns true <b><i>only</i></b> for those two conditions!
  */
 public class SimulatedLinkerContext
-        implements LinkerContext
-    {
+        implements LinkerContext {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -42,15 +41,13 @@ public class SimulatedLinkerContext
      *
      * @param cond  a conditional constant, or null (meaning unconditional)
      */
-    public SimulatedLinkerContext(ConditionalConstant cond)
-        {
+    public SimulatedLinkerContext(ConditionalConstant cond) {
         this.cond = cond;
-        if (cond != null)
-            {
+        if (cond != null) {
             this.influences = cond.terminalInfluences();
             extractRequiredConditions();
-            }
         }
+    }
 
     /**
      * Construct a SimulatedLinkerContext using the specified conditions.
@@ -58,10 +55,9 @@ public class SimulatedLinkerContext
      * @param pool   the ConstantPool to place a new constant into
      * @param conds  any number of conditions, which will be treated as if they all need to be met
      */
-    public SimulatedLinkerContext(ConstantPool pool, ConditionalConstant... conds)
-        {
+    public SimulatedLinkerContext(ConstantPool pool, ConditionalConstant... conds) {
         this(toCondition(pool, conds));
-        }
+    }
 
     /**
      * Turn an optional array of conditions into a condition.
@@ -72,155 +68,121 @@ public class SimulatedLinkerContext
      * @return null iff the array is null or zero-length, otherwise a condition representing the
      *         contents of the array
      */
-    private static ConditionalConstant toCondition(ConstantPool pool, ConditionalConstant[] conds)
-        {
-        if (conds == null || conds.length == 0)
-            {
+    private static ConditionalConstant toCondition(ConstantPool pool, ConditionalConstant[] conds) {
+        if (conds == null || conds.length == 0) {
             return null;
-            }
-        else if (conds.length == 1)
-            {
+        } else if (conds.length == 1) {
             return conds[0];
-            }
-        else
-            {
+        } else {
             return new AllCondition(pool, conds);
-            }
         }
+    }
 
-    private void extractRequiredConditions()
-        {
-        for (Map.Entry<ConditionalConstant, Influence> entry : influences.entrySet())
-            {
-            if (entry.getValue().isRequired())
-                {
+    private void extractRequiredConditions() {
+        for (Map.Entry<ConditionalConstant, Influence> entry : influences.entrySet()) {
+            if (entry.getValue().isRequired()) {
                 ConditionalConstant condEach = entry.getKey();
-                if (condEach instanceof NamedCondition)
-                    {
-                    if (names.isEmpty())
-                        {
+                if (condEach instanceof NamedCondition) {
+                    if (names.isEmpty()) {
                         names = new HashSet<>();
-                        }
+                    }
                     names.add(((NamedCondition) condEach).getName());
-                    }
-                else if (condEach instanceof PresentCondition)
-                    {
-                    if (present.isEmpty())
-                        {
+                } else if (condEach instanceof PresentCondition) {
+                    if (present.isEmpty()) {
                         present = new HashMap<>();
-                        }
-                    present.put(((PresentCondition) condEach).getPresentConstant(), true);
                     }
-                else if (condEach instanceof VersionMatchesCondition condModuleVer)
-                    {
-                    if (modules.isEmpty())
-                        {
+                    present.put(((PresentCondition) condEach).getPresentConstant(), true);
+                } else if (condEach instanceof VersionMatchesCondition condModuleVer) {
+                    if (modules.isEmpty()) {
                         modules = new HashMap<>();
-                        }
+                    }
                     modules.put(condModuleVer.getModuleConstant(),
                             condModuleVer.getVersionConstant().getVersion());
-                    }
-                else if (condEach instanceof VersionedCondition)
-                    {
+                } else if (condEach instanceof VersionedCondition) {
                     assert version == null;
                     version = ((VersionedCondition) condEach).getVersion();
-                    }
                 }
             }
         }
+    }
 
 
     // ----- LinkerContext methods -----------------------------------------------------------------
 
     @Override
-    public boolean isSpecified(String sName)
-        {
+    public boolean isSpecified(String sName) {
         return names.contains(sName);
-        }
+    }
 
     @Override
-    public boolean isPresent(IdentityConstant constId)
-        {
-        if (present.isEmpty())
-            {
+    public boolean isPresent(IdentityConstant constId) {
+        if (present.isEmpty()) {
             return false;
-            }
+        }
 
         Boolean fPresent = present.get(constId);
-        if (fPresent != null)
-            {
+        if (fPresent != null) {
             return fPresent;
-            }
+        }
 
         // evaluate each of the items in the present set that are from the same module, just in case
         // one of them implies the presence of the IdentityConstant being evaluated
         ModuleConstant module = constId.getModuleConstant();
-        for (Map.Entry<IdentityConstant, Boolean> entry : present.entrySet())
-            {
-            if (entry.getValue().booleanValue())
-                {
+        for (Map.Entry<IdentityConstant, Boolean> entry : present.entrySet()) {
+            if (entry.getValue().booleanValue()) {
                 IdentityConstant constIdPresent = entry.getKey();
-                if (constIdPresent.getModuleConstant().equals(module))
-                    {
+                if (constIdPresent.getModuleConstant().equals(module)) {
                     // walk up the namespace hierarchy, to see if the IdentityConstant being
                     // evaluated is part of this constant's namespace hierarchy
                     IdentityConstant constIdParent = constIdPresent.getNamespace();
-                    while (constIdParent != null)
-                        {
-                        if (constId.equals(constIdParent)) // TODO fix eventually - what if the parent is a composite?
-                            {
+                    while (constIdParent != null) {
+                        if (constId.equals(constIdParent)) { // TODO fix eventually - what if the parent is a composite?
                             present.put(constId, true);
                             return true;
-                            }
-                        constIdParent = constIdParent.getNamespace();
                         }
+                        constIdParent = constIdParent.getNamespace();
                     }
                 }
             }
+        }
 
         present.put(constId, false);
         return false;
-        }
+    }
 
     @Override
-    public boolean isVersionMatch(ModuleConstant constModule, VersionConstant constVer)
-        {
-        if (modules.isEmpty())
-            {
+    public boolean isVersionMatch(ModuleConstant constModule, VersionConstant constVer) {
+        if (modules.isEmpty()) {
             return false;
-            }
+        }
 
         Version ver = modules.get(constModule);
         return ver != null && ver.equals(constVer.getVersion());
-        }
+    }
 
     @Override
-    public boolean isVersion(VersionConstant constVer)
-        {
+    public boolean isVersion(VersionConstant constVer) {
         return version != null && version.equals(constVer.getVersion());
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
-        {
+    public int hashCode() {
         return 11 * cond.hashCode();
-        }
+    }
 
     @Override
-    public boolean equals(Object obj)
-        {
+    public boolean equals(Object obj) {
         return obj instanceof SimulatedLinkerContext that
                 && (this == that || Handy.equals(this.cond, that.cond));
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return "SimulatedLinkerContext{" + cond + "}";
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -233,4 +195,4 @@ public class SimulatedLinkerContext
     private Map<IdentityConstant, Boolean>      present     = Collections.emptyMap();
     private Map<ModuleConstant, Version>        modules     = Collections.emptyMap();
     private Version                             version;
-    }
+}

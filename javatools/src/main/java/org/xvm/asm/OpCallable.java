@@ -468,8 +468,7 @@ public abstract class OpCallable extends Op {
                     typeTarget = typeTarget.adoptAnnotations(pool, typeChild);
                 }
             }
-        }
-        else if (typeChild == null) {
+        } else if (typeChild == null) {
             typeTarget = structChild.isInnerChild()
                     ? pool.ensureInnerChildTypeConstant(typeParent,
                         (ClassConstant) structChild.getIdentityConstant())

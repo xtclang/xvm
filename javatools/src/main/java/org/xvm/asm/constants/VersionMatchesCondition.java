@@ -24,8 +24,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * a particular module other than the module within which this condition occurs.
  */
 public class VersionMatchesCondition
-        extends ConditionalConstant
-    {
+        extends ConditionalConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -35,12 +34,11 @@ public class VersionMatchesCondition
      * @param constModule  the Module to test the version of
      * @param constVer     the version of the Module to test for
      */
-    public VersionMatchesCondition(ConstantPool pool, ModuleConstant constModule, VersionConstant constVer)
-        {
+    public VersionMatchesCondition(ConstantPool pool, ModuleConstant constModule, VersionConstant constVer) {
         super(pool);
         m_constStruct = constModule;
         m_constVer    = constVer;
-        }
+    }
 
     /**
      * Constructor used for deserialization.
@@ -52,22 +50,20 @@ public class VersionMatchesCondition
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public VersionMatchesCondition(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
 
         m_iModule = readMagnitude(in);
         m_iVer    = readIndex(in);
-        }
+    }
 
     @Override
-    protected void resolveConstants()
-        {
+    protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
         m_constStruct = (ModuleConstant)  pool.getConstant(m_iModule);
         m_constVer    = (VersionConstant) pool.getConstant(m_iVer);
-        }
+    }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
@@ -78,147 +74,125 @@ public class VersionMatchesCondition
      *
      * @return the ModuleConstant
      */
-    public ModuleConstant getModuleConstant()
-        {
+    public ModuleConstant getModuleConstant() {
         return m_constStruct;
-        }
+    }
 
     /**
      * Obtain the version that the module must match.
      *
      * @return the VersionConstant
      */
-    public VersionConstant getVersionConstant()
-        {
+    public VersionConstant getVersionConstant() {
         return m_constVer;
-        }
+    }
 
 
     // ----- ConditionalConstant methods -----------------------------------------------------------
 
     @Override
-    public boolean evaluate(LinkerContext ctx)
-        {
+    public boolean evaluate(LinkerContext ctx) {
         return ctx.isVersionMatch(m_constStruct, m_constVer);
-        }
+    }
 
     @Override
-    public boolean isTerminal()
-        {
+    public boolean isTerminal() {
         return true;
-        }
+    }
 
     @Override
-    public Relation calcRelation(ConditionalConstant constant)
-        {
-        if (constant instanceof VersionMatchesCondition that)
-            {
+    public Relation calcRelation(ConditionalConstant constant) {
+        if (constant instanceof VersionMatchesCondition that) {
             // too bad Java doesn't respect the "if instanceof" we just suffered through
-            if (this.m_constStruct.equals(that.m_constStruct))
-                {
+            if (this.m_constStruct.equals(that.m_constStruct)) {
                 Version verThis = this.m_constVer.getVersion();
                 Version verThat = that.m_constVer.getVersion();
 
-                if (verThis.isSameAs(verThat))
-                    {
+                if (verThis.isSameAs(verThat)) {
                     return Relation.EQUIV;
-                    }
+                }
 
-                if (verThis.isSubstitutableFor(verThat))
-                    {
+                if (verThis.isSubstitutableFor(verThat)) {
                     return Relation.IMPLIES;
-                    }
+                }
 
-                if (verThat.isSubstitutableFor(verThis))
-                    {
+                if (verThat.isSubstitutableFor(verThis)) {
                     return Relation.IMPLIED;
-                    }
+                }
 
                 return Relation.MUTEX;
-                }
             }
-        else if (constant instanceof PresentCondition)
-            {
+        } else if (constant instanceof PresentCondition) {
             // these two are potentially related, but instead of duplicating the code, let's keep
             // the logic over on PresentCondition
             return constant.calcRelation(this).reverse();
-            }
+        }
 
         return Relation.INDEP;
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.ConditionVersionMatches;
-        }
+    }
 
     @Override
-    public boolean containsUnresolved()
-        {
+    public boolean containsUnresolved() {
         return !isHashCached() && m_constStruct.containsUnresolved();
-        }
+    }
 
     @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
+    public void forEachUnderlying(Consumer<Constant> visitor) {
         visitor.accept(m_constStruct);
         visitor.accept(m_constVer);
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant obj)
-        {
-        if (!(obj instanceof VersionMatchesCondition that))
-            {
+    protected int compareDetails(Constant obj) {
+        if (!(obj instanceof VersionMatchesCondition that)) {
             return -1;
-            }
+        }
         int nResult = m_constStruct.compareTo(that.m_constStruct);
-        if (nResult == 0)
-            {
+        if (nResult == 0) {
             nResult = m_constVer.compareTo(that.m_constVer);
-            }
+        }
 
         return nResult;
-        }
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return "versionMatches(" + m_constStruct + ", " + m_constVer.getValueString() + ')';
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         m_constStruct = (ModuleConstant)  pool.register(m_constStruct);
         m_constVer    = (VersionConstant) pool.register(m_constVer);
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constStruct.getPosition());
         writePackedLong(out, m_constVer.getPosition());
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_constStruct,
                Hash.of(m_constVer));
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -242,4 +216,4 @@ public class VersionMatchesCondition
      * The VersionConstant specifying the version of the specified module to test for.
      */
     private VersionConstant m_constVer;
-    }
+}

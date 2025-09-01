@@ -7,8 +7,7 @@ import org.xvm.asm.Constant;
 /**
  * A constant that starts as an unresolved constant, but is eventually resolved.
  */
-public interface ResolvableConstant
-    {
+public interface ResolvableConstant {
     /**
      * @return the constant, iff it has been resolved; otherwise null
      */
@@ -25,22 +24,18 @@ public interface ResolvableConstant
      * @return the resolved constant, if one exists, otherwise the ResolvableConstant that needs to
      *         be resolved
      */
-    default Constant unwrap()
-        {
+    default Constant unwrap() {
         Constant next = getResolvedConstant();
-        if (next == null)
-            {
+        if (next == null) {
             return (Constant) this;
-            }
+        }
 
         Constant last;
-        do
-            {
+        do {
             last = next;
             next = last.resolve();
-            }
-        while (next != last);
+        } while (next != last);
 
         return last;
-        }
     }
+}

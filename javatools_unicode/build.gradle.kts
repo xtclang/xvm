@@ -85,9 +85,4 @@ val rebuildUnicodeTables by tasks.registering {
         }
     }
 
-    doLast {
-        printTaskInputs()
-        printTaskOutputs()
-        printTaskDependencies()
-    }
 }

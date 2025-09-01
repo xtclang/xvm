@@ -17,8 +17,7 @@ import org.xvm.compiler.ast.Context;
  * or a formal type child constant, such as Map.equals.CompileType.Key)
  */
 public abstract class FormalConstant
-        extends NamedConstant
-    {
+        extends NamedConstant {
     /**
      * Construct a constant whose purpose is to identify a structure of a formal constant
      * of the specified name that exists within its parent structure.
@@ -27,10 +26,9 @@ public abstract class FormalConstant
      * @param constParent  the module, package, class, or method that contains this identity
      * @param sName        the name associated with this formal constant
      */
-    public FormalConstant(ConstantPool pool, IdentityConstant constParent, String sName)
-        {
+    public FormalConstant(ConstantPool pool, IdentityConstant constParent, String sName) {
         super(pool, constParent, sName);
-        }
+    }
 
     /**
      * Constructor used for deserialization.
@@ -42,10 +40,9 @@ public abstract class FormalConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public FormalConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool, format, in);
-        }
+    }
 
     /**
      * Obtain the constraint type of the formal type represented by this constant.
@@ -61,10 +58,9 @@ public abstract class FormalConstant
      *
      * @return a resolved type or null if this constant cannot be resolved
      */
-    public TypeConstant resolve(GenericTypeResolver resolver)
-        {
+    public TypeConstant resolve(GenericTypeResolver resolver) {
         return resolver.resolveFormalType(this);
-        }
+    }
 
     /**
      * Convert this formal constant to a {@link ExprAST binary expression AST}.
@@ -72,4 +68,4 @@ public abstract class FormalConstant
      * @return the resulting {@link ExprAST} or null if the conversion is not feasible
      */
     public abstract ExprAST toExprAst(Context ctx);
-    }
+}

@@ -1,15 +1,18 @@
 package org.xvm.asm.op;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import java.lang.classfile.CodeBuilder;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -18,7 +21,6 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.checkElementsNonNull;
-
 
 /**
  *NVOK_NN rvalue-target, CONST-METHOD, #params:(rvalue), #returns:(lvalue)
@@ -125,6 +127,15 @@ public class Invoke_NN
     protected String getParamsString() {
         return getParamsString(m_anArgValue, m_aArgValue);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        buildInvoke(bctx, code, m_anArgValue);
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int[] m_anArgValue;
 

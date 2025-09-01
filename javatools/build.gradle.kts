@@ -197,6 +197,9 @@ val jar by tasks.existing(Jar::class) {
             "Implementation-Vendor" to "xtclang.org",
             "Sealed" to "true",
             "Xdk-Version" to semanticVersion.toString(),
+            // Enable native access for JLine and other dependencies that load native libraries
+            "Add-Opens" to "java.base/java.lang=ALL-UNNAMED",
+            "Enable-Native-Access" to "ALL-UNNAMED",
         )
     }
 }
@@ -215,41 +218,3 @@ val versionOutputTest by tasks.registering(Test::class) {
     }
 }
 
-val assemble by tasks.existing {
-    dependsOn(sanityCheckJar) // "assemble" already depends on jar by default in the Java build life cycle
-}
-
-val sanityCheckJar by tasks.registering {
-    group = VERIFICATION_GROUP
-    description = """
-            If the properties are enabled, verify that the javatools.jar file is sane (contains expected packages and files), 
-            and optionally, that it has a certain number of entries.
-        """.trimIndent()
-
-    dependsOn(jar)
-
-    val checkJar = getXdkPropertyBoolean("org.xtclang.javatools.sanityCheckJar")
-    val expectedEntryCount = getXdkPropertyInt("org.xtclang.javatools.verifyJar.expectedFileCount", -1)
-    inputs.properties("sanityCheckJarBoolean" to checkJar, "sanityCheckJarEntryCount" to expectedEntryCount)
-    inputs.file(jar.map { it.archiveFile })
-
-    logger.info("$prefix Configuring sanityCheckJar task (enabled: $checkJar, expected entry count: $expectedEntryCount)")
-
-    onlyIf {
-        checkJar
-    }
-    doLast {
-        logger.info("$prefix Sanity checking integrity of generated jar file.")
-        val size = DebugBuild.verifyJarFileContents(
-            project,
-            listOf(
-                "implicit.x",                       // verify the implicits are in the jar
-                "org/xvm/tool/Compiler.class",      // verify the javatools package inclusion
-                "org/xvm/util/Severity.class",      // verify the javatools_utils package inclusion
-                "org/jline/reader/LineReader.class" // verify the jline library inclusion
-            ),
-            expectedEntryCount
-        )
-        logger.lifecycle("$prefix Sanity check of javatools.jar completed successfully ($size elements found).")
-    }
-}

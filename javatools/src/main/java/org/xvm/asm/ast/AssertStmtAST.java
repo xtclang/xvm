@@ -14,8 +14,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * REVIEW encode presence of interval and message as part of node type?
  */
 public class AssertStmtAST
-        extends BinaryAST
-    {
+        extends BinaryAST {
     private ExprAST cond;     // could be null
     private ExprAST interval; // could be null
     private ExprAST message;  // could be null
@@ -28,20 +27,17 @@ public class AssertStmtAST
         this.message  = message;
     }
 
-    public ExprAST getCond()
-        {
+    public ExprAST getCond() {
         return cond;
-        }
+    }
 
-    public ExprAST getInterval()
-        {
+    public ExprAST getInterval() {
         return interval;
-        }
+    }
 
-    public ExprAST getMessage()
-        {
+    public ExprAST getMessage() {
         return message;
-        }
+    }
 
     @Override
     public NodeType nodeType() {

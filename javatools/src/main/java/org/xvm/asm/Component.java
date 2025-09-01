@@ -100,8 +100,7 @@ import static org.xvm.util.Handy.writePackedLong;
  */
 public abstract class Component
         extends XvmStructure
-        implements Documentable, Cloneable, ComponentResolver
-    {
+        implements Documentable, Cloneable, ComponentResolver {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -118,12 +117,11 @@ public abstract class Component
      * @param condition   the optional condition that mandates the existence of this structure
      */
     protected Component(XvmStructure xsParent, Access access, boolean fAbstract, boolean fStatic,
-                        boolean fSynthetic, Format format, IdentityConstant constId, ConditionalConstant condition)
-        {
+                        boolean fSynthetic, Format format, IdentityConstant constId, ConditionalConstant condition) {
         this(xsParent, (format.ordinal() << FORMAT_SHIFT) | (access.ordinal() << ACCESS_SHIFT)
                 | (fAbstract ? ABSTRACT_BIT : 0) | (fStatic ? STATIC_BIT : 0)
                 | (fSynthetic ? SYNTHETIC_BIT : 0), constId, condition);
-        }
+    }
 
     /**
      * Construct a component.
@@ -135,35 +133,32 @@ public abstract class Component
      *                    structure
      * @param condition   the optional condition that mandates the existence of this structure
      */
-    protected Component(XvmStructure xsParent, int nFlags, IdentityConstant constId, ConditionalConstant condition)
-        {
+    protected Component(XvmStructure xsParent, int nFlags, IdentityConstant constId, ConditionalConstant condition) {
         super(xsParent);
         assert (xsParent == null) == (this instanceof FileStructure);   // file doesn't have a parent
         assert (constId == null)  == (this instanceof FileStructure);   // file doesn't have constId
         assert condition == null || !(this instanceof FileStructure);   // file can't be conditional
 
-        if (constId != null)
-            {
+        if (constId != null) {
             constId = (IdentityConstant) constId.resolveTypedefs();
             constId.resetCachedInfo();
-            }
+        }
 
         m_nFlags  = (short) nFlags;
         m_cond    = condition;
         m_constId = constId;
-        }
+    }
 
     /**
      * Package private constructor used by the CompositeComponent.
      *
      * @param parent  the parent of the composite component
      */
-    Component(Component parent)
-        {
+    Component(Component parent) {
         super(parent);
         // TODO this constructor is not currently used, but there are fields that need to be copied
         //      in order for it to be correct
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -182,33 +177,28 @@ public abstract class Component
      *
      * @return the parent Component of this Component
      */
-    public Component getParent()
-        {
+    public Component getParent() {
         Component    parent;
         XvmStructure containing = getContaining();
-        while (true)
-            {
-            if (containing == null)
-                {
+        while (true) {
+            if (containing == null) {
                 assert getFormat() == Format.FILE;
                 return null;
-                }
-
-            if (containing instanceof Component component)
-                {
-                parent = component;
-                break;
-                }
-
-            containing = containing.getContaining();
             }
 
-        if (parent.getCondition() == null)
-            {
+            if (containing instanceof Component component) {
+                parent = component;
+                break;
+            }
+
+            containing = containing.getContaining();
+        }
+
+        if (parent.getCondition() == null) {
             // if there is no condition on the parent, then there is only one possible parent;
             // note that a file component cannot have a condition
             return parent;
-            }
+        }
         assert parent.getFormat() != Format.FILE;
 
         // need to get the grandparent and ask it for the parent
@@ -216,16 +206,15 @@ public abstract class Component
         return parent instanceof MethodStructure
                 ? grandparent.getChild(parent.getIdentityConstant())
                 : grandparent.getChild(parent.getName());
-        }
+    }
 
     /**
      * @return the first component walking up the parentage chain of this component that is a
      *         ClassStructure, or null if none can be found
      */
-    public ClassStructure getContainingClass()
-        {
+    public ClassStructure getContainingClass() {
         return getContainingClass(true);
-        }
+    }
 
     /**
      * Find the first component walking up the parentage chain of this component that is a
@@ -235,20 +224,17 @@ public abstract class Component
      *
      * @return the first ClassStructure parent component
      */
-    public ClassStructure getContainingClass(boolean fAllowAnonymous)
-        {
+    public ClassStructure getContainingClass(boolean fAllowAnonymous) {
         Component parent = getParent();
-        while (parent != null)
-            {
+        while (parent != null) {
             if (parent instanceof ClassStructure clzParent &&
-                    (fAllowAnonymous || !clzParent.isAnonInnerClass()))
-                {
+                    (fAllowAnonymous || !clzParent.isAnonInnerClass())) {
                 return clzParent;
-                }
-            parent = parent.getParent();
             }
-        return null;
+            parent = parent.getParent();
         }
+        return null;
+    }
 
     /**
      * Each Component is identified by a constant. The one exception is the file structure, which
@@ -256,27 +242,23 @@ public abstract class Component
      *
      * @return  the constant that identifies the component, or null for a File component
      */
-    public IdentityConstant getIdentityConstant()
-        {
+    public IdentityConstant getIdentityConstant() {
         return m_constId;
-        }
+    }
 
     /**
      * @param idNew  the new identity to use for this component
      */
-    protected void replaceThisIdentityConstant(IdentityConstant idNew)
-        {
+    protected void replaceThisIdentityConstant(IdentityConstant idNew) {
         IdentityConstant idOld = m_constId;
-        for (Iterator<Component> iter = siblings(); iter.hasNext(); )
-            {
+        for (Iterator<Component> iter = siblings(); iter.hasNext(); ) {
             iter.next().m_constId = idNew;
-            }
-        Component parent = getParent();
-        if (parent != null)
-            {
-            parent.replaceChildIdentityConstant(idOld, idNew);
-            }
         }
+        Component parent = getParent();
+        if (parent != null) {
+            parent.replaceChildIdentityConstant(idOld, idNew);
+        }
+    }
 
     /**
      * Replace all references to children that use the old identity with the new identity.
@@ -284,162 +266,142 @@ public abstract class Component
      * @param idOld  the old identity
      * @param idNew  the new identity to use instead of the old identity
      */
-    protected void replaceChildIdentityConstant(IdentityConstant idOld, IdentityConstant idNew)
-        {
+    protected void replaceChildIdentityConstant(IdentityConstant idOld, IdentityConstant idNew) {
         // nothing to do unless the name changed, which we don't support anyhow
         assert idOld.getName().equals(idNew.getName());
-        }
+    }
 
     /**
      * @return the Format that corresponds to this Component
      */
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.valueOf((m_nFlags & FORMAT_MASK) >>> FORMAT_SHIFT);
-        }
+    }
 
     /**
      * @return the Access for this Component
      */
-    public Access getAccess()
-        {
+    public Access getAccess() {
         return Access.valueOf((m_nFlags & ACCESS_MASK) >>> ACCESS_SHIFT);
-        }
+    }
 
     /**
      * Specify the accessibility of the component.
      *
      * @param access  the accessibility of the component
      */
-    public void setAccess(Access access)
-        {
+    public void setAccess(Access access) {
         int nFlagsOld = m_nFlags;
         int nFlagsNew = (nFlagsOld & ~ACCESS_MASK) | (access.ordinal() << ACCESS_SHIFT);
-        if (nFlagsNew != nFlagsOld)
-            {
+        if (nFlagsNew != nFlagsOld) {
             m_nFlags = (short) nFlagsNew;
             markModified();
-            }
         }
+    }
 
     /**
      * @return true iff the component is marked as abstract
      */
-    public boolean isAbstract()
-        {
+    public boolean isAbstract() {
         return (m_nFlags & ABSTRACT_BIT) != 0;
-        }
+    }
 
     /**
      * Specify whether or not the component is abstract.
      *
      * @param fAbstract  true to specify the component is abstract; false otherwise
      */
-    public void setAbstract(boolean fAbstract)
-        {
+    public void setAbstract(boolean fAbstract) {
         int nFlagsOld = m_nFlags;
         int nFlagsNew = (nFlagsOld & ~ABSTRACT_BIT) | (fAbstract ? ABSTRACT_BIT : 0);
-        if (nFlagsNew != nFlagsOld)
-            {
+        if (nFlagsNew != nFlagsOld) {
             m_nFlags = (short) nFlagsNew;
             markModified();
-            }
         }
+    }
 
     /**
      * @return true iff the component is marked as static
      */
-    public boolean isStatic()
-        {
+    public boolean isStatic() {
         return (m_nFlags & STATIC_BIT) != 0;
-        }
+    }
 
     /**
      * Specify whether or not the component is static.
      *
      * @param fStatic  true to specify the component is static; false otherwise
      */
-    public void setStatic(boolean fStatic)
-        {
+    public void setStatic(boolean fStatic) {
         int nFlagsOld = m_nFlags;
         int nFlagsNew = (nFlagsOld & ~STATIC_BIT) | (fStatic ? STATIC_BIT : 0);
-        if (nFlagsNew != nFlagsOld)
-            {
+        if (nFlagsNew != nFlagsOld) {
             m_nFlags = (short) nFlagsNew;
             markModified();
-            }
         }
+    }
 
     /**
      * @return true iff the component is marked as synthetic
      */
-    public boolean isSynthetic()
-        {
+    public boolean isSynthetic() {
         return (m_nFlags & SYNTHETIC_BIT) != 0;
-        }
+    }
 
     /**
      * Specify whether or not the component is synthetic.
      *
      * @param fSynthetic  true to specify the component is synthetic; false otherwise
      */
-    public void setSynthetic(boolean fSynthetic)
-        {
+    public void setSynthetic(boolean fSynthetic) {
         int nFlagsOld = m_nFlags;
         int nFlagsNew = (nFlagsOld & ~SYNTHETIC_BIT) | (fSynthetic ? SYNTHETIC_BIT : 0);
-        if (nFlagsNew != nFlagsOld)
-            {
+        if (nFlagsNew != nFlagsOld) {
             m_nFlags = (short) nFlagsNew;
             markModified();
-            }
         }
+    }
 
     /**
      * @return true iff the component is marked as having a conditional return
      */
-    protected boolean isConditionalReturn()
-        {
+    protected boolean isConditionalReturn() {
         return (m_nFlags & COND_RET_BIT) != 0;
-        }
+    }
 
     /**
      * Specify whether or not the method has a conditional return value.
      *
      * @param fConditional  true to specify the method has a conditional return; false otherwise
      */
-    protected void setConditionalReturn(boolean fConditional)
-        {
+    protected void setConditionalReturn(boolean fConditional) {
         int nFlagsOld = m_nFlags;
         int nFlagsNew = (nFlagsOld & ~COND_RET_BIT) | (fConditional ? COND_RET_BIT : 0);
-        if (nFlagsNew != nFlagsOld)
-            {
+        if (nFlagsNew != nFlagsOld) {
             m_nFlags = (short) nFlagsNew;
             markModified();
-            }
         }
+    }
 
     /**
      * @return true iff the auxiliary flag is set
      */
-    protected boolean isAuxiliary()
-        {
+    protected boolean isAuxiliary() {
         return (m_nFlags & AUXILIARY_BIT) != 0;
-        }
+    }
 
     /**
      * Set the auxiliary flag. The semantic of this flag depends on the specific component
      * implementation.
      */
-    protected void markAuxiliary()
-        {
+    protected void markAuxiliary() {
         int nFlagsOld = m_nFlags;
         int nFlagsNew = (nFlagsOld & ~AUXILIARY_BIT) | AUXILIARY_BIT;
-        if (nFlagsNew != nFlagsOld)
-            {
+        if (nFlagsNew != nFlagsOld) {
             m_nFlags = (short) nFlagsNew;
             markModified();
-            }
         }
+    }
 
     /**
      * Obtain the name of the component. All components have a name, although the purpose of the
@@ -457,72 +419,64 @@ public abstract class Component
      * </ul>
      * @return
      */
-    public String getName()
-        {
+    public String getName() {
         return getIdentityConstant().getName();
-        }
+    }
 
     /**
      * @return the unqualified form of the component name
      */
-    public String getSimpleName()
-        {
+    public String getSimpleName() {
         return getName();
-        }
+    }
 
     /**
      * @return true if the identity of this component is visible from anywhere
      */
-    public boolean isGloballyVisible()
-        {
+    public boolean isGloballyVisible() {
         Component parent = getParent();
         return parent.isGloballyVisible() && !parent.isChildLessVisible();
-        }
+    }
 
     /**
      * @return true if the identity of a child component is less visible than the identity of this
      *         component; this tends to be true when this component is a method
      */
-    protected boolean isChildLessVisible()
-        {
+    protected boolean isChildLessVisible() {
         return false;
-        }
+    }
 
     /**
      * Determine if this component allows any type within it to be auto-narrowing.
      *
      * @return true iff the component can contain auto-narrowing types
      */
-    public boolean isAutoNarrowingAllowed()
-        {
+    public boolean isAutoNarrowingAllowed() {
         return false;
-        }
+    }
 
     /**
      * Obtain the class contributions as a list.
      *
      * @return a read-only list of class contributions
      */
-    public List<Contribution> getContributionsAsList()
-        {
+    public List<Contribution> getContributionsAsList() {
         List<Contribution> list = m_listContribs;
-        if (list == null)
-            {
+        if (list == null) {
             return Collections.emptyList();
-            }
+        }
         assert (list = Collections.unmodifiableList(m_listContribs)) != null;
         return list;
-        }
+    }
 
     /**
      * @return false iff all of the contributions have fully resolved types
      */
-    public boolean containsUnresolvedContribution()
-        {
+    public boolean containsUnresolvedContribution() {
         return m_listContribs != null && m_listContribs
                 .stream()
                 .anyMatch(Contribution::containsUnresolved);
-        }
+    }
 
     /**
      * Find a contribution of a specified type.
@@ -532,21 +486,17 @@ public abstract class Component
      * @return a first (if more than one) contribution matching the specified category
      *         or null if none found
      */
-    public Contribution findContribution(Composition composition)
-        {
+    public Contribution findContribution(Composition composition) {
         List<Contribution> list = m_listContribs;
-        if (list != null)
-            {
-            for (Contribution contrib : list)
-                {
-                if (contrib.getComposition() == composition)
-                    {
+        if (list != null) {
+            for (Contribution contrib : list) {
+                if (contrib.getComposition() == composition) {
                     return contrib;
-                    }
                 }
             }
-        return null;
         }
+        return null;
+    }
 
     /**
      * Add a class type contribution.
@@ -554,21 +504,19 @@ public abstract class Component
      * @param composition  the contribution category
      * @param constType    the contribution class type
      */
-    public Contribution addContribution(Composition composition, TypeConstant constType)
-        {
+    public Contribution addContribution(Composition composition, TypeConstant constType) {
         return addContribution(new Contribution(composition, constType));
-        }
+    }
 
     /**
      * Add a module import contribution.
      *
      * @param constModule    the contribution class
      */
-    public void addImport(ModuleConstant constModule)
-        {
+    public void addImport(ModuleConstant constModule) {
         assert this instanceof PackageStructure;
         addContribution(new Contribution(constModule));
-        }
+    }
 
     /**
      * Add an annotation.
@@ -576,20 +524,18 @@ public abstract class Component
      * @param constAnno    the annotation class type
      * @param aconstParam  the annotation parameters (optional)
      */
-    public void addAnnotation(IdentityConstant constAnno, Constant... aconstParam)
-        {
+    public void addAnnotation(IdentityConstant constAnno, Constant... aconstParam) {
         addAnnotation(getConstantPool().ensureAnnotation(constAnno, aconstParam));
-        }
+    }
 
     /**
      * Add an annotation.
      *
      * @param annotation  the Annotation
      */
-    public void addAnnotation(Annotation annotation)
-        {
+    public void addAnnotation(Annotation annotation) {
         addContribution(new Contribution(annotation));
-        }
+    }
 
     /**
      * Add an interface delegation.
@@ -597,10 +543,9 @@ public abstract class Component
      * @param constClass  the class type to delegate
      * @param constProp   the property specifying the reference to delegate to
      */
-    public Contribution addDelegation(TypeConstant constClass, PropertyConstant constProp)
-        {
+    public Contribution addDelegation(TypeConstant constClass, PropertyConstant constProp) {
         return addContribution(new Contribution(constClass, constProp));
-        }
+    }
 
     /**
      * Add a mixin via an "incorporates" or "incorporates conditional".
@@ -609,68 +554,57 @@ public abstract class Component
      * @param mapConstraints  the type constraints that make the mixin conditional
      */
     public Contribution addIncorporates(TypeConstant constClass,
-                                Map<String, TypeConstant> mapConstraints)
-        {
+                                Map<String, TypeConstant> mapConstraints) {
         ListMap<StringConstant, TypeConstant> map = null;
-        if (mapConstraints != null)
-            {
+        if (mapConstraints != null) {
             ConstantPool pool = getConstantPool();
 
             map = new ListMap<>();
-            for (Map.Entry<String, TypeConstant> entry : mapConstraints.entrySet())
-                {
+            for (Map.Entry<String, TypeConstant> entry : mapConstraints.entrySet()) {
                 map.put(pool.ensureStringConstant(entry.getKey()), entry.getValue());
-                }
             }
-        return addContribution(new Contribution(constClass, map));
         }
+        return addContribution(new Contribution(constClass, map));
+    }
 
     /**
      * Helper to add a contribution to the lazily-instantiated list of contributions.
      *
      * @param contrib  the contribution to add to the end of the list
      */
-    protected Contribution addContribution(Contribution contrib)
-        {
+    protected Contribution addContribution(Contribution contrib) {
         List<Contribution> list = m_listContribs;
-        if (list == null)
-            {
+        if (list == null) {
             m_listContribs = list = new ArrayList<>();
-            }
-        else if (!list.isEmpty() && (contrib.getComposition() == Composition.Into ||
-                                     contrib.getComposition() == Composition.Extends))
-            {
+        } else if (!list.isEmpty() && (contrib.getComposition() == Composition.Into ||
+                                     contrib.getComposition() == Composition.Extends)) {
             // order is "into" and then "extends" and then everything else
-            for (ListIterator<Contribution> listIterator = list.listIterator(); listIterator.hasNext(); )
-                {
+            for (ListIterator<Contribution> listIterator = list.listIterator(); listIterator.hasNext(); ) {
                 Contribution contribNext = listIterator.next();
-                if (contribNext.getComposition() != Composition.Into)
-                    {
+                if (contribNext.getComposition() != Composition.Into) {
                     listIterator.previous();
                     listIterator.add(contrib);
                     return contrib;
-                    }
                 }
             }
+        }
 
         list.add(contrib);
         markModified();
         return contrib;
-        }
+    }
 
     /**
      * Remove a contribution from the list of contributions.
      *
      * @param contrib  the contribution to remove from the list
      */
-    protected void removeContribution(Contribution contrib)
-        {
+    protected void removeContribution(Contribution contrib) {
         List<Contribution> list = m_listContribs;
-        if (list != null)
-            {
+        if (list != null) {
             list.remove(contrib);
-            }
         }
+    }
 
     /**
      * Determine whether multiple different components (versions, alternatives) may exist for the
@@ -684,105 +618,90 @@ public abstract class Component
      * @return true iff the component allows multiple conditional children to exist for the same
      *         identity
      */
-    protected boolean isSiblingAllowed()
-        {
+    protected boolean isSiblingAllowed() {
         return getParent().isSiblingAllowed();
-        }
+    }
 
     /**
      * @return assuming that this is one of any number of siblings, obtain a reference to the first
      *         sibling (which may be this); never null
      */
-    protected Component getEldestSibling()
-        {
+    protected Component getEldestSibling() {
         Component parent = getParent();
-        if (parent == null) // || !isSiblingAllowed())
-            {
+        if (parent == null) /* || !isSiblingAllowed()) */ {
             return this;
-            }
+        }
 
         Component sibling = parent.getChildByNameMap().get(getName());
         assert sibling != null;
         return sibling;
-        }
+    }
 
     /**
      * @return assuming that this is one of any number of siblings, obtain a reference to the next
      *         sibling, which may be null to indicate no more siblings
      */
-    protected Component getNextSibling()
-        {
+    protected Component getNextSibling() {
         return isSiblingAllowed() ? m_sibling : null;
-        }
+    }
 
     /**
      * Update this component's reference to its next sibling.
      *
      * @param sibling  a reference to the next sibling (null indicates no more siblings)
      */
-    private void setNextSibling(Component sibling)
-        {
+    private void setNextSibling(Component sibling) {
         assert sibling == null || isSiblingAllowed();
         m_sibling = sibling;
-        }
+    }
 
     /**
-     * Iterate all of the siblings of this component, including this component.
+     * Iterate all siblings of this component, including this component.
      *
      * @return an Iterator of sibling components, including this component
      */
-    protected Iterator<Component> siblings()
-        {
-        if (!isSiblingAllowed())
-            {
-            return new Iterator<>()
-                {
+    protected Iterator<Component> siblings() {
+        if (!isSiblingAllowed()) {
+            return new Iterator<>() {
                 private boolean first = true;
 
                 @Override
-                public boolean hasNext()
-                    {
+                public boolean hasNext() {
                     return first;
-                    }
-
-                @Override
-                public Component next()
-                    {
-                    if (first)
-                        {
-                        first = false;
-                        return Component.this;
-                        }
-
-                    throw new NoSuchElementException();
-                    }
-                };
-            }
-
-        return new Iterator<>()
-            {
-            private Component nextSibling = getEldestSibling();
-
-            @Override
-            public boolean hasNext()
-                {
-                return nextSibling != null;
                 }
 
-            @Override
-            public Component next()
-                {
-                Component sibling = nextSibling;
-                if (sibling == null)
-                    {
-                    throw new NoSuchElementException();
+                @Override
+                public Component next() {
+                    if (first) {
+                        first = false;
+                        return Component.this;
                     }
 
-                nextSibling = sibling.getNextSibling();
-                return sibling;
+                    throw new NoSuchElementException();
                 }
             };
         }
+
+        return new Iterator<>() {
+            private Component nextSibling = getEldestSibling();
+
+            @Override
+            public boolean hasNext() {
+                return nextSibling != null;
+            }
+
+            @Override
+            public Component next() {
+                Component sibling = nextSibling;
+                if (sibling == null) {
+                    throw new NoSuchElementException();
+                }
+
+                nextSibling = sibling.getNextSibling();
+                return sibling;
+            }
+        };
+    }
 
     /**
      * Obtain a read-only map of all children identified by name.
@@ -792,12 +711,11 @@ public abstract class Component
      * @return a read-only map from name to child component; never null, even if there are no
      *         children
      */
-    public Map<String, Component> getChildByNameMap()
-        {
+    public Map<String, Component> getChildByNameMap() {
         ensureChildren();
         Map<String, Component> map = m_childByName;
         return map == null ? Collections.emptyMap() : map;
-        }
+    }
 
     /**
      * Obtain the actual read/write map of all children that are identified by name.
@@ -806,99 +724,81 @@ public abstract class Component
      *
      * @return obtain the actual map from name to child component, creating the map if necessary
      */
-     public synchronized Map<String, Component> ensureChildByNameMap()
-        {
+     public synchronized Map<String, Component> ensureChildByNameMap() {
         ensureChildren();
 
         Map<String, Component> map = m_childByName;
-        if (map == null)
-            {
+        if (map == null) {
             map = new ListMap<>();
 
             // store the map on every one of the siblings (including this component)
-            for (Iterator<Component> siblings = siblings(); siblings.hasNext(); )
-                {
+            for (Iterator<Component> siblings = siblings(); siblings.hasNext(); ) {
                 siblings.next().m_childByName = map;
-                }
+            }
 
             // the corresponding field on this component should now be initialized
             assert m_childByName == map;
-            }
-        return map;
         }
+        return map;
+    }
 
     /**
      * Make sure that any deferred child deserialization is complete
      */
-    protected void ensureChildren()
-        {
-        if (m_abChildren != null)
-            {
+    protected void ensureChildren() {
+        if (m_abChildren != null) {
             ensureChildrenComplex();
-            }
-        // else; common path
         }
+        // else; common path
+    }
 
     /**
      * Complex portion of {@link #ensureChildren()} extracted for hot-spotting.
      */
-    private void ensureChildrenComplex()
-        {
+    private void ensureChildrenComplex() {
         byte[] ab = m_abChildren;
-        if (ab != null)
-            {
+        if (ab != null) {
             // sync on an object shared by all siblings
-            synchronized (ab)
-                {
-                if (ab.length == 0)
-                    {
+            synchronized (ab) {
+                if (ab.length == 0) {
                     // we've recursed from disassembleChildren() below, or the deserialization
                     // thread just released the empty array monitor introduced below
                     return;
-                    }
+                }
 
-                if (m_abChildren != null)
-                    {
+                if (m_abChildren != null) {
                     assert ab == m_abChildren;
 
                     // create an empty array to serve as a marker indicating that we are in the
                     // process of deserialization, so threads would be forced to block on this object
                     byte[] empty = new byte[0];
-                    synchronized (empty)
-                        {
+                    synchronized (empty) {
                         // mark all siblings as in active serialization; this blocks other threads
                         // until deserialization is complete
-                        for (Iterator<Component> siblings = siblings(); siblings.hasNext(); )
-                            {
+                        for (Iterator<Component> siblings = siblings(); siblings.hasNext(); ) {
                             siblings.next().m_abChildren = empty;
-                            }
+                        }
 
                         // now read in the children
                         DataInput in = new DataInputStream(new ByteArrayInputStream(ab));
-                        try
-                            {
+                        try {
                             // this may recurse, hence the complexity of the synchronization above
                             disassembleChildren(in, true);
-                            }
-                        catch (IOException e)
-                            {
+                        } catch (IOException e) {
                             throw new IllegalStateException(
                                     "IOException occurred in " + getIdentityConstant() + " " + "during"
                                     + " deferred read of child components", e);
-                            }
-                        finally
-                            {
+                        } finally {
                             // mark the deserialization as complete
-                            for (Iterator<Component> siblings = siblings(); siblings.hasNext(); )
-                                {
+                            for (Iterator<Component> siblings = siblings(); siblings.hasNext(); ) {
                                 siblings.next().m_abChildren = null;
-                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
 
     /**
      * Visitor pattern for children of this component, optionally including all siblings, and
@@ -908,25 +808,20 @@ public abstract class Component
      * @param fSiblings   true to visit all siblings; false to visit only the eldest sibling
      * @param fRecursive  true to recursively visit the children of the children, and so on
      */
-    public void visitChildren(Consumer<Component> visitor, boolean fSiblings, boolean fRecursive)
-        {
-        for (Component component : children())
-            {
+    public void visitChildren(Consumer<Component> visitor, boolean fSiblings, boolean fRecursive) {
+        for (Component component : children()) {
             Component componentEldest = component;
 
-            do
-                {
+            do {
                 visitor.accept(component);
                 component = component.getNextSibling();
-                }
-            while (fSiblings && component != null);
+            } while (fSiblings && component != null);
 
-            if (fRecursive)
-                {
+            if (fRecursive) {
                 componentEldest.visitChildren(visitor, fSiblings, fRecursive);
-                }
             }
         }
+    }
 
     /**
      * Adopt the specified child.
@@ -935,8 +830,7 @@ public abstract class Component
      *
      * @return true iff the child was successfully added
      */
-    protected boolean addChild(Component child)
-        {
+    protected boolean addChild(Component child) {
         // if the child is a method, it can only be contained by a MultiMethodStructure
         assert !(child instanceof MethodStructure);
 
@@ -944,22 +838,17 @@ public abstract class Component
         String                 sName = child.getName();
 
         Component sibling = kids.get(sName);
-        if (sibling == null)
-            {
+        if (sibling == null) {
             kids.put(sName, child);
-            }
-        else if (isSiblingAllowed())
-            {
+        } else if (isSiblingAllowed()) {
             linkSibling(child, sibling);
-            }
-        else
-            {
+        } else {
             return false;
-            }
+        }
 
         markModified();
         return true;
-        }
+    }
 
     /**
      * Link a sibling to the specified child's chain.
@@ -967,8 +856,7 @@ public abstract class Component
      * @param child    the child component to link
      * @param sibling  the sibling component to link to
      */
-    protected void linkSibling(Component child, Component sibling)
-        {
+    protected void linkSibling(Component child, Component sibling) {
         assert isSiblingAllowed();
 
         // there has to be a condition that sets the new kid apart from its siblings, but that
@@ -979,12 +867,12 @@ public abstract class Component
         //     {
         //     throw new IllegalStateException("cannot add child with same ID (" + id
         //             + ") if condition == null");
-        //     }
+        // }
         // if (sibling.m_cond == null)
         //     {
         //     throw new IllegalStateException("cannot add child if sibling with same ID (" + id
         //             + ") has condition == null");
-        //     }
+        // }
 
         // make sure that the parent is set correctly
         child.setContaining(this);
@@ -992,23 +880,21 @@ public abstract class Component
         // the new kid gets put at the end of the linked list of siblings
         Component lastSibling = sibling;
         Component nextSibling = lastSibling.getNextSibling();
-        while (nextSibling != null)
-            {
+        while (nextSibling != null) {
             lastSibling = nextSibling;
             nextSibling = lastSibling.getNextSibling();
-            }
+        }
         lastSibling.setNextSibling(child);
 
         child.adoptChildren(sibling);
-        }
+    }
 
     /**
      * Adopt the children of the specified component
      *
      * @param that
      */
-    protected void adoptChildren(Component that)
-        {
+    protected void adoptChildren(Component that) {
         // the child can't have any of its own children; that "merge" functionality is simply
         // not supported by this operation
         assert m_abChildren       == null;
@@ -1017,15 +903,14 @@ public abstract class Component
         // make sure that the various sibling-shared fields are configured
         m_abChildren  = that.m_abChildren;
         m_childByName = that.m_childByName;
-        }
+    }
 
     /**
      * Remove the specified child.
      *
      * @param child  the child of this component to remove
      */
-    public void removeChild(Component child)
-        {
+    public void removeChild(Component child) {
         assert child.getParent() == this;
 
         Map<String, Component> kids  = ensureChildByNameMap();
@@ -1035,7 +920,7 @@ public abstract class Component
         child.getIdentityConstant().resetCachedInfo();
 
         unlinkSibling(kids, sName, child, sibling);
-        }
+    }
 
     /**
      * Replace the specified first child and all of its siblings (and their children) with the
@@ -1044,8 +929,7 @@ public abstract class Component
      * @param childOld  the child to remove
      * @param childNew  the child to add
      */
-    protected void replaceChild(Component childOld, Component childNew)
-        {
+    protected void replaceChild(Component childOld, Component childNew) {
         assert childOld != null && childNew != null;
         assert childOld.getParent() == this;
         assert childNew.getParent() == this;
@@ -1054,7 +938,7 @@ public abstract class Component
         // warning: brute force
         ensureChildByNameMap().put(childNew.getName(), childNew);
         childNew.getIdentityConstant().resetCachedInfo();
-        }
+    }
 
     /**
      * Unlink the sibling from the specified child's chain.
@@ -1064,53 +948,43 @@ public abstract class Component
      * @param child    the child component
      * @param sibling  the sibling component to unlink
      */
-    protected void unlinkSibling(Map kids, Object id, Component child, Component sibling)
-        {
-        if (sibling == child && child.getNextSibling() == null)
-            {
+    protected void unlinkSibling(Map kids, Object id, Component child, Component sibling) {
+        if (sibling == child && child.getNextSibling() == null) {
             // most common case: the specified child is the only sibling with that id
             markModified();
             return;
-            }
+        }
 
-        if (sibling == null)
-            {
+        if (sibling == null) {
             // the child was not there
             return;
-            }
+        }
 
-        if (sibling == child)
-            {
+        if (sibling == child) {
             // the child to remove is in the head of the linked list
             kids.put(id, child.getNextSibling());
-            }
-        else
-            {
+        } else {
             // the child to remove is in the middle of the linked list;
             // put the linked list back first, then find and remove the child
             kids.put(id, sibling);
-            do
-                {
-                if (sibling.getNextSibling() == child)
-                    {
+            do {
+                if (sibling.getNextSibling() == child) {
                     sibling.setNextSibling(child.getNextSibling());
                     break;
-                    }
-                sibling = sibling.getNextSibling();
                 }
-            while (sibling != null);
-            }
+                sibling = sibling.getNextSibling();
+            } while (sibling != null);
+        }
 
         markModified();
-        }
+    }
 
     /**
      * @return true if this component can contain packages
      */
-    public boolean isPackageContainer()
-        {
+    public boolean isPackageContainer() {
         return false;
-        }
+    }
 
     /**
      * Create and register a PackageStructure with the specified package name.
@@ -1119,15 +993,13 @@ public abstract class Component
      * @param sName   the simple (unqualified) package name to create
      * @param cond    the conditional constant for the class, or null
      */
-    public PackageStructure createPackage(Access access, String sName, ConditionalConstant cond)
-        {
+    public PackageStructure createPackage(Access access, String sName, ConditionalConstant cond) {
         assert sName != null;
         assert access != null;
 
-        if (!isPackageContainer())
-            {
+        if (!isPackageContainer()) {
             throw new IllegalStateException("this (" + this + ") cannot contain a package");
-            }
+        }
 
         // the check for duplicates is deferred, since it is possible (e.g. with conditionals) to
         // have multiple components occupying the same location within the namespace at this point
@@ -1138,25 +1010,23 @@ public abstract class Component
         PackageStructure struct  = new PackageStructure(this, nFlags, constId, cond);
 
         return addChild(struct) ? struct : null;
-        }
+    }
 
     /**
      * @return true if this component can contain classes and properties
      */
-    public boolean isClassContainer()
-        {
+    public boolean isClassContainer() {
         return false;
-        }
+    }
 
     /**
      * See documentation for the synchronicity property at Service.x.
      *
      * @return the safety value for this method, property or class
      */
-    public ConcurrencySafety getConcurrencySafety()
-        {
+    public ConcurrencySafety getConcurrencySafety() {
         return getParent().getConcurrencySafety();
-        }
+    }
 
     /**
      * Create and register a ClassStructure with the specified class name.
@@ -1166,15 +1036,13 @@ public abstract class Component
      * @param sName   the simple (unqualified) class name to create
      * @param cond    the conditional constant for the class, or null
      */
-    public ClassStructure createClass(Access access, Format format, String sName, ConditionalConstant cond)
-        {
+    public ClassStructure createClass(Access access, Format format, String sName, ConditionalConstant cond) {
         assert sName != null;
         assert access != null;
 
-        if (!isClassContainer())
-            {
+        if (!isClassContainer()) {
             throw new IllegalStateException("this (" + this + ") cannot contain a class");
-            }
+        }
 
         // the check for duplicates is deferred, since it is possible (e.g. with conditionals) to
         // have multiple components occupying the same location within the namespace at this point
@@ -1185,35 +1053,30 @@ public abstract class Component
         ClassStructure struct  = new ClassStructure(this, nFlags, constId, cond);
 
         return addChild(struct) ? struct : null;
-        }
+    }
 
     /**
      * @return true iff this component contains a virtual child class; note that this method does
      *         not search contributions to see if any contribution contains a virtual child (which
      *         implies that this component would then also have a virtual child)
      */
-    public boolean containsVirtualChild()
-        {
-        for (Component child : getChildByNameMap().values())
-            {
-            switch (child.getIdentityConstant().getFormat())
-                {
-                case Class:
-                    if (((ClassStructure) child).isVirtualChild())
-                        {
-                        return true;
-                        }
-                    break;
-                case Property:
-                    if (child.containsVirtualChild())
-                        {
-                        return true;
-                        }
-                    break;
+    public boolean containsVirtualChild() {
+        for (Component child : getChildByNameMap().values()) {
+            switch (child.getIdentityConstant().getFormat()) {
+            case Class:
+                if (((ClassStructure) child).isVirtualChild()) {
+                    return true;
                 }
+                break;
+            case Property:
+                if (child.containsVirtualChild()) {
+                    return true;
+                }
+                break;
             }
-        return false;
         }
+        return false;
+    }
 
     /**
      * Create and register a PropertyStructure with the specified name.
@@ -1225,17 +1088,15 @@ public abstract class Component
      * @param sName      the simple (unqualified) property name to create
      */
     public PropertyStructure createProperty(boolean fStatic, Access accessRef, Access accessVar,
-            TypeConstant constType, String sName)
-        {
+            TypeConstant constType, String sName) {
         assert sName != null;
         assert accessRef != null;
         assert accessVar == null || accessRef.ordinal() <= accessVar.ordinal();
         assert constType != null;
 
-        if (!isClassContainer())
-            {
+        if (!isClassContainer()) {
             throw new IllegalStateException("this (" + this + ") cannot contain a property");
-            }
+        }
 
         // the check for duplicates is deferred, since it is possible (thanks to the complexity of
         // conditionals) to have multiple components occupying the same location within the
@@ -1245,14 +1106,14 @@ public abstract class Component
         //     {
         //     throw new IllegalStateException("cannot add a class \"" + sName
         //             + "\" because a child with that name already exists: " + component);
-        //     }
+        // }
 
         int               nFlags  = Format.PROPERTY.ordinal() | accessRef.FLAGS | (fStatic ? STATIC_BIT : 0);
         PropertyConstant  constId = getConstantPool().ensurePropertyConstant(getIdentityConstant(), sName);
         PropertyStructure struct  = new PropertyStructure(this, nFlags, constId, null, accessVar, constType);
 
         return addChild(struct) ? struct : null;
-        }
+    }
 
     /**
      * Create and register a TypedefStructure with the specified name.
@@ -1263,16 +1124,14 @@ public abstract class Component
      *
      * @return the new TypedefStructure
      */
-    public TypedefStructure createTypedef(Access access, TypeConstant constType, String sName)
-        {
+    public TypedefStructure createTypedef(Access access, TypeConstant constType, String sName) {
         assert sName != null;
         assert access != null;
         assert constType != null;
 
-        if (!isClassContainer())
-            {
+        if (!isClassContainer()) {
             throw new IllegalStateException("this (" + this + ") cannot contain a typedef");
-            }
+        }
 
         int              nFlags  = Format.TYPEDEF.ordinal() | access.FLAGS;
         TypedefConstant  constId = getConstantPool().ensureTypedefConstant(getIdentityConstant(),
@@ -1281,15 +1140,14 @@ public abstract class Component
         struct.setType(constType);
 
         return addChild(struct) ? struct : null;
-        }
+    }
 
     /**
      * @return true if this component can contain multi-methods
      */
-    public boolean isMethodContainer()
-        {
+    public boolean isMethodContainer() {
         return false;
-        }
+    }
 
     /**
      * Create a MethodStructure with the specified name, but whose identity may not yet be fully
@@ -1308,8 +1166,7 @@ public abstract class Component
      */
     public MethodStructure createMethod(boolean fFunction, Access access, Annotation[] annotations,
                                         Parameter[] aReturns, String sName, Parameter[] aParams,
-                                        boolean fHasCode, boolean fUsesSuper)
-        {
+                                        boolean fHasCode, boolean fUsesSuper) {
         assert sName != null;
         assert access != null;
 
@@ -1318,88 +1175,75 @@ public abstract class Component
                 ? null
                 : multimethod.createMethod(fFunction, access, annotations, aReturns, aParams,
                         fHasCode, fUsesSuper);
-        }
+    }
 
-    public MultiMethodStructure ensureMultiMethodStructure(String sName)
-        {
+    public MultiMethodStructure ensureMultiMethodStructure(String sName) {
         Component sibling = getChildByNameMap().get(sName);
-        while (sibling != null)
-            {
-            if (sibling instanceof MultiMethodStructure mms)
-                {
+        while (sibling != null) {
+            if (sibling instanceof MultiMethodStructure mms) {
                 return mms;
-                }
+            }
 
             sibling = sibling.getNextSibling();
-            }
+        }
 
         MultiMethodConstant  constId = getConstantPool().ensureMultiMethodConstant(getIdentityConstant(), sName);
         MultiMethodStructure struct  = new MultiMethodStructure(this, Format.MULTIMETHOD.ordinal(), constId, null);
 
         return addChild(struct) ? struct : null;
-        }
+    }
 
     /**
      * Add the specified version as a condition on this component.
      *
      * @param ver  the version
      */
-    protected void addVersion(Version ver)
-        {
+    protected void addVersion(Version ver) {
         ConditionalConstant cond = getCondition();
-        if (cond == null)
-            {
+        if (cond == null) {
             setCondition(getConstantPool().ensureVersionedCondition(ver));
-            }
-        else
-            {
+        } else {
             setCondition(cond.addVersion(ver));
-            }
         }
+    }
 
     /**
      * Remove the specified version as a condition from this component.
      *
      * @param ver  the version
      */
-    protected void removeVersion(Version ver)
-        {
+    protected void removeVersion(Version ver) {
         ConditionalConstant cond = getCondition();
-        if (cond != null)
-            {
+        if (cond != null) {
             setCondition(cond.removeVersion(ver));
-            }
         }
+    }
 
     /**
      * Modify the condition on this component by adding another required condition.
      *
      * @param cond  the condition to require
      */
-    protected void addAndCondition(ConditionalConstant cond)
-        {
-        if (cond != null)
-            {
+    protected void addAndCondition(ConditionalConstant cond) {
+        if (cond != null) {
             ConditionalConstant condOld = m_cond;
             m_cond = condOld == null ? cond : condOld.addAnd(cond);
             markModified();
-            }
         }
+    }
 
     /**
      * Modify the condition on this component by adding an alternative condition.
      *
      * @param cond  the alternative condition
      */
-    protected void addOrCondition(ConditionalConstant cond)
-        {
-        if (cond != null)
-            {
+    protected void addOrCondition(ConditionalConstant cond) {
+        if (cond != null) {
             ConditionalConstant condOld = m_cond;
             m_cond = condOld == null ? cond : condOld.addOr(cond);
             markModified();
-            }
         }
+    }
 
     /**
      * Without comparing the child components, compare this component to another component to
@@ -1411,11 +1255,10 @@ public abstract class Component
      *
      * @return true iff this component's "body" is identical to that component's "body"
      */
-    protected boolean isBodyIdentical(Component that)
-        {
+    protected boolean isBodyIdentical(Component that) {
         return this.m_nFlags == that.m_nFlags
             && this.m_constId.equals(that.m_constId);
-        }
+    }
 
     /**
      * Comparing only the child components (recursively), determine if this component's children
@@ -1425,47 +1268,39 @@ public abstract class Component
      *
      * @return
      */
-    protected boolean areChildrenIdentical(Component that)
-        {
+    protected boolean areChildrenIdentical(Component that) {
         ensureChildren();
         return equalChildMaps(this.getChildByNameMap(), that.getChildByNameMap());
-        }
+    }
 
     protected boolean equalChildMaps(Map<?, ? extends Component> mapThis,
-                                     Map<?, ? extends Component> mapThat)
-        {
-        if (mapThis.size() != mapThat.size())
-            {
+                                     Map<?, ? extends Component> mapThat) {
+        if (mapThis.size() != mapThat.size()) {
             return false;
-            }
+        }
 
-        if (mapThis.isEmpty())
-            {
+        if (mapThis.isEmpty()) {
             return true;
-            }
+        }
 
-        for (Object key : mapThis.keySet())
-            {
+        for (Object key : mapThis.keySet()) {
             Component childThis = mapThis.get(key);
             Component childThat = mapThat.get(key);
 
             for (Component eachThis = childThis, eachThat = childThat;
                     eachThis != null || eachThat != null;
-                    eachThis = eachThis.getNextSibling(), eachThat = eachThat.getNextSibling())
-                {
-                if (eachThis == null || eachThat == null)
-                    {
+                    eachThis = eachThis.getNextSibling(), eachThat = eachThat.getNextSibling()) {
+                if (eachThis == null || eachThat == null) {
                     return false;
-                    }
-                }
-            if (childThat == null)
-                {
-                return false;
                 }
             }
+            if (childThat == null) {
+                return false;
+            }
+        }
 
         return true;
-        }
+    }
 
     /**
      * Obtain the child that is identified by the specified identity. If more than one child is
@@ -1476,16 +1311,14 @@ public abstract class Component
      *
      * @return the child component, or null
      */
-    public Component getChild(Constant constId)
-        {
-        if (constId instanceof NamedConstant constNamed)
-            {
+    public Component getChild(Constant constId) {
+        if (constId instanceof NamedConstant constNamed) {
             Component firstSibling = getChildByNameMap().get(constNamed.getName());
 
             return findLinkedChild(constId, firstSibling);
-            }
-        return null;
         }
+        return null;
+    }
 
     /**
      * Find a child in the chain with the specified id.
@@ -1495,35 +1328,30 @@ public abstract class Component
      *
      * @return the matching child
      */
-    protected Component findLinkedChild(Constant constId, Component firstSibling)
-        {
+    protected Component findLinkedChild(Constant constId, Component firstSibling) {
         // common result: nothing for that constant
-        if (firstSibling == null)
-            {
+        if (firstSibling == null) {
             return null;
-            }
+        }
 
         // common result: exactly one non-conditional match
         if (firstSibling.getNextSibling() == null
                 && firstSibling.getIdentityConstant().equals(constId)
-                && firstSibling.m_cond == null)
-            {
+                && firstSibling.m_cond == null) {
             return firstSibling;
-            }
+        }
 
         List<Component> matches = selectMatchingSiblings(firstSibling);
-        if (matches.isEmpty())
-            {
+        if (matches.isEmpty()) {
             return null;
-            }
+        }
 
-        if (matches.size() == 1)
-            {
+        if (matches.size() == 1) {
             return matches.get(0);
-            }
+        }
 
         return new CompositeComponent(this, matches);
-        }
+    }
 
     /**
      * For all but the multi-method, this obtains a child by the specified dot-delimited path.
@@ -1533,38 +1361,33 @@ public abstract class Component
      *
      * @return the child component or null if cannot be found
      */
-    public Component getChildByPath(String sPath)
-        {
+    public Component getChildByPath(String sPath) {
         int       ofStart = 0;
         int       ofEnd   = sPath.indexOf('.');
         Component parent  = this;
 
-        while (ofEnd >= 0)
-            {
+        while (ofEnd >= 0) {
             String sName = sPath.substring(ofStart, ofEnd);
 
             parent = parent.getChild(sName);
-            if (parent == null)
-                {
+            if (parent == null) {
                 return null;
-                }
-            if (parent instanceof PackageStructure pkg && pkg.isModuleImport())
-                {
+            }
+            if (parent instanceof PackageStructure pkg && pkg.isModuleImport()) {
                 parent = pkg.getImportedModule();
-                }
+            }
             ofStart = ofEnd + 1;
             ofEnd   = sPath.indexOf('.', ofStart);
-            }
-        return parent.getChild(sPath.substring(ofStart));
         }
+        return parent.getChild(sPath.substring(ofStart));
+    }
 
     /**
      * @return an iterator of any contributions that could contain virtual children
      */
-    protected Iterator<IdentityConstant> potentialVirtualChildContributors()
-        {
+    protected Iterator<IdentityConstant> potentialVirtualChildContributors() {
         throw new IllegalStateException();
-        }
+    }
 
     /**
      * Starting from this component, search for the child that is a super of the specified virtual
@@ -1584,68 +1407,57 @@ public abstract class Component
     protected Object findVirtualChildSuper(
             IdentityConstant        idVirtChild,
             int                     cDepth,
-            Set<IdentityConstant>   setVisited)
-        {
-        if (!setVisited.add(getIdentityConstant()))
-            {
+            Set<IdentityConstant>   setVisited) {
+        if (!setVisited.add(getIdentityConstant())) {
             // already checked this component node
             return null;
-            }
+        }
 
-        if (cDepth == 0)
-            {
+        if (cDepth == 0) {
             return this;
-            }
+        }
 
         // first, attempt to navigate down to the desired child
         IdentityConstant idChild = idVirtChild;
-        for (int i = 1; i < cDepth; ++i)
-            {
+        for (int i = 1; i < cDepth; ++i) {
             idChild = idChild.getParentConstant();
-            }
+        }
         Component child = getChild(idChild.getName());
-        if (child != null)
-            {
+        if (child != null) {
             // TODO verify visibility
             // TODO verify compatibility of the two components, e.g. must be either class or property, property must match property, can't have interface->class, etc.
             // TODO the possibility of compatibility issues probably implies that an error listener should be passed in
             Object oResult = child.findVirtualChildSuper(idVirtChild, cDepth-1, setVisited);
-            if (oResult != null)
-                {
+            if (oResult != null) {
                 return oResult;
-                }
             }
+        }
 
         // second, attempt to follow the path to a virtual super child via any contributions
         Iterator<IdentityConstant> iter = potentialVirtualChildContributors();
-        if (iter == null)
-            {
+        if (iter == null) {
             return false;
-            }
+        }
 
         Object oResult = null;
-        while (iter.hasNext())
-            {
+        while (iter.hasNext()) {
             IdentityConstant idContrib = iter.next();
-            if (idContrib.containsUnresolved())
-                {
+            if (idContrib.containsUnresolved()) {
                 oResult = false;
                 continue;
-                }
-
-            Component component = idContrib.getComponent();
-            if (component != null)
-                {
-                Object o = component.findVirtualChildSuper(idVirtChild, cDepth, setVisited);
-                if (o != null)
-                    {
-                    return o;
-                    }
-                }
             }
 
-        return oResult;
+            Component component = idContrib.getComponent();
+            if (component != null) {
+                Object o = component.findVirtualChildSuper(idVirtChild, cDepth, setVisited);
+                if (o != null) {
+                    return o;
+                }
+            }
         }
+
+        return oResult;
+    }
 
     /**
      * Helper method to find a method by signature.
@@ -1654,13 +1466,12 @@ public abstract class Component
      *
      * @return the specified MethodStructure, or null
      */
-    public MethodStructure findMethod(SignatureConstant sig)
-        {
+    public MethodStructure findMethod(SignatureConstant sig) {
         Component child = getChild(sig.getName());
         return child instanceof MultiMethodStructure
                 ? child.findMethod(sig)
                 : null;
-        }
+    }
 
     /**
      * Check if this component belongs to the specified primary module and if not, find the package
@@ -1668,13 +1479,12 @@ public abstract class Component
      *
      * @return the importing package or null if this component belongs to the main module
      */
-    public PackageStructure getImportedPackage(ModuleConstant idMainModule)
-        {
+    public PackageStructure getImportedPackage(ModuleConstant idMainModule) {
         ModuleConstant idModule = getIdentityConstant().getModuleConstant();
         return idModule.equals(idMainModule)
                 ? null
                 : idModule.getComponent().getImportedPackage(idMainModule);
-        }
+    }
 
     /**
      * For all but the multi-method, this obtains a child by the specified name. (Unlike all other
@@ -1684,8 +1494,7 @@ public abstract class Component
      *
      * @return the child component
      */
-    public Component getChild(String sName)
-        {
+    public Component getChild(String sName) {
         // there are five cases:
         // 1) no child by that name - return null
         // 2) one unconditional child by that name - return the child
@@ -1695,60 +1504,53 @@ public abstract class Component
 
         // most common result: no child by that name
         Component firstSibling = getChildByNameMap().get(sName);
-        if (firstSibling == null)
-            {
+        if (firstSibling == null) {
             return null;
-            }
+        }
 
         // common result: exactly one non-conditional match
-        if (firstSibling.getNextSibling() == null && firstSibling.m_cond == null)
-            {
+        if (firstSibling.getNextSibling() == null && firstSibling.m_cond == null) {
             return firstSibling;
-            }
+        }
 
         List<Component> matches = selectMatchingSiblings(firstSibling);
-        if (matches.isEmpty())
-            {
+        if (matches.isEmpty()) {
             return null;
-            }
+        }
 
-        if (matches.size() == 1)
-            {
+        if (matches.size() == 1) {
             return matches.get(0);
-            }
+        }
 
         return new CompositeComponent(this, matches);
-        }
+    }
 
     /**
      * @return the number of children
      */
-    public int getChildrenCount()
-        {
+    public int getChildrenCount() {
         return m_childByName == null ? 0 : m_childByName.size();
-        }
+    }
 
     /**
      * @return true iff this component has children
      */
-    public boolean hasChildren()
-        {
+    public boolean hasChildren() {
         ensureChildren();
         return m_childByName != null && !m_childByName.isEmpty();
-        }
+    }
 
     /**
      * Obtain a collection of the child components contained within this Component.
      *
      * @return an immutable collection of the component's children
      */
-    public Collection<? extends Component> children()
-        {
+    public Collection<? extends Component> children() {
         Collection<Component> children = getChildByNameMap().values();
 
         assert (children = Collections.unmodifiableCollection(children)) != null;
         return children;
-        }
+    }
 
     /**
      * Obtain a list of the child components contained within this Component. Note that this is a
@@ -1757,49 +1559,41 @@ public abstract class Component
      *
      * @return a list of the component's children
      */
-    public List<Component> safeChildren()
-        {
+    public List<Component> safeChildren() {
         List<Component> list = new ArrayList<>();
 
-        for (String sName : getChildByNameMap().keySet())
-            {
+        for (String sName : getChildByNameMap().keySet()) {
             Component child = getChild(sName);
-            if (child != null)
-                {
+            if (child != null) {
                 list.add(child);
-                }
             }
-
-        return list;
         }
 
-    protected List<Component> selectMatchingSiblings(Component firstSibling)
-        {
+        return list;
+    }
+
+    protected List<Component> selectMatchingSiblings(Component firstSibling) {
         AssemblerContext ctxAsm  = getFileStructure().getContext();
         LinkerContext    ctxLink = ctxAsm == null ? null : ctxAsm.getLinkerContext();
         List<Component>  matches = null;
 
         // see which siblings will be present based on what has been required in the current
         // assembler context
-        for (Component eachSibling = firstSibling; eachSibling != null; eachSibling = eachSibling.getNextSibling())
-            {
-            if (ctxLink == null || eachSibling.isPresent(ctxLink))
-                {
-                if (matches == null)
-                    {
+        for (Component eachSibling = firstSibling; eachSibling != null; eachSibling = eachSibling.getNextSibling()) {
+            if (ctxLink == null || eachSibling.isPresent(ctxLink)) {
+                if (matches == null) {
                     matches = new ArrayList<>();
-                    }
-                matches.add(eachSibling);
                 }
+                matches.add(eachSibling);
             }
+        }
 
         return matches == null ? Collections.emptyList() : matches;
-        }
+    }
 
-    protected boolean canBeSeen(Access access)
-        {
+    protected boolean canBeSeen(Access access) {
         return access.canSee(getAccess());
-        }
+    }
 
     /**
      * Read zero or more child components from the DataInput stream. For a given identity, there may
@@ -1813,33 +1607,27 @@ public abstract class Component
      *                      DataInput stream, or if there is invalid data in the stream
      */
     protected void disassembleChildren(DataInput in, boolean fLazy)
-            throws IOException
-        {
+            throws IOException {
         // read component children
         int cKids = readMagnitude(in);
-        while (cKids-- > 0)
-            {
+        while (cKids-- > 0) {
             ConstantPool pool = getConstantPool();
             Component    kid  = null;
 
             // read component body (or bodies)
             int n = in.readUnsignedByte();
-            if ((n & CONDITIONAL_BIT) == 0)
-                {
+            if ((n & CONDITIONAL_BIT) == 0) {
                 // there isn't a conditional multiple-component list, so this is just the first byte of
                 // the two-byte FLAGS value (which is the start of the body) for a single component
                 n = (n << 8) | in.readUnsignedByte();
                 kid = Format.fromFlags(n).instantiate(this, pool.getConstant(readMagnitude(in)), n, null);
                 kid.disassemble(in);
-                }
-            else
-                {
+            } else {
                 // some number of components, each with a condition
                 Component    prevSibling = null;
                 int          cSiblings   = readMagnitude(in);
                 assert cSiblings > 0;
-                for (int i = 0; i < cSiblings; ++i)
-                    {
+                for (int i = 0; i < cSiblings; ++i) {
                     ConditionalConstant condition  = (ConditionalConstant) pool.getConstant(readIndex(in));
                     int                 nFlags     = in.readUnsignedShort();
                     Component           curSibling = Format.fromFlags(nFlags).instantiate(
@@ -1849,17 +1637,14 @@ public abstract class Component
                     // the stream (but do NOT disassemble the children)
                     curSibling.disassemble(in);
 
-                    if (prevSibling == null)
-                        {
+                    if (prevSibling == null) {
                         kid = curSibling;
-                        }
-                    else
-                        {
+                    } else {
                         prevSibling.setNextSibling(curSibling);
-                        }
-                    prevSibling = curSibling;
                     }
+                    prevSibling = curSibling;
                 }
+            }
 
             boolean fModified = isBodyModified();
 
@@ -1869,34 +1654,28 @@ public abstract class Component
             addChild(kid);
 
             // disassembly should not change the "modified" status
-            if (!fModified)
-                {
+            if (!fModified) {
                 resetBodyModified();
-                }
+            }
 
             int cb = readMagnitude(in);
-            if (cb > 0)
-                {
-                if (fLazy)
-                    {
+            if (cb > 0) {
+                if (fLazy) {
                     // just read the bytes for the children and store it off for later
                     byte[] ab = new byte[cb];
                     in.readFully(ab);
-                    for (Component eachSibling = kid; eachSibling != null; eachSibling = eachSibling.getNextSibling())
-                        {
+                    for (Component eachSibling = kid; eachSibling != null; eachSibling = eachSibling.getNextSibling()) {
                         // note that every sibling has a copy of all the children; this is because
                         // the byte[] serves as both the storage of those children and an indicator that
                         // the deserialization of the children has been deferred
                         eachSibling.m_abChildren = ab;
-                        }
                     }
-                else
-                    {
+                } else {
                     kid.disassembleChildren(in, fLazy);
-                    }
                 }
             }
         }
+    }
 
     /**
      * Register all constants used by the child components.
@@ -1904,13 +1683,11 @@ public abstract class Component
      * @param pool  the ConstantPool with which to register each constant referenced by the child
      *              components
      */
-    protected void registerChildrenConstants(ConstantPool pool)
-        {
-        for (Component child : children())
-            {
+    protected void registerChildrenConstants(ConstantPool pool) {
+        for (Component child : children()) {
             registerChildConstants(pool, child);
-            }
         }
+    }
 
     /**
      * Register the constants for a child AND all of its siblings, and then recursively for the
@@ -1919,16 +1696,14 @@ public abstract class Component
      * @param pool   the constant pool
      * @param child  the eldest sibling of the siblings to recursively register the constants for
      */
-    private void registerChildConstants(ConstantPool pool, Component child)
-        {
-        for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.getNextSibling())
-            {
+    private void registerChildConstants(ConstantPool pool, Component child) {
+        for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.getNextSibling()) {
             eachSibling.registerConstants(pool);
-            }
+        }
 
         // now register the grand-children (the children of the various siblings we just iterated)
         child.registerChildrenConstants(pool);
-        }
+    }
 
     /**
      * Write any child components to the DataOutput stream.
@@ -1939,24 +1714,21 @@ public abstract class Component
      *                      stream
      */
     protected void assembleChildren(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         int cKids = getChildrenCount();
         writePackedLong(out, cKids);
 
-        if (cKids > 0)
-            {
+        if (cKids > 0) {
             int cActual = 0;
 
-            for (Component child : children())
-                {
+            for (Component child : children()) {
                 assembleChild(out, child);
                 ++cActual;
-                }
+            }
 
             assert cActual == cKids;
-            }
         }
+    }
 
     /**
      * Write a child AND all of its siblings to the DataOutput stream, and then recursively for the
@@ -1969,50 +1741,41 @@ public abstract class Component
      *                      stream
      */
     private void assembleChild(DataOutput out, Component child)
-            throws IOException
-        {
-        if (child.getNextSibling() != null || child.m_cond != null)
-            {
+            throws IOException {
+        if (child.getNextSibling() != null || child.m_cond != null) {
             // multiple child / conditional format:
             // first is an indicator that we're using the conditional format
             out.writeByte(CONDITIONAL_BIT);
 
             // second is the number of kids
             int cSiblings = 0;
-            for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.getNextSibling())
-                {
+            for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.getNextSibling()) {
                 ++cSiblings;
-                }
+            }
             writePackedLong(out, cSiblings);
 
             // last comes a sequence of siblings, each preceded by its condition
-            for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.getNextSibling())
-                {
+            for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.getNextSibling()) {
                 writePackedLong(out, Constant.indexOf(eachSibling.m_cond));
                 eachSibling.assemble(out);
-                }
             }
-        else
-            {
+        } else {
             // single child format
             child.assemble(out);
-            }
+        }
 
         // children nested under these siblings are length-encoded as a group
-        if (child.hasChildren())
-            {
+        if (child.hasChildren()) {
             ByteArrayOutputStream outNestedRaw = new ByteArrayOutputStream();
             DataOutputStream outNestedData = new DataOutputStream(outNestedRaw);
             child.assembleChildren(outNestedData);
             byte[] abGrandChildren = outNestedRaw.toByteArray();
             writePackedLong(out, abGrandChildren.length);
             out.write(abGrandChildren);
-            }
-        else
-            {
+        } else {
             writePackedLong(out, 0);
-            }
         }
+    }
 
     /**
      * Create a temporary clone of this component, and replace this component with the new clone,
@@ -2020,41 +1783,37 @@ public abstract class Component
      *
      * @return a clone of this component
      */
-    public Component replaceWithTemporary()
-        {
+    public Component replaceWithTemporary() {
         // re-arrange the siblings so that this is the oldest, because we're about to replace
         // all of the siblings with the clone, so re-ordering them prevents the rest of the
         // siblings from being lost
         Component eldest = getEldestSibling();
-        if (this != eldest)
-            {
+        if (this != eldest) {
             // start by finding this component in the middle (or at the end) of the sibling list
             Component tail = this.getNextSibling(); // null if this is the end of the list
             Component cur = eldest;
             Component next;
-            while ((next = cur.getNextSibling()) != this)
-                {
+            while ((next = cur.getNextSibling()) != this) {
                 assert next != null;
                 cur = next;
-                }
+            }
 
             // remove this from the middle of the list and put it at the head of the sibling list
             cur.setNextSibling(tail);
             this.setNextSibling(eldest);
-            }
+        }
 
         Component parent = (Component) this.getContaining();
         Component that   = this.cloneBody();
         assert that.getContaining() == parent;
 
-        if (this.hasChildren())
-            {
+        if (this.hasChildren()) {
             that.cloneChildren(this.children());
-            }
+        }
 
         parent.replaceChild(this, that);
         return that;
-        }
+    }
 
     /**
      * Given a component that previously was replaced using {@link #replaceWithTemporary()}, remove
@@ -2062,12 +1821,11 @@ public abstract class Component
      *
      * @param that  the Component that was previously replaced with a temporary clone component
      */
-    public void replaceTemporaryWith(Component that)
-        {
+    public void replaceTemporaryWith(Component that) {
         Component parent = (Component) this.getContaining();
         parent.replaceChild(this, that);
         getIdentityConstant().resetCachedInfo();
-        }
+    }
 
     /**
      * Determine if the specified name is referring to a name introduced by any of the contributions
@@ -2084,64 +1842,57 @@ public abstract class Component
      * @return the resolution result is one of: RESOLVED, UNKNOWN or POSSIBLE
      */
     protected ResolutionResult resolveContributedName(
-            String sName, Access access, ResolutionCollector collector, boolean fAllowInto)
-        {
+            String sName, Access access, ResolutionCollector collector, boolean fAllowInto) {
         assert access != Access.STRUCT;
 
         Component child = getChild(sName);
-        if (child != null && child.canBeSeen(access))
-            {
-            switch (child.getIdentityConstant().getFormat())
-                {
-                case Property:
-                case Module:
-                case Package:
-                case Class:
-                case Typedef:
-                case MultiMethod:
-                    collector.resolvedComponent(child);
-                    return ResolutionResult.RESOLVED;
-                }
-            return ResolutionResult.UNKNOWN;
+        if (child != null && child.canBeSeen(access)) {
+            switch (child.getIdentityConstant().getFormat()) {
+            case Property:
+            case Module:
+            case Package:
+            case Class:
+            case Typedef:
+            case MultiMethod:
+                collector.resolvedComponent(child);
+                return ResolutionResult.RESOLVED;
             }
+            return ResolutionResult.UNKNOWN;
+        }
 
         // no child by that name; check if it was introduced by a contribution
-        for (Contribution contrib : getContributionsAsList())
-            {
+        for (Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib = contrib.getTypeConstant();
-            if (typeContrib.containsUnresolved())
-                {
+            if (typeContrib.containsUnresolved()) {
                 return ResolutionResult.POSSIBLE;
+            }
+
+            switch (contrib.getComposition()) {
+            case Into:
+                if (!fAllowInto) {
+                    continue;
                 }
+                access = access.minOf(Access.PROTECTED);
+                break;
 
-            switch (contrib.getComposition())
-                {
-                case Into:
-                    if (!fAllowInto)
-                        {
-                        continue;
-                        }
-                    access = access.minOf(Access.PROTECTED);
-                    break;
+            case Delegates:
+            case Implements:
+                access = Access.PUBLIC;
+                break;
 
-                case Delegates:
-                case Implements:
-                    access = Access.PUBLIC;
-                    break;
+            case Extends:
+                access = access.minOf(Access.PROTECTED);
+                break;
 
-                case Extends:
-                    access = access.minOf(Access.PROTECTED);
-                    break;
+            case Annotation:
+            case Incorporates:
+                fAllowInto = false;
+                access = access.minOf(Access.PROTECTED);
+                break;
 
-                case Annotation:
-                case Incorporates:
-                    fAllowInto = false;
-                    access = access.minOf(Access.PROTECTED);
-                    break;
-
-                default:
-                    throw new IllegalStateException();
-                }
+            default:
+                throw new IllegalStateException();
+            }
 
             // since some components in the graph that we would need to visit in order to answer the
             // question about generic type parameters may not yet be ready to answer those
@@ -2149,109 +1900,92 @@ public abstract class Component
             // parameters to short-circuit that search; we know that the virtual child type can
             // answer the question precisely because it exists (they are created no earlier than a
             // certain stage)
-            if (typeContrib.isVirtualChild())
-                {
+            if (typeContrib.isVirtualChild()) {
                 // check the parent's formal type
                 TypeConstant typeParent = typeContrib.getParentType();
                 TypeConstant typeFormal = typeParent.resolveGenericType(sName);
-                if (typeFormal != null)
-                    {
-                    if (!typeFormal.isGenericType())
-                        {
+                if (typeFormal != null) {
+                    if (!typeFormal.isGenericType()) {
                         ClassStructure clzParent = (ClassStructure)
                                 typeParent.getSingleUnderlyingClass(true).getComponent();
                         typeFormal = clzParent.getFormalType().resolveGenericType(sName);
-                        }
+                    }
                     collector.resolvedConstant(typeFormal.getDefiningConstant());
                     return ResolutionResult.RESOLVED;
-                    }
                 }
+            }
 
-            if (typeContrib.isExplicitClassIdentity(true))
-                {
+            if (typeContrib.isExplicitClassIdentity(true)) {
                 ClassStructure clzContrib =
                         (ClassStructure) typeContrib.getSingleUnderlyingClass(true).getComponent();
 
-                if (clzContrib == null)
-                    {
+                if (clzContrib == null) {
                     return ResolutionResult.UNKNOWN;
-                    }
-                if (m_FVisited != null && m_FVisited.booleanValue() == fAllowInto)
-                    {
+                }
+                if (m_FVisited != null && m_FVisited.booleanValue() == fAllowInto) {
                     // recursive contribution
                     collector.getErrorListener().log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION,
                             new Object[] {getName(), contrib.getComposition().toString().toLowerCase()}, this);
                     return ResolutionResult.ERROR;
-                    }
+                }
 
                 m_FVisited = fAllowInto;
                 ResolutionResult result =
                         clzContrib.resolveContributedName(sName, access, collector, fAllowInto);
                 m_FVisited = null;
 
-                if (result != ResolutionResult.UNKNOWN)
-                    {
+                if (result != ResolutionResult.UNKNOWN) {
                     return result;
-                    }
                 }
-            else
-                {
+            } else {
                 return typeContrib.resolveContributedName(sName, access, null, collector);
-                }
             }
+        }
 
         return ResolutionResult.UNKNOWN;
-        }
+    }
 
     /**
      * Clone this component's body, but not its siblings nor its children.
      *
      * @return a clone of this component, sans siblings and sans children
      */
-    protected Component cloneBody()
-        {
+    protected Component cloneBody() {
         Component that;
-        try
-            {
+        try {
             that = (Component) super.clone();
-            }
-        catch (CloneNotSupportedException e)
-            {
+        } catch (CloneNotSupportedException e) {
             throw new IllegalStateException(e);
-            }
+        }
 
         // deep clone the contributions
         List<Contribution> listContribs = m_listContribs;
-        if (listContribs != null)
-            {
+        if (listContribs != null) {
             List<Contribution> listClone = new ArrayList<>(listContribs.size());
 
-            for (Contribution listContrib : listContribs)
-                {
+            for (Contribution listContrib : listContribs) {
                 listClone.add((Contribution) listContrib.clone());
-                }
-            that.m_listContribs = listClone;
             }
+            that.m_listContribs = listClone;
+        }
 
         that.m_sibling     = null;
         that.m_childByName = null;
         that.m_abChildren  = null;
 
         return that;
-        }
+    }
 
     /**
      * Clone the passed collection child components onto this component.
      *
      * @param collThat  a collection of child components to clone
      */
-    protected void cloneChildren(Collection<? extends Component> collThat)
-        {
-        for (Component childThat : collThat)
-            {
+    protected void cloneChildren(Collection<? extends Component> collThat) {
+        for (Component childThat : collThat) {
             this.addChild(this.cloneChild(childThat));
-            }
         }
+    }
 
     /**
      * Clone the passed child AND all of its siblings, adding those clones to this component, and
@@ -2259,8 +1993,7 @@ public abstract class Component
      *
      * @param childThat  the eldest sibling of the siblings to recursively clone
      */
-    private Component cloneChild(Component childThat)
-        {
+    private Component cloneChild(Component childThat) {
         // clone the child ...
         Component childThis = childThat.cloneBody();
         childThis.setContaining(this);
@@ -2269,8 +2002,7 @@ public abstract class Component
         Component childThisPrev = childThis;
         Component childThatPrev = childThat;
         Component childThatNext = childThatPrev.getNextSibling();
-        while (childThatNext != null)
-            {
+        while (childThatNext != null) {
             Component childThisNext = childThatNext.cloneBody();
             childThisNext.setContaining(this);
             childThisPrev.setNextSibling(childThisNext);
@@ -2278,114 +2010,97 @@ public abstract class Component
             childThisPrev = childThisNext;
             childThatPrev = childThatNext;
             childThatNext = childThatPrev.getNextSibling();
-            }
+        }
 
         // clone the grand-children nested under these siblings
-        if (childThat.hasChildren())
-            {
+        if (childThat.hasChildren()) {
             childThis.cloneChildren(childThat.children());
-            }
+        }
 
         return childThis;
-        }
+    }
 
     /**
      * This method is used during the load and link stage to allow components to create synthetic
      * children necessary for the runtime.
      */
-    protected void synthesizeChildren()
-        {
-        for (Component child : children())
-            {
+    protected void synthesizeChildren() {
+        for (Component child : children()) {
             child.synthesizeChildren();
-            }
         }
+    }
 
     /**
      * Collect all injections necessary for this component.
      *
      * @param setInjections  a set to add injection keys to
      */
-    public void collectInjections(Set<InjectionKey> setInjections)
-        {
-        }
+    public void collectInjections(Set<InjectionKey> setInjections) {
+    }
 
 
     // ----- ComponentResolver methods -------------------------------------------------------------
 
     @Override
-    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector)
-        {
+    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector) {
         return resolveContributedName(sName, access, collector, true);
-        }
+    }
 
 
     // ----- Documentable methods ------------------------------------------------------------------
 
     @Override
-    public String getDocumentation()
-        {
+    public String getDocumentation() {
         return m_sDoc;
-        }
+    }
 
     @Override
-    public void setDocumentation(String sDoc)
-        {
+    public void setDocumentation(String sDoc) {
         m_sDoc = sDoc;
         markModified();
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public Iterator<? extends XvmStructure> getContained()
-        {
+    public Iterator<? extends XvmStructure> getContained() {
         return children().iterator();
-        }
+    }
 
     @Override
-    public boolean isModified()
-        {
-        for (Component eachSibling = this; eachSibling != null; eachSibling = eachSibling.getNextSibling())
-            {
-            if (eachSibling.isBodyModified())
-                {
+    public boolean isModified() {
+        for (Component eachSibling = this; eachSibling != null; eachSibling = eachSibling.getNextSibling()) {
+            if (eachSibling.isBodyModified()) {
                 return true;
-                }
             }
+        }
         return super.isModified();
-        }
+    }
 
-    protected boolean isBodyModified()
-        {
+    protected boolean isBodyModified() {
         return m_fModified;
-        }
+    }
 
-    protected void resetBodyModified()
-        {
+    protected void resetBodyModified() {
         m_fModified = false;
-        }
+    }
 
     @Override
-    protected void markModified()
-        {
+    protected void markModified() {
         m_fModified = true;
-        }
+    }
 
     @Override
-    protected void resetModified()
-        {
-        for (Component eachSibling = this; eachSibling != null; eachSibling = eachSibling.getNextSibling())
-            {
+    protected void resetModified() {
+        for (Component eachSibling = this; eachSibling != null; eachSibling = eachSibling.getNextSibling()) {
             eachSibling.m_fModified = false;
-            }
-        super.resetModified();
         }
+        super.resetModified();
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         StringBuilder sb = new StringBuilder();
         sb.append("name=")
           .append(getName())
@@ -2394,28 +2109,23 @@ public abstract class Component
           .append(", access=")
           .append(getAccess());
 
-        if (isAbstract())
-            {
+        if (isAbstract()) {
             sb.append(", abstract");
-            }
-        if (isStatic())
-            {
-            sb.append(", static");
-            }
-        if (isSynthetic())
-            {
-            sb.append(", synthetic");
-            }
-        if (getNextSibling() != null)
-            {
-            sb.append(", next-sibling");
-            }
-        if (m_fModified)
-            {
-            sb.append(", modified");
-            }
-        return sb.toString();
         }
+        if (isStatic()) {
+            sb.append(", static");
+        }
+        if (isSynthetic()) {
+            sb.append(", synthetic");
+        }
+        if (getNextSibling() != null) {
+            sb.append(", next-sibling");
+        }
+        if (m_fModified) {
+            sb.append(", modified");
+        }
+        return sb.toString();
+    }
 
     /**
      * {@inheritDoc}
@@ -2427,23 +2137,20 @@ public abstract class Component
      */
     @Override
     protected void disassemble(DataInput in)
-            throws IOException
-        {
+            throws IOException {
         assert getContaining() == null || getContaining() instanceof Component;
 
         // read in the "contributions"
         int c = readMagnitude(in);
-        if (c > 0)
-            {
+        if (c > 0) {
             ConstantPool       pool = getConstantPool();
             List<Contribution> list = new ArrayList<>();
-            for (int i = 0; i < c; ++i)
-                {
+            for (int i = 0; i < c; ++i) {
                 list.add(new Contribution(in, pool));
-                }
-            m_listContribs = list;
             }
+            m_listContribs = list;
         }
+    }
 
     /**
      * {@inheritDoc}
@@ -2454,8 +2161,7 @@ public abstract class Component
      * @see #registerChildrenConstants(ConstantPool)
      */
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         assert getContaining() == null || getContaining() instanceof Component;
 
         m_constId = (IdentityConstant   ) pool.register(m_constId);
@@ -2463,14 +2169,12 @@ public abstract class Component
 
         // register the contributions
         List<Contribution> listContribs = m_listContribs;
-        if (listContribs != null  && !listContribs.isEmpty())
-            {
-            for (Contribution contribution : listContribs)
-                {
+        if (listContribs != null  && !listContribs.isEmpty()) {
+            for (Contribution contribution : listContribs) {
                 contribution.registerConstants(pool);
-                }
             }
         }
+    }
 
     /**
      * {@inheritDoc}
@@ -2482,8 +2186,7 @@ public abstract class Component
      */
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         assert getContaining() == null || getContaining() instanceof Component;
 
         out.writeShort(m_nFlags);
@@ -2493,27 +2196,23 @@ public abstract class Component
         List<Contribution> listContribs = m_listContribs;
         int                cContribs    = listContribs == null ? 0 : listContribs.size();
         writePackedLong(out, cContribs);
-        if (cContribs > 0)
-            {
-            for (Contribution contribution : listContribs)
-                {
+        if (cContribs > 0) {
+            for (Contribution contribution : listContribs) {
                 contribution.assemble(out);
-                }
             }
         }
+    }
 
     @Override
-    public ConditionalConstant getCondition()
-        {
+    public ConditionalConstant getCondition() {
         return m_cond;
-        }
+    }
 
     @Override
-    public void setCondition(ConditionalConstant condition)
-        {
+    public void setCondition(ConditionalConstant condition) {
         m_cond = condition;
         markModified();
-        }
+    }
 
     /**
      * {@inheritDoc}
@@ -2524,8 +2223,7 @@ public abstract class Component
      * @see #dumpChildren(PrintWriter, String)
      */
     @Override
-    protected void dump(PrintWriter out, String sIndent)
-        {
+    protected void dump(PrintWriter out, String sIndent) {
         out.print(sIndent);
         out.println(this);
 
@@ -2533,14 +2231,12 @@ public abstract class Component
 
         List<Contribution> listContribs = m_listContribs;
         int                cContribs    = listContribs == null ? 0 : listContribs.size();
-        if (cContribs > 0)
-            {
-            for (int i = 0; i < cContribs; ++i)
-                {
+        if (cContribs > 0) {
+            for (int i = 0; i < cContribs; ++i) {
                 out.println(sIndent + '[' + i + "]=" + listContribs.get(i));
-                }
             }
         }
+    }
 
     /**
      * Dump all the children of this component, recursively.
@@ -2548,14 +2244,12 @@ public abstract class Component
      * @param out      the PrintWriter to dump to
      * @param sIndent  the indentation to use for this level
      */
-    protected void dumpChildren(PrintWriter out, String sIndent)
-        {
+    protected void dumpChildren(PrintWriter out, String sIndent) {
         // go through each named and constant-identified child, and dump it, and its siblings
-        for (Component child : children())
-            {
+        for (Component child : children()) {
             dumpChild(child, out, sIndent);
-            }
         }
+    }
 
     /**
      * Dump a child and all of its siblings, and then its children under it.
@@ -2564,30 +2258,25 @@ public abstract class Component
      * @param out      the PrintWriter to dump to
      * @param sIndent  the indentation to use for this level
      */
-    private void dumpChild(Component child, PrintWriter out, String sIndent)
-        {
+    private void dumpChild(Component child, PrintWriter out, String sIndent) {
         // dump all of the siblings
-        for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.getNextSibling())
-            {
+        for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.getNextSibling()) {
             eachSibling.dump(out, sIndent);
-            }
+        }
 
         // dump the shared children
         child.dumpChildren(out, nextIndent(sIndent));
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public boolean equals(Object obj)
-        {
-        if (obj instanceof Component that)
-            {
-            if (!isBodyIdentical(that) || !areChildrenIdentical(that))
-                {
+    public boolean equals(Object obj) {
+        if (obj instanceof Component that) {
+            if (!isBodyIdentical(that) || !areChildrenIdentical(that)) {
                 return false;
-                }
+            }
 
             // contributions (order is considered important)
             List<Contribution> listThisContribs = this.m_listContribs;
@@ -2596,16 +2285,15 @@ public abstract class Component
             int cThatContribs = listThatContribs == null ? 0 : listThatContribs.size();
             return !(cThisContribs != cThatContribs ||
                     (cThisContribs > 0 && !listThisContribs.equals(listThatContribs)));
-            }
+        }
 
         return false;
-        }
+    }
 
     @Override
-    public int hashCode()
-        {
+    public int hashCode() {
         return getIdentityConstant().hashCode();
-        }
+    }
 
 
     // ----- inner class: Format -------------------------------------------------------------------
@@ -2616,8 +2304,7 @@ public abstract class Component
      * <p/>
      * Those beginning with "RSVD_" are reserved, and must not be used.
      */
-    public enum Format
-        {
+    public enum Format {
         INTERFACE,
         CLASS,
         CONST,
@@ -2642,10 +2329,9 @@ public abstract class Component
          *
          * @return the Format specified by the bit flags
          */
-        static Format fromFlags(int nFlags)
-            {
+        static Format fromFlags(int nFlags) {
             return valueOf((nFlags & FORMAT_MASK) >>> FORMAT_SHIFT);
-            }
+        }
 
         /**
          * Validate that this format can legally extend another format.
@@ -2654,10 +2340,8 @@ public abstract class Component
          *
          * @return true if legal; otherwise false
          */
-        public boolean isExtendsLegal(Format fmtSuper)
-            {
-            return switch (this)
-                {
+        public boolean isExtendsLegal(Format fmtSuper) {
+            return switch (this) {
                 case CLASS                        -> fmtSuper == CLASS;
                 case CONST, ENUM, PACKAGE, MODULE -> fmtSuper == CONST || fmtSuper == CLASS;
                 case ENUMVALUE                    -> fmtSuper == ENUM;
@@ -2665,8 +2349,8 @@ public abstract class Component
                 case MIXIN                        -> fmtSuper == MIXIN;
                 case SERVICE                      -> fmtSuper == SERVICE || fmtSuper == CLASS;
                 default                           -> false;
-                };
-            }
+            };
+        }
 
         /**
          * Instantiate a component as it is being read from a stream, reading its body (but NOT its
@@ -2679,15 +2363,12 @@ public abstract class Component
          *
          * @return the new component
          */
-        Component instantiate(XvmStructure xsParent, Constant constId, int nFlags, ConditionalConstant condition)
-            {
-            if (xsParent == null)
-                {
+        Component instantiate(XvmStructure xsParent, Constant constId, int nFlags, ConditionalConstant condition) {
+            if (xsParent == null) {
                 throw new IllegalStateException("parent required");
-                }
+            }
 
-            return switch (this)
-                {
+            return switch (this) {
                 case MODULE ->
                     new ModuleStructure(xsParent, nFlags, (ModuleConstant) constId, condition);
 
@@ -2711,47 +2392,37 @@ public abstract class Component
 
                 default ->
                     throw new IllegalStateException("uninstantiable format: " + this);
-                };
-            }
+            };
+        }
 
-        public boolean isImplicitlyStatic()
-            {
-            return switch (this)
-                {
-                case MODULE, PACKAGE, ENUM, ENUMVALUE ->
-                    true;
+        public boolean isImplicitlyStatic() {
+            return switch (this) {
+                case MODULE, PACKAGE, ENUM, ENUMVALUE -> true;
 
-                case INTERFACE, CLASS, CONST, ANNOTATION, MIXIN, SERVICE, PROPERTY, MULTIMETHOD,
-                        METHOD, TYPEDEF ->
-                    false;
+                case INTERFACE, CLASS, CONST, ANNOTATION, MIXIN, SERVICE -> false;
+                case PROPERTY, MULTIMETHOD, METHOD, TYPEDEF -> false;
 
-                default ->
-                    throw new IllegalStateException("unsupported format: " + this);
-                };
-            }
+                default -> throw new IllegalStateException("unsupported format: " + this);
+            };
+        }
 
-        public boolean isAutoNarrowingAllowed()
-            {
-            return switch (this)
-                {
-                case MODULE, PACKAGE, ENUM, ENUMVALUE, PROPERTY, MULTIMETHOD, METHOD, TYPEDEF ->
-                    false;
+        public boolean isAutoNarrowingAllowed() {
+            return switch (this) {
+                case MODULE, PACKAGE, ENUM, ENUMVALUE -> false;
+                case PROPERTY, MULTIMETHOD, METHOD, TYPEDEF -> false;
 
-                case ANNOTATION, MIXIN, INTERFACE, CLASS, CONST, SERVICE ->
-                    true;
+                case ANNOTATION, MIXIN, INTERFACE, CLASS, CONST, SERVICE -> true;
 
-                default ->
-                    throw new IllegalStateException("unsupported format: " + this);
-                };
-            }
+                default -> throw new IllegalStateException("unsupported format: " + this);
+            };
+        }
 
         /**
          * @return true iff a component of this format has no further ability to resolve by name
          */
-        public boolean isDeadEnd()
-            {
+        public boolean isDeadEnd() {
             return this.compareTo(PROPERTY) > 0;
-            }
+        }
 
         /**
          * Look up a Format enum by its ordinal.
@@ -2760,16 +2431,15 @@ public abstract class Component
          *
          * @return the Format enum for the specified ordinal
          */
-        public static Format valueOf(int i)
-            {
+        public static Format valueOf(int i) {
             return FORMATS[i];
-            }
+        }
 
         /**
          * All of the Format enums.
          */
         private static final Format[] FORMATS = Format.values();
-        }
+    }
 
 
     // ----- enumeration: Component Composition ----------------------------------------------------
@@ -2777,8 +2447,7 @@ public abstract class Component
     /**
      * Types of composition.
      */
-    public enum Composition
-        {
+    public enum Composition {
         /**
          * Represents an annotation.
          * <p/>
@@ -2844,16 +2513,15 @@ public abstract class Component
          *
          * @return the Composition enum for the specified ordinal
          */
-        public static Composition valueOf(int i)
-            {
+        public static Composition valueOf(int i) {
             return COMPOSITIONS[i];
-            }
+        }
 
         /**
          * All of the Composition enums.
          */
         private static final Composition[] COMPOSITIONS = Composition.values();
-        }
+    }
 
 
     // ----- inner class: Component Contribution ---------------------------------------------------
@@ -2864,73 +2532,65 @@ public abstract class Component
      * of any number of contributing components.
      */
     public class Contribution
-            implements Cloneable
-        {
+            implements Cloneable {
         /**
          * @see XvmStructure#disassemble(DataInput)
          */
         protected Contribution(DataInput in, ConstantPool pool)
-                throws IOException
-            {
+                throws IOException {
             m_composition = Composition.valueOf(in.readUnsignedByte());
             m_typeContrib = (TypeConstant) pool.getConstant(readIndex(in));
             assert m_typeContrib != null;
 
-            switch (m_composition)
-                {
-                case Extends:
-                case Implements:
-                case Into:
-                case RebasesOnto:
-                    break;
+            switch (m_composition) {
+            case Extends:
+            case Implements:
+            case Into:
+            case RebasesOnto:
+                break;
 
-                case Annotation:
-                    m_annotation  = (Annotation) pool.getConstant(readIndex(in));
-                    break;
+            case Annotation:
+                m_annotation  = (Annotation) pool.getConstant(readIndex(in));
+                break;
 
-                case Delegates:
-                    m_constProp   = (PropertyConstant) pool.getConstant(readIndex(in));
-                    break;
+            case Delegates:
+                m_constProp   = (PropertyConstant) pool.getConstant(readIndex(in));
+                break;
 
-                case Incorporates:
-                    int cParams = readMagnitude(in);
-                    if (cParams > 0)
-                        {
-                        ListMap<StringConstant, TypeConstant> map = new ListMap<>();
-                        for (int i = 0; i < cParams; ++i)
-                            {
-                            int iName = readMagnitude(in);
-                            int iType = readMagnitude(in);
-                            map.put((StringConstant) pool.getConstant(iName),
-                                    iType == 0 ? null : (TypeConstant) pool.getConstant(iType));
-                            }
-                        m_mapParams = map;
-                        }
-                    break;
-
-                case Import:
-                    m_constInjector = (SingletonConstant) pool.getConstant(readIndex(in));
-                    if (m_constInjector != null)
-                        {
-                        int c = readIndex(in);
-                        if (c >= 0)
-                            {
-                            List<Injection> listInject = new ArrayList<>(c);
-                            for (int i = 0; i < c; ++i)
-                                {
-                                TypeConstant   type = (TypeConstant)   pool.getConstant(readIndex(in));
-                                StringConstant name = (StringConstant) pool.getConstant(readIndex(in));
-                                listInject.add(new Injection(type, name));
-                                }
-                            m_listInject = listInject;
-                            }
-                        }
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException("composition=" + m_composition);
+            case Incorporates:
+                int cParams = readMagnitude(in);
+                if (cParams > 0) {
+                    ListMap<StringConstant, TypeConstant> map = new ListMap<>();
+                    for (int i = 0; i < cParams; ++i) {
+                        int iName = readMagnitude(in);
+                        int iType = readMagnitude(in);
+                        map.put((StringConstant) pool.getConstant(iName),
+                                iType == 0 ? null : (TypeConstant) pool.getConstant(iType));
+                    }
+                    m_mapParams = map;
                 }
+                break;
+
+            case Import:
+                m_constInjector = (SingletonConstant) pool.getConstant(readIndex(in));
+                if (m_constInjector != null) {
+                    int c = readIndex(in);
+                    if (c >= 0) {
+                        List<Injection> listInject = new ArrayList<>(c);
+                        for (int i = 0; i < c; ++i) {
+                            TypeConstant   type = (TypeConstant)   pool.getConstant(readIndex(in));
+                            StringConstant name = (StringConstant) pool.getConstant(readIndex(in));
+                            listInject.add(new Injection(type, name));
+                        }
+                        m_listInject = listInject;
+                    }
+                }
+                break;
+
+            default:
+                throw new UnsupportedOperationException("composition=" + m_composition);
             }
+        }
 
         /**
          * Construct an Annotation, Extends, Implements, Into, Incorporates, or Enumerates
@@ -2940,55 +2600,50 @@ public abstract class Component
          *                     Implements, Into, Incorporates, or Enumerates
          * @param constType    specifies the class type being contributed
          */
-        public Contribution(Composition composition, TypeConstant constType)
-            {
+        public Contribution(Composition composition, TypeConstant constType) {
             assert composition != null;
 
-            switch (composition)
-                {
-                case Annotation:
-                case Extends:
-                case Implements:
-                case Into:
-                case Incorporates:
-                case RebasesOnto:
-                    if (constType == null)
-                        {
-                        throw new IllegalArgumentException("type is required");
-                        }
-
-                case Equal:
-                    break;
-
-                case Delegates:
-                    throw new IllegalArgumentException("delegates uses the constructor with a PropertyConstant");
-
-                case Import:
-                    throw new IllegalArgumentException("imports uses the constructor with a ModuleConstant");
-
-                default:
-                    throw new UnsupportedOperationException("composition=" + composition);
+            switch (composition) {
+            case Annotation:
+            case Extends:
+            case Implements:
+            case Into:
+            case Incorporates:
+            case RebasesOnto:
+                if (constType == null) {
+                    throw new IllegalArgumentException("type is required");
                 }
+
+            case Equal:
+                break;
+
+            case Delegates:
+                throw new IllegalArgumentException("delegates uses the constructor with a PropertyConstant");
+
+            case Import:
+                throw new IllegalArgumentException("imports uses the constructor with a ModuleConstant");
+
+            default:
+                throw new UnsupportedOperationException("composition=" + composition);
+            }
 
             m_composition = composition;
             m_typeContrib = constType;
-            }
+        }
 
         /**
          * Construct an import Contribution.
          *
          * @param constModule    specifies the module being imported
          */
-        protected Contribution(ModuleConstant constModule)
-            {
-            if (constModule == null)
-                {
+        protected Contribution(ModuleConstant constModule) {
+            if (constModule == null) {
                 throw new IllegalArgumentException("module is required");
-                }
+            }
 
             m_composition = Composition.Import;
             m_typeContrib = constModule.getType();
-            }
+        }
 
         /**
          * Construct a delegation Contribution.
@@ -2997,24 +2652,22 @@ public abstract class Component
          * @param delegate  for a Delegates composition, this is the property that provides the
          *                  delegate reference
          */
-        public Contribution(TypeConstant constant, PropertyConstant delegate)
-            {
+        public Contribution(TypeConstant constant, PropertyConstant delegate) {
             assert constant != null && delegate != null;
 
             m_composition = Composition.Delegates;
             m_typeContrib = constant;
             m_constProp   = delegate;
-            }
+        }
 
         /**
          * Construct an annotation Contribution.
          *
          * @param annotation  the annotation
          */
-        public Contribution(Annotation annotation)
-            {
+        public Contribution(Annotation annotation) {
             this(annotation, annotation.getAnnotationType());
-            }
+        }
 
         /**
          * Construct an annotation Contribution.
@@ -3022,15 +2675,14 @@ public abstract class Component
          * @param annotation  the annotation
          * @param type        the specific type to use for the annotation
          */
-        public Contribution(Annotation annotation, TypeConstant type)
-            {
+        public Contribution(Annotation annotation, TypeConstant type) {
             assert annotation != null;
             assert type != null;
 
             m_composition = Composition.Annotation;
             m_typeContrib = type;
             m_annotation  = annotation;
-            }
+        }
 
         /**
          * Construct an "incorporates conditional" Contribution.
@@ -3039,31 +2691,28 @@ public abstract class Component
          * @param mapConstraints  the type constraints that make the mixin conditional
          */
         public Contribution(TypeConstant constType,
-                               ListMap<StringConstant, TypeConstant> mapConstraints)
-            {
+                               ListMap<StringConstant, TypeConstant> mapConstraints) {
             this(Composition.Incorporates, constType);
 
             assert mapConstraints == null || !mapConstraints.isEmpty();
             m_mapParams = mapConstraints;
-            }
+        }
 
         /**
          * Obtain the form of composition represented by this contribution.
          *
          * @return the Composition type for this contribution
          */
-        public Composition getComposition()
-            {
+        public Composition getComposition() {
             return m_composition;
-            }
+        }
 
         /**
          * @return the component this Contribution belongs to
          */
-        public Component getComponent()
-            {
+        public Component getComponent() {
             return Component.this;
-            }
+        }
 
         /**
          * Obtain the constant identifying the module being imported by this contribution.
@@ -3071,11 +2720,10 @@ public abstract class Component
          * @return the ModuleConstant for this contribution, or null if this is not an "imports"
          *         contribution
          */
-        public ModuleConstant getModuleConstant()
-            {
+        public ModuleConstant getModuleConstant() {
             assert m_composition == Composition.Import;
             return (ModuleConstant) getTypeConstant().getDefiningConstant();
-            }
+        }
 
         /**
          * Add an injector to a package that imports a module.
@@ -3083,142 +2731,121 @@ public abstract class Component
          * @param constInjector  optional injector
          * @param listInject     optional list of injections
          */
-        void addInjector(SingletonConstant constInjector, List<Injection> listInject)
-            {
-            if (m_composition != Composition.Import)
-                {
+        void addInjector(SingletonConstant constInjector, List<Injection> listInject) {
+            if (m_composition != Composition.Import) {
                 throw new IllegalStateException("the contribution must be a package that imports a module");
-                }
+            }
 
-            if (m_constInjector != null)
-                {
+            if (m_constInjector != null) {
                 throw new IllegalStateException("injector already added");
-                }
+            }
 
-            if (constInjector == null)
-                {
+            if (constInjector == null) {
                 throw new IllegalArgumentException("missing injector");
-                }
+            }
 
             m_constInjector = constInjector;
             m_listInject    = listInject;
-            }
+        }
 
         /**
          * @return for a package that imports a module, get the injector that is used to override
          *         the injections for that module, if any
          */
-        public SingletonConstant getInjector()
-            {
+        public SingletonConstant getInjector() {
             return m_constInjector;
-            }
+        }
 
         /**
          * @return a list of specific injections specified to be handled by the injector; null
          *         indicates that all injections are handled by the injector
          */
-        public List<Injection> getInjections()
-            {
+        public List<Injection> getInjections() {
             return m_listInject;
-            }
+        }
 
         /**
          * @return false iff all the contribution's elements are resolved
          */
-        public boolean containsUnresolved()
-            {
-            if (getTypeConstant().containsUnresolved())
-                {
+        public boolean containsUnresolved() {
+            if (getTypeConstant().containsUnresolved()) {
                 return true;
-                }
+            }
 
             PropertyConstant constProp = m_constProp;
-            if (constProp != null)
-                {
-                if (constProp.containsUnresolved())
-                    {
+            if (constProp != null) {
+                if (constProp.containsUnresolved()) {
                     return true;
-                    }
                 }
+            }
 
             Annotation anno = m_annotation;
-            if (anno != null)
-                {
+            if (anno != null) {
                 // annotations parameters don't need to be resolved for the compilation to move
                 // forward; they will be checked later as a part of the annotation type resolution
-                if (anno.getAnnotationClass().containsUnresolved())
-                    {
+                if (anno.getAnnotationClass().containsUnresolved()) {
                     return true;
-                    }
                 }
+            }
 
             Map<StringConstant, TypeConstant> mapParams = m_mapParams;
-            if (mapParams != null)
-                {
-                for (TypeConstant typeParam : mapParams.values())
-                    {
-                    if (typeParam != null && typeParam.containsUnresolved())
-                        {
+            if (mapParams != null) {
+                for (TypeConstant typeParam : mapParams.values()) {
+                    if (typeParam != null && typeParam.containsUnresolved()) {
                         return true;
-                        }
                     }
                 }
+            }
 
             SingletonConstant constInjector = m_constInjector;
-            if (constInjector != null && constInjector.containsUnresolved())
-                {
+            if (constInjector != null && constInjector.containsUnresolved()) {
                 return true;
-                }
+            }
 
             List<Injection> listInject = m_listInject;
             return listInject != null && listInject.stream().anyMatch(
                     injection -> injection.getType().containsUnresolved());
-            }
+        }
 
         /**
          * Obtain the constant identifying the class type being contributed by this contribution.
          *
          * @return the TypeConstant for this contribution
          */
-        public TypeConstant getTypeConstant()
-            {
+        public TypeConstant getTypeConstant() {
             return m_typeContrib;
-            }
+        }
 
         /**
          * Update the type being contributed by this contribution to a narrower one.
          *
          * @param  type  the updated TypeConstant for this contribution
          */
-        public void narrowType(TypeConstant type)
-            {
+        public void narrowType(TypeConstant type) {
             assert m_typeContrib != null && type.isA(m_typeContrib);
             m_typeContrib = type;
-            }
+        }
 
         /**
          * @return the PropertyConstant specifying the reference to delegate to; never null
          */
-        public PropertyConstant getDelegatePropertyConstant()
-            {
+        public PropertyConstant getDelegatePropertyConstant() {
             return m_constProp;
-            }
+        }
 
         /**
          * @return the annotation (if this is an annotation contribution)
          */
-        public Annotation getAnnotation()
-            {
+        public Annotation getAnnotation() {
             return m_annotation;
-            }
+        }
 
         /**
          * @return true iff this contribution represents a conditional mixin
          */
-        public boolean isConditional()
-            {
+        public boolean isConditional() {
             return m_mapParams != null;
-            }
+        }
 
         /**
          * Obtain the type constraints for the conditional mixin.
@@ -3226,16 +2853,14 @@ public abstract class Component
          * @return a read-only map of type parameter name to type constraint, or null if the
          *         Composition is not "incorporates conditional"
          */
-        public Map<StringConstant, TypeConstant> getTypeParams()
-            {
+        public Map<StringConstant, TypeConstant> getTypeParams() {
             Map<StringConstant, TypeConstant> map = m_mapParams;
-            if (map == null)
-                {
+            if (map == null) {
                 return null;
-                }
+            }
             assert (map = Collections.unmodifiableMap(map)) != null;
             return map;
-            }
+        }
 
         /**
          * Resolve this contribution type based on the specified resolver.
@@ -3246,58 +2871,49 @@ public abstract class Component
          * @return the transformed type or null if the conditional incorporation
          *         does not apply for the resulting type
          */
-        public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
-            {
+        public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver) {
             TypeConstant typeContrib = getTypeConstant();
             boolean      fNormalize  = true;
 
-            if (typeContrib.isExplicitClassIdentity(true) && !typeContrib.isParamsSpecified())
-                {
+            if (typeContrib.isExplicitClassIdentity(true) && !typeContrib.isParamsSpecified()) {
                 IdentityConstant id  = typeContrib.getSingleUnderlyingClass(true);
                 ClassStructure   clz = (ClassStructure) id.getComponent();
-                if (clz.isParameterized())
-                    {
+                if (clz.isParameterized()) {
                     // check if generic type parameters were implicitly added
                     // (see TypeCompositionStatement.addImplicitTypeParameters)
                     // and only then resolve them accordingly
                     boolean fSynthetic = false;
-                    for (StringConstant constName : clz.getTypeParams().keySet())
-                        {
-                        if (clz.getChild(constName.getValue()).isSynthetic())
-                            {
+                    for (StringConstant constName : clz.getTypeParams().keySet()) {
+                        if (clz.getChild(constName.getValue()).isSynthetic()) {
                             fSynthetic = true;
                             break;
-                            }
-                        }
-
-                    if (fSynthetic)
-                        {
-                        TypeConstant typeContribNew = clz.getFormalType().resolveGenerics(pool, resolver);
-
-                        if (typeContrib.isAccessSpecified())
-                            {
-                            typeContribNew = pool.ensureAccessTypeConstant(typeContribNew,
-                                    typeContrib.getAccess());
-                            }
-                        if (typeContrib.isImmutabilitySpecified())
-                            {
-                            typeContribNew = typeContribNew.freeze();
-                            }
-                        typeContrib = typeContribNew;
-                        fNormalize  = false;
                         }
                     }
-                }
 
-            if (fNormalize)
-                {
-                typeContrib = typeContrib.normalizeParameters().resolveGenerics(pool, resolver);
+                    if (fSynthetic) {
+                        TypeConstant typeContribNew = clz.getFormalType().resolveGenerics(pool, resolver);
+
+                        if (typeContrib.isAccessSpecified()) {
+                            typeContribNew = pool.ensureAccessTypeConstant(typeContribNew,
+                                    typeContrib.getAccess());
+                        }
+                        if (typeContrib.isImmutabilitySpecified()) {
+                            typeContribNew = typeContribNew.freeze();
+                        }
+                        typeContrib = typeContribNew;
+                        fNormalize  = false;
+                    }
                 }
+            }
+
+            if (fNormalize) {
+                typeContrib = typeContrib.normalizeParameters().resolveGenerics(pool, resolver);
+            }
 
             return getComposition() != Composition.Incorporates ||
                     checkConditionalIncorporate(typeContrib) ?
                 typeContrib : null;
-            }
+        }
 
         /**
          * Resolve the type of this contribution based on the specified list of actual types.
@@ -3310,17 +2926,15 @@ public abstract class Component
          *         does not apply for the specified types
          */
         protected TypeConstant resolveType(ConstantPool pool, ClassStructure clzParent,
-                                           List<TypeConstant> listActual)
-            {
+                                           List<TypeConstant> listActual) {
             TypeConstant typeContrib = getTypeConstant();
 
             assert typeContrib.isSingleDefiningConstant();
 
             typeContrib = typeContrib.normalizeParameters();
-            if (!typeContrib.isParameterizedDeep())
-                {
+            if (!typeContrib.isParameterizedDeep()) {
                 return typeContrib;
-                }
+            }
 
             GenericTypeResolver resolver = clzParent.new SimpleTypeResolver(pool, listActual);
 
@@ -3330,7 +2944,7 @@ public abstract class Component
                         checkConditionalIncorporate(typeContrib)
                     ? typeContrib
                     : null;
-            }
+        }
 
         /**
          * Resolve the type of this contribution based on the specified actual type.
@@ -3342,17 +2956,15 @@ public abstract class Component
          *         does not apply for the specified type
          */
         protected TypeConstant resolveType(ConstantPool pool, ClassStructure clzParent,
-                                           TypeConstant typeActual)
-            {
+                                           TypeConstant typeActual) {
             TypeConstant typeContrib = getTypeConstant();
 
             assert typeContrib.isSingleDefiningConstant();
 
             typeContrib = typeContrib.normalizeParameters();
-            if (!typeContrib.isParameterizedDeep())
-                {
+            if (!typeContrib.isParameterizedDeep()) {
                 return typeContrib;
-                }
+            }
 
             // Note: this method is called by ClassStructure.getGenericParamTypeImpl(),
             //       that iterates over all the contributions; as a result, to avoid the infinite
@@ -3367,7 +2979,7 @@ public abstract class Component
                         checkConditionalIncorporate(typeContrib)
                     ? typeContrib
                     : null;
-            }
+        }
 
         /**
          * Check if this "incorporate" contribution is conditional and if so, whether or not it
@@ -3377,302 +2989,250 @@ public abstract class Component
          *
          * @return true iff the contribution is unconditional or applies to this type
          */
-        protected boolean checkConditionalIncorporate(TypeConstant typeContrib)
-            {
+        protected boolean checkConditionalIncorporate(TypeConstant typeContrib) {
             assert getComposition() == Composition.Incorporates;
 
             TypeConstant[] atypeParams = typeContrib.getParamTypesArray();
 
             Map<StringConstant, TypeConstant> mapConditional = getTypeParams();
-            if (mapConditional != null)
-                {
+            if (mapConditional != null) {
                 // conditional incorporation; check if the actual parameters apply
                 assert atypeParams.length == mapConditional.size();
 
                 Iterator<TypeConstant> iterConstraint = mapConditional.values().iterator();
-                for (TypeConstant typeParam : atypeParams)
-                    {
+                for (TypeConstant typeParam : atypeParams) {
                     TypeConstant typeConstraint = iterConstraint.next();
 
-                    if (typeConstraint != null && !typeParam.isA(typeConstraint))
-                        {
+                    if (typeConstraint != null && !typeParam.isA(typeConstraint)) {
                         // this contribution doesn't apply
                         return false;
-                        }
                     }
                 }
-            return true;
             }
+            return true;
+        }
 
         /**
          * @see XvmStructure#registerConstants(ConstantPool)
          */
-        protected void registerConstants(ConstantPool pool)
-            {
+        protected void registerConstants(ConstantPool pool) {
             m_typeContrib  = (TypeConstant)     pool.register(m_typeContrib);
             m_constProp    = (PropertyConstant) pool.register(m_constProp);
 
-            if (m_annotation != null)
-                {
+            if (m_annotation != null) {
                 assert !m_annotation.containsUnresolved();
                 m_annotation = (Annotation) pool.register(m_annotation);
-                }
+            }
 
             ListMap<StringConstant, TypeConstant> mapOld = m_mapParams;
-            if (mapOld != null)
-                {
+            if (mapOld != null) {
                 ListMap<StringConstant, TypeConstant> mapNew = new ListMap<>();
-                for (Map.Entry<StringConstant, TypeConstant> entry : mapOld.asList())
-                    {
+                for (Map.Entry<StringConstant, TypeConstant> entry : mapOld.asList()) {
                     StringConstant constName = entry.getKey();
                     TypeConstant   type      = entry.getValue();
 
                     mapNew.put((StringConstant) pool.register(constName),
                                (TypeConstant) (type == null ? null : pool.register(type)));
-                    }
-                m_mapParams = mapNew;
                 }
+                m_mapParams = mapNew;
+            }
 
-            if (m_constInjector != null)
-                {
+            if (m_constInjector != null) {
                 m_constInjector = (SingletonConstant) pool.register(m_constInjector);
 
                 List<Injection> listInject = m_listInject;
-                if (listInject != null)
-                    {
-                    for (int i = 0, c = listInject.size(); i < c; ++i)
-                        {
+                if (listInject != null) {
+                    for (int i = 0, c = listInject.size(); i < c; ++i) {
                         Injection      oldInject = listInject.get(i);
                         TypeConstant   oldType   = oldInject.getType();
                         StringConstant oldName   = oldInject.getNameConstant();
                         TypeConstant   newType   = (TypeConstant)   pool.register(oldType);
                         StringConstant newName   = (StringConstant) pool.register(oldName);
-                        if (newType != oldType || newName != oldName)
-                            {
+                        if (newType != oldType || newName != oldName) {
                             listInject.set(i, new Injection(newType, newName));
-                            }
                         }
                     }
                 }
             }
+        }
 
         /**
          * @see XvmStructure#registerConstants(ConstantPool)
          */
         protected void assemble(DataOutput out)
-                throws IOException
-            {
+                throws IOException {
             out.writeByte(m_composition.ordinal());
             writePackedLong(out, m_typeContrib.getPosition());
 
-            switch (m_composition)
-                {
-                case Annotation:
-                    writePackedLong(out, Constant.indexOf(m_annotation));
-                    break;
+            switch (m_composition) {
+            case Annotation:
+                writePackedLong(out, Constant.indexOf(m_annotation));
+                break;
 
-                case Delegates:
-                    writePackedLong(out, Constant.indexOf(m_constProp));
-                    break;
+            case Delegates:
+                writePackedLong(out, Constant.indexOf(m_constProp));
+                break;
 
-                case Incorporates:
-                    ListMap<StringConstant, TypeConstant> map = m_mapParams;
-                    if (map == null)
-                        {
-                        writePackedLong(out, 0);
-                        }
-                    else
-                        {
-                        writePackedLong(out, map.size());
-                        for (Map.Entry<StringConstant, TypeConstant> entry : map.entrySet())
-                            {
-                            StringConstant constName = entry.getKey();
-                            TypeConstant   type      = entry.getValue();
+            case Incorporates:
+                ListMap<StringConstant, TypeConstant> map = m_mapParams;
+                if (map == null) {
+                    writePackedLong(out, 0);
+                } else {
+                    writePackedLong(out, map.size());
+                    for (Map.Entry<StringConstant, TypeConstant> entry : map.entrySet()) {
+                        StringConstant constName = entry.getKey();
+                        TypeConstant   type      = entry.getValue();
 
-                            writePackedLong(out, constName.getPosition());
-                            writePackedLong(out, type == null ? 0 : type.getPosition());
-                            }
-                        }
-                    break;
-
-                case Import:
-                    writePackedLong(out, Constant.indexOf(m_constInjector));
-                    if (m_constInjector != null)
-                        {
-                        List<Injection> listInject = m_listInject;
-                        int c = listInject == null ? -1 : listInject.size();
-                        writePackedLong(out, c);
-                        if (c > 0)
-                            {
-                            for (Injection inject : listInject)
-                                {
-                                writePackedLong(out, Constant.indexOf(inject.getType()));
-                                writePackedLong(out, Constant.indexOf(inject.getNameConstant()));
-                                }
-                            }
-                        }
-                    break;
+                        writePackedLong(out, constName.getPosition());
+                        writePackedLong(out, type == null ? 0 : type.getPosition());
+                    }
                 }
+                break;
+
+            case Import:
+                writePackedLong(out, Constant.indexOf(m_constInjector));
+                if (m_constInjector != null) {
+                    List<Injection> listInject = m_listInject;
+                    int c = listInject == null ? -1 : listInject.size();
+                    writePackedLong(out, c);
+                    if (c > 0) {
+                        for (Injection inject : listInject) {
+                            writePackedLong(out, Constant.indexOf(inject.getType()));
+                            writePackedLong(out, Constant.indexOf(inject.getNameConstant()));
+                        }
+                    }
+                }
+                break;
             }
+        }
 
         @Override
-        protected Object clone()
-            {
-            try
-                {
+        protected Object clone() {
+            try {
                 return super.clone();
-                }
-            catch (CloneNotSupportedException e)
-                {
+            } catch (CloneNotSupportedException e) {
                 throw new IllegalStateException(e);
-                }
             }
+        }
 
         @Override
-        public int hashCode()
-            {
+        public int hashCode() {
             // unfortunately we cannot use m_typeContrib here, since it starts unresolved and
             // changes its hash value as it gets resolved
             return Hash.of(m_composition);
-            }
+        }
 
         @Override
-        public boolean equals(Object obj)
-            {
-            if (this == obj)
-                {
+        public boolean equals(Object obj) {
+            if (this == obj) {
                 return true;
-                }
+            }
 
-            if (!(obj instanceof Contribution that))
-                {
+            if (!(obj instanceof Contribution that)) {
                 return false;
-                }
+            }
 
             if (this.m_composition == that.m_composition
                     && Handy.equals(this.m_typeContrib  , that.m_typeContrib  )
                     && Handy.equals(this.m_constProp    , that.m_constProp    )
                     && Handy.equals(this.m_annotation   , that.m_annotation   )
                     && Handy.equals(this.m_constInjector, that.m_constInjector)
-                    && Handy.equals(this.m_listInject   , that.m_listInject   ))
-                {
+                    && Handy.equals(this.m_listInject   , that.m_listInject   )) {
                 ListMap<StringConstant, TypeConstant> mapThis = this.m_mapParams;
                 ListMap<StringConstant, TypeConstant> mapThat = that.m_mapParams;
-                if (mapThis == null && mapThat == null)
-                    {
+                if (mapThis == null && mapThat == null) {
                     return true;
-                    }
-                if (mapThis != null && mapThat != null)
-                    {
+                }
+                if (mapThis != null && mapThat != null) {
                     return Handy.equals(mapThis.keySet().toArray(), mapThat.keySet().toArray())
                         && Handy.equals(mapThis.values().toArray(), mapThat.values().toArray());
-                    }
                 }
-
-            return false;
             }
 
+            return false;
+        }
+
         @Override
-        public String toString()
-            {
+        public String toString() {
             StringBuilder sb = new StringBuilder();
 
-            switch (m_composition)
-                {
-                case Annotation:
-                    sb.append('@');
-                    break;
+            switch (m_composition) {
+            case Annotation:
+                sb.append('@');
+                break;
 
-                case Equal:
-                    sb.append(m_composition)
-                      .append(' ');
-                    break;
+            case Equal:
+                sb.append(m_composition)
+                  .append(' ');
+                break;
 
-                default:
-                    sb.append(m_composition.toString().toLowerCase())
-                      .append(' ');
-                    break;
-                }
+            default:
+                sb.append(m_composition.toString().toLowerCase())
+                  .append(' ');
+                break;
+            }
 
-            if (m_composition == Composition.Incorporates && m_mapParams != null)
-                {
+            if (m_composition == Composition.Incorporates && m_mapParams != null) {
                 TypeConstant constMixin = m_typeContrib;
                 sb.append("conditional ")
                   .append(constMixin.getDefiningConstant())
                   .append('<');
 
                 boolean fFirst = true;
-                for (TypeConstant constParam : constMixin.getParamTypesArray())
-                    {
-                    if (fFirst)
-                        {
+                for (TypeConstant constParam : constMixin.getParamTypesArray()) {
+                    if (fFirst) {
                         fFirst = false;
-                        }
-                    else
-                        {
+                    } else {
                         sb.append(", ");
-                        }
+                    }
 
                     sb.append(constParam.getValueString());
 
                     // extract the type name from the type param
                     if (constParam.isSingleDefiningConstant()
-                            && constParam.getDefiningConstant() instanceof PropertyConstant idProp)
-                        {
+                            && constParam.getDefiningConstant() instanceof PropertyConstant idProp) {
                         StringConstant constName       = idProp.getNameConstant();
                         TypeConstant   constConstraint = m_mapParams.get(constName);
-                        if (constConstraint != null)
-                            {
+                        if (constConstraint != null) {
                             sb.append(" extends ")
                               .append(constConstraint.getValueString());
-                            }
                         }
                     }
+                }
 
                 sb.append('>');
-                }
-            else
-                {
-                if (m_typeContrib != null)
-                    {
+            } else {
+                if (m_typeContrib != null) {
                     sb.append(m_typeContrib.resolveTypedefs().getDescription());
-                    }
+                }
 
-                if (m_composition == Composition.Annotation && m_annotation != null)
-                    {
+                if (m_composition == Composition.Annotation && m_annotation != null) {
                     Constant[] aconstArgs = m_annotation.getParams();
-                    if (aconstArgs.length > 0)
-                        {
+                    if (aconstArgs.length > 0) {
                         sb.append('(');
 
                         boolean fFirst = true;
-                        for (Constant constParam : aconstArgs)
-                            {
-                            if (fFirst)
-                                {
+                        for (Constant constParam : aconstArgs) {
+                            if (fFirst) {
                                 fFirst = false;
-                                }
-                            else
-                                {
+                            } else {
                                 sb.append(", ");
-                                }
-
-                            sb.append(constParam.getValueString());
                             }
 
-                        sb.append(')');
+                            sb.append(constParam.getValueString());
                         }
+
+                        sb.append(')');
                     }
-                else if (m_composition == Composition.Delegates)
-                    {
+                } else if (m_composition == Composition.Delegates) {
                     sb.append('(')
                       .append(m_constProp.getDescription())
                       .append(')');
-                    }
                 }
+            }
 
             return sb.toString();
-            }
+        }
 
         /**
          * Defines the form of composition that this component contributes to the class.
@@ -3710,7 +3270,7 @@ public abstract class Component
          * for the module represented by the package.
          */
         private List<Injection> m_listInject;
-        }
+    }
 
 
     // ----- inner class: Injection ----------------------------------------------------------------
@@ -3718,77 +3278,67 @@ public abstract class Component
     /**
      * Represents an injection specifier used in a "package..import..inject (x) using..." statement.
      */
-    public static class Injection
-        {
+    public static class Injection {
         /**
          * Construct an Injection specifier.
          *
          * @param type  the type of the injection variable
          * @param name  the name of the injection variable
          */
-        public Injection(TypeConstant type, StringConstant name)
-            {
-            if (type == null)
-                {
+        public Injection(TypeConstant type, StringConstant name) {
+            if (type == null) {
                 throw new IllegalArgumentException("injection type is required");
-                }
+            }
 
             this.type = type;
             this.name = name;
-            }
+        }
 
         /**
          * @return the type of the injection variable; not null.
          */
-        public TypeConstant getType()
-            {
+        public TypeConstant getType() {
             return type;
-            }
+        }
 
         /**
          * @return the name of the injection variable; may be null to indicate "_".
          */
-        public String getName()
-            {
+        public String getName() {
             StringConstant name = this.name;
             return name == null
                 ? null
                 : name.getValue();
-            }
+        }
 
         /**
          * @return the constant containing the name of the injection variable, or null
          */
-        public StringConstant getNameConstant()
-            {
+        public StringConstant getNameConstant() {
             return name;
-            }
+        }
 
         @Override
-        public boolean equals(Object o)
-            {
-            if (o instanceof Injection that)
-                {
+        public boolean equals(Object o) {
+            if (o instanceof Injection that) {
                 return this == that
                         || Handy.equals(this.type, that.type)
                         && Handy.equals(this.name, that.name);
-                }
+            }
 
             return false;
-            }
+        }
 
         @Override
-        public int hashCode()
-            {
+        public int hashCode() {
             return Hash.of(type,
                    Hash.of(name));
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return type + " " + (name == null ? "_" : name);
-            }
+        }
 
         /**
          * The type of the injection variable; not null.
@@ -3799,7 +3349,7 @@ public abstract class Component
          * The name of the injection variable; may be null to indicate "_".
          */
         private final StringConstant name;
-        }
+    }
 
 
     // ----- interface: ResolutionCollector --------------------------------------------------------
@@ -3808,40 +3358,34 @@ public abstract class Component
      * A simple ResolutionCollector implementation.
      */
     public static class SimpleCollector
-            implements ResolutionCollector
-        {
-        public SimpleCollector(ErrorListener errs)
-            {
+            implements ResolutionCollector {
+        public SimpleCollector(ErrorListener errs) {
             m_errs = errs;
-            }
+        }
 
         @Override
-        public ResolutionResult resolvedComponent(Component component)
-            {
+        public ResolutionResult resolvedComponent(Component component) {
             m_constant = component.getIdentityConstant();
             return ResolutionResult.RESOLVED;
-            }
+        }
 
         @Override
-        public ResolutionResult resolvedConstant(Constant constant)
-            {
+        public ResolutionResult resolvedConstant(Constant constant) {
             m_constant = constant;
             return ResolutionResult.RESOLVED;
-            }
+        }
 
         @Override
-        public ErrorListener getErrorListener()
-            {
+        public ErrorListener getErrorListener() {
             return m_errs;
-            }
+        }
 
         /**
          * @return the resolved constant
          */
-        public Constant getResolvedConstant()
-            {
+        public Constant getResolvedConstant() {
             return m_constant;
-            }
+        }
 
 
         // ----- data fields -----------------------------------------------------------------------
@@ -3855,7 +3399,7 @@ public abstract class Component
          * The error listener.
          */
         private final ErrorListener m_errs;
-        }
+    }
 
 
     // ----- constants -----------------------------------------------------------------------------
@@ -3954,4 +3498,4 @@ public abstract class Component
      * Recursion check for {@link #resolveContributedName}. Not thread-safe.
      */
     private transient Boolean m_FVisited;
-    }
+}

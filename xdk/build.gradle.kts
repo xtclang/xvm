@@ -27,6 +27,17 @@ val xtcLauncherBinaries by configurations.registering {
     isCanBeConsumed = false
 }
 
+val xdkJavaToolsJitBridge by configurations.registering {
+    description = "Consumes javatools-jitbridge JAR as native binary blob for distribution (NOT classpath)"
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    attributes {
+        attribute(CATEGORY_ATTRIBUTE, objects.named("jit-bridge-binary"))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("jit-bridge-binary"))
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named("native-runtime-blob"))
+    }
+}
+
 /**
  * Local configuration to provide an xdk-distribution, which contains versioned zip and tar.gz XDKs.
  */
@@ -45,6 +56,7 @@ val xdkProvider by configurations.registering {
 
 dependencies {
     xdkJavaTools(libs.javatools)
+    xdkJavaToolsJitBridge(libs.javatools.jitbridge)
     xtcModule(libs.xdk.ecstasy)
     xtcModule(libs.xdk.aggregate)
     xtcModule(libs.xdk.cli)
@@ -99,7 +111,9 @@ fun createLauncherScriptTask(scriptName: String, mainClassName: String) = tasks.
     defaultJvmOpts = buildList {
         add("-ea")
         add("-DXDK_HOME=\${XDK_HOME:-\$APP_HOME}")
-        if (getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)) {
+        // Enable preview features when explicitly enabled
+        val enablePreview = getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)
+        if (enablePreview) {
             add("--enable-preview")
         }
     }
@@ -251,6 +265,12 @@ distributions {
                 into("javatools")
             }
             
+            // Include javatools-jitbridge binary blob (separate from normal javatools classpath)
+            from(xdkJavaToolsJitBridge) {
+                rename { originalName -> stripVersionFromJarName(originalName) }
+                into("javatools")
+            }
+            
             // Version file
             from(tasks.xtcVersionFile)
             
@@ -300,6 +320,12 @@ distributions {
             
             // Java tools (strip version from jar names)
             from(configurations.xdkJavaTools) {
+                rename { originalName -> stripVersionFromJarName(originalName) }
+                into("javatools")
+            }
+            
+            // Include javatools-jitbridge binary blob (separate from normal javatools classpath)
+            from(xdkJavaToolsJitBridge) {
                 rename { originalName -> stripVersionFromJarName(originalName) }
                 into("javatools")
             }
@@ -388,13 +414,13 @@ val test by tasks.existing {
 val ensureTags by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Ensure that the current commit is tagged with the current version."
-    
+
     // Capture values during configuration phase to avoid runtime project access
     val snapshotOnly = snapshotOnly()
     val currentVersion = semanticVersion
     val gitHubProtocol = xdkBuildLogic.gitHubProtocol()
     val logPrefix = prefix  // Capture prefix to avoid project access during execution
-    
+
     if (!allowPublication()) {
         logger.lifecycle("$logPrefix Skipping publication task, snapshotOnly=${snapshotOnly} for version: '$currentVersion")
     }

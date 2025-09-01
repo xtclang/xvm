@@ -8,8 +8,7 @@ import org.xvm.asm.ConstantPool;
  * Represent a binary floating point constant.
  */
 public abstract class FloatConstant
-        extends ValueConstant
-    {
+        extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -17,10 +16,9 @@ public abstract class FloatConstant
      *
      * @param pool the ConstantPool that will contain this Constant
      */
-    protected FloatConstant(ConstantPool pool)
-        {
+    protected FloatConstant(ConstantPool pool) {
         super(pool);
-        }
+    }
 
 
     // ----- ValueConstant methods -----------------------------------------------------------------
@@ -31,4 +29,4 @@ public abstract class FloatConstant
      */
     @Override
     public abstract Float getValue();
-    }
+}

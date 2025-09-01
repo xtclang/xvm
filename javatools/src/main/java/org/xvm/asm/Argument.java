@@ -8,8 +8,7 @@ import org.xvm.runtime.ServiceContext;
  * Represents any argument for an op, including constants, registers, and pre-defined
  * references like "this".
  */
-public interface Argument
-    {
+public interface Argument {
     /**
      * @return the type of the argument, which is the value of the Referent type parameter from the
      *         implicit Ref/Var that this argument represents
@@ -43,31 +42,24 @@ public interface Argument
      *
      * @return a String useful for debugging purposes
      */
-    static String toIdString(Argument arg, int nArg)
-        {
-        if (arg instanceof Constant)
-            {
+    static String toIdString(Argument arg, int nArg) {
+        if (arg instanceof Constant) {
             return ((Constant) arg).getValueString();
-            }
+        }
 
-        if (arg instanceof Register)
-            {
+        if (arg instanceof Register) {
             return ((Register) arg).getIdString();
-            }
+        }
 
-        try
-            {
-            if (nArg <= Op.CONSTANT_OFFSET)
-                {
+        try {
+            if (nArg <= Op.CONSTANT_OFFSET) {
                 ServiceContext context = ServiceContext.getCurrentContext();
-                if (context != null)
-                    {
+                if (context != null) {
                     return context.getCurrentFrame().localConstants()[Op.convertId(nArg)].getValueString();
-                    }
                 }
             }
-        catch (Throwable ignore) {}
+        } catch (Throwable ignore) {}
 
         return Register.getIdString(nArg);
-        }
     }
+}

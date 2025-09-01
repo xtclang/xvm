@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -29,6 +31,8 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.ast.BinaryAST;
 
 import org.xvm.asm.op.*;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -266,8 +270,7 @@ public abstract class Op {
             int nOp = op.ensureOp().getOpCode();
             if (nOp == nOpen) {
                 ++cReq;
-            }
-            else if (nOp == nClose) {
+            } else if (nOp == nClose) {
                 if (--cReq == 0) {
                     return op;
                 }
@@ -413,6 +416,17 @@ public abstract class Op {
         return Math.abs(opDest.getDepth() - getDepth() - (isEnter() ? 1 : 0) + (isExit() ? 1 : 0));
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    /**
+     * Build the Java code for this op.
+     */
+    public void build(BuildContext bctx, CodeBuilder code) {
+        throw new UnsupportedOperationException(toString());
+    }
+
+    // ----- debugging support ---------------------------------------------------------------------
+
     @Override
     public String toString() {
         return toName(getOpCode());
@@ -457,8 +471,7 @@ public abstract class Op {
 
             if (m_op == null) {
                 m_op = op;
-            }
-            else if (m_op instanceof Prefix opPrefix) {
+            } else if (m_op instanceof Prefix opPrefix) {
                 opPrefix.append(op);
             } else {
                 throw new IllegalStateException();
@@ -1048,8 +1061,7 @@ public abstract class Op {
         if (arg == null) {
             // this means we have just loaded the ops from disk
             scope.ensureVar(nArg);
-        }
-        else if (arg instanceof Register reg && reg.isUnknown()) {
+        } else if (arg instanceof Register reg && reg.isUnknown()) {
             reg.assignIndex(scope.allocVar());
         }
     }
@@ -1321,6 +1333,9 @@ public abstract class Op {
         case OP_MBIND:       return new MBind       (in, aconst);
         case OP_FBIND:       return new FBind       (in, aconst);
 
+        case OP_LOOP:        return new Loop        ();
+        case OP_LOOP_END:    return new LoopEnd     ();
+
         case OP_JMP:         return new Jump        (in, aconst);
         case OP_JMP_TRUE:    return new JumpTrue    (in, aconst);
         case OP_JMP_FALSE:   return new JumpFalse   (in, aconst);
@@ -1556,6 +1571,8 @@ public abstract class Op {
         case OP_RETURN_T:    return "RETURN_T";
         case OP_MBIND:       return "BIND_M";
         case OP_FBIND:       return "BIND_F";
+        case OP_LOOP:        return "LOOP";
+        case OP_LOOP_END:    return "LOOP_END";
         case OP_JMP:         return "JMP";
         case OP_JMP_TRUE:    return "JMP_TRUE";
         case OP_JMP_FALSE:   return "JMP_FALSE";
@@ -1906,8 +1923,9 @@ public abstract class Op {
     public static final int OP_IS_TYPE      = 0x74;
     public static final int OP_IS_NTYPE     = 0x75;
     public static final int OP_RSVD_76      = 0x76;
-    public static final int OP_RSVD_77      = 0x77;
-    public static final int OP_RSVD_78      = 0x78;
+
+    public static final int OP_LOOP         = 0x77;
+    public static final int OP_LOOP_END     = 0x78;
 
     public static final int OP_JMP          = 0x79;
     public static final int OP_JMP_TRUE     = 0x7A;

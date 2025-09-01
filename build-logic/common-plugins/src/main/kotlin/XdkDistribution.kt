@@ -14,7 +14,7 @@ import java.io.File
 
 /**
  * Configure all maven publications with some mandatory and helpful information.
- * 
+ *
  * TODO: Add some generic XML point out more information about the build, like maybe
  *   SHA commit etc.
  */
@@ -143,7 +143,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         fun isDistributionArchiveTask(task: Task): Boolean {
             return task.group == DISTRIBUTION_TASK_GROUP && task.name in distributionTasks
         }
-        
+
         // Normalize architecture names to consistent values (Docker platform naming)
         fun normalizeArchitecture(arch: String): String {
             return when (arch.lowercase()) {
@@ -153,28 +153,28 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
                 else -> arch.lowercase()
             }
         }
-        
+
         // Get OS name in consistent format
         fun getOsName(): String {
             return when {
                 currentOs.isMacOsX -> "macos"
-                currentOs.isLinux -> "linux" 
+                currentOs.isLinux -> "linux"
                 currentOs.isWindows -> "windows"
                 else -> throw UnsupportedOperationException("Unsupported OS: $currentOs")
             }
         }
-        
+
         // Get all supported OS×Architecture combinations (Docker platform naming)
         fun getSupportedPlatforms(): List<Pair<String, String>> {
             return listOf(
                 "linux" to "amd64",
-                "linux" to "arm64", 
+                "linux" to "arm64",
                 "macos" to "arm64",   // Apple Silicon
                 "macos" to "amd64",   // Intel Mac (if needed)
                 "windows" to "amd64"
             )
         }
-        
+
         // Check if a platform combination is supported
         fun isPlatformSupported(os: String, arch: String): Boolean {
             return getSupportedPlatforms().contains(os to arch)

@@ -28,8 +28,7 @@ import org.xvm.util.Hash;
  * Represent a type for a recursive "typedef" constant.
  */
 public class RecursiveTypeConstant
-        extends TerminalTypeConstant
-    {
+        extends TerminalTypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -38,10 +37,9 @@ public class RecursiveTypeConstant
      * @param pool     the ConstantPool that will contain this Constant
      * @param constId  a TypedefConstant this recursive constant is based on
      */
-    public RecursiveTypeConstant(ConstantPool pool, TypedefConstant constId)
-        {
+    public RecursiveTypeConstant(ConstantPool pool, TypedefConstant constId) {
         super(pool, constId);
-        }
+    }
 
     /**
      * Constructor used for deserialization.
@@ -53,10 +51,9 @@ public class RecursiveTypeConstant
      * @throws IOException if an issue occurs reading the Constant value
      */
     public RecursiveTypeConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool, format, in);
-        }
+    }
 
 
     // ----- type specific methods -----------------------------------------------------------------
@@ -64,308 +61,261 @@ public class RecursiveTypeConstant
     /**
      * @return the underlying TypedefConstant
      */
-    public TypedefConstant getTypedef()
-        {
+    public TypedefConstant getTypedef() {
         return (TypedefConstant) ensureResolvedConstant();
-        }
+    }
 
     /**
      * @return the underlying type that the typedef represents
      */
-    protected TypeConstant getReferredToType()
-        {
+    protected TypeConstant getReferredToType() {
         return ((TypedefConstant) ensureResolvedConstant()).getReferredToType();
-        }
+    }
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    public boolean isComposedOfAny(Set<IdentityConstant> setIds)
-        {
+    public boolean isComposedOfAny(Set<IdentityConstant> setIds) {
         return false;
-        }
+    }
 
     @Override
-    public boolean isImmutable()
-        {
+    public boolean isImmutable() {
         return getReferredToType().isImmutable();
-        }
+    }
 
     @Override
-    public boolean isService()
-        {
+    public boolean isService() {
         return false;
-        }
+    }
 
     @Override
-    public boolean containsGenericParam(String sName)
-        {
+    public boolean containsGenericParam(String sName) {
         return false;
-        }
+    }
 
     @Override
-    public TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
-        {
+    public TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams) {
         return null;
-        }
+    }
 
     @Override
-    public boolean containsRecursiveType()
-        {
+    public boolean containsRecursiveType() {
         return true;
-        }
+    }
 
     @Override
-    public boolean containsFunctionType()
-        {
+    public boolean containsFunctionType() {
         return false;
-        }
+    }
 
     @Override
-    public boolean isSingleDefiningConstant()
-        {
+    public boolean isSingleDefiningConstant() {
         return false;
-        }
+    }
 
     @Override
-    public Constant getDefiningConstant()
-        {
+    public Constant getDefiningConstant() {
         throw new IllegalStateException();
-        }
+    }
 
     @Override
     public ResolutionResult resolveContributedName(
-            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector)
-        {
+            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
         return ResolutionResult.UNKNOWN;
-        }
+    }
 
     @Override
-    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
-        {
+    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver) {
         return this;
-        }
+    }
 
     @Override
-    public TypeConstant resolveConstraints(boolean fPendingOnly)
-        {
+    public TypeConstant resolveConstraints(boolean fPendingOnly) {
         return this;
-        }
+    }
 
     @Override
-    public TypeConstant resolveDynamicConstraints(Register register)
-        {
+    public TypeConstant resolveDynamicConstraints(Register register) {
         return this;
-        }
+    }
 
     @Override
-    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant typeFrom)
-        {
+    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant typeFrom) {
         return this;
-        }
+    }
 
     @Override
-    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
-        {
+    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams) {
         return this;
-        }
+    }
 
     @Override
-    public TypeConstant[] collectGenericParameters()
-        {
+    public TypeConstant[] collectGenericParameters() {
         // recursive type is not formalizable
         return null;
-        }
+    }
 
     @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
-                                             TypeConstant typeTarget, IdentityConstant idCtx)
-        {
+                                             TypeConstant typeTarget, IdentityConstant idCtx) {
         return this;
-        }
+    }
 
     @Override
-    public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
-        {
+    public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName) {
         return null;
-        }
+    }
 
     @Override
-    public boolean isTuple()
-        {
+    public boolean isTuple() {
         return false;
-        }
+    }
 
     @Override
-    public boolean extendsClass(IdentityConstant constClass)
-        {
+    public boolean extendsClass(IdentityConstant constClass) {
         return false;
-        }
+    }
 
     @Override
-    public TypeConstant.Category getCategory()
-        {
+    public TypeConstant.Category getCategory() {
         return TypeConstant.Category.OTHER;
-        }
+    }
 
     @Override
-    public boolean isSingleUnderlyingClass(boolean fAllowInterface)
-        {
+    public boolean isSingleUnderlyingClass(boolean fAllowInterface) {
         return false;
-        }
+    }
 
     @Override
-    public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface)
-        {
+    public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface) {
         throw new IllegalStateException();
-        }
+    }
 
     @Override
-    public boolean isExplicitClassIdentity(boolean fAllowParams)
-        {
+    public boolean isExplicitClassIdentity(boolean fAllowParams) {
         return false;
-        }
+    }
 
     @Override
-    public Component.Format getExplicitClassFormat()
-        {
+    public Component.Format getExplicitClassFormat() {
         throw new IllegalStateException();
-        }
+    }
 
     @Override
-    public TypeConstant getExplicitClassInto(boolean fResolve)
-        {
+    public TypeConstant getExplicitClassInto(boolean fResolve) {
         throw new IllegalStateException();
-        }
+    }
 
     @Override
-    public boolean isConst()
-        {
+    public boolean isConst() {
         return false;
-        }
+    }
 
     @Override
-    public boolean isTypeOfType()
-        {
+    public boolean isTypeOfType() {
         return false;
-        }
+    }
 
     @Override
-    public Relation calculateRelation(TypeConstant typeLeft)
-        {
+    public Relation calculateRelation(TypeConstant typeLeft) {
         return getReferredToType().calculateRelation(typeLeft);
-        }
+    }
 
     @Override
-    protected Relation calculateRelationToLeft(TypeConstant typeLeft)
-        {
+    protected Relation calculateRelationToLeft(TypeConstant typeLeft) {
         return getReferredToType().calculateRelationToLeft(typeLeft);
-        }
+    }
 
     @Override
-    protected Relation calculateRelationToRight(TypeConstant typeRight)
-        {
+    protected Relation calculateRelationToRight(TypeConstant typeRight) {
         return getReferredToType().calculateRelationToRight(typeRight);
-        }
+    }
 
     @Override
     public Set<SignatureConstant> isInterfaceAssignableFrom(
-            TypeConstant typeRight, Access accessLeft, List<TypeConstant> listLeft)
-        {
+            TypeConstant typeRight, Access accessLeft, List<TypeConstant> listLeft) {
         return getConstantPool().typeObject().isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
-        }
+    }
 
     @Override
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
-                                               boolean fFunction, List<TypeConstant> listParams)
-        {
+                                               boolean fFunction, List<TypeConstant> listParams) {
         return getConstantPool().typeObject().containsSubstitutableMethod(signature, access, fFunction, listParams);
-        }
+    }
 
     @Override
-    public TypeConstant.Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
-        {
+    public TypeConstant.Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams) {
         return TypeConstant.Usage.NO;
-        }
+    }
 
     @Override
-    public TypeConstant.Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
-        {
+    public TypeConstant.Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams) {
         return TypeConstant.Usage.NO;
-        }
+    }
 
     @Override
-    protected Object getLocator()
-        {
+    protected Object getLocator() {
         return null;
-        }
+    }
 
 
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
-    public TypeInfo ensureTypeInfoInternal(ErrorListener errs)
-        {
+    public TypeInfo ensureTypeInfoInternal(ErrorListener errs) {
         return getConstantPool().typeObject().ensureTypeInfo(errs);
-        }
+    }
 
 
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
-    public ClassTemplate getTemplate(Container container)
-        {
+    public ClassTemplate getTemplate(Container container) {
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
-    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         return getReferredToType().callEquals(frame, hValue1, hValue2, iReturn);
-        }
+    }
 
     @Override
-    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         return getReferredToType().callCompare(frame, hValue1, hValue2, iReturn);
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.RecursiveType;
-        }
+    }
 
     @Override
-    public boolean containsUnresolved()
-        {
+    public boolean containsUnresolved() {
         return false;
-        }
+    }
 
     @Override
-    public TypeConstant resolveTypedefs()
-        {
+    public TypeConstant resolveTypedefs() {
         return this;
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public boolean validate(ErrorListener errs)
-        {
+    public boolean validate(ErrorListener errs) {
         return false;
-        }
+    }
 
     @Override
-    protected int computeHashCode()
-        {
+    protected int computeHashCode() {
         TypedefConstant constTypedef = getTypedef();
         return Hash.of(constTypedef.getParentConstant(),
                Hash.of(constTypedef.getName()));
-        }
     }
+}

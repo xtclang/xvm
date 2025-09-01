@@ -167,59 +167,59 @@ public abstract class OpSwitch
                              boolean fLoEx,    boolean      fHiEx,
                              boolean fLow, Frame.Continuation continuation) {
         switch (typeCompare.callCompare(frame, hValue, fLow ? hLo : hHi, Op.A_STACK)) {
-            case Op.R_NEXT:
-                ObjectHandle hResult = frame.popStack();
-                if (fLow) {
-                    boolean fMatch = fLoEx
-                                        ? hResult == xOrdered.GREATER
-                                        : hResult != xOrdered.LESSER;   // GREATER or EQUAL
-                    if (!fMatch) {
-                        // we're done; no match
-                        frame.pushStack(xBoolean.FALSE);
-                        return continuation.proceed(frame);
-                    }
-
-                    return checkRange(frame, typeCompare, hValue,
-                            hLo, hHi, fLoEx, fHiEx, false, continuation);
-                } else {
-                    boolean fMatch = fHiEx
-                                        ? hResult == xOrdered.LESSER
-                                        : hResult != xOrdered.GREATER;  // LESSER or EQUAL
-                    frame.pushStack(xBoolean.makeHandle(fMatch));
+        case Op.R_NEXT:
+            ObjectHandle hResult = frame.popStack();
+            if (fLow) {
+                boolean fMatch = fLoEx
+                                    ? hResult == xOrdered.GREATER
+                                    : hResult != xOrdered.LESSER;   // GREATER or EQUAL
+                if (!fMatch) {
+                    // we're done; no match
+                    frame.pushStack(xBoolean.FALSE);
                     return continuation.proceed(frame);
                 }
 
-            case Op.R_CALL:
-                Frame.Continuation stepNext = frameCaller -> {
-                    ObjectHandle hR = frameCaller.popStack();
-                    if (fLow) {
-                        boolean fMatch = fLoEx
-                                            ? hR == xOrdered.GREATER
-                                            : hR != xOrdered.LESSER;   // GREATER or EQUAL
-                        if (!fMatch) {
-                            // we're done; no match
-                            frameCaller.pushStack(xBoolean.FALSE);
-                            return continuation.proceed(frameCaller);
-                        }
+                return checkRange(frame, typeCompare, hValue,
+                        hLo, hHi, fLoEx, fHiEx, false, continuation);
+            } else {
+                boolean fMatch = fHiEx
+                                    ? hResult == xOrdered.LESSER
+                                    : hResult != xOrdered.GREATER;  // LESSER or EQUAL
+                frame.pushStack(xBoolean.makeHandle(fMatch));
+                return continuation.proceed(frame);
+            }
 
-                        return checkRange(frameCaller, typeCompare, hValue,
-                                hLo, hHi, fLoEx, fHiEx, false, continuation);
-                    } else {
-                        boolean fMatch = fHiEx
-                                            ? hR == xOrdered.LESSER
-                                            : hR != xOrdered.GREATER;  // LESSER or EQUAL
-                        frameCaller.pushStack(xBoolean.makeHandle(fMatch));
+        case Op.R_CALL:
+            Frame.Continuation stepNext = frameCaller -> {
+                ObjectHandle hR = frameCaller.popStack();
+                if (fLow) {
+                    boolean fMatch = fLoEx
+                                        ? hR == xOrdered.GREATER
+                                        : hR != xOrdered.LESSER;   // GREATER or EQUAL
+                    if (!fMatch) {
+                        // we're done; no match
+                        frameCaller.pushStack(xBoolean.FALSE);
                         return continuation.proceed(frameCaller);
                     }
-                };
-                frame.m_frameNext.addContinuation(stepNext);
-                return Op.R_CALL;
 
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
+                    return checkRange(frameCaller, typeCompare, hValue,
+                            hLo, hHi, fLoEx, fHiEx, false, continuation);
+                } else {
+                    boolean fMatch = fHiEx
+                                        ? hR == xOrdered.LESSER
+                                        : hR != xOrdered.GREATER;  // LESSER or EQUAL
+                    frameCaller.pushStack(xBoolean.makeHandle(fMatch));
+                    return continuation.proceed(frameCaller);
+                }
+            };
+            frame.m_frameNext.addContinuation(stepNext);
+            return Op.R_CALL;
 
-            default:
-                throw new IllegalStateException();
+        case Op.R_EXCEPTION:
+            return Op.R_EXCEPTION;
+
+        default:
+            throw new IllegalStateException();
         }
     }
 
@@ -284,14 +284,10 @@ public abstract class OpSwitch
         NativeSimple, NativeRange, NaturalSimple, NaturalRange;
 
         boolean isNative() {
-            switch (this) {
-                case NativeSimple:
-                case NativeRange:
-                    return true;
-
-                default:
-                    return false;
-            }
+            return switch (this) {
+                case NativeSimple, NativeRange -> true;
+                default -> false;
+            };
         }
 
         Algorithm worstOf(Algorithm that) {

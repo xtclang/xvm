@@ -25,8 +25,7 @@ import static org.xvm.util.Handy.writeUtf8Char;
  * Represent a unicode character constant.
  */
 public class CharConstant
-        extends ValueConstant
-    {
+        extends ValueConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -39,11 +38,10 @@ public class CharConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public CharConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
         m_chVal = readUtf8Char(in);
-        }
+    }
 
     /**
      * Construct a constant whose value is a unicode character.
@@ -51,11 +49,10 @@ public class CharConstant
      * @param pool   the ConstantPool that will contain this Constant
      * @param chVal  the unicode character value
      */
-    public CharConstant(ConstantPool pool, int chVal)
-        {
+    public CharConstant(ConstantPool pool, int chVal) {
         super(pool);
         m_chVal = chVal;
-        }
+    }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
@@ -65,186 +62,163 @@ public class CharConstant
      * @return  the constant's unicode character value as a Java Integer
      */
     @Override
-    public Integer getValue()
-        {
+    public Integer getValue() {
         return Integer.valueOf(m_chVal);
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.Char;
-        }
+    }
 
     @Override
-    public PackedInteger getIntValue()
-        {
+    public PackedInteger getIntValue() {
         return PackedInteger.valueOf(m_chVal);
-        }
+    }
 
     @Override
-    public Constant apply(Token.Id op, Constant that)
-        {
-        switch (op.TEXT + that.getFormat().name())
-            {
-            case "+String":
-                {
-                assert Character.isValidCodePoint(this.m_chVal);
-                String s = (char) this.m_chVal + ((StringConstant) that).getValue();
-                return getConstantPool().ensureStringConstant(s);
-                }
+    public Constant apply(Token.Id op, Constant that) {
+        switch (op.TEXT + that.getFormat().name()) {
+        case "+String": {
+            assert Character.isValidCodePoint(this.m_chVal);
+            String s = (char) this.m_chVal + ((StringConstant) that).getValue();
+            return getConstantPool().ensureStringConstant(s);
+        }
 
-            case "+Char":
-                {
-                assert Character.isValidCodePoint(this.m_chVal);
-                assert Character.isValidCodePoint(((CharConstant) that).m_chVal);
-                char chThis = (char) this.m_chVal;
-                char chThat = (char) ((CharConstant) that).m_chVal;
-                return getConstantPool().ensureStringConstant(String.valueOf(chThis) + chThat);
-                }
+        case "+Char": {
+            assert Character.isValidCodePoint(this.m_chVal);
+            assert Character.isValidCodePoint(((CharConstant) that).m_chVal);
+            char chThis = (char) this.m_chVal;
+            char chThat = (char) ((CharConstant) that).m_chVal;
+            return getConstantPool().ensureStringConstant(String.valueOf(chThis) + chThat);
+        }
 
-            case "-Char":
-                {
-                assert Character.isValidCodePoint(this.m_chVal);
-                assert Character.isValidCodePoint(((CharConstant) that).m_chVal);
-                char chThis = (char) this.m_chVal;
-                char chThat = (char) ((CharConstant) that).m_chVal;
-                return getConstantPool().ensureIntConstant(chThis - chThat);
-                }
+        case "-Char": {
+            assert Character.isValidCodePoint(this.m_chVal);
+            assert Character.isValidCodePoint(((CharConstant) that).m_chVal);
+            char chThis = (char) this.m_chVal;
+            char chThat = (char) ((CharConstant) that).m_chVal;
+            return getConstantPool().ensureIntConstant(chThis - chThat);
+        }
 
-            case "*IntLiteral":
-            case "*Int64":
-                {
-                assert Character.isValidCodePoint(this.m_chVal);
-                char ch = (char) this.m_chVal;
+        case "*IntLiteral":
+        case "*Int64": {
+            assert Character.isValidCodePoint(this.m_chVal);
+            char ch = (char) this.m_chVal;
 
-                int n = that.getFormat() == Format.IntLiteral
-                        ? ((LiteralConstant) that).getPackedInteger().getInt()
-                        : ((IntConstant) that).getValue().getInt();
-                assert n >= 0 && n < 1000000;
+            int n = that.getFormat() == Format.IntLiteral
+                    ? ((LiteralConstant) that).getPackedInteger().getInt()
+                    : ((IntConstant) that).getValue().getInt();
+            assert n >= 0 && n < 1000000;
 
-                char[] ach = new char[n];
-                Arrays.fill(ach, ch);
+            char[] ach = new char[n];
+            Arrays.fill(ach, ch);
 
-                return getConstantPool().ensureStringConstant(new String(ach));
-                }
+            return getConstantPool().ensureStringConstant(new String(ach));
+        }
 
-            // these are "fake" i.e. compile-time only in order to support calculations resulting
-            // from the use of Range in ForEachStatement
-            case "+IntLiteral":
-            case "-IntLiteral":
-                {
-                int delta = ((LiteralConstant) that).toIntConstant(Format.Int32).getIntValue().getInt();
-                if (op == Id.SUB)
-                    {
-                    delta = -delta;
-                    }
-
-                return getConstantPool().ensureCharConstant(m_chVal + delta);
-                }
-
-            case "==Char":
-                return getConstantPool().valOf(this.m_chVal == ((CharConstant) that).m_chVal);
-            case "!=Char":
-                return getConstantPool().valOf(this.m_chVal != ((CharConstant) that).m_chVal);
-            case "<Char":
-                return getConstantPool().valOf(this.m_chVal < ((CharConstant) that).m_chVal);
-            case "<=Char":
-                return getConstantPool().valOf(this.m_chVal <= ((CharConstant) that).m_chVal);
-            case ">Char":
-                return getConstantPool().valOf(this.m_chVal > ((CharConstant) that).m_chVal);
-            case ">=Char":
-                return getConstantPool().valOf(this.m_chVal >= ((CharConstant) that).m_chVal);
-
-            case "<=>Char":
-                return getConstantPool().valOrd(this.m_chVal - ((CharConstant) that).m_chVal);
-
-            case "..Char":
-                return getConstantPool().ensureRangeConstant(this, that);
+        // these are "fake" i.e. compile-time only in order to support calculations resulting
+        // from the use of Range in ForEachStatement
+        case "+IntLiteral":
+        case "-IntLiteral": {
+            int delta = ((LiteralConstant) that).toIntConstant(Format.Int32).getIntValue().getInt();
+            if (op == Id.SUB) {
+                delta = -delta;
             }
+
+            return getConstantPool().ensureCharConstant(m_chVal + delta);
+        }
+
+        case "==Char":
+            return getConstantPool().valOf(this.m_chVal == ((CharConstant) that).m_chVal);
+        case "!=Char":
+            return getConstantPool().valOf(this.m_chVal != ((CharConstant) that).m_chVal);
+        case "<Char":
+            return getConstantPool().valOf(this.m_chVal < ((CharConstant) that).m_chVal);
+        case "<=Char":
+            return getConstantPool().valOf(this.m_chVal <= ((CharConstant) that).m_chVal);
+        case ">Char":
+            return getConstantPool().valOf(this.m_chVal > ((CharConstant) that).m_chVal);
+        case ">=Char":
+            return getConstantPool().valOf(this.m_chVal >= ((CharConstant) that).m_chVal);
+
+        case "<=>Char":
+            return getConstantPool().valOrd(this.m_chVal - ((CharConstant) that).m_chVal);
+
+        case "..Char":
+            return getConstantPool().ensureRangeConstant(this, that);
+        }
 
         return super.apply(op, that);
-        }
+    }
 
     @Override
-    public Constant convertTo(TypeConstant typeOut)
-        {
-        switch (typeOut.getEcstasyClassName())
-            {
-            case "text.String":
-                {
-                int ch = m_chVal;
-                if (ch >= Character.MIN_VALUE && ch <= Character.MAX_VALUE)
-                    {
-                    return getConstantPool().
-                        ensureStringConstant(Character.valueOf((char) ch).toString());
-                    }
-                }
+    public Constant convertTo(TypeConstant typeOut) {
+        switch (typeOut.getEcstasyClassName()) {
+        case "text.String": {
+            int ch = m_chVal;
+            if (ch >= Character.MIN_VALUE && ch <= Character.MAX_VALUE) {
+                return getConstantPool().
+                    ensureStringConstant(Character.valueOf((char) ch).toString());
             }
+        }
+        }
 
         return super.convertTo(typeOut);
-        }
+    }
 
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return getConstantPool().typeChar();
-        }
+    }
 
     @Override
-    public Object getLocator()
-        {
+    public Object getLocator() {
         // Integer only guarantees that up to 0x7F is cached
         return m_chVal <= 0x7F ? Character.valueOf((char) m_chVal) : null;
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant constant)
-        {
-        if (!(constant instanceof CharConstant that))
-            {
+    protected int compareDetails(Constant constant) {
+        if (!(constant instanceof CharConstant that)) {
             return -1;
-            }
+        }
 
         return this.m_chVal - that.m_chVal;
-        }
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return m_chVal > 0xFFFF
                 ? appendIntAsHex(new StringBuilder("'\\U"), m_chVal).append('\'').toString()
                 : quotedChar((char) m_chVal);
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         writeUtf8Char(out, m_chVal);
-        }
+    }
 
     @Override
-    public String getDescription()
-        {
+    public String getDescription() {
         return "char=" + getValueString() + ", index=" + m_chVal;
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_chVal);
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -253,4 +227,4 @@ public class CharConstant
      * The constant character code-point value stored as an integer.
      */
     private final int m_chVal;
-    }
+}

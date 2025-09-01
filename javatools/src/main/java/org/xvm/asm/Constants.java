@@ -4,8 +4,7 @@ package org.xvm.asm;
 /**
  * Constant values used by the XVM for its various VM structures.
  */
-public interface Constants
-    {
+public interface Constants {
     // ----- file header ---------------------------------------------------------------------------
 
     /**
@@ -95,50 +94,43 @@ public interface Constants
      * <li>{@link #PRIVATE PRIVATE} - access to the private members of the object's class;</li>
      * </ul>
      */
-    enum Access
-        {
+    enum Access {
         STRUCT(0),
         PUBLIC(Component.ACCESS_PUBLIC),
         PROTECTED(Component.ACCESS_PROTECTED),
         PRIVATE(Component.ACCESS_PRIVATE);
 
-        Access(int flags)
-            {
+        Access(int flags) {
             this.FLAGS = flags;
-            }
+        }
 
-        public boolean canSee(Access that)
-            {
-            if (this == that || this == STRUCT || this == PRIVATE)
-                {
+        public boolean canSee(Access that) {
+            if (this == that || this == STRUCT || this == PRIVATE) {
                 return true;
-                }
+            }
 
             return this == PROTECTED && that == PUBLIC;
-            }
+        }
 
-        public boolean isAsAccessibleAs(Access that)
-            {
+        public boolean isAsAccessibleAs(Access that) {
             return !isLessAccessibleThan(that);
-            }
+        }
 
-        public boolean isMoreAccessibleThan(Access that)
-            {
+        public boolean isMoreAccessibleThan(Access that) {
             // struct access is not comparable
             assert this != STRUCT;
             assert that != STRUCT;
 
             return this.compareTo(that) < 0;
-            }
+        }
 
-        public boolean isLessAccessibleThan(Access that)
-            {
+        public boolean isLessAccessibleThan(Access that) {
             // struct access is not comparable
             assert this != STRUCT;
             assert that != STRUCT;
 
             return this.compareTo(that) > 0;
-            }
+        }
 
         /**
          * Compare this access with that access, and return the one that has LESS accessibility.
@@ -147,22 +139,19 @@ public interface Constants
          *
          * @return the lesser (i.e. the more constrained) of the two Access specifiers
          */
-        public Access minOf(Access that)
-            {
-            if (this == that)
-                {
+        public Access minOf(Access that) {
+            if (this == that) {
                 return this;
-                }
+            }
 
-            if (this == STRUCT || that == STRUCT)
-                {
+            if (this == STRUCT || that == STRUCT) {
                 throw new IllegalStateException("cannot compare struct to other access levels");
-                }
+            }
 
             return this.isLessAccessibleThan(that)
                     ? this
                     : that;
-            }
+        }
 
         /**
          * Compare this access with that access, and return the one that has MORE accessibility.
@@ -171,22 +160,19 @@ public interface Constants
          *
          * @return the greater (i.e. the more accessible) of the two Access specifiers
          */
-        public Access maxOf(Access that)
-            {
-            if (this == that)
-                {
+        public Access maxOf(Access that) {
+            if (this == that) {
                 return this;
-                }
+            }
 
-            if (this == STRUCT || that == STRUCT)
-                {
+            if (this == STRUCT || that == STRUCT) {
                 throw new IllegalStateException("cannot compare struct to other access levels");
-                }
+            }
 
             return this.isMoreAccessibleThan(that)
                     ? this
                     : that;
-            }
+        }
 
         /**
          * Look up an Access enum by its ordinal.
@@ -195,10 +181,9 @@ public interface Constants
          *
          * @return the Access enum for the specified ordinal
          */
-        public static Access valueOf(int i)
-            {
+        public static Access valueOf(int i) {
             return VALUES[i];
-            }
+        }
 
         /**
          * All of the Access enums.
@@ -220,7 +205,7 @@ public interface Constants
          * @see Component#ACCESS_PRIVATE
          */
         public final int FLAGS;
-        }
+    }
 
 
     // ----- error codes ---------------------------------------------------------------------------
@@ -613,4 +598,4 @@ public interface Constants
      * Compile-time debug flag.
      */
     boolean DEBUG = Boolean.parseBoolean(System.getProperty("xtc.debug", "true"));
-    }
+}

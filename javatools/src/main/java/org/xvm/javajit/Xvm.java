@@ -1,8 +1,8 @@
 package org.xvm.javajit;
 
-
 import java.lang.ref.WeakReference;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
@@ -11,20 +11,22 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
+import static java.util.Arrays.copyOf;
+
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.NATIVE_MODULE;
+
 import static org.xvm.util.Handy.checkElementsNonNull;
 import static org.xvm.util.Handy.isDigit;
 import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.require;
-import static org.xvm.util.Handy.resize;
 import static org.xvm.util.Handy.scan;
 import static org.xvm.util.Handy.sorted;
-
 
 /**
  * The Ecstasy-to-Java "just-in-time" (JIT) compiler implementation of the XVM specification.
@@ -40,7 +42,8 @@ public class Xvm {
             locks[i] = new Object();
         }
         this.systemRepo       = repo;
-        this.nativeTypeSystem = new TypeSystem(this, repo);
+        this.nativeTypeSystem = NativeTypeSystem.create(this, repo);
+
         register(this.nativeTypeSystem);
         this.nativeContainer  = createContainer(null, nativeTypeSystem, FailEverythingInjector);
 
@@ -57,7 +60,8 @@ public class Xvm {
         }
         assert ecstasy != null && _native != null;
         this.ecstasyLoader = ecstasy;
-        this.nativeLoader  = _native;
+        this.bridgeLoader = _native;
+        this.ecstasyPool   = ecstasy.module.getConstantPool();
     }
 
     /**
@@ -69,29 +73,34 @@ public class Xvm {
     /**
      * The ModuleRepository that the system modules are loaded from.
      */
-    final ModuleRepository systemRepo;
+    public final ModuleRepository systemRepo;
 
     /**
      * The TypeSystem for the invisible "Container -1", which is the only TypeSystem allowed to
      * contain native code.
      */
-    final TypeSystem nativeTypeSystem;
+    public final NativeTypeSystem nativeTypeSystem;
 
     /**
      * The invisible "Container -1", which provides the interface to the "native" world and loads
      * all the Ecstasy system modules that require any native support.
      */
-    final Container nativeContainer;
+    public final Container nativeContainer;
 
     /**
      * The ModuleLoader for the core Ecstasy library.
      */
-    final ModuleLoader ecstasyLoader;
+    public final ModuleLoader ecstasyLoader;
 
     /**
-     * The ModuleLoader for the "native" library (the module that interfaces directly with the JVM).
+     * The ModuleLoader for the "bridge" library (the module that interfaces directly with the JVM).
      */
-    final ModuleLoader nativeLoader;
+    public final ModuleLoader bridgeLoader;
+
+    /**
+     * The ConstantPool of the Ecstasy module loader.
+     */
+    public final ConstantPool ecstasyPool;
 
     /**
      * All Containers (held only by a weak reference) keyed by id.
@@ -151,6 +160,11 @@ public class Xvm {
     private final ConcurrentHashMap<String, String[]> packagesByModule = new ConcurrentHashMap<>();
 
     /**
+     * The incremental counter for every method/property name.
+     */
+    private final ConcurrentHashMap<String, Integer> nameCounters = new ConcurrentHashMap<>();
+
+    /**
      * Used to sort ModuleStructures by their ModuleConstant identities.
      */
     static final Comparator<ModuleStructure> StructureByModuleId =
@@ -159,7 +173,7 @@ public class Xvm {
     /**
      * Used to sort ModuleLoaders by their ModuleStructure's ModuleConstant identities.
      */
-    static final Comparator<ModuleLoader> LoaderByModuleId = 
+    static final Comparator<ModuleLoader> LoaderByModuleId =
             Comparator.comparing(l -> l.module.getIdentityConstant());
 
     /**
@@ -230,18 +244,11 @@ public class Xvm {
     }
 
     /**
-     * The default inject instance used for "main" containers.
-     */
-    public final Injector DefaultMainInjector = new Injector() {
-        // TODO implement "native" injector
-    };
-
-    /**
      * Create a new "main" Container around the specified TypeSystem.
      *
      * @param typeSystem  the {@link TypeSystem} to use to form the Container
      * @param injector    the {@link Injector} to use to provide for dependency injection into the
-     *                    new Container
+     *                    new "main" Container
      *
      * @return a new Container
      */
@@ -271,6 +278,14 @@ public class Xvm {
         return null;
     }
 
+    /**
+     * @return a unique suffix for the specified name
+     */
+    public String createUniqueSuffix(String name) {
+        int count = nameCounters.compute(name, (k, v) -> v == null ? -1 : v + 1);
+        return count == -1 ? "" : "$" + count;
+    }
+
     // ----- internal ------------------------------------------------------------------------------
 
     /**
@@ -286,11 +301,7 @@ public class Xvm {
      * @return the new Container
      */
     Container createContainer(Container parent, TypeSystem typeSystem, Injector injector) {
-        assert typeSystem != null;
-
-        if (injector == null) {
-            injector = DefaultMainInjector;
-        }
+        assert typeSystem != null && injector != null;
 
         long id = containerCount.getAndIncrement();
         assert id >= 0 && parent != null || id == -1 && parent == null;
@@ -336,7 +347,7 @@ public class Xvm {
         // makes comparison of type systems much simpler and more efficient
         shared = sorted(shared, LoaderByModuleId);
         owned  = sorted(owned, StructureByModuleId);
-        
+
         // given the requested shape of the TypeSystem, make sure no other thread is simultaneously
         // racing us to build the same TypeSystem; note: this method will deadlock if it recurses
         synchronized (mutex(typeSystemKey(owned.length > 0 ? owned : modulesOf(shared)))) {
@@ -381,12 +392,13 @@ public class Xvm {
     /**
      * Generate a temporally-unique name for a TypeSystem.
      *
-     * @param shared  the ModuleLoaders shared into the TypeSystem
-     * @param owned   the ModuleStructures to load within the TypeSystem
+     * @param shared    the ModuleLoaders shared into the TypeSystem
+     * @param owned     the ModuleStructures to load within the TypeSystem
+     * @param nativeTS  if true, the type system is the native TS
      *
      * @return a unique TypeSystem name based on the name of the TypeSystem's owned modules
      */
-    String generateTypeSystemName(ModuleLoader[] shared, ModuleStructure[] owned) {
+    String generateTypeSystemName(ModuleLoader[] shared, ModuleStructure[] owned, boolean nativeTS) {
         assert shared != null && owned != null;
 
         // occasionally sweep through the data structure that holds weak references to TypeSystems
@@ -407,7 +419,7 @@ public class Xvm {
         }
 
         ModuleStructure module = owned[0];
-        String          pkg    = moduleToPackageName(module.getName(), module.getVersion());
+        String          pkg    = moduleToPackageName(module, nativeTS);
         String          name   = pkg;
         int             count  = 1;
         while (typeSystems.containsKey(name) && typeSystems.get(name).get() != null) {
@@ -459,7 +471,7 @@ public class Xvm {
     boolean sameModule(ModuleStructure module1, ModuleStructure module2) {
         return module1.isRefined() && module2.isRefined()
             && module1.getName().equals(module2.getName())
-            && module1.equals(module2); // TODO GG optimize using hash, defines, version, optional deps
+            && Arrays.equals(module1.getDigest(), module2.getDigest());
     }
 
     /**
@@ -495,13 +507,15 @@ public class Xvm {
 
         synchronized (moduleLoaders) {
             String moduleName = module.getName();
-            String pkg        = moduleToPackageName(moduleName, module.getVersion());
+            String pkg        = moduleToPackageName(moduleName,
+                tsl.typeSystem instanceof NativeTypeSystem ? null : module.getVersion());
             String unique     = pkg;
             int    count      = 1;
             while (moduleLoaders.containsKey(unique)) {
                 unique = pkg + ".alt" + (++count);
             }
 
+            // TODO CP can we defer this?
             ModuleLoader loader   = new ModuleLoader(tsl, module, unique);
             String[]     packages = packagesByModule.get(moduleName);
             String[]     original = packages;
@@ -515,7 +529,7 @@ public class Xvm {
                     (index = scan(packages, null  )) < 0) {
                     // replace a full array with a bigger array
                     index    = packages.length;
-                    packages = resize(packages, packages.length * 2);
+                    packages = copyOf(packages, packages.length * 2);
                 }
             }
             packages[index] = unique;
@@ -533,11 +547,9 @@ public class Xvm {
      */
     private void loadersGc() {
         synchronized (moduleLoaders) {
-            for (Iterator<Map.Entry<String, WeakReference<ModuleLoader>>> iter
-                    = moduleLoaders.entrySet().iterator(); iter.hasNext(); ) {
-                var    entry = iter.next();
-                String pkg   = entry.getKey();
-                var    ref   = entry.getValue();
+            for (Map.Entry<String, WeakReference<ModuleLoader>> entry : moduleLoaders.entrySet()) {
+                String pkg = entry.getKey();
+                var ref = entry.getValue();
                 if (ref != null && ref.get() == null) {
                     // this weak reference has been dropped and needs to be cleaned out
                     moduleLoaders.remove(pkg, ref);
@@ -588,7 +600,8 @@ public class Xvm {
         if (parts.length <= 1) {
             buf.append("anon");
         }
-        for (String part : parts) {
+        for (int i = parts.length - 1; i >= 0; --i) {
+            String part = parts[i];
             if (part.isEmpty()) {
                 throw new IllegalArgumentException();
             }
@@ -606,6 +619,17 @@ public class Xvm {
             buf.append(s);
         }
         return buf.toString();
+    }
+
+    /**
+     * Convert Ecstasy module name to a dot-delimited Java package name.
+     *
+     * @param module  the module
+     *
+     * @return a dot-delimited Java package name
+     */
+    static String moduleToPackageName(ModuleStructure module, boolean nativeTS) {
+        return moduleToPackageName(module.getName(), nativeTS ? null : module.getVersion());
     }
 
     /**

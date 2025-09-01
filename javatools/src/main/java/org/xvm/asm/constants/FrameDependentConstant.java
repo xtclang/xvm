@@ -12,8 +12,7 @@ import org.xvm.runtime.ObjectHandle;
  * Constant whose purpose is to represent a run-time action based on the current frame.
  */
 public abstract class FrameDependentConstant
-        extends Constant
-    {
+        extends Constant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -21,10 +20,9 @@ public abstract class FrameDependentConstant
      *
      * @param pool  the ConstantPool that will contain this Constant
      */
-    public FrameDependentConstant(ConstantPool pool)
-        {
+    public FrameDependentConstant(ConstantPool pool) {
         super(pool);
-        }
+    }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
@@ -35,4 +33,4 @@ public abstract class FrameDependentConstant
      * @return the ObjectHandle (can be a DeferredCallHandle)
      */
     public abstract ObjectHandle getHandle(Frame frame);
-    }
+}

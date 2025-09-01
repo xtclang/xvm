@@ -20,8 +20,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Represent a constant that specifies that the underlying type is a service.
  */
 public class ServiceTypeConstant
-        extends TypeConstant
-    {
+        extends TypeConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -30,17 +29,15 @@ public class ServiceTypeConstant
      * @param pool       the ConstantPool that will contain this Constant
      * @param constType  a TypeConstant that this constant modifies to be a service
      */
-    public ServiceTypeConstant(ConstantPool pool, TypeConstant constType)
-        {
+    public ServiceTypeConstant(ConstantPool pool, TypeConstant constType) {
         super(pool);
 
-        if (constType == null)
-            {
+        if (constType == null) {
             throw new IllegalArgumentException("type required");
-            }
+        }
 
         m_constType = constType;
-        }
+    }
 
     /**
      * Constructor used for deserialization.
@@ -52,63 +49,55 @@ public class ServiceTypeConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public ServiceTypeConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
+            throws IOException {
         super(pool);
 
         m_iType = readMagnitude(in);
-        }
+    }
 
     @Override
-    protected void resolveConstants()
-        {
+    protected void resolveConstants() {
         m_constType = (TypeConstant) getConstantPool().getConstant(m_iType);
-        }
+    }
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    public boolean isModifyingType()
-        {
+    public boolean isModifyingType() {
         return true;
-        }
+    }
 
     @Override
-    public TypeConstant getUnderlyingType()
-        {
+    public TypeConstant getUnderlyingType() {
         return m_constType;
-        }
+    }
 
     @Override
-    public boolean isService()
-        {
+    public boolean isService() {
         return true;
-        }
+    }
 
     @Override
-    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
-        {
+    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type) {
         return pool.ensureServiceTypeConstant(type);
-        }
+    }
 
 
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
-    protected TypeInfo buildTypeInfo(ErrorListener errs)
-        {
+    protected TypeInfo buildTypeInfo(ErrorListener errs) {
         // the "service" keyword does not affect the TypeInfo, even though the type itself is
         // slightly different
         return m_constType.ensureTypeInfoInternal(errs);
-        }
+    }
 
 
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
-    public Relation calculateRelation(TypeConstant typeLeft)
-        {
+    public Relation calculateRelation(TypeConstant typeLeft) {
         ConstantPool pool = getConstantPool();
 
         // turn (service T) into (service Object) + T
@@ -118,88 +107,77 @@ public class ServiceTypeConstant
                     ? super.calculateRelation(typeLeft)
                     : m_constType.combine(pool, pool.ensureServiceTypeConstant(pool.typeObject())).
                             calculateRelation(typeLeft);
-        }
+    }
 
     @Override
-    protected Relation calculateRelationToRight(TypeConstant typeRight)
-        {
+    protected Relation calculateRelationToRight(TypeConstant typeRight) {
         return typeRight.isService()
                 ? m_constType.calculateRelationToRight(typeRight)
                 : Relation.INCOMPATIBLE;
-        }
+    }
 
     @Override
-    protected boolean isDuckTypeAbleFrom(TypeConstant typeRight)
-        {
+    protected boolean isDuckTypeAbleFrom(TypeConstant typeRight) {
         return typeRight.isService() && super.isDuckTypeAbleFrom(typeRight);
-        }
+    }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return Format.ServiceType;
-        }
+    }
 
     @Override
-    protected Object getLocator()
-        {
+    protected Object getLocator() {
         return m_constType;
-        }
+    }
 
     @Override
-    public boolean containsUnresolved()
-        {
+    public boolean containsUnresolved() {
         return !isHashCached() && m_constType.containsUnresolved();
-        }
+    }
 
     @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
+    public void forEachUnderlying(Consumer<Constant> visitor) {
         visitor.accept(m_constType);
-        }
+    }
 
     @Override
-    protected int compareDetails(Constant obj)
-        {
+    protected int compareDetails(Constant obj) {
         return obj instanceof ServiceTypeConstant that
                 ? this.m_constType.compareTo(that.m_constType)
                 : -1;
-        }
+    }
 
     @Override
-    public String getValueString()
-        {
+    public String getValueString() {
         return "service " + m_constType.getValueString();
-        }
+    }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
+    protected void registerConstants(ConstantPool pool) {
         m_constType = (TypeConstant) pool.register(m_constType);
-        }
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, indexOf(m_constType));
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int computeHashCode()
-        {
+    public int computeHashCode() {
         return Hash.of(m_constType);
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -213,4 +191,4 @@ public class ServiceTypeConstant
      * The type referred to.
      */
     private TypeConstant m_constType;
-    }
+}

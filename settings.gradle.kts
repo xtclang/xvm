@@ -33,6 +33,7 @@ develocity {
 
 val xvmBuilds = listOf(
     "javatools",
+    "javatools_jitbridge",
     "javatools_utils",
     "javatools_unicode",
     "plugin",

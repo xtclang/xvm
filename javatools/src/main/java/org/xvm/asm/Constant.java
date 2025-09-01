@@ -70,8 +70,7 @@ import org.xvm.util.PackedInteger;
  */
 public abstract class Constant
         extends XvmStructure
-        implements Comparable<Constant>, Cloneable, Argument
-    {
+        implements Comparable<Constant>, Cloneable, Argument {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -79,10 +78,9 @@ public abstract class Constant
      *
      * @param pool  the containing constant pool
      */
-    protected Constant(ConstantPool pool)
-        {
+    protected Constant(ConstantPool pool) {
         super(pool);
-        }
+    }
 
     /**
      * Since the reading of the Constant information is done as part of construction, this method is
@@ -90,9 +88,8 @@ public abstract class Constant
      * <p/>
      * This method must be overridden by constant types which reference other constants.
      */
-    protected void resolveConstants()
-        {
-        }
+    protected void resolveConstants() {
+    }
 
 
     // ----- Constant operations -------------------------------------------------------------------
@@ -108,60 +105,53 @@ public abstract class Constant
      * @return true iff this constant represents a class at runtime, whether or not the exact
      *         identity of the class is known at compile time
      */
-    public boolean isClass()
-        {
+    public boolean isClass() {
         return false;
-        }
+    }
 
     /**
      * @return true iff this constant represents an auto-narrowing identity
      */
-    public boolean isAutoNarrowing()
-        {
+    public boolean isAutoNarrowing() {
         return false;
-        }
+    }
 
     /**
      * Resolve the constant.
      *
      * @return the resolved constant, possibly {@code this}
      */
-    public Constant resolve()
-        {
+    public Constant resolve() {
         return this;
-        }
+    }
 
     /**
      * @return true iff this constant represents a property at runtime, whether or not the exact
      *         identity of the property is known at compile time
      */
-    public boolean isProperty()
-        {
+    public boolean isProperty() {
         return false;
-        }
+    }
 
     /**
      * @return true iff this constant represents a runtime value that is never going to change
      *         and therefore can be cached
      */
-    public boolean isValueCacheable()
-        {
+    public boolean isValueCacheable() {
         return true;
-        }
+    }
 
     /**
      * @return false iff the constant is resolved, and all reachable constants within the constant
      *         are resolved
      */
-    public boolean containsUnresolved()
-        {
+    public boolean containsUnresolved() {
         return false;
-        }
+    }
 
-    public boolean canResolve()
-        {
+    public boolean canResolve() {
         return !containsUnresolved();
-        }
+    }
 
     /**
      * Recurse through the constants that make up this constant, replacing typedefs with the types
@@ -173,10 +163,9 @@ public abstract class Constant
      * @return this same type, but without any typedefs or resolvable
      *         {@link UnresolvedNameConstant}s in it
      */
-    public Constant resolveTypedefs()
-        {
+    public Constant resolveTypedefs() {
         return this;
-        }
+    }
 
     /**
      * Generate some default constant value for the specified type, which should be the type of a
@@ -186,105 +175,102 @@ public abstract class Constant
      *
      * @return a Constant of the specified type, if possible, otherwise the constant for False
      */
-    public static Constant defaultValue(TypeConstant type)
-        {
+    public static Constant defaultValue(TypeConstant type) {
         ConstantPool pool = type.getConstantPool();
-        switch (type.getEcstasyClassName())
-            {
-            default:
-                // TODO this needs to be deleted once we verify that things are working
-                // System.out.println("** unsupported constant type: " + type);
-                // fall through
-            case "Boolean":
-                return pool.valFalse();
+        switch (type.getEcstasyClassName()) {
+        default:
+            // TODO this needs to be deleted once we verify that things are working
+            // System.out.println("** unsupported constant type: " + type);
+            // fall through
+        case "Boolean":
+            return pool.valFalse();
 
-            case "Nullable":
-                return pool.valNull();
+        case "Nullable":
+            return pool.valNull();
 
-            case "Ordered":
-                return pool.valOrd(0);
+        case "Ordered":
+            return pool.valOrd(0);
 
-            case "Boolean.True":
-                return pool.valTrue();
+        case "Boolean.True":
+            return pool.valTrue();
 
-            case "text.Char":
-                return pool.ensureCharConstant('?');
+        case "text.Char":
+            return pool.ensureCharConstant('?');
 
-            case "text.String":
-                return pool.ensureStringConstant("");
+        case "text.String":
+            return pool.ensureStringConstant("");
 
-            case "numbers.IntLiteral":
-                return pool.ensureLiteralConstant(Format.IntLiteral, "0");
+        case "numbers.IntLiteral":
+            return pool.ensureLiteralConstant(Format.IntLiteral, "0");
 
-            case "numbers.FPLiteral":
-                return pool.ensureLiteralConstant(Format.FPLiteral, "0.0");
+        case "numbers.FPLiteral":
+            return pool.ensureLiteralConstant(Format.FPLiteral, "0.0");
 
-            case "numbers.Bit":
-                return pool.ensureBitConstant(0);
+        case "numbers.Bit":
+            return pool.ensureBitConstant(0);
 
-            case "numbers.Nibble":
-                return pool.ensureNibbleConstant(0);
+        case "numbers.Nibble":
+            return pool.ensureNibbleConstant(0);
 
-            case "numbers.Int8":
-                return pool.ensureByteConstant(Format.Int8, 0);
+        case "numbers.Int8":
+            return pool.ensureByteConstant(Format.Int8, 0);
 
-            case "numbers.UInt8":
-                return pool.ensureByteConstant(Format.UInt8, 0);
+        case "numbers.UInt8":
+            return pool.ensureByteConstant(Format.UInt8, 0);
 
-            case "numbers.Int16":
-            case "numbers.Int32":
-            case "numbers.Int64":
-            case "numbers.Int128":
-            case "numbers.IntN":
-            case "numbers.UInt16":
-            case "numbers.UInt32":
-            case "numbers.UInt64":
-            case "numbers.UInt128":
-            case "numbers.UIntN":
-                return pool.ensureIntConstant(PackedInteger.ZERO, Format.valueOf(
-                        // omit "numbers."
-                        type.getEcstasyClassName().substring(8)));
+        case "numbers.Int16":
+        case "numbers.Int32":
+        case "numbers.Int64":
+        case "numbers.Int128":
+        case "numbers.IntN":
+        case "numbers.UInt16":
+        case "numbers.UInt32":
+        case "numbers.UInt64":
+        case "numbers.UInt128":
+        case "numbers.UIntN":
+            return pool.ensureIntConstant(PackedInteger.ZERO, Format.valueOf(
+                    // omit "numbers."
+                    type.getEcstasyClassName().substring(8)));
 
-            case "numbers.Dec":
-                return pool.ensureDecAConstant(Decimal64.POS_ZERO);
-            case "numbers.Dec32":
-                return pool.ensureDecConstant(Decimal32.POS_ZERO);
-            case "numbers.Dec64":
-                return pool.ensureDecConstant(Decimal64.POS_ZERO);
-            case "numbers.Dec128":
-                return pool.ensureDecConstant(Decimal128.POS_ZERO);
-            case "numbers.DecN":
-                throw new UnsupportedOperationException();
+        case "numbers.Dec":
+            return pool.ensureDecAConstant(Decimal64.POS_ZERO);
+        case "numbers.Dec32":
+            return pool.ensureDecConstant(Decimal32.POS_ZERO);
+        case "numbers.Dec64":
+            return pool.ensureDecConstant(Decimal64.POS_ZERO);
+        case "numbers.Dec128":
+            return pool.ensureDecConstant(Decimal128.POS_ZERO);
+        case "numbers.DecN":
+            throw new UnsupportedOperationException();
 
-            case "numbers.Float8e4":
-                return pool.ensureFloat8e4Constant(0.0f);
-            case "numbers.Float8e5":
-                return pool.ensureFloat8e5Constant(0.0f);
-            case "numbers.BFloat16":
-                return pool.ensureBFloat16Constant(0.0f);
-            case "numbers.Float16":
-                return pool.ensureFloat16Constant(0.0f);
-            case "numbers.Float32":
-                return pool.ensureFloat32Constant(0.0f);
-            case "numbers.Float64":
-                return pool.ensureFloat64Constant(0.0);
-            case "numbers.Float128":
-                return pool.ensureFloat128Constant(new byte[16]);
-            case "numbers.FloatN":
-                throw new UnsupportedOperationException();
+        case "numbers.Float8e4":
+            return pool.ensureFloat8e4Constant(0.0f);
+        case "numbers.Float8e5":
+            return pool.ensureFloat8e5Constant(0.0f);
+        case "numbers.BFloat16":
+            return pool.ensureBFloat16Constant(0.0f);
+        case "numbers.Float16":
+            return pool.ensureFloat16Constant(0.0f);
+        case "numbers.Float32":
+            return pool.ensureFloat32Constant(0.0f);
+        case "numbers.Float64":
+            return pool.ensureFloat64Constant(0.0);
+        case "numbers.Float128":
+            return pool.ensureFloat128Constant(new byte[16]);
+        case "numbers.FloatN":
+            throw new UnsupportedOperationException();
 
-            // TODO arrays and lists and maps and tuples and so on
-            }
+        // TODO arrays and lists and maps and tuples and so on
         }
+    }
 
     /**
      * @return the int representation of this constant, iff {@link TypeConstant#isIntConvertible()}
      *         returns {@code true} for the type of the constant
      */
-    public PackedInteger getIntValue()
-        {
+    public PackedInteger getIntValue() {
         throw new IllegalStateException(getClass().getSimpleName());
-        }
+    }
 
     /**
      * Apply the specified operation to this Constant.
@@ -294,16 +280,14 @@ public abstract class Constant
      *
      * @return the result as a Constant
      */
-    public Constant apply(Token.Id op, Constant that)
-        {
-        if (that instanceof DeferredValueConstant)
-            {
+    public Constant apply(Token.Id op, Constant that) {
+        if (that instanceof DeferredValueConstant) {
             return that;
-            }
+        }
         throw new UnsupportedOperationException("this=" + getClass().getSimpleName()
                 + ", op=" + op.TEXT
                 + (that == null ? "" : ", that=" + that.getClass().getSimpleName()));
-        }
+    }
 
     /**
      * Convert this constant to a constant of the specified type.
@@ -314,10 +298,9 @@ public abstract class Constant
      *
      * @throws ArithmeticException  on overflow
      */
-    public Constant convertTo(TypeConstant typeOut)
-        {
+    public Constant convertTo(TypeConstant typeOut) {
         return getType().isA(typeOut) ? this : null;
-        }
+    }
 
     /**
      * Create a clone of this Constant so that it can be adopted by a different ConstantPool.
@@ -326,21 +309,17 @@ public abstract class Constant
      *
      * @return the new Constant
      */
-    protected Constant adoptedBy(ConstantPool pool)
-        {
+    protected Constant adoptedBy(ConstantPool pool) {
         Constant that;
-        try
-            {
+        try {
             that = (Constant) super.clone();
-            }
-        catch (CloneNotSupportedException e)
-            {
+        } catch (CloneNotSupportedException e) {
             throw new IllegalStateException(e);
-            }
+        }
         that.setContaining(pool);
         that.resetRefs();
         return that;
-        }
+    }
 
     /**
      * Visit every underlying constant (if any).
@@ -348,9 +327,8 @@ public abstract class Constant
      * @param visitor  a Consumer&lt;Constant&gt; whose {@link Consumer#accept(Object)}that will be
      *                 called with each underlying (i.e. referenced) constant
      */
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
-        }
+    public void forEachUnderlying(Consumer<Constant> visitor) {
+    }
 
     /**
      * Check whether this constant and all its underlying constants are registered with
@@ -358,32 +336,28 @@ public abstract class Constant
      *
      * This method is used only as an assertion for debugging purposes.
      */
-    public void checkValidPools(Set<ConstantPool> setValidPools, int[] anDepth)
-        {
+    public void checkValidPools(Set<ConstantPool> setValidPools, int[] anDepth) {
         // check this pool
-        if (!setValidPools.contains(getConstantPool()))
-            {
-            if (setValidPools.isEmpty())
-                {
+        if (!setValidPools.contains(getConstantPool())) {
+            if (setValidPools.isEmpty()) {
                 // the modules are not yet linked
                 return;
-                }
+            }
 
             // TODO explanatory error message should go here
             throw new IllegalStateException("attempt to register a constant that refers to an " +
                     "unknown upstream constant pool: " + getConstantPool());
-            }
+        }
 
-        if (anDepth[0]++ > 100)
-            {
+        if (anDepth[0]++ > 100) {
             throw new IllegalStateException("Suspected infinite loop in checkValidPools()");
-            }
+        }
 
         // check children
         forEachUnderlying(constant -> constant.checkValidPools(setValidPools, anDepth));
 
         anDepth[0]--;
-        }
+    }
 
     /**
      * Determine the last known position that the Constant was located at in its ConstantPool.
@@ -393,21 +367,19 @@ public abstract class Constant
      * @return the last known index of the Constant, or <tt>-1</tt> if no position has been assigned
      *         to the constant
      */
-    public int getPosition()
-        {
+    public int getPosition() {
         return m_iPos;
-        }
+    }
 
     /**
      * Assign a position to the Constant.
      *
      * @param iPos  the position to assign to the Constant
      */
-    protected void setPosition(int iPos)
-        {
+    protected void setPosition(int iPos) {
         assert iPos >= -1;
         m_iPos = iPos;
-        }
+    }
 
     /**
      * Obtain an object that can be used as a key to locate this Constant. By default, the Constant
@@ -428,10 +400,9 @@ public abstract class Constant
      *         and implements the Object methods {@link #equals}, {@link #hashCode}, and {@link
      *         #toString}; or null
      */
-    protected Object getLocator()
-        {
+    protected Object getLocator() {
         return null;
-        }
+    }
 
     /**
      * This method allows each particular type of constant to compare its detailed information with
@@ -453,20 +424,18 @@ public abstract class Constant
      * (2) to be able to determine which Constants can be discarded altogether (i.e. the ones that
      * have zero references to them.)
      */
-    void resetRefs()
-        {
+    void resetRefs() {
         m_cRefs = 0;
-        }
+    }
 
     /**
      * This marks that the Constant is referred to by another XvmStructure.
      *
      * @return true iff the very first reference has been registered
      */
-    boolean addRef()
-        {
+    boolean addRef() {
         return m_cRefs++ == 0;
-        }
+    }
 
     /**
      * Based on the Constant registration process that tallies references to the Constants,
@@ -474,72 +443,62 @@ public abstract class Constant
      *
      * @return true iff there are any known references to this Constant
      */
-    boolean hasRefs()
-        {
+    boolean hasRefs() {
         return m_cRefs > 0;
-        }
+    }
 
 
     // ----- XvmStructure operations ---------------------------------------------------------------
 
     @Override
-    public ConstantPool getConstantPool()
-        {
+    public ConstantPool getConstantPool() {
         return (ConstantPool) getContaining();
-        }
+    }
 
     @Override
-    public boolean isModified()
-        {
+    public boolean isModified() {
         // it's a constant; it can't be modified
         return false;
-        }
+    }
 
     @Override
-    protected void markModified()
-        {
+    protected void markModified() {
         // it's a constant; it can't be modified
         throw new IllegalStateException();
-        }
+    }
 
     @Override
-    protected void resetModified()
-        {
+    protected void resetModified() {
         // it's a constant; it wasn't modified
-        }
+    }
 
     @Override
-    public boolean isConditional()
-        {
+    public boolean isConditional() {
         // a constant does not support conditional inclusion of itself
         return false;
-        }
+    }
 
     @Override
-    public void purgeCondition(ConditionalConstant condition)
-        {
-        }
+    public void purgeCondition(ConditionalConstant condition) {
+    }
 
     @Override
-    public boolean isPresent(LinkerContext ctx)
-        {
+    public boolean isPresent(LinkerContext ctx) {
         // a constant does not support conditional inclusion of itself; it will simply be
         // automatically discarded if it is not referenced at the time of assembly
         return true;
-        }
+    }
 
     @Override
-    public boolean isResolved()
-        {
+    public boolean isResolved() {
         return true;
-        }
+    }
 
     @Override
-    protected void disassemble(DataInput in)
-        {
+    protected void disassemble(DataInput in) {
         // constants are fully assembled during the construction/resolveConstants() cycle
         throw new IllegalStateException();
-        }
+    }
 
     /**
      * {@inheritDoc}
@@ -547,16 +506,14 @@ public abstract class Constant
      * This method must be overridden by constant types which reference other constants.
      */
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
-        }
+    protected void registerConstants(ConstantPool pool) {
+    }
 
     @Override
     protected void assemble(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getFormat().ordinal());
-        }
+    }
 
 
     // ----- Argument interface --------------------------------------------------------------------
@@ -567,28 +524,24 @@ public abstract class Constant
      * @return a TypeConstant
      */
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         throw new UnsupportedOperationException("constant-class=" + getClass().getSimpleName());
-        }
+    }
 
     @Override
-    public boolean isStack()
-        {
+    public boolean isStack() {
         return false;
-        }
+    }
 
     @Override
-    public boolean isEffectivelyFinal()
-        {
+    public boolean isEffectivelyFinal() {
         return false;
-        }
+    }
 
     @Override
-    public Constant registerConstants(Op.ConstantRegistry registry)
-        {
+    public Constant registerConstants(Op.ConstantRegistry registry) {
         return registry.register(this);
-        }
+    }
 
 
     // ----- debugging support ---------------------------------------------------------------------
@@ -599,27 +552,25 @@ public abstract class Constant
     public abstract String getValueString();
 
     @Override
-    protected void dump(PrintWriter out, String sIndent)
-        {
+    protected void dump(PrintWriter out, String sIndent) {
         // this must be over-ridden by any Constant implementation that has a multi-line toString()
         out.print(sIndent);
         out.println(this);
-        }
+    }
 
 
     // ----- Object operations ---------------------------------------------------------------------
 
     @Override
-    public int hashCode()
-        {
+    public int hashCode() {
         int iHash = m_iHash;
         // TODO: uncomment below to validate the stability of hashCode for complex constants
         // if (iHash != 0)
         //    {
         //    assert iHash == computeHashCodeInternal();
-        //    }
+        //}
         return iHash == 0 ? computeHashCodeInternal() : iHash;
-        }
+    }
 
     /**
      * Compute a hash of this constant.
@@ -633,72 +584,62 @@ public abstract class Constant
      *
      * @return the hash
      */
-    protected int computeHashCodeInternal()
-        {
-        if (containsUnresolved())
-            {
+    protected int computeHashCodeInternal() {
+        if (containsUnresolved()) {
             return 0;
-            }
+        }
         int iHash = Hash.of(getClass().getName(), computeHashCode());
         return m_iHash = iHash == 0 ? 7654211 : iHash;
-        }
+    }
 
     /**
      * @return true if the hash code is cached (which implies that the constant is resolved)
      */
-    protected boolean isHashCached()
-        {
+    protected boolean isHashCached() {
         return m_iHash != 0;
-        }
+    }
 
     @Override
-    public boolean equals(Object obj)
-        {
-        if (!(obj instanceof Constant that))
-            {
+    public boolean equals(Object obj) {
+        if (!(obj instanceof Constant that)) {
             return false;
-            }
+        }
 
         Constant constThis = this.resolve();
         Constant constThat = that.resolve();
         return constThis == constThat || (constThis.getFormat() == constThat.getFormat()
                 && constThis.compareDetails(constThat) == 0);
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return getFormat().name() + '{' + getDescription() + '}';
-        }
+    }
 
 
     // ----- Comparable interface ------------------------------------------------------------------
 
     @Override
-    public int compareTo(Constant that)
-        {
-        if (this == that)
-            {
+    public int compareTo(Constant that) {
+        if (this == that) {
             return 0;
-            }
+        }
 
         Constant constThis = resolve();
         Constant constThat = that.resolve();
-        if (constThis == constThat)
-            {
+        if (constThis == constThat) {
             return 0;
-            }
+        }
 
         // primary sort of constants is by the "format" i.e. the "binary type" of the constant
         int cDif = constThis.getFormat().compareTo(constThat.getFormat());
-        if (cDif != 0)
-            {
+        if (cDif != 0) {
             return cDif;
-            }
+        }
 
         // two constants of the same format can be compared by their contents
         return constThis.compareDetails(constThat);
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -710,10 +651,9 @@ public abstract class Constant
      *
      * @return the Constant's index in the ConstantPool, or -1 if passed constant is null
      */
-    protected static int indexOf(Constant constant)
-        {
+    protected static int indexOf(Constant constant) {
         return constant == null ? -1 : constant.getPosition();
-        }
+    }
 
     /**
      * Translate a comparison operator and ordered result into a constant value.
@@ -724,11 +664,9 @@ public abstract class Constant
      * @return one of {@code Boolean.True}, {@code Boolean.False}, {@code Ordered.Lesser},
      *         {@code Ordered.Equal}, {@code Ordered.Greater}
      */
-    protected Constant translateOrder(int nOrder, Token.Id op)
-        {
+    protected Constant translateOrder(int nOrder, Token.Id op) {
         ConstantPool pool = getConstantPool();
-        return switch (op)
-            {
+        return switch (op) {
             case COMP_EQ   -> pool.valOf(nOrder == 0);
             case COMP_NEQ  -> pool.valOf(nOrder != 0);
             case COMP_LT   -> pool.valOf(nOrder < 0);
@@ -737,34 +675,31 @@ public abstract class Constant
             case COMP_GTEQ -> pool.valOf(nOrder >= 0);
             case COMP_ORD  -> pool.valOrd(nOrder);
             default        -> throw new IllegalStateException();
-            };
-        }
+        };
+    }
 
     /**
      * Add a TypeConstant that needs its TypeInfo to be built or rebuilt.
      *
      * @param type  the TypeConstant to defer the building of a TypeInfo for
      */
-    protected void addDeferredTypeInfo(TypeConstant type)
-        {
+    protected void addDeferredTypeInfo(TypeConstant type) {
         getConstantPool().addDeferredTypeInfo(type);
-        }
+    }
 
     /**
      * @return true iff there are any TypeConstants that have deferred the building of a TypeInfo
      */
-    protected boolean hasDeferredTypeInfo()
-        {
+    protected boolean hasDeferredTypeInfo() {
         return getConstantPool().hasDeferredTypeInfo();
-        }
+    }
 
     /**
      * @return the List of TypeConstants to build (or rebuild) TypeInfo objects for
      */
-    protected List<TypeConstant> takeDeferredTypeInfo()
-        {
+    protected List<TypeConstant> takeDeferredTypeInfo() {
         return getConstantPool().takeDeferredTypeInfo();
-        }
+    }
 
     /**
      * Register each of the constants in the passed array.
@@ -775,24 +710,20 @@ public abstract class Constant
      * @param pool    the ConstantPool
      * @param aconst  an array of constants
      */
-    protected static Constant[] registerConstants(ConstantPool pool, Constant[] aconst)
-        {
+    protected static Constant[] registerConstants(ConstantPool pool, Constant[] aconst) {
         Constant[] aconstNew = null;
-        for (int i = 0, c = aconst.length; i < c; ++i)
-            {
+        for (int i = 0, c = aconst.length; i < c; ++i) {
             Constant constOld = aconst[i];
             Constant constNew = pool.register(constOld);
-            if (constOld != constNew)
-                {
-                if (aconstNew == null)
-                    {
+            if (constOld != constNew) {
+                if (aconstNew == null) {
                     aconstNew = aconst.clone();
-                    }
-                aconstNew[i] = constNew;
                 }
+                aconstNew[i] = constNew;
             }
-        return aconstNew == null ? aconst : aconstNew;
         }
+        return aconstNew == null ? aconst : aconstNew;
+    }
 
 
     // ----- constant pool format identifiers ------------------------------------------------------
@@ -803,8 +734,7 @@ public abstract class Constant
      * out in a seemingly-arbitrary sequence, mixed in with various other Constants that have
      * various other formats.
      */
-    public enum Format
-        {
+    public enum Format {
         /*
          * Values.
          */
@@ -937,57 +867,47 @@ public abstract class Constant
 
         // -------------------------------------------------------------------------------------
 
-        Format()
-            {
+        Format() {
             this(null);
-            }
+        }
 
-        Format(String sPackage)
-            {
+        Format(String sPackage) {
             f_sPackage = sPackage;
-            }
+        }
 
-        public Format next()
-            {
+        public Format next() {
             return Format.valueOf(this.ordinal() + 1);
-            }
+        }
 
         /**
          * @return true if a corresponding Constant could be used as a terminal type
          */
-        public boolean isTypeable()
-            {
-            return switch (this)
-                {
-                case Module, Package, Class, Typedef, Property, TypeParameter, FormalTypeChild,
-                     DynamicFormal, ThisClass, ParentClass, ChildClass, DecoratedClass, NativeClass,
-                     UnresolvedName, IsConst, IsEnum, IsModule, IsPackage, IsClass
-                    -> true;
+        public boolean isTypeable() {
+            return switch (this) {
+                case Module, Package, Class, Typedef, Property, TypeParameter, FormalTypeChild -> true;
+                case DynamicFormal, ThisClass, ParentClass, ChildClass, DecoratedClass, NativeClass -> true;
+                case UnresolvedName, IsConst, IsEnum, IsModule, IsPackage, IsClass -> true;
 
-                default
-                    -> false;
-                };
-            }
+                default -> false;
+            };
+        }
 
         /**
          * @return fully qualified Ecstasy class name corresponding to this enum value
          */
-        public String getEcstasyName()
-            {
+        public String getEcstasyName() {
             return f_sPackage == null
                 ? name()
                 : f_sPackage + '.' + name();
-            }
+        }
 
         /**
          * @param pool the ConstantPool to use
          *
          * @return the Ecstasy type for this format enum value
          */
-        public TypeConstant getType(ConstantPool pool)
-            {
-            return switch (this)
-                {
+        public TypeConstant getType(ConstantPool pool) {
+            return switch (this) {
                 case Int8     -> pool.typeInt8();
                 case Int16    -> pool.typeInt16();
                 case Int32    -> pool.typeInt32();
@@ -1002,8 +922,8 @@ public abstract class Constant
                 case UIntN    -> pool.typeUIntN();
                 case Dec64    -> pool.typeDec64();
                 default       -> pool.ensureEcstasyTypeConstant(getEcstasyName());
-                };
-            }
+            };
+        }
 
         /**
          * Look up a Format enum by its ordinal.
@@ -1012,10 +932,9 @@ public abstract class Constant
          *
          * @return the Format enum for the specified ordinal
          */
-        public static Format valueOf(int i)
-            {
+        public static Format valueOf(int i) {
             return FORMATS[i];
-            }
+        }
 
         /**
          * All of the Format enums.
@@ -1026,7 +945,7 @@ public abstract class Constant
          * The package name.
          */
         private final String f_sPackage;
-        }
+    }
 
 
     // ----- Constant Comparators for ordering ConstantPool ----------------------------------------
@@ -1035,12 +954,10 @@ public abstract class Constant
      * A Comparator of Constant values that orders the "most frequently used" constants to the front
      * of the ConstantPool.
      */
-    public static final Comparator<Constant> MFU_ORDER = (o1, o2) ->
-        {
-        if (o1 == o2)
-            {
+    public static final Comparator<Constant> MFU_ORDER = (o1, o2) -> {
+        if (o1 == o2) {
             return 0;
-            }
+        }
 
         assert o1.getConstantPool() == o2.getConstantPool();
 
@@ -1049,7 +966,7 @@ public abstract class Constant
 
         // most used comes first (i.e. _reverse_ sort on most used)
         return -cDif;
-        };
+    };
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -1074,4 +991,9 @@ public abstract class Constant
      * constant pool.
      */
     private transient int m_cRefs;
-    }
+
+    /**
+     * An optional run-time object associated with this constant.
+     */
+    private transient Object m_oValue;
+}
