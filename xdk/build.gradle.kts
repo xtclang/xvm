@@ -419,7 +419,6 @@ val ensureTags by tasks.registering {
     val snapshotOnly = snapshotOnly()
     val currentVersion = semanticVersion
     val gitHubProtocol = xdkBuildLogic.gitHubProtocol()
-    val logPrefix = prefix  // Capture prefix to avoid project access during execution
     if (!allowPublication()) {
         logger.lifecycle("[xdk] Skipping publication task, snapshotOnly=${snapshotOnly} for version: '$currentVersion")
     }
