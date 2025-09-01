@@ -55,8 +55,8 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
 
     init {
         this.properties = resolve()
-        toString().lines().forEach { logger.info("$prefix $it") }
-        logger.info("$prefix Resolved ${properties.size} properties for project.")
+        toString().lines().forEach { logger.info("[build-logic] $it") }
+        logger.info("[build-logic] Resolved ${properties.size} properties for project.")
     }
 
     /**
@@ -78,14 +78,14 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
      * build breaks.
      */
     override fun get(key: String, defaultValue: String?): String {
-        logger.info("$prefix get($key) invoked (props: ${System.identityHashCode(this)})")
+        logger.info("[build-logic] get($key) invoked (props: ${System.identityHashCode(this)})")
         if (!key.startsWith("org.xtclang")) {
             // TODO: Remove this artificial limitation.
             throw project.buildException("ERROR: XdkProperties are currently expected to start with org.xtclang. Remove this artificial limitation.")
         }
         if (!has(key)) {
             return defaultValue?.also {
-                logger.info("$prefix XdkProperties; resolved property '$key' to its default value.")
+                logger.info("[build-logic] XdkProperties; resolved property '$key' to its default value.")
             } ?: throw project.buildException("ERROR: XdkProperty '$key' has no value, and no default was given.")
         }
 
@@ -93,24 +93,24 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
         val envKey = toSystemEnvKey(key)
         val envValue = System.getenv(envKey)
         if (envValue != null) {
-            logger.info("$prefix XdkProperties; resolved System ENV property '$key' (${envKey}).")
+            logger.info("[build-logic] XdkProperties; resolved System ENV property '$key' (${envKey}).")
             return envValue.toString()
         }
 
         // Check Gradle project properties (from -P command line args)
         val projectPropValue = project.findProperty(key)
         if (projectPropValue != null) {
-            logger.info("$prefix XdkProperties; resolved Gradle project property '$key' (from -P flag).")
+            logger.info("[build-logic] XdkProperties; resolved Gradle project property '$key' (from -P flag).")
             return projectPropValue.toString()
         }
 
         val sysPropValue = System.getProperty(key)
         if (sysPropValue != null) {
-            logger.info("$prefix XdkProperties; resolved Java System property '$key'.")
+            logger.info("[build-logic] XdkProperties; resolved Java System property '$key'.")
             return sysPropValue.toString()
         }
 
-        logger.info("$prefix XdkProperties; resolved property '$key' from properties table.")
+        logger.info("[build-logic] XdkProperties; resolved property '$key' from properties table.")
         return properties[key]!!.toString()
     }
 
@@ -149,7 +149,7 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
             resolveExternalDirs().forEach { mergeFromDir(ext, it) }
             ext.keys.map { it.toString() }.forEach(secrets::add)
         }
-        logger.info("$prefix Internals; loaded properties (${all.size} internal, ${ext.size} external).")
+        logger.info("[build-logic] Internals; loaded properties (${all.size} internal, ${ext.size} external).")
         return merge(all, ext)
     }
 
@@ -192,11 +192,11 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
         from.forEach { key, value ->
             val old = to.putIfAbsent(key, value)
             if (old == null) {
-                logger.info("$prefix Defined new property: '$key'")
+                logger.info("[build-logic] Defined new property: '$key'")
             } else {
-                logger.info("$prefix Property '$key' already defined, not overwriting.")
+                logger.info("[build-logic] Property '$key' already defined, not overwriting.")
                 if (old != value) {
-                    logger.info("$prefix     WARNING: Property '$key' has different values at different levels.")
+                    logger.info("[build-logic]     WARNING: Property '$key' has different values at different levels.")
                 }
             }
         }
@@ -213,7 +213,7 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
         for (f in files) {
             assert(f.exists() && f.isFile)
             FileInputStream(f).use { local.load(it) }
-            logger.info("$prefix Loaded ${local.size} properties from ${f.absolutePath}")
+            logger.info("[build-logic] Loaded ${local.size} properties from ${f.absolutePath}")
         }
         return merge(to, local)
     }

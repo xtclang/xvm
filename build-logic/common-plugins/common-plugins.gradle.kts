@@ -6,6 +6,13 @@ plugins {
     `kotlin-dsl`
 }
 
+// Prevents Kotlin Gradle Plugin "Gradle 8.0" JVM Toolchain warning
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(JavaVersion.current().majorVersion.toInt()))
+    }
+}
+
 dependencies {
     // Build-logic bootstrap dependencies (can't use main version catalog due to bootstrap order)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")

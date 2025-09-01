@@ -32,7 +32,7 @@ val processLauncherResources by tasks.registering(Copy::class) {
 val assemble by tasks.existing {
     dependsOn(processLauncherResources)
     doLast {
-        logger.info("$prefix Finished assembling launcher resources into Gradle build.")
+        logger.info("[javatools_launcher] Finished assembling launcher resources into Gradle build.")
     }
 }
 

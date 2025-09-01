@@ -178,7 +178,7 @@ val jar by tasks.existing(Jar::class) {
      *      use the "Class-Path" attribute of the manifest to point to them.
      */
     from(syncDependencies.map { fileTree(it.destinationDir).map { jarFile ->
-        logger.info("$prefix Resolving dependency: $jarFile for $version")
+        logger.info("[javatools] Resolving dependency: $jarFile for $version")
         zipTree(jarFile)
     }})
 
@@ -214,7 +214,7 @@ val versionOutputTest by tasks.registering(Test::class) {
     include("**/BuildInfoTest.class", "**/LauncherVersionTest.class")
     
     doFirst {
-        logger.lifecycle("$prefix Verifying version output contains expected git and API information")
+        logger.lifecycle("[javatools] Verifying version output contains expected git and API information")
     }
 }
 
