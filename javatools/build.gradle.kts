@@ -11,6 +11,7 @@ plugins {
 }
 
 private val semanticVersion: SemanticVersion by extra
+private val gitProtocol = xdkBuildLogic.gitHubProtocol()
 
 val processResources by tasks.existing {
     // Make the task depend on environment variables so Gradle knows when to re-run it
@@ -22,7 +23,6 @@ val processResources by tasks.existing {
     
     doFirst {
         logger.info(">>> GENERATING GIT PROPERTIES")
-        val gitProtocol = GitHubProtocol(project)
         val props = gitProtocol.getGitInfo().toMutableMap()
         props["git.build.version"] = version.toString()
         logger.info("Calculated git properties: $props")
@@ -218,3 +218,4 @@ val versionOutputTest by tasks.registering(Test::class) {
     }
 }
 
+// "assemble" already depends on jar by default in the Java build life cycle

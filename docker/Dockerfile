@@ -4,8 +4,8 @@
 # See DOCKER.md for complete build and usage instructions
 #
 
-# Build arguments with defaults
-ARG JAVA_VERSION=24
+# Build arguments (JAVA_VERSION passed from CI/Gradle build)
+ARG JAVA_VERSION
 ARG GH_BRANCH=master
 ARG GH_COMMIT
 ARG TARGETARCH
@@ -64,7 +64,7 @@ RUN --mount=type=cache,target=/root/.gradle/caches,sharing=locked \
 # This simplifies the build and ensures script/native launcher consistency
 
 # *** STAGE 5 (Final Runtime Image)
-FROM bellsoft/liberica-runtime-container:jre-24-slim-musl
+FROM bellsoft/liberica-runtime-container:jre-${JAVA_VERSION}-slim-musl
 
 ENV XDK_HOME=/opt/xdk
 ENV PATH="${XDK_HOME}/bin:${PATH}"
