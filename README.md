@@ -12,30 +12,29 @@ Ecstasy virtual machine (XVM) project.
 
 </td><td style="border: none;">
 
-Ecstasy is a new, general-purpose, programming language, designed for modern cloud architectures,
-and explicitly for the secure, serverless cloud. Actually, to be completely honest, it's the most
-amazing programming language ever. No, really, it's that awesome.
+Ecstasy is an application programming language, designed to enable modular development and long-term
+sustainability of secure, "serverless cloud" applications. Ecstasy leverages a reactive,
+event-driven, service- and fiber-based execution model within a container-based architecture to
+achieve energy-efficient, high-density, autonomically-managed deployments. In a nut-shell, Ecstasy
+is designed to be secure, easy to deploy, easy to monitor, easy to manage, and easy to evolve. 
 
 </td></tr></table>
 
-The Ecstasy project includes a development kit (XDK) that is produced out of this repository, a
-programming language specification, a core set of runtime modules (libraries), a portable,
-type-safe, and verifiable Intermediate Representation (IR), a proof-of-concept runtime (with an
-adaptive LLVM-based optimizing compiler in development), and a tool-chain with both Java and Ecstasy
-implementations being actively developed.
+The Ecstasy project includes: a development kit (the Ecstasy development kit, the "xdk") that is
+produced from this git repo; a programming language specification; a core set of runtime modules
+(libraries); a portable, type-safe, and verifiable Intermediate Representation (IR); a
+proof-of-concept interpreted runtime; a JIT compiler targeting the JVM (in development); and a
+tool-chain with both Java and Ecstasy implementations being actively developed.
 
 The Ecstasy language supports first class modules, including versioning and conditionality; first
 class functions, including currying and partial application; type-safe object orientation,
 including support for auto-narrowing types, type-safe covariance, mixins, and duck-typed interfaces;
-complete type inference; first class immutable types; first class asynchronous services, including
+type inference; first class deeply-immutable types; first class asynchronous services, including
 both automatic `async/await`-style and promises-based (`@Future`) programming models; and first
 class software containers, including resource injection and transitively-closed, immutable type
 systems. _And much, much more._
 
-Read more
-at [https://xtclang.blogspot.com/](https://xtclang.blogspot.com/2016/11/welcome-to-ecstasy-language-first.html)
-
-Follow us on Twitter [@xtclang](https://twitter.com/xtclang)
+Read more at: [https://github.com/xtclang/xvm/wiki](https://github.com/xtclang/xvm/wiki)
 
 Find out more about [how you can contribute to Ecstasy](CONTRIBUTING.md).
 
@@ -50,19 +49,21 @@ And please respect our [code of conduct](CODE_OF_CONDUCT.md) and each other.
 Homebrew provides continuously updated `xdk-latest` builds from our CI pipeline:
 
 ```bash
-# Install Homebrew if not available: https://brew.sh/
+# Install Homebrew if you have not already done so: https://brew.sh/
 brew tap xtclang/xvm && brew install xdk-latest
 # Upgrade to latest CI build:
 brew update && brew upgrade xdk-latest
 ```
 
-Note: Homebrew delivers CI snapshots for development. Each snapshot gets a unique timestamp-based version (e.g., `0.4.4-SNAPSHOT.20250831181403`) ensuring `brew upgrade` detects newer builds correctly. Stable releases will be available through other package managers.
+Note: Homebrew delivers CI snapshots for development. Each snapshot gets a unique timestamp-based
+version (e.g., `0.4.4-SNAPSHOT.20250831181403`) ensuring `brew update && brew upgrade xdk-latest`
+detects newer builds correctly. Stable releases will be available through other package managers.
 
 #### How Snapshot Releases Work
 
 Our CI system maintains a single, continuously updated snapshot release:
 
-- **Release Name**: `XDK Latest Snapshot`  
+- **Release Name**: `XDK Latest Snapshot`
 - **GitHub Tag**: `xdk-latest-snapshot`
 - **Download URL**: `https://github.com/xtclang/xvm/releases/download/xdk-latest-snapshot/xdk-0.4.4-SNAPSHOT.zip`
 
@@ -80,7 +81,7 @@ This ensures:
 
 #### Snapshots vs. Stable Releases
 
-**Current Status**: XTC is currently in active development using snapshot versioning (e.g., `0.4.4-SNAPSHOT`). 
+**Current Status**: XTC is currently in active development using snapshot versioning (e.g., `0.4.4-SNAPSHOT`).
 
 **Snapshots in Maven Ecosystem**:
 - **Snapshots** (`*-SNAPSHOT`) are development builds that can change frequently
@@ -102,7 +103,7 @@ Our continuous integration system automatically maintains the Homebrew tap to en
 
 **Pipeline Overview**:
 1. **Build & Test**: On every push to `master`, CI builds and verifies the XDK across multiple platforms
-2. **Snapshot Release**: Creates/updates the `xdk-latest-snapshot` GitHub release with the XDK distribution ZIP  
+2. **Snapshot Release**: Creates/updates the `xdk-latest-snapshot` GitHub release with the XDK distribution ZIP
 3. **Homebrew Update**: Automatically updates the [xtclang/homebrew-xvm](https://github.com/xtclang/homebrew-xvm) tap with the new release
 4. **Docker Images**: Builds and pushes multi-platform Docker images to `ghcr.io/xtclang/xvm`
 
@@ -110,7 +111,7 @@ Our continuous integration system automatically maintains the Homebrew tap to en
 
 The CI pipeline automatically maintains the Homebrew formula in the [xtclang/homebrew-xvm](https://github.com/xtclang/homebrew-xvm) repository:
 
-- **Formula Path**: `Formula/xdk-latest.rb` 
+- **Formula Path**: `Formula/xdk-latest.rb`
 - **Auto-generated**: Version, SHA256, download URL are computed automatically
 - **Java Dependency**: Dynamically sourced from `xdk.properties` (`org.xtclang.java.jdk=24`)
 - **Branch Configuration**: Controlled by GitHub variable `HOMEBREW_TAP_BRANCH` (currently: `lagergren/brew-tap`)
@@ -156,7 +157,7 @@ docker run -it --rm -v $(pwd):/workspace xtclang/xdk:latest bash
 **Platform Support**: The XDK Docker image is a Linux-based multiplatform image supporting both `linux/amd64` and `linux/arm64` architectures. This covers all modern hardware:
 
 - **macOS**: Runs natively on Apple Silicon (arm64) and Intel Macs (amd64)
-- **Windows**: Runs via WSL2 on both Intel/AMD (amd64) and ARM processors 
+- **Windows**: Runs via WSL2 on both Intel/AMD (amd64) and ARM processors
 - **Linux**: Runs natively on x86_64 and ARM64 systems
 
 Docker automatically selects the native platform matching your CPU architecture for optimal performance. In rare cases where native support isn't available, Docker will use QEMU emulation (which will be slower but functional).
@@ -192,9 +193,9 @@ IntelliJ IDEA provides Docker integration but doesn't use devcontainers directly
 
 1. **Docker Plugin**: Install the Docker plugin in IntelliJ IDEA
 2. **Docker Run Configuration**: Create a run configuration using the XDK Docker image:
-   - Image: `xtclang/xdk:latest`
-   - Bind mounts: Map your project directory to `/workspace`
-   - Working directory: `/workspace`
+    - Image: `xtclang/xdk:latest`
+    - Bind mounts: Map your project directory to `/workspace`
+    - Working directory: `/workspace`
 3. **Docker Compose** (alternative): Create a `docker-compose.yml`:
    ```yaml
    version: '3.8'
@@ -294,27 +295,27 @@ The project provides two main distribution variants:
 #### Installation Tasks (creates local installations):
 
 1. **`./gradlew xdk:installDist`** - **Recommended** default installation with cross-platform shell script launchers
-   - **Output**: `xdk/build/install/xdk/` 
-   - **Contents**: Cross-platform script launchers (`xec`, `xcc`, `xec.bat`, `xcc.bat`)
-   - **Ready to use**: Just add `bin/` to your PATH - no configuration needed
+    - **Output**: `xdk/build/install/xdk/`
+    - **Contents**: Cross-platform script launchers (`xec`, `xcc`, `xec.bat`, `xcc.bat`)
+    - **Ready to use**: Just add `bin/` to your PATH - no configuration needed
 
 2. **`./gradlew xdk:installWithLaunchersDist`** - Platform-specific native binary launchers
-   - **Output**: `xdk/build/install/xdk-native-{os}_{arch}/` (e.g., `xdk-native-linux_amd64/`)
-   - **Contents**: Platform-specific native binary launchers (`xec`, `xcc`)  
-   - **Ready to use**: Just add `bin/` to your PATH - no configuration needed
+    - **Output**: `xdk/build/install/xdk-native-{os}_{arch}/` (e.g., `xdk-native-linux_amd64/`)
+    - **Contents**: Platform-specific native binary launchers (`xec`, `xcc`)
+    - **Ready to use**: Just add `bin/` to your PATH - no configuration needed
 
 
 #### Archive Tasks (creates distributable archives):
 
 1. **`./gradlew xdk:distZip`** / **`./gradlew xdk:distTar`** - **Recommended** default archives with cross-platform script launchers
-   - **Output**: `xdk-{version}.zip` / `xdk-{version}.tar.gz`
-   - **Contents**: Cross-platform script launchers (`xec`, `xcc`, `xec.bat`, `xcc.bat`)
-   - **Ready to use**: Extract and add `bin/` to PATH
+    - **Output**: `xdk-{version}.zip` / `xdk-{version}.tar.gz`
+    - **Contents**: Cross-platform script launchers (`xec`, `xcc`, `xec.bat`, `xcc.bat`)
+    - **Ready to use**: Extract and add `bin/` to PATH
 
-2. **`./gradlew xdk:withLaunchersDistZip`** / **`./gradlew xdk:withLaunchersDistTar`** - Platform-specific native binary launchers  
-   - **Output**: `xdk-{version}-native-{os}_{arch}.zip` / `xdk-{version}-native-{os}_{arch}.tar.gz`
-   - **Contents**: Platform-specific native launchers (`xec`, `xcc`)
-   - **Ready to use**: Extract and add `bin/` to PATH
+2. **`./gradlew xdk:withLaunchersDistZip`** / **`./gradlew xdk:withLaunchersDistTar`** - Platform-specific native binary launchers
+    - **Output**: `xdk-{version}-native-{os}_{arch}.zip` / `xdk-{version}-native-{os}_{arch}.tar.gz`
+    - **Contents**: Platform-specific native launchers (`xec`, `xcc`)
+    - **Ready to use**: Extract and add `bin/` to PATH
 
 
 #### Distribution Differences
@@ -325,14 +326,14 @@ The project provides two main distribution variants:
 - ✅ **Recommended for all users**
 
 **Native Launcher Distribution** (`withLaunchers*`):
-- ✅ Platform-specific native binary launchers (`xec`, `xcc`)  
+- ✅ Platform-specific native binary launchers (`xec`, `xcc`)
 - ✅ Ready to use immediately - just add `bin/` to your PATH
 - ℹ️ **Alternative for specific platform requirements**
 
 The archive tasks produce the same XDK installation content as their corresponding installation tasks, but package them as ZIP and tar.gz files in the `xdk/build/distributions/` directory. These archives are suitable for distribution and deployment to other systems.
 
 **Example archive filenames** (for version `0.4.4-SNAPSHOT`):
-- `xdk-0.4.4-SNAPSHOT.zip` - **Default**: Cross-platform script launchers  
+- `xdk-0.4.4-SNAPSHOT.zip` - **Default**: Cross-platform script launchers
 - `xdk-0.4.4-SNAPSHOT-native-macos_arm64.zip` - macOS ARM64 native launchers
 
 ### Quick Development Setup
@@ -390,8 +391,8 @@ After running any install task, you'll find:
 - **`lib/`** - Core Ecstasy modules (`ecstasy.xtc`, `collections.xtc`, etc.)
 - **`javatools/`** - Java-based toolchain (`javatools.jar`, bridge modules)
 - **`bin/`** - Executable launchers (if using launcher variants)
-  - `xec` - Ecstasy code runner
-  - `xcc` - Ecstasy compiler
+    - `xec` - Ecstasy code runner
+    - `xcc` - Ecstasy compiler
 
 The difference between `build` and `installDist` is that `build` creates all the necessary artifacts but leaves them in their individual project build directories, while `installDist` assembles everything into a unified, deployable XDK structure ready for use.
 
@@ -561,7 +562,7 @@ branches.
 
 ## Status
 
-Version 0.4. That's way _before_ version 1.0. In other words, Ecstasy is about as mature as 
+Version 0.4. That's way _before_ version 1.0. In other words, Ecstasy is about as mature as
 Windows 3.1 was.
 
 **Warning:** The Ecstasy project is not yet certified for production use. This is a large and
@@ -715,9 +716,9 @@ Or do the equivalent actions manually:
 3) Delete the `$GRADLE_USER_HOME/cache` and `$GRADLE_USER_HOME/daemons` directories. *NOTE: this invalidates
    caches for all Gradle builds on your current system, and rebuilds a new Gradle version.*
 4) Run `git clean -xfd` in your build root. Note that this may also delete any IDE configuration that resides
-  in your build. You may want to preserve e.g. the `.idea` directory, and then you can do `git clean -xfd -e .idea`
-  or perform a dry run `git clean -xfdn`, to see what will be deleted. Note that if you are at this level of
-  purging stuff, it's likely a bad idea to hang on to your IDE state anyway.
+   in your build. You may want to preserve e.g. the `.idea` directory, and then you can do `git clean -xfd -e .idea`
+   or perform a dry run `git clean -xfdn`, to see what will be deleted. Note that if you are at this level of
+   purging stuff, it's likely a bad idea to hang on to your IDE state anyway.
 
 ## Debugging the build
 
@@ -773,14 +774,14 @@ To see the list of available tasks for the XDK build, use:
 
 Remember to run `clean` and the publish task separately due to our composite build architecture.
 
-The group and version of the current XDK build and the XTC Plugin are currently defined in 
-the properties file "version.properties". Here, we define the version of the current XDK 
+The group and version of the current XDK build and the XTC Plugin are currently defined in
+the properties file "version.properties". Here, we define the version of the current XDK
 and XTC Plugin, as well as their group. The default behavior is to only define the XDK, since
 at this point, the Plugin, while decoupled, tracks and maps to the XDK version pretty much 1-1.
 This can be taken apart with different semantic versioning, should we need to. Nothing is assuming
 the plugin has the same version or group as the XDK. It's just convenient for time being.
 
-The file `gradle/libs.versions.toml` contains all internal and external by-artifact version 
+The file `gradle/libs.versions.toml` contains all internal and external by-artifact version
 dependencies to the XDK project. If you need to add a new plugin, library, or bundle, always define
 its details in this version catalog, and nowhere else. The XDK build logic, will dynamically plugin
 in values for the XDK and XTC Plugin artifacts that will be used only as references outside this file.
@@ -789,10 +790,10 @@ in values for the XDK and XTC Plugin artifacts that will be used only as referen
 similar framework.
 
 Typically, the project version of anything that is unreleased should be "x.y.z-SNAPSHOT", and the first
-action after tagging and uploading a release of the XDK, is usually changing the release version in 
-"VERSION" in the xvm repository root, and (if the plugin is versioned separately, optionally in "plugin/VERSION") 
-both by incrementing the micro version, and by adding a SNAPSHOT suffix. You  will likely find yourself 
-working in branches that use SNAPSHOT versions until they have made it into a release train. The CI/CD 
+action after tagging and uploading a release of the XDK, is usually changing the release version in
+"VERSION" in the xvm repository root, and (if the plugin is versioned separately, optionally in "plugin/VERSION")
+both by incrementing the micro version, and by adding a SNAPSHOT suffix. You  will likely find yourself
+working in branches that use SNAPSHOT versions until they have made it into a release train. The CI/CD
 pipeline can very likely handle this automatically.
 
 ## Bleeding Edge for Developers
@@ -816,19 +817,19 @@ of the workflow for adding XTC releases is described [here](https://www.baeldung
 
 We plan to move to an automatic release model in the very near future, utilizing JRelease
 (and JPackage to generate our binary launchers). As an XTC/XDK developer, you do not have
-to understand all the details of the release model. The somewhat incomplete and rather 
+to understand all the details of the release model. The somewhat incomplete and rather
 manual release mode is current described here for completeness. It will soon be replaced
 with something familiar.
 
 ### XDK Platform Releases
 
-1) Take the current version of master and create a release branch. 
+1) Take the current version of master and create a release branch.
 2) Set the VERSION in the release branch project root to reflect the version of the release.
-Typically an ongoing development branch will be a "-SNAPSHOT" suffixed release, but not
-an official XTC release, which just has a group:name:version number
+   Typically an ongoing development branch will be a "-SNAPSHOT" suffixed release, but not
+   an official XTC release, which just has a group:name:version number
 3) Build, tag and add the release using the GitHub release plugin.
 
-### XDK Platform Publishing 
+### XDK Platform Publishing
 
 We have verified credentials for artifacts with the group "org.xtclang" at the best known
 community portals, and will start publishing there, as soon as we have an industrial
@@ -837,7 +838,7 @@ strength release model completed.
 The current semi-manual process looks like this:
 
 1) ./gradlew publish to build the artifacts and verify they work. This will publish the artifacts
-to a local repositories and the XTC GitHub org repository. 
+   to a local repositories and the XTC GitHub org repository.
 2) To publish the plugin to Gradle Plugin Portal: ./gradlew :plugin:publishPlugins (publish the plugin to gradlePortal)
 3) To publish the XDK distro to Maven Central: (... TODO ... )
 
@@ -856,7 +857,7 @@ repositories {
 ```
 
 or by simply publishing the XDK and XDK Plugin to your mavenLocal repository, and adding
-that to the configuration of your XTC project, if it's not there already: 
+that to the configuration of your XTC project, if it's not there already:
 
 ```
 repositories {
@@ -872,13 +873,13 @@ understand if we cannot respond to every e-mail. Thank you.
 
 ## Appendix: Gradle fundamentals
 
-We have tried very hard to create an easy-to-use build system based on industry standards 
-and expected behavior. These days, most software is based on the Maven/Gradle model, which 
-provides repositories of semantically versioned artifacts, cached incremental builds and 
+We have tried very hard to create an easy-to-use build system based on industry standards
+and expected behavior. These days, most software is based on the Maven/Gradle model, which
+provides repositories of semantically versioned artifacts, cached incremental builds and
 mature support for containerization.
 
 The principle of least astonishment permeates the philosophy behind the entire build system.
-This means that a modern developer, should be immediately familiar with how to build and run 
+This means that a modern developer, should be immediately familiar with how to build and run
 the XDK project, i.e. clone it from GitHub and execute "./gradlew build". It should also
 import complaint free, and with dependency chains understood by any IDE that has support
 for Gradle projects. "It should just work", out of the box, and should look familiar to any
@@ -886,43 +887,43 @@ developer with basic experience as a Gradle user. Nothing should require more th
 command like to build or execute the system or anything built on top of it.
 
 Implementing language support for an alien language on top of Gradle, however, is a fairly
-complex undertaking, and requires deeper knowledge of the Gradle architecture. It is 
-our firm belief, though, that the user should not have to drill down to these levels, unless he/she 
-specifically wants to. As it is, any open source developer today still needs to grasp some basic 
-fundamentals about artifacts and the Gradle build system. This is not just our assumption; it is 
-actually industry-wide. 
+complex undertaking, and requires deeper knowledge of the Gradle architecture. It is
+our firm belief, though, that the user should not have to drill down to these levels, unless he/she
+specifically wants to. As it is, any open source developer today still needs to grasp some basic
+fundamentals about artifacts and the Gradle build system. This is not just our assumption; it is
+actually industry-wide.
 
-We believe the following concepts are necessary to understand, in order to work with XDK 
+We believe the following concepts are necessary to understand, in order to work with XDK
 projects or the XDK. None of them are at all specific to XTC:
 
-* The concept of "gradlew" and "mvnw" (or "gradlew.bat" and "mvnw.bat" on Windows) wrappers, 
-  and why it should ALWAYS be used instead of a "gradle" binary on the local system, for any 
+* The concept of "gradlew" and "mvnw" (or "gradlew.bat" and "mvnw.bat" on Windows) wrappers,
+  and why it should ALWAYS be used instead of a "gradle" binary on the local system, for any
   repository that ships it with its build.
 * The concept of a versioned Maven artifact, and that its descriptor "group:artifactId:version"
   is its "global address", no matter how it is resolved on the lower abstraction layer.
 * The concept of release vs snapshot artifact versions in the Maven model.
-* The concept of local (mostly mavenLocal()) and remote artifact repositories, and how they are used 
+* The concept of local (mostly mavenLocal()) and remote artifact repositories, and how they are used
   by a maven build.
 * The concept of the Maven/Gradle build lifecycle, its fundamental tasks, and how they depend
-  on each other ("clean", "assemble", "build" and "check"). 
+  on each other ("clean", "assemble", "build" and "check").
 * The concept of the Gradle/Maven cache, build daemons, and why "clean" is not what you think  
   of as "clean" in a C++ Makefile and why is it often better not to use it, in a cached, incrementally
   built Gradle project.
-* The concept of Maven/Gradle source sets, like "main", "resources" and "test". 
-* The concept of a Gradle build scan, and understanding how to inspect it and how to use it to 
+* The concept of Maven/Gradle source sets, like "main", "resources" and "test".
+* The concept of a Gradle build scan, and understanding how to inspect it and how to use it to
   spot build issues.
 * The standard flags that can be used to control Gradle debug log levels, --info, -q, --stacktrace
   and so on.
 * The concept of goal of self-contained software, which specifies its complete dependencies
-  as part of its source controlled configuration. 
-  1) On the Maven model level, this means semantically versioned Maven artifacts. 
-  2) On the software build and execution level, this also means specific versions of external
-    pieces of software, for example Java, NodeJS or Yarn. This also means that we CAN and SHOULD
-    always be able to containerize for development purposes.
+  as part of its source controlled configuration.
+    1) On the Maven model level, this means semantically versioned Maven artifacts.
+    2) On the software build and execution level, this also means specific versions of external
+       pieces of software, for example Java, NodeJS or Yarn. This also means that we CAN and SHOULD
+       always be able to containerize for development purposes.
 
 Today, it is pretty safe to assume that most open source developers who has worked on any Gradle
 or Maven based project has at least the most important parts of the above knowledge.
-We have spent significant architectural effort to ensure that an adopter who wants to become an 
+We have spent significant architectural effort to ensure that an adopter who wants to become an
 XTC or XDK user or developer does not need to acquire *any* knowledge that is
 more domain specific than concepts listed above. None of these concepts are specific to the
 XTC platform, but should be familiar to most software developers who have worked on projects
