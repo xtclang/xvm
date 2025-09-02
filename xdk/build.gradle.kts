@@ -89,9 +89,12 @@ private fun stripVersionFromJarName(jarName: String): String {
     return jarName.replace(Regex("(.*)\\-${Regex.escape(semanticVersion.artifactVersion)}\\.jar"), "$1.jar")
 }
 
-// Resolve XDK properties once at script level
+// Resolve XDK properties once at script level to avoid configuration cache issues
 val enablePreview = getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)
 val enableNativeAccess = getXdkPropertyBoolean("org.xtclang.java.enableNativeAccess", false)
+
+// Capture configuration values at configuration time for configuration cache compatibility
+val javaToolsJars = configurations.xdkJavaTools.get().files
 
 // Configure application plugin to create multiple scripts instead of default single script
 application {
@@ -134,7 +137,7 @@ tasks.startScripts {
             if (scriptFile.exists()) {
                 var content = scriptFile.readText()
                 // Replace each jar in the classpath with its version-stripped equivalent
-                configurations.xdkJavaTools.get().forEach { jar ->
+                javaToolsJars.forEach { jar ->
                     val originalName = jar.name
                     val strippedName = stripVersionFromJarName(originalName)
                     content = XdkDistribution.replaceJarPaths(content, originalName, strippedName)
