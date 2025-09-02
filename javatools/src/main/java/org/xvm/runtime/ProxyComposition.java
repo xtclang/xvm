@@ -13,121 +13,102 @@ import org.xvm.runtime.template.Proxy;
  * ProxyComposition represents a Proxy object.
  */
 public class ProxyComposition
-        extends DelegatingComposition
-    {
+        extends DelegatingComposition {
     /**
      * Construct the ProxyComposition for a given "inception" composition and a "proxy" type.
      */
-    public ProxyComposition(TypeComposition clzOrigin, TypeConstant typeProxy)
-        {
+    public ProxyComposition(TypeComposition clzOrigin, TypeConstant typeProxy) {
         super(clzOrigin);
 
         f_typeProxy = typeProxy;
-        }
+    }
 
     /**
      * @return the original ("inception") composition
      */
-    public TypeComposition getOrigin()
-        {
+    public TypeComposition getOrigin() {
         return f_clzOrigin;
-        }
+    }
 
     @Override
-    public OpSupport getSupport()
-        {
+    public OpSupport getSupport() {
         return Proxy.INSTANCE;
-        }
+    }
 
     @Override
-    public ClassTemplate getTemplate()
-        {
+    public ClassTemplate getTemplate() {
         return Proxy.INSTANCE;
-        }
+    }
 
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return f_typeProxy;
-        }
+    }
 
     @Override
-    public TypeConstant getInceptionType()
-        {
+    public TypeConstant getInceptionType() {
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
-    public TypeConstant getBaseType()
-        {
+    public TypeConstant getBaseType() {
         return f_typeProxy;
-        }
+    }
 
     @Override
-    public ProxyComposition maskAs(TypeConstant type)
-        {
+    public ProxyComposition maskAs(TypeConstant type) {
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
-    public TypeComposition revealAs(TypeConstant type)
-        {
+    public TypeComposition revealAs(TypeConstant type) {
         return f_clzOrigin.revealAs(type);
-        }
+    }
 
     @Override
-    public ObjectHandle ensureOrigin(ObjectHandle handle)
-        {
+    public ObjectHandle ensureOrigin(ObjectHandle handle) {
         return handle;
-        }
+    }
 
     @Override
-    public ObjectHandle ensureAccess(ObjectHandle handle, Access access)
-        {
+    public ObjectHandle ensureAccess(ObjectHandle handle, Access access) {
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
-    public ProxyComposition ensureAccess(Access access)
-        {
+    public ProxyComposition ensureAccess(Access access) {
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
-    public boolean isStruct()
-        {
+    public boolean isStruct() {
         return false;
-        }
+    }
 
     @Override
-    public boolean isConst()
-        {
+    public boolean isConst() {
         return true;
-        }
+    }
 
     @Override
-    public boolean isInstanceChild()
-        {
+    public boolean isInstanceChild() {
         return false;
-        }
+    }
 
     @Override
-    public MethodStructure ensureAutoInitializer()
-        {
+    public MethodStructure ensureAutoInitializer() {
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
-    public ObjectHandle[] initializeStructure()
-        {
+    public ObjectHandle[] initializeStructure() {
         return Utils.OBJECTS_NONE;
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return "Proxy: " + f_clzOrigin.toString() + " as " + f_typeProxy.getValueString();
-        }
+    }
 
 
     // ----- data fields ---------------------------------------------------------------------------
@@ -136,4 +117,4 @@ public class ProxyComposition
      * The revealed (proxying) type.
      */
     private final TypeConstant f_typeProxy;
-    }
+}

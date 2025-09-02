@@ -29,96 +29,80 @@ import org.xvm.runtime.template.xBoolean;
  * Native OSDirectory implementation.
  */
 public class xOSDirectory
-        extends xOSFileNode
-    {
+        extends xOSFileNode {
     public static xOSDirectory INSTANCE;
 
-    public xOSDirectory(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xOSDirectory(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         markNativeMethod("deleteRecursively", null, null);
         markNativeMethod("watchRecursively", null, null);
 
         invalidateTypeInfo();
 
         s_constructor = getStructure().findConstructor();
-        }
+    }
 
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle hArg, int iReturn)
-        {
+                             ObjectHandle hArg, int iReturn) {
         NodeHandle hNode = (NodeHandle) hTarget;
 
-        switch (method.getName())
-            {
-            case "watchRecursively":  // (FileWatcher)
-                // TODO GG
-                throw new UnsupportedOperationException("watchRecursively");
-            }
+        switch (method.getName()) {
+        case "watchRecursively":  // (FileWatcher)
+            // TODO GG
+            throw new UnsupportedOperationException("watchRecursively");
+        }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
-        }
+    }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
+                             ObjectHandle[] ahArg, int iReturn) {
         NodeHandle hNode = (NodeHandle) hTarget;
 
-        switch (method.getName())
-            {
-            case "deleteRecursively":
-                {
-                Path pathDir = hNode.f_path;
-                File file    = pathDir.toFile();
-                if (!file.isDirectory())
-                    {
-                    return frame.assignValue(iReturn, xBoolean.FALSE);
-                    }
-
-                try
-                    {
-                    Files.walkFileTree(pathDir,
-                        new SimpleFileVisitor<>()
-                            {
-                            @Override
-                            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
-                                    throws IOException
-                               {
-                               Files.delete(file);
-                               return FileVisitResult.CONTINUE;
-                               }
-
-                           @Override
-                           public FileVisitResult postVisitDirectory(Path dir, IOException exc)
-                                    throws IOException
-                               {
-                               Files.delete(dir);
-                               return FileVisitResult.CONTINUE;
-                               }
-                        });
-                    return frame.assignValue(iReturn, xBoolean.TRUE);
-                    }
-                catch (IOException e)
-                    {
-                    return raisePathException(frame, e, hNode.f_path);
-                    }
-                }
+        switch (method.getName()) {
+        case "deleteRecursively": {
+            Path pathDir = hNode.f_path;
+            File file    = pathDir.toFile();
+            if (!file.isDirectory()) {
+                return frame.assignValue(iReturn, xBoolean.FALSE);
             }
 
-        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+            try {
+                Files.walkFileTree(pathDir,
+                    new SimpleFileVisitor<>() {
+                        @Override
+                        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+                                throws IOException {
+                           Files.delete(file);
+                           return FileVisitResult.CONTINUE;
+                       }
+
+                       @Override
+                       public FileVisitResult postVisitDirectory(Path dir, IOException exc)
+                                throws IOException {
+                           Files.delete(dir);
+                           return FileVisitResult.CONTINUE;
+                       }
+                });
+                return frame.assignValue(iReturn, xBoolean.TRUE);
+            } catch (IOException e) {
+                return raisePathException(frame, e, hNode.f_path);
+            }
         }
+        }
+
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+    }
 
     /**
      * Construct a new {@link NodeHandle} representing the specified directory.
@@ -130,8 +114,7 @@ public class xOSDirectory
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
-    public int createHandle(Frame frame, ObjectHandle hOSStore, Path path, int iReturn)
-        {
+    public int createHandle(Frame frame, ObjectHandle hOSStore, Path path, int iReturn) {
         TypeComposition clz = ensureClass(frame.f_context.f_container,
                                     getCanonicalType(), frame.poolContext().typeDirectory());
 
@@ -140,10 +123,10 @@ public class xOSDirectory
         ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
 
         return proceedConstruction(frame, s_constructor, true, hStruct, ahVar, iReturn);
-        }
+    }
 
 
     // ----- constants -----------------------------------------------------------------------------
 
     private static MethodStructure s_constructor;
-    }
+}

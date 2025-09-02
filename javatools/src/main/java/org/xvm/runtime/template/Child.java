@@ -20,100 +20,85 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
  * Native functionality for instance child classes.
  */
 public class Child
-        extends xObject
-    {
-    public Child(Container container, ClassStructure structure)
-        {
+        extends xObject {
+    public Child(Container container, ClassStructure structure) {
         super(container, structure, false);
 
         assert structure.isInstanceChild();
-        }
+    }
 
     @Override
-    public void initNative()
-        {
-        }
+    public void initNative() {
+    }
 
     @Override
-    public int invoke1(Frame frame, CallChain chain, ObjectHandle hChild, ObjectHandle[] ahVar, int iReturn)
-        {
+    public int invoke1(Frame frame, CallChain chain, ObjectHandle hChild, ObjectHandle[] ahVar, int iReturn) {
         ServiceHandle hService = hChild.getService();
         return hService == null || hService.f_context == frame.f_context || chain.isAtomic()
             ? super.invoke1(frame, chain, hChild, ahVar, iReturn)
             : makeAsyncHandle(hChild, chain).call1(frame, hService, ahVar, iReturn);
-        }
+    }
 
     @Override
-    public int invokeN(Frame frame, CallChain chain, ObjectHandle hChild, ObjectHandle[] ahVar, int[] aiReturn)
-        {
+    public int invokeN(Frame frame, CallChain chain, ObjectHandle hChild, ObjectHandle[] ahVar, int[] aiReturn) {
         ServiceHandle hService = hChild.getService();
         return hService == null || hService.f_context == frame.f_context || chain.isAtomic()
             ? super.invokeN(frame, chain, hChild, ahVar, aiReturn)
             : makeAsyncHandle(hChild, chain).callN(frame, hService, ahVar, aiReturn);
-        }
+    }
 
     @Override
-    public int invokeT(Frame frame, CallChain chain, ObjectHandle hChild, ObjectHandle[] ahVar, int iReturn)
-        {
+    public int invokeT(Frame frame, CallChain chain, ObjectHandle hChild, ObjectHandle[] ahVar, int iReturn) {
         ServiceHandle hService = hChild.getService();
         return hService == null || hService.f_context == frame.f_context || chain.isAtomic()
             ? super.invokeT(frame, chain, hChild, ahVar, iReturn)
             : makeAsyncHandle(hChild, chain).callT(frame, hService, ahVar, iReturn);
-        }
+    }
 
     @Override
-    public int getPropertyValue(Frame frame, ObjectHandle hChild, PropertyConstant idProp, int iReturn)
-        {
+    public int getPropertyValue(Frame frame, ObjectHandle hChild, PropertyConstant idProp, int iReturn) {
         ServiceHandle hService = hChild.getService();
         return hService == null || hService.f_context == frame.f_context || hChild.isAtomic(idProp)
             ? super.getPropertyValue(frame, hChild, idProp, iReturn)
             : hService.f_context.sendProperty01Request(frame, hChild, idProp, iReturn, super::getPropertyValue);
-        }
+    }
 
     @Override
-    public int getFieldValue(Frame frame, ObjectHandle hChild, PropertyConstant idProp, int iReturn)
-        {
+    public int getFieldValue(Frame frame, ObjectHandle hChild, PropertyConstant idProp, int iReturn) {
         ServiceHandle hService = hChild.getService();
-        if (hService == null || hService.f_context == frame.f_context || hChild.isAtomic(idProp))
-            {
+        if (hService == null || hService.f_context == frame.f_context || hChild.isAtomic(idProp)) {
             return super.getFieldValue(frame, hChild, idProp, iReturn);
-            }
-        throw new IllegalStateException("Invalid context");
         }
+        throw new IllegalStateException("Invalid context");
+    }
 
     @Override
     public int setPropertyValue(Frame frame, ObjectHandle hChild, PropertyConstant idProp,
-                                ObjectHandle hValue)
-        {
+                                ObjectHandle hValue) {
         ServiceHandle hService = hChild.getService();
         return hService == null || hService.f_context == frame.f_context || hChild.isAtomic(idProp)
             ? super.setPropertyValue(frame, hChild, idProp, hValue)
             : hService.f_context.sendProperty10Request(frame, hChild, idProp, hValue, super::setPropertyValue);
-        }
+    }
 
     @Override
     public int setFieldValue(Frame frame, ObjectHandle hChild, PropertyConstant idProp,
-                             ObjectHandle hValue)
-        {
+                             ObjectHandle hValue) {
         ServiceHandle hService = hChild.getService();
 
-        if (hService == null || hService.f_context == frame.f_context || hChild.isAtomic(idProp))
-            {
+        if (hService == null || hService.f_context == frame.f_context || hChild.isAtomic(idProp)) {
             return super.setFieldValue(frame, hChild, idProp, hValue);
-            }
+        }
 
         throw new IllegalStateException("Invalid context");
-        }
-
-    private FunctionHandle makeAsyncHandle(ObjectHandle hChild, CallChain chain)
-        {
-        return new AsyncHandle(hChild.getComposition().getContainer(), chain)
-            {
-            @Override
-            protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService)
-                {
-                return hChild;
-                }
-            };
-        }
     }
+
+    private FunctionHandle makeAsyncHandle(ObjectHandle hChild, CallChain chain) {
+        return new AsyncHandle(hChild.getComposition().getContainer(), chain) {
+            @Override
+            protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService) {
+                return hChild;
+            }
+        };
+    }
+}

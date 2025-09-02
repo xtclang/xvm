@@ -30,23 +30,19 @@ import org.xvm.runtime.template.text.xString;
  * Native MethodTemplate implementation.
  */
 public class xRTMethodTemplate
-        extends xRTComponentTemplate
-    {
+        extends xRTComponentTemplate {
     public static xRTMethodTemplate INSTANCE;
 
-    public xRTMethodTemplate(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTMethodTemplate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         markNativeProperty("annotations");
         markNativeProperty("hasCode");
         markNativeProperty("parameterCount");
@@ -56,48 +52,44 @@ public class xRTMethodTemplate
         markNativeMethod("getReturn", INT, null);
 
         super.initNative();
-        }
+    }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         ComponentTemplateHandle hMethod = (ComponentTemplateHandle) hTarget;
-        switch (sPropName)
-            {
-            case "annotations":
-                return getPropertyAnnotations(frame, hMethod, iReturn);
+        switch (sPropName) {
+        case "annotations":
+            return getPropertyAnnotations(frame, hMethod, iReturn);
 
-            case "hasCode":
-                return getPropertyHasCode(frame, hMethod, iReturn);
+        case "hasCode":
+            return getPropertyHasCode(frame, hMethod, iReturn);
 
-            case "parameterCount":
-                return frame.assignValue(iReturn,
-                                         xInt64.makeHandle(((MethodStructure) hMethod.getComponent()).getParamCount()));
+        case "parameterCount":
+            return frame.assignValue(iReturn,
+                                     xInt64.makeHandle(((MethodStructure) hMethod.getComponent()).getParamCount()));
 
-            case "returnCount":
-                return frame.assignValue(iReturn,
-                                         xInt64.makeHandle(((MethodStructure) hMethod.getComponent()).getReturnCount()));
-            }
+        case "returnCount":
+            return frame.assignValue(iReturn,
+                                     xInt64.makeHandle(((MethodStructure) hMethod.getComponent()).getReturnCount()));
+        }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
+    }
 
     @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                              ObjectHandle[] ahArg, int[] aiReturn)
-        {
+                              ObjectHandle[] ahArg, int[] aiReturn) {
         ComponentTemplateHandle hMethod = (ComponentTemplateHandle) hTarget;
-        switch (method.getName())
-            {
-            case "getParameter":
-                return invokeGetParameter(frame, hMethod, (JavaLong) ahArg[0], aiReturn);
+        switch (method.getName()) {
+        case "getParameter":
+            return invokeGetParameter(frame, hMethod, (JavaLong) ahArg[0], aiReturn);
 
-            case "getReturn":
-                return invokeGetReturn(frame, hMethod, (JavaLong) ahArg[0], aiReturn);
-            }
+        case "getReturn":
+            return invokeGetReturn(frame, hMethod, (JavaLong) ahArg[0], aiReturn);
+        }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
-        }
+    }
 
 
     // ----- property implementations --------------------------------------------------------------
@@ -105,8 +97,7 @@ public class xRTMethodTemplate
     /**
      * Implements property: annotations.get()
      */
-    protected int getPropertyAnnotations(Frame frame, ComponentTemplateHandle hMethod, int iReturn)
-        {
+    protected int getPropertyAnnotations(Frame frame, ComponentTemplateHandle hMethod, int iReturn) {
         MethodStructure method = (MethodStructure) hMethod.getComponent();
         Annotation[]    aAnno  = method.getAnnotations();
 
@@ -114,16 +105,15 @@ public class xRTMethodTemplate
                 ? new Utils.CreateAnnos(aAnno, iReturn).doNext(frame)
                 : frame.assignValue(iReturn,
                     Utils.makeAnnoArrayHandle(frame.f_context.f_container, Utils.OBJECTS_NONE));
-        }
+    }
 
     /**
      * Implements property: hasCode.get()
      */
-    protected int getPropertyHasCode(Frame frame, ComponentTemplateHandle hMethod, int iReturn)
-        {
+    protected int getPropertyHasCode(Frame frame, ComponentTemplateHandle hMethod, int iReturn) {
         MethodStructure method = (MethodStructure) hMethod.getComponent();
         return frame.assignValue(iReturn, xBoolean.makeHandle(method.hasCode()));
-        }
+    }
 
 
     // ----- methods implementations ---------------------------------------------------------------
@@ -134,8 +124,7 @@ public class xRTMethodTemplate
      *         getParameter(Int index)
      */
     protected int invokeGetParameter(Frame frame, ComponentTemplateHandle hMethod, JavaLong hIndex,
-                                     int[] aiReturn)
-        {
+                                     int[] aiReturn) {
         MethodStructure method = (MethodStructure) hMethod.getComponent();
 
         Parameter parameter    = method.getParam((int) hIndex.getValue());
@@ -149,26 +138,21 @@ public class xRTMethodTemplate
         ahReturn[2] = xBoolean.makeHandle(parameter.isTypeParameter());
         ahReturn[3] = xBoolean.makeHandle(fDefault);
 
-        if (fDefault)
-            {
+        if (fDefault) {
             ObjectHandle hDefault = frame.getConstHandle(parameter.getDefaultValue());
-            if (Op.isDeferred(hDefault))
-                {
-                return hDefault.proceed(frame, frameCaller ->
-                    {
+            if (Op.isDeferred(hDefault)) {
+                return hDefault.proceed(frame, frameCaller -> {
                     ahReturn[4] = frameCaller.popStack();
                     return frameCaller.assignValues(aiReturn, ahReturn);
-                    });
-                }
+                });
+            }
             ahReturn[4] = hDefault;
-            }
-        else
-            {
+        } else {
             ahReturn[4] = xNullable.NULL;
-            }
+        }
 
         return frame.assignValues(aiReturn, ahReturn);
-        }
+    }
 
     /**
      * Implements method:
@@ -176,8 +160,7 @@ public class xRTMethodTemplate
      *         getReturn(Int index)
      */
     protected int invokeGetReturn(Frame frame, ComponentTemplateHandle hMethod, JavaLong hIndex,
-                                     int[] aiReturn)
-        {
+                                     int[] aiReturn) {
         MethodStructure method = (MethodStructure) hMethod.getComponent();
 
         Parameter parameter = method.getReturn((int) hIndex.getValue());
@@ -190,7 +173,7 @@ public class xRTMethodTemplate
         ahReturn[2] = xBoolean.makeHandle(parameter.isConditionalReturn());
 
         return frame.assignValues(aiReturn, ahReturn);
-        }
+    }
 
 
     // ----- Composition caching -------------------------------------------------------------------
@@ -198,19 +181,17 @@ public class xRTMethodTemplate
     /**
      * @return the TypeComposition for an RTMethodTemplate
      */
-    public static TypeComposition ensureMethodTemplateComposition() // TODO: use the container
-        {
+    public static TypeComposition ensureMethodTemplateComposition() { // TODO: use the container
         TypeComposition clz = METHOD_TEMPLATE_COMP;
-        if (clz == null)
-            {
+        if (clz == null) {
             ClassTemplate templateRT   = INSTANCE;
             ConstantPool  pool         = templateRT.pool();
             TypeConstant  typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MethodTemplate");
             METHOD_TEMPLATE_COMP = clz = templateRT.ensureClass(templateRT.f_container, typeTemplate);
             assert clz != null;
-            }
-        return clz;
         }
+        return clz;
+    }
 
     // ----- ObjectHandle support ------------------------------------------------------------------
 
@@ -221,13 +202,12 @@ public class xRTMethodTemplate
      *
      * @return the newly created handle
      */
-    static ComponentTemplateHandle makeHandle(MethodStructure method)
-        {
+    static ComponentTemplateHandle makeHandle(MethodStructure method) {
         return new ComponentTemplateHandle(ensureMethodTemplateComposition(), method);
-        }
+    }
 
 
     // ----- constants -----------------------------------------------------------------------------
 
     private static TypeComposition METHOD_TEMPLATE_COMP;
-    }
+}

@@ -28,161 +28,137 @@ import org.xvm.runtime.template._native.collections.arrays.BitBasedDelegate.BitA
  */
 public class xRTNibbleDelegate
         extends ByteBasedDelegate
-        implements ByteView
-    {
+        implements ByteView {
     public static xRTNibbleDelegate INSTANCE;
 
-    public xRTNibbleDelegate(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTNibbleDelegate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, (byte) 0, (byte) 0xF);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         ConstantPool   pool         = pool();
         ClassStructure structNibble = (ClassStructure) pool.
                 typeNibble().getSingleUnderlyingClass(false).getComponent();
         FN_OF_INT = structNibble.findMethod("of", 1, pool.typeInt64());
         PROP_BITS = (PropertyConstant) structNibble.getChild("bits").getIdentityConstant();
-        }
+    }
 
     @Override
-    public TypeConstant getCanonicalType()
-        {
+    public TypeConstant getCanonicalType() {
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
                 pool.typeNibble());
-        }
+    }
 
     @Override
     public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cSize,
-                                         ObjectHandle[] ahContent, Mutability mutability)
-        {
+                                         ObjectHandle[] ahContent, Mutability mutability) {
         byte[] ab = new byte[storage(cSize)];
 
-        for (int i = 0, c = ahContent.length; i < c; i++)
-            {
+        for (int i = 0, c = ahContent.length; i < c; i++) {
             int nNibble = getValue((GenericHandle) ahContent[i]);
 
             // the very first call to Nibble.of(Int) initializes the "Nibble.values" array, which
             // allows as to cache every Nibble value
-            if (NIBBLES[nNibble] == null)
-                {
+            if (NIBBLES[nNibble] == null) {
                 NIBBLES[nNibble] = ahContent[i];
-                }
-            setNibble(ab, i, nNibble);
             }
-        return new NibbleArrayHandle(getCanonicalClass(), ab, cSize, mutability);
+            setNibble(ab, i, nNibble);
         }
+        return new NibbleArrayHandle(getCanonicalClass(), ab, cSize, mutability);
+    }
 
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn)
-        {
+    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
         NibbleArrayHandle hDelegate = (NibbleArrayHandle) hTarget;
         int               nNibble   = getNibble(hDelegate.m_abValue, lIndex);
 
         return assignNibble(frame, nNibble, iReturn);
-        }
+    }
 
     @Override
     protected int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
-                                       ObjectHandle hValue)
-        {
+                                       ObjectHandle hValue) {
         NibbleArrayHandle hDelegate = (NibbleArrayHandle) hTarget;
 
         long   cSize   = hDelegate.m_cSize;
         byte[] abValue = hDelegate.m_abValue;
 
-        if (lIndex >= cSize)
-            {
-            if (index(lIndex) >= abValue.length)
-                {
+        if (lIndex >= cSize) {
+            if (index(lIndex) >= abValue.length) {
                 abValue = hDelegate.m_abValue = grow(abValue, storage(lIndex + 1));
-                }
+            }
 
             hDelegate.m_cSize = lIndex + 1;
-            }
+        }
 
         setNibble(abValue, (int) lIndex, getValue((GenericHandle) hValue));
         return Op.R_NEXT;
-        }
+    }
 
     @Override
-    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex)
-        {
+    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex) {
         NibbleArrayHandle hDelegate = (NibbleArrayHandle) hTarget;
         long              cSize     = hDelegate.m_cSize;
         byte[]            abValue   = hDelegate.m_abValue;
 
-        if (storage(cSize + 1) > abValue.length)
-            {
+        if (storage(cSize + 1) > abValue.length) {
             abValue = hDelegate.m_abValue = grow(hDelegate.m_abValue, storage(cSize) + 1);
-            }
+        }
         hDelegate.m_cSize++;
 
-        if (lIndex < cSize)
-            {
-            for (long i = lIndex + 1; i < cSize; i++)
-                {
+        if (lIndex < cSize) {
+            for (long i = lIndex + 1; i < cSize; i++) {
                 setNibble(abValue, i, getNibble(abValue, i-1));
-                }
             }
-        setNibble(abValue, lIndex, getValue((GenericHandle) hElement));
         }
+        setNibble(abValue, lIndex, getValue((GenericHandle) hElement));
+    }
 
     @Override
-    protected void deleteElementImpl(DelegateHandle hTarget, long lIndex)
-        {
+    protected void deleteElementImpl(DelegateHandle hTarget, long lIndex) {
         NibbleArrayHandle hDelegate = (NibbleArrayHandle) hTarget;
         long           cSize     = hDelegate.m_cSize;
         byte[]         abValue   = hDelegate.m_abValue;
 
-        if (lIndex < cSize - 1)
-            {
-            for (long i = lIndex + 1; i < cSize; i++)
-                {
+        if (lIndex < cSize - 1) {
+            for (long i = lIndex + 1; i < cSize; i++) {
                 setNibble(abValue, i - 1, getNibble(abValue, i));
-                }
             }
-
-        setNibble(abValue, --hDelegate.m_cSize, 0);
         }
 
+        setNibble(abValue, --hDelegate.m_cSize, 0);
+    }
+
     @Override
-    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete)
-        {
+    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete) {
         NibbleArrayHandle hDelegate = (NibbleArrayHandle) hTarget;
         long              cSize     = hDelegate.m_cSize;
         byte[]            abValue   = hDelegate.m_abValue;
 
-        if (lIndex < cSize - cDelete)
-            {
-            for (long i = lIndex + cDelete; i < cSize; i++)
-                {
+        if (lIndex < cSize - cDelete) {
+            for (long i = lIndex + cDelete; i < cSize; i++) {
                 setNibble(abValue, i - cDelete, getNibble(abValue, i));
-                }
             }
-
-        for (long i = cSize - cDelete; i < cSize; i++)
-            {
-            setNibble(abValue, i, 0);
-            }
-        hDelegate.m_cSize -= cDelete;
         }
+
+        for (long i = cSize - cDelete; i < cSize; i++) {
+            setNibble(abValue, i, 0);
+        }
+        hDelegate.m_cSize -= cDelete;
+    }
 
     @Override
-    protected ObjectHandle makeElementHandle(long lValue)
-        {
+    protected ObjectHandle makeElementHandle(long lValue) {
         // we should never get here
         throw new IllegalStateException();
-        }
+    }
 
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -196,23 +172,19 @@ public class xRTNibbleDelegate
      *
      * @return Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION
      */
-    public static int assignNibble(Frame frame, int nNibble, int iReturn)
-        {
+    public static int assignNibble(Frame frame, int nNibble, int iReturn) {
         ObjectHandle hNibble = NIBBLES[nNibble];
-        if (hNibble == null)
-            {
+        if (hNibble == null) {
             ObjectHandle[] ahArg = new ObjectHandle[FN_OF_INT.getMaxVars()];
             ahArg[0] = xInt64.makeHandle(nNibble);
 
-            switch (frame.call1(FN_OF_INT, null, ahArg, Op.A_STACK))
-                {
+            switch (frame.call1(FN_OF_INT, null, ahArg, Op.A_STACK)) {
                 case Op.R_CALL:
-                    Frame.Continuation stepNext = frameCaller ->
-                        {
+                    Frame.Continuation stepNext = frameCaller -> {
                         ObjectHandle h = frameCaller.popStack();
                         NIBBLES[nNibble] = h;
                         return frameCaller.assignValue(iReturn, h);
-                        };
+                    };
                     frame.m_frameNext.addContinuation(stepNext);
                     return Op.R_CALL;
 
@@ -221,20 +193,19 @@ public class xRTNibbleDelegate
 
                 default:
                     throw new IllegalStateException();
-                }
             }
-        return frame.assignValue(iReturn, hNibble);
         }
+        return frame.assignValue(iReturn, hNibble);
+    }
 
     /**
      * @return the four-bit value contained in the natural Nibble handle
      */
-    public static int getValue(GenericHandle hNibble)
-        {
+    public static int getValue(GenericHandle hNibble) {
         ArrayHandle    haBits    = (ArrayHandle) hNibble.getField(null, PROP_BITS);
         BitArrayHandle hDelegate = (BitArrayHandle) haBits.m_hDelegate;
         return (hDelegate.m_abValue[0] & 0xF0) >>> 4;
-        }
+    }
 
     /**
      * Calculate the size of a byte array to represent a Nibble array.
@@ -243,10 +214,9 @@ public class xRTNibbleDelegate
      *
      * @return the byte array size
      */
-    private static int storage(long cNibbles)
-        {
+    private static int storage(long cNibbles) {
         return (int) ((cNibbles - 1) / 2 + 1);
-        }
+    }
 
     /**
      * Calculate an index of the specified Nibble in the byte array.
@@ -255,10 +225,9 @@ public class xRTNibbleDelegate
      *
      * @return the byte index
      */
-    private static int index(long iNibble)
-        {
+    private static int index(long iNibble) {
         return (int) (iNibble / 2);
-        }
+    }
 
     /**
      * Get a Nibble in the specified array of bytes.
@@ -268,10 +237,9 @@ public class xRTNibbleDelegate
      *
      * @return the Nibble value
      */
-    public static int getNibble(byte[] abValue, long iIndex)
-        {
+    public static int getNibble(byte[] abValue, long iIndex) {
         return ((byte) (abValue[index(iIndex)] >>> (4 * (1 - iIndex % 2)))) & 0xF;
-        }
+    }
 
     /**
      * Set or clear a Nibble in the specified array of bytes.
@@ -280,82 +248,68 @@ public class xRTNibbleDelegate
      * @param iIndex   the Nibble index
      * @param bNibble  the Nibble value
      */
-    public static void setNibble(byte[] abValue, long iIndex, int bNibble)
-        {
+    public static void setNibble(byte[] abValue, long iIndex, int bNibble) {
         int ix = index(iIndex);
 
         bNibble &= 0xF;
-        if (iIndex % 2 == 0)
-            {
+        if (iIndex % 2 == 0) {
             abValue[ix] = (byte) ((abValue[ix] & 0x0F) | (byte) (bNibble << 4));
-            }
-        else
-            {
+        } else {
             abValue[ix] = (byte) ((abValue[ix] & 0xF0) | (byte) bNibble);
-            }
         }
+    }
 
     @Override
-    public NibbleArrayHandle makeHandle(byte[] abValue, long cNibbles, Mutability mutability)
-        {
+    public NibbleArrayHandle makeHandle(byte[] abValue, long cNibbles, Mutability mutability) {
         return new NibbleArrayHandle(getCanonicalClass(), abValue, cNibbles, mutability);
-        }
+    }
 
     /**
      * The handle for Nibble array delegate.
      */
     public static class NibbleArrayHandle
-            extends ByteArrayHandle
-        {
+            extends ByteArrayHandle {
         public NibbleArrayHandle(TypeComposition clazz, byte[] abValue,
-                                 long cSize, Mutability mutability)
-            {
+                                 long cSize, Mutability mutability) {
             super(clazz, abValue, cSize, mutability);
-            }
+        }
 
         @Override
-        public long getBitCount()
-            {
+        public long getBitCount() {
             return m_cSize*4;
-            }
+        }
 
         @Override
-        protected void purgeUnusedSpace()
-            {
+        protected void purgeUnusedSpace() {
             byte[] ab = m_abValue;
             int    c  = storage(m_cSize);
-            if (ab.length != c)
-                {
+            if (ab.length != c) {
                 byte[] abNew = new byte[c];
                 System.arraycopy(ab, 0, abNew, 0, c);
                 m_abValue = abNew;
-                }
             }
+        }
 
         @Override
-        public int compareTo(ObjectHandle that)
-            {
+        public int compareTo(ObjectHandle that) {
             byte[] abThis = m_abValue;
             long   cThis  = m_cSize;
             byte[] abThat = ((NibbleArrayHandle) that).m_abValue;
             long   cThat  = ((NibbleArrayHandle) that).m_cSize;
 
-            if (cThis != cThat)
-                {
+            if (cThis != cThat) {
                 return (int) (cThis - cThat);
-                }
-
-            for (int i = 0, c = storage(cThis); i < c; i++)
-                {
-                int iDiff = abThis[i] - abThat[i];
-                if (iDiff != 0)
-                    {
-                    return iDiff < 0 ? -1 : 1;
-                    }
-                }
-            return 0;
             }
+
+            for (int i = 0, c = storage(cThis); i < c; i++) {
+                int iDiff = abThis[i] - abThat[i];
+                if (iDiff != 0) {
+                    return iDiff < 0 ? -1 : 1;
+                }
+            }
+            return 0;
         }
+    }
 
 
     // ----- constants -----------------------------------------------------------------------------
@@ -367,4 +321,4 @@ public class xRTNibbleDelegate
      * Caches Nibble handles.
      */
     private static final ObjectHandle[] NIBBLES = new ObjectHandle[16];
-    }
+}

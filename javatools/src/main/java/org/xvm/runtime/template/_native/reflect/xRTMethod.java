@@ -37,23 +37,19 @@ import org.xvm.runtime.template.collections.xTuple.TupleHandle;
  * Native Method implementation.
  */
 public class xRTMethod
-        extends xRTSignature
-    {
+        extends xRTSignature {
     public static xRTMethod INSTANCE;
 
-    public xRTMethod(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTMethod(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         markNativeProperty("access");
 
         markNativeMethod("formalParamNames" , null, null);
@@ -62,11 +58,10 @@ public class xRTMethod
         markNativeMethod("invoke"           , null, null);
 
         super.initNative();
-        }
+    }
 
     @Override
-    public TypeComposition ensureClass(Container container, TypeConstant typeActual)
-        {
+    public TypeComposition ensureClass(Container container, TypeConstant typeActual) {
         // see explanation at xRTFunction.ensureClass()
         ConstantPool pool = typeActual.getConstantPool();
 
@@ -77,126 +72,108 @@ public class xRTMethod
         TypeConstant typeR      = typeActual.getParamType(2);
         TypeConstant typeMethod = pool.ensureParameterizedTypeConstant(
                                         pool.typeMethod(), typeTarget, typeP, typeR);
-        if (typeActual.isAnnotated())
-            {
+        if (typeActual.isAnnotated()) {
             typeMethod = typeMethod.adoptAnnotations(pool, typeActual);
-            }
-
-        return super.ensureClass(container, typeMethod);
         }
 
+        return super.ensureClass(container, typeMethod);
+    }
+
     @Override
-    public int createConstHandle(Frame frame, Constant constant)
-        {
-        if (constant instanceof MethodConstant idMethod)
-            {
+    public int createConstHandle(Frame frame, Constant constant) {
+        if (constant instanceof MethodConstant idMethod) {
             IdentityConstant idTarget   = idMethod.getNamespace();
             TypeConstant     typeTarget = idTarget.getType();
 
-            if (frame.isMethod())
-                {
+            if (frame.isMethod()) {
                 TypeConstant typeThis = frame.getThis().getType();
-                if (typeThis.isNestMateOf(idTarget))
-                    {
-                    if (idTarget.equals(typeThis.getDefiningConstant()))
-                        {
+                if (typeThis.isNestMateOf(idTarget)) {
+                    if (idTarget.equals(typeThis.getDefiningConstant())) {
                         typeTarget = typeThis;
-                        }
-                    else
-                        {
+                    } else {
                         typeTarget = ((ClassStructure) idTarget.getComponent()).
                                 getFormalType().resolveGenerics(frame.poolContext(), typeThis);
-                        }
                     }
                 }
+            }
 
             ObjectHandle hMethod = makeHandle(frame, typeTarget, idMethod);
 
             return Op.isDeferred(hMethod)
                     ? hMethod.proceed(frame, Utils.NEXT)
                     : frame.pushStack(hMethod);
-            }
+        }
 
         return super.createConstHandle(frame, constant);
-        }
+    }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         MethodHandle hMethod = (MethodHandle) hTarget;
-        switch (sPropName)
-            {
-            case "access":
-                return getPropertyAccess(frame, hMethod, iReturn);
-            }
+        switch (sPropName) {
+        case "access":
+            return getPropertyAccess(frame, hMethod, iReturn);
+        }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
+    }
 
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle hArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "bindTarget":
-                return invokeBindTarget(frame, (MethodHandle) hTarget, hArg, iReturn);
-            }
+                             ObjectHandle hArg, int iReturn) {
+        switch (method.getName()) {
+        case "bindTarget":
+            return invokeBindTarget(frame, (MethodHandle) hTarget, hArg, iReturn);
+        }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
-        }
+    }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "invoke":
-                return invokeInvoke(frame, (MethodHandle) hTarget, ahArg, iReturn);
-            }
+                             ObjectHandle[] ahArg, int iReturn) {
+        switch (method.getName()) {
+        case "invoke":
+            return invokeInvoke(frame, (MethodHandle) hTarget, ahArg, iReturn);
+        }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
-        }
+    }
 
     @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                              ObjectHandle[] ahArg, int[] aiReturn)
-        {
+                              ObjectHandle[] ahArg, int[] aiReturn) {
         MethodHandle hMethod = (MethodHandle) hTarget;
-        switch (method.getName())
-            {
-            case "formalParamNames":
-                return invokeFormalParamNames(frame, hMethod, aiReturn);
+        switch (method.getName()) {
+        case "formalParamNames":
+            return invokeFormalParamNames(frame, hMethod, aiReturn);
 
-            case "formalReturnNames":
-                return invokeFormalReturnNames(frame, hMethod, aiReturn);
-            }
+        case "formalReturnNames":
+            return invokeFormalReturnNames(frame, hMethod, aiReturn);
+        }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
-        }
+    }
 
     @Override
     protected int callEqualsImpl(Frame frame, TypeComposition clazz,
-                                 ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+                                 ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         MethodHandle hMethod1 = (MethodHandle) hValue1;
         MethodHandle hMethod2 = (MethodHandle) hValue2;
 
         return frame.assignValue(iReturn,
             xBoolean.makeHandle(hMethod1.getMethodId().equals(hMethod2.getMethodId())));
-        }
+    }
 
     @Override
     protected int callCompareImpl(Frame frame, TypeComposition clazz,
-                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         MethodHandle hMethod1 = (MethodHandle) hValue1;
         MethodHandle hMethod2 = (MethodHandle) hValue2;
 
         return frame.assignValue(iReturn,
             xOrdered.makeHandle(hMethod1.getMethodId().compareTo(hMethod2.getMethodId())));
-        }
+    }
 
 
     // ----- property implementations --------------------------------------------------------------
@@ -204,12 +181,11 @@ public class xRTMethod
     /**
      * Implements property: access.get()
      */
-    public int getPropertyAccess(Frame frame, MethodHandle hMethod, int iReturn)
-        {
+    public int getPropertyAccess(Frame frame, MethodHandle hMethod, int iReturn) {
         Access       access  = hMethod.getMethodInfo().getAccess();
         ObjectHandle hAccess = xRTType.makeAccessHandle(frame, access);
         return frame.assignValue(iReturn, hAccess);
-        }
+    }
 
 
     // ----- method implementations ----------------------------------------------------------------
@@ -217,41 +193,37 @@ public class xRTMethod
     /**
      * Implementation for: {@code Function<ParamTypes, ReturnTypes> bindTarget(Target target)}.
      */
-    public int invokeBindTarget(Frame frame, MethodHandle hMethod, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokeBindTarget(Frame frame, MethodHandle hMethod, ObjectHandle hTarget, int iReturn) {
         return hMethod.getCallChain(frame, hTarget).bindTarget(frame, hTarget, iReturn);
-        }
+    }
 
     /**
      * Implementation for: {@code ReturnTypes invoke(Target target, ParamTypes args)}.
      */
-    public int invokeInvoke(Frame frame, MethodHandle hMethod, ObjectHandle[] ahArg, int iReturn)
-        {
+    public int invokeInvoke(Frame frame, MethodHandle hMethod, ObjectHandle[] ahArg, int iReturn) {
         ObjectHandle   hTarget = ahArg[0];
         TupleHandle    hTuple  = (TupleHandle) ahArg[1];
         ObjectHandle[] ahPass  = hTuple.m_ahValue;  // TODO GG+CP do we need to check these?
         CallChain      chain   = hMethod.getCallChain(frame, hTarget);
 
         return chain.invokeT(frame, hTarget, ahPass, iReturn);
-        }
+    }
 
     /**
      * Implementation for: {@code conditional String[] formalParamNames(Int i)}.
      */
-    public int invokeFormalParamNames(Frame frame, MethodHandle hMethod, int[] aiReturn)
-        {
+    public int invokeFormalParamNames(Frame frame, MethodHandle hMethod, int[] aiReturn) {
         // TODO
         throw new UnsupportedOperationException("TODO");
-        }
+    }
 
     /**
      * Implementation for: {@code conditional String[] formalReturnNames(Int i)}.
      */
-    public int invokeFormalReturnNames(Frame frame, MethodHandle hMethod, int[] aiReturn)
-        {
+    public int invokeFormalReturnNames(Frame frame, MethodHandle hMethod, int[] aiReturn) {
         // TODO
         throw new UnsupportedOperationException("TODO");
-        }
+    }
 
 
     // ----- Object handle -------------------------------------------------------------------------
@@ -265,32 +237,28 @@ public class xRTMethod
      *
      * @return the resulting {@link MethodHandle} or a {@link DeferredCallHandle}
      */
-    public static ObjectHandle makeHandle(Frame frame, TypeConstant typeTarget, MethodConstant idMethod)
-        {
+    public static ObjectHandle makeHandle(Frame frame, TypeConstant typeTarget, MethodConstant idMethod) {
         ConstantPool    pool      = frame.poolContext();
         Container       container = frame.f_context.f_container;
         TypeConstant    type      = idMethod.getSignature().asMethodType(pool, typeTarget);
         MethodStructure method    = (MethodStructure) idMethod.getComponent();
 
-        if (method == null)
-            {
+        if (method == null) {
             TypeInfo   infoTarget = typeTarget.ensureTypeInfo();
             MethodInfo infoMethod = infoTarget.getMethodById(idMethod, true);
 
             method = infoMethod == null
                 ? null
                 : infoMethod.getTopmostMethodStructure(infoTarget);
-            if (method == null)
-                {
+            if (method == null) {
                 return new DeferredCallHandle(
                     xException.makeHandle(frame, "Invalid method: " + idMethod.getValueString()));
-                }
             }
+        }
 
         Annotation[] aAnno = method.getAnnotations();
 
-        if (aAnno != null && aAnno.length > 0)
-            {
+        if (aAnno != null && aAnno.length > 0) {
             type = pool.ensureAnnotatedTypeConstant(type, aAnno);
 
             TypeComposition clzMethod = INSTANCE.ensureClass(container, type);
@@ -300,10 +268,10 @@ public class xRTMethod
             int iResult = hStruct.getTemplate().proceedConstruction(
                                 frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK);
             return frame.popResultImmutable(iResult);
-            }
+        }
 
         return new MethodHandle(INSTANCE.ensureClass(container, type), type, method, typeTarget);
-        }
+    }
 
     /**
      * Method handle.
@@ -312,75 +280,63 @@ public class xRTMethod
      * "fully bound" type and carry the actual type as a part of their state,
      */
     public static class MethodHandle
-            extends SignatureHandle
-        {
+            extends SignatureHandle {
         protected MethodHandle(TypeComposition clz, TypeConstant typeMethod, MethodStructure method,
-                               TypeConstant typeTarget)
-            {
+                               TypeConstant typeTarget) {
             super(clz, method.getIdentityConstant(), method, typeMethod);
 
             m_fMutable   = clz.isStruct();
             f_typeTarget = typeTarget;
 
             assert getMethodInfo() != null;
-            }
+        }
 
-        public MethodInfo getMethodInfo()
-            {
+        public MethodInfo getMethodInfo() {
             return f_typeTarget.ensureTypeInfo().getMethodById(f_idMethod, true);
-            }
+        }
 
         @Override
-        public TypeConstant getParamType(int iArg)
-            {
+        public TypeConstant getParamType(int iArg) {
             return getMethodInfo().getIdentity().getSignature().getRawParams()[iArg];
-            }
+        }
 
         @Override
-        public TypeConstant getReturnType(int iArg)
-            {
+        public TypeConstant getReturnType(int iArg) {
             return getMethodInfo().getIdentity().getSignature().getRawReturns()[iArg];
-            }
+        }
 
-        private CallChain getCallChain(Frame frame, ObjectHandle hTarget)
-            {
+        private CallChain getCallChain(Frame frame, ObjectHandle hTarget) {
             TypeComposition clazz    = hTarget.getComposition();
             MethodConstant  idMethod = getMethodId();
             MethodStructure method   = getMethod();
-            if (method == null)
-                {
+            if (method == null) {
                 method = (MethodStructure) idMethod.getComponent();
-                }
+            }
 
             CallChain chain;
-            if (method != null && method.getAccess() == Access.PRIVATE)
-                {
+            if (method != null && method.getAccess() == Access.PRIVATE) {
                 chain = new CallChain(method);
-                }
-            else
-                {
+            } else {
                 SignatureConstant sig = idMethod.getSignature().
                         resolveGenericTypes(frame.poolContext(), frame.getGenericsResolver(true));
 
                 chain = clazz.getMethodCallChain(sig);
-                if (chain.isEmpty())
-                    {
+                if (chain.isEmpty()) {
                     return new CallChain.ExceptionChain(xException.makeHandle(frame,
                             "Missing method \"" + sig.getValueString() +
                             "\" on " + hTarget.getType().getValueString()));
-                    }
                 }
-            return chain;
             }
+            return chain;
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return "Method: " + getMethod();
-            }
+        }
 
         private final TypeConstant f_typeTarget;
-        }
+    }
 
 
     // ----- Template, Composition, and handle caching ---------------------------------------------
@@ -388,49 +344,44 @@ public class xRTMethod
     /**
      * @return the ArrayConstant for an empty Array of Method
      */
-    public static ArrayConstant ensureEmptyArrayConstant()
-        {
+    public static ArrayConstant ensureEmptyArrayConstant() {
         ArrayConstant constant = EMPTY_ARRAY;
-        if (constant == null)
-            {
+        if (constant == null) {
             ConstantPool pool = INSTANCE.pool();
             EMPTY_ARRAY = constant = new ArrayConstant(pool, Constant.Format.Array,
                                             pool.ensureArrayType(pool.typeMethod()));
-            }
-        return constant;
         }
+        return constant;
+    }
 
     /**
      * @return the handle for an empty Array of Method
      */
-    public static ObjectHandle ensureEmptyArray(Container container)
-        {
+    public static ObjectHandle ensureEmptyArray(Container container) {
         ArrayConstant constArray = ensureEmptyArrayConstant();
         ObjectHandle hArray = container.f_heap.getConstHandle(constArray);
-        if (hArray == null)
-            {
+        if (hArray == null) {
             TypeComposition clzArray = container.resolveClass(constArray.getType());
             hArray = xArray.createImmutableArray(clzArray, Utils.OBJECTS_NONE);
             container.f_heap.saveConstHandle(constArray, hArray);
-            }
-        return hArray;
         }
+        return hArray;
+    }
 
     /**
      * @return the TypeComposition for an Array of Method
      */
-    public static TypeComposition ensureArrayComposition(Frame frame, TypeConstant typeTarget)
-        {
+    public static TypeComposition ensureArrayComposition(Frame frame, TypeConstant typeTarget) {
         assert typeTarget != null;
 
         ConstantPool pool            = frame.poolContext();
         TypeConstant typeMethodArray = pool.ensureArrayType(
             pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget));
         return frame.f_context.f_container.resolveClass(typeMethodArray);
-        }
+    }
 
 
     // ----- data members --------------------------------------------------------------------------
 
     private static ArrayConstant EMPTY_ARRAY;
-    }
+}

@@ -16,8 +16,7 @@ import static org.xvm.util.Handy.appendString;
  * Representation of a language token.
  */
 public class Token
-        implements Cloneable
-    {
+        implements Cloneable {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -27,10 +26,9 @@ public class Token
      * @param lEndPos    ending position in the Source (exclusive)
      * @param id         identity of the token
      */
-    public Token(long lStartPos, long lEndPos, Id id)
-        {
+    public Token(long lStartPos, long lEndPos, Id id) {
         this(lStartPos, lEndPos, id, null);
-        }
+    }
 
     /**
      * Construct an Ecstasy token.
@@ -40,21 +38,19 @@ public class Token
      * @param id         identity of the token
      * @param oValue     value of the token (if it is a literal)
      */
-    public Token(long lStartPos, long lEndPos, Id id, Object oValue)
-        {
+    public Token(long lStartPos, long lEndPos, Id id, Object oValue) {
         m_lStartPos = lStartPos;
         m_lEndPos   = lEndPos;
         m_id        = id;
         m_oValue    = oValue;
-        }
+    }
 
     /**
      * Create a token that is structurally identical to this token, but with a different value.
      */
-    public Token withValue(Object oValue)
-        {
+    public Token withValue(Object oValue) {
         return new Token(m_lStartPos, m_lEndPos, m_id, oValue);
-        }
+    }
 
     /**
      * Record whitespace information onto the token.
@@ -62,11 +58,10 @@ public class Token
      * @param fWhitespaceBefore
      * @param fWhitespaceAfter
      */
-    public void noteWhitespace(boolean fWhitespaceBefore, boolean fWhitespaceAfter)
-        {
+    public void noteWhitespace(boolean fWhitespaceBefore, boolean fWhitespaceAfter) {
         m_fLeadingWhitespace  = fWhitespaceBefore;
         m_fTrailingWhitespace = fWhitespaceAfter;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -76,60 +71,54 @@ public class Token
      *
      * @return the Source position of the token
      */
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return m_lStartPos;
-        }
+    }
 
     /**
      * Determine the ending position (exclusive) in the source for this token.
      *
      * @return the Source position of the end of the token
      */
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return m_lEndPos;
-        }
+    }
 
     /**
      * Determine if this token follows whitespace in the source.
      *
      * @return true iff this token follows whitespace
      */
-    public boolean hasLeadingWhitespace()
-        {
+    public boolean hasLeadingWhitespace() {
         return m_fLeadingWhitespace;
-        }
+    }
 
     /**
      * Determine if this token precedes whitespace in the source.
      *
      * @return true iff this token is followed by whitespace
      */
-    public boolean hasTrailingWhitespace()
-        {
+    public boolean hasTrailingWhitespace() {
         return m_fTrailingWhitespace;
-        }
+    }
 
     /**
      * Determine the identity of the token.
      *
      * @return the identity of the token
      */
-    public Id getId()
-        {
+    public Id getId() {
         return m_id;
-        }
+    }
 
     /**
      * Determine the value of the token.
      *
      * @return the value of the token, or null
      */
-    public Object getValue()
-        {
+    public Object getValue() {
         return m_oValue;
-        }
+    }
 
     /**
      * Helper to get the value as text, if there is a value, otherwise to get the token id's text.
@@ -137,32 +126,28 @@ public class Token
      *
      * @return the String form of the token
      */
-    public String getValueText()
-        {
+    public String getValueText() {
         return m_oValue == null ? m_id.TEXT : m_oValue.toString();
-        }
+    }
 
     /**
      * @return true iff this is an identifier is a "special name"
      */
-    public boolean isSpecial()
-        {
-        if (m_id == Id.IDENTIFIER)
-            {
+    public boolean isSpecial() {
+        if (m_id == Id.IDENTIFIER) {
             Id keywordId = Id.valueByContextSensitiveText((String) getValue());
             return keywordId != null && keywordId.Special;
-            }
+        }
 
         return false;
-        }
+    }
 
     /**
      * @return true iff this is an identifier is a context-sensitive name
      */
-    public boolean isContextSensitive()
-        {
+    public boolean isContextSensitive() {
         return m_id == Id.IDENTIFIER && Id.valueByContextSensitiveText((String) getValue()) != null;
-        }
+    }
 
     /**
      * Determine the alternative identity of the token, if any, assuming that the token were to be
@@ -171,52 +156,46 @@ public class Token
      * @return the context-sensitive identity of the token, if the token is an "identifier" whose
      *         name also is a context-sensitive keyword
      */
-    public Id getContextSensitiveId()
-        {
+    public Id getContextSensitiveId() {
         return m_id == Id.IDENTIFIER ? Id.valueByContextSensitiveText(m_oValue.toString()) : null;
-        }
+    }
 
     /**
      * If the token is an identifier that is also a context-sensitive keyword, obtain that keyword.
      *
      * @return a keyword token that represents the same text as this identifier token
      */
-    public Token convertToKeyword()
-        {
-        if (m_id != Id.IDENTIFIER)
-            {
+    public Token convertToKeyword() {
+        if (m_id != Id.IDENTIFIER) {
             throw new IllegalStateException("not an identifier! (" + this + ")");
-            }
+        }
 
         Id id = Id.valueByContextSensitiveText((String) getValue());
-        if (id == null)
-            {
+        if (id == null) {
             throw new IllegalStateException("missing context sensitive keyword for: " + getValue());
-            }
+        }
 
         return new Token(m_lStartPos, m_lEndPos, id, m_oValue);
-        }
+    }
 
     /**
      * If the token is a context sensitive keyword that was an identifier, obtain the identifier.
      *
      * @return a token that is not a context sensitive keyword
      */
-    public Token desensitize()
-        {
+    public Token desensitize() {
         return m_id.ContextSensitive ? new Token(m_lStartPos, m_lEndPos, Id.IDENTIFIER, m_oValue) : this;
-        }
+    }
 
     /**
      * Refine the token identity to a more specific identity.
      *
      * @param id  the refined identity
      */
-    Token refine(Id id)
-        {
+    Token refine(Id id) {
         m_id = id;
         return this;
-        }
+    }
 
     /**
      * Allow a token to be "peeled off" the front of this token, if possible. This mutates this
@@ -228,64 +207,57 @@ public class Token
      *
      * @return the requested token that was peeled off of this token, if possible, otherwise null
      */
-    public Token peel(Id id, Source source)
-        {
+    public Token peel(Id id, Source source) {
         Id newId = null;
 
-        if (id == Id.COMP_GT)
-            {
-            switch (m_id)
-                {
-                default:
-                    return null;
+        if (id == Id.COMP_GT) {
+            switch (m_id) {
+            default:
+                return null;
 
-                case USHR_ASN:
-                    newId = Id.SHR_ASN;
-                    break;
+            case USHR_ASN:
+                newId = Id.SHR_ASN;
+                break;
 
-                case USHR:
-                    newId = Id.SHR;
-                    break;
+            case USHR:
+                newId = Id.SHR;
+                break;
 
-                case SHR_ASN:
-                    newId = Id.COMP_GTEQ;
-                    break;
+            case SHR_ASN:
+                newId = Id.COMP_GTEQ;
+                break;
 
-                case SHR:
-                    newId = Id.COMP_GT;
-                    break;
+            case SHR:
+                newId = Id.COMP_GT;
+                break;
 
-                case COMP_GTEQ:
-                    newId = Id.ASN;
-                    break;
-                }
+            case COMP_GTEQ:
+                newId = Id.ASN;
+                break;
             }
-        else if (id == Id.COMP_LT)
-            {
-            switch (m_id)
-                {
-                default:
-                    return null;
+        } else if (id == Id.COMP_LT) {
+            switch (m_id) {
+            default:
+                return null;
 
-                case SHL_ASN:
-                    newId = Id.COMP_LTEQ;
-                    break;
+            case SHL_ASN:
+                newId = Id.COMP_LTEQ;
+                break;
 
-                case SHL:
-                    newId = Id.COMP_LT;
-                    break;
+            case SHL:
+                newId = Id.COMP_LT;
+                break;
 
-                // note: there are no legitimate use cases for peeling "<" off of "<=" or "<=>"
-                // case COMP_LTEQ:
-                //     newId = Id.ASN;
-                //     break;
-                }
+            // note: there are no legitimate use cases for peeling "<" off of "<=" or "<=>"
+            // case COMP_LTEQ:
+            //     newId = Id.ASN;
+            //     break;
             }
+        }
 
-        if (newId == null)
-            {
+        if (newId == null) {
             return null;
-            }
+        }
 
         // get the location of "this" token
         long start  = m_lStartPos;
@@ -306,7 +278,7 @@ public class Token
         peeled.noteWhitespace(hasLeadingWhitespace(), false);
         this.noteWhitespace(false, hasTrailingWhitespace());
         return peeled;
-        }
+    }
 
     /**
      * Allow a token to be "un-peeled off" from the front of that following token, if possible.
@@ -315,22 +287,19 @@ public class Token
      *
      * @return the new token, or null if the two tokens cannot be annealed
      */
-    public Token anneal(Token that)
-        {
-        if (m_id == Id.COMP_LT && this.m_lEndPos == that.m_lStartPos)
-            {
-            switch (that.m_id)
-                {
-                case COMP_LTEQ:
-                    return new Token(this.m_lStartPos, that.m_lEndPos, Id.SHL_ASN);
+    public Token anneal(Token that) {
+        if (m_id == Id.COMP_LT && this.m_lEndPos == that.m_lStartPos) {
+            switch (that.m_id) {
+            case COMP_LTEQ:
+                return new Token(this.m_lStartPos, that.m_lEndPos, Id.SHL_ASN);
 
-                case COMP_LT:
-                    return new Token(this.m_lStartPos, that.m_lEndPos, Id.SHL);
-                }
+            case COMP_LT:
+                return new Token(this.m_lStartPos, that.m_lEndPos, Id.SHL);
             }
+        }
 
         return null;
-        }
+    }
 
     /**
      * Obtain the actual string of characters from the source code for this token.
@@ -339,10 +308,9 @@ public class Token
      *
      * @return the string of characters corresponding to this token, extracted from the source
      */
-    public String getString(Source source)
-        {
+    public String getString(Source source) {
         return source.toString(m_lStartPos, m_lEndPos);
-        }
+    }
 
     /**
      * Helper to log an error related to this Token.
@@ -355,22 +323,19 @@ public class Token
      * @return true to attempt to abort the process that reported the error, or false to attempt to
      *         continue the process
      */
-    public boolean log(ErrorListener errs, Source source, Severity severity, String sCode, Object... aoParam)
-        {
-        if (aoParam == null || aoParam.length == 0)
-            {
+    public boolean log(ErrorListener errs, Source source, Severity severity, String sCode, Object... aoParam) {
+        if (aoParam == null || aoParam.length == 0) {
             aoParam = new Object[] {source == null ? toString() : getString(source)};
-            }
+        }
 
         return errs.log(severity, sCode, aoParam, source,
                 source == null ? 0L : getStartPosition(), source == null ? 0L : getEndPosition());
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
-    public String toDebugString()
-        {
+    public String toDebugString() {
         return "[" +
                 Source.calculateLine(m_lStartPos) +
                 "," +
@@ -380,110 +345,99 @@ public class Token
                 "," +
                 Source.calculateOffset(m_lEndPos) +
                 "] " + this;
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
-        switch (m_id)
-            {
-            case LIT_CHAR:
-                {
-                sb.append('\'');
-                appendChar(sb, (Character) m_oValue);
-                sb.append('\'');
-                }
-                break;
+        switch (m_id) {
+        case LIT_CHAR: {
+            sb.append('\'');
+            appendChar(sb, (Character) m_oValue);
+            sb.append('\'');
+        }
+            break;
 
-            case LIT_STRING:
-                sb.append('\"');
-                appendString(sb, (String) m_oValue);
-                sb.append('\"');
-                break;
+        case LIT_STRING:
+            sb.append('\"');
+            appendString(sb, (String) m_oValue);
+            sb.append('\"');
+            break;
 
-            case LIT_INT:
-            case LIT_DEC:
-            case LIT_FLOAT:
-                sb.append(m_oValue);
-                break;
+        case LIT_INT:
+        case LIT_DEC:
+        case LIT_FLOAT:
+            sb.append(m_oValue);
+            break;
 
-            case LIT_BIT:
-            case LIT_NIBBLE:
-            case LIT_INT8:
-            case LIT_INT16:
-            case LIT_INT32:
-            case LIT_INT64:
-            case LIT_INT128:
-            case LIT_INTN:
-            case LIT_UINT8:
-            case LIT_UINT16:
-            case LIT_UINT32:
-            case LIT_UINT64:
-            case LIT_UINT128:
-            case LIT_UINTN:
-            case LIT_DEC32:
-            case LIT_DEC64:
-            case LIT_DEC128:
-            case LIT_DECN:
-            case LIT_FLOAT16:
-            case LIT_FLOAT32:
-            case LIT_FLOAT64:
-            case LIT_FLOAT128:
-            case LIT_FLOATN:
-            case LIT_BFLOAT16:
-                sb.append(m_id.TEXT)
-                  .append(':')
-                  .append(m_oValue);
-                break;
+        case LIT_BIT:
+        case LIT_NIBBLE:
+        case LIT_INT8:
+        case LIT_INT16:
+        case LIT_INT32:
+        case LIT_INT64:
+        case LIT_INT128:
+        case LIT_INTN:
+        case LIT_UINT8:
+        case LIT_UINT16:
+        case LIT_UINT32:
+        case LIT_UINT64:
+        case LIT_UINT128:
+        case LIT_UINTN:
+        case LIT_DEC32:
+        case LIT_DEC64:
+        case LIT_DEC128:
+        case LIT_DECN:
+        case LIT_FLOAT16:
+        case LIT_FLOAT32:
+        case LIT_FLOAT64:
+        case LIT_FLOAT128:
+        case LIT_FLOATN:
+        case LIT_BFLOAT16:
+            sb.append(m_id.TEXT)
+              .append(':')
+              .append(m_oValue);
+            break;
 
-            case IDENTIFIER:
-                sb.append("name:")
-                  .append(m_oValue);
-                break;
+        case IDENTIFIER:
+            sb.append("name:")
+              .append(m_oValue);
+            break;
 
-            case ENC_COMMENT:
-                {
-                String sComment = (String) m_oValue;
-                if (sComment.length() > 47)
-                    {
-                    sComment = sComment.substring(0, 44) + "...";
-                    }
-                appendString(sb.append("/*"), sComment).append("*/");
-                }
-                break;
-
-            case EOL_COMMENT:
-                {
-                String sComment = (String) m_oValue;
-                if (sComment.length() > 50)
-                    {
-                    sComment = sComment.substring(0, 47) + "...";
-                    }
-                appendString(sb.append("//"), sComment);
-                }
-                break;
-
-            default:
-                sb.append(m_id.TEXT);
-                break;
+        case ENC_COMMENT: {
+            String sComment = (String) m_oValue;
+            if (sComment.length() > 47) {
+                sComment = sComment.substring(0, 44) + "...";
             }
+            appendString(sb.append("/*"), sComment).append("*/");
+        }
+            break;
+
+        case EOL_COMMENT: {
+            String sComment = (String) m_oValue;
+            if (sComment.length() > 50) {
+                sComment = sComment.substring(0, 47) + "...";
+            }
+            appendString(sb.append("//"), sComment);
+        }
+            break;
+
+        default:
+            sb.append(m_id.TEXT);
+            break;
+        }
 
         return sb.toString();
-        }
+    }
 
-    public Token clone()
-        {
-        try
-            {
+    public Token clone() {
+        try {
             return (Token) super.clone();
-            }
-        catch (CloneNotSupportedException e)
-            {
+        } catch (CloneNotSupportedException e) {
             throw new IllegalStateException(e);
-            }
         }
+    }
 
 
     // ----- Token identities ----------------------------------------------------------------------
@@ -491,8 +445,7 @@ public class Token
     /**
      * Token Identity.
      */
-    public enum Id
-        {
+    public enum Id {
         COLON        (":"              ),
         SEMICOLON    (";"              ),
         COMMA        (","              ),
@@ -687,33 +640,29 @@ public class Token
          *
          * @param sText  a textual representation of the token, or null
          */
-        Id(final String sText)
-            {
+        Id(final String sText) {
             this(sText, false);
-            }
+        }
 
         /**
          * Constructor.
          *
          * @param sText  a textual representation of the token, or null
          */
-        Id(final String sText, boolean fContextSensitive)
-            {
+        Id(final String sText, boolean fContextSensitive) {
             this(sText, fContextSensitive, false);
-            }
+        }
 
-        Id(final String sText, boolean fContextSensitive, boolean fSpecial)
-            {
+        Id(final String sText, boolean fContextSensitive, boolean fSpecial) {
             TEXT = sText;
             this.ContextSensitive = fContextSensitive;
             this.Special          = fSpecial;
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return TEXT == null ? super.toString() : '\"' + TEXT + '"';
-            }
+        }
 
         /**
          * Look up an Id enum by its ordinal.
@@ -722,10 +671,9 @@ public class Token
          *
          * @return the Format enum for the specified ordinal
          */
-        public static Id valueOf(int i)
-            {
+        public static Id valueOf(int i) {
             return IDs[i];
-            }
+        }
 
         /**
          * Look up an Id enum by its {@link #TEXT}.
@@ -735,10 +683,9 @@ public class Token
          * @return an instance of Id, or null if there is no matching
          *         {@link #TEXT}
          */
-        public static Id valueByText(String sText)
-            {
+        public static Id valueByText(String sText) {
             return KEYWORDS.get(sText);
-            }
+        }
 
         /**
          * Look up an Id enum by its {@link #TEXT}, including context-sensitive keywords.
@@ -748,10 +695,9 @@ public class Token
          * @return an instance of Id, or null if there is no matching
          *         {@link #TEXT}
          */
-        public static Id valueByContextSensitiveText(String sText)
-            {
+        public static Id valueByContextSensitiveText(String sText) {
             return ALL_KEYWORDS.get(sText);
-            }
+        }
 
         /**
          * Look up an Id enum by its {@link #TEXT}, and if it is one of the keywords that has both
@@ -761,10 +707,9 @@ public class Token
          *
          * @return the Id of the "normal form" of the keyword, iff suffixed forms also exist
          */
-        public static Id valueByPrefix(String sText)
-            {
+        public static Id valueByPrefix(String sText) {
             return PREFIXES.get(sText);
-            }
+        }
 
         /**
          * All of the Format enums.
@@ -786,36 +731,29 @@ public class Token
          */
         private static final Map<String, Id> PREFIXES = new HashMap<>();
 
-        static
-            {
-            for (Id id : IDs)
-                {
+        static {
+            for (Id id : IDs) {
                 String sText = id.TEXT;
-                if (sText != null && !sText.isEmpty())
-                    {
+                if (sText != null && !sText.isEmpty()) {
                     char ch = sText.charAt(0);
-                    if (ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z' || ch == '_')
-                        {
+                    if (ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z' || ch == '_') {
                         ALL_KEYWORDS.put(sText, id);
 
-                        if (!id.ContextSensitive)
-                            {
+                        if (!id.ContextSensitive) {
                             KEYWORDS.put(sText, id);
-                            }
+                        }
 
                         int ofColon = sText.indexOf(':');
-                        if (ofColon > 0)
-                            {
+                        if (ofColon > 0) {
                             Id prefix = ALL_KEYWORDS.get(sText.substring(0, ofColon));
-                            if (prefix != null)
-                                {
+                            if (prefix != null) {
                                 PREFIXES.put(prefix.TEXT, prefix);
-                                }
                             }
                         }
                     }
                 }
             }
+        }
 
         /**
          * A textual representation of the token, if it has a constant textual representation;
@@ -832,7 +770,7 @@ public class Token
          * True if the token is a special name.
          */
         final boolean Special;
-        }
+    }
 
 
     // ----- data members --------------------------------------------------------------------------
@@ -866,4 +804,4 @@ public class Token
      * Each token knows if it has whitespace following.
      */
     private boolean m_fTrailingWhitespace;
-    }
+}

@@ -12,8 +12,7 @@ import org.xvm.compiler.Token;
  * A type expression specifies a module name.
  */
 public class ModuleTypeExpression
-    extends NamedTypeExpression
-    {
+    extends NamedTypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -21,16 +20,14 @@ public class ModuleTypeExpression
      *
      * @param names  the qualified name of the module
      */
-    public ModuleTypeExpression(List<Token> names)
-        {
+    public ModuleTypeExpression(List<Token> names) {
         super(null, names, null, null, null, names.get(names.size()-1).getEndPosition());
-        }
+    }
 
 
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    public void resolveNames(StageMgr mgr, ErrorListener errs)
-        {
-        }
+    public void resolveNames(StageMgr mgr, ErrorListener errs) {
     }
+}

@@ -17,24 +17,21 @@ import org.xvm.asm.op.Var_T;
  * A tuple packing expression. This packs the multiple values from the sub-expression into a tuple.
  */
 public class PackExpression
-        extends SyntheticExpression
-    {
+        extends SyntheticExpression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public PackExpression(Expression expr, ErrorListener errs)
-        {
+    public PackExpression(Expression expr, ErrorListener errs) {
         super(expr);
 
         ConstantPool pool = pool();
         TypeConstant type = pool.ensureTupleType(expr.getTypes());
         Constant     val  = null;
-        if (expr.isConstant())
-            {
+        if (expr.isConstant()) {
             type = pool.ensureImmutableTypeConstant(type);
             val  = pool.ensureTupleConstant(type, expr.toConstants());
-            }
-        finishValidation(null, null, type, expr.getTypeFit().addPack(), val, errs);
         }
+        finishValidation(null, null, type, expr.getTypeFit().addPack(), val, errs);
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -43,31 +40,26 @@ public class PackExpression
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType(Context ctx)
-        {
+    public TypeConstant getImplicitType(Context ctx) {
         return getType();
-        }
+    }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         return this;
-        }
+    }
 
     @Override
-    public void generateVoid(Context ctx, Code code, ErrorListener errs)
-        {
+    public void generateVoid(Context ctx, Code code, ErrorListener errs) {
         expr.generateVoid(ctx, code, errs);
-        }
+    }
 
     @Override
     public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
-        {
-        if (isConstant())
-            {
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+        if (isConstant()) {
             return toConstant();
-            }
+        }
 
         // generate the tuple fields
         Argument[] args = expr.generateArguments(ctx, code, fLocalPropOk, fUsedOnce, errs);
@@ -77,18 +69,17 @@ public class PackExpression
         Register reg = code.createRegister(getType());
         code.add(new Var_T(reg, args));
         return reg;
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return "Packed:" + getUnderlyingExpression().toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
-    }
+}

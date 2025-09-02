@@ -24,83 +24,72 @@ import org.xvm.util.Handy;
  * The native RTViewFromByte<Int64> implementation.
  */
 public class xRTViewFromByteToInt64
-        extends xRTViewFromByte
-    {
+        extends xRTViewFromByte {
     public static xRTViewFromByteToInt64 INSTANCE;
 
-    public xRTViewFromByteToInt64(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTViewFromByteToInt64(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public TypeConstant getCanonicalType()
-        {
+    public TypeConstant getCanonicalType() {
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(), pool.typeInt64());
-        }
+    }
 
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
     protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
-                                            long ofStart, long cSize, boolean fReverse)
-        {
+                                            long ofStart, long cSize, boolean fReverse) {
         ViewHandle     hView   = (ViewHandle) hTarget;
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof ByteView tView)
-            {
+        if (tSource instanceof ByteView tView) {
             long[] alValue = new long[(int) cSize];
-            for (int i = 0; i < cSize; i++)
-                {
+            for (int i = 0; i < cSize; i++) {
                 byte[] ab = tView.getBytes(hSource, ofStart + i*8L, 8, fReverse);
 
                 alValue[i] = Handy.byteArrayToLong(ab, 0);
-                }
-
-            return xRTInt64Delegate.INSTANCE.makeHandle(alValue, alValue.length, mutability);
             }
 
-        throw new UnsupportedOperationException();
+            return xRTInt64Delegate.INSTANCE.makeHandle(alValue, alValue.length, mutability);
         }
 
+        throw new UnsupportedOperationException();
+    }
+
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn)
-        {
+    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
         ViewHandle     hView   = (ViewHandle) hTarget;
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof ByteView tView)
-            {
+        if (tSource instanceof ByteView tView) {
             byte[] ab = tView.getBytes(hSource, lIndex*8, 8, false);
             long   l  = Handy.byteArrayToLong(ab, 0);
 
             return frame.assignValue(iReturn, xInt64.makeHandle(l));
-            }
+        }
 
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
     public int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
-                                    ObjectHandle hValue)
-        {
+                                    ObjectHandle hValue) {
         ViewHandle     hView   = (ViewHandle) hTarget;
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof ByteView tView)
-            {
+        if (tSource instanceof ByteView tView) {
             long lValue = ((JavaLong) hValue).getValue();
 
             tView.assignByte(hSource, (lIndex++)*8, (byte) ((lValue >>> 56) & 0xFF));
@@ -113,8 +102,8 @@ public class xRTViewFromByteToInt64
             tView.assignByte(hSource, (lIndex  )*8, (byte) ((lValue       ) & 0xFF));
 
             return Op.R_NEXT;
-            }
+        }
 
         throw new UnsupportedOperationException();
-        }
     }
+}

@@ -36,33 +36,27 @@ import org.xvm.runtime.template.text.xString;
  * Native ComponentTemplate (abstract base class) implementation.
  */
 public class xRTComponentTemplate
-        extends ClassTemplate
-    {
+        extends ClassTemplate {
     public static xRTComponentTemplate INSTANCE;
 
-    public xRTComponentTemplate(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTComponentTemplate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void registerNativeTemplates()
-        {
-        if (this == INSTANCE)
-            {
+    public void registerNativeTemplates() {
+        if (this == INSTANCE) {
             ClassStructure struct = f_container.getClassStructure("_native.reflect.RTMultiMethodTemplate");
             registerNativeTemplate(new xRTComponentTemplate(f_container, struct, false));
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         markNativeProperty("access");
         markNativeProperty("doc");
         markNativeProperty("format");
@@ -75,75 +69,69 @@ public class xRTComponentTemplate
         markNativeMethod("children", null, null);
 
         invalidateTypeInfo();
-        }
+    }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         ComponentTemplateHandle hComponent = (ComponentTemplateHandle) hTarget;
-        switch (sPropName)
-            {
-            case "access":
-                return getPropertyAccess(frame, hComponent, iReturn);
+        switch (sPropName) {
+        case "access":
+            return getPropertyAccess(frame, hComponent, iReturn);
 
-            case "doc":
-                return getPropertyDoc(frame, hComponent, iReturn);
+        case "doc":
+            return getPropertyDoc(frame, hComponent, iReturn);
 
-            case "format":
-                return getPropertyFormat(frame, hComponent, iReturn);
+        case "format":
+            return getPropertyFormat(frame, hComponent, iReturn);
 
-            case "isAbstract":
-                return getPropertyIsAbstract(frame, hComponent, iReturn);
+        case "isAbstract":
+            return getPropertyIsAbstract(frame, hComponent, iReturn);
 
-            case "isStatic":
-                return getPropertyIsStatic(frame, hComponent, iReturn);
+        case "isStatic":
+            return getPropertyIsStatic(frame, hComponent, iReturn);
 
-            case "name":
-                return getPropertyName(frame, hComponent, iReturn);
+        case "name":
+            return getPropertyName(frame, hComponent, iReturn);
 
-            case "parent":
-                return getPropertyParent(frame, hComponent, iReturn);
+        case "parent":
+            return getPropertyParent(frame, hComponent, iReturn);
 
-            case "synthetic":
-                return getPropertySynthetic(frame, hComponent, iReturn);
-            }
+        case "synthetic":
+            return getPropertySynthetic(frame, hComponent, iReturn);
+        }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
+    }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
+                             ObjectHandle[] ahArg, int iReturn) {
         ComponentTemplateHandle hComponent = (ComponentTemplateHandle) hTarget;
-        switch (method.getName())
-            {
-            case "children":
-                return invokeChildren(frame, hComponent, iReturn);
-            }
+        switch (method.getName()) {
+        case "children":
+            return invokeChildren(frame, hComponent, iReturn);
+        }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
-        }
+    }
 
     @Override
     public int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         ComponentTemplateHandle hTemplate1 = (ComponentTemplateHandle) hValue1;
         ComponentTemplateHandle hTemplate2 = (ComponentTemplateHandle) hValue2;
 
         return frame.assignValue(iReturn,
             xBoolean.makeHandle(hTemplate1.getComponent().equals(hTemplate2.getComponent())));
-        }
+    }
 
     @Override
-    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
-        {
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
         ComponentTemplateHandle hTemplate1 = (ComponentTemplateHandle) hValue1;
         ComponentTemplateHandle hTemplate2 = (ComponentTemplateHandle) hValue2;
 
         return hTemplate1.getComponent() == hTemplate2.getComponent();
-        }
+    }
 
 
     // ----- property implementations --------------------------------------------------------------
@@ -151,82 +139,74 @@ public class xRTComponentTemplate
     /**
      * Implements property: access.get()
      */
-    protected int getPropertyAccess(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
-        {
+    protected int getPropertyAccess(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         Component component = hComponent.getComponent();
         Access    access    = component.getAccess();
         return Utils.assignInitializedEnum(frame, xRTType.makeAccessHandle(frame, access), iReturn);
-        }
+    }
 
     /**
      * Implements property: doc.get()
      */
-    protected int getPropertyDoc(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
-        {
+    protected int getPropertyDoc(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         Component component = hComponent.getComponent();
         String    sDoc      = component.getDocumentation();
         return frame.assignValue(iReturn, sDoc == null
                 ? xNullable.NULL
                 : xString.makeHandle(sDoc));
-        }
+    }
 
     /**
      * Implements property: format.get()
      */
-    protected int getPropertyFormat(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
-        {
+    protected int getPropertyFormat(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         Component  component = hComponent.getComponent();
         EnumHandle hFormat   = makeFormatHandle(frame, component.getFormat());
         return Utils.assignInitializedEnum(frame, hFormat, iReturn);
-        }
+    }
 
     /**
      * Implements property: isAbstract.get()
      */
-    protected int getPropertyIsAbstract(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
-        {
+    protected int getPropertyIsAbstract(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         Component component = hComponent.getComponent();
         return frame.assignValue(iReturn, xBoolean.makeHandle(component.isAbstract()));
-        }
+    }
 
     /**
      * Implements property: isStatic.get()
      */
-    protected int getPropertyIsStatic(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
-        {
+    protected int getPropertyIsStatic(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         Component component = hComponent.getComponent();
         return frame.assignValue(iReturn, xBoolean.makeHandle(component.isStatic()));
-        }
+    }
 
     /**
      * Implements property: name.get()
      */
-    protected int getPropertyName(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
-        {
+    protected int getPropertyName(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         Component component = hComponent.getComponent();
         return frame.assignValue(iReturn, xString.makeHandle(component.getSimpleName()));
-        }
+    }
 
     /**
      * Implements property: parent.get()
      */
-    protected int getPropertyParent(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
-        {
+    protected int getPropertyParent(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         Component    parent  = hComponent.getComponent().getParent();
         ObjectHandle hParent = parent == null
                 ? xNullable.NULL
                 : makeComponentHandle(frame.f_context.f_container, parent);
         return frame.assignValue(iReturn, hParent);
-        }
+    }
 
     /**
      * Implements property: synthetic.get()
      */
-    protected int getPropertySynthetic(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
-        {
+    protected int getPropertySynthetic(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         Component component = hComponent.getComponent();
         return frame.assignValue(iReturn, xBoolean.makeHandle(component.isSynthetic()));
-        }
+    }
 
 
     // ----- method implementations ----------------------------------------------------------------
@@ -234,18 +214,16 @@ public class xRTComponentTemplate
     /**
      * Implementation for: {@code ComponentTemplate[] children()}.
      */
-    protected int invokeChildren(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
-        {
+    protected int invokeChildren(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         Container      container  = frame.f_context.f_container;
         Component      component  = hComponent.getComponent();
         int            cChildren  = component.getChildrenCount();
         ObjectHandle[] ahChildren = new ObjectHandle[cChildren];
 
         int i = 0;
-        for (Component child : component.children())
-            {
+        for (Component child : component.children()) {
             ahChildren[i++] = makeComponentHandle(container, child);
-            }
+        }
         assert i == cChildren;
 
         // the only possible child type of MultiMethodTemplate is the MethodTemplate
@@ -254,7 +232,7 @@ public class xRTComponentTemplate
                 : container.resolveClass(ensureComponentArrayType());
 
         return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahChildren));
-        }
+    }
 
 
     // ----- Composition caching -------------------------------------------------------------------
@@ -262,34 +240,30 @@ public class xRTComponentTemplate
     /**
      * @return the TypeConstant for an Array of ComponentTemplate
      */
-    public static TypeConstant ensureComponentArrayType()
-        {
+    public static TypeConstant ensureComponentArrayType() {
         TypeConstant type = COMPONENT_ARRAY_TYPE;
-        if (type == null)
-            {
+        if (type == null) {
             ConstantPool pool = INSTANCE.pool();
             COMPONENT_ARRAY_TYPE = type = pool.ensureArrayType(
                     pool.ensureEcstasyTypeConstant("reflect.ComponentTemplate"));
-            }
-        return type;
         }
+        return type;
+    }
 
     /**
      * @return the TypeComposition for an RTMultiMethodTemplate
      */
-    public static TypeComposition getMultiMethodTemplateComposition(Container container)
-        {
+    public static TypeComposition getMultiMethodTemplateComposition(Container container) {
         ClassTemplate templateRT = MULTI_METHOD_TEMPLATE;
-        if (templateRT == null)
-            {
+        if (templateRT == null) {
             MULTI_METHOD_TEMPLATE = templateRT =
                 INSTANCE.f_container.getTemplate("_native.reflect.RTMultiMethodTemplate");
-            }
+        }
 
         ConstantPool pool         = container.getConstantPool();
         TypeConstant typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MultiMethodTemplate");
         return templateRT.ensureClass(container, typeTemplate);
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -302,123 +276,115 @@ public class xRTComponentTemplate
      *
      * @return the handle to the appropriate Ecstasy {@code ComponentTemplate.Format} enum value
      */
-    protected static EnumHandle makeFormatHandle(Frame frame, Component.Format format)
-        {
+    protected static EnumHandle makeFormatHandle(Frame frame, Component.Format format) {
         xEnum enumForm = (xEnum) INSTANCE.f_container.getTemplate("reflect.ComponentTemplate.Format");
 
-        switch (format)
-            {
-            case INTERFACE:
-                return enumForm.getEnumByName("Interface");
-            case CLASS:
-                return enumForm.getEnumByName("Class");
-            case CONST:
-                return enumForm.getEnumByName("Const");
-            case ENUM:
-                return enumForm.getEnumByName("Enum");
-            case ENUMVALUE:
-                return enumForm.getEnumByName("EnumValue");
-            case ANNOTATION:
-                return enumForm.getEnumByName("Annotation");
-            case MIXIN:
-                return enumForm.getEnumByName("Mixin");
-            case SERVICE:
-                return enumForm.getEnumByName("Service");
-            case PACKAGE:
-                return enumForm.getEnumByName("Package");
-            case MODULE:
-                return enumForm.getEnumByName("Module");
-            case TYPEDEF:
-                return enumForm.getEnumByName("TypeDef");
-            case PROPERTY:
-                return enumForm.getEnumByName("Property");
-            case METHOD:
-                return enumForm.getEnumByName("Method");
-            case RSVD_D:
-                return enumForm.getEnumByName("Reserved_D");
-            case MULTIMETHOD:
-                return enumForm.getEnumByName("MultiMethod");
-            case FILE:
-                return enumForm.getEnumByName("File");
+        switch (format) {
+        case INTERFACE:
+            return enumForm.getEnumByName("Interface");
+        case CLASS:
+            return enumForm.getEnumByName("Class");
+        case CONST:
+            return enumForm.getEnumByName("Const");
+        case ENUM:
+            return enumForm.getEnumByName("Enum");
+        case ENUMVALUE:
+            return enumForm.getEnumByName("EnumValue");
+        case ANNOTATION:
+            return enumForm.getEnumByName("Annotation");
+        case MIXIN:
+            return enumForm.getEnumByName("Mixin");
+        case SERVICE:
+            return enumForm.getEnumByName("Service");
+        case PACKAGE:
+            return enumForm.getEnumByName("Package");
+        case MODULE:
+            return enumForm.getEnumByName("Module");
+        case TYPEDEF:
+            return enumForm.getEnumByName("TypeDef");
+        case PROPERTY:
+            return enumForm.getEnumByName("Property");
+        case METHOD:
+            return enumForm.getEnumByName("Method");
+        case RSVD_D:
+            return enumForm.getEnumByName("Reserved_D");
+        case MULTIMETHOD:
+            return enumForm.getEnumByName("MultiMethod");
+        case FILE:
+            return enumForm.getEnumByName("File");
 
-            default:
-                throw new IllegalStateException("unsupported format: " + format);
-            }
+        default:
+            throw new IllegalStateException("unsupported format: " + format);
         }
+    }
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     /**
      * Given a Component structure, create ComponentTemplateHandle for it.
      */
-    public static ComponentTemplateHandle makeComponentHandle(Container container, Component component)
-        {
-        switch (component.getFormat())
-            {
-            case FILE:
-                return xRTFileTemplate.makeHandle(container, (FileStructure) component);
+    public static ComponentTemplateHandle makeComponentHandle(Container container, Component component) {
+        switch (component.getFormat()) {
+        case FILE:
+            return xRTFileTemplate.makeHandle(container, (FileStructure) component);
 
-            case MODULE:
-                return xRTModuleTemplate.makeHandle(container, (ModuleStructure) component);
+        case MODULE:
+            return xRTModuleTemplate.makeHandle(container, (ModuleStructure) component);
 
-            case PACKAGE:
-                return xRTPackageTemplate.makeHandle(container, (PackageStructure) component);
+        case PACKAGE:
+            return xRTPackageTemplate.makeHandle(container, (PackageStructure) component);
 
-            case CLASS:
-            case CONST:
-            case INTERFACE:
-            case ENUM:
-            case ENUMVALUE:
-            case ANNOTATION:
-            case MIXIN:
-            case SERVICE:
-                return xRTClassTemplate.makeHandle(container, (ClassStructure) component);
+        case CLASS:
+        case CONST:
+        case INTERFACE:
+        case ENUM:
+        case ENUMVALUE:
+        case ANNOTATION:
+        case MIXIN:
+        case SERVICE:
+            return xRTClassTemplate.makeHandle(container, (ClassStructure) component);
 
-            case MULTIMETHOD:
-                return new ComponentTemplateHandle(getMultiMethodTemplateComposition(container), component);
+        case MULTIMETHOD:
+            return new ComponentTemplateHandle(getMultiMethodTemplateComposition(container), component);
 
-            case METHOD:
-                return xRTMethodTemplate.makeHandle((MethodStructure) component);
+        case METHOD:
+            return xRTMethodTemplate.makeHandle((MethodStructure) component);
 
-            case PROPERTY:
-                return xRTPropertyTemplate.makePropertyHandle((PropertyStructure) component);
+        case PROPERTY:
+            return xRTPropertyTemplate.makePropertyHandle((PropertyStructure) component);
 
-            default:
-                throw new UnsupportedOperationException("unsupported format " + component.getFormat());
-            }
+        default:
+            throw new UnsupportedOperationException("unsupported format " + component.getFormat());
         }
+    }
 
     /**
      * Inner class: ComponentTemplateHandle. This is a handle to a native Component.
      */
     public static class ComponentTemplateHandle
-            extends GenericHandle
-        {
-        protected ComponentTemplateHandle(TypeComposition clz, Component component)
-            {
+            extends GenericHandle {
+        protected ComponentTemplateHandle(TypeComposition clz, Component component) {
             super(clz);
 
             f_struct   = component;
             m_fMutable = false;
-            }
+        }
 
-        public Component getComponent()
-            {
+        public Component getComponent() {
             return f_struct;
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return super.toString() + f_struct.getName();
-            }
+        }
 
         private final Component f_struct;
-        }
+    }
 
 
     // ----- constants -----------------------------------------------------------------------------
 
     private static TypeConstant  COMPONENT_ARRAY_TYPE;
     private static ClassTemplate MULTI_METHOD_TEMPLATE;
-    }
+}

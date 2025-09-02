@@ -33,97 +33,81 @@ import static org.xvm.util.Handy.indentLines;
  * A "switch" expression.
  */
 public class SwitchExpression
-        extends Expression
-    {
+        extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public SwitchExpression(Token keyword, List<AstNode> cond, List<AstNode> contents, long lEndPos)
-        {
+    public SwitchExpression(Token keyword, List<AstNode> cond, List<AstNode> contents, long lEndPos) {
         this.keyword  = keyword;
         this.cond     = cond;
         this.contents = contents;
         this.lEndPos  = lEndPos;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return keyword.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return lEndPos;
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean allowsConditional(Expression exprChild)
-        {
+    protected boolean allowsConditional(Expression exprChild) {
         return getParent().allowsShortCircuit(this) && contents.contains(exprChild);
-        }
+    }
 
     @Override
-    protected boolean hasSingleValueImpl()
-        {
+    protected boolean hasSingleValueImpl() {
         return false;
-        }
+    }
 
     @Override
-    protected boolean hasMultiValueImpl()
-        {
+    protected boolean hasMultiValueImpl() {
         return true;
-        }
+    }
 
     @Override
-    public TypeConstant[] getImplicitTypes(Context ctx)
-        {
+    public TypeConstant[] getImplicitTypes(Context ctx) {
         TypeCollector collector = new TypeCollector(pool());
-        for (AstNode node : contents)
-            {
-            if (node instanceof Expression expr)
-                {
+        for (AstNode node : contents) {
+            if (node instanceof Expression expr) {
                 collector.add(expr.getImplicitTypes(ctx));
-                }
             }
-        return collector.inferMulti(null);
         }
+        return collector.inferMulti(null);
+    }
 
     @Override
     public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive,
-                                ErrorListener errs)
-        {
+                                ErrorListener errs) {
         TypeFit fit = TypeFit.Fit;
-        for (AstNode node : contents)
-            {
-            if (node instanceof Expression expr)
-                {
+        for (AstNode node : contents) {
+            if (node instanceof Expression expr) {
                 fit = fit.combineWith(expr.testFitMulti(ctx, atypeRequired, fExhaustive, errs));
-                if (!fit.isFit())
-                    {
+                if (!fit.isFit()) {
                     return fit;
-                    }
                 }
             }
-
-        return fit;
         }
 
+        return fit;
+    }
+
     @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
-        {
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs) {
         // determine the type to request from each "result expression" (i.e. the result of this
         // switch expression, each of which comes after some "case:" label)
         TypeConstant[] atypeRequest = atypeRequired == null
@@ -136,10 +120,9 @@ public class SwitchExpression
         m_casemgr = mgr;
 
         int nArity = mgr.computeArity(listNodes, errs);
-        if (nArity == 0)
-            {
+        if (nArity == 0) {
             return null; // an error must've been reported
-            }
+        }
 
         // create a new context in case there are short-circuiting conditions that result in
         // narrowing inferences (see comments in SwitchStatement.validateImpl)
@@ -156,37 +139,28 @@ public class SwitchExpression
         int            cExprs    = 0;
         int            cCases    = 0;    // number of cases preceding an expression
         CaseStatement  stmtPrev  = null; // used for error reporting only
-        for (int iNode = 0, cNodes = listNodes.size(); iNode < cNodes; ++iNode)
-            {
+        for (int iNode = 0, cNodes = listNodes.size(); iNode < cNodes; ++iNode) {
             AstNode node = listNodes.get(iNode);
-            if (node instanceof CaseStatement stmtCase)
-                {
-                if (fInCase)
-                    {
+            if (node instanceof CaseStatement stmtCase) {
+                if (fInCase) {
                     ctxCase = ctxCase.enterOr();
-                    }
+                }
 
                 fValid &= mgr.validateCase(ctxCase, stmtCase, errs);
 
-                if (fInCase)
-                    {
+                if (fInCase) {
                     ctxCase = ctxCase.exit();
-                    }
-                else
-                    {
+                } else {
                     fInCase = true;
-                    }
+                }
                 stmtPrev = stmtCase;
                 cCases  += stmtCase.getExpressionCount();
-                }
-            else // it's an expression value
-                {
-                if (!fInCase)
-                    {
+            } else { // it's an expression value
+                if (!fInCase) {
                     node.log(errs, Severity.ERROR, Compiler.SWITCH_CASE_EXPECTED);
                     fValid = false;
                     break;
-                    }
+                }
                 fInCase = false;
                 cExprs++;
 
@@ -195,18 +169,15 @@ public class SwitchExpression
                 TypeConstant[] atypeReqScoped = atypeRequest;
                 Context        ctxScope       = ctxCase.enter();
                 if (fValid && mgr.hasTypeConditions() && cCases == 1 &&
-                        mgr.addTypeInference(ctxScope, stmtPrev, errs))
-                    {
-                    if (atypeReqScoped != null && atypeReqScoped.length > 0)
-                        {
+                        mgr.addTypeInference(ctxScope, stmtPrev, errs)) {
+                    if (atypeReqScoped != null && atypeReqScoped.length > 0) {
                         atypeReqScoped = atypeReqScoped.clone();
 
-                        for (int i = 0, c = atypeReqScoped.length; i < c; i++)
-                            {
+                        for (int i = 0, c = atypeReqScoped.length; i < c; i++) {
                             atypeReqScoped[i] = ctxScope.resolveFormalType(atypeReqScoped[i]);
-                            }
                         }
                     }
+                }
 
                 Expression exprOld = (Expression) node;
                 Expression exprNew = exprOld.validateMulti(ctxScope, atypeReqScoped, errs);
@@ -216,37 +187,30 @@ public class SwitchExpression
 
                 mgr.endCaseGroup(exprNew == null ? exprOld : exprNew);
 
-                if (iNode < cNodes - 1)
-                    {
+                if (iNode < cNodes - 1) {
                     ctxCase = ctxCase.enterFork(false).enterIf();
-                    }
+                }
 
-                if (exprNew == null)
-                    {
+                if (exprNew == null) {
                     fValid = false;
-                    }
-                else
-                    {
-                    if (exprNew != exprOld)
-                        {
+                } else {
+                    if (exprNew != exprOld) {
                         listNodes.set(iNode, exprNew);
-                        }
+                    }
 
-                    if (exprNew.isCompletable())
-                        {
+                    if (exprNew.isCompletable()) {
                         collector.add(atypeRequest == null || atypeRequest.length == 0
                                 ? exprNew.getTypes()
                                 : atypeRequest);
-                        }
                     }
-                cCases = 0; // restart the count
                 }
+                cCases = 0; // restart the count
             }
+        }
 
-        for (int i = 0, c = 2*cExprs - 1; i < c; ++i)
-            {
+        for (int i = 0, c = 2*cExprs - 1; i < c; ++i) {
             ctxCase = ctxCase.exit();
-            }
+        }
 
         // notify the case manager that we're finished collecting everything
         fValid = fValid && mgr.validateEnd(ctxCase, errs);
@@ -255,65 +219,52 @@ public class SwitchExpression
 
         TypeConstant[] atypeActual = TypeConstant.NO_TYPES;
         Constant[]     aconstVal   = null;
-        if (fValid)
-            {
+        if (fValid) {
             // determine the result type of the switch expression
             atypeActual = collector.inferMulti(atypeRequired);
-            if (atypeActual.length == 0)
-                {
+            if (atypeActual.length == 0) {
                 log(errs, Severity.ERROR, Compiler.SWITCH_TYPES_NONUNIFORM);
                 fValid = false;
-                }
+            }
 
             // determine the constant value of the switch expression
-            if (mgr.isSwitchConstant())
-                {
+            if (mgr.isSwitchConstant()) {
                 Expression exprResult = mgr.getCookie(mgr.getSwitchConstantLabel());
                 aconstVal = exprResult.toConstants();
-                }
             }
+        }
 
         return fValid
                 ? finishValidations(ctx, atypeRequired, atypeActual, TypeFit.Fit, aconstVal, errs)
                 : null;
-        }
+    }
 
     @Override
-    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
-        {
-        if (isConstant())
-            {
+    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs) {
+        if (isConstant()) {
             super.generateAssignments(ctx, code, aLVal, errs);
-            }
-        else
-            {
+        } else {
             // a scope will be required if the switch condition declares any new variables
             boolean fScope = m_casemgr.hasDeclarations();
-            if (fScope)
-                {
+            if (fScope) {
                 code.add(new Enter());
-                }
+            }
 
-            if (m_casemgr.usesIfLadder())
-                {
+            if (m_casemgr.usesIfLadder()) {
                 m_casemgr.generateIfLadder(ctx, code, contents, errs);
-                }
-            else
-                {
+            } else {
                 m_casemgr.generateJumpTable(ctx, code, errs);
-                }
+            }
 
             generateCaseBodies(ctx, code, aLVal, errs);
 
-            if (fScope)
-                {
+            if (fScope) {
                 code.add(new Exit());
-                }
             }
         }
+    }
 
-    private void generateCaseBodies(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
-        {
+    private void generateCaseBodies(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs) {
         List<AstNode> aNodes     = contents;
         int           cNodes     = aNodes.size();
         Label         labelCur   = null;
@@ -321,16 +272,12 @@ public class SwitchExpression
         int           cCases     = m_casemgr.getCaseCount();
         Constant[]    aconstCase = new Constant[cCases]; // case values (null == default)
         ExprAST[]     abastBody  = new ExprAST[cCases];  // case bodies (or nulls)
-        for (int i = 0, iCase = -1; i < cNodes; ++i)
-            {
+        for (int i = 0, iCase = -1; i < cNodes; ++i) {
             AstNode node = aNodes.get(i);
-            if (node instanceof CaseStatement stmtCase)
-                {
+            if (node instanceof CaseStatement stmtCase) {
                 labelCur = stmtCase.getLabel();
                 iCase    = stmtCase.collectConstants(iCase, aconstCase);
-                }
-            else
-                {
+            } else {
                 assert iCase >= 0 && iCase < cCases;
 
                 Expression expr = (Expression) node;
@@ -341,99 +288,82 @@ public class SwitchExpression
 
                 assert abastBody[iCase] == null;
                 abastBody[iCase] = expr.getExprAST(ctx);
-                }
             }
+        }
         code.add(labelExit);
 
         m_aconstCases = aconstCase;
         m_abastBody   = abastBody;
-        }
+    }
 
     @Override
-    public boolean isCompletable()
-        {
+    public boolean isCompletable() {
         // until we validate, assume completable
         return isShortCircuiting() || m_casemgr == null || !m_casemgr.isConditionAborting();
-        }
+    }
 
     @Override
-    public boolean isConditionalResult()
-        {
+    public boolean isConditionalResult() {
         return getParent() instanceof ReturnStatement stmtReturn &&
             stmtReturn.getCodeContainer().isReturnConditional();
-        }
+    }
 
     @Override
-    public boolean isShortCircuiting()
-        {
-        if (cond != null)
-            {
-            for (AstNode node : cond)
-                {
-                if (node instanceof Expression expr && expr.isShortCircuiting())
-                    {
+    public boolean isShortCircuiting() {
+        if (cond != null) {
+            for (AstNode node : cond) {
+                if (node instanceof Expression expr && expr.isShortCircuiting()) {
                     return true;
-                    }
                 }
             }
-        return false;
         }
+        return false;
+    }
 
     @Override
-    public ExprAST getExprAST(Context ctx)
-        {
+    public ExprAST getExprAST(Context ctx) {
         return isConstant()
                 ? toExprAst(toConstant())
                 : new SwitchAST(m_casemgr.getConditionBAST(), m_casemgr.getConditionIsA(),
                         m_aconstCases, m_abastBody, getTypes());
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
         sb.append("switch (");
 
-        if (cond != null && !cond.isEmpty())
-            {
+        if (cond != null && !cond.isEmpty()) {
             boolean fFirst = true;
-            for (AstNode node : cond)
-                {
-                if (fFirst)
-                    {
+            for (AstNode node : cond) {
+                if (fFirst) {
                     fFirst = false;
-                    }
-                else
-                    {
+                } else {
                     sb.append(", ");
-                    }
-                sb.append(node);
                 }
+                sb.append(node);
             }
+        }
 
         sb.append(")\n    {");
-        for (AstNode node : contents)
-            {
-            if (node instanceof CaseStatement)
-                {
+        for (AstNode node : contents) {
+            if (node instanceof CaseStatement) {
                 sb.append('\n')
                   .append(indentLines(node.toString(), "    "));
-                }
-            else
-                {
+            } else {
                 sb.append(' ')
                   .append(node)
                   .append(';');
-                }
             }
-        sb.append("\n    }");
+        }
+        sb.append("\n}");
 
         return sb.toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -448,4 +378,4 @@ public class SwitchExpression
     private transient ExprAST[]               m_abastBody;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchExpression.class, "cond", "contents");
-    }
+}

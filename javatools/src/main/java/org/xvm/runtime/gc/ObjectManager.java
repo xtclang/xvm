@@ -5,8 +5,7 @@ package org.xvm.runtime.gc;
  *
  * @param <V> the storage type
  */
-public interface ObjectManager<V>
-    {
+public interface ObjectManager<V> {
     /**
      * Allocate a new object with the specified field count.
      *
@@ -65,4 +64,4 @@ public interface ObjectManager<V>
      * @param address the field value
      */
     void setField(V o, int index, long address);
-    }
+}

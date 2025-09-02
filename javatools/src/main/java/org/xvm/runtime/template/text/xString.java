@@ -44,23 +44,19 @@ import org.xvm.util.Handy;
  */
 public class xString
         extends xConst
-        implements IndexSupport
-    {
+        implements IndexSupport {
     public static xString INSTANCE;
 
-    public xString(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xString(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         ConstantPool   pool      = pool();
         TypeConstant   typeArg   = pool.ensureClassTypeConstant(
                 pool.ensureEcstasyClassConstant("Appender"), null,
@@ -86,189 +82,165 @@ public class xString
         markNativeMethod("compare",   null, null);
 
         invalidateTypeInfo();
-        }
+    }
 
     @Override
-    public boolean isGenericHandle()
-        {
+    public boolean isGenericHandle() {
         return false;
-        }
+    }
 
     @Override
-    public int createConstHandle(Frame frame, Constant constant)
-        {
-        if (constant instanceof StringConstant hString)
-            {
+    public int createConstHandle(Frame frame, Constant constant) {
+        if (constant instanceof StringConstant hString) {
             return frame.pushStack(makeHandle(hString.getValue().toCharArray()));
-            }
+        }
 
         return super.createConstHandle(frame, constant);
-        }
+    }
 
     @Override
     public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
-                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
-        {
-        if (constructor.getIdentityConstant().getRawParams()[0].equals(frame.poolContext().typeString()))
-            {
+                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn) {
+        if (constructor.getIdentityConstant().getRawParams()[0].equals(frame.poolContext().typeString())) {
             return frame.assignValue(iReturn, ahVar[0]);
-            }
+        }
 
         return frame.assignValue(iReturn,
                 makeHandle(getChars((ArrayHandle) ahVar[0])));
-        }
+    }
 
     @Override
-    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
+    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         StringHandle hThis = (StringHandle) hTarget;
 
-        switch (Utils.callToString(frame, hArg))
-            {
-            case Op.R_NEXT:
-                return frame.assignValue(iReturn, concat(hThis, (StringHandle) frame.popStack()));
+        switch (Utils.callToString(frame, hArg)) {
+        case Op.R_NEXT:
+            return frame.assignValue(iReturn, concat(hThis, (StringHandle) frame.popStack()));
 
-            case Op.R_CALL:
-                frame.m_frameNext.addContinuation(frameCaller ->
-                    frameCaller.assignValue(iReturn, concat(hThis, (StringHandle) frame.popStack())));
-                return Op.R_CALL;
+        case Op.R_CALL:
+            frame.m_frameNext.addContinuation(frameCaller ->
+                frameCaller.assignValue(iReturn, concat(hThis, (StringHandle) frame.popStack())));
+            return Op.R_CALL;
 
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
+        case Op.R_EXCEPTION:
+            return Op.R_EXCEPTION;
 
-            default:
-                throw new IllegalStateException();
-            }
+        default:
+            throw new IllegalStateException();
         }
+    }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         StringHandle hThis = (StringHandle) hTarget;
 
-        switch (sPropName)
-            {
-            case "size":
-                return frame.assignValue(iReturn, xInt64.makeHandle(hThis.m_achValue.length));
+        switch (sPropName) {
+        case "size":
+            return frame.assignValue(iReturn, xInt64.makeHandle(hThis.m_achValue.length));
 
-            case "chars":
-                return frame.assignValue(iReturn,
-                        xArray.makeCharArrayHandle(hThis.m_achValue, Mutability.Constant));
-            }
+        case "chars":
+            return frame.assignValue(iReturn,
+                    xArray.makeCharArrayHandle(hThis.m_achValue, Mutability.Constant));
+        }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
+    }
 
     @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                              ObjectHandle[] ahArg, int[] aiReturn)
-        {
-        switch (ahArg.length)
-            {
-            case 2:
-                switch (method.getName())
-                    {
-                    case "indexOf":
-                        {
-                        StringHandle hThis  = (StringHandle) hTarget;
-                        ObjectHandle hValue = ahArg[0];
-                        ObjectHandle hStart = ahArg[1];
+                              ObjectHandle[] ahArg, int[] aiReturn) {
+        switch (ahArg.length) {
+        case 2:
+            switch (method.getName()) {
+            case "indexOf": {
+                StringHandle hThis  = (StringHandle) hTarget;
+                ObjectHandle hValue = ahArg[0];
+                ObjectHandle hStart = ahArg[1];
 
-                        int  ofStart = hStart == ObjectHandle.DEFAULT
-                                ? 0
-                                : (int) ((JavaLong) hStart).getValue();
+                int  ofStart = hStart == ObjectHandle.DEFAULT
+                        ? 0
+                        : (int) ((JavaLong) hStart).getValue();
 
-                        int ofResult;
-                        if (hValue instanceof JavaLong hChar)
-                            {
-                            // (Boolean, Int) indexOf(Char value, Int startAt)
-                            char chValue = (char) hChar.getValue();
+                int ofResult;
+                if (hValue instanceof JavaLong hChar) {
+                    // (Boolean, Int) indexOf(Char value, Int startAt)
+                    char chValue = (char) hChar.getValue();
 
-                            ofResult = indexOf(hThis.m_achValue, chValue, ofStart);
-                            }
-                        else
-                            {
-                            // (Boolean, Int) indexOf(String value, Int startAt)
-                            String sValue = ((StringHandle) hValue).getStringValue();
+                    ofResult = indexOf(hThis.m_achValue, chValue, ofStart);
+                } else {
+                    // (Boolean, Int) indexOf(String value, Int startAt)
+                    String sValue = ((StringHandle) hValue).getStringValue();
 
-                            ofResult = hThis.getStringValue().indexOf(sValue, ofStart);
-                            }
-                        return ofResult < 0
-                                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                                : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(ofResult));
-                        }
-                    }
+                    ofResult = hThis.getStringValue().indexOf(sValue, ofStart);
+                }
+                return ofResult < 0
+                        ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
+                        : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(ofResult));
             }
+            }
+        }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
-        }
+    }
 
     // ----- IndexSupport --------------------------------------------------------------------------
 
     @Override
-    public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
-        {
+    public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn) {
         char[] ach = ((StringHandle) hTarget).getValue();
         int    nIx = (int) lIndex;
 
         return nIx < 0 || nIx >= ach.length
                 ? frame.raiseException(xException.outOfBounds(frame, lIndex, ach.length))
                 : frame.assignValue(iReturn, xChar.makeHandle(ach[nIx]));
-        }
+    }
 
     @Override
-    public int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
-        {
+    public int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue) {
         return frame.raiseException(xException.immutableObject(frame));
-        }
+    }
 
     @Override
-    public TypeConstant getElementType(Frame frame, ObjectHandle hTarget, long lIndex)
-        {
+    public TypeConstant getElementType(Frame frame, ObjectHandle hTarget, long lIndex) {
         return pool().typeChar();
-        }
+    }
 
     @Override
-    public long size(ObjectHandle hTarget)
-        {
+    public long size(ObjectHandle hTarget) {
         return ((StringHandle) hTarget).getValue().length;
-        }
+    }
 
 
     // ----- comparison support --------------------------------------------------------------------
 
     @Override
     public int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         return frame.assignValue(iReturn, xBoolean.makeHandle(compareIdentity(hValue1, hValue2)));
-        }
+    }
 
     @Override
     public int callCompare(Frame frame, TypeComposition clazz,
-                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         StringHandle h1 = (StringHandle) hValue1;
         StringHandle h2 = (StringHandle) hValue2;
 
         return frame.assignValue(iReturn,
                 xOrdered.makeHandle(Arrays.compare(h1.m_achValue, h2.m_achValue)));
-        }
+    }
 
     @Override
-    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
-        {
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
         StringHandle h1 = (StringHandle) hValue1;
         StringHandle h2 = (StringHandle) hValue2;
 
         return Arrays.equals(h1.m_achValue, h2.m_achValue);
-        }
+    }
 
     @Override
-    public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
-        {
+    public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         return frame.assignValue(iReturn, ((StringHandle) hTarget).getHashCode());
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -276,75 +248,60 @@ public class xString
     /**
      * Extract an array of chars from the Array<Char> handle.
      */
-    private static char[] getChars(ArrayHandle hArray)
-        {
+    private static char[] getChars(ArrayHandle hArray) {
         DelegateHandle hDelegate = hArray.m_hDelegate;
-        if (hDelegate instanceof SliceHandle hSlice)
-            {
+        if (hDelegate instanceof SliceHandle hSlice) {
             CharArrayHandle hChars = (CharArrayHandle) hSlice.f_hSource;
             return xRTCharDelegate.getChars(hChars,
                     (int) hSlice.f_ofStart, (int) hSlice.m_cSize, hSlice.f_fReverse);
-            }
-
-        if (hDelegate instanceof CharArrayHandle hChars)
-            {
-            return xRTCharDelegate.getChars(hChars, 0, (int) hChars.m_cSize, false);
-            }
-        throw new UnsupportedOperationException();
         }
 
-    private static StringHandle concat(StringHandle h1, StringHandle h2)
-        {
+        if (hDelegate instanceof CharArrayHandle hChars) {
+            return xRTCharDelegate.getChars(hChars, 0, (int) hChars.m_cSize, false);
+        }
+        throw new UnsupportedOperationException();
+    }
+
+    private static StringHandle concat(StringHandle h1, StringHandle h2) {
         char[] ach1 = h1.m_achValue;
         char[] ach2 = h2.m_achValue;
 
         int c1 = ach1.length;
         int c2 = ach2.length;
 
-        if (c1 == 0)
-            {
+        if (c1 == 0) {
             return h2;
-            }
-        if (c2 == 0)
-            {
+        }
+        if (c2 == 0) {
             return h1;
-            }
+        }
 
         char[] ach = new char[c1 + c2];
         System.arraycopy(ach1, 0, ach, 0, c1);
         System.arraycopy(ach2, 0, ach, c1, c2);
         return makeHandle(ach);
-        }
+    }
 
-    private static int indexOf(char[] achSource, char chTarget, int ofStart)
-        {
+    private static int indexOf(char[] achSource, char chTarget, int ofStart) {
         int cchSource = achSource.length;
 
-        if (ofStart < 0)
-            {
+        if (ofStart < 0) {
             ofStart = 0;
-            }
-        else if (ofStart >= cchSource)
-            {
+        } else if (ofStart >= cchSource) {
             return -1;
-            }
+        }
 
-        if (chTarget < Character.MIN_SUPPLEMENTARY_CODE_POINT)
-            {
-            for (int of = ofStart; of < cchSource; of++)
-                {
-                if (achSource[of] == chTarget)
-                    {
+        if (chTarget < Character.MIN_SUPPLEMENTARY_CODE_POINT) {
+            for (int of = ofStart; of < cchSource; of++) {
+                if (achSource[of] == chTarget) {
                     return of;
-                    }
                 }
             }
-        else
-            {
+        } else {
             // TODO: see String.java indexOfSupplementary()
-            }
-        return -1;
         }
+        return -1;
+    }
 
     /**
      * Call String.appendTo(Appender<Char> appender)
@@ -357,112 +314,94 @@ public class xString
      * @return one of the {@link Op#R_CALL}, {@link Op#R_EXCEPTION} values
      */
     public static int callAppendTo(Frame frame, StringHandle hString,
-                                   ObjectHandle hAppender, int iReturn)
-        {
+                                   ObjectHandle hAppender, int iReturn) {
         ObjectHandle[] ahArg = new ObjectHandle[METHOD_APPEND_TO.getMaxVars()];
         ahArg[0] = hAppender;
 
         return frame.call1(METHOD_APPEND_TO, hString, ahArg, iReturn);
-        }
+    }
 
 
     // ----- handle --------------------------------------------------------------------------------
 
     public static class StringHandle
-            extends ObjectHandle
-        {
+            extends ObjectHandle {
         private final     char[]   m_achValue;
         private transient JavaLong m_hash;   // cached hash value
         private transient String   m_sValue; // cached String value
 
-        protected StringHandle(TypeComposition clazz, char[] achValue)
-            {
+        protected StringHandle(TypeComposition clazz, char[] achValue) {
             super(clazz);
 
             m_achValue = achValue;
-            }
+        }
 
-        public char[] getValue()
-            {
+        public char[] getValue() {
             return m_achValue;
-            }
+        }
 
-        public String getStringValue()
-            {
+        public String getStringValue() {
             String sValue = m_sValue;
             return sValue == null
                     ? (m_sValue = new String(m_achValue))
                     : sValue;
-            }
+        }
 
-        public int calcHashCode()
-            {
+        public int calcHashCode() {
             char[] ach  = m_achValue;
             int    cch  = ach.length;
             int    hash = 982_451_653;
-            if (cch <= 0x40)
-                {
-                for (char ch : ach)
-                    {
+            if (cch <= 0x40) {
+                for (char ch : ach) {
                     hash = hash * 31 + ch;
-                    }
                 }
-            else
-                {
+            } else {
                 // just sample ~60 characters from across the entire length of the string
-                for (int of = 0, cchStep = (cch >>> 6) + 1; of < cch; of += cchStep)
-                    {
+                for (int of = 0, cchStep = (cch >>> 6) + 1; of < cch; of += cchStep) {
                     hash = hash * 31 + ach[of];
-                    }
                 }
-            return hash;
             }
+            return hash;
+        }
 
-        public JavaLong getHashCode()
-            {
+        public JavaLong getHashCode() {
             JavaLong hHash = m_hash;
             return hHash == null
                     ? (m_hash = xInt64.makeHandle(calcHashCode()))
                     : hHash;
-            }
+        }
 
         @Override
-        public int hashCode()
-            {
+        public int hashCode() {
             return (int) getHashCode().getValue();
-            }
+        }
 
         @Override
-        public boolean equals(Object obj)
-            {
-            if (obj instanceof StringHandle that)
-                {
+        public boolean equals(Object obj) {
+            if (obj instanceof StringHandle that) {
                 return Arrays.equals(this.m_achValue, that.m_achValue);
-                }
-            return false;
             }
+            return false;
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             StringBuilder sb = new StringBuilder(super.toString());
             sb.append('\"');
             Handy.appendString(sb, getStringValue());
             return sb.append('\"').toString();
-            }
         }
+    }
 
-    public static StringHandle makeHandle(String sValue)
-        {
+    public static StringHandle makeHandle(String sValue) {
         return makeHandle(sValue.toCharArray());
-        }
+    }
 
-    public static StringHandle makeHandle(char[] achValue)
-        {
+    public static StringHandle makeHandle(char[] achValue) {
         return achValue.length == 0
             ? EMPTY_STRING
             : new StringHandle(INSTANCE.getCanonicalClass(), achValue);
-        }
+    }
 
 
     // ----- Composition and handle caching --------------------------------------------------------
@@ -470,28 +409,24 @@ public class xString
     /**
      * @return an immutable array of Strings
      */
-    public static ArrayHandle makeArrayHandle(String[] asValue)
-        {
+    public static ArrayHandle makeArrayHandle(String[] asValue) {
         int            cValues = asValue.length;
         StringHandle[] ahValue = new StringHandle[cValues];
-        for (int i = 0; i < cValues; i++)
-            {
+        for (int i = 0; i < cValues; i++) {
             ahValue[i] = makeHandle(asValue[i]);
-            }
-        return xArray.makeStringArrayHandle(ahValue);
         }
+        return xArray.makeStringArrayHandle(ahValue);
+    }
 
     /**
      * @return the handle for an empty Array of String
      */
-    public static ArrayHandle ensureEmptyArray()
-        {
-        if (EMPTY_STRING_ARRAY == null)
-            {
+    public static ArrayHandle ensureEmptyArray() {
+        if (EMPTY_STRING_ARRAY == null) {
             EMPTY_STRING_ARRAY = xArray.makeStringArrayHandle(Utils.STRINGS_NONE);
-            }
-        return EMPTY_STRING_ARRAY;
         }
+        return EMPTY_STRING_ARRAY;
+    }
 
 
     // ----- data members --------------------------------------------------------------------------
@@ -503,4 +438,4 @@ public class xString
 
     private static ArrayHandle     EMPTY_STRING_ARRAY;
     private static MethodStructure METHOD_APPEND_TO;
-    }
+}

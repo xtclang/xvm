@@ -19,25 +19,20 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
  * The native RTViewToBit base implementation.
  */
 public class xRTViewToBit
-        extends xRTView
-    {
+        extends xRTView {
     public static xRTViewToBit INSTANCE;
 
-    public xRTViewToBit(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTViewToBit(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void registerNativeTemplates()
-        {
-        if (this == INSTANCE)
-            {
+    public void registerNativeTemplates() {
+        if (this == INSTANCE) {
             registerNativeTemplate(new xRTViewToBitFromNibble(f_container, f_struct, true));
 
             registerNativeTemplate(new xRTViewToBitFromInt8   (f_container, f_struct, true));
@@ -53,13 +48,11 @@ public class xRTViewToBit
             registerNativeTemplate(new xRTViewToBitFromUInt128(f_container, f_struct, true));
 
             registerNativeTemplate(new xRTViewToBitFromFloat64(f_container, f_struct, true));
-            }
         }
+    }
     @Override
-    public void initNative()
-        {
-        if (this == INSTANCE)
-            {
+    public void initNative() {
+        if (this == INSTANCE) {
             // register native views
             ConstantPool                    pool     = pool();
             Map<TypeConstant, xRTViewToBit> mapViews = new HashMap<>();
@@ -81,19 +74,18 @@ public class xRTViewToBit
             mapViews.put(pool.typeFloat64(), xRTViewToBitFromFloat64.INSTANCE);
 
             VIEWS = mapViews;
-            }
         }
+    }
 
     @Override
-    public TypeComposition ensureParameterizedClass(Container container, TypeConstant... atypeParams)
-        {
+    public TypeComposition ensureParameterizedClass(Container container, TypeConstant... atypeParams) {
         assert atypeParams.length == 1;
 
         TypeConstant typeInception = container.getConstantPool().ensureParameterizedTypeConstant(
             getInceptionClassConstant().getType(), atypeParams);
 
         return ensureClass(container, typeInception, typeInception);
-        }
+    }
 
     /**
      * Create an ArrayDelegate<Bit> view into the specified ArrayDelegate<NumType> source.
@@ -101,20 +93,18 @@ public class xRTViewToBit
      * @param hSource     the source (of numeric type) delegate
      * @param mutability  the desired mutability (Constant of Fixed)
      */
-    public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability)
-        {
+    public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability) {
         TypeConstant typeElement = hSource.getType().getParamType(0);
         xRTViewToBit template    = VIEWS.get(typeElement);
 
-        if (template != null)
-            {
+        if (template != null) {
             return template.createBitViewDelegate(hSource, mutability);
-            }
-        throw new UnsupportedOperationException("RTViewToBitFrom" + typeElement.getValueString());
         }
+        throw new UnsupportedOperationException("RTViewToBitFrom" + typeElement.getValueString());
+    }
 
 
     // ----- constants -----------------------------------------------------------------------------
 
     private static Map<TypeConstant, xRTViewToBit> VIEWS;
-    }
+}

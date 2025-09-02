@@ -39,189 +39,158 @@ import org.xvm.util.Handy;
  * Native Char implementation.
  */
 public class xChar
-        extends xConst
-    {
+        extends xConst {
     public static xChar INSTANCE;
 
-    public xChar(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xChar(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         super.initNative();
 
         markNativeProperty("codepoint");
 
         invalidateTypeInfo();
 
-        if (this == INSTANCE)
-            {
+        if (this == INSTANCE) {
             ClassComposition clz = getCanonicalClass();
-            for (int i = 0; i < cache.length; ++i)
-                {
+            for (int i = 0; i < cache.length; ++i) {
                 cache[i] = new JavaLong(clz, i);
-                }
             }
         }
+    }
 
     @Override
-    public boolean isGenericHandle()
-        {
+    public boolean isGenericHandle() {
         return false;
-        }
+    }
 
     @Override
-    public int createConstHandle(Frame frame, Constant constant)
-        {
-        if (constant instanceof CharConstant constChar)
-            {
+    public int createConstHandle(Frame frame, Constant constant) {
+        if (constant instanceof CharConstant constChar) {
             return frame.pushStack(new JavaLong(getCanonicalClass(), constChar.getValue()));
-            }
+        }
 
         return super.createConstHandle(frame, constant);
-        }
+    }
 
     @Override
     public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
-                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
-        {
+                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn) {
         // there are three constructors take a JavaLong parameter (Byte, UInt32 and Int)
         // and one takes Byte[]
         ObjectHandle hArg = ahVar[0];
-        if (hArg instanceof JavaLong hCodepoint)
-            {
+        if (hArg instanceof JavaLong hCodepoint) {
             return constructHandle(frame, hCodepoint.getValue(), iReturn);
-            }
+        }
 
-        if (hArg instanceof StringHandle hText)
-            {
+        if (hArg instanceof StringHandle hText) {
             char[] ach = hText.getValue();
-            if (ach.length != 1)
-                {
+            if (ach.length != 1) {
                 return frame.raiseException("illegal argument: String has length=" + ach.length);
-                }
+            }
 
             return constructHandle(frame, ach[0], iReturn);
-            }
+        }
 
         byte[] ab = xByteArray.getBytes((ArrayHandle) hArg);
-        try
-            {
+        try {
             long lCodepoint =
                 Handy.readUtf8Char(new DataInputStream(new ByteArrayInputStream(ab)));
             return constructHandle(frame, lCodepoint, iReturn);
-            }
-        catch (IOException e)
-            {
+        } catch (IOException e) {
             return frame.raiseException(xException.illegalUTF(frame, e.getMessage()));
-            }
         }
+    }
 
-    protected int constructHandle(Frame frame, long lCodepoint, int iReturn)
-        {
+    protected int constructHandle(Frame frame, long lCodepoint, int iReturn) {
         if (lCodepoint > 0x10FFFFL ||                       // unicode limit
-            lCodepoint > 0xD7FFL && lCodepoint < 0xE000L)   // surrogate values are illegal
-            {
+            lCodepoint > 0xD7FFL && lCodepoint < 0xE000L) { // surrogate values are illegal
             return frame.raiseException("illegal code-point: " + lCodepoint);
-            }
+        }
 
         return frame.assignValue(iReturn, makeHandle(lCodepoint));
-        }
+    }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
-        switch (sPropName)
-            {
-            case "codepoint":
-                return frame.assignValue(iReturn,
-                    xUInt32.INSTANCE.makeJavaLong(((JavaLong) hTarget).getValue()));
-            }
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
+        switch (sPropName) {
+        case "codepoint":
+            return frame.assignValue(iReturn, xUInt32.INSTANCE.makeJavaLong(((JavaLong) hTarget).getValue()));
+        }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
+    }
 
     @Override
-    public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn) {
         long l = ((JavaLong) hTarget).getValue();
 
-        if (l == Character.MIN_VALUE)
-            {
+        if (l == Character.MIN_VALUE) {
             return overflow(frame);
-            }
+        }
 
         return frame.assignValue(iReturn, makeHandle(l - 1));
-        }
+    }
 
     @Override
-    public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn) {
         long l = ((JavaLong) hTarget).getValue();
 
-        if (l == Character.MAX_VALUE)
-            {
+        if (l == Character.MAX_VALUE) {
             return overflow(frame);
-            }
+        }
 
         return frame.assignValue(iReturn, makeHandle(l + 1));
-        }
+    }
 
 
     // ----- comparison support --------------------------------------------------------------------
 
     @Override
     public int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         return frame.assignValue(iReturn, xBoolean.makeHandle(compareIdentity(hValue1, hValue2)));
-        }
+    }
 
     @Override
     public int callCompare(Frame frame, TypeComposition clazz,
-                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         JavaLong h1 = (JavaLong) hValue1;
         JavaLong h2 = (JavaLong) hValue2;
 
         return frame.assignValue(iReturn,
             xOrdered.makeHandle(Long.compare(h1.getValue(), h2.getValue())));
-        }
+    }
 
     @Override
-    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
-        {
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
         return ((JavaLong) hValue1).getValue() == ((JavaLong) hValue2).getValue();
-        }
+    }
 
     @Override
-    public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
-        {
+    public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         JavaLong hThis = (JavaLong) hTarget;
 
         return frame.assignValue(iReturn, xInt64.makeHandle(hThis.getValue()));
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
 
-    public static JavaLong makeHandle(long chValue)
-        {
+    public static JavaLong makeHandle(long chValue) {
         assert chValue >= 0 & chValue <= 0x10FFFF;
-        if (chValue < 128)
-            {
+        if (chValue < 128) {
             return INSTANCE.cache[(int)chValue];
-            }
-        return new JavaLong(INSTANCE.getCanonicalClass(), chValue);
         }
+        return new JavaLong(INSTANCE.getCanonicalClass(), chValue);
+    }
 
     private final JavaLong[] cache = new JavaLong[128];
-    }
+}

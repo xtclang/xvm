@@ -35,24 +35,21 @@ import org.xvm.util.Handy;
  * </ul>
  */
 public class CondOpExpression
-        extends BiExpression
-    {
+        extends BiExpression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public CondOpExpression(Expression expr1, Token operator, Expression expr2)
-        {
+    public CondOpExpression(Expression expr1, Token operator, Expression expr2) {
         super(expr1, operator, expr2);
 
-        switch (operator.getId())
-            {
-            case COND_OR:
-            case COND_AND:
-                break;
+        switch (operator.getId()) {
+        case COND_OR:
+        case COND_AND:
+            break;
 
-            default:
-                throw new IllegalArgumentException("operator: " + operator);
-            }
+        default:
+            throw new IllegalArgumentException("operator: " + operator);
         }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -60,45 +57,39 @@ public class CondOpExpression
     /**
      * @return true iff the expression is a conditional "and" expression
      */
-    public boolean isAnd()
-        {
+    public boolean isAnd() {
         return operator.getId() == Id.COND_AND;
-        }
+    }
 
     /**
      * @return true iff the expression is a conditional "or" expression
      */
-    public boolean isOr()
-        {
+    public boolean isOr() {
         return operator.getId() == Id.COND_OR;
-        }
+    }
 
     @Override
-    public boolean validateCondition(ErrorListener errs)
-        {
+    public boolean validateCondition(ErrorListener errs) {
         return expr1.validateCondition(errs) && expr2.validateCondition(errs);
-        }
+    }
 
     @Override
-    public ConditionalConstant toConditionalConstant()
-        {
+    public ConditionalConstant toConditionalConstant() {
         return isAnd()
                 ? expr1.toConditionalConstant().addAnd(expr2.toConditionalConstant())
                 : expr1.toConditionalConstant().addOr (expr2.toConditionalConstant());
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType(Context ctx)
-        {
+    public TypeConstant getImplicitType(Context ctx) {
         return pool().typeBoolean();
-        }
+    }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         TypeFit fit = TypeFit.Fit;
 
         ConstantPool pool        = pool();
@@ -106,19 +97,15 @@ public class CondOpExpression
         Expression   expr1Old    = expr1;
         Expression   expr1New    = expr1Old.validate(ctx, typeBoolean, errs);
         Constant     const1      = null;
-        if (expr1New == null)
-            {
+        if (expr1New == null) {
             fit = TypeFit.NoFit;
-            }
-        else
-            {
-            if (expr1New != expr1Old)
-                {
+        } else {
+            if (expr1New != expr1Old) {
                 expr1 = expr1New;
-                }
+            }
 
             const1 = expr1New.toConstant();
-            }
+        }
 
         // && -> the second expression is only evaluated if the first expression is true
         // || -> the second expression is only evaluated if the first expression is false
@@ -127,173 +114,152 @@ public class CondOpExpression
         Expression expr2New = expr2Old.validate(ctx, typeBoolean, errs);
         Constant   const2   = null;
         ctx = ctx.exit();
-        if (expr2New == null)
-            {
+        if (expr2New == null) {
             fit = TypeFit.NoFit;
-            }
-        else
-            {
-            if (expr2New != expr2Old)
-                {
+        } else {
+            if (expr2New != expr2Old) {
                 expr2 = expr2New;
-                }
+            }
 
             const2 = expr2New.toConstant();
-            }
-
-        Constant constResult = null;
-        switch (combine(const1, getOperatorString(), const2))
-            {
-            case UandF:
-                if (expr1.hasSideEffects())
-                    {
-                    break;
-                    }
-                // fall through
-            case ForF:
-            case FandF:
-            case FandT:
-            case FandU:
-            case TandF:
-                constResult = pool.valFalse();
-                break;
-
-            case UorT:
-                if (expr1.hasSideEffects())
-                    {
-                    break;
-                    }
-                // fall through
-            case ForT:
-            case TorF:
-            case TorT:
-            case TorU:
-            case TandT:
-                constResult = pool.valTrue();
-                break;
-            }
-
-        return finishValidation(ctx, typeRequired, typeBoolean, fit, constResult, errs);
         }
 
+        Constant constResult = null;
+        switch (combine(const1, getOperatorString(), const2)) {
+        case UandF:
+            if (expr1.hasSideEffects()) {
+                break;
+            }
+            // fall through
+        case ForF:
+        case FandF:
+        case FandT:
+        case FandU:
+        case TandF:
+            constResult = pool.valFalse();
+            break;
+
+        case UorT:
+            if (expr1.hasSideEffects()) {
+                break;
+            }
+            // fall through
+        case ForT:
+        case TorF:
+        case TorT:
+        case TorU:
+        case TandT:
+            constResult = pool.valTrue();
+            break;
+        }
+
+        return finishValidation(ctx, typeRequired, typeBoolean, fit, constResult, errs);
+    }
+
     @Override
-    public boolean isCompletable()
-        {
+    public boolean isCompletable() {
         // these can complete if the first expression can complete, because the result can
         // be calculated from the first expression, depending on what its answer is
         return expr1.isCompletable();
-        }
+    }
 
     @Override
     public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
-        {
-        if (isConstant())
-            {
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+        if (isConstant()) {
             return toConstant();
-            }
-
-        switch (combine(expr1.toConstant(), getOperatorString(), expr2.toConstant()))
-            {
-            case UorF:
-            case UandT:
-                // result is the same as the result of the first expression
-                return expr1.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
-
-            case ForU:
-            case TandU:
-                // result is the same as the result of the second expression
-                return expr2.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
-
-            case UorU:
-            case UandU:
-                Label      labelEnd  = new Label(getCodeContainerCounter());
-                Register   regAccum  = code.createRegister(getType());
-                Assignable LValAccum = new Assignable(regAccum);
-
-                code.add(new Var(regAccum));
-                expr1.generateAssignment(ctx, code, LValAccum, errs);
-                if (isAnd())
-                    {
-                    code.add(new JumpFalse(regAccum, labelEnd));
-                    }
-                else
-                    {
-                    code.add(new JumpTrue(regAccum, labelEnd));
-                    }
-                expr2.generateAssignment(ctx, code, LValAccum, errs);
-                code.add(labelEnd);
-                return regAccum;
-
-            case UorT:
-                // ensure side effects are in play
-                expr1.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
-                // fall through
-            case ForT:
-                return pool().valTrue();
-
-            default:
-                throw new IllegalStateException();
-            }
         }
 
+        switch (combine(expr1.toConstant(), getOperatorString(), expr2.toConstant())) {
+        case UorF:
+        case UandT:
+            // result is the same as the result of the first expression
+            return expr1.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+
+        case ForU:
+        case TandU:
+            // result is the same as the result of the second expression
+            return expr2.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+
+        case UorU:
+        case UandU:
+            Label      labelEnd  = new Label(getCodeContainerCounter());
+            Register   regAccum  = code.createRegister(getType());
+            Assignable LValAccum = new Assignable(regAccum);
+
+            code.add(new Var(regAccum));
+            expr1.generateAssignment(ctx, code, LValAccum, errs);
+            if (isAnd()) {
+                code.add(new JumpFalse(regAccum, labelEnd));
+            } else {
+                code.add(new JumpTrue(regAccum, labelEnd));
+            }
+            expr2.generateAssignment(ctx, code, LValAccum, errs);
+            code.add(labelEnd);
+            return regAccum;
+
+        case UorT:
+            // ensure side effects are in play
+            expr1.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+            // fall through
+        case ForT:
+            return pool().valTrue();
+
+        default:
+            throw new IllegalStateException();
+        }
+    }
+
     @Override
-    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
-        {
-        if (isConstant())
-            {
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs) {
+        if (isConstant()) {
             LVal.assign(toConstant(), code, errs);
             return;
-            }
-
-        if (LVal.isNormalVariable())
-            {
-            switch (combine(expr1.toConstant(), getOperatorString(), expr1.toConstant()))
-                {
-                case UorF:
-                case UandT:
-                    // result is the same as the result of the first expression
-                    expr1.generateAssignment(ctx, code, LVal, errs);
-                    return;
-
-                case ForU:
-                case TandU:
-                    // result is the same as the result of the second expression
-                    expr2.generateAssignment(ctx, code, LVal, errs);
-                    return;
-                }
-            }
-
-        super.generateAssignment(ctx, code, LVal, errs);
         }
 
-    @Override
-    public ExprAST getExprAST(Context ctx)
-        {
-        if (isConstant())
-            {
-            return toExprAst(toConstant());
-            }
-
-        switch (combine(expr1.toConstant(), getOperatorString(), expr2.toConstant()))
-            {
+        if (LVal.isNormalVariable()) {
+            switch (combine(expr1.toConstant(), getOperatorString(), expr1.toConstant())) {
             case UorF:
             case UandT:
                 // result is the same as the result of the first expression
-                return expr1.getExprAST(ctx);
+                expr1.generateAssignment(ctx, code, LVal, errs);
+                return;
 
             case ForU:
-            case ForT:
             case TandU:
                 // result is the same as the result of the second expression
-                return expr2.getExprAST(ctx);
-
-            default:
-                return new CondOpExprAST(expr1.getExprAST(ctx),
-                     isAnd() ? Operator.CondAnd : Operator.CondOr,
-                     expr2.getExprAST(ctx));
+                expr2.generateAssignment(ctx, code, LVal, errs);
+                return;
             }
         }
+
+        super.generateAssignment(ctx, code, LVal, errs);
+    }
+
+    @Override
+    public ExprAST getExprAST(Context ctx) {
+        if (isConstant()) {
+            return toExprAst(toConstant());
+        }
+
+        switch (combine(expr1.toConstant(), getOperatorString(), expr2.toConstant())) {
+        case UorF:
+        case UandT:
+            // result is the same as the result of the first expression
+            return expr1.getExprAST(ctx);
+
+        case ForU:
+        case ForT:
+        case TandU:
+            // result is the same as the result of the second expression
+            return expr2.getExprAST(ctx);
+
+        default:
+            return new CondOpExprAST(expr1.getExprAST(ctx),
+                 isAnd() ? Operator.CondAnd : Operator.CondOr,
+                 expr2.getExprAST(ctx));
+        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -301,64 +267,51 @@ public class CondOpExpression
     /**
      * @return the default name of the "@Op" method
      */
-    public String getDefaultMethodName()
-        {
+    public String getDefaultMethodName() {
         // it uses the same operator method name as the non-conditional operator, but this
         // expression type short-circuits
         return isAnd()
                 ? "and"
                 : "or";
-        }
+    }
 
     /**
      * @return the default operator symbol for the "@Op" method
      */
-    public String getOperatorString()
-        {
+    public String getOperatorString() {
         // it uses the same operator method name as the non-conditional operator, but this
         // expression type short-circuits
         return isAnd()
                 ? "&"
                 : "|";
-        }
+    }
 
-    private int combine(Constant const1, String sOp, Constant const2)
-        {
+    private int combine(Constant const1, String sOp, Constant const2) {
         int n;
 
         final Constant TRUE  = pool().valTrue();
         final Constant FALSE = pool().valFalse();
 
-        if (Handy.equals(const1, TRUE))
-            {
+        if (Handy.equals(const1, TRUE)) {
             n = '1';
-            }
-        else if (Handy.equals(const1, FALSE))
-            {
+        } else if (Handy.equals(const1, FALSE)) {
             n = '0';
-            }
-        else
-            {
+        } else {
             n = '?';
-            }
+        }
 
         n = (n << 16) | (sOp.charAt(0) << 8);
 
-        if (Handy.equals(const2, TRUE))
-            {
+        if (Handy.equals(const2, TRUE)) {
             n |= '1';
-            }
-        else if (Handy.equals(const2, FALSE))
-            {
+        } else if (Handy.equals(const2, FALSE)) {
             n |= '0';
-            }
-        else
-            {
+        } else {
             n |= '?';
-            }
+        }
 
         return n;
-        }
+    }
 
     static final int ForF  = ('0' << 16) | ('|' << 8) | '0';
     static final int ForT  = ('0' << 16) | ('|' << 8) | '1';
@@ -378,4 +331,4 @@ public class CondOpExpression
     static final int UandF = ('?' << 16) | ('&' << 8) | '0';
     static final int UandT = ('?' << 16) | ('&' << 8) | '1';
     static final int UandU = ('?' << 16) | ('&' << 8) | '?';
-    }
+}

@@ -20,8 +20,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * TypeComposition represents a fully resolved class (e.g. ArrayList<String> or
  * @Interval Range<Date>).
  */
-public interface TypeComposition
-    {
+public interface TypeComposition {
     /**
      * @return the container this TypeComposition belongs to
      */
@@ -95,18 +94,16 @@ public interface TypeComposition
     /**
      * @return true iff the inception type represents a const
      */
-    default boolean isConst()
-        {
+    default boolean isConst() {
         return getTemplate().getStructure().isConst();
-        }
+    }
 
     /**
      * @return true iff this TypeComposition represents an instance inner class
      */
-    default boolean isInstanceChild()
-        {
+    default boolean isInstanceChild() {
         return getTemplate().getStructure().isInstanceChild();
-        }
+    }
 
     /**
      * Retrieve an auto-generated default initializer for struct instances of this class. Return
@@ -190,10 +187,9 @@ public interface TypeComposition
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
-    default int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
-        {
+    default int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn) {
         return getTemplate().getFieldValue(frame, hTarget, idProp, iReturn);
-        }
+    }
 
     /**
      * Set a field value.
@@ -205,10 +201,9 @@ public interface TypeComposition
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION},
      */
-    default int setFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
-        {
+    default int setFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue) {
         return getTemplate().setFieldValue(frame, hTarget, idProp, hValue);
-        }
+    }
 
     /**
      * @return a map of field info (excluding potentially unassigned, lazy and transient)
@@ -228,8 +223,7 @@ public interface TypeComposition
     /**
      * @return the ConstantPool for the container this TypeComposition belongs to
      */
-    default ConstantPool getConstantPool()
-        {
+    default ConstantPool getConstantPool() {
         return getContainer().getConstantPool();
-        }
     }
+}

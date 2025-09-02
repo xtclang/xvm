@@ -10,23 +10,19 @@ import org.xvm.runtime.Container;
  * Native Int16 support.
  */
 public class xInt16
-        extends xConstrainedInteger
-    {
+        extends xConstrainedInteger {
     public static xInt16 INSTANCE;
 
-    public xInt16(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xInt16(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, Short.MIN_VALUE, Short.MAX_VALUE, 16, false, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
-        }
-
-    @Override
-    protected xConstrainedInteger getComplimentaryTemplate()
-        {
-        return xUInt16.INSTANCE;
         }
     }
+
+    @Override
+    protected xConstrainedInteger getComplimentaryTemplate() {
+        return xUInt16.INSTANCE;
+    }
+}

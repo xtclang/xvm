@@ -13,31 +13,26 @@ import org.xvm.runtime.Container;
  * The native RTViewToBit<UInt16> implementation.
  */
 public class xRTViewToBitFromUInt16
-        extends LongBasedBitView
-    {
+        extends LongBasedBitView {
     public static xRTViewToBitFromUInt16 INSTANCE;
 
-    public xRTViewToBitFromUInt16(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTViewToBitFromUInt16(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, 16);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
-        }
+    public void initNative() {
+    }
 
     @Override
-    public TypeConstant getCanonicalType()
-        {
+    public TypeConstant getCanonicalType() {
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
                 pool.typeUInt16());
-        }
     }
+}

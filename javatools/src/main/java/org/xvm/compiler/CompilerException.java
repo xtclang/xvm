@@ -7,22 +7,18 @@ package org.xvm.compiler;
  * source material being compiled.
  */
 public class CompilerException
-        extends RuntimeException
-    {
-    public CompilerException(String message)
-        {
+        extends RuntimeException {
+    public CompilerException(String message) {
         super(message);
-        }
-
-    public CompilerException(String message, Throwable cause)
-        {
-        super(message, cause);
-        }
-
-    public CompilerException(Throwable cause)
-        {
-        super(cause);
-        }
     }
+
+    public CompilerException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public CompilerException(Throwable cause) {
+        super(cause);
+    }
+}
 
 

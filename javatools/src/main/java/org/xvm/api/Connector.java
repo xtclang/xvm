@@ -39,92 +39,80 @@ import org.xvm.runtime.template.text.xString;
  *   <li> wait for the natural termination or explicitly shutdown the container at some point
  * </ul>
  */
-public class Connector
-    {
+public class Connector {
     /**
      * Construct the Connector based on the specified ModuleRepository.
      */
-    public Connector(ModuleRepository repository)
-        {
+    public Connector(ModuleRepository repository) {
         f_repository      = repository;
         f_runtime         = new Runtime();
         f_containerNative = new NativeContainer(f_runtime, repository);
-        }
+    }
 
     /**
      * Create the main container for the specified module.
      */
-    public void loadModule(String sAppName)
-        {
-        if (m_containerMain != null)
-            {
+    public void loadModule(String sAppName) {
+        if (m_containerMain != null) {
             throw new IllegalStateException("Connector is already activated");
-            }
+        }
 
         ModuleStructure moduleApp = f_repository.loadModule(sAppName);
-        if (moduleApp == null)
-            {
+        if (moduleApp == null) {
             throw new IllegalStateException("Unable to load module \"" + sAppName + "\"");
-            }
+        }
 
         FileStructure  structApp = f_containerNative.createFileStructure(moduleApp);
         ModuleConstant idMissing = structApp.linkModules(f_repository, true);
-        if (idMissing != null)
-            {
+        if (idMissing != null) {
             throw new IllegalStateException("Unable to load module \"" + idMissing.getName() + "\"");
-            }
+        }
 
         m_containerMain = new MainContainer(f_runtime, f_containerNative, structApp.getModuleId());
-        }
+    }
 
     /**
      * Obtain the ConstantPool for the container associated with this Connector.
      */
-    public ConstantPool getConstantPool()
-        {
+    public ConstantPool getConstantPool() {
         return m_containerMain.getConstantPool();
-        }
+    }
 
     /**
      * Obtain the container associated with this Connector.
      */
-    public MainContainer getContainer()
-        {
+    public MainContainer getContainer() {
         return m_containerMain;
-        }
+    }
 
     /**
      * Start the Runtime and the main Container.
      */
-    public void start(Map<String, String> mapInjections)
-        {
-        if (!m_fStarted)
-            {
+    public void start(Map<String, String> mapInjections) {
+        if (!m_fStarted) {
             f_runtime.start();
             m_fStarted = true;
-            }
+        }
 
         m_containerMain.start(mapInjections);
-        }
+    }
 
     /**
      * Find any possible entry points for a given name in the main module.
      */
-    public Set<MethodStructure> findMethods(String sMethodName)
-        {
+    public Set<MethodStructure> findMethods(String sMethodName) {
         return findMethods(m_containerMain.getModule(), sMethodName);
-        }
+    }
 
     /**
      * Find an entry points for a given name in the specified module.
      */
-    protected Set<MethodStructure> findMethods(ModuleConstant idModule, String sMethodName)
-        {
+    protected Set<MethodStructure> findMethods(ModuleConstant idModule, String sMethodName) {
         MultiMethodStructure mms = (MultiMethodStructure)
                 idModule.getComponent().getChildByNameMap().get(sMethodName);
 
         return new HashSet<>(mms.getMethodByConstantMap().values());
-        }
+    }
 
 
     /**
@@ -133,45 +121,40 @@ public class Connector
      * @param method  the method structure
      * @param asArg   arguments
      */
-    public void invoke0(MethodStructure method, String... asArg)
-        {
-        if (!m_fStarted)
-            {
+    public void invoke0(MethodStructure method, String... asArg) {
+        if (!m_fStarted) {
             throw new IllegalStateException("The container has not been started");
-            }
+        }
 
         ConstantPool   pool        = ConstantPool.getCurrentPool();
         TypeConstant   typeStrings = pool.ensureArrayType(pool.typeString());
         ObjectHandle[] ahArg       = Utils.OBJECTS_NONE;
 
-        switch (method.getRequiredParamCount())
-            {
-            case 0:
-                if (asArg != null)
-                    {
-                    assert method.getParamCount() > 0;
-                    TypeConstant typeArg = method.getParam(0).getType();
-
-                    assert typeStrings.isA(typeArg);
-                    ahArg = new ObjectHandle[]{xString.makeArrayHandle(asArg)};
-                    }
-                break;
-
-            case 1:
-                {
+        switch (method.getRequiredParamCount()) {
+        case 0:
+            if (asArg != null) {
+                assert method.getParamCount() > 0;
                 TypeConstant typeArg = method.getParam(0).getType();
+
                 assert typeStrings.isA(typeArg);
-                // the method requires an array that we can supply
-                ahArg = new ObjectHandle[] {
-                    asArg == null
-                        ? xString.ensureEmptyArray()
-                        : xString.makeArrayHandle(asArg)};
-                break;
-                }
+                ahArg = new ObjectHandle[]{xString.makeArrayHandle(asArg)};
             }
+            break;
+
+        case 1: {
+            TypeConstant typeArg = method.getParam(0).getType();
+            assert typeStrings.isA(typeArg);
+            // the method requires an array that we can supply
+            ahArg = new ObjectHandle[] {
+                asArg == null
+                    ? xString.ensureEmptyArray()
+                    : xString.makeArrayHandle(asArg)};
+            break;
+        }
+        }
 
         m_containerMain.invoke0(method.getName(), ahArg);
-        }
+    }
 
     /**
      * Wait for the container termination.
@@ -180,18 +163,16 @@ public class Connector
      *              the return value
      */
     public int join()
-            throws InterruptedException
-        {
+            throws InterruptedException {
         // extremely naive; replace
         do  {
             Thread.sleep(500);
-            }
-        while (!f_runtime.isIdle() || !m_containerMain.isIdle());
+        } while (!f_runtime.isIdle() || !m_containerMain.isIdle());
 
         int nResult = m_containerMain.getResult();
         m_containerMain = null;
         return nResult;
-        }
+    }
 
 
     // ----- data fields ---------------------------------------------------------------------------
@@ -220,4 +201,4 @@ public class Connector
      * Status indicator.
      */
     private boolean m_fStarted;
-    }
+}

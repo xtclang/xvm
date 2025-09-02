@@ -10,8 +10,7 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
  * {@link VarSupport} represents a run-time facet of a Var.
  */
 public interface VarSupport
-        extends OpSupport
-    {
+        extends OpSupport {
     // ----- construction --------------------------------------------------------------------------
 
     /**
@@ -227,4 +226,4 @@ public interface VarSupport
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeVarXor(Frame frame, RefHandle hTarget, ObjectHandle hArg);
-    }
+}

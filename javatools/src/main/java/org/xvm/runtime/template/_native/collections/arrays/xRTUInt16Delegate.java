@@ -17,37 +17,31 @@ import org.xvm.runtime.template.numbers.xUInt16;
  */
 public class xRTUInt16Delegate
         extends LongBasedDelegate
-        implements ByteView
-    {
+        implements ByteView {
     public static xRTUInt16Delegate INSTANCE;
 
-    public xRTUInt16Delegate(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTUInt16Delegate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, 16, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
-        }
+    public void initNative() {
+    }
 
     @Override
-    public TypeConstant getCanonicalType()
-        {
+    public TypeConstant getCanonicalType() {
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
                 pool.typeUInt16());
-        }
+    }
 
     @Override
-    protected ObjectHandle makeElementHandle(long lValue)
-        {
+    protected ObjectHandle makeElementHandle(long lValue) {
         return xUInt16.INSTANCE.makeJavaLong(lValue);
-        }
     }
+}

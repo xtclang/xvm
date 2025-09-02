@@ -40,8 +40,7 @@ import org.xvm.util.Severity;
  * <p/>REVIEW this expression could theoretically calculate to a constant value
  */
 public class StatementExpression
-        extends Expression
-    {
+        extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -49,82 +48,70 @@ public class StatementExpression
      *
      * @param body  the
      */
-    public StatementExpression(StatementBlock body)
-        {
+    public StatementExpression(StatementBlock body) {
         this.body = body;
-        }
+    }
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return body.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return body.getEndPosition();
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- code container methods ----------------------------------------------------------------
 
     @Override
-    public TypeConstant[] getReturnTypes()
-        {
+    public TypeConstant[] getReturnTypes() {
         return isValidated() ? getTypes() : m_atypeRequired;
-        }
+    }
 
     @Override
-    public boolean isReturnConditional()
-        {
+    public boolean isReturnConditional() {
         // this is called during validation, when we're still trying to figure out what exactly does
         // get returned
         return false;
-        }
+    }
 
     @Override
-    public void collectReturnTypes(TypeConstant[] atypeRet)
-        {
+    public void collectReturnTypes(TypeConstant[] atypeRet) {
         TypeCollector collector = m_collector;
-        if (collector == null)
-            {
+        if (collector == null) {
             m_collector = collector = new TypeCollector(pool());
-            }
-        collector.add(atypeRet);
         }
+        collector.add(atypeRet);
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean hasSingleValueImpl()
-        {
+    protected boolean hasSingleValueImpl() {
         return false;
-        }
+    }
 
     @Override
-    protected boolean hasMultiValueImpl()
-        {
+    protected boolean hasMultiValueImpl() {
         return true;
-        }
+    }
 
     @Override
-    public TypeConstant[] getImplicitTypes(Context ctx)
-        {
+    public TypeConstant[] getImplicitTypes(Context ctx) {
         assert m_atypeRequired == null && m_collector == null;
-        if (isValidated())
-            {
+        if (isValidated()) {
             return getTypes();
-            }
+        }
 
         // clone the body (to avoid damaging the original) and validate it to calculate its type
         StatementBlock blockTempOld = (StatementBlock) body.clone();
@@ -137,46 +124,39 @@ public class StatementExpression
 
         // extract the type information (if everything validated ok)
         TypeConstant[] aTypes = null;
-        if (blockTempNew != null && m_collector != null)
-            {
+        if (blockTempNew != null && m_collector != null) {
             aTypes = m_collector.inferMulti(null); // TODO isConditional
-            }
+        }
 
         // clean up temporary stuff
         m_collector = null;
         blockTempOld.discard(true);
 
         return aTypes;
-        }
+    }
 
     @Override
     public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive,
-                                ErrorListener errs)
-        {
-        if (atypeRequired != null && atypeRequired.length == 0)
-            {
+                                ErrorListener errs) {
+        if (atypeRequired != null && atypeRequired.length == 0) {
             return TypeFit.Fit;
-            }
+        }
 
         assert m_atypeRequired == null && m_collector == null;
-        if (isValidated())
-            {
+        if (isValidated()) {
             TypeConstant[] aActualTypes   = getTypes();
             int            cActualTypes   = aActualTypes.length;
             int            cRequiredTypes = atypeRequired.length;
-            if (cRequiredTypes > cActualTypes)
-                {
+            if (cRequiredTypes > cActualTypes) {
                 return TypeFit.NoFit;
-                }
-            for (int i = 0; i < cRequiredTypes; ++i)
-                {
-                if (!isA(ctx, aActualTypes[i], atypeRequired[i]))
-                    {
-                    return TypeFit.NoFit;
-                    }
-                }
-            return TypeFit.Fit;
             }
+            for (int i = 0; i < cRequiredTypes; ++i) {
+                if (!isA(ctx, aActualTypes[i], atypeRequired[i])) {
+                    return TypeFit.NoFit;
+                }
+            }
+            return TypeFit.Fit;
+        }
 
         m_atypeRequired = atypeRequired;
 
@@ -189,12 +169,11 @@ public class StatementExpression
         ctx = ctx.exit();
 
         TypeFit fit = TypeFit.NoFit;
-        if (blockTempNew != null && m_collector != null)
-            {
+        if (blockTempNew != null && m_collector != null) {
             // calculate the resulting type
             TypeConstant[] aActualTypes = m_collector.inferMulti(atypeRequired);  // TODO isConditional
             fit = calcFitMulti(ctx, aActualTypes, atypeRequired);
-            }
+        }
 
         // clean up temporary stuff
         m_atypeRequired = null;
@@ -202,11 +181,10 @@ public class StatementExpression
         blockTempOld.discard(true);
 
         return fit;
-        }
+    }
 
     @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
-        {
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs) {
         assert m_atypeRequired == null && m_collector == null;
         m_atypeRequired = atypeRequired;
 
@@ -221,67 +199,53 @@ public class StatementExpression
 
         ctx = ctx.exit();
 
-        if (bodyNew == null)
-            {
+        if (bodyNew == null) {
             fit = TypeFit.NoFit;
-            }
-        else
-            {
+        } else {
             body = bodyNew;
 
-            if (m_collector == null)
-                {
-                if (atypeRequired != null && atypeRequired.length == 0)
-                    {
+            if (m_collector == null) {
+                if (atypeRequired != null && atypeRequired.length == 0) {
                     // void is a fit
                     atypeActual = atypeRequired;
-                    }
-                else
-                    {
+                } else {
                     log(errs, Severity.ERROR, Compiler.RETURN_REQUIRED);
                     fit = TypeFit.NoFit;
-                    }
                 }
-            else
-                {
+            } else {
                 atypeActual = m_collector.inferMulti(atypeRequired); // TODO conditional
                 m_collector = null;
 
-                if (atypeActual == null)
-                    {
+                if (atypeActual == null) {
                     log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                             atypeRequired == null || atypeRequired.length == 0 ? "void"
                                     : atypeRequired[0].getValueString(), "undefined");
                     fit = TypeFit.NoFit;
-                    }
                 }
             }
+        }
 
         return finishValidations(ctx, atypeRequired, atypeActual, fit, null, errs);
-        }
+    }
 
     @Override
-    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
-        {
+    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs) {
         m_aLVal = aLVal;
         if (body.completes(ctx, true, code, errs) &&
-                m_atypeRequired != null && m_atypeRequired.length > 0)
-            {
+                m_atypeRequired != null && m_atypeRequired.length > 0) {
             errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, getSource(),
                     getEndPosition(), getEndPosition());
-            }
+        }
         m_astBody = ctx.getHolder().getAst(body);
-        }
+    }
 
     @Override
-    public ExprAST getExprAST(Context ctx)
-        {
+    public ExprAST getExprAST(Context ctx) {
         return new StmtExprAST(m_astBody, getTypes());
-        }
+    }
 
     @Override
-    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
-        {
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg) {
         // theoretically speaking, we can go through the list of statements; check for invocations,
         // property access or assignments and compute the effect, but since i) the use of
         // StatementExpressions is very limited; ii) the cost of the defensive copy is extremely low
@@ -289,7 +253,7 @@ public class StatementExpression
         return super.mightAffect(exprLeft, arg) == SideEffect.DefNo
                 ? SideEffect.DefNo
                 : SideEffect.DefYes;
-        }
+    }
 
     // ----- compilation helpers -------------------------------------------------------------------
 
@@ -297,33 +261,28 @@ public class StatementExpression
      * @return the array of Assignable object representing the L-Value(s) emitted by this
      *         expression
      */
-    Assignable[] getAssignables()
-        {
+    Assignable[] getAssignables() {
         return m_aLVal;
-        }
+    }
 
     /**
      * Create a custom statement expression context.
      */
-    protected StatementExpressionContext enterStatementContext(Context ctx)
-        {
+    protected StatementExpressionContext enterStatementContext(Context ctx) {
         return new StatementExpressionContext(ctx);
-        }
+    }
 
     /**
      * A custom context implementation for statement expression.
      */
     protected static class StatementExpressionContext
-            extends Context
-        {
-        public StatementExpressionContext(Context ctxOuter)
-            {
+            extends Context {
+        public StatementExpressionContext(Context ctxOuter) {
             super(ctxOuter, true);
-            }
+        }
 
         @Override
-        public Context exit()
-            {
+        public Context exit() {
             // the "statement expression" is an "inline lambda", that represents a conceptually
             // nested unit of compilation that produces one or more values which become the value(s)
             // of the expression; as a result, the "return" statement inside of the statement
@@ -334,23 +293,21 @@ public class StatementExpression
             setReachable(true);
 
             return super.exit();
-            }
         }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return body.toString();
-        }
+    }
 
     @Override
-    public String toDumpString()
-        {
+    public String toDumpString() {
         return body.toDumpString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -363,4 +320,4 @@ public class StatementExpression
     private transient BinaryAST      m_astBody;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(StatementExpression.class, "body");
-    }
+}

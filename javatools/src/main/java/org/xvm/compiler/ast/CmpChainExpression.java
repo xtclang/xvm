@@ -63,15 +63,13 @@ import org.xvm.util.Severity;
  * @see CmpExpression
  */
 public class CmpChainExpression
-        extends Expression
-    {
+        extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public CmpChainExpression(List<Expression> expressions, Token[] operators)
-        {
+    public CmpChainExpression(List<Expression> expressions, Token[] operators) {
         this.expressions = expressions;
         this.operators   = operators;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -80,48 +78,41 @@ public class CmpChainExpression
      * @return true iff the expression uses a type composition's equals() function, or false iff the
      *         expression uses a type composition's compare() function
      */
-    public boolean usesEquals()
-        {
+    public boolean usesEquals() {
         Id id = operators[0].getId();
         return id == Id.COMP_EQ | id == Id.COMP_NEQ;
-        }
+    }
 
-    public boolean isAscending()
-        {
+    public boolean isAscending() {
         Id id = operators[0].getId();
         return id == Id.COMP_LT | id == Id.COMP_LTEQ;
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return expressions.getFirst().getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return expressions.getLast().getEndPosition();
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType(Context ctx)
-        {
+    public TypeConstant getImplicitType(Context ctx) {
         return ctx.pool().typeBoolean();
-        }
+    }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         boolean fValid = true;
 
         // find the common type across all of the expressions, hopefully before having to validate
@@ -133,202 +124,157 @@ public class CmpChainExpression
 
         TypeConstant typeCommon = chooseCommonType(ctx, false);
         boolean      fForceFirst = typeCommon == null;
-        if (fForceFirst)
-            {
+        if (fForceFirst) {
             Expression exprOld = listExprs.get(0);
             Expression exprNew = exprOld.validate(ctx, fOrdered ? pool.typeOrderable() : null, errs);
-            if (exprNew == null)
-                {
+            if (exprNew == null) {
                 return null;
-                }
-            if (exprNew != exprOld)
-                {
-                listExprs.set(0, exprNew);
-                }
-            typeCommon = chooseCommonType(ctx, false);
             }
+            if (exprNew != exprOld) {
+                listExprs.set(0, exprNew);
+            }
+            typeCommon = chooseCommonType(ctx, false);
+        }
 
         // allow the expressions to resolve names based on the requested type
         boolean fInfer = typeCommon != null;
-        if (fInfer)
-            {
+        if (fInfer) {
             ctx = ctx.enterInferring(typeCommon);
-            }
-        else
-            {
+        } else {
             typeCommon = fOrdered ? pool.typeOrderable() : null;
-            }
+        }
 
-        for (int i = fForceFirst ? 1 : 0; i < cExprs; ++i)
-            {
+        for (int i = fForceFirst ? 1 : 0; i < cExprs; ++i) {
             Expression exprOld = listExprs.get(i);
             Expression exprNew = listExprs.get(i).validate(ctx, typeCommon, errs);
-            if (exprNew == null)
-                {
+            if (exprNew == null) {
                 fValid = false;
-                }
-            else if (exprNew != exprOld)
-                {
+            } else if (exprNew != exprOld) {
                 listExprs.set(i, exprNew);
-                }
             }
+        }
 
-        if (fInfer)
-            {
+        if (fInfer) {
             ctx = ctx.exit();
-            }
-        else
-            {
+        } else {
             typeCommon = chooseCommonType(ctx, true);
-            CheckConversions: if (typeCommon != null)
-                {
+            CheckConversions: if (typeCommon != null) {
                 // test if we can convert all of the expressions to the decided-upon type
                 MethodConstant[] aConvMethod = new MethodConstant[cExprs];
-                for (int i = 0; i < cExprs; ++i)
-                    {
+                for (int i = 0; i < cExprs; ++i) {
                     TypeConstant typePre = listExprs.get(i).getType();
-                    if (!typePre.isA(typeCommon))
-                        {
+                    if (!typePre.isA(typeCommon)) {
                         MethodConstant method = typePre.getConverterTo(typeCommon);
-                        if (method == null)
-                            {
+                        if (method == null) {
                             typeCommon = null;
                             break CheckConversions;
-                            }
-                        else
-                            {
+                        } else {
                             aConvMethod[i] = method;
-                            }
-                        }
-                    }
-
-                for (int i = 0; i < cExprs; ++i)
-                    {
-                    MethodConstant method = aConvMethod[i];
-                    if (method != null)
-                        {
-                        listExprs.set(i, new ConvertExpression(listExprs.get(i),
-                                                new MethodConstant[]{method}, errs));
                         }
                     }
                 }
 
-            if (typeCommon == null)
-                {
-                if (fOrdered)
-                    {
+                for (int i = 0; i < cExprs; ++i) {
+                    MethodConstant method = aConvMethod[i];
+                    if (method != null) {
+                        listExprs.set(i, new ConvertExpression(listExprs.get(i),
+                                                new MethodConstant[]{method}, errs));
+                    }
+                }
+            }
+
+            if (typeCommon == null) {
+                if (fOrdered) {
                     // TODO need a better error
                     log(errs, Severity.ERROR, Compiler.TYPES_NOT_COMPARABLE,
                                 listExprs.getFirst().getType().getValueString(), "...");
                     fValid = false;
-                    }
-                else
-                    {
+                } else {
                     // for equality, just use Object
                     typeCommon = pool.typeObject();
-                    }
                 }
             }
+        }
 
         // store the resulting common type to compare
-        if (fValid)
-            {
+        if (fValid) {
             assert typeCommon != null;
 
             SignatureConstant sigCmp  = fOrdered ? pool.sigCompare() : pool.sigEquals();
             MethodInfo        infoCmp = typeCommon.ensureTypeInfo(errs).getMethodBySignature(sigCmp);
-            if (infoCmp == null)
-                {
+            if (infoCmp == null) {
                 fValid = false;
                 log(errs, Severity.ERROR, Compiler.MISSING_METHOD,
                         sigCmp.getName(), typeCommon.getValueString());
-                }
-            else
-                {
+            } else {
                 m_typeCommon = typeCommon;
                 m_idCmp      = infoCmp.getIdentity();
-                }
             }
+        }
 
         // for this to be a constant expression, either all sub-expressions are constant and the
         // result is calculated from that, or left-to-right, enough expressions are constant that
         // the result can be proven to always be false; for "==", see if there is a constant
         // expression that everything else can be compared to
         Constant constVal = null;
-        if (fValid)
-            {
+        if (fValid) {
             Constant constPrev  = null;
             boolean  fEquality  = operators[0].getId() == Id.COMP_EQ;
             Constant FALSE      = pool.valFalse();
             boolean  fAllConst  = true;
 
-            for (int i = 0; i < cExprs; ++i)
-                {
+            for (int i = 0; i < cExprs; ++i) {
                 Expression   expr   = listExprs.get(i);
                 boolean      fConst = expr.isConstant();
                 TypeConstant type   = expr.getType();
 
                 if (fEquality
                         ? !typeCommon.supportsEquals (type, fConst)
-                        : !typeCommon.supportsCompare(type, fConst))
-                    {
+                        : !typeCommon.supportsCompare(type, fConst)) {
                     log(errs, Severity.ERROR, Compiler.TYPES_NOT_COMPARABLE,
                                 typeCommon.getValueString(), type.getValueString());
                     return null;
-                    }
-                if (fConst)
-                    {
-                    if (fAllConst)
-                        {
-                        if (i > 0)
-                            {
-                            try
-                                {
+                }
+                if (fConst) {
+                    if (fAllConst) {
+                        if (i > 0) {
+                            try {
                                 constVal = constPrev.apply(operators[i-1].getId(), expr.toConstant());
-                                }
-                            catch (RuntimeException e)
-                                {
+                            } catch (RuntimeException e) {
                                 constVal  = null;
                                 fAllConst = false;
-                                }
+                            }
 
-                            if (constVal != null && constVal.equals(FALSE))
-                                {
+                            if (constVal != null && constVal.equals(FALSE)) {
                                 break;
-                                }
                             }
                         }
+                    }
 
-                    if (fEquality && m_constEq == null)
-                        {
+                    if (fEquality && m_constEq == null) {
                         // store off the constant to compare to
                         m_constEq = expr.toConstant();
-                        }
                     }
-                else
-                    {
+                } else {
                     fAllConst = false;
-                    }
-                }
-
-            if (m_constEq != null && m_constEq.equals(pool.valNull()))
-                {
-                fValid = checkNullComparison(ctx, listExprs, errs);
                 }
             }
+
+            if (m_constEq != null && m_constEq.equals(pool.valNull())) {
+                fValid = checkNullComparison(ctx, listExprs, errs);
+            }
+        }
 
         return finishValidation(ctx, typeRequired, getImplicitType(ctx),
                 fValid ? TypeFit.Fit : TypeFit.NoFit, constVal, errs);
-        }
+    }
 
     @Override
-    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
-        {
-        if (!LVal.isLocalArgument())
-            {
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs) {
+        if (!LVal.isLocalArgument()) {
             super.generateAssignment(ctx, code, LVal, errs);
             return;
-            }
+        }
 
         ConstantPool     pool       = pool();
         List<Expression> listExprs  = expressions;
@@ -343,27 +289,22 @@ public class CmpChainExpression
         // evaluate all the sub-expressions upfront - we may need them to produce an
         // assertion exception; local properties should not be used (could cause a "double dip",
         // and only the last argument is allowed to be on stack
-        for (int i = 0; i < cExprs; i++)
-            {
+        for (int i = 0; i < cExprs; i++) {
             Expression expr = listExprs.get(i);
             Argument   arg  = expr.generateArgument(ctx, code, false, i == cExprs-1, errs);
             aArgs[i] = expr.ensurePointInTime(code, arg, listExprs, i);
-            }
+        }
 
-        if (constVal == null)
-            {
+        if (constVal == null) {
             // everything has to get compared, left to right
             Token[] aTokOp = operators;
-            for (int iCmp = 0, cOps = aTokOp.length; iCmp < cOps; iCmp++)
-                {
+            for (int iCmp = 0, cOps = aTokOp.length; iCmp < cOps; iCmp++) {
                 Token    tok  = aTokOp[iCmp];
                 Argument arg1 = aArgs[iCmp];
                 Argument arg2 = aArgs[iCmp + 1];
 
-                if (iCmp == cOps - 1) // last
-                    {
-                    code.add(switch (tok.getId())
-                        {
+                if (iCmp == cOps - 1) { // last
+                    code.add(switch (tok.getId()) {
                         case COMP_EQ   -> new IsEq(typeCmp, arg1, arg2, argResult);
                         case COMP_NEQ  -> new IsNotEq(typeCmp, arg1, arg2, argResult);
                         case COMP_LT   -> new IsLt(typeCmp, arg1, arg2, argResult);
@@ -371,12 +312,9 @@ public class CmpChainExpression
                         case COMP_LTEQ -> new IsLte(typeCmp, arg1, arg2, argResult);
                         case COMP_GTEQ -> new IsGte(typeCmp, arg1, arg2, argResult);
                         default        -> throw new IllegalStateException();
-                        });
-                    }
-                else
-                    {
-                    code.add(switch (tok.getId())
-                        {
+                    });
+                } else {
+                    code.add(switch (tok.getId()) {
                         case COMP_EQ   -> new JumpNotEq(typeCmp, arg1, arg2, labelFalse);
                         case COMP_NEQ  -> new JumpEq(typeCmp, arg1, arg2, labelFalse);
                         case COMP_LT   -> new JumpGte(typeCmp, arg1, arg2, labelFalse);
@@ -384,50 +322,42 @@ public class CmpChainExpression
                         case COMP_LTEQ -> new JumpGt(typeCmp, arg1, arg2, labelFalse);
                         case COMP_GTEQ -> new JumpLt(typeCmp, arg1, arg2, labelFalse);
                         default        -> throw new IllegalStateException();
-                        });
-                    }
+                    });
                 }
             }
-        else
-            {
+        } else {
             // optimize equality comparisons to a constant, especially to null
             boolean fNull = constVal.equals(pool.valNull());
-            for (int iExpr = 0; iExpr < cExprs; ++iExpr)
-                {
+            for (int iExpr = 0; iExpr < cExprs; ++iExpr) {
                 Argument arg = aArgs[iExpr];
-                if (iExpr == cExprs - 1) // last
-                    {
+                if (iExpr == cExprs - 1) { // last
                     OpTest opTest = fNull
                             ? new IsNull(arg, argResult)
                             : new IsEq(typeCmp, arg, constVal, argResult);
                     code.add(opTest);
-                    }
-                else
-                    {
+                } else {
                     OpCondJump opCondJump = fNull
                             ? new JumpNotNull(arg, labelFalse)
                             : new JumpNotEq(typeCmp, arg, constVal, labelFalse);
                     code.add(opCondJump);
-                    }
                 }
             }
+        }
 
         code.add(new Jump(labelEnd))
             .add(labelFalse)
             .add(new Move(pool.valFalse(), argResult))
             .add(labelEnd);
-        }
+    }
 
     @Override
     public void generateConditionalJump(
-            Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs)
-        {
+            Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs) {
         // constant expressions can be handled by the default implementation
-        if (isConstant())
-            {
+        if (isConstant()) {
             super.generateConditionalJump(ctx, code, label, fWhenTrue, errs);
             return;
-            }
+        }
 
         // optimize equality comparisons to a constant, especially to null
         List<Expression> listExprs = expressions;
@@ -436,38 +366,33 @@ public class CmpChainExpression
         Constant         constVal  = m_constEq;
         TypeConstant     typeCmp   = m_typeCommon;
 
-        for (int i = 0; i < cExprs; i++)
-            {
+        for (int i = 0; i < cExprs; i++) {
             Expression expr = listExprs.get(i);
             Argument   arg  = expr.generateArgument(ctx, code, false, i == cExprs-1, errs);
             aArgs[i] = expr.ensurePointInTime(code, arg, listExprs, i);
-            }
+        }
 
-        if (constVal != null)
-            {
+        if (constVal != null) {
             boolean fNull = constVal.equals(pool().valNull());
-            for (int i = 0; i < cExprs; i++)
-                {
+            for (int i = 0; i < cExprs; i++) {
                 Argument   arg = aArgs[i];
                 OpCondJump op  = fNull
                         ? new JumpNull(arg, label)
                         : new JumpEq(typeCmp, arg, constVal, label);
                 code.add(op);
-                }
-            return;
             }
+            return;
+        }
 
         Label labelFalse = fWhenTrue ? new Label("not_eq") : label;
 
         // otherwise, everything has to get compared, left to right
         Token[] aTokOp  = operators;
-        for (int iCmp = 0, cOps = aTokOp.length; iCmp < cOps; ++iCmp)
-            {
+        for (int iCmp = 0, cOps = aTokOp.length; iCmp < cOps; ++iCmp) {
             Argument arg1 = aArgs[iCmp];
             Argument arg2 = aArgs[iCmp + 1];
 
-            code.add(switch (aTokOp[iCmp].getId())
-                {
+            code.add(switch (aTokOp[iCmp].getId()) {
                 case COMP_EQ   -> new JumpNotEq(typeCmp, arg1, arg2, labelFalse);
                 case COMP_NEQ  -> new JumpEq   (typeCmp, arg1, arg2, labelFalse);
                 case COMP_LT   -> new JumpGte  (typeCmp, arg1, arg2, labelFalse);
@@ -475,30 +400,25 @@ public class CmpChainExpression
                 case COMP_LTEQ -> new JumpGt   (typeCmp, arg1, arg2, labelFalse);
                 case COMP_GTEQ -> new JumpLt   (typeCmp, arg1, arg2, labelFalse);
                 default        -> throw new IllegalStateException();
-                });
-            }
-
-        if (fWhenTrue)
-            {
-            code.add(new Jump(label));
-            code.add(labelFalse);
-            }
+            });
         }
 
+        if (fWhenTrue) {
+            code.add(new Jump(label));
+            code.add(labelFalse);
+        }
+    }
+
     @Override
-    public ExprAST getExprAST(Context ctx)
-        {
+    public ExprAST getExprAST(Context ctx) {
         int        cExpr = expressions.size();
         ExprAST[]  aAst  = new ExprAST[cExpr];
         Operator[] aOp   = new Operator[cExpr-1];
 
-        for (int i = 0; i < cExpr; i++)
-            {
+        for (int i = 0; i < cExpr; i++) {
             aAst[i] = expressions.get(i).getExprAST(ctx);
-            if (i < cExpr-1)
-                {
-                aOp[i] = switch (operators[i].getId())
-                    {
+            if (i < cExpr-1) {
+                aOp[i] = switch (operators[i].getId()) {
                     case COMP_EQ    -> Operator.CompEq;
                     case COMP_NEQ   -> Operator.CompNeq;
                     case COMP_LT    -> Operator.CompLt;
@@ -506,33 +426,29 @@ public class CmpChainExpression
                     case COMP_LTEQ  -> Operator.CompLtEq;
                     case COMP_GTEQ  -> Operator.CompGtEq;
                     default         -> throw new IllegalStateException();
-                    };
-                }
+                };
             }
-        return new CmpChainExprAST(aAst, aOp, m_idCmp);
         }
+        return new CmpChainExprAST(aAst, aOp, m_idCmp);
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public boolean isShortCircuiting()
-        {
-        for (Expression expr : expressions)
-            {
-            if (expr.isShortCircuiting())
-                {
+    public boolean isShortCircuiting() {
+        for (Expression expr : expressions) {
+            if (expr.isShortCircuiting()) {
                 return true;
-                }
             }
-        return false;
         }
+        return false;
+    }
 
     @Override
-    public boolean isCompletable()
-        {
+    public boolean isCompletable() {
         return expressions.get(0).isCompletable() && expressions.get(1).isCompletable();
-        }
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -545,48 +461,41 @@ public class CmpChainExpression
      *
      * @return the selected common type, or null
      */
-    protected TypeConstant chooseCommonType(Context ctx, boolean fCheck)
-        {
+    protected TypeConstant chooseCommonType(Context ctx, boolean fCheck) {
         ConstantPool      pool      = pool();
         boolean           fEqual    = usesEquals();
         List<Expression>  listExprs = expressions;
         Set<TypeConstant> setTried  = new HashSet<>();
 
-        for (int i = 0, c = listExprs.size(); i < c; i++)
-            {
+        for (int i = 0, c = listExprs.size(); i < c; i++) {
             Expression   expr1 = listExprs.get(i);
             TypeConstant type1 = expr1.getImplicitType(ctx);
-            if (type1 != null)
-                {
+            if (type1 != null) {
                 ctx = ctx.enterInferring(type1);
-                for (int j = 0; j < c; j++)
-                    {
-                    if (j == i)
-                        {
+                for (int j = 0; j < c; j++) {
+                    if (j == i) {
                         continue;
-                        }
+                    }
 
                     Expression   expr2 = listExprs.get(j);
                     TypeConstant type2 = expr2.getImplicitType(ctx);
                     TypeConstant typeC = CmpExpression.chooseCommonType(pool, fEqual, type1, type2);
 
-                    if (typeC != null && !setTried.contains(typeC))
-                        {
+                    if (typeC != null && !setTried.contains(typeC)) {
                         ctx = ctx.exit(); // inferring type1
-                        if (testCommonType(ctx, typeC))
-                            {
+                        if (testCommonType(ctx, typeC)) {
                             // no need to exit/discard an inferring context
                             return typeC;
-                            }
+                        }
                         setTried.add(typeC);
                         ctx = ctx.enterInferring(type1);
-                        }
                     }
                 }
             }
+        }
 
         return null;
-        }
+    }
 
     /**
      * Test the specified type for "fit" against all the expression.
@@ -596,78 +505,68 @@ public class CmpChainExpression
      *
      * @return true iff all the expressions "fit"
      */
-    protected boolean testCommonType(Context ctx, TypeConstant type)
-        {
+    protected boolean testCommonType(Context ctx, TypeConstant type) {
         ctx = ctx.enterInferring(type);
 
-        for (Expression expr : expressions)
-            {
-            if (!expr.testFit(ctx, type, false, null).isFit())
-                {
+        for (Expression expr : expressions) {
+            if (!expr.testFit(ctx, type, false, null).isFit()) {
                 return false;
-                }
             }
+        }
 
         // there is no need to exit/discard an inferring context
         return true;
-        }
+    }
 
-    boolean checkNullComparison(Context ctx, List<Expression> listExprs, ErrorListener errs)
-        {
+    boolean checkNullComparison(Context ctx, List<Expression> listExprs, ErrorListener errs) {
         TypeConstant typeNull = pool().typeNull();
-        for (Expression expr : listExprs)
-            {
+        for (Expression expr : listExprs) {
             TypeConstant type = expr.getType();
-            if (!type.isNullable() && !typeNull.isA(type.resolveConstraints()))
-                {
+            if (!type.isNullable() && !typeNull.isA(type.resolveConstraints())) {
                 log(errs, Severity.ERROR, Compiler.EXPRESSION_NOT_NULLABLE, type.getValueString());
                 return false;
-                }
             }
+        }
 
 // TODO GG
-//        switch (operator.getId())
-//            {
-//            case COMP_EQ:
-//                typeTrue  = typeNull;
-//                typeFalse = typeTarget.removeNullable();
-//                break;
+//        switch (operator.getId()) {
+//        case COMP_EQ:
+//            typeTrue  = typeNull;
+//            typeFalse = typeTarget.removeNullable();
+//            break;
 //
-//            case COMP_NEQ:
-//                typeTrue  = typeTarget.removeNullable();
-//                typeFalse = typeNull;
-//                break;
-//            }
+//        case COMP_NEQ:
+//            typeTrue  = typeTarget.removeNullable();
+//            typeFalse = typeNull;
+//            break;
+//        }
 //
 //        exprTarget.narrowType(ctx, Branch.WhenTrue,  typeTrue);
 //        exprTarget.narrowType(ctx, Branch.WhenFalse, typeFalse);
 
         return true;
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(expressions.get(0));
-        for (int i = 0, c = operators.length; i < c; ++i)
-            {
+        for (int i = 0, c = operators.length; i < c; ++i) {
             sb.append(' ')
               .append(operators[i].getId().TEXT)
               .append(' ')
               .append(expressions.get(i+1));
-            }
-        return sb.toString();
         }
+        return sb.toString();
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -691,4 +590,4 @@ public class CmpChainExpression
     private Constant m_constEq;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(CmpChainExpression.class, "expressions");
-    }
+}

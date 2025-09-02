@@ -21,44 +21,37 @@ import org.xvm.asm.op.Label;
  * Base class for all Ecstasy statements.
  */
 public abstract class Statement
-        extends AstNode
-    {
+        extends AstNode {
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    protected boolean usesSuper()
-        {
-        for (AstNode node : children())
-            {
-            if (!(node instanceof ComponentStatement) && node.usesSuper())
-                {
+    protected boolean usesSuper() {
+        for (AstNode node : children()) {
+            if (!(node instanceof ComponentStatement) && node.usesSuper()) {
                 return true;
-                }
             }
+        }
 
         return false;
-        }
+    }
 
     /**
      * @return the label corresponding to the ending of the Statement
      */
-    public Label getEndLabel()
-        {
+    public Label getEndLabel() {
         Label label = m_labelEnd;
-        if (label == null)
-            {
+        if (label == null) {
             m_labelEnd = label = new Label(getCodeContainerCounter());
-            }
-        return label;
         }
+        return label;
+    }
 
     /**
      * @return true iff a GotoStatement can "naturally" (without a label) refer to this statement
      */
-    public boolean isNaturalGotoStatementTarget()
-        {
+    public boolean isNaturalGotoStatementTarget() {
         return false;
-        }
+    }
 
     /**
      * Obtain the label to "break" to.
@@ -68,13 +61,11 @@ public abstract class Statement
      *
      * @return the label to jump to when a "break" occurs within (or for) this statement
      */
-    public Label ensureBreakLabel(AstNode nodeOrigin, Context ctxOrigin)
-        {
+    public Label ensureBreakLabel(AstNode nodeOrigin, Context ctxOrigin) {
         Context ctxDest = ensureValidationContext();
         Label   label   = getEndLabel();
 
-        if (ctxOrigin.isReachable())
-            {
+        if (ctxOrigin.isReachable()) {
             // generate a delta of assignment information for the jump
             Map<String, Assignment> mapAsn = new HashMap<>();
             Map<String, Argument>   mapArg = new HashMap<>();
@@ -82,28 +73,25 @@ public abstract class Statement
             ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
 
             addBreak(new Break(nodeOrigin, mapAsn, mapArg, label));
-            }
+        }
 
         return label;
-        }
+    }
 
-    protected void addBreak(Break breakInfo)
-        {
+    protected void addBreak(Break breakInfo) {
         // record the jump that landed on this statement by recording its assignment impact
-        if (m_listBreaks == null)
-            {
+        if (m_listBreaks == null) {
             m_listBreaks = new ArrayList<>();
-            }
-        m_listBreaks.add(breakInfo);
         }
+        m_listBreaks.add(breakInfo);
+    }
 
     /**
      * @return true iff this statement has any breaks that jump to this statement's exit label
      */
-    protected boolean hasBreaks()
-        {
+    protected boolean hasBreaks() {
         return m_listBreaks != null;
-        }
+    }
 
     /**
      * Obtain the label to "continue" to.
@@ -113,22 +101,20 @@ public abstract class Statement
      *
      * @return the label to jump to when a "continue" occurs within (or for) this statement
      */
-    public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin)
-        {
+    public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin) {
         assert isNaturalGotoStatementTarget();
         throw new IllegalStateException();
-        }
+    }
 
     @Override
-    protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin)
-        {
+    protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin) {
         AstNode nodeChild = findChild(nodeOrigin);
         assert nodeChild != null;
         assert allowsShortCircuit(nodeChild);
 
         // this needs to be overridden by any statement that doesn't short-circuit to the end label
         return ensureBreakLabel(nodeOrigin, ctxOrigin);
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
@@ -142,12 +128,10 @@ public abstract class Statement
      *
      * @return the resulting statement (typically this) or null if the compilation cannot proceed
      */
-    protected final Statement validate(Context ctx, ErrorListener errs)
-        {
-        if (errs.isAbortDesired())
-            {
+    protected final Statement validate(Context ctx, ErrorListener errs) {
+        if (errs.isAbortDesired()) {
             return null;
-            }
+        }
 
         // before validating the nested code, associate this statement with the context so that any
         // "break" or "continue" can find the context to apply assignment data to
@@ -155,35 +139,28 @@ public abstract class Statement
         Statement stmt = validateImpl(ctx, errs);
         m_ctx = null;
 
-        if (m_listBreaks != null)
-            {
-            for (Iterator<Break> iter = m_listBreaks.iterator(); iter.hasNext(); )
-                {
+        if (m_listBreaks != null) {
+            for (Iterator<Break> iter = m_listBreaks.iterator(); iter.hasNext(); ) {
                 Break breakInfo = iter.next();
-                if (breakInfo.node.isDiscarded())
-                    {
+                if (breakInfo.node.isDiscarded()) {
                     iter.remove();
-                    }
-                else
-                    {
+                } else {
                     ctx.merge(breakInfo.mapAssign(), breakInfo.mapNarrow());
 
-                    if (breakInfo.label != null)
-                        {
+                    if (breakInfo.label != null) {
                         breakInfo.label.restoreNarrowed(ctx);
-                        }
                     }
-                }
-
-            if (!ctx.isReachable())
-                {
-                // since we do have reachable breaks, the statement is completable
-                ctx.setReachable(true);
                 }
             }
 
-        return stmt;
+            if (!ctx.isReachable()) {
+                // since we do have reachable breaks, the statement is completable
+                ctx.setReachable(true);
+            }
         }
+
+        return stmt;
+    }
 
     /**
      * @return the Context being used for validation of this statement, if this statement is
@@ -191,15 +168,13 @@ public abstract class Statement
      *
      * @throws IllegalStateException  if this statement is not currently being validated
      */
-    protected Context ensureValidationContext()
-        {
-        if (m_ctx == null)
-            {
+    protected Context ensureValidationContext() {
+        if (m_ctx == null) {
             throw new IllegalStateException();
-            }
+        }
 
         return m_ctx;
-        }
+    }
 
     /**
      * Before generating the code for the method body, resolve names and verify definite assignment,
@@ -222,26 +197,21 @@ public abstract class Statement
      *
      * @return true iff the statement completes
      */
-    protected final boolean completes(Context ctx, boolean fReachable, Code code, ErrorListener errs)
-        {
-        if (fReachable)
-            {
+    protected final boolean completes(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
+        if (fReachable) {
             updateLineNumber(code);
-            }
-        else
-            {
+        } else {
             code = code.blackhole();
-            }
+        }
 
         boolean fCompletes = fReachable && emit(ctx, fReachable, code, errs);
 
-        if (m_labelEnd != null && !errs.hasSeriousErrors())
-            {
+        if (m_labelEnd != null && !errs.hasSeriousErrors()) {
             code.add(m_labelEnd);
-            }
+        }
 
         return fCompletes || fReachable && m_listBreaks != null && !m_listBreaks.isEmpty();
-        }
+    }
 
     /**
      * Generate the statement-specific assembly code.
@@ -265,39 +235,34 @@ public abstract class Statement
      * Holder for BinaryAST objects as they percolate up the emit() call tree.
      * TODO get rid of this concept and add a getAST as per Expression tree
      */
-    public static class AstHolder
-        {
-        BinaryAST getAst(Statement stmt)
-            {
+    public static class AstHolder {
+        BinaryAST getAst(Statement stmt) {
             assert stmt != null;
 
-            if (stmt instanceof LabeledStatement stmtLbl)
-                {
+            if (stmt instanceof LabeledStatement stmtLbl) {
                 return getAst(stmtLbl.stmt);
-                }
+            }
 
-            if (stmt instanceof ImportStatement || stmt instanceof ComponentStatement)
-                {
+            if (stmt instanceof ImportStatement || stmt instanceof ComponentStatement) {
                 return null;
-                }
+            }
 
             BinaryAST ast = this.ast;
             this.ast = null;
             return ast != null && stmt == this.stmt
                 ? ast
                 : BinaryAST.POISON;
-            }
+        }
 
-        void setAst(Statement stmt, BinaryAST ast)
-            {
+        void setAst(Statement stmt, BinaryAST ast) {
             assert stmt != null && ast != null;
             this.stmt = stmt;
             this.ast  = ast;
-            }
+        }
 
         private Statement stmt;
         private BinaryAST ast;
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -316,4 +281,4 @@ public abstract class Statement
      * Generally null, unless there is a break that jumps to this statement's exit label.
      */
     private transient List<Break> m_listBreaks;
-    }
+}

@@ -17,45 +17,38 @@ import org.xvm.runtime.template.numbers.xUInt8;
  */
 public class xRTUInt8Delegate
         extends ByteBasedDelegate
-        implements ByteView
-    {
+        implements ByteView {
     public static xRTUInt8Delegate INSTANCE;
 
-    public xRTUInt8Delegate(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTUInt8Delegate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, (byte) 0, (byte) 0xFF);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
-        }
+    public void initNative() {
+    }
 
     @Override
-    public TypeConstant getCanonicalType()
-        {
+    public TypeConstant getCanonicalType() {
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
                 pool.typeByte());
-        }
+    }
 
     @Override
-    protected ObjectHandle makeElementHandle(long lValue)
-        {
+    protected ObjectHandle makeElementHandle(long lValue) {
         return xUInt8.INSTANCE.makeJavaLong(lValue);
-        }
+    }
 
     /**
      * Obtain an array of bytes from the specified ByteArrayHandle.
      */
-    public static byte[] getBytes(ByteArrayHandle hDelegate)
-        {
+    public static byte[] getBytes(ByteArrayHandle hDelegate) {
         return INSTANCE.getBytes(hDelegate, 0, hDelegate.m_cSize, false);
-        }
     }
+}

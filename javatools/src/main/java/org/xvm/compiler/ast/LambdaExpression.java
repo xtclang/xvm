@@ -73,8 +73,7 @@ import static org.xvm.util.Handy.indentLines;
  * names only.
  */
 public class LambdaExpression
-        extends Expression
-    {
+        extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -85,231 +84,195 @@ public class LambdaExpression
      * @param body       the StatementBlock of the lambda
      * @param lStartPos  the expression's start position in the source code
      */
-    public LambdaExpression(List params, Token operator, StatementBlock body, long lStartPos)
-        {
-        if (!params.isEmpty() && params.get(0) instanceof Expression)
-            {
+    public LambdaExpression(List params, Token operator, StatementBlock body, long lStartPos) {
+        if (!params.isEmpty() && params.get(0) instanceof Expression) {
             assert params.stream().allMatch(Expression.class::isInstance);
             this.paramNames = params;
-            }
-        else
-            {
+        } else {
             assert params.stream().allMatch(Parameter.class::isInstance);
             this.params = params;
-            }
+        }
 
         this.operator  = operator;
         this.body      = body;
         this.lStartPos = lStartPos;
-        }
+    }
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public boolean isComponentNode()
-        {
+    public boolean isComponentNode() {
         return true;
-        }
+    }
 
     @Override
-    public Component getComponent()
-        {
+    public Component getComponent() {
         MethodStructure method = m_lambda;
         return method == null
                 ? super.getComponent()
                 : method;
-        }
+    }
 
     /**
      * @return the lambda structure (null until the validation phase)
      */
-    public MethodStructure getLambda()
-        {
+    public MethodStructure getLambda() {
         return m_lambda;
-        }
+    }
 
     /**
      * @return true iff the lambda declaration has parameters
      */
-    public boolean hasParameters()
-        {
+    public boolean hasParameters() {
         return paramNames != null && !paramNames.isEmpty()
                 || params != null && !params.isEmpty();
-        }
+    }
 
     /**
      * @return the number of parameters
      */
-    public int getParamCount()
-        {
-        if (paramNames != null && !paramNames.isEmpty())
-            {
+    public int getParamCount() {
+        if (paramNames != null && !paramNames.isEmpty()) {
             return paramNames.size();
-            }
+        }
 
-        if (params != null && !params.isEmpty())
-            {
+        if (params != null && !params.isEmpty()) {
             return params.size();
-            }
+        }
 
         return 0;
-        }
+    }
 
     /**
      * @return an array of parameter names
      */
-    public String[] getParamNames()
-        {
+    public String[] getParamNames() {
         int c = getParamCount();
-        if (c == 0)
-            {
+        if (c == 0) {
             return NO_NAMES;
-            }
+        }
 
         String[] as = new String[c];
-        if (hasOnlyParamNames())
-            {
-            for (int i = 0; i < c; ++i)
-                {
+        if (hasOnlyParamNames()) {
+            for (int i = 0; i < c; ++i) {
                 Expression expr = paramNames.get(i);
                 as[i] = expr instanceof NameExpression exprName
                         ? exprName.getName()
                         : null;
-                }
             }
-        else
-            {
-            for (int i = 0; i < c; ++i)
-                {
+        } else {
+            for (int i = 0; i < c; ++i) {
                 Parameter param = params.get(i);
                 as[i] = param.getName();
-                }
             }
+        }
 
         return as;
-        }
+    }
 
     /**
      * @return true iff the lambda declaration has parameters, but did not specify parameter types
      */
-    public boolean hasOnlyParamNames()
-        {
+    public boolean hasOnlyParamNames() {
         return paramNames != null && !paramNames.isEmpty();
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return lStartPos;
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return body.getEndPosition();
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- code container methods ----------------------------------------------------------------
 
     @Override
-    public TypeConstant[] getReturnTypes()
-        {
+    public TypeConstant[] getReturnTypes() {
         TypeConstant typeFn = isValidated() ? getType() : m_typeRequired;
         return pool().extractFunctionReturns(typeFn);
-        }
+    }
 
     @Override
-    public boolean isReturnConditional()
-        {
+    public boolean isReturnConditional() {
         // this may be called during validation, when we're still trying to figure out what exactly
         // does get returned
         TypeConstant typeFn = isValidated() ? getType() : m_typeRequired;
         return typeFn != null && pool().isConditionalReturn(typeFn);
-        }
+    }
 
     @Override
-    public void collectReturnTypes(TypeConstant[] atypeRet)
-        {
+    public void collectReturnTypes(TypeConstant[] atypeRet) {
         TypeCollector collector = m_collector;
-        if (collector == null)
-            {
+        if (collector == null) {
             m_collector = collector = new TypeCollector(pool());
             collector.setConditional(isReturnConditional());
-            }
-        collector.add(atypeRet);
         }
+        collector.add(atypeRet);
+    }
 
 
     // ----- compilation (Statement) ---------------------------------------------------------------
 
     @Override
-    protected void registerStructures(StageMgr mgr, ErrorListener errs)
-        {
+    protected void registerStructures(StageMgr mgr, ErrorListener errs) {
         // just like the MethodDeclarationStatement, lambda expressions are considered to be
         // completely opaque, and so a lambda defers the processing of its children at this point,
         // because it wants everything around its children to be set up by the time those children
         // need to be able to answer all the questions about names and types and so on
-        if (m_lambda == null)
-            {
+        if (m_lambda == null) {
             mgr.deferChildren();
-            }
         }
+    }
 
     @Override
-    public void resolveNames(StageMgr mgr, ErrorListener errs)
-        {
+    public void resolveNames(StageMgr mgr, ErrorListener errs) {
         // see note above
-        if (m_lambda == null)
-            {
+        if (m_lambda == null) {
             mgr.deferChildren();
-            }
         }
+    }
 
     @Override
-    public void validateContent(StageMgr mgr, ErrorListener errs)
-        {
+    public void validateContent(StageMgr mgr, ErrorListener errs) {
         // see note above
-        if (m_lambda == null)
-            {
+        if (m_lambda == null) {
             mgr.deferChildren();
-            }
         }
+    }
 
     @Override
-    public void generateCode(StageMgr mgr, ErrorListener errs)
-        {
+    public void generateCode(StageMgr mgr, ErrorListener errs) {
         MethodStructure method = m_lambda;
 
         // the method body containing this must validate the lambda expression, which then will
         // create the lambda body (the method structure), and that has to happen before we try to
         // spit out any code
-        if (method == null)
-            {
+        if (method == null) {
             mgr.requestRevisit();
             mgr.deferChildren();
             return;
-            }
+        }
 
-        if (getParentBlock().isTerminatedAbnormally())
-            {
-            if (method.getIdentityConstant().isNascent())
-                {
+        if (getParentBlock().isTerminatedAbnormally()) {
+            if (method.getIdentityConstant().isNascent()) {
                 // stub out the lambda structure
                 configureLambda(TypeConstant.NO_TYPES, Handy.NO_ARGS, 0,
                         new boolean[0], TypeConstant.NO_TYPES, false);
-                }
+            }
 
             mgr.deferChildren();
             mgr.markComplete();
             return;
-            }
+        }
 
         // this is where the magic happens:
         // - by this point in time, the method body containing the lambda has already been validated
@@ -326,30 +289,25 @@ public class LambdaExpression
         //   passed to the lambda (via FBIND)
         // - so now, at this point, we have the signature, we have the method structure, and we just
         //   have to emit the code corresponding to the lambda
-        if (catchUpChildren(errs))
-            {
-            if (!body.compileMethod(method.createCode(), errs))
-                {
+        if (catchUpChildren(errs)) {
+            if (!body.compileMethod(method.createCode(), errs)) {
                 mgr.deferChildren();
-                }
             }
         }
+    }
 
 
     // ----- compilation (Expression) --------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType(Context ctx)
-        {
-        if (!ensurePrepared(ErrorListener.BLACKHOLE))
-            {
+    public TypeConstant getImplicitType(Context ctx) {
+        if (!ensurePrepared(ErrorListener.BLACKHOLE)) {
             return null;
-            }
+        }
 
-        if (isValidated())
-            {
+        if (isValidated()) {
             return getType();
-            }
+        }
 
         assert m_typeRequired == null && m_collector == null;
 
@@ -359,145 +317,121 @@ public class LambdaExpression
         // 3) a lambda defined with only parameter names: "x -> ..."
         // the problem with the last form is that the type of the lambda includes the types of the
         // parameters, and the type cannot be inferred from its name
-        if (hasOnlyParamNames())
-            {
+        if (hasOnlyParamNames()) {
             return null;
-            }
+        }
 
         int            cParams     = getParamCount();
         String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
         TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
 
-        if (!collectParamNamesAndTypes(null, atypeParams, asParams, ErrorListener.BLACKHOLE))
-            {
+        if (!collectParamNamesAndTypes(null, atypeParams, asParams, ErrorListener.BLACKHOLE)) {
             return null;
-            }
+        }
 
         TypeConstant[] atypeReturns =
                 extractReturnTypes(ctx, atypeParams, asParams, null, false, ErrorListener.BLACKHOLE);
         return atypeReturns == null
                 ? null
                 : pool().buildFunctionType(buildParamTypes(), atypeReturns);
-        }
+    }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs)
-        {
-        if (errs == null)
-            {
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs) {
+        if (errs == null) {
             errs = ErrorListener.BLACKHOLE;
-            }
+        }
 
-        if (!ensurePrepared(errs))
-            {
+        if (!ensurePrepared(errs)) {
             return TypeFit.NoFit;
-            }
+        }
 
-        if (isValidated())
-            {
+        if (isValidated()) {
             return calcFit(ctx, getType(), typeRequired);
-            }
+        }
 
         ConstantPool pool = pool();
 
         // short-circuit for simple cases (i.e. where any function type will do)
         TypeFit fit = calcFit(ctx, pool.typeFunction(), typeRequired);
-        if (fit.isFit())
-            {
+        if (fit.isFit()) {
             return fit;
-            }
+        }
 
         assert typeRequired != null; // the calcFit() above would have returned a "Fit""
 
-        if (typeRequired.resolveTypedefs() instanceof UnionTypeConstant typeUnion)
-            {
+        if (typeRequired.resolveTypedefs() instanceof UnionTypeConstant typeUnion) {
             Set<TypeConstant> setFunctions = typeUnion.collectMatching(pool.typeFunction(), null);
-            for (TypeConstant typeFunction : setFunctions)
-                {
+            for (TypeConstant typeFunction : setFunctions) {
                 TypeConstant[] atypeReqParams  = pool.extractFunctionParams(typeFunction);
                 TypeConstant[] atypeReqReturns = pool.extractFunctionReturns(typeFunction);
                 boolean        fCondReturn     = pool.isConditionalReturn(typeFunction);
 
                 fit = calculateTypeFitImpl(ctx, atypeReqParams, atypeReqReturns, fCondReturn, errs);
-                if (fit.isFit())
-                    {
+                if (fit.isFit()) {
                     return fit;
-                    }
                 }
-            return TypeFit.NoFit;
             }
-        else
-            {
+            return TypeFit.NoFit;
+        } else {
             TypeConstant[] atypeReqParams  = pool.extractFunctionParams(typeRequired);
             TypeConstant[] atypeReqReturns = pool.extractFunctionReturns(typeRequired);
             boolean        fCondReturn     = pool.isConditionalReturn(typeRequired);
             return calculateTypeFitImpl(ctx, atypeReqParams, atypeReqReturns, fCondReturn, errs);
-            }
         }
+    }
 
     private TypeFit calculateTypeFitImpl(Context ctx, TypeConstant[] atypeReqParams,
                                          TypeConstant[] atypeReqReturns, boolean fCondReturn,
-                                         ErrorListener errs)
-        {
+                                         ErrorListener errs) {
         int cParams = getParamCount();
-        if (atypeReqParams != null && atypeReqParams.length == cParams && atypeReqReturns != null)
-            {
+        if (atypeReqParams != null && atypeReqParams.length == cParams && atypeReqReturns != null) {
             String[]       asParams    = cParams == 0   ? NO_NAMES : new String[cParams];
             TypeConstant[] atypeParams = cParams == 0   ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
 
-            if (!collectParamNamesAndTypes(atypeReqParams, atypeParams, asParams, errs))
-                {
+            if (!collectParamNamesAndTypes(atypeReqParams, atypeParams, asParams, errs)) {
                 return TypeFit.NoFit;
-                }
+            }
 
             TypeConstant[] atypeReturns =
                     extractReturnTypes(ctx, atypeParams, asParams, atypeReqReturns, fCondReturn, errs);
-            if (atypeReturns == null)
-                {
+            if (atypeReturns == null) {
                 return TypeFit.NoFit;
-                }
+            }
 
             int cReturns = atypeReturns.length;
-            if (cReturns == 0 && isPending(atypeReqReturns))
-                {
+            if (cReturns == 0 && isPending(atypeReqReturns)) {
                 // the lambda thinks that it's void and the caller didn't have an opinion
                 return TypeFit.Fit;
-                }
+            }
 
             int cReqReturns = atypeReqReturns.length;
-            if (cReqReturns <= cReturns)
-                {
-                for (int i = 0; i < cReqReturns; i++)
-                    {
+            if (cReqReturns <= cReturns) {
+                for (int i = 0; i < cReqReturns; i++) {
                     TypeConstant typeReturn = atypeReturns[i];
 
-                    if (typeReturn == null || !typeReturn.isA(atypeReqReturns[i]))
-                        {
+                    if (typeReturn == null || !typeReturn.isA(atypeReqReturns[i])) {
                         return TypeFit.NoFit;
-                        }
                     }
-                return TypeFit.Fit;
                 }
-            else if (fCondReturn && cReturns == 1 &&
-                        atypeReqReturns[0].isA(pool().typeBoolean()))
-                {
+                return TypeFit.Fit;
+            } else if (fCondReturn && cReturns == 1 &&
+                        atypeReqReturns[0].isA(pool().typeBoolean())) {
                 // to be more precise, we would have to check against "typeFalse()" rather than
                 // "typeBoolean()" above, but {@link TypeCollector.inferFrom()} method used by
                 // extractReturnTypes() method widens ENUMVALUE types to the corresponding ENUM
                 // types, so this check should suffice
                 return TypeFit.Fit;
-                }
             }
-        return TypeFit.NoFit;
         }
+        return TypeFit.NoFit;
+    }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
-        if (!ensurePrepared(errs))
-            {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
+        if (!ensurePrepared(errs)) {
             return finishValidation(ctx, typeRequired, null, TypeFit.NoFit, null, errs);
-            }
+        }
 
         // validation only occurs once, but we'll put some extra checks in up front, because we do
         // weird stuff on lambdas like cloning the AST so that we can pass over it once for the
@@ -512,52 +446,45 @@ public class LambdaExpression
         TypeConstant[] atypeReqReturns = null;
         boolean        fCondReturn;
 
-        if (typeRequired != null)
-            {
+        if (typeRequired != null) {
             typeReqFn = typeRequired = typeRequired.resolveTypedefs();
-            if (typeRequired instanceof UnionTypeConstant typeUnion)
-                {
+            if (typeRequired instanceof UnionTypeConstant typeUnion) {
                 Set<TypeConstant> setFunctions = typeUnion.collectMatching(pool.typeFunction(), null);
-                for (TypeConstant typeFunction : setFunctions)
-                    {
+                for (TypeConstant typeFunction : setFunctions) {
                     TypeConstant[] atypeTestP = pool.extractFunctionParams(typeFunction);
                     TypeConstant[] atypeTestR = pool.extractFunctionReturns(typeFunction);
                     boolean        fCondTestR = pool.isConditionalReturn(typeFunction);
 
-                    if (calculateTypeFitImpl(ctx, atypeTestP, atypeTestR, fCondTestR, errs).isFit())
-                        {
+                    if (calculateTypeFitImpl(ctx, atypeTestP, atypeTestR, fCondTestR, errs).isFit()) {
                         atypeReqParams  = atypeTestP;
                         atypeReqReturns = atypeTestR;
                         typeReqFn       = fCondTestR
                             ? pool.buildConditionalFunctionType(atypeReqParams, replacePending(atypeReqReturns))
                             : pool.buildFunctionType(atypeReqParams, replacePending(atypeReqReturns));
                         break;
-                        }
                     }
                 }
-            else if (typeRequired.isA(pool.typeFunction()))
-                {
+            } else if (typeRequired.isA(pool.typeFunction())) {
                 atypeReqParams  = pool.extractFunctionParams(typeRequired);
                 atypeReqReturns = pool.extractFunctionReturns(typeRequired);
                 fCondReturn     = pool.isConditionalReturn(typeRequired);
                 typeReqFn       = fCondReturn
                     ? pool.buildConditionalFunctionType(atypeReqParams, replacePending(atypeReqReturns))
                     : pool.buildFunctionType(atypeReqParams, replacePending(atypeReqReturns));
-                }
             }
+        }
 
         boolean fValid      = true;
         int     cReqParams  = atypeReqParams  == null ? -1 : atypeReqParams.length;
         int     cReqReturns = atypeReqReturns == null ? -1 : atypeReqReturns.length;
         int     cParams     = getParamCount();
 
-        if (cReqParams != -1 && cParams != cReqParams)
-            {
+        if (cReqParams != -1 && cParams != cReqParams) {
             errs.log(Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT,
                     new Object[]{cReqParams, cParams},
                     getSource(), getStartPosition(), operator.getStartPosition());
             fValid = false;
-            }
+        }
 
         // evaluate the parameter declarations
         String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
@@ -565,92 +492,74 @@ public class LambdaExpression
 
         fValid &= collectParamNamesAndTypes(atypeReqParams, atypeParams, asParams, errs);
 
-        if (!fValid)
-            {
+        if (!fValid) {
             return null;
-            }
+        }
 
         // even if we know we cannot proceed, we need to validate the lambda to report on errors
         // that would not have been otherwise reported
         m_lambda = instantiateLambda(errs);
 
         LambdaContext ctxLambda = createContext(ctx, typeReqFn, atypeParams, asParams, errs);
-        if (ctxLambda == null)
-            {
+        if (ctxLambda == null) {
             return null;
-            }
+        }
 
         TypeFit        fit = TypeFit.Fit;
         TypeConstant[] atypeRets;
         boolean        fCond;
-        if (m_collector == null)
-            {
+        if (m_collector == null) {
             // the lambda is a void function that is missing a closing return; the statement block
             // will automatically add a trailing "return" when it is compiled
             atypeRets = TypeConstant.NO_TYPES;
             fCond     = false;
-            if (cReqReturns > 0)
-                {
-                if (isPending(atypeReqReturns))
-                    {
+            if (cReqReturns > 0) {
+                if (isPending(atypeReqReturns)) {
                     // the lambda thinks that it's void and the caller didn't have an opinion;
                     // make it void indeed
                     atypeRets = new TypeConstant[cReqReturns];
                     Arrays.fill(atypeRets, pool.typeTuple0());
-                    }
-                else
-                    {
+                } else {
                     log(errs, Severity.ERROR, Compiler.RETURN_EXPECTED);
                     fit = TypeFit.NoFit;
-                    }
                 }
             }
-        else
-            {
+        } else {
             atypeRets   = replacePending(m_collector.inferMulti(atypeReqReturns));
             fCond       = cReqReturns > 1 && m_collector.isConditional();
             m_collector = null;
 
-            if (atypeRets == null)
-                {
+            if (atypeRets == null) {
                 log(errs, Severity.ERROR, Compiler.RETURN_EXPECTED);
                 fit = TypeFit.NoFit;
-                }
-            else
-                {
+            } else {
                 int cReturns = atypeRets.length;
 
                 // lambda's return type is used to define the method structure and therefore cannot
                 // refer to a dynamic type with an unbound register; need to resolve those;
                 // (Note: collector (above) returns a new array; no problem mutating it)
-                for (int i = 0; i < cReturns; i++)
-                    {
+                for (int i = 0; i < cReturns; i++) {
                     TypeConstant typeRet = atypeRets[i];
-                    if (typeRet.containsDynamicType())
-                        {
+                    if (typeRet.containsDynamicType()) {
                         GenericTypeResolver resolver = new ConstraintResolver(
                             ctxLambda.ensureRegisterMap().values());
 
                         atypeRets[i] = typeRet.resolveGenerics(pool, resolver);
-                        }
-                    }
-                if (cReqReturns != -1 && cReturns > cReqReturns)
-                    {
-                    // the lambda has more return values that the caller needs; adjust it
-                    atypeRets = Arrays.copyOfRange(atypeRets, 0, cReqReturns);
-                    }
-                else if (fCond && cReturns == 1)
-                    {
-                    // this can only be a "return False" lambda; augment the return type as required
-                    atypeRets = atypeReqReturns;
                     }
                 }
+                if (cReqReturns != -1 && cReturns > cReqReturns) {
+                    // the lambda has more return values that the caller needs; adjust it
+                    atypeRets = Arrays.copyOfRange(atypeRets, 0, cReqReturns);
+                } else if (fCond && cReturns == 1) {
+                    // this can only be a "return False" lambda; augment the return type as required
+                    atypeRets = atypeReqReturns;
+                }
             }
+        }
 
         TypeConstant   typeActual = null;
         MethodConstant constVal   = null;
-        if (fit.isFit())
-            {
+        if (fit.isFit()) {
             // while we have enough info at this point to build a signature, what we lack is the
             // effectively final data that will only get reported (via exit() on the context) as
             // the variables go out of scope in the method body that contains this lambda, so we need
@@ -664,16 +573,15 @@ public class LambdaExpression
 
             if (ctxLambda.getCaptureMap().isEmpty() &&
                 ctxLambda.getFormalMap().isEmpty() &&
-                !ctxLambda.isLambdaMethod())
-                {
+                !ctxLambda.isLambdaMethod()) {
                 // there are no bindings, so the lambda is a constant i.e. the function is the value
                 configureLambda(atypeParams, asParams, 0, null, atypeRets, fCond);
                 constVal = m_lambda.getIdentityConstant();
-                }
             }
+        }
 
         return finishValidation(ctx, typeRequired, typeActual, fit, constVal, errs);
-        }
+    }
 
     /**
      * Collect the parameter types and names into the specified arrays.
@@ -687,91 +595,73 @@ public class LambdaExpression
      */
     protected boolean collectParamNamesAndTypes(TypeConstant[] atypeReqParams,
                                                 TypeConstant[] atypeParams, String[] asParams,
-                                                ErrorListener errs)
-        {
+                                                ErrorListener errs) {
         boolean fValid     = true;
         int     cReqParams = atypeReqParams == null ? 0 : atypeReqParams.length;
         int     cParams    = atypeParams.length;
 
-        if (hasOnlyParamNames())
-            {
-            if (atypeReqParams == null)
-                {
+        if (hasOnlyParamNames()) {
+            if (atypeReqParams == null) {
                 errs.log(Severity.ERROR, Compiler.PARAMETER_TYPES_REQUIRED, null,
                         getSource(), paramNames.get(0).getStartPosition(),
                         paramNames.get(cParams-1).getEndPosition());
                 fValid = false;
-                }
+            }
 
             Set<String> setNames = new HashSet<>();
-            for (int i = 0; i < cParams; ++i)
-                {
+            for (int i = 0; i < cParams; ++i) {
                 Expression expr = paramNames.get(i);
-                if (expr instanceof NameExpression exprName)
-                    {
+                if (expr instanceof NameExpression exprName) {
                     String sName = exprName.getName();
                     asParams[i] = sName;
-                    if (!(expr instanceof IgnoredNameExpression))
-                        {
-                        if (!setNames.add(sName))
-                            {
+                    if (!(expr instanceof IgnoredNameExpression)) {
+                        if (!setNames.add(sName)) {
                             expr.log(errs, Severity.ERROR, Compiler.DUPLICATE_PARAMETER, sName);
                             fValid = false;
-                            }
                         }
                     }
-                else
-                    {
+                } else {
                     expr.log(errs, Severity.ERROR, Compiler.NAME_REQUIRED);
                     fValid = false;
-                    }
+                }
 
                 atypeParams[i] = i < cReqParams ? atypeReqParams[i] : pool().typeObject();
-                }
             }
-        else
-            {
+        } else {
             Set<String> setNames = new HashSet<>();
-            for (int i = 0; i < cParams; ++i)
-                {
+            for (int i = 0; i < cParams; ++i) {
                 Parameter param = params.get(i);
                 String    sName = asParams[i] = param.getName();
 
-                if (!sName.equals(Id.ANY.TEXT) && !setNames.add(sName))
-                    {
+                if (!sName.equals(Id.ANY.TEXT) && !setNames.add(sName)) {
                     param.log(errs, Severity.ERROR, Compiler.DUPLICATE_PARAMETER, sName);
                     asParams[i] = Id.ANY.TEXT;
                     fValid      = false;
-                    }
+                }
 
                 TypeConstant typeParam = param.getType().ensureTypeConstant();
-                if (typeParam.containsUnresolved())
-                    {
+                if (typeParam.containsUnresolved()) {
                     atypeParams[i] = pool().typeObject();
                     log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, typeParam.getValueString());
                     fValid = false;
-                    }
-                else
-                    {
+                } else {
                     atypeParams[i] = typeParam;
-                    if (i < cReqParams)
-                        {
+                    if (i < cReqParams) {
                         // the types don't have to match exactly, but the lambda must not attempt to
                         // narrow the required type for a parameter
                         TypeConstant typeReq = atypeReqParams[i];
-                        if (typeReq != null && !typeReq.isA(typeParam))
-                            {
+                        if (typeReq != null && !typeReq.isA(typeParam)) {
                             param.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                                     typeReq.getValueString(), typeParam.getValueString());
                             fValid = false;
-                            }
                         }
                     }
                 }
             }
+        }
 
         return fValid;
-        }
+    }
 
     /**
      * Extract the return types from this lambda expression without changing its state.
@@ -787,8 +677,7 @@ public class LambdaExpression
     private TypeConstant[] extractReturnTypes(Context ctx,
                                               TypeConstant[] atypeParams, String[] asParams,
                                               TypeConstant[] atypeReturns, boolean fCondReturn,
-                                              ErrorListener errs)
-        {
+                                              ErrorListener errs) {
         TypeConstant typeReqFn = atypeReturns == null
                 ? null
                 : fCondReturn
@@ -796,18 +685,15 @@ public class LambdaExpression
                     : pool().buildFunctionType(atypeParams, replacePending(atypeReturns));
 
         createContext(ctx, typeReqFn, atypeParams, asParams, errs);
-        try
-            {
+        try {
             // extract return types
             return m_collector == null
                     ? TypeConstant.NO_TYPES
                     : m_collector.inferMulti(atypeReturns);
-            }
-        finally
-            {
+        } finally {
             m_collector = null;
-            }
         }
+    }
 
     /**
      * Prepare a LambdaContext to use for code generation for this LambdaExpression. Since the lambda
@@ -819,14 +705,12 @@ public class LambdaExpression
      */
     private LambdaContext createContext(Context ctx, TypeConstant typeRequired,
                                         TypeConstant[] atypeParams, String[] asParams,
-                                        ErrorListener errs)
-        {
+                                        ErrorListener errs) {
         StatementBlock blockTemp = (StatementBlock) body.clone();
-        if (!new StageMgr(blockTemp, Stage.Validated, errs).fastForward(20))
-            {
+        if (!new StageMgr(blockTemp, Stage.Validated, errs).fastForward(20)) {
             blockTemp.discard(true);
             return null;
-            }
+        }
 
         // prior to calling "blockTemp.validate()" below we need to prime the expected lambda type;
         // note that only the return types portion is going to be used via "getReturnTypes()" method
@@ -840,8 +724,7 @@ public class LambdaExpression
 
         // don't let this repeat ad nauseam
         int cTries = 0;
-        while (true)
-            {
+        while (true) {
             boolean fValid = true;
 
             // clone the condition(s) and the body
@@ -858,17 +741,13 @@ public class LambdaExpression
             LambdaContext  ctxLambda = enterCapture(ctx, blockTemp, atypeParams, asParams);
             StatementBlock blockNew  = (StatementBlock) blockTemp.validate(ctxLambda, errsTemp);
 
-            if (blockNew != blockTemp)
-                {
-                if (blockNew == null)
-                    {
+            if (blockNew != blockTemp) {
+                if (blockNew == null) {
                     fValid = false;
-                    }
-                else
-                    {
+                } else {
                     blockOrig = blockNew;
-                    }
                 }
+            }
 
             // discard the clone
             blockTemp.discard(true);
@@ -878,22 +757,19 @@ public class LambdaExpression
             Map<String, Argument>   mapArgAfter = new HashMap<>();
             ctxLambda.prepareJump(ctxOrig, mapAsnAfter, mapArgAfter);
 
-            if (!mapAsnAfter.equals(mapAsnBefore))
-                {
+            if (!mapAsnAfter.equals(mapAsnBefore)) {
                 // don't let this repeat forever
-                if (++cTries < 10)
-                    {
+                if (++cTries < 10) {
                     mapAsnBefore = mapAsnAfter;
                     mapArgBefore = mapArgAfter;
                     continue; // repeat
-                    }
-
-                if (!errsTemp.hasSeriousErrors())
-                    {
-                    log(errsTemp, Severity.ERROR, Compiler.FATAL_ERROR);
-                    }
-                fValid = false;
                 }
+
+                if (!errsTemp.hasSeriousErrors()) {
+                    log(errsTemp, Severity.ERROR, Compiler.FATAL_ERROR);
+                }
+                fValid = false;
+            }
 
             // we do NOT store off the validated block; the block does NOT belong to the lambda
             // expression; rather, it belongs to the function (m_lambda) that we created, and the
@@ -905,28 +781,25 @@ public class LambdaExpression
             ctxLambda.exit().exit();
             m_typeRequired = null;
             return fValid ? ctxLambda : null;
-            }
         }
+    }
 
     @Override
-    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
-        {
+    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
         Argument[] aargBind = calculateBindings(ctx, code, errs);
-        if (m_lambda.isFunction() && aargBind.length == 0)
-            {
+        if (m_lambda.isFunction() && aargBind.length == 0) {
             // if no binding is required (either MBIND or FBIND) then the resulting argument is the
             // identity of the lambda function itself
             MethodConstant idLambda = m_lambda.getIdentityConstant();
             m_astLambda = new ConstantExprAST(idLambda);
             return idLambda;
-            }
-
-        return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
         }
 
+        return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+    }
+
     @Override
-    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
-        {
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs) {
         Argument[] aBindArgs = calculateBindings(ctx, code, errs);
         int        cBindArgs = aBindArgs.length;
 
@@ -934,25 +807,20 @@ public class LambdaExpression
         boolean fBindParams = cBindArgs > 0;
 
         int[] anBind = null;
-        if (fBindParams)
-            {
+        if (fBindParams) {
             anBind = new int[cBindArgs];
-            for (int i = 0; i < cBindArgs; ++i)
-                {
+            for (int i = 0; i < cBindArgs; ++i) {
                 anBind[i] = i;
-                }
             }
+        }
 
         MethodConstant idLambda = m_lambda.getIdentityConstant();
 
         m_astLambda = new ConstantExprAST(idLambda);
-        if (fBindTarget | fBindParams)
-            {
-            if (LVal.isLocalArgument())
-                {
+        if (fBindTarget | fBindParams) {
+            if (LVal.isLocalArgument()) {
                 Argument argResult = LVal.getLocalArgument();
-                if (fBindTarget & fBindParams)
-                    {
+                if (fBindTarget & fBindParams) {
                     Register regThis = ctx.getThisRegister();
                     Register regTemp = new Register(idLambda.getSignature().asFunctionType(), null,
                                                     Op.A_STACK);
@@ -961,69 +829,56 @@ public class LambdaExpression
 
                     m_astLambda = new BindMethodAST(regThis.getRegisterAST(), idLambda, regTemp.getType());
                     m_astLambda = new BindFunctionAST(m_astLambda, anBind, m_aAstBind, getType());
-                    }
-                else if (fBindTarget)
-                    {
+                } else if (fBindTarget) {
                     code.add(new MBind(ctx.getThisRegister(), idLambda, argResult));
 
                     m_astLambda = new BindMethodAST(ctx.getThisRegisterAST(), idLambda, getType());
-                    }
-                else // if (fBindParams)
-                    {
+                } else { // if (fBindParams)
                     code.add(new FBind(idLambda, anBind, aBindArgs, argResult));
 
                     m_astLambda = new BindFunctionAST(m_astLambda, anBind, m_aAstBind, getType());
-                    }
                 }
-            else
-                {
+            } else {
                 super.generateAssignment(ctx, code, LVal, errs);
-                }
             }
-        else
-            {
+        } else {
             // neither target nor param binding
             LVal.assign(idLambda, code, errs);
-            }
         }
+    }
 
     @Override
-    protected void discard(boolean fRecurse)
-        {
+    protected void discard(boolean fRecurse) {
         super.discard(fRecurse);
 
-        if (m_lambda != null)
-            {
+        if (m_lambda != null) {
             m_lambda.getParent().removeChild(m_lambda);
             m_lambda = null;
-            }
         }
+    }
 
     @Override
-    public AstNode clone()
-        {
+    public AstNode clone() {
         // the reference to the lambda's method structure should not be a part of the cloned state
         LambdaExpression that = (LambdaExpression) super.clone();
         that.m_lambda = null;
         return that;
-        }
+    }
 
     @Override
-    public ExprAST getExprAST(Context ctx)
-        {
+    public ExprAST getExprAST(Context ctx) {
         return m_astLambda == null
                 ? isConstant()
                     ? new ConstantExprAST(toConstant())
                     : super.getExprAST(ctx)
                 : m_astLambda;
-        }
+    }
 
     @Override
-    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
-        {
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg) {
         // lambda is a function reference, not an invocation; definitely doesn't affect anything
         return SideEffect.DefNo;
-        }
+    }
 
 
     // ----- compilation helpers -------------------------------------------------------------------
@@ -1037,21 +892,18 @@ public class LambdaExpression
      *
      * @return true if the lambda expression was able to prepare (catch up)
      */
-    protected boolean ensurePrepared(ErrorListener errs)
-        {
-        if (m_fPrepared || params == null || params.isEmpty())
-            {
+    protected boolean ensurePrepared(ErrorListener errs) {
+        if (m_fPrepared || params == null || params.isEmpty()) {
             return m_fPrepared = true;
-            }
+        }
 
         boolean fPrepared = true;
-        for (AstNode param : params)
-            {
+        for (AstNode param : params) {
             fPrepared &= new StageMgr(param, Stage.Validated, errs).fastForward(20);
-            }
+        }
 
         return m_fPrepared = fPrepared;
-        }
+    }
 
     /**
      * For lambdas that do NOT use the "names only" form of parameter declaration, determine the
@@ -1059,70 +911,58 @@ public class LambdaExpression
      *
      * @return an array of the parameter types
      */
-    protected TypeConstant[] buildParamTypes()
-        {
-        if (!hasParameters())
-            {
+    protected TypeConstant[] buildParamTypes() {
+        if (!hasParameters()) {
             return TypeConstant.NO_TYPES;
-            }
+        }
 
         assert !hasOnlyParamNames();
 
         List<Parameter> list   = params;
         int             cTypes = list.size();
         TypeConstant[]  aTypes = new TypeConstant[cTypes];
-        for (int i = 0; i < cTypes; ++i)
-            {
+        for (int i = 0; i < cTypes; ++i) {
             Parameter param = list.get(i);
             aTypes[i] = param.getType().ensureTypeConstant();
-            }
-        return aTypes;
         }
+        return aTypes;
+    }
 
-    MethodStructure instantiateLambda(ErrorListener errs)
-        {
+    MethodStructure instantiateLambda(ErrorListener errs) {
         TypeConstant[] atypes   = null;
         String[]       asParams;
-        if (paramNames == null)
-            {
+        if (paramNames == null) {
             // build an array of types and an array of names
             int cParams = params == null ? 0 : params.size();
             atypes   = new TypeConstant[cParams];
             asParams = new String[cParams];
-            for (int i = 0; i < cParams; ++i)
-                {
+            for (int i = 0; i < cParams; ++i) {
                 Parameter param = params.get(i);
                 atypes  [i] = param.getType().ensureTypeConstant();
                 asParams[i] = param.getName();
-                }
             }
-        else
-            {
+        } else {
             // build an array of names
             int cParams = paramNames.size();
             asParams = new String[cParams];
-            for (int i = 0; i < cParams; ++i)
-                {
+            for (int i = 0; i < cParams; ++i) {
                 Expression expr = paramNames.get(i);
-                if (expr instanceof NameExpression exprName)
-                    {
+                if (expr instanceof NameExpression exprName) {
                     // note: could also be an IgnoredNameExpression
                     asParams[i] = exprName.getName();
-                    }
-                else
-                    {
+                } else {
                     expr.log(errs, Severity.ERROR, Compiler.NAME_REQUIRED);
                     asParams[i] = Id.ANY.TEXT;
-                    }
                 }
             }
+        }
 
         Component            container = getParent().getComponent();
         MultiMethodStructure structMM  = container.ensureMultiMethodStructure(METHOD_NAME);
         MethodStructure      method    =  structMM.createLambda(atypes, asParams);
         donateSource(method);
         return method;
-        }
+    }
 
     /**
      * Determine if MBIND and/or FBIND is necessary. If MBIND is necessary, then make the structure
@@ -1136,8 +976,7 @@ public class LambdaExpression
      *
      * @return an array of arguments to pass to FBIND; also compute {@link #m_aAstBind}
      */
-    protected Argument[] calculateBindings(Context ctx, Code code, ErrorListener errs)
-        {
+    protected Argument[] calculateBindings(Context ctx, Code code, ErrorListener errs) {
         MethodStructure lambda    = m_lambda;
         LambdaContext   ctxLambda = m_ctxLambda;
 
@@ -1145,8 +984,7 @@ public class LambdaExpression
         assert ctxLambda != null;
 
         MethodConstant idLambda = lambda.getIdentityConstant();
-        if (idLambda.isNascent())
-            {
+        if (idLambda.isNascent()) {
             // this is the first time that we have a chance to put together the signature, because
             // this is the first time that we are being called after validate()
             ConstantPool          pool         = ctx.pool();
@@ -1162,10 +1000,9 @@ public class LambdaExpression
 
             // there is a chance that a formal type has been also captured; dedupe it
             if (cTypeParams > 0 && cCaptures > 0
-                    && mapCapture.keySet().removeAll(mapFormal.keySet()))
-                {
+                    && mapCapture.keySet().removeAll(mapFormal.keySet())) {
                 cCaptures = mapCapture.size();
-                }
+            }
 
             int        cBindArgs       = cTypeParams + cCaptures;
             Argument[] aBindArgs       = NO_RVALUES;
@@ -1176,8 +1013,7 @@ public class LambdaExpression
             lambda.setStatic(!ctxLambda.isLambdaMethod());
 
             // FBIND is indicated by >0 bind arguments being returned from this method
-            if (cBindArgs > 0)
-                {
+            if (cBindArgs > 0) {
                 Map<String, Register> mapRegisters   = ctxLambda.ensureRegisterMap();
                 int                   cLambdaParams  = atypeParams.length;
                 int                   cAllParams     = cBindArgs + cLambdaParams;
@@ -1189,16 +1025,14 @@ public class LambdaExpression
                 aAstBind  = new ExprAST[cBindArgs];
 
                 Map<FormalConstant, TypeConstant> mapRedefine = new HashMap<>();
-                for (Entry<String, Argument> entry : mapFormal.entrySet())
-                    {
+                for (Entry<String, Argument> entry : mapFormal.entrySet()) {
                     String       sCapture  = entry.getKey();
                     Argument     argFormal = entry.getValue();
                     TypeConstant typeReg   = pool.ensureRegisterConstant(
                                                 idLambda, iParam, sCapture).getType();
                     TypeConstant typeFormal;
                     Register     regFormal;
-                    if (argFormal instanceof TargetInfo infoGeneric)
-                        {
+                    if (argFormal instanceof TargetInfo infoGeneric) {
                         typeFormal = infoGeneric.getType(); // type of type
                         regFormal  = new Register(typeFormal, null, Op.A_STACK);
 
@@ -1208,8 +1042,7 @@ public class LambdaExpression
                         mapRedefine.put(idGeneric, typeReg);
 
                         int cSteps = infoGeneric.getStepsOut();
-                        if (cSteps > 0)
-                            {
+                        if (cSteps > 0) {
                             Register regTarget = new Register(infoGeneric.getTargetType(), null, Op.A_STACK);
                             code.add(new MoveThis(cSteps, regTarget));
                             code.add(new P_Get(idGeneric, regTarget, regFormal));
@@ -1217,16 +1050,12 @@ public class LambdaExpression
                             aAstBind[iParam] = new PropertyExprAST(
                                 new OuterExprAST(ctx.getThisRegisterAST(), cSteps, regTarget.getType()),
                                 idGeneric);
-                            }
-                        else
-                            {
+                        } else {
                             code.add(new L_Get(idGeneric, regFormal));
 
                             aAstBind[iParam] = new PropertyExprAST(ctx.getThisRegisterAST(), idGeneric);
-                            }
                         }
-                    else
-                        {
+                    } else {
                         // the source is a register (type parameter); drop any inferences
                         regFormal = ((Register) argFormal).getOriginalRegister();
 
@@ -1238,42 +1067,38 @@ public class LambdaExpression
                         typeFormal = typeParam.resolveConstraints().getType();
 
                         aAstBind[iParam] = regFormal.getRegisterAST();
-                        }
+                    }
 
                     asAllParams   [iParam] = sCapture;
                     atypeAllParams[iParam] = typeFormal;
                     aBindArgs     [iParam] = regFormal;
 
                     iParam++;
-                    }
+                }
 
                 // Note: the MoveRef ops are allowed to push arguments on the stack since the
                 // run-time knows to load them up in the inverse order
-                for (Entry<String, Boolean> entry : mapCapture.entrySet())
-                    {
+                for (Entry<String, Boolean> entry : mapCapture.entrySet()) {
                     String       sCapture       = entry.getKey();
                     Register     regCapture     = mapRegisters.get(sCapture);
                     TypeConstant typeCapture    = regCapture.getType();
                     boolean      fImplicitDeref = false;
 
-                    if (regCapture instanceof LabelVar)
-                        {
+                    if (regCapture instanceof LabelVar) {
                         log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED,
                                 "Label capturing (\"" + sCapture + "\")");
-                        }
+                    }
 
                     regCapture = regCapture.getOriginalRegister(); // remove any inferences
 
                     boolean      fVar             = regCapture.isVar();
                     TypeConstant typeVar          = fVar ? regCapture.ensureRegType(true) : null;
                     boolean      fAllowRefCapture = fVar && typeVar.isA(pool.clzVolatile().getType());
-                    if (entry.getValue())
-                        {
+                    if (entry.getValue()) {
                         // it's a read/write capture; capture the Var
-                        if (!fAllowRefCapture)
-                            {
+                        if (!fAllowRefCapture) {
                             log(errs, Severity.ERROR, Compiler.WRITEABLE_CAPTURE, sCapture);
-                            }
+                        }
                         typeCapture = fVar
                                 ? typeVar
                                 : pool.ensureParameterizedTypeConstant(pool.typeVar(), typeCapture);
@@ -1285,10 +1110,8 @@ public class LambdaExpression
 
                         aAstBind[iParam] = new UnaryOpExprAST(
                                 regVal.getRegisterAST(), Operator.Var, typeCapture);
-                        }
-                    else if (fVar && !typeVar.isA(pool.clzInject().getType()) ||
-                            !regCapture.isEffectivelyFinal() && fAllowRefCapture)
-                        {
+                    } else if (fVar && !typeVar.isA(pool.clzInject().getType()) ||
+                            !regCapture.isEffectivelyFinal() && fAllowRefCapture) {
                         // we have a read-only non-injected capture; if it's a Var already, use that
                         // type; otherwise, since we were unable to prove that the register was
                         // effectively final, we need to capture the Ref implicitly
@@ -1303,26 +1126,22 @@ public class LambdaExpression
 
                         aAstBind[iParam] = new UnaryOpExprAST(
                                 regVal.getRegisterAST(), Operator.Ref, typeCapture);
-                        }
-                    else
-                        {
+                    } else {
                         aAstBind[iParam] = regCapture.getRegisterAST();
-                        }
+                    }
                     asAllParams   [iParam] = sCapture;
                     atypeAllParams[iParam] = typeCapture;
                     aBindArgs     [iParam] = regCapture;
 
-                    if (fImplicitDeref)
-                        {
-                        if (afImplicitDeref == null)
-                            {
+                    if (fImplicitDeref) {
+                        if (afImplicitDeref == null) {
                             afImplicitDeref = new boolean[cBindArgs];
-                            }
-                        afImplicitDeref[iParam] = true;
                         }
+                        afImplicitDeref[iParam] = true;
+                    }
 
                     ++iParam;
-                    }
+                }
                 assert iParam == cBindArgs;
 
                 System.arraycopy(atypeParams, 0, atypeAllParams, cBindArgs, cLambdaParams);
@@ -1330,43 +1149,37 @@ public class LambdaExpression
                 atypeParams = atypeAllParams;
                 asParams    = asAllParams;
 
-                if (!mapRedefine.isEmpty())
-                    {
-                    GenericTypeResolver resolver = new GenericTypeResolver()
-                        {
+                if (!mapRedefine.isEmpty()) {
+                    GenericTypeResolver resolver = new GenericTypeResolver() {
                         @Override
-                        public TypeConstant resolveGenericType(String sFormalName)
-                            {
+                        public TypeConstant resolveGenericType(String sFormalName) {
                             return null;
-                            }
+                        }
 
                         @Override
-                        public TypeConstant resolveFormalType(FormalConstant constFormal)
-                            {
+                        public TypeConstant resolveFormalType(FormalConstant constFormal) {
                             return mapRedefine.get(constFormal);
-                            }
-                        };
+                        }
+                    };
 
-                    for (int i = cTypeParams, c = atypeParams.length; i < c; i++)
-                        {
+                    for (int i = cTypeParams, c = atypeParams.length; i < c; i++) {
                         TypeConstant typeOld = atypeParams[i].resolveTypedefs();
                         TypeConstant typeNew = typeOld.resolveGenerics(pool, resolver);
-                        if (typeNew != typeOld)
-                            {
+                        if (typeNew != typeOld) {
                             atypeParams[i] = typeNew;
-                            }
                         }
                     }
                 }
+            }
             m_aBindArgs = aBindArgs;
             m_aAstBind  = aAstBind;
 
             // store the resulting signature for the lambda
             configureLambda(atypeParams, asParams, cTypeParams, afImplicitDeref, atypeReturns, fCondReturn);
-            }
+        }
 
         return m_aBindArgs;
-        }
+    }
 
     /**
      * Configure the lambda's parameters, and fill in the lambda's signature information.
@@ -1379,8 +1192,7 @@ public class LambdaExpression
      * @param fCondReturn     if true, lambda has a conditional return value
      */
     protected void configureLambda(TypeConstant[] atypeParams, String[] asParams, int cFormal,
-            boolean[] afImpliedDeref, TypeConstant[] atypeRets, boolean fCondReturn)
-        {
+            boolean[] afImpliedDeref, TypeConstant[] atypeRets, boolean fCondReturn) {
         MethodStructure   lambda = m_lambda;
         ConstantPool      pool   = pool();
         SignatureConstant sig    = pool.ensureSignatureConstant(METHOD_NAME, atypeParams, atypeRets);
@@ -1388,8 +1200,7 @@ public class LambdaExpression
         int cParams = atypeParams.length;
         int cNames  = asParams.length;
         org.xvm.asm.Parameter[] aparamParams = new org.xvm.asm.Parameter[cParams];
-        for (int i = 0; i < cParams; ++i)
-            {
+        for (int i = 0; i < cParams; ++i) {
             String       sName = i < cNames ? asParams[i] : null;
             TypeConstant type  = atypeParams[i];
             assert !type.containsUnresolved();
@@ -1397,128 +1208,107 @@ public class LambdaExpression
             aparamParams[i] = new org.xvm.asm.Parameter(pool, type, sName, null, false, i, i < cFormal);
 
             // check if the parameter needs to be marked as being an implicit de-reference
-            if (afImpliedDeref != null && afImpliedDeref.length > i && afImpliedDeref[i])
-                {
+            if (afImpliedDeref != null && afImpliedDeref.length > i && afImpliedDeref[i]) {
                 aparamParams[i].markImplicitDeref();
-                }
             }
+        }
 
         int cRets = atypeRets.length;
         org.xvm.asm.Parameter[] aparamRets = new org.xvm.asm.Parameter[cRets];
-        for (int i = 0; i < cRets; ++i)
-            {
+        for (int i = 0; i < cRets; ++i) {
             TypeConstant type = atypeRets[i];
             assert !type.containsUnresolved();
 
             aparamRets[i] = new org.xvm.asm.Parameter(pool, type, null, null, true, i, false);
-            }
+        }
 
         lambda.configureLambda(aparamParams, cFormal, aparamRets);
         lambda.setConditionalReturn(fCondReturn);
         lambda.getIdentityConstant().setSignature(sig);
-        }
+    }
 
     /**
      * @return true iff lambda requires "this"
      */
-    protected boolean isRequiredThis()
-        {
+    protected boolean isRequiredThis() {
         assert isValidated();
         return m_ctxLambda.isLambdaMethod();
-        }
+    }
 
     /**
      * Replace all PendingTypeConstants in the specified array with the Object type (recursively).
      */
-    private TypeConstant[] replacePending(TypeConstant[] atype)
-        {
+    private TypeConstant[] replacePending(TypeConstant[] atype) {
         TypeConstant[] atypeRets = atype;
-        for (int i = 0, c = atype == null ? 0 : atype.length; i < c; i++)
-            {
+        for (int i = 0, c = atype == null ? 0 : atype.length; i < c; i++) {
             TypeConstant typeOld = atype[i];
             TypeConstant typeNew = typeOld;
-            if (typeOld instanceof PendingTypeConstant)
-                {
+            if (typeOld instanceof PendingTypeConstant) {
                 typeNew = pool().typeObject();
-                }
-            else if (typeOld instanceof ParameterizedTypeConstant typeParams)
-                {
+            } else if (typeOld instanceof ParameterizedTypeConstant typeParams) {
                 TypeConstant[] atypeOld = typeParams.getParamTypesArray();
                 TypeConstant[] atypeNew = replacePending(atypeOld);
-                if (atypeNew != atypeOld)
-                    {
+                if (atypeNew != atypeOld) {
                     typeNew = pool().ensureParameterizedTypeConstant(
                                 typeParams.getUnderlyingType(), atypeNew);
-                    }
-                }
-            if (typeNew != typeOld)
-                {
-                if (atypeRets == atype)
-                    {
-                    atypeRets = atype.clone();
-                    }
-                atypeRets[i] = typeNew;
                 }
             }
-        return atypeRets;
+            if (typeNew != typeOld) {
+                if (atypeRets == atype) {
+                    atypeRets = atype.clone();
+                }
+                atypeRets[i] = typeNew;
+            }
         }
+        return atypeRets;
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
-    public String toSignatureString()
-        {
+    public String toSignatureString() {
         StringBuilder sb = new StringBuilder();
 
         sb.append('(');
         boolean first = true;
-        for (Object param : (params == null ? paramNames : params))
-            {
-            if (first)
-                {
+        for (Object param : (params == null ? paramNames : params)) {
+            if (first) {
                 first = false;
-                }
-            else
-                {
+            } else {
                 sb.append(", ");
-                }
-            sb.append(param);
             }
+            sb.append(param);
+        }
 
         sb.append(')')
           .append(' ')
           .append(operator.getId().TEXT);
 
         return sb.toString();
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
         sb.append(toSignatureString());
 
         String s = body.toString();
-        if (s.indexOf('\n') >= 0)
-            {
+        if (s.indexOf('\n') >= 0) {
             sb.append('\n')
               .append(indentLines(s, "    "));
-            }
-        else
-            {
+        } else {
             sb.append(' ')
               .append(s);
-            }
+        }
 
         return sb.toString();
-        }
+    }
 
     @Override
-    public String toDumpString()
-        {
+    public String toDumpString() {
         return toSignatureString() + " {...}";
-        }
+    }
 
 
     // ----- CaptureContext ------------------------------------------------------------------------
@@ -1535,17 +1325,15 @@ public class LambdaExpression
      * @return a capturing context
      */
     protected static LambdaContext enterCapture(Context ctx, StatementBlock body,
-                                                TypeConstant[] atypeParams, String[] asParams)
-        {
+                                                TypeConstant[] atypeParams, String[] asParams) {
         return new LambdaContext(ctx, body, atypeParams, asParams);
-        }
+    }
 
     /**
      * A context for compiling lambda expressions.
      */
     public static class LambdaContext
-            extends CaptureContext
-        {
+            extends CaptureContext {
         /**
          * Construct a Lambda CaptureContext.
          *
@@ -1556,19 +1344,17 @@ public class LambdaExpression
          * @param asParams     names of the explicit parameters for the context (e.g. for a lambda)
          */
         public LambdaContext(Context ctxOuter, StatementBlock body, TypeConstant[] atypeParams,
-                             String[] asParams)
-            {
+                             String[] asParams) {
             super(ctxOuter);
 
             assert atypeParams == null && asParams == null
                     || atypeParams != null && asParams != null && atypeParams.length == asParams.length;
             f_atypeParams = atypeParams;
             f_asParams    = asParams;
-            }
+        }
 
         @Override
-        protected void promoteNarrowedTypes()
-            {
+        protected void promoteNarrowedTypes() {
             // Any changes are detected within the lambda *may or may not* impact previous
             // inferences, so we need to restore the original types. For example:
             //      @Volatile String? s = Null; // we know "s" is Null here
@@ -1576,175 +1362,150 @@ public class LambdaExpression
             // Since we cannot know whether the lambda is called, "s" may or may not be Null
             // afterward.
             restoreOriginalTypes();
-            }
+        }
 
         @Override
-        protected void promoteNonCompleting(Context ctxInner)
-            {
+        protected void promoteNonCompleting(Context ctxInner) {
             // Lambda's non-completion has no effect on the parent's context (AAMOF, it's always
             // non-completing). See the example above in promoteNarrowedTypes().
 
             ctxInner.restoreOriginalTypes();
             ctxInner.promoteNarrowedTypes();
-            }
+        }
 
         @Override
-        public boolean requireThis(long lPos, ErrorListener errs)
-            {
-            if (getOuterContext().requireThis(lPos, errs))
-                {
+        public boolean requireThis(long lPos, ErrorListener errs) {
+            if (getOuterContext().requireThis(lPos, errs)) {
                 captureThis();
                 return true;
-                }
-            return false;
             }
+            return false;
+        }
 
         @Override
         protected void markVarRead(boolean fNested, String sName, Token tokName, boolean fDeref,
-                                   ErrorListener errs)
-            {
+                                   ErrorListener errs) {
             // variable capture will create a parameter (a variable in this scope) for the lambda,
             // so if the variable isn't already declared in this scope, but it exists in the outer
             // scope, then capture it
             Context ctxOuter = getOuterContext();
-            if (!isVarDeclaredInThisScope(sName) && ctxOuter.isVarReadable(sName))
-                {
-                if (isReservedName(sName))
-                    {
+            if (!isVarDeclaredInThisScope(sName) && ctxOuter.isVarReadable(sName)) {
+                if (isReservedName(sName)) {
                     boolean fAllowConstructor = false;
-                    switch (sName)
-                        {
-                        // the only names that we capture _without_ a capture parameter are the
-                        // various "this" references that refer to "this" object
-                        case "this":
-                        case "this:struct":
-                        case "this:class":
-                            fAllowConstructor = true;
-                            // fall through
-                        case "this:target":
-                        case "this:public":
-                        case "this:protected":
-                        case "this:private":
-                            if (fAllowConstructor && ctxOuter.isConstructor())
-                                {
-                                captureThis();
-                                }
-                            else
-                                {
-                                requireThis(tokName.getStartPosition(), errs);
-                                }
-                            return;
-
-                        case "this:service":
-                        case "this:module":
-                            // these two are available globally, and are _not_ captured
-                            return;
+                    switch (sName) {
+                    // the only names that we capture _without_ a capture parameter are the
+                    // various "this" references that refer to "this" object
+                    case "this":
+                    case "this:struct":
+                    case "this:class":
+                        fAllowConstructor = true;
+                        // fall through
+                    case "this:target":
+                    case "this:public":
+                    case "this:protected":
+                    case "this:private":
+                        if (fAllowConstructor && ctxOuter.isConstructor()) {
+                            captureThis();
+                        } else {
+                            requireThis(tokName.getStartPosition(), errs);
                         }
+                        return;
+
+                    case "this:service":
+                    case "this:module":
+                        // these two are available globally, and are _not_ captured
+                        return;
                     }
                 }
+            }
 
             super.markVarRead(fNested, sName, tokName, fDeref, errs);
-            }
+        }
 
         /**
          * @return true iff the lambda is built as a method (and not as a function) in order to
          *         capture the "this" object reference
          */
-        public boolean isLambdaMethod()
-            {
+        public boolean isLambdaMethod() {
             return isThisCaptured();
-            }
+        }
 
         @Override
-        protected boolean hasInitialNames()
-            {
+        protected boolean hasInitialNames() {
             return true;
-            }
+        }
 
         @Override
-        public Map<String, Argument> getFormalMap()
-            {
+        public Map<String, Argument> getFormalMap() {
             // if the lambda requires "this", there is no need to capture the generic types
             Map<String, Argument> mapFormal = super.getFormalMap();
-            if (isLambdaMethod() && !mapFormal.isEmpty())
-                {
+            if (isLambdaMethod() && !mapFormal.isEmpty()) {
                 mapFormal = new HashMap<>(mapFormal);
-                mapFormal.values().removeIf(arg ->
-                    {
+                mapFormal.values().removeIf(arg -> {
                     TypeConstant type = arg.getType();
                     return type.isTypeOfType() && type.getParamType(0).isGenericType();
-                    });
-                }
-            return mapFormal;
+                });
             }
+            return mapFormal;
+        }
 
         @Override
-        protected void initNameMap(Map<String, Argument> mapByName)
-            {
+        protected void initNameMap(Map<String, Argument> mapByName) {
             Context ctxOuter = getOuterContext();
             int     cParams  = f_atypeParams == null ? 0 : f_atypeParams.length;
-            for (int i = 0; i < cParams; ++i)
-                {
+            for (int i = 0; i < cParams; ++i) {
                 TypeConstant type  = f_atypeParams[i];
                 String       sName = f_asParams[i];
                 if (sName != null && !sName.equals(Id.ANY.TEXT) &&
-                            type != null && !type.containsUnresolved())
-                    {
+                            type != null && !type.containsUnresolved()) {
                     Register     reg          = createRegister(type, sName);
                     TypeConstant typeNarrowed = ctxOuter.resolveFormalType(type);
-                    if (typeNarrowed != type)
-                        {
+                    if (typeNarrowed != type) {
                         reg = reg.narrowType(typeNarrowed);
                         reg.markInPlace();
-                        }
+                    }
                     mapByName.put(sName, reg);
 
                     // the variable has been definitely assigned, but not multiple times (i.e. it's
                     // still effectively final)
                     ensureDefiniteAssignments().put(sName, Assignment.AssignedOnce);
-                    }
                 }
             }
+        }
 
         private final TypeConstant[] f_atypeParams;
         private final String[]       f_asParams;
-        }
+    }
 
     /**
      * Custom GenericTypeResolver allowing to avoid resolving constraints for "known" dynamic types.
      */
     static protected class ConstraintResolver
-            implements GenericTypeResolver
-        {
-        public ConstraintResolver(Collection<Register> setCapture)
-            {
+            implements GenericTypeResolver {
+        public ConstraintResolver(Collection<Register> setCapture) {
             f_setCapture = setCapture;
-            }
+        }
 
         @Override
-        public TypeConstant resolveFormalType(FormalConstant constFormal)
-            {
-            if (constFormal instanceof DynamicFormalConstant constDynamic)
-                {
+        public TypeConstant resolveFormalType(FormalConstant constFormal) {
+            if (constFormal instanceof DynamicFormalConstant constDynamic) {
                 Register register = constDynamic.getRegister();
-                if (register == null || !f_setCapture.contains(register))
-                    {
+                if (register == null || !f_setCapture.contains(register)) {
                     // this formal dynamic type is unknown (possibly a shadow is captured);
                     // resolve the constraints
                     return constDynamic.getConstraintType();
-                    }
                 }
-            return null;
             }
+            return null;
+        }
 
         @Override
-        public TypeConstant resolveGenericType(String sFormalName)
-            {
+        public TypeConstant resolveGenericType(String sFormalName) {
             return null;
-            }
+        }
 
         private final Collection<Register> f_setCapture;
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -1795,4 +1556,4 @@ public class LambdaExpression
 
     private static final Field[] CHILD_FIELDS =
             fieldsForNames(LambdaExpression.class, "params", "paramNames", "body");
-    }
+}

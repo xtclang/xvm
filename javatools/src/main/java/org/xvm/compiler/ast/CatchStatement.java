@@ -25,16 +25,14 @@ import static org.xvm.util.Handy.indentLines;
  * A "catch" statement. (Not actually a statement. It only occurs within a try.)
  */
 public class CatchStatement
-        extends Statement
-    {
+        extends Statement {
     // ----- constructors --------------------------------------------------------------------------
 
-    public CatchStatement(VariableDeclarationStatement target, StatementBlock block, long lStartPos)
-        {
+    public CatchStatement(VariableDeclarationStatement target, StatementBlock block, long lStartPos) {
         this.target    = target;
         this.block     = block;
         this.lStartPos = lStartPos;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -42,79 +40,66 @@ public class CatchStatement
     /**
      * @return the exception type
      */
-    public TypeConstant getCatchType()
-        {
+    public TypeConstant getCatchType() {
         return target.getType();
-        }
+    }
 
     /**
      * @return get the register used for the catch variable
      */
-    public Register getCatchRegister()
-        {
+    public Register getCatchRegister() {
         return target.getRegister();
-        }
+    }
 
     /**
      * @return the declared name of the catch variable
      */
-    public String getCatchVariableName()
-        {
+    public String getCatchVariableName() {
         return target.getName();
-        }
+    }
 
-    public CatchStart ensureCatchStart()
-        {
+    public CatchStart ensureCatchStart() {
         CatchStart op = m_opCatch;
-        if (op == null)
-            {
+        if (op == null) {
             m_opCatch = op = new CatchStart(getCatchRegister(),
                     pool().ensureStringConstant(getCatchVariableName()));
-            }
+        }
         return op;
-        }
+    }
 
-    public void setCatchLabel(Label label)
-        {
+    public void setCatchLabel(Label label) {
         m_labelEndCatch = label;
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return lStartPos;
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return block.getEndPosition();
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validateImpl(Context ctx, ErrorListener errs)
-        {
+    protected Statement validateImpl(Context ctx, ErrorListener errs) {
         boolean fValid = true;
 
         ctx = ctx.enter();
 
         // validate the catch clause
         VariableDeclarationStatement targetNew = (VariableDeclarationStatement) target.validate(ctx, errs);
-        if (targetNew == null)
-            {
+        if (targetNew == null) {
             fValid = false;
-            }
-        else
-            {
+        } else {
             target = targetNew;
 
             // exception variable has a value at this point
@@ -122,30 +107,27 @@ public class CatchStatement
 
             // make sure that the exception variable is of an exception type
             TypeConstant typeE = target.getType();
-            if (!typeE.isA(pool().typeException()))
-                {
+            if (!typeE.isA(pool().typeException())) {
                 fValid = false;
                 target.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                         pool().typeException().getValueString(), typeE.getValueString());
-                }
+            }
 
             // validate the block
             block.suppressScope();
             StatementBlock blockNew = (StatementBlock) block.validate(ctx, errs);
-            if (blockNew != null)
-                {
+            if (blockNew != null) {
                 block = blockNew;
-                }
             }
+        }
 
         ctx.exit();
 
         return fValid ? this : null;
-        }
+    }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
-        {
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         assert m_opCatch != null && m_labelEndCatch != null;
 
         code.add(m_opCatch);
@@ -155,16 +137,15 @@ public class CatchStatement
 
         ctx.getHolder().setAst(this, ctx.getHolder().getAst(block));
         return fCompletes;
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return "catch (" + target + ")\n" + indentLines(block.toString(), "    ");
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -177,4 +158,4 @@ public class CatchStatement
     private transient Label      m_labelEndCatch;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(CatchStatement.class, "target", "block");
-    }
+}

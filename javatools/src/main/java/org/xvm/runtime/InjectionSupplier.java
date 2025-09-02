@@ -5,8 +5,7 @@ package org.xvm.runtime;
  * Represents a function that creates an injectable resource.
  */
 @FunctionalInterface
-public interface InjectionSupplier
-    {
+public interface InjectionSupplier {
     /**
      * Obtain an injectable resource.
      *
@@ -16,4 +15,4 @@ public interface InjectionSupplier
      * @return a resource handle
      */
     ObjectHandle supply(Frame frame, ObjectHandle hOpts);
-    }
+}

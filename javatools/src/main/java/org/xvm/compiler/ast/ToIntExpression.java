@@ -34,8 +34,7 @@ import org.xvm.util.PackedInteger;
  * </ul>
  */
 public class ToIntExpression
-        extends SyntheticExpression
-    {
+        extends SyntheticExpression {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -45,28 +44,25 @@ public class ToIntExpression
      * @param pintOffset  the (optional) value to add to the expression being converted
      * @param errs        the error list to log to
      */
-    public ToIntExpression(Expression expr, PackedInteger pintOffset, ErrorListener errs)
-        {
+    public ToIntExpression(Expression expr, PackedInteger pintOffset, ErrorListener errs) {
         super(expr);
 
         assert expr.getType().isIntConvertible();
 
         Constant val = null;
-        if (expr.isConstant())
-            {
+        if (expr.isConstant()) {
             // determine if compile-time conversion is supported
             Constant      constOrig = expr.toConstant();
             PackedInteger pintVal   = constOrig.getIntValue();
-            if (pintOffset != null)
-                {
+            if (pintOffset != null) {
                 pintVal = pintVal.sub(pintOffset);
-                }
-            val = pool().ensureIntConstant(pintVal);
             }
+            val = pool().ensureIntConstant(pintVal);
+        }
 
         m_pintOffset = pintOffset;
         finishValidation(null, null, expr.pool().typeInt64(), expr.getTypeFit().addConversion(), val, errs);
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -75,69 +71,61 @@ public class ToIntExpression
      * @return the method or property constant to use to extract an IntNumber, or null if extraction
      *         is unnecessary
      */
-    public IdentityConstant getExtractor()
-        {
-        switch (expr.getType().getEcstasyClassName())
-            {
-            case "numbers.Int8":
-            case "numbers.Int16":
-            case "numbers.Int32":
-            case "numbers.Int64":
-            case "numbers.Int128":
-            case "numbers.IntN":
-            case "numbers.UInt8":
-            case "numbers.UInt16":
-            case "numbers.UInt32":
-            case "numbers.UInt64":
-            case "numbers.UInt128":
-            case "numbers.UIntN":
-                // already an IntNumber
-                return null;
+    public IdentityConstant getExtractor() {
+        switch (expr.getType().getEcstasyClassName()) {
+        case "numbers.Int8":
+        case "numbers.Int16":
+        case "numbers.Int32":
+        case "numbers.Int64":
+        case "numbers.Int128":
+        case "numbers.IntN":
+        case "numbers.UInt8":
+        case "numbers.UInt16":
+        case "numbers.UInt32":
+        case "numbers.UInt64":
+        case "numbers.UInt128":
+        case "numbers.UIntN":
+            // already an IntNumber
+            return null;
 
-            case "numbers.Bit":
-            case "numbers.Nibble":
-            case "text.Char":
-                {
-                // at least one of these does NOT have an @Auto method that converts to<Int>()
-                MethodConstant id = expr.getType().ensureTypeInfo().findCallable(
-                        "toInt64", true, false, getTypes(), TypeConstant.NO_TYPES);
-                assert id != null;
-                return id;
-                }
-
-            default:
-                {
-                PropertyConstant id = expr.getType().ensureTypeInfo().findProperty("ordinal").getIdentity();
-                assert id != null;
-                return id;
-                }
-            }
+        case "numbers.Bit":
+        case "numbers.Nibble":
+        case "text.Char": {
+            // at least one of these does NOT have an @Auto method that converts to<Int>()
+            MethodConstant id = expr.getType().ensureTypeInfo().findCallable(
+                    "toInt64", true, false, getTypes(), TypeConstant.NO_TYPES);
+            assert id != null;
+            return id;
         }
+
+        default: {
+            PropertyConstant id = expr.getType().ensureTypeInfo().findProperty("ordinal").getIdentity();
+            assert id != null;
+            return id;
+        }
+        }
+    }
 
     /**
      * @return the magnitude of the offset that will be subtracted from the int value of the
      *         underlying expression, or null
      */
-    public PackedInteger getOffset()
-        {
+    public PackedInteger getOffset() {
         return m_pintOffset;
-        }
+    }
 
     /**
      * @return the constant to use as an offset, or null if no offset adjustment is necessary
      */
-    public Constant getOffsetConstant()
-        {
+    public Constant getOffsetConstant() {
         PackedInteger pint = getOffset();
-        if (pint == null || pint.equals(PackedInteger.ZERO))
-            {
+        if (pint == null || pint.equals(PackedInteger.ZERO)) {
             return null;
-            }
+        }
 
         ConstantPool pool    = pool();
         String       sFormat = expr.getType().getEcstasyClassName(); // REVIEW CP
-        return switch (sFormat)
-            {
+        return switch (sFormat) {
             case "numbers.Int8"    -> pool.ensureByteConstant(Format.Int8, pint.getInt());
             case "numbers.UInt8"   -> pool.ensureByteConstant(Format.UInt8, pint.getInt());
             case "numbers.Int16"   -> pool.ensureIntConstant(pint, Format.Int16);
@@ -153,80 +141,72 @@ public class ToIntExpression
 
             // converted by extract "numbers.Bit", "numbers.Nibble", "text.Char"
             default                -> pool.ensureIntConstant(pint);
-            };
-        }
+        };
+    }
 
     /**
      * @return the method to use to extract an IntNumber, or null if extraction is unnecessary
      */
-    public MethodConstant getConvertMethod()
-        {
-        switch (expr.getType().getEcstasyClassName())
-            {
-            case "numbers.Int8":
-            case "numbers.Int16":
-            case "numbers.Int32":
-            case "numbers.Int128":
-            case "numbers.IntN":
-            case "numbers.UInt8":
-            case "numbers.UInt16":
-            case "numbers.UInt32":
-            case "numbers.UInt64":
-            case "numbers.UInt128":
-            case "numbers.UIntN":
-                // most of these do NOT have an @Auto method that converts to<Int>()
-                MethodConstant id = expr.getType().ensureTypeInfo().findCallable(
-                        "toInt64", true, false, getTypes(), TypeConstant.NO_TYPES);
-                assert id != null;
-                return id;
+    public MethodConstant getConvertMethod() {
+        switch (expr.getType().getEcstasyClassName()) {
+        case "numbers.Int8":
+        case "numbers.Int16":
+        case "numbers.Int32":
+        case "numbers.Int128":
+        case "numbers.IntN":
+        case "numbers.UInt8":
+        case "numbers.UInt16":
+        case "numbers.UInt32":
+        case "numbers.UInt64":
+        case "numbers.UInt128":
+        case "numbers.UIntN":
+            // most of these do NOT have an @Auto method that converts to<Int>()
+            MethodConstant id = expr.getType().ensureTypeInfo().findCallable(
+                    "toInt64", true, false, getTypes(), TypeConstant.NO_TYPES);
+            assert id != null;
+            return id;
 
 
-            case "numbers.Bit":     // converted by extract
-            case "numbers.Nibble":  // converted by extract
-            case "text.Char":       // converted by extract
-            case "numbers.Int64":   // already the right type
-            default:
-                return null;
-            }
+        case "numbers.Bit":     // converted by extract
+        case "numbers.Nibble":  // converted by extract
+        case "text.Char":       // converted by extract
+        case "numbers.Int64":   // already the right type
+        default:
+            return null;
         }
+    }
 
 
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType(Context ctx)
-        {
+    public TypeConstant getImplicitType(Context ctx) {
         return getType();
-        }
+    }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         return this;
-        }
+    }
 
     @Override
-    public void generateVoid(Context ctx, Code code, ErrorListener errs)
-        {
+    public void generateVoid(Context ctx, Code code, ErrorListener errs) {
         expr.generateVoid(ctx, code, errs);
-        }
+    }
 
     @Override
     public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
-        {
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
         return !isConstant() && getExtractor() == null && getOffsetConstant() == null && getConvertMethod() == null
                 ? expr.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs)
                 : super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
-        }
+    }
 
     @Override
-    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
-        {
-        if (isConstant())
-            {
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs) {
+        if (isConstant()) {
             super.generateAssignment(ctx, code, LVal, errs);
-            }
+        }
 
         IdentityConstant idExtract   = getExtractor();
         Constant         constOffset = getOffsetConstant();
@@ -234,8 +214,7 @@ public class ToIntExpression
 
         // step 1: extract the value from the underlying expression
         Argument argExtracted = expr.generateArgument(ctx, code, false, true, errs);
-        if (idExtract != null)
-            {
+        if (idExtract != null) {
             // extract always results in an Int64, which is the type of this expression
             Argument   argExtractFrom = argExtracted;
             Assignable LValExtractTo  = createTempVar(code, getType(), true);
@@ -243,92 +222,78 @@ public class ToIntExpression
             code.add(idExtract instanceof PropertyConstant
                     ? new P_Get((PropertyConstant) idExtract, argExtractFrom, argExtracted)
                     : new Invoke_01(argExtractFrom, (MethodConstant) idExtract, argExtracted));
-            }
+        }
 
         // step 2: apply the offset
         Argument argAdjusted = argExtracted;
-        if (constOffset != null)
-            {
+        if (constOffset != null) {
             Argument   argAdjustFrom = argAdjusted;
             Assignable LValAdjustTo  = createTempVar(code, argExtracted.getType(), true);
             argAdjusted = LValAdjustTo.getLocalArgument();
             code.add(new GP_Sub(argAdjustFrom, constOffset, argAdjusted));
-            }
+        }
 
         // step 3: apply the conversion
-        if (idConvert == null)
-            {
+        if (idConvert == null) {
             LVal.assign(argAdjusted, code, errs);
-            }
-        else
-            {
+        } else {
             Assignable LValConverted = LVal.isLocalArgument()
                     ? LVal
                     : createTempVar(code, getType(), true);
 
             code.add(new Invoke_01(argAdjusted, idConvert, LValConverted.getLocalArgument()));
 
-            if (LVal != LValConverted)
-                {
+            if (LVal != LValConverted) {
                 LVal.assign(LValConverted.getLocalArgument(), code, errs);
-                }
             }
         }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
         sb.append(expr);
 
         IdentityConstant idExtract = getExtractor();
-        if (idExtract != null)
-            {
+        if (idExtract != null) {
             sb.append('.')
               .append(idExtract.getName());
-            if (idExtract instanceof MethodConstant)
-                {
+            if (idExtract instanceof MethodConstant) {
                 sb.append("()");
-                }
             }
+        }
 
         PackedInteger pintOffset = getOffset();
-        if (pintOffset != null)
-            {
-            if (pintOffset.equals(PackedInteger.ZERO))
-                {
+        if (pintOffset != null) {
+            if (pintOffset.equals(PackedInteger.ZERO)) {
                 pintOffset = null;
-                }
-            else
-                {
+            } else {
                 sb.append(" - ")
                   .append(pintOffset);
-                }
             }
+        }
 
         MethodConstant idConvert = getConvertMethod();
-        if (idConvert != null)
-            {
-            if (pintOffset != null)
-                {
+        if (idConvert != null) {
+            if (pintOffset != null) {
                 sb.insert(0, '(')
                         .append(')');
-                }
+            }
 
             sb.append('.')
               .append(idConvert.getName())
               .append("()");
-            }
+        }
 
         return sb.toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
     private final PackedInteger m_pintOffset;
-    }
+}

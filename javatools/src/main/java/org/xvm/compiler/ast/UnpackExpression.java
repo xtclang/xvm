@@ -26,55 +26,47 @@ import org.xvm.asm.op.I_Get;
  * A tuple un-packing expression. This unpacks the values from the sub-expression tuple.
  */
 public class UnpackExpression
-        extends SyntheticExpression
-    {
+        extends SyntheticExpression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public UnpackExpression(Expression exprTuple, ErrorListener errs)
-        {
+    public UnpackExpression(Expression exprTuple, ErrorListener errs) {
         super(exprTuple);
 
-        if (exprTuple.isValidated())
-            {
+        if (exprTuple.isValidated()) {
             adoptValidation(null, exprTuple, errs);
-            }
         }
+    }
 
 
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
-    protected boolean hasSingleValueImpl()
-        {
+    protected boolean hasSingleValueImpl() {
         return false;
-        }
+    }
 
     @Override
-    protected boolean hasMultiValueImpl()
-        {
+    protected boolean hasMultiValueImpl() {
         return true;
-        }
+    }
 
     @Override
-    public TypeConstant[] getImplicitTypes(Context ctx)
-        {
+    public TypeConstant[] getImplicitTypes(Context ctx) {
         return isValidated()
                 ? getTypes()
                 : expr.getImplicitType(ctx).getParamTypesArray();
-        }
+    }
 
     @Override
     public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive,
-                                ErrorListener errs)
-        {
+                                ErrorListener errs) {
         TypeConstant typeTuple = pool().ensureTupleType(atypeRequired);
 
         return expr.testFit(ctx, typeTuple, fExhaustive, errs);
-        }
+    }
 
     @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
-        {
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs) {
         TypeConstant typeTuple = pool().ensureTupleType(atypeRequired);
 
         Expression exprOld = expr;
@@ -83,38 +75,33 @@ public class UnpackExpression
         return exprNew == null
                 ? null
                 : adoptValidation(ctx, expr = exprNew, errs);
-        }
+    }
 
 
     @Override
-    public void generateVoid(Context ctx, Code code, ErrorListener errs)
-        {
+    public void generateVoid(Context ctx, Code code, ErrorListener errs) {
         expr.generateVoid(ctx, code, errs);
-        }
+    }
 
     @Override
     public Argument[] generateArguments(Context ctx, Code code, boolean fLocalPropOk,
-                                        boolean fUsedOnce, ErrorListener errs)
-        {
-        if (isConstant())
-            {
+                                        boolean fUsedOnce, ErrorListener errs) {
+        if (isConstant()) {
             return toConstants();
-            }
+        }
 
-        if (expr instanceof TupleExpression exprTuple)
-            {
+        if (expr instanceof TupleExpression exprTuple) {
             List<Expression> listExprs = exprTuple.getExpressions();
             int              cExprs    = listExprs.size();
             Argument[]       aArgs     = new Argument[cExprs];
-            for (int i = 0; i < cExprs; ++i)
-                {
+            for (int i = 0; i < cExprs; ++i) {
                 Expression expr = listExprs.get(i);
                 Argument   arg  = expr.generateArgument(ctx, code, false, false, errs);
                 aArgs[i] = expr.ensurePointInTime(code, arg, listExprs, i);
-                }
+            }
 
             return aArgs;
-            }
+        }
 
         Argument argTuple = expr.generateArgument(ctx, code, true, false, errs);
 
@@ -123,34 +110,30 @@ public class UnpackExpression
         int            cValues = aTypes.length;
         Register[]     aRegs   = new Register[cValues];
 
-        for (int i = 0; i < cValues; i++)
-            {
+        for (int i = 0; i < cValues; i++) {
             Assignable LValue   = createTempVar(code, aTypes[i], false);
             Register   regValue = LValue.getRegister();
             code.add(new I_Get(argTuple, pool.ensureIntConstant(i), regValue));
             aRegs[i] = regValue;
-            }
-
-        return aRegs;
         }
 
+        return aRegs;
+    }
+
     @Override
-    public ExprAST getExprAST(Context ctx)
-        {
-        if (isConstant())
-            {
+    public ExprAST getExprAST(Context ctx) {
+        if (isConstant()) {
             // the constant is already unpacked; we need to pass it on
             Constant[] aconst = toConstants();
             int        cVals  = aconst.length;
             ExprAST[]  aAst   = new ExprAST[cVals];
-            for (int i = 0; i < cVals; i++)
-                {
+            for (int i = 0; i < cVals; i++) {
                 aAst[i] = new ConstantExprAST(aconst[i]);
-                }
-            return new MultiExprAST(aAst);
             }
-        return new UnpackExprAST(expr.getExprAST(ctx), getTypes());
+            return new MultiExprAST(aAst);
         }
+        return new UnpackExprAST(expr.getExprAST(ctx), getTypes());
+    }
 
 
     // ----- helpers ------------------------------------------------------------------
@@ -162,30 +145,27 @@ public class UnpackExpression
      * @param exprTuple  the validated expression that yields a Tuple type
      * @param errs       the error listener
      */
-    protected Expression adoptValidation(Context ctx, Expression exprTuple, ErrorListener errs)
-        {
+    protected Expression adoptValidation(Context ctx, Expression exprTuple, ErrorListener errs) {
         TypeConstant typeTuple = exprTuple.getType();
         assert typeTuple.isTuple() && typeTuple.isParamsSpecified();
 
         TypeConstant[] atypeField = typeTuple.getParamTypesArray();
         Constant[]     aconstVal  = null;
 
-        if (exprTuple.isConstant())
-            {
+        if (exprTuple.isConstant()) {
             Constant constTuple = exprTuple.toConstant();
             assert constTuple.getFormat() == Format.Tuple;
             aconstVal = ((ArrayConstant) constTuple).getValue();
-            }
+        }
 
         return finishValidations(ctx, null, atypeField, expr.getTypeFit().addUnpack(), aconstVal, errs);
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return "Unpacked: " + getUnderlyingExpression().toString();
-        }
     }
+}

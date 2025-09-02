@@ -19,133 +19,114 @@ import org.xvm.util.Severity;
  * or intersection types.
  */
 public class BiTypeExpression
-        extends TypeExpression
-    {
+        extends TypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public BiTypeExpression(TypeExpression type1, Token operator, TypeExpression type2)
-        {
+    public BiTypeExpression(TypeExpression type1, Token operator, TypeExpression type2) {
         this.type1    = type1;
         this.operator = operator;
         this.type2    = type2;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    protected boolean canResolveNames()
-        {
+    protected boolean canResolveNames() {
         return super.canResolveNames() ||
                 (type1.canResolveNames() && type2.canResolveNames());
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return type1.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return type2.getEndPosition();
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
-        {
+    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs) {
         TypeConstant constType1 = type1.ensureTypeConstant(ctx, errs);
         TypeConstant constType2 = type2.ensureTypeConstant(ctx, errs);
 
         ConstantPool pool = pool();
-        return switch (operator.getId())
-            {
+        return switch (operator.getId()) {
             case ADD    -> pool.ensureIntersectionTypeConstant(constType1, constType2);
             case BIT_OR -> pool.ensureUnionTypeConstant(constType1, constType2);
             case SUB    -> pool.ensureDifferenceTypeConstant(constType1, constType2);
             default     -> throw new IllegalStateException("unsupported operator: " + operator);
-            };
-        }
+        };
+    }
 
     @Override
-    protected void collectAnonInnerClassInfo(AnonInnerClass info)
-        {
-        switch (operator.getId())
-            {
-            case ADD:
-                // delegate down to each sub-type as a separate contribution
-                type1.collectAnonInnerClassInfo(info);
-                type2.collectAnonInnerClassInfo(info);
-                break;
+    protected void collectAnonInnerClassInfo(AnonInnerClass info) {
+        switch (operator.getId()) {
+        case ADD:
+            // delegate down to each sub-type as a separate contribution
+            type1.collectAnonInnerClassInfo(info);
+            type2.collectAnonInnerClassInfo(info);
+            break;
 
-            case BIT_OR:
-                // cannot implement a union type in an anonymous inner class
-                log(info.getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_UNION);
-                break;
+        case BIT_OR:
+            // cannot implement a union type in an anonymous inner class
+            log(info.getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_UNION);
+            break;
 
-            case SUB:
-                // a difference type is treated as an interface type that can be implemented
-                info.addContribution(this);
-                break;
+        case SUB:
+            // a difference type is treated as an interface type that can be implemented
+            info.addContribution(this);
+            break;
 
-            default:
-                throw new IllegalStateException("unsupported operator: " + operator);
-            }
+        default:
+            throw new IllegalStateException("unsupported operator: " + operator);
         }
+    }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         boolean        fValid = true;
         TypeExpression exprNew;
 
         exprNew = (TypeExpression) type1.validate(ctx, null, errs);
-        if (exprNew == null)
-            {
+        if (exprNew == null) {
             fValid = false;
-            }
-        else
-            {
+        } else {
             type1 = exprNew;
-            }
+        }
 
         exprNew = (TypeExpression) type2.validate(ctx, null, errs);
-        if (exprNew == null)
-            {
+        if (exprNew == null) {
             fValid = false;
-            }
-        else
-            {
+        } else {
             type2 = exprNew;
-            }
+        }
 
         return fValid ? super.validate(ctx, typeRequired, errs) : null;
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return String.valueOf(type1) + ' ' + operator.getId().TEXT + ' ' + type2;
-        }
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -155,4 +136,4 @@ public class BiTypeExpression
     protected TypeExpression type2;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(BiTypeExpression.class, "type1", "type2");
-    }
+}

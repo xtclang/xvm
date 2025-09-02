@@ -6,8 +6,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateH
  * A ClassTemplate implementation that knows how to extract/replace bits in the underlying storage.
  */
 public interface BitView
-        extends ByteView
-    {
+        extends ByteView {
     /**
      * Obtain an array of bytes representing bits.
      *
@@ -38,4 +37,4 @@ public interface BitView
      * @param fBit       the bit value
      */
     void assignBit(DelegateHandle hDelegate, long of, boolean fBit);
-    }
+}

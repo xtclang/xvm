@@ -51,132 +51,117 @@ import org.xvm.util.Severity;
 /**
  * Compiler context for compiling a method body.
  */
-public class Context
-    {
+public class Context {
     /**
      * Construct a Context.
      *
      * @param ctxOuter      the context that this Context is nested within
      * @param fDemuxOnExit  true if this context should demux the assignment information
      */
-    protected Context(Context ctxOuter, boolean fDemuxOnExit)
-        {
+    protected Context(Context ctxOuter, boolean fDemuxOnExit) {
         m_ctxOuter     = ctxOuter;
         m_fDemuxOnExit = fDemuxOnExit;
         m_fReachable   = ctxOuter == null || ctxOuter.isReachable();
-        }
+    }
 
     /**
      * @return the outer context
      */
-    protected Context getOuterContext()
-        {
+    protected Context getOuterContext() {
         return m_ctxOuter;
-        }
+    }
 
     /**
      * @return the outer branch to use for {@link #getVar(String, Token, Branch, ErrorListener)}
      *         and {@link #resolveFormalType(TypeConstant, Branch)} implementations
      *         based on the current branch
      */
-    protected Branch getOuterBranch(Branch branch)
-        {
+    protected Branch getOuterBranch(Branch branch) {
         return Branch.Always;
-        }
+    }
 
     /**
      * @return true iff this context demuxes assignment data as it pushes it outwards
      */
-    protected boolean isDemuxing()
-        {
+    protected boolean isDemuxing() {
         return m_fDemuxOnExit;
-        }
+    }
 
     /**
      * @return the MethodStructure that the context represents (and specifically, not a
      *         MethodStructure representing an implicit or explicit lambda, since those are
      *         treated "transparently" because of captures)
      */
-    public MethodStructure getMethod()
-        {
+    public MethodStructure getMethod() {
         return getOuterContext().getMethod();
-        }
+    }
 
     /**
      * @return true iff the containing MethodStructure is a method (not a function), which means
      *         that "this", "super", and other reserved registers are available
      */
-    public boolean isMethod()
-        {
+    public boolean isMethod() {
         Context ctx = getOuterContext();
         return ctx != null && ctx.isMethod();
-        }
+    }
 
     /**
      * @return true iff the containing MethodStructure is a function (neither a method nor a
      *         constructor), which means that "this", "super", and other reserved registers are
      *         not available
      */
-    public boolean isFunction()
-        {
+    public boolean isFunction() {
         Context ctx = getOuterContext();
         return ctx != null && ctx.isFunction();
-        }
+    }
 
     /**
      * @return true iff the containing MethodStructure is a constructor, which means that
      *         "this" and "this:struct" and "this:class" are available, but other reserved registers
      *         that require an instance of the class are not available
      */
-    public boolean isConstructor()
-        {
+    public boolean isConstructor() {
         Context ctx = getOuterContext();
         return ctx != null && ctx.isConstructor();
-        }
+    }
 
     /**
      * @return the source for the method
      */
-    public Source getSource()
-        {
+    public Source getSource() {
         return getOuterContext().getSource();
-        }
+    }
 
     /**
      * @return the containing ClassStructure for the method
      */
-    public ClassStructure getThisClass()
-        {
+    public ClassStructure getThisClass() {
         return getOuterContext().getThisClass();
-        }
+    }
 
     /**
      * @return the identity of the containing ClassStructure for the method
      */
-    public IdentityConstant getThisClassId()
-        {
+    public IdentityConstant getThisClassId() {
         return getThisClass().getIdentityConstant();
-        }
+    }
 
     /**
      * @return the formal type for "this" (could be narrowed within this context)
      */
-    public TypeConstant getThisType()
-        {
+    public TypeConstant getThisType() {
         Argument argThis = getVar("this");
         return argThis == null
                 ? getThisClass().getFormalType()
                 : argThis.getType().removeAccess();
-        }
+    }
 
     /**
      * @return the Register for "this"
      */
-    public Register getThisRegister()
-        {
+    public Register getThisRegister() {
         Register regThis = m_regThis;
-        if (regThis == null)
-            {
+        if (regThis == null) {
             TypeConstant typeThis = getThisType();
 
             // we used to adjust the type for "this" inside the property, but that seems to be
@@ -187,51 +172,45 @@ public class Context
             // while (parent instanceof MethodStructure)
             //     {
             //     parent = parent.getParent().getParent();
-            //     }
+            // }
             // if (parent instanceof PropertyStructure prop && prop.isRefAnnotated())
             //     {
             //     typeThis = prop.getIdentityConstant().getRefType(typeThis);
-            //     }
+            // }
 
             ConstantPool pool = pool();
-            if (isConstructor())
-                {
+            if (isConstructor()) {
                 TypeConstant typeStruct = pool.ensureAccessTypeConstant(typeThis, Access.STRUCT);
                 regThis = new Register(typeStruct, "this", Op.A_STRUCT);
-                }
-            else
-                {
+            } else {
                 regThis = new Register(typeThis, "this", Op.A_THIS);
-                }
+            }
 
             m_regThis = regThis;
-            }
-        return regThis;
         }
+        return regThis;
+    }
 
     /**
      * @return the Register for "this"
      */
-    public ExprAST getThisRegisterAST()
-        {
+    public ExprAST getThisRegisterAST() {
         return getThisRegister().getRegisterAST();
-        }
+    }
 
     /**
      * @return the AST holder
      */
-    public AstHolder getHolder()
-        {
+    public AstHolder getHolder() {
         return getOuterContext().getHolder();
-        }
+    }
 
     /**
      * @return the ConstantPool
      */
-    public ConstantPool pool()
-        {
+    public ConstantPool pool() {
         return getOuterContext().pool();
-        }
+    }
 
 
     // ----- nested context creation ---------------------------------------------------------------
@@ -241,10 +220,9 @@ public class Context
      * <p/>
      * Note: This can only be used during the validate() stage.
      */
-    public Context enter()
-        {
+    public Context enter() {
         return new Context(this, true);
-        }
+    }
 
     /**
      * Create a nested "if" of this context.
@@ -253,10 +231,9 @@ public class Context
      *
      * @return the new "if" context
      */
-    public Context enterIf()
-        {
+    public Context enterIf() {
         return new IfContext(this);
-        }
+    }
 
     /**
      * Create a nested "and-if" of this context.
@@ -265,10 +242,9 @@ public class Context
      *
      * @return the new multi-condition "and-if" context
      */
-    public Context enterAndIf()
-        {
+    public Context enterAndIf() {
         return new AndIfContext(this);
-        }
+    }
 
     /**
      * Create a nested fork of this context.
@@ -280,10 +256,9 @@ public class Context
      *
      * @return the new (forked) context
      */
-    public Context enterFork(boolean fWhenTrue)
-        {
+    public Context enterFork(boolean fWhenTrue) {
         return new ForkedContext(this, fWhenTrue);
-        }
+    }
 
     /**
      * Create a nested context that behaves as a "true" branch of an IfContext and automatically
@@ -293,12 +268,11 @@ public class Context
      *
      * @return the new (forked) context
      */
-    public Context enterInfiniteLoop()
-        {
+    public Context enterInfiniteLoop() {
         ForkedContext ctxFork = (ForkedContext) enterFork(true);
         ctxFork.markExclusive();
         return ctxFork;
-        }
+    }
 
     /**
      * Create a short-circuiting "and" context.
@@ -307,10 +281,9 @@ public class Context
      *
      * @return the new "and" context
      */
-    public Context enterAnd()
-        {
+    public Context enterAnd() {
         return new AndContext(this);
-        }
+    }
 
     /**
      * Create a short-circuiting "or" context.
@@ -319,10 +292,9 @@ public class Context
      *
      * @return the new "or" context
      */
-    public Context enterOr()
-        {
+    public Context enterOr() {
         return new OrContext(this);
-        }
+    }
 
     /**
      * Create a negated form of this context.
@@ -331,10 +303,9 @@ public class Context
      *
      * @return the new (negating) context
      */
-    public Context enterNot()
-        {
+    public Context enterNot() {
         return new NotContext(this);
-        }
+    }
 
     /**
      * Create a context that tracks variable assignment data within a loop. The assignments within
@@ -345,10 +316,9 @@ public class Context
      *
      * @return the new (forked) context
      */
-    public Context enterLoop()
-        {
+    public Context enterLoop() {
         return new LoopingContext(this);
-        }
+    }
 
     /**
      * Create a delegating context that allows an expression to resolve names based on the
@@ -375,10 +345,9 @@ public class Context
      *
      * @return a new context
      */
-    public InferringContext enterInferring(TypeConstant typeLeft)
-        {
+    public InferringContext enterInferring(TypeConstant typeLeft) {
         return new InferringContext(this, typeLeft);
-        }
+    }
 
     /**
      * Create a delegating context that allows this context to resolve names for elements in a list.
@@ -394,18 +363,16 @@ public class Context
      *
      * @return a new context
      */
-    public Context enterList()
-        {
+    public Context enterList() {
         return new Context(this, true);
-        }
+    }
 
     /**
      * @return true iff the code for which the context exists is considered reachable
      */
-    public boolean isReachable()
-        {
+    public boolean isReachable() {
         return m_fReachable;
-        }
+    }
 
     /**
      * This method allows the code for which the Context exists to be marked as reachable vs
@@ -413,10 +380,9 @@ public class Context
      *
      * @param fReachable  true iff the current point in the code can be reached
      */
-    public void setReachable(boolean fReachable)
-        {
+    public void setReachable(boolean fReachable) {
         m_fReachable = fReachable;
-        }
+    }
 
     /**
      * Exit the scope that was created by calling {@link #enter()}. Used in the validation
@@ -424,46 +390,39 @@ public class Context
      * <p/>
      * Note: This can only be used during the validate() stage.
      */
-    public Context exit()
-        {
+    public Context exit() {
         Context ctxOuter = getOuterContext();
 
         promoteAssignments(ctxOuter);
 
-        if (isReachable())
-            {
+        if (isReachable()) {
             promoteNarrowedTypes();
             promoteNarrowedGenericTypes();
-            }
-        else
-            {
+        } else {
             ctxOuter.promoteNonCompleting(this);
-            }
+        }
 
         return ctxOuter;
-        }
+    }
 
     /**
      * Discard the context without promoting its contents.
      */
-    public void discard()
-        {
+    public void discard() {
         Context ctxOuter = getOuterContext();
-        if (ctxOuter != null)
-            {
+        if (ctxOuter != null) {
             ctxOuter.unlink(this);
-            }
+        }
 
         m_fReachable = false;
         m_ctxOuter   = null;
-        }
+    }
 
     /**
      * A notification to the context that its nested context has been discarded.
      */
-    protected void unlink(Context ctxDiscarded)
-        {
-        }
+    protected void unlink(Context ctxDiscarded) {
+    }
 
     /**
      * Determine the effects of an abrupt exit from this context to the specified context.
@@ -474,18 +433,16 @@ public class Context
      * @return the variable assignment contributions that need to be made if the code exits abruptly
      *         at this point and breaks/continues/short-circuits to the specified context
      */
-    public Map<String, Assignment> prepareJump(Context ctxDest)
-        {
+    public Map<String, Assignment> prepareJump(Context ctxDest) {
         // don't pollute a reachable destination with assignments from an unreachable point in code
-        if (!this.isReachable() && ctxDest.isReachable())
-            {
+        if (!this.isReachable() && ctxDest.isReachable()) {
             return Collections.emptyMap();
-            }
+        }
 
         Map<String, Assignment> mapMods = new HashMap<>();
         prepareJump(ctxDest, mapMods, null);
         return mapMods;
-        }
+    }
 
     /**
      * Determine the effects of an abrupt exit from this context to the specified context.
@@ -498,19 +455,16 @@ public class Context
      * @param mapArgMods  the map to put the variable argument contributions that need to be made
      */
     public void prepareJump(Context ctxDest, Map<String, Assignment> mapAsnMods,
-                            Map<String, Argument> mapArgMods)
-        {
+                            Map<String, Argument> mapArgMods) {
         // don't pollute a reachable destination with assignments from an unreachable point in code
-        if (!this.isReachable() && ctxDest.isReachable())
-            {
+        if (!this.isReachable() && ctxDest.isReachable()) {
             return;
-            }
+        }
 
         // begin with a snapshot of the current modifications
         boolean fDemux   = false;
         Context ctxInner = this;
-        while (ctxInner != ctxDest)
-            {
+        while (ctxInner != ctxDest) {
             // calculate impact of the already-accumulated assignment deltas across this context
             // boundary
 
@@ -518,58 +472,48 @@ public class Context
             mapAsnMods.keySet().removeIf(sName -> ctxDest.getVar(sName) == null);
 
             // 2) collect all other pending modifications that will be promoted to the outer context
-            for (String sName : ctxInner.getDefiniteAssignments().keySet())
-                {
-                if (!mapAsnMods.containsKey(sName) && !ctxInner.isVarDeclaredInThisScope(sName))
-                    {
+            for (String sName : ctxInner.getDefiniteAssignments().keySet()) {
+                if (!mapAsnMods.containsKey(sName) && !ctxInner.isVarDeclaredInThisScope(sName)) {
                     mapAsnMods.put(sName, getVarAssignment(sName));
-                    }
                 }
+            }
 
             fDemux  |= ctxInner.isDemuxing();
             ctxInner = ctxInner.getOuterContext();
-            }
+        }
 
-        if (fDemux)
-            {
-            for (Entry<String, Assignment> entry : mapAsnMods.entrySet())
-                {
+        if (fDemux) {
+            for (Entry<String, Assignment> entry : mapAsnMods.entrySet()) {
                 entry.setValue(entry.getValue().demux());
-                }
             }
+        }
 
-        if (mapArgMods != null)
-            {
-            for (String sName : mapAsnMods.keySet())
-                {
+        if (mapArgMods != null) {
+            for (String sName : mapAsnMods.keySet()) {
                 mapArgMods.put(sName, getVar(sName));
-                }
+            }
 
             // there could be some narrowed arguments that didn't get into the assignment map
-            for (String sName : getNameMap().keySet())
-                {
+            for (String sName : getNameMap().keySet()) {
                 if (!mapArgMods.containsKey(sName) &&
-                        ctxDest.getVar(sName) instanceof Register regDest)
-                    {
+                        ctxDest.getVar(sName) instanceof Register regDest) {
                     TypeConstant typeArg = getVar(sName).getType();
-                    if (!regDest.getType().equals(typeArg))
-                        {
+                    if (!regDest.getType().equals(typeArg)) {
                         mapArgMods.put(sName, regDest.narrowType(typeArg));
-                        }
                     }
                 }
             }
         }
+    }
 
     /**
      * Merge a previously prepared set of variable assignment information into this context.
      *
      * @param mapAdd  a map of assignments from a previous call to {@link #prepareJump}
      */
-    public void merge(Map<String, Assignment> mapAdd)
-        {
+    public void merge(Map<String, Assignment> mapAdd) {
         merge(mapAdd, Collections.emptyMap());
-        }
+    }
 
     /**
      * Merge a previously prepared set of variable assignment information into this context.
@@ -577,53 +521,43 @@ public class Context
      * @param mapAddAsn  a map of assignments from a previous call to {@link #prepareJump}
      * @param mapAddArg  a map of arguments from a previous call to {@link #prepareJump}
      */
-    public void merge(Map<String, Assignment> mapAddAsn, Map<String, Argument> mapAddArg)
-        {
+    public void merge(Map<String, Assignment> mapAddAsn, Map<String, Argument> mapAddArg) {
         Map<String, Assignment> mapAsn     = ensureDefiniteAssignments();
         boolean                 fCompletes = isReachable();
 
-        for (Entry<String, Assignment> entry : mapAddAsn.entrySet())
-            {
+        for (Entry<String, Assignment> entry : mapAddAsn.entrySet()) {
             String     sName  = entry.getKey();
             Assignment asnNew = entry.getValue();
 
-            if (fCompletes)
-                {
+            if (fCompletes) {
                 asnNew = getVarAssignment(sName).join(asnNew);
-                }
-            mapAsn.put(sName, asnNew);
             }
+            mapAsn.put(sName, asnNew);
+        }
 
-        for (Entry<String, Argument> entry : mapAddArg.entrySet())
-            {
+        for (Entry<String, Argument> entry : mapAddArg.entrySet()) {
             String sName = entry.getKey();
 
-            if (entry.getValue() instanceof Register regNew)
-                {
+            if (entry.getValue() instanceof Register regNew) {
                 Register regOld = (Register) getVar(sName);
                 assert regOld != null;
 
                 TypeConstant typeOld = regOld.getType();
                 TypeConstant typeNew = regNew.getType();
-                if (!typeOld.equals(typeNew))
-                    {
-                    if (typeOld.isA(typeNew))
-                        {
+                if (!typeOld.equals(typeNew)) {
+                    if (typeOld.isA(typeNew)) {
                         // the new type is wider - take it instead of the old narrower one
                         replaceArgument(sName, Branch.Always, regOld.narrowType(typeNew));
-                        }
-                    else
-                        {
+                    } else {
                         TypeConstant typeJoin = typeNew.union(pool(), typeOld);
-                        if (!typeJoin.equals(typeOld))
-                            {
+                        if (!typeJoin.equals(typeOld)) {
                             replaceArgument(sName, Branch.Always, regOld.narrowType(typeJoin));
-                            }
                         }
                     }
                 }
             }
         }
+    }
 
     /**
      * Collect the narrowed arguments from the "else" branch of the assert expression and merge
@@ -633,17 +567,14 @@ public class Context
      *
      * @return the merged map
      */
-    protected Map<String, Argument> mergeNarrowedElseTypes(Map<String, Argument> map)
-        {
+    protected Map<String, Argument> mergeNarrowedElseTypes(Map<String, Argument> map) {
         Map<String, Argument> mapThis = getNarrowingMap(false);
-        if (map == null || map.isEmpty())
-            {
+        if (map == null || map.isEmpty()) {
             return mapThis.isEmpty() ? null : new HashMap<>(mapThis);
-            }
+        }
 
         map.keySet().retainAll(mapThis.keySet()); // only keep common arguments
-        for (Map.Entry<String, Argument> entry : map.entrySet())
-            {
+        for (Map.Entry<String, Argument> entry : map.entrySet()) {
             String   sName   = entry.getKey();
             Argument argPrev = entry.getValue();
             Argument argThis = mapThis.get(sName);
@@ -652,61 +583,50 @@ public class Context
             TypeConstant typeThis = argThis.getType();
 
             TypeConstant typeJoin = typeThis.union(pool(), typePrev);
-            if (!typeJoin.equals(typePrev))
-                {
-                if (argPrev instanceof Register regPrev)
-                    {
+            if (!typeJoin.equals(typePrev)) {
+                if (argPrev instanceof Register regPrev) {
                     map.put(sName, regPrev.narrowType(typeJoin));
-                    }
-                else
-                    {
+                } else {
                     map.remove(sName);
-                    }
                 }
             }
-        return map;
         }
+        return map;
+    }
 
     /**
      * Copy variable assignment information from this scope to the specified outer scope.
      *
      * @param ctxOuter  the context to copy the assignment information into
      */
-    public void promoteAssignments(Context ctxOuter)
-        {
+    public void promoteAssignments(Context ctxOuter) {
         boolean fCompletes = isReachable();
         boolean fDemuxing  = isDemuxing();
 
-        for (Entry<String, Assignment> entry : getDefiniteAssignments().entrySet())
-            {
+        for (Entry<String, Assignment> entry : getDefiniteAssignments().entrySet()) {
             String     sName    = entry.getKey();
             Assignment asnInner = entry.getValue();
-            if (isVarDeclaredInThisScope(sName))
-                {
+            if (isVarDeclaredInThisScope(sName)) {
                 // we have unwound all the way back to the declaration context for the
                 // variable at this point, so if it is proven to be effectively final, that
                 // information is stored off, for example so that captures can make use of
                 // that knowledge (i.e. capturing a value of type T, instead of a Ref<T>)
-                if (asnInner.isEffectivelyFinal())
-                    {
+                if (asnInner.isEffectivelyFinal()) {
                     ((Register) getVar(sName)).markEffectivelyFinal();
-                    }
                 }
-            else
-                {
+            } else {
                 Assignment asnOuter = ctxOuter.getVarAssignment(sName);
                 asnOuter = fCompletes
                         ? promote(sName, asnInner, asnOuter)
                         : asnOuter.promoteFromNonCompleting(asnInner);
 
-                if (fDemuxing)
-                    {
+                if (fDemuxing) {
                     asnOuter = asnOuter.demux();
-                    }
-                ctxOuter.setVarAssignment(sName, asnOuter);
                 }
+                ctxOuter.setVarAssignment(sName, asnOuter);
             }
         }
+    }
 
     /**
      * Promote assignment information from this context to its enclosing context.
@@ -717,29 +637,24 @@ public class Context
      *
      * @return the promoted assignment information
      */
-    protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
-        {
+    protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter) {
         return asnInner;
-        }
+    }
 
     /**
      * Promote narrowing type information from this context to its enclosing context.
      */
-    protected void promoteNarrowedTypes()
-        {
-        for (Entry<String, Argument> entry : getNameMap().entrySet())
-            {
+    protected void promoteNarrowedTypes() {
+        for (Entry<String, Argument> entry : getNameMap().entrySet()) {
             promoteNarrowedType(entry.getKey(), entry.getValue(), Branch.Always);
-            }
-        for (Entry<String, Argument> entry : getNarrowingMap(true).entrySet())
-            {
-            promoteNarrowedType(entry.getKey(), entry.getValue(), Branch.WhenTrue);
-            }
-        for (Entry<String, Argument> entry : getNarrowingMap(false).entrySet())
-            {
-            promoteNarrowedType(entry.getKey(), entry.getValue(), Branch.WhenFalse);
-            }
         }
+        for (Entry<String, Argument> entry : getNarrowingMap(true).entrySet()) {
+            promoteNarrowedType(entry.getKey(), entry.getValue(), Branch.WhenTrue);
+        }
+        for (Entry<String, Argument> entry : getNarrowingMap(false).entrySet()) {
+            promoteNarrowedType(entry.getKey(), entry.getValue(), Branch.WhenFalse);
+        }
+    }
 
     /**
      * Promote narrowing type information for the specified argument from this context to its
@@ -749,32 +664,26 @@ public class Context
      * @param arg     the corresponding narrowed argument
      * @param branch  the branch this narrowing comes from
      */
-    protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
-        {
-        if (branch == Branch.Always && !isVarDeclaredInThisScope(sName))
-            {
+    protected void promoteNarrowedType(String sName, Argument arg, Branch branch) {
+        if (branch == Branch.Always && !isVarDeclaredInThisScope(sName)) {
             getOuterContext().replaceArgument(sName, branch, arg);
-            }
         }
+    }
 
     /**
      * Promote narrowing generic type information from this context to its enclosing context.
      */
-    protected void promoteNarrowedGenericTypes()
-        {
-        for (Entry<FormalConstant, TypeConstant> entry : getFormalTypeMap(Branch.Always).entrySet())
-            {
+    protected void promoteNarrowedGenericTypes() {
+        for (Entry<FormalConstant, TypeConstant> entry : getFormalTypeMap(Branch.Always).entrySet()) {
             promoteNarrowedGenericType(entry.getKey(), entry.getValue(), Branch.Always);
-            }
-        for (Entry<FormalConstant, TypeConstant> entry : getFormalTypeMap(Branch.WhenTrue).entrySet())
-            {
-            promoteNarrowedGenericType(entry.getKey(), entry.getValue(), Branch.WhenTrue);
-            }
-        for (Entry<FormalConstant, TypeConstant> entry : getFormalTypeMap(Branch.WhenFalse).entrySet())
-            {
-            promoteNarrowedGenericType(entry.getKey(), entry.getValue(), Branch.WhenFalse);
-            }
         }
+        for (Entry<FormalConstant, TypeConstant> entry : getFormalTypeMap(Branch.WhenTrue).entrySet()) {
+            promoteNarrowedGenericType(entry.getKey(), entry.getValue(), Branch.WhenTrue);
+        }
+        for (Entry<FormalConstant, TypeConstant> entry : getFormalTypeMap(Branch.WhenFalse).entrySet()) {
+            promoteNarrowedGenericType(entry.getKey(), entry.getValue(), Branch.WhenFalse);
+        }
+    }
 
     /**
      * Promote narrowing type information for the specified generic type from this context to its
@@ -785,23 +694,20 @@ public class Context
      * @param branch       the branch this narrowing comes from
      */
     protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant typeNarrow,
-                                              Branch branch)
-        {
-        if (branch == Branch.Always)
-            {
+                                              Branch branch) {
+        if (branch == Branch.Always) {
             getOuterContext().replaceGenericType(constFormal, branch, typeNarrow);
-            }
         }
+    }
 
     /**
      * Promote the non-completing state from the specified context to this one.
      *
      * @param ctxInner  the inner context that is non-completing
      */
-    protected void promoteNonCompleting(Context ctxInner)
-        {
+    protected void promoteNonCompleting(Context ctxInner) {
         setReachable(false);
-        }
+    }
 
     /**
      * Retain all the keys from the specified map at the specified branch.
@@ -809,45 +715,36 @@ public class Context
      * @param map        the map to use
      * @param fWhenTrue  the branch indicator
      */
-    protected void retainNarrowedTypes(Map<String, Argument> map, boolean fWhenTrue)
-        {
+    protected void retainNarrowedTypes(Map<String, Argument> map, boolean fWhenTrue) {
         Map<String, Argument> mapNarrowing = ensureNarrowingMap(fWhenTrue);
-        if (!mapNarrowing.isEmpty())
-            {
-            if (map.isEmpty())
-                {
+        if (!mapNarrowing.isEmpty()) {
+            if (map.isEmpty()) {
                 mapNarrowing.clear();
-                }
-            else
-                {
+            } else {
                 mapNarrowing.keySet().retainAll(map.keySet());
-                }
             }
         }
+    }
 
     /**
      * Restore the original types for all narrowed arguments in this context.
      */
-    public void restoreOriginalTypes()
-        {
-        for (String sName : getNameMap().keySet())
-            {
+    public void restoreOriginalTypes() {
+        for (String sName : getNameMap().keySet()) {
             restoreOriginalType(sName);
-            }
         }
+    }
 
     /**
      * Restore the original type for the specified argument.
      *
      * @param sName  the argument name
      */
-    protected void restoreOriginalType(String sName)
-        {
-        if (getVar(sName) instanceof Register regOrig)
-            {
+    protected void restoreOriginalType(String sName) {
+        if (getVar(sName) instanceof Register regOrig) {
             replaceArgument(sName, Branch.Always, regOrig.restoreType());
-            }
         }
+    }
 
     /**
      * Register the specified variable name in this context.
@@ -858,25 +755,22 @@ public class Context
      * @param reg      the register representing the variable
      * @param errs     the error list to log to
      */
-    public void registerVar(Token tokName, Register reg, ErrorListener errs)
-        {
+    public void registerVar(Token tokName, Register reg, ErrorListener errs) {
         String sName = tokName.getValueText();
-        if (isVarDeclaredInThisScope(sName) || !isVarHideable(sName))
-            {
+        if (isVarDeclaredInThisScope(sName) || !isVarHideable(sName)) {
             tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_DEFINED, sName);
-            }
+        }
 
         ensureNameMap().put(sName, reg);
         ensureDefiniteAssignments().put(sName, reg.isPredefined() ? Assignment.AssignedOnce
                                                                   : Assignment.Unassigned);
-        }
+    }
 
-    public void unregisterVar(Token tokName)
-        {
+    public void unregisterVar(Token tokName) {
         String sName = tokName.getValueText();
         ensureNameMap().remove(sName);
         ensureDefiniteAssignments().remove(sName);
-        }
+    }
 
     /**
      * See if the specified name declares an argument within this context.
@@ -885,10 +779,9 @@ public class Context
      *
      * @return a Register iff the name is registered to a register; otherwise null
      */
-    public final Argument getVar(String sName)
-        {
+    public final Argument getVar(String sName) {
         return getVar(sName, null, Branch.Always, null);
-        }
+    }
 
     /**
      * See if the specified name declares an argument within this context.
@@ -898,10 +791,9 @@ public class Context
      *
      * @return a Register iff the name is registered to a register; otherwise null
      */
-    public final Argument getVar(Token name, ErrorListener errs)
-        {
+    public final Argument getVar(Token name, ErrorListener errs) {
         return getVar(name.getValueText(), name, Branch.Always, errs);
-        }
+    }
 
     /**
      * Internal implementation of getVar() that allows the lookup to be done with or without a
@@ -914,26 +806,22 @@ public class Context
      *
      * @return the argument for the variable, or null
      */
-    protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
-        {
+    protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs) {
         Argument arg = getLocalVar(sName, branch);
-        if (arg == null)
-            {
+        if (arg == null) {
             Context ctxOuter = getOuterContext();
-            if (ctxOuter != null)
-                {
+            if (ctxOuter != null) {
                 arg = ctxOuter.getVar(sName, name, getOuterBranch(branch), errs);
-                }
             }
+        }
 
         // we need to call resolveRegisterType() even on registers that are local
         // since some formal types could have been narrowed afterward
-        if (arg instanceof Register reg)
-            {
+        if (arg instanceof Register reg) {
             arg = resolveRegisterType(branch, reg);
-            }
-        return arg;
         }
+        return arg;
+    }
 
     /**
      * Check for the variable definition in this context.
@@ -943,19 +831,16 @@ public class Context
      *
      * @return the argument for the variable, or null
      */
-    protected Argument getLocalVar(String sName, Branch branch)
-        {
-        if (branch != Branch.Always)
-            {
+    protected Argument getLocalVar(String sName, Branch branch) {
+        if (branch != Branch.Always) {
             Argument arg = getNarrowingMap(branch == Branch.WhenTrue).get(sName);
-            if (arg != null)
-                {
+            if (arg != null) {
                 return arg;
-                }
             }
+        }
 
         return getNameMap().get(sName);
-        }
+    }
 
     /**
      * Determine if the specified variable name is already declared in the current scope.
@@ -966,26 +851,22 @@ public class Context
      *
      * @return true iff a variable of that name is already declared in this scope
      */
-    public boolean isVarDeclaredInThisScope(String sName)
-        {
+    public boolean isVarDeclaredInThisScope(String sName) {
         Argument arg = getNameMap().get(sName);
         return arg instanceof Register reg && reg.isInPlace();
-        }
+    }
 
     /**
      * @return true iff this context declares any names
      */
-    public boolean isAnyVarDeclaredInThisScope()
-        {
-        for (String sName : getNameMap().keySet())
-            {
-            if (isVarDeclaredInThisScope(sName))
-                {
+    public boolean isAnyVarDeclaredInThisScope() {
+        for (String sName : getNameMap().keySet()) {
+            if (isVarDeclaredInThisScope(sName)) {
                 return true;
-                }
             }
-        return false;
         }
+        return false;
+    }
 
     /**
      * Obtain the assignment information for a variable name.
@@ -994,13 +875,11 @@ public class Context
      *
      * @return the Assignment (VAS data) for the variable name
      */
-    public Assignment getVarAssignment(String sName)
-        {
+    public Assignment getVarAssignment(String sName) {
         Assignment asn = getDefiniteAssignments().get(sName);
-        if (asn != null)
-            {
+        if (asn != null) {
             return asn;
-            }
+        }
 
         // if the variable was declared in this scope, then we should have a variable assignment
         // status in this scope
@@ -1010,7 +889,7 @@ public class Context
         return ctxOuter == null
                 ? null
                 : ctxOuter.getVarAssignment(sName);
-        }
+    }
 
     /**
      * Associate assignment information with a variable name.
@@ -1018,10 +897,9 @@ public class Context
      * @param sName  the variable name
      * @param asn    the Assignment (VAS data) to associate with the variable name
      */
-    public void setVarAssignment(String sName, Assignment asn)
-        {
+    public void setVarAssignment(String sName, Assignment asn) {
         ensureDefiniteAssignments().put(sName, asn);
-        }
+    }
 
     /**
      * Determine if the name refers to a readable variable. A variable is only readable if it
@@ -1033,25 +911,22 @@ public class Context
      *
      * @return true iff the name refers to a variable, and the variable can be read from
      */
-    public boolean isVarReadable(String sName)
-        {
+    public boolean isVarReadable(String sName) {
         Assignment asn = getVarAssignment(sName);
-        if (asn != null)
-            {
+        if (asn != null) {
             Argument arg = getVar(sName);
 
-            if (!asn.isDefinitelyAssigned())
-                {
+            if (!asn.isDefinitelyAssigned()) {
                 return arg instanceof Register reg && reg.isAllowedUnassigned();
-                }
+            }
 
             return !(arg instanceof Register reg) || reg.isReadable();
-            }
+        }
 
         // the only other readable variable names are reserved variables, and we need to ask
         // the containing context whether those are readable
         return isReservedName(sName) && getOuterContext().isVarReadable(sName);
-        }
+    }
 
     /**
      * Mark the specified variable as being read from within this context.
@@ -1061,10 +936,9 @@ public class Context
      *                 suppressed (e.g: &val)
      * @param errs     the error list to log to
      */
-    public final void markVarRead(Token tokName, boolean fDeref, ErrorListener errs)
-        {
+    public final void markVarRead(Token tokName, boolean fDeref, ErrorListener errs) {
         markVarRead(false, tokName.getValueText(), tokName, fDeref, errs);
-        }
+    }
 
     /**
      * Mark the specified variable as being read from within this context.
@@ -1077,28 +951,20 @@ public class Context
      * @param errs     the error list to log to (optional)
      */
     protected void markVarRead(boolean fNested, String sName, Token tokName, boolean fDeref,
-                               ErrorListener errs)
-        {
-        if (fNested || isVarReadable(sName))
-            {
-            if (!isVarDeclaredInThisScope(sName))
-                {
+                               ErrorListener errs) {
+        if (fNested || isVarReadable(sName)) {
+            if (!isVarDeclaredInThisScope(sName)) {
                 // the idea here is that we will communicate up the chain of contexts that the
                 // specified variable is being read, so that (for example) a capture can occur
                 // if necessary
                 Context ctxOuter = getOuterContext();
-                if (ctxOuter != null)
-                    {
+                if (ctxOuter != null) {
                     ctxOuter.markVarRead(true, sName, tokName, fDeref, errs);
-                    }
                 }
             }
-        else
-            {
-            if (tokName != null && errs != null)
-                {
-                if (isReservedName(sName))
-                    {
+        } else {
+            if (tokName != null && errs != null) {
+                if (isReservedName(sName)) {
                     MethodStructure  method = getMethod();
                     IdentityConstant idCtx  = method == null
                             ? getThisClassId()
@@ -1113,32 +979,24 @@ public class Context
                     // add the variable to the reserved names that are allowed, to avoid
                     // repeating the same error logging
                     setVarAssignment(sName, Assignment.AssignedOnce);
-                    }
-                else if (fDeref)
-
-                    {
+                } else if (fDeref) {
                     tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_UNASSIGNED, sName);
 
                     // record that the variable is definitely assigned so that the error will
                     // not be repeated unnecessarily within this context
                     setVarAssignment(sName, getVarAssignment(sName).applyAssignment());
-                    }
-                else
-                    {
+                } else {
                     // unassigned non-dereferenced local variables are allowed to be read; moreover,
                     // obtaining a Var ('&x') for it turns off its "definite assignment" checks
-                    if (getVar(sName) instanceof Register reg)
-                        {
+                    if (getVar(sName) instanceof Register reg) {
                         reg.markAllowUnassigned();
-                        }
                     }
                 }
-            else
-                {
+            } else {
                 throw new IllegalStateException("illegal var read: name=" + sName);
-                }
             }
         }
+    }
 
     /**
      * Determine if the name refers to a writable variable.
@@ -1149,30 +1007,26 @@ public class Context
      *
      * @return true iff the name refers to a variable, and the variable can be written to
      */
-    public boolean isVarWritable(String sName)
-        {
-        if ("$".equals(sName))
-            {
+    public boolean isVarWritable(String sName) {
+        if ("$".equals(sName)) {
             return false;
-            }
+        }
 
-        if (isVarDeclaredInThisScope(sName))
-            {
+        if (isVarDeclaredInThisScope(sName)) {
             Argument arg = getVar(sName);
-            if (arg instanceof Register reg && reg.isWritable())
-                {
+            if (arg instanceof Register reg && reg.isWritable()) {
                 return !reg.isMarkedFinal() ||
                         getVarAssignment(sName).isDefinitelyUnassigned();
-                }
-            return false;
             }
+            return false;
+        }
 
         // we don't actually explicitly check for reserved names, but this has the effect of
         // reporting them as "not writable" by walking up to the root and then rejecting them
         // (since no context will answer "yes" to this question along the way)
         Context ctxOuter = getOuterContext();
         return ctxOuter != null && ctxOuter.isVarWritable(sName);
-        }
+    }
 
     /**
      * Mark the specified variable as being written to within this context.
@@ -1181,10 +1035,9 @@ public class Context
      * @param fCond    true if the variable is conditionally assigned
      * @param errs     the error list to log to (optional)
      */
-    public final void markVarWrite(Token tokName, boolean fCond, ErrorListener errs)
-        {
+    public final void markVarWrite(Token tokName, boolean fCond, ErrorListener errs) {
         markVarWrite(tokName.getValueText(), tokName, fCond, errs);
-        }
+    }
 
     /**
      * Mark an AstNode at the specified position as reliant on "this".
@@ -1194,19 +1047,16 @@ public class Context
      *
      * @return true iff the check was successful; otherwise an error has been generated
      */
-    public boolean requireThis(long lPos, ErrorListener errs)
-        {
+    public boolean requireThis(long lPos, ErrorListener errs) {
         Context ctxOuter = getOuterContext();
-        if (ctxOuter == null)
-            {
-            if (errs != null)
-                {
+        if (ctxOuter == null) {
+            if (errs != null) {
                 errs.log(Severity.ERROR, Compiler.NO_THIS, new Object[0], getSource(), lPos, lPos);
-                }
-            return false;
             }
-        return ctxOuter.requireThis(lPos, errs);
+            return false;
         }
+        return ctxOuter.requireThis(lPos, errs);
+    }
 
     /**
      * Mark the specified variable as being written to within this context.
@@ -1216,29 +1066,22 @@ public class Context
      * @param fCond    true if the variable is conditionally assigned
      * @param errs     the error list to log to (optional)
      */
-    protected void markVarWrite(String sName, Token tokName, boolean fCond, ErrorListener errs)
-        {
-        if (getVar(sName) == null)
-            {
+    protected void markVarWrite(String sName, Token tokName, boolean fCond, ErrorListener errs) {
+        if (getVar(sName) == null) {
             // this method can be called for variable names that don't exist only if there are
             // already compilation errors
             assert errs.hasSeriousErrors();
             return;
-            }
-
-        if (isVarWritable(sName))
-            {
-            setVarAssignment(sName, getVarAssignment(sName).applyAssignment());
-            }
-        else if (tokName != null && errs != null)
-            {
-            tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_ASSIGNMENT_ILLEGAL, sName);
-            }
-        else
-            {
-            throw new IllegalStateException("illegal var write: name=" + sName);
-            }
         }
+
+        if (isVarWritable(sName)) {
+            setVarAssignment(sName, getVarAssignment(sName).applyAssignment());
+        } else if (tokName != null && errs != null) {
+            tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_ASSIGNMENT_ILLEGAL, sName);
+        } else {
+            throw new IllegalStateException("illegal var write: name=" + sName);
+        }
+    }
 
     /**
      * Mark the specified formal type as being used within this context.
@@ -1246,14 +1089,12 @@ public class Context
      * @param type  the formal type or a type that contains formal types
      * @param errs  the error list to log to (optional)
      */
-    public void useFormalType(TypeConstant type, ErrorListener errs)
-        {
+    public void useFormalType(TypeConstant type, ErrorListener errs) {
         Context ctxOuter = getOuterContext();
-        if (ctxOuter != null)
-            {
+        if (ctxOuter != null) {
             ctxOuter.useFormalType(type, errs);
-            }
         }
+    }
 
     /**
      * Determine if a variable of the specified name can be introduced.
@@ -1262,26 +1103,23 @@ public class Context
      *
      * @return true iff it is legal to introduce a variable of that name
      */
-    public boolean isVarHideable(String sName)
-        {
-        if ("$".equals(sName) || "_".equals(sName)) // template or ANY
-            {
+    public boolean isVarHideable(String sName) {
+        if ("$".equals(sName) || "_".equals(sName)) { // template or ANY
             return true;
-            }
+        }
 
         return !(getVar(sName) instanceof Register);
-        }
+    }
 
     /**
      * @return a read-only map containing definitely assigned variable names; never null
      */
-    protected Map<String, Assignment> getDefiniteAssignments()
-        {
+    protected Map<String, Assignment> getDefiniteAssignments() {
         Map<String, Assignment> map = m_mapAssigned;
         return map == null
                 ? Collections.emptyMap()
                 : map;
-        }
+    }
 
     /**
      * Map from variable name to Boolean value or null, with null indicating "not assigned
@@ -1290,15 +1128,13 @@ public class Context
      *
      * @return a readable and writable set of definitely assigned variable names; never null
      */
-    protected Map<String, Assignment> ensureDefiniteAssignments()
-        {
+    protected Map<String, Assignment> ensureDefiniteAssignments() {
         Map<String, Assignment> map = m_mapAssigned;
-        if (map == null)
-            {
+        if (map == null) {
             m_mapAssigned = map = new HashMap<>();
-            }
-        return map;
         }
+        return map;
+    }
 
     /**
      * Resolve the name of a variable, structure, etc.
@@ -1309,10 +1145,9 @@ public class Context
      *
      * @return the Argument representing the meaning of the name, or null
      */
-    public final Argument resolveName(String sName)
-        {
+    public final Argument resolveName(String sName) {
         return resolveName(sName, null, ErrorListener.BLACKHOLE);
-        }
+    }
 
     /**
      * Resolve the name of a variable, structure, etc.
@@ -1323,10 +1158,9 @@ public class Context
      *
      * @return the Argument representing the meaning of the name, or null
      */
-    public final Argument resolveName(Token name, ErrorListener errs)
-        {
+    public final Argument resolveName(Token name, ErrorListener errs) {
         return resolveName(name.getValueText(), name, errs);
-        }
+    }
 
     /**
      * Resolve the name of a variable, structure, etc.
@@ -1339,68 +1173,59 @@ public class Context
      *
      * @return the Argument representing the meaning of the name, or null
      */
-    protected Argument resolveName(String sName, Token name, ErrorListener errs)
-        {
+    protected Argument resolveName(String sName, Token name, ErrorListener errs) {
         Argument arg = getVar(sName, name, Branch.Always, errs);
-        if (arg == null)
-            {
+        if (arg == null) {
             arg = resolveReservedName(sName, name, errs);
-            if (arg == null)
-                {
+            if (arg == null) {
                 arg = resolveRegularName(this, sName, name, errs);
-                }
             }
-        return arg;
         }
+        return arg;
+    }
 
     /**
      * @return the read-only map that provides a name-to-argument lookup
      */
-    protected Map<String, Argument> getNameMap()
-        {
+    protected Map<String, Argument> getNameMap() {
         return hasInitialNames()
                 ? ensureNameMap()
                 : m_mapByName == null
                         ? Collections.emptyMap()
                         : m_mapByName;
-        }
+    }
 
     /**
      * @return the map that provides a name-to-argument lookup
      */
-    protected Map<String, Argument> ensureNameMap()
-        {
+    protected Map<String, Argument> ensureNameMap() {
         Map<String, Argument> mapByName = m_mapByName;
 
-        if (mapByName == null)
-            {
+        if (mapByName == null) {
             mapByName = new HashMap<>();
-            if (hasInitialNames())
-                {
+            if (hasInitialNames()) {
                 initNameMap(mapByName);
-                }
-            m_mapByName = mapByName;
             }
+            m_mapByName = mapByName;
+        }
 
         return mapByName;
-        }
+    }
 
     /**
      * @return true iff the context has to register initial names
      */
-    protected boolean hasInitialNames()
-        {
+    protected boolean hasInitialNames() {
         return false;
-        }
+    }
 
     /**
      * Initialize the map that holds named arguments.
      *
      * @param mapByName  the map from simple name to argument
      */
-    protected void initNameMap(Map<String, Argument> mapByName)
-        {
-        }
+    protected void initNameMap(Map<String, Argument> mapByName) {
+    }
 
     /**
      * Resolve a name (other than a reserved name) to an argument.
@@ -1412,10 +1237,9 @@ public class Context
      *
      * @return an Argument iff the name is registered to an argument; otherwise null
      */
-    protected Argument resolveRegularName(Context ctxFrom, String sName, Token name, ErrorListener errs)
-        {
+    protected Argument resolveRegularName(Context ctxFrom, String sName, Token name, ErrorListener errs) {
         return getOuterContext().resolveRegularName(ctxFrom, sName, name, errs);
-        }
+    }
 
     /**
      * Determine if the specified name refers to a reserved name.
@@ -1424,10 +1248,8 @@ public class Context
      *
      * @return true iff the name is a reserved name
      */
-    public boolean isReservedName(String sName)
-        {
-        return switch (sName)
-            {
+    public boolean isReservedName(String sName) {
+        return switch (sName) {
             case "this",
                  "this:target",
                  "this:public",
@@ -1437,13 +1259,10 @@ public class Context
                  "this:class",
                  "this:service",
                  "this:module",
-                 "super"
-                -> true;
-
-            default
-                -> false;
-            };
-        }
+                 "super" -> true;
+            default      -> false;
+        };
+    }
 
     /**
      * Internal implementation of resolveReservedName that allows the resolution to be done with
@@ -1456,61 +1275,50 @@ public class Context
      * @return the argument for the reserved name, or null if no such reserved name can be
      *         resolved within this context
      */
-    protected Argument resolveReservedName(String sName, Token name, ErrorListener errs)
-        {
+    protected Argument resolveReservedName(String sName, Token name, ErrorListener errs) {
         return getOuterContext().resolveReservedName(sName, name, errs);
-        }
+    }
 
     /**
      * Narrow the type of the specified variable in this context for the specified branch.
      */
     protected void narrowLocalRegister(String sName, Register reg,
-                                       Branch branch, TypeConstant typeNarrow)
-        {
+                                       Branch branch, TypeConstant typeNarrow) {
         // a formal type could be narrowed to its constraint, but is not assignable from it
         assert typeNarrow.isA(reg.getType()) || typeNarrow.isA(reg.getOriginalType()) ||
                reg.getOriginalType().isFormalType() ||
                reg.getOriginalType().getParamType(0).isFormalType();
 
-        if (reg.isInPlace() || !reg.getType().equals(typeNarrow))
-            {
+        if (reg.isInPlace() || !reg.getType().equals(typeNarrow)) {
             replaceArgument(sName, branch, reg.narrowType(typeNarrow));
-            }
         }
+    }
 
     /**
      * Replace the existing argument with the specified one for the given branch.
      */
-    protected void replaceArgument(String sName, Branch branch, Argument argNew)
-        {
-        if (branch == Branch.Always)
-            {
-            if (argNew instanceof Register reg && isVarDeclaredInThisScope(sName))
-                {
+    protected void replaceArgument(String sName, Branch branch, Argument argNew) {
+        if (branch == Branch.Always) {
+            if (argNew instanceof Register reg && isVarDeclaredInThisScope(sName)) {
                 // the narrowing register is replacing a local register; remember that fact
                 reg.markInPlace();
-                }
+            }
             ensureNameMap().put(sName, argNew);
-            }
-        else
-            {
+        } else {
             ensureNarrowingMap(branch == Branch.WhenTrue).put(sName, argNew);
-            }
         }
+    }
 
     /**
      * Replace the existing arguments with the specified one for the "Always" branch.
      */
-    protected void replaceArguments(Map<String, Argument> mapArgs)
-        {
-        if (mapArgs != null)
-            {
-            for (Map.Entry<String, Argument> entry : mapArgs.entrySet())
-                {
+    protected void replaceArguments(Map<String, Argument> mapArgs) {
+        if (mapArgs != null) {
+            for (Map.Entry<String, Argument> entry : mapArgs.entrySet()) {
                 replaceArgument(entry.getKey(), Context.Branch.Always, entry.getValue());
-                }
             }
         }
+    }
 
     /**
      * Restore the existing argument using the saved off original register.
@@ -1518,210 +1326,172 @@ public class Context
      * @param sName    the argument name
      * @param regOrig  the original register
      */
-    public void restoreArgument(String sName, Register regOrig)
-        {
+    public void restoreArgument(String sName, Register regOrig) {
         Map<String, Argument> map = ensureNameMap();
-        if (isVarDeclaredInThisScope(sName))
-            {
+        if (isVarDeclaredInThisScope(sName)) {
             map.put(sName, regOrig);
-            }
-        else
-            {
+        } else {
             map.remove(sName); // remove the argument from this scope before calling "getVar()"
 
             Argument argOrig = getVar(sName);
-            if (argOrig != null && !argOrig.getType().equals(regOrig.getType()))
-                {
+            if (argOrig != null && !argOrig.getType().equals(regOrig.getType())) {
                 map.put(sName, regOrig);
-                }
             }
         }
+    }
 
     /**
      * Replace (narrow) the generic type of the specified name in this context with the specified
      * target's type.
      */
-    protected void replaceGenericArgument(FormalConstant constFormal, Branch branch, TargetInfo infoNew)
-        {
+    protected void replaceGenericArgument(FormalConstant constFormal, Branch branch, TargetInfo infoNew) {
         // place the info with the narrowed generic type (used by NamedTypeExpression)
-        switch (branch)
-            {
-            case WhenTrue:
-                if (constFormal instanceof PropertyConstant)
-                    {
-                    ensureNarrowingMap(true).put(constFormal.getName(), infoNew);
-                    }
-                break;
-
-            case WhenFalse:
-                if (constFormal instanceof PropertyConstant)
-                    {
-                    ensureNarrowingMap(false).put(constFormal.getName(), infoNew);
-                    }
-                break;
-
-            default:
-                if (constFormal instanceof PropertyConstant)
-                    {
-                    ensureNameMap().put(constFormal.getName(), infoNew);
-                    }
-                break;
+        switch (branch) {
+        case WhenTrue:
+            if (constFormal instanceof PropertyConstant) {
+                ensureNarrowingMap(true).put(constFormal.getName(), infoNew);
             }
+            break;
+
+        case WhenFalse:
+            if (constFormal instanceof PropertyConstant) {
+                ensureNarrowingMap(false).put(constFormal.getName(), infoNew);
+            }
+            break;
+
+        default:
+            if (constFormal instanceof PropertyConstant) {
+                ensureNameMap().put(constFormal.getName(), infoNew);
+            }
+            break;
+        }
 
         replaceGenericType(constFormal, branch, infoNew.getType());
-        }
+    }
 
     /**
      * Replace (narrow) the generic type of the specified name in this context.
      */
-    protected void replaceGenericType(FormalConstant constFormal, Branch branch, TypeConstant typeNew)
-        {
+    protected void replaceGenericType(FormalConstant constFormal, Branch branch, TypeConstant typeNew) {
         assert typeNew.isTypeOfType();
 
         ensureFormalTypeMap(branch).put(constFormal, typeNew);
-        }
+    }
 
     /**
      * Narrow the type of the specified property in this context for the specified branch.
      */
     protected void narrowProperty(String sName, PropertyConstant idProp,
-                                  Branch branch, Argument argNarrow)
-        {
-        if (argNarrow.getType().isA(idProp.getType()))
-            {
+                                  Branch branch, Argument argNarrow) {
+        if (argNarrow.getType().isA(idProp.getType())) {
             replaceArgument(sName, branch, argNarrow);
-            }
         }
+    }
 
     /**
      * Merge the types of the existing argument with the specified one for the given branch.
      */
-    protected void joinArgument(String sName, Branch branch, Argument argNew)
-        {
+    protected void joinArgument(String sName, Branch branch, Argument argNew) {
         Map<String, Argument> map = branch == Branch.Always
             ? ensureNameMap()
             : ensureNarrowingMap(branch == Branch.WhenTrue);
 
         Argument argOld = map.get(sName);
-        if (argOld != null)
-            {
+        if (argOld != null) {
             TypeConstant typeOld = argOld.getType();
             TypeConstant typeNew = argNew.getType();
 
             TypeConstant typeJoin = typeNew.union(pool(), typeOld);
-            if (!typeJoin.equals(typeOld))
-                {
-                if (argOld instanceof Register regOld)
-                    {
+            if (!typeJoin.equals(typeOld)) {
+                if (argOld instanceof Register regOld) {
                     map.put(sName, regOld.narrowType(typeJoin));
-                    }
-                else
-                    {
+                } else {
                     map.remove(sName);
-                    }
                 }
             }
         }
+    }
 
     /**
      * Merge the types of the existing argument with the specified one for the given branch.
      */
-    protected void joinGenericType(FormalConstant constFormal, Branch branch, Argument argNew)
-        {
+    protected void joinGenericType(FormalConstant constFormal, Branch branch, Argument argNew) {
         Map<FormalConstant, TypeConstant> map = ensureFormalTypeMap(branch);
 
         TypeConstant typeOld = map.get(constFormal);
-        if (typeOld == null)
-            {
+        if (typeOld == null) {
             map.remove(constFormal);
-            }
-        else
-            {
+        } else {
             map.put(constFormal, argNew.getType().union(pool(), typeOld));
-            }
         }
+    }
 
     /**
      * @return the read-only map that provides a name-to-narrowed type lookup
      */
-    protected Map<String, Argument> getNarrowingMap(boolean fWhenTrue)
-        {
+    protected Map<String, Argument> getNarrowingMap(boolean fWhenTrue) {
         Map<String, Argument> map = fWhenTrue ? m_mapWhenTrue : m_mapWhenFalse;
         return map == null ? Collections.emptyMap() : map;
-        }
+    }
 
     /**
      * @return the map that provides a name-to-narrowed type lookup
      */
-    protected Map<String, Argument> ensureNarrowingMap(boolean fWhenTrue)
-        {
+    protected Map<String, Argument> ensureNarrowingMap(boolean fWhenTrue) {
         Map<String, Argument> map = fWhenTrue ? m_mapWhenTrue : m_mapWhenFalse;
 
-        if (map == null)
-            {
+        if (map == null) {
             map = new HashMap<>();
-            if (fWhenTrue)
-                {
+            if (fWhenTrue) {
                 m_mapWhenTrue = map;
-                }
-            else
-                {
+            } else {
                 m_mapWhenFalse = map;
-                }
             }
+        }
 
         return map;
-        }
+    }
 
     /**
      * @return the read-only map that provides a formal constant-to-narrowed generic type lookup
      */
-    protected Map<FormalConstant, TypeConstant> getFormalTypeMap(Branch branch)
-        {
-        Map<FormalConstant, TypeConstant> map = switch (branch)
-            {
+    protected Map<FormalConstant, TypeConstant> getFormalTypeMap(Branch branch) {
+        Map<FormalConstant, TypeConstant> map = switch (branch) {
             case WhenTrue  -> m_mapFormalWhenTrue;
             case WhenFalse -> m_mapFormalWhenFalse;
             default        -> m_mapFormal;
-            };
+        };
         return map == null ? Collections.emptyMap() : map;
-        }
+    }
 
     /**
      * @return the map that provides a formal constant-to-narrowed generic type lookup
      */
-    protected Map<FormalConstant, TypeConstant> ensureFormalTypeMap(Branch branch)
-        {
+    protected Map<FormalConstant, TypeConstant> ensureFormalTypeMap(Branch branch) {
         Map<FormalConstant, TypeConstant> map = getFormalTypeMap(branch);
 
-        if (map.isEmpty())
-            {
-            return switch (branch)
-                {
+        if (map.isEmpty()) {
+            return switch (branch) {
                 case WhenTrue  -> m_mapFormalWhenTrue  = new HashMap<>();
                 case WhenFalse -> m_mapFormalWhenFalse = new HashMap<>();
                 default        -> m_mapFormal          = new HashMap<>();
-                };
-            }
-        return map;
+            };
         }
+        return map;
+    }
 
     /**
      * @return a generic type resolver for a given branch; null if no narrowing info exists
      */
-    protected GenericTypeResolver getLocalResolver(Branch branch)
-        {
-        return new GenericTypeResolver()
-            {
+    protected GenericTypeResolver getLocalResolver(Branch branch) {
+        return new GenericTypeResolver() {
             @Override
-            public TypeConstant resolveFormalType(FormalConstant constFormal)
-                {
+            public TypeConstant resolveFormalType(FormalConstant constFormal) {
                 TypeConstant typeType = getFormalTypeMap(branch).get(constFormal);
-                if (typeType != null)
-                    {
+                if (typeType != null) {
                     assert typeType.isTypeOfType();
                     return typeType.getParamType(0);
-                    }
+                }
 
                 String   sName = constFormal.getName();
                 Argument arg   = getLocalVar(sName, branch);
@@ -1730,22 +1500,19 @@ public class Context
                                 ? null
                                 : getThisClass().getFormalType().resolveGenericType(sName)
                         : extractElementType(arg);
-                }
+            }
 
             @Override
-            public TypeConstant resolveGenericType(String sFormalName)
-                {
+            public TypeConstant resolveGenericType(String sFormalName) {
                 // in the absence of any additional information, only pick generic types
                 for (Map.Entry<FormalConstant, TypeConstant> entry :
-                            getFormalTypeMap(branch).entrySet())
-                    {
+                            getFormalTypeMap(branch).entrySet()) {
                     FormalConstant constFormal = entry.getKey();
                     if (constFormal instanceof PropertyConstant &&
-                            constFormal.getName().equals(sFormalName))
-                        {
+                            constFormal.getName().equals(sFormalName)) {
                         return entry.getValue();
-                        }
                     }
+                }
 
                 Argument arg = getLocalVar(sFormalName, branch);
                 return arg == null
@@ -1753,17 +1520,16 @@ public class Context
                                 ? null
                                 : getThisClass().getFormalType().resolveGenericType(sFormalName)
                         : extractElementType(arg);
-                }
+            }
 
-            private TypeConstant extractElementType(Argument arg)
-                {
+            private TypeConstant extractElementType(Argument arg) {
                 TypeConstant typeType = arg.getType();
                 return typeType.isTypeOfType()
                         ? typeType.getParamType(0)
                         : null;
-                }
-            };
-        }
+            }
+        };
+    }
 
 
     /**
@@ -1771,15 +1537,14 @@ public class Context
      *
      * @return a potentially narrowed register
      */
-    protected Argument resolveRegisterType(Branch branch, Register reg)
-        {
+    protected Argument resolveRegisterType(Branch branch, Register reg) {
         TypeConstant typeOriginal = reg.getType();
         TypeConstant typeResolved = typeOriginal.resolveGenerics(pool(), getLocalResolver(branch));
 
         return typeResolved.equals(typeOriginal)
                 ? reg
                 : reg.narrowType(typeResolved);
-        }
+    }
 
     /**
      * Resolve the specified formal type within this context if possible.
@@ -1788,10 +1553,9 @@ public class Context
      *
      * @return the resolved formal type if possible, or the passed in type
      */
-    public TypeConstant resolveFormalType(TypeConstant typeFormal)
-        {
+    public TypeConstant resolveFormalType(TypeConstant typeFormal) {
         return resolveFormalType(typeFormal, Branch.Always);
-        }
+    }
 
     /**
      * Resolve the specified formal type within this context on the specified branch.
@@ -1801,39 +1565,33 @@ public class Context
      *
      * @return the resolved formal type if possible, or the passed in type
      */
-    protected TypeConstant resolveFormalType(TypeConstant typeFormal, Branch branch)
-        {
+    protected TypeConstant resolveFormalType(TypeConstant typeFormal, Branch branch) {
         TypeConstant typeResolved = typeFormal.resolveGenerics(pool(), getLocalResolver(branch));
 
-        if (typeResolved.containsFormalType(true))
-             {
+        if (typeResolved.containsFormalType(true)) {
              // the type could be partially resolved; take it and keep going
              typeFormal = typeResolved;
-             }
-        else
-             {
+         } else {
              return typeResolved;
-             }
+         }
 
         Context ctxOuter = getOuterContext();
         return ctxOuter == null
                 ? typeFormal
                 : ctxOuter.resolveFormalType(typeFormal, getOuterBranch(branch));
-        }
+    }
 
     /**
      * Collect all the variable names that are "visible" in this context.
      */
-    protected void collectVariables(Set<String> setVars)
-        {
+    protected void collectVariables(Set<String> setVars) {
         Context ctxOuter = getOuterContext();
-        if (ctxOuter != null)
-            {
+        if (ctxOuter != null) {
             ctxOuter.collectVariables(setVars);
-            }
+        }
 
         setVars.addAll(getDefiniteAssignments().keySet());
-        }
+    }
 
     /**
      * Calculate the number of steps ("this.outer") it takes to get from this context to the
@@ -1843,8 +1601,7 @@ public class Context
      *
      * @return the number of steps or -1 if the parent is not in the path
      */
-    public int getStepsToOuterClass(ClassStructure clzParent)
-        {
+    public int getStepsToOuterClass(ClassStructure clzParent) {
         int              cSteps    = 0;
         IdentityConstant idParent  = clzParent.getIdentityConstant();
         MethodStructure  method    = getMethod();
@@ -1852,59 +1609,51 @@ public class Context
                 ? getThisClass()
                 : method.getParent().getParent();
 
-        while (component != null)
-            {
+        while (component != null) {
             IdentityConstant id = component.getIdentityConstant();
 
-            switch (id.getFormat())
-                {
-                case Module:
-                case Package:
-                case Class:
-                    {
-                    if (id.equals(idParent))
-                        {
-                        return cSteps;
-                        }
-
-                    ClassStructure clz = (ClassStructure) component;
-                    if (clz.hasContribution(idParent))
-                        {
-                        return cSteps;
-                        }
-
-                    if (clz.isStatic() || clz.isTopLevel())
-                        {
-                        return -1;
-                        }
-
-                    cSteps++;
-                    break;
-                    }
-
-                case Method:
-                case MultiMethod:
-                    break;
-
-                case Property:
-                    {
-                    PropertyStructure prop = (PropertyStructure) id.getComponent();
-                    if (prop.isRefAnnotated())
-                        {
-                        cSteps++;
-                        }
-                    break;
-                    }
-
-                default:
-                    throw new IllegalStateException();
+            switch (id.getFormat()) {
+            case Module:
+            case Package:
+            case Class: {
+                if (id.equals(idParent)) {
+                    return cSteps;
                 }
 
-            component = component.getParent();
+                ClassStructure clz = (ClassStructure) component;
+                if (clz.hasContribution(idParent)) {
+                    return cSteps;
+                }
+
+                if (clz.isStatic() || clz.isTopLevel()) {
+                    return -1;
+                }
+
+                cSteps++;
+                break;
             }
 
-        return -1;
+            case Method:
+            case MultiMethod:
+                break;
+
+            case Property: {
+                PropertyStructure prop = (PropertyStructure) id.getComponent();
+                if (prop.isRefAnnotated()) {
+                    cSteps++;
+                }
+                break;
+            }
+
+            default:
+                throw new IllegalStateException();
+            }
+
+            component = component.getParent();
         }
+
+        return -1;
+    }
 
     /**
      * Produce a regular (not on stack) register.
@@ -1912,100 +1661,84 @@ public class Context
      * @param type   the type of the register
      * @param sName  the name of the register, or null for an anonymous (e.g. temp) register
      */
-    public Register createRegister(TypeConstant type, String sName)
-        {
+    public Register createRegister(TypeConstant type, String sName) {
         return new Register(type, sName, getMethod());
-        }
+    }
 
     /**
      * @return a Register for the parameter at the specified index
      */
-    public Register getParameter(int iReg)
-        {
+    public Register getParameter(int iReg) {
         Parameter param = getMethod().getParam(iReg);
         String    sName = param.getName();
         Register  reg   = (Register) getVar(sName);
-        if (reg == null)
-            {
+        if (reg == null) {
             ensureNameMap().put(sName, reg = new Register(param.getType(), sName, iReg));
-            }
-        return reg;
         }
+        return reg;
+    }
 
     /**
      * @return an array of RegisterAst<Constant> for the method parameters
      */
-    public RegisterAST[] collectParameters()
-        {
+    public RegisterAST[] collectParameters() {
         // create registers for the method parameters
         MethodStructure method  = getMethod();
         int             cParams = method.getParamCount();
-        if (cParams == 0)
-            {
+        if (cParams == 0) {
             return BinaryAST.NO_REGS;
-            }
+        }
 
         RegisterAST[] aReg = new RegisterAST[cParams];
-        for (int i = 0; i < cParams; i++)
-            {
+        for (int i = 0; i < cParams; i++) {
             Parameter param = method.getParam(i);
 
             Register reg = (Register) getVar(param.getName());
             aReg[i] = reg == null
                     ? new RegisterAST(param.getType(), param.getNameConstant())
                     : (RegisterAST) reg.getOriginalRegister().getRegisterAST();
-            }
-        return aReg;
         }
+        return aReg;
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
         sb.append("Current: ");
         Map<String, Assignment> mapVars = getDefiniteAssignments();
-        if (mapVars.isEmpty())
-            {
+        if (mapVars.isEmpty()) {
             sb.append("none");
-            }
-        else
-            {
+        } else {
             TreeSet<String> setVars = new TreeSet<>(mapVars.keySet());
             boolean fFirst = true;
-            for (String s : setVars)
-                {
-                if (fFirst)
-                    {
+            for (String s : setVars) {
+                if (fFirst) {
                     fFirst = false;
-                    }
-                else
-                    {
+                } else {
                     sb.append(", ");
-                    }
+                }
 
                 sb.append(s)
                   .append("=")
                   .append(getVarAssignment(s));
-                }
             }
+        }
 
         TreeSet<String> setVars = new TreeSet<>();
         collectVariables(setVars);
-        if (setVars.size() > mapVars.size())
-            {
+        if (setVars.size() > mapVars.size()) {
             sb.append("; all variables:");
-            for (String s : setVars)
-                {
+            for (String s : setVars) {
                 sb.append('\n')
                   .append(s)
                   .append('=')
                   .append(getVarAssignment(s));
-                }
             }
+        }
 
         return sb.toString();
-        }
+    }
 
 
     // ----- inner class: IfContext ----------------------------------------------------------------
@@ -2015,306 +1748,243 @@ public class Context
      * "if" or a "ternary" block with a terminating branch.
      */
     static class IfContext
-            extends Context
-        {
+            extends Context {
         /**
          * Construct an IfContext.
          *
          * @param outer  the outer context
          */
-        public IfContext(Context outer)
-            {
+        public IfContext(Context outer) {
             super(outer, true);
-            }
+        }
 
         @Override
-        public boolean isReachable()
-            {
+        public boolean isReachable() {
             // IfContext is unreachable if both branches exist and not reachable
             return m_fReachable &&
                     (m_ctxWhenTrue  == null || m_ctxWhenTrue .isReachable() ||
                      m_ctxWhenFalse == null || m_ctxWhenFalse.isReachable());
-            }
+        }
 
         @Override
-        public Context enterFork(boolean fWhenTrue)
-            {
+        public Context enterFork(boolean fWhenTrue) {
             Context ctx = super.enterFork(fWhenTrue);
-            if (fWhenTrue)
-                {
+            if (fWhenTrue) {
                 m_ctxWhenTrue = ctx;
-                }
-            else
-                {
+            } else {
                 // we're entering the "else" scope; every variable that was declared at the "if"
                 // context needs to be "forgotten"
                 forgetDeclaredVars(m_ctxWhenTrue);
 
                 m_ctxWhenFalse = ctx;
-                }
-            return ctx;
             }
+            return ctx;
+        }
 
         /**
          * Remove all vars that are declared at this scope from this context as well as from the
          * specified branch.
          */
-        private void forgetDeclaredVars(Context ctxBranch)
-            {
-            for (Iterator<String> iter = getNameMap().keySet().iterator(); iter.hasNext();)
-                {
+        private void forgetDeclaredVars(Context ctxBranch) {
+            for (Iterator<String> iter = getNameMap().keySet().iterator(); iter.hasNext();) {
                 String sVar = iter.next();
-                if (isVarDeclaredInThisScope(sVar))
-                    {
+                if (isVarDeclaredInThisScope(sVar)) {
                     iter.remove();
                     getDefiniteAssignments().remove(sVar);
 
-                    if (ctxBranch != null)
-                        {
+                    if (ctxBranch != null) {
                         ctxBranch.getNameMap().remove(sVar);
                         ctxBranch.getDefiniteAssignments().remove(sVar);
-                        }
                     }
                 }
             }
+        }
 
         @Override
-        protected void markVarWrite(String sName, Token tokName, boolean fCond, ErrorListener errs)
-            {
-            if (getVar(sName) != null && isVarWritable(sName))
-                {
+        protected void markVarWrite(String sName, Token tokName, boolean fCond, ErrorListener errs) {
+            if (getVar(sName) != null && isVarWritable(sName)) {
                 Assignment asn = getVarAssignment(sName);
-                if (fCond)
-                    {
+                if (fCond) {
                     Assignment asnTrue = asn.whenTrue().applyAssignment();
                     asn = asnTrue.join(asn, false);
-                    }
-                else
-                    {
+                } else {
                     asn = asn.applyAssignment();
-                    }
+                }
                 setVarAssignment(sName, asn);
-                }
-            else
-                {
+            } else {
                 super.markVarWrite(sName, tokName, fCond, errs);
-                }
             }
+        }
 
         @Override
-        protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
-            {
+        protected void promoteNarrowedType(String sName, Argument arg, Branch branch) {
             // choose the wider type of the two branches and promote to "Always"
             Context  ctxOuter = getOuterContext();
             Argument argOrig  = ctxOuter.getVar(sName);
-            if (argOrig != null)
-                {
+            if (argOrig != null) {
                 Argument     argTrue;
                 Argument     argFalse;
                 TypeConstant typeTrue;
                 TypeConstant typeFalse;
 
-                switch (branch)
-                    {
-                    case WhenTrue:
-                        argTrue   = arg;
-                        argFalse  = getNarrowingMap(false).get(sName);
-                        typeTrue  = argTrue.getType();
-                        typeFalse = argFalse == null ? argOrig.getType() : argFalse.getType();
-                        break;
+                switch (branch) {
+                case WhenTrue:
+                    argTrue   = arg;
+                    argFalse  = getNarrowingMap(false).get(sName);
+                    typeTrue  = argTrue.getType();
+                    typeFalse = argFalse == null ? argOrig.getType() : argFalse.getType();
+                    break;
 
-                    case WhenFalse:
-                        argTrue = getNarrowingMap(true).get(sName);
-                        if (argTrue != null)
-                            {
-                            // the argument has already been processed on the "true" branch
-                            return;
-                            }
-                        argFalse  = arg;
-                        typeTrue  = argOrig.getType();
-                        typeFalse = argFalse.getType();
-                        break;
-
-                    default:
-                        super.promoteNarrowedType(sName, arg, branch);
+                case WhenFalse:
+                    argTrue = getNarrowingMap(true).get(sName);
+                    if (argTrue != null) {
+                        // the argument has already been processed on the "true" branch
                         return;
                     }
+                    argFalse  = arg;
+                    typeTrue  = argOrig.getType();
+                    typeFalse = argFalse.getType();
+                    break;
 
-                if (typeFalse.isA(typeTrue))
-                    {
-                    if (argTrue != null)
-                        {
+                default:
+                    super.promoteNarrowedType(sName, arg, branch);
+                    return;
+                }
+
+                if (typeFalse.isA(typeTrue)) {
+                    if (argTrue != null) {
                         ctxOuter.replaceArgument(sName, Branch.Always, argTrue);
-                        }
                     }
-                else if (typeTrue.isA(typeFalse))
-                    {
-                    if (argFalse != null)
-                        {
+                } else if (typeTrue.isA(typeFalse)) {
+                    if (argFalse != null) {
                         ctxOuter.replaceArgument(sName, Branch.Always, argFalse);
-                        }
                     }
-                else if (argOrig instanceof Register regOrig)
-                    {
+                } else if (argOrig instanceof Register regOrig) {
                     // we may need to restore the original type
                     TypeConstant typeOrig = regOrig.getType();
 
-                    if (!typeFalse.isA(typeOrig) || !typeTrue.isA(typeOrig))
-                        {
+                    if (!typeFalse.isA(typeOrig) || !typeTrue.isA(typeOrig)) {
                         ctxOuter.replaceArgument(sName, Branch.Always, regOrig.restoreType());
-                        }
                     }
                 }
             }
+        }
 
         @Override
         protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant typeNarrowed,
-                                                  Branch branch)
-            {
+                                                  Branch branch) {
             // choose the wider type of the two branches and promote to "Always"
-            if (branch == Branch.WhenTrue)
-                {
+            if (branch == Branch.WhenTrue) {
                 TypeConstant typeTrue  = typeNarrowed;
                 TypeConstant typeFalse = getFormalTypeMap(Branch.WhenFalse).get(constFormal);
-                if (typeFalse != null)
-                    {
+                if (typeFalse != null) {
                     Context      ctxOuter = getOuterContext();
                     TypeConstant typeOrig = ctxOuter.getFormalTypeMap(Branch.Always).get(constFormal);
-                    if (typeFalse.isA(typeTrue))
-                        {
-                        if (!typeTrue.equals(typeOrig))
-                            {
+                    if (typeFalse.isA(typeTrue)) {
+                        if (!typeTrue.equals(typeOrig)) {
                             ctxOuter.replaceGenericType(constFormal, Branch.Always, typeTrue);
-                            }
                         }
-                    else if (typeTrue.isA(typeFalse))
-                        {
-                        if (!typeFalse.equals(typeOrig))
-                            {
+                    } else if (typeTrue.isA(typeFalse)) {
+                        if (!typeFalse.equals(typeOrig)) {
                             ctxOuter.replaceGenericType(constFormal, Branch.Always, typeFalse);
-                            }
                         }
                     }
                 }
             }
+        }
 
         @Override
-        protected void promoteNonCompleting(Context ctxInner)
-            {
+        protected void promoteNonCompleting(Context ctxInner) {
             // defer the reachability decision until the exit()
-            }
+        }
 
         @Override
-        public Context exit()
-            {
-            if (isReachable())
-                {
-                if (m_ctxWhenTrue != null && !m_ctxWhenTrue.isReachable())
-                    {
+        public Context exit() {
+            if (isReachable()) {
+                if (m_ctxWhenTrue != null && !m_ctxWhenTrue.isReachable()) {
                     discardBranch(true);
-                    }
-                else if (m_ctxWhenFalse != null && !m_ctxWhenFalse.isReachable())
-                    {
+                } else if (m_ctxWhenFalse != null && !m_ctxWhenFalse.isReachable()) {
                     discardBranch(false);
-                    }
                 }
+            }
 
             return super.exit();
-            }
+        }
 
-        private void discardBranch(boolean fWhenTrue)
-            {
+        private void discardBranch(boolean fWhenTrue) {
             Map mapBranch;
 
             // clear this branch
             mapBranch = getNarrowingMap(fWhenTrue);
-            if (!mapBranch.isEmpty())
-                {
+            if (!mapBranch.isEmpty()) {
                 mapBranch.clear();
-                }
+            }
             mapBranch = getFormalTypeMap(Branch.of(fWhenTrue));
-            if (!mapBranch.isEmpty())
-                {
+            if (!mapBranch.isEmpty()) {
                 mapBranch.clear();
-                }
+            }
 
             // copy the opposite branch; the context may merge it (see IfContext)
             mapBranch = getNarrowingMap(!fWhenTrue);
-            if (!mapBranch.isEmpty())
-                {
+            if (!mapBranch.isEmpty()) {
                 ensureNarrowingMap(fWhenTrue).putAll(mapBranch);
-                }
+            }
 
             mapBranch = getFormalTypeMap(Branch.of(!fWhenTrue));
-            if (!mapBranch.isEmpty())
-                {
+            if (!mapBranch.isEmpty()) {
                 ensureFormalTypeMap(Branch.of(fWhenTrue)).putAll(mapBranch);
-                }
+            }
 
             // promote the other branch's assignments
             Context ctxPromote = fWhenTrue ? m_ctxWhenFalse : m_ctxWhenTrue;
-            if (ctxPromote == null)
-                {
+            if (ctxPromote == null) {
                 Map<String, Assignment> mapAssign = ensureDefiniteAssignments();
-                for (Map.Entry<String, Assignment> entry : mapAssign.entrySet())
-                    {
-                    if (!isVarDeclaredInThisScope(entry.getKey()))
-                        {
+                for (Map.Entry<String, Assignment> entry : mapAssign.entrySet()) {
+                    if (!isVarDeclaredInThisScope(entry.getKey())) {
                         Assignment asnCurrent = entry.getValue();
                         entry.setValue(fWhenTrue ? asnCurrent.whenFalse() : asnCurrent.whenTrue());
-                        }
                     }
                 }
-            else
-                {
+            } else {
                 Set<String> setVars = new HashSet<>();
                 ctxPromote.collectVariables(setVars);
 
                 Map<String, Assignment> mapAssign = ensureDefiniteAssignments();
-                for (String sName : setVars)
-                    {
-                    if (!ctxPromote.isVarDeclaredInThisScope(sName))
-                        {
+                for (String sName : setVars) {
+                    if (!ctxPromote.isVarDeclaredInThisScope(sName)) {
                         Assignment asnPromote = ctxPromote.getVarAssignment(sName);
                         Assignment asnCurrent = mapAssign.get(sName);
 
                         assert asnPromote != null;
 
-                        if (asnCurrent == null)
-                            {
+                        if (asnCurrent == null) {
                             asnCurrent = asnPromote;
-                            }
-                        else
-                            {
+                        } else {
                             asnCurrent = fWhenTrue ? asnCurrent.whenFalse() : asnCurrent.whenTrue();
                             asnCurrent = asnCurrent.join(asnPromote);
-                            }
+                        }
 
-                        if (!asnCurrent.equals(getVarAssignment(sName)))
-                            {
+                        if (!asnCurrent.equals(getVarAssignment(sName))) {
                             mapAssign.put(sName, asnCurrent);
-                            }
                         }
                     }
                 }
             }
+        }
 
         @Override
-        protected void unlink(Context ctxDiscarded)
-            {
-            if (ctxDiscarded == m_ctxWhenTrue)
-                {
+        protected void unlink(Context ctxDiscarded) {
+            if (ctxDiscarded == m_ctxWhenTrue) {
                 m_ctxWhenTrue = null;
-                }
-            if (ctxDiscarded == m_ctxWhenFalse)
-                {
-                m_ctxWhenFalse = null;
-                }
             }
+            if (ctxDiscarded == m_ctxWhenFalse) {
+                m_ctxWhenFalse = null;
+            }
+        }
 
         private Context m_ctxWhenTrue;
         private Context m_ctxWhenFalse;
-        }
+    }
 
     // ----- inner class: ForkedContext ------------------------------------------------------------
 
@@ -2322,89 +1992,75 @@ public class Context
      * A nested context for a "when false" or "when true" fork.
      */
     public static class ForkedContext
-            extends Context
-        {
-        public ForkedContext(Context ctxOuter, boolean fWhenTrue)
-            {
+            extends Context {
+        public ForkedContext(Context ctxOuter, boolean fWhenTrue) {
             super(ctxOuter, false);
             m_fWhenTrue = fWhenTrue;
-            }
+        }
 
-        public boolean isWhenTrue()
-            {
+        public boolean isWhenTrue() {
             return m_fWhenTrue;
-            }
+        }
 
-        void markExclusive()
-            {
+        void markExclusive() {
             assert m_fWhenTrue; // exclusive is only allowed on a "true" branch
             m_fExclusive = true;
-            }
+        }
 
         @Override
-        protected Branch getOuterBranch(Branch branch)
-            {
+        protected Branch getOuterBranch(Branch branch) {
             return Branch.of(m_fWhenTrue);
-            }
+        }
 
         @Override
-        public Context exit()
-            {
+        public Context exit() {
             Context ctxOuter = super.exit();
 
-            if (m_fExclusive)
-                {
+            if (m_fExclusive) {
                 // simulate an unreachable "false" branch
                 Context ctxFalse = ctxOuter.enterFork(false);
                 ctxFalse.setReachable(false);
                 ctxFalse.exit();
-                }
-            return ctxOuter;
             }
+            return ctxOuter;
+        }
 
         @Override
-        public Assignment getVarAssignment(String sName)
-            {
+        public Assignment getVarAssignment(String sName) {
             Assignment asn = super.getVarAssignment(sName);
             assert asn != null;
-            if (!getDefiniteAssignments().containsKey(sName))
-                {
+            if (!getDefiniteAssignments().containsKey(sName)) {
                 // the variable assignment came from outside of (i.e. before) this fork
                 asn = isWhenTrue() ? asn.whenTrue() : asn.whenFalse();
-                }
+            }
             return asn;
-            }
+        }
 
         @Override
-        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
-            {
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter) {
             return asnOuter.join(asnInner, isWhenTrue());
-            }
+        }
 
         @Override
-        protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
-            {
+        protected void promoteNarrowedType(String sName, Argument arg, Branch branch) {
             // promote our "always" into the corresponding parent's branch
-            if (branch == Branch.Always && !isVarDeclaredInThisScope(sName))
-                {
+            if (branch == Branch.Always && !isVarDeclaredInThisScope(sName)) {
                 getOuterContext().replaceArgument(sName, Branch.of(m_fWhenTrue), arg);
-                }
             }
+        }
 
         @Override
         protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant typeNarrowed,
-                                                  Branch branch)
-            {
+                                                  Branch branch) {
             // promote our "always" into the corresponding parent's branch
-            if (branch == Branch.Always)
-                {
+            if (branch == Branch.Always) {
                 getOuterContext().replaceGenericType(constFormal, Branch.of(m_fWhenTrue), typeNarrowed);
-                }
             }
+        }
 
         private final boolean m_fWhenTrue;
         private       boolean m_fExclusive;
-        }
+    }
 
 
     // ----- inner class: AndContext ---------------------------------------------------------------
@@ -2413,43 +2069,37 @@ public class Context
      * A nested context for handling "&&" expressions.
      */
     public static class AndContext
-            extends Context
-        {
-        public AndContext(Context ctxOuter)
-            {
+            extends Context {
+        public AndContext(Context ctxOuter) {
             super(ctxOuter, false);
-            }
+        }
 
         @Override
-        protected Branch getOuterBranch(Branch branch)
-            {
+        protected Branch getOuterBranch(Branch branch) {
             // we only use the parent's "true" branch
             return Branch.WhenTrue;
-            }
+        }
 
         @Override
-        public Assignment getVarAssignment(String sName)
-            {
+        public Assignment getVarAssignment(String sName) {
             Assignment asn = super.getVarAssignment(sName);
             return getDefiniteAssignments().containsKey(sName)
                     ? asn
                     : asn.whenTrue(); // "&&" only uses the true branch of the left side
-            }
+        }
 
         @Override
-        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
-            {
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter) {
             // the "when true" portion of this context replaces the "when true" portion of the
             // outer context;  the "when false" portion of this context is combined with the
             // "when false" portion of the outer context
             Assignment asnFalse = Assignment.join(asnOuter.whenFalse(), asnInner.whenFalse());
             Assignment asnJoin  = Assignment.join(asnFalse, asnInner.whenTrue());
             return asnJoin;
-            }
+        }
 
         @Override
-        protected void promoteNarrowedTypes()
-            {
+        protected void promoteNarrowedTypes() {
             // retain only our "false" entries in the parent's "false" context;
             // consider an example:
             //    Int? a; Int? b;
@@ -2457,69 +2107,63 @@ public class Context
             //        b != Null)    // AndContext: "b" is Int for "true"; Null for "false"
             //      {
             //                      // exit from AndContext infers "a" and "b" are Int into
-            //      }               // the "true" branch of the parent IfContext
+            //  }               // the "true" branch of the parent IfContext
             //    else
             //      {
             //                      // exit from AndContext infers nothing into the "false" branch
-            //      }               // of the parent IfContext
+            //  }               // of the parent IfContext
             //
             getOuterContext().retainNarrowedTypes(getNarrowingMap(false), false);
 
             super.promoteNarrowedTypes();
-            }
+        }
 
         @Override
-        protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
-            {
+        protected void promoteNarrowedType(String sName, Argument arg, Branch branch) {
             super.promoteNarrowedType(sName, arg, branch);
 
             // promote our "true" into the parent's "true" branch
             // join our "false" with the parent's "false"
-            switch (branch)
-                {
-                case WhenTrue:
-                    getOuterContext().replaceArgument(sName, branch, arg);
-                    break;
+            switch (branch) {
+            case WhenTrue:
+                getOuterContext().replaceArgument(sName, branch, arg);
+                break;
 
-                case WhenFalse:
-                    getOuterContext().joinArgument(sName, branch, arg);
-                    break;
-                }
+            case WhenFalse:
+                getOuterContext().joinArgument(sName, branch, arg);
+                break;
             }
+        }
 
         @Override
-        protected void promoteNarrowedGenericTypes()
-            {
+        protected void promoteNarrowedGenericTypes() {
             // retain only our "false" entries in the parent's "false" context
             Map<FormalConstant, TypeConstant> map = getFormalTypeMap(Branch.WhenFalse);
-            if (!map.isEmpty())
-                {
+            if (!map.isEmpty()) {
                 getOuterContext().ensureFormalTypeMap(Branch.WhenFalse).keySet().
                     retainAll(map.keySet());
-                }
-            super.promoteNarrowedGenericTypes();
             }
+            super.promoteNarrowedGenericTypes();
+        }
 
         @Override
         protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant typeNarrowed,
-                                                  Branch branch)
-            {
+                                                  Branch branch) {
             super.promoteNarrowedGenericType(constFormal, typeNarrowed, branch);
 
             // promote our "true" into the parent's "true" branch and
             // join our "false" with the parent's "false"
-            switch (branch)
-                {
-                case WhenTrue:
-                    getOuterContext().replaceGenericType(constFormal, branch, typeNarrowed);
-                    break;
+            switch (branch) {
+            case WhenTrue:
+                getOuterContext().replaceGenericType(constFormal, branch, typeNarrowed);
+                break;
 
-                case WhenFalse:
-                    getOuterContext().joinGenericType(constFormal, branch, typeNarrowed);
-                    break;
-                }
+            case WhenFalse:
+                getOuterContext().joinGenericType(constFormal, branch, typeNarrowed);
+                break;
             }
         }
+    }
 
 
     // ----- inner class: OrContext ----------------------------------------------------------------
@@ -2528,102 +2172,90 @@ public class Context
      * A nested context for handling "||" expressions.
      */
     public static class OrContext
-            extends Context
-        {
-        public OrContext(Context ctxOuter)
-            {
+            extends Context {
+        public OrContext(Context ctxOuter) {
             super(ctxOuter, false);
-            }
+        }
 
         @Override
-        protected Branch getOuterBranch(Branch branch)
-            {
+        protected Branch getOuterBranch(Branch branch) {
             // we only use the parent's "false" branch
             return Branch.WhenFalse;
-            }
+        }
 
         @Override
-        public Assignment getVarAssignment(String sName)
-            {
+        public Assignment getVarAssignment(String sName) {
             Assignment asn = super.getVarAssignment(sName);
             return getDefiniteAssignments().containsKey(sName)
                     ? asn
                     : asn.whenFalse(); // "||" only uses the false branch of the left side
-            }
+        }
 
         @Override
-        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
-            {
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter) {
             // the "when false" portion of this context replaces the "when false" portion of the
             // outer context;  the "when true" portion of this context is combined with the
             // "when true" portion of the outer context
             Assignment asnTrue = Assignment.join(asnOuter.whenTrue(), asnInner.whenTrue());
             Assignment asnJoin = Assignment.join(asnInner.whenFalse(), asnTrue);
             return asnJoin;
-            }
+        }
 
         @Override
-        protected void promoteNarrowedTypes()
-            {
+        protected void promoteNarrowedTypes() {
             // inversely to the AndContext, retain only our "true" entries in the parent's "true"
             // context
             getOuterContext().retainNarrowedTypes(getNarrowingMap(true), true);
 
             super.promoteNarrowedTypes();
-            }
+        }
 
         @Override
-        protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
-            {
+        protected void promoteNarrowedType(String sName, Argument arg, Branch branch) {
             super.promoteNarrowedType(sName, arg, branch);
 
             // promote our "false" into the parent's "false" branch and
             // join our "true" with the parent's "true"
-            switch (branch)
-                {
-                case WhenFalse:
-                    getOuterContext().replaceArgument(sName, branch, arg);
-                    break;
+            switch (branch) {
+            case WhenFalse:
+                getOuterContext().replaceArgument(sName, branch, arg);
+                break;
 
-                case WhenTrue:
-                    getOuterContext().joinArgument(sName, branch, arg);
-                    break;
-                }
+            case WhenTrue:
+                getOuterContext().joinArgument(sName, branch, arg);
+                break;
             }
+        }
 
         @Override
-        protected void promoteNarrowedGenericTypes()
-            {
+        protected void promoteNarrowedGenericTypes() {
             // retain only our "true" entries in the parent's "true" context
             Map<FormalConstant, TypeConstant> map = getFormalTypeMap(Branch.WhenTrue);
-            if (!map.isEmpty())
-                {
+            if (!map.isEmpty()) {
                 getOuterContext().ensureFormalTypeMap(Branch.WhenTrue).keySet().
                     retainAll(map.keySet());
-                }
-            super.promoteNarrowedGenericTypes();
             }
+            super.promoteNarrowedGenericTypes();
+        }
 
         @Override
         protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant typeNarrowed,
-                                                  Branch branch)
-            {
+                                                  Branch branch) {
             super.promoteNarrowedGenericType(constFormal, typeNarrowed, branch);
 
             // promote our "false" into the parent's "false" branch and
             // join our "true" with the parent's "true"
-            switch (branch)
-                {
-                case WhenFalse:
-                    getOuterContext().replaceGenericType(constFormal, branch, typeNarrowed);
-                    break;
+            switch (branch) {
+            case WhenFalse:
+                getOuterContext().replaceGenericType(constFormal, branch, typeNarrowed);
+                break;
 
-                case WhenTrue:
-                    getOuterContext().joinGenericType(constFormal, branch, typeNarrowed);
-                    break;
-                }
+            case WhenTrue:
+                getOuterContext().joinGenericType(constFormal, branch, typeNarrowed);
+                break;
             }
         }
+    }
 
 
     // ----- inner class: NotContext ---------------------------------------------------------------
@@ -2632,61 +2264,48 @@ public class Context
      * A nested context for swapping "when false" and "when true".
      */
     public static class NotContext
-            extends Context
-        {
-        public NotContext(Context ctxOuter)
-            {
+            extends Context {
+        public NotContext(Context ctxOuter) {
             super(ctxOuter, false);
-            }
+        }
 
         @Override
-        protected Branch getOuterBranch(Branch branch)
-            {
+        protected Branch getOuterBranch(Branch branch) {
             return branch.complement();
-            }
+        }
 
         @Override
-        public Assignment getVarAssignment(String sName)
-            {
+        public Assignment getVarAssignment(String sName) {
             Assignment asn = super.getVarAssignment(sName);
             return getDefiniteAssignments().containsKey(sName)
                     ? asn
                     : asn.negate(); // the variable assignment came from outside of this negation
-            }
+        }
 
         @Override
-        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
-            {
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter) {
             return asnInner.negate();
-            }
+        }
 
         @Override
-        protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
-            {
-            if (branch == Branch.Always)
-                {
+        protected void promoteNarrowedType(String sName, Argument arg, Branch branch) {
+            if (branch == Branch.Always) {
                 super.promoteNarrowedType(sName, arg, branch);
-                }
-            else
-                {
+            } else {
                 getOuterContext().replaceArgument(sName, branch.complement(), arg);
-                }
             }
+        }
 
         @Override
         protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant typeNarrowed,
-                                                  Branch branch)
-            {
-            if (branch == Branch.Always)
-                {
+                                                  Branch branch) {
+            if (branch == Branch.Always) {
                 super.promoteNarrowedGenericType(constFormal, typeNarrowed, branch);
-                }
-            else
-                {
+            } else {
                 getOuterContext().replaceGenericType(constFormal, branch.complement(), typeNarrowed);
-                }
             }
         }
+    }
 
 
     // ----- inner class: AndIfContext -------------------------------------------------------------
@@ -2698,51 +2317,44 @@ public class Context
      * This context behaves as a combination of the AndContext and IfContext.
      */
     static class AndIfContext
-            extends AndContext
-        {
+            extends AndContext {
         /**
          * Construct an AndIfContext.
          *
          * @param outer  the outer context
          */
-        public AndIfContext(Context outer)
-            {
+        public AndIfContext(Context outer) {
             super(outer);
-            }
+        }
 
         @Override
-        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
-            {
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter) {
             // the "when true" portion of this context replaces the "when true" portion of the
             // outer context
             Assignment asnJoin = Assignment.join(asnOuter.whenFalse(), asnInner.whenTrue());
             return asnJoin;
-            }
+        }
 
         @Override
-        public Context exit()
-            {
-            if (!isReachable())
-                {
+        public Context exit() {
+            if (!isReachable()) {
                 // "then" block is not reachable; reflect that fact at the outer IfContext's
                 // "whenTrue" branch, which is never created directly (via ensureFork(true))
                 Context ctxOuter = getOuterContext();
-                while (true)
-                    {
-                    if (ctxOuter instanceof IfContext ctxIf)
-                        {
+                while (true) {
+                    if (ctxOuter instanceof IfContext ctxIf) {
                         assert ctxIf.m_ctxWhenTrue == null;
                         ctxIf.enterFork(true).setReachable(false);
                         setReachable(true);
                         break;
-                        }
-                    ctxOuter = ctxOuter.getOuterContext();
                     }
+                    ctxOuter = ctxOuter.getOuterContext();
                 }
+            }
 
             return super.exit();
-            }
         }
+    }
 
 
     // ----- inner class: LoopingContext -----------------------------------------------------------
@@ -2751,20 +2363,17 @@ public class Context
      * A nested context for a loop.
      */
     public static class LoopingContext
-            extends Context
-        {
-        public LoopingContext(Context ctxOuter)
-            {
+            extends Context {
+        public LoopingContext(Context ctxOuter) {
             super(ctxOuter, true);
-            }
+        }
 
         @Override
-        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
-            {
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter) {
             Assignment asnJoin = asnOuter.joinLoop(asnInner);
             return asnJoin;
-            }
         }
+    }
 
 
     // ----- inner class: InferringContext ---------------------------------------------------------
@@ -2791,8 +2400,7 @@ public class Context
      * </code></pre>
      */
     public static class InferringContext
-            extends Context
-        {
+            extends Context {
         /**
          * Construct an InferringContext.
          *
@@ -2800,16 +2408,14 @@ public class Context
          * @param typeLeft  the type from which this context can draw additional names for purposes
          *                  of resolution
          */
-        public InferringContext(Context ctxOuter, TypeConstant typeLeft)
-            {
+        public InferringContext(Context ctxOuter, TypeConstant typeLeft) {
             super(ctxOuter, true);
 
             f_typeLeft = typeLeft;
-            }
+        }
 
         @Override
-        public Context enterList()
-            {
+        public Context enterList() {
             TypeConstant typeCtx = f_typeLeft;
             TypeConstant typeEl  = typeCtx.isA(pool().typeList())
                     ? typeCtx.resolveGenericType("Element")
@@ -2817,11 +2423,10 @@ public class Context
             return typeEl == null
                     ? new Context(this, true)
                     : new InferringContext(this, typeEl);
-            }
+        }
 
         @Override
-        protected Argument resolveRegularName(Context ctxFrom, String sName, Token name, ErrorListener errs)
-            {
+        protected Argument resolveRegularName(Context ctxFrom, String sName, Token name, ErrorListener errs) {
             // hold off on logging the errors from the first attempt until the second attempt fails
             errs = errs.branch(null);
 
@@ -2829,8 +2434,7 @@ public class Context
 
             // TargetInfo carries a "local" view of the name and has a preference over the
             // inference; otherwise, the inference takes precedence
-            if (!(arg instanceof TargetInfo))
-                {
+            if (!(arg instanceof TargetInfo)) {
                 SimpleCollector  collector = new SimpleCollector(errs);
                 TypeConstant     typeLeft  = f_typeLeft;
                 Access           access    = typeLeft.getAccess();
@@ -2838,63 +2442,56 @@ public class Context
                 MethodConstant   idMethod  = method == null ? null : method.getIdentityConstant();
 
                 if (typeLeft.resolveContributedName(sName, access, idMethod, collector) ==
-                        ResolutionResult.RESOLVED)
-                    {
+                        ResolutionResult.RESOLVED) {
                     // inference succeeded, but we can only use properties that are constants or
                     // formal types
                     Constant constant = collector.getResolvedConstant();
                     if (!(constant instanceof PropertyConstant idProp) ||
-                            idProp.isConstant() || idProp.isFormalType())
-                        {
+                            idProp.isConstant() || idProp.isFormalType()) {
                         return constant;
-                        }
                     }
                 }
+            }
 
             errs.merge();
             return arg;
-            }
+        }
 
         @Override
-        public void registerVar(Token tokName, Register reg, ErrorListener errs)
-            {
+        public void registerVar(Token tokName, Register reg, ErrorListener errs) {
             getOuterContext().registerVar(tokName, reg, errs);
-            }
+        }
 
         @Override
-        public void unregisterVar(Token tokName)
-            {
+        public void unregisterVar(Token tokName) {
             getOuterContext().unregisterVar(tokName);
-            }
+        }
 
         @Override
-        protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
-            {
-            switch (branch)
-                {
-                case Always:
-                    super.promoteNarrowedType(sName, arg, branch);
-                    break;
+        protected void promoteNarrowedType(String sName, Argument arg, Branch branch) {
+            switch (branch) {
+            case Always:
+                super.promoteNarrowedType(sName, arg, branch);
+                break;
 
-                case WhenTrue:
-                case WhenFalse:
-                    // promote our "true" into the parent's "true" branch and
-                    // our "false" int the parent's "false"
-                    getOuterContext().replaceArgument(sName, branch, arg);
-                    break;
-                }
+            case WhenTrue:
+            case WhenFalse:
+                // promote our "true" into the parent's "true" branch and
+                // our "false" int the parent's "false"
+                getOuterContext().replaceArgument(sName, branch, arg);
+                break;
             }
+        }
 
         @Override
         protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant typeNarrowed,
-                                                  Branch branch)
-            {
+                                                  Branch branch) {
             // promote all
             getOuterContext().replaceGenericType(constFormal, branch, typeNarrowed);
-            }
+        }
 
         private final TypeConstant f_typeLeft;
-        }
+    }
 
 
     // ----- inner class: CaptureContext -----------------------------------------------------------
@@ -2904,129 +2501,109 @@ public class Context
      * This is used by lambdas (LambdaExpression) and anonymous inner classes (NewExpression).
      */
     public static class CaptureContext
-            extends Context
-        {
+            extends Context {
         /**
          * Construct a CaptureContext.
          *
          * @param ctxOuter  the context within which this context is nested
          */
-        public CaptureContext(Context ctxOuter)
-            {
+        public CaptureContext(Context ctxOuter) {
             super(ctxOuter, true);
-            }
+        }
 
         @Override
-        public Context exit()
-            {
+        public Context exit() {
             Context ctxOuter = super.exit();
 
             // record the registers for the captured variables
             Map<String, Boolean>  mapCapture = ensureCaptureMap();
             Map<String, Register> mapVars    = ensureRegisterMap();
-            for (String sName : mapCapture.keySet())
-                {
+            for (String sName : mapCapture.keySet()) {
                 mapVars.put(sName, (Register) getVar(sName));
-                }
-
-            return ctxOuter;
             }
 
+            return ctxOuter;
+        }
+
         @Override
-        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
-            {
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter) {
             ensureCaptureMap().put(sName, true);
 
             if (getOuterContext().getVar(sName) instanceof Register reg && reg.isVar() &&
-                    asnInner.isDefinitelyAssigned())
-                {
+                    asnInner.isDefinitelyAssigned()) {
                 // an assignment of a Var-annotated local variable within a lambda turns off
                 // the "definite assignment" checks in the outer context
                 reg.markAllowUnassigned();
-                }
-            return asnOuter.applyAssignmentFromCapture();
             }
+            return asnOuter.applyAssignmentFromCapture();
+        }
 
         @Override
-        public boolean requireThis(long lPos, ErrorListener errs)
-            {
+        public boolean requireThis(long lPos, ErrorListener errs) {
             captureThis();
             return true;
-            }
+        }
 
         @Override
-        protected void markVarRead(boolean fNested, String sName, Token tokName, boolean fDeref, ErrorListener errs)
-            {
-            if (!isVarDeclaredInThisScope(sName) && getOuterContext().isVarReadable(sName))
-                {
+        protected void markVarRead(boolean fNested, String sName, Token tokName, boolean fDeref, ErrorListener errs) {
+            if (!isVarDeclaredInThisScope(sName) && getOuterContext().isVarReadable(sName)) {
                 // capture the variable
                 ensureCaptureMap().putIfAbsent(sName, false);
-                }
-
-            super.markVarRead(fNested, sName, tokName, fDeref, errs);
             }
 
+            super.markVarRead(fNested, sName, tokName, fDeref, errs);
+        }
+
         @Override
-        public void useFormalType(TypeConstant type, ErrorListener errs)
-            {
+        public void useFormalType(TypeConstant type, ErrorListener errs) {
             super.useFormalType(type, errs);
 
-            if (type.isFormalType())
-                {
+            if (type.isFormalType()) {
                 FormalConstant constFormal = (FormalConstant) type.getDefiningConstant();
-                switch (constFormal.getFormat())
-                    {
-                    case Property:
-                    case TypeParameter:
-                        {
-                        String   sName = constFormal.getName();
-                        Argument arg   = resolveName(sName, null, ErrorListener.BLACKHOLE);
-                        if (arg != null)
-                            {
-                            ensureFormalMap().putIfAbsent(sName, arg);
-                            }
-                        break;
-                        }
-
-                    case FormalTypeChild:
-                        {
-                        FormalConstant constParent = (FormalConstant) constFormal.getParentConstant();
-                        useFormalType(constParent.getType(), errs);
-                        break;
-                        }
-
-                    case DynamicFormal:
-                        break;
+                switch (constFormal.getFormat()) {
+                case Property:
+                case TypeParameter: {
+                    String   sName = constFormal.getName();
+                    Argument arg   = resolveName(sName, null, ErrorListener.BLACKHOLE);
+                    if (arg != null) {
+                        ensureFormalMap().putIfAbsent(sName, arg);
                     }
+                    break;
                 }
-            else if (type.containsFormalType(true))
-                {
+
+                case FormalTypeChild: {
+                    FormalConstant constParent = (FormalConstant) constFormal.getParentConstant();
+                    useFormalType(constParent.getType(), errs);
+                    break;
+                }
+
+                case DynamicFormal:
+                    break;
+                }
+            } else if (type.containsFormalType(true)) {
                 Set<TypeConstant> setTypes = new HashSet<>();
                 type.collectFormalTypes(true, setTypes);
 
-                for (TypeConstant typeFormal : setTypes)
-                    {
+                for (TypeConstant typeFormal : setTypes) {
                     useFormalType(typeFormal, errs);
-                    }
                 }
             }
+        }
 
         @Override
-        protected void collectVariables(Set<String> setVars)
-            {
+        protected void collectVariables(Set<String> setVars) {
             // there's no visibility across LambdaContext or AnonymousInnerClassContext
-            }
+        }
 
         /**
          * @return a map of variable name to a Boolean representing if the capture is read-only
          *         (false) or read/write (true)
          */
-        public Map<String, Boolean> getCaptureMap()
-            {
+        public Map<String, Boolean> getCaptureMap() {
             return m_mapCapture == null
                     ? Collections.emptyMap()
                     : m_mapCapture;
-            }
+        }
 
         /**
          * Obtain the map of names to the registers, if it has been built.
@@ -3035,32 +2612,28 @@ public class Context
          *
          * @return a non-null map of the variable name to a Register for all variables to capture
          */
-        public Map<String, Register> ensureRegisterMap()
-            {
+        public Map<String, Register> ensureRegisterMap() {
             Map<String, Register> map = m_mapRegisters;
-            if (map == null)
-                {
-                if (getCaptureMap().isEmpty())
-                    {
+            if (map == null) {
+                if (getCaptureMap().isEmpty()) {
                     // there are never more capture-registers than there are captures
                     return Collections.emptyMap();
-                    }
-
-                m_mapRegisters = map = new HashMap<>();
                 }
 
-            return map;
+                m_mapRegisters = map = new HashMap<>();
             }
+
+            return map;
+        }
 
         /**
          * @return a map of names to generic type TargetInfo or type parameter's Register
          */
-        public Map<String, Argument> getFormalMap()
-            {
+        public Map<String, Argument> getFormalMap() {
             return m_mapFormalInfo == null
                     ? Collections.emptyMap()
                     : m_mapFormalInfo;
-            }
+        }
 
         /**
          * Mark the capturing context as requiring a "this" from outside of the context. For a
@@ -3068,53 +2641,47 @@ public class Context
          * anonymous inner class, this makes the resulting class an instance child instead of a
          * static child.
          */
-        protected void captureThis()
-            {
+        protected void captureThis() {
             m_fCaptureThis = true;
-            }
+        }
 
         /**
          * @return true iff the lambda is built as a method (and not as a function) in order to
          *         capture the "this" object reference
          */
-        public boolean isThisCaptured()
-            {
+        public boolean isThisCaptured() {
             return m_fCaptureThis;
-            }
+        }
 
         /**
          * @return a map of variable name to a Boolean representing if the capture is read-only
          *         (false) or read/write (true)
          */
-        protected Map<String, Boolean> ensureCaptureMap()
-            {
+        protected Map<String, Boolean> ensureCaptureMap() {
             Map<String, Boolean> map = m_mapCapture;
-            if (map == null)
-                {
+            if (map == null) {
                 // use a tree map, as it will keep the captures in alphabetical order, which will
                 // help to produce lambdas with a "predictable" signature
                 m_mapCapture = map = new TreeMap<>();
-                }
+            }
 
             return map;
-            }
+        }
 
         /**
          * @return a non-null map of variable name to generic type TargetInfo or
          *         type parameter Register
          */
-        protected Map<String, Argument> ensureFormalMap()
-            {
+        protected Map<String, Argument> ensureFormalMap() {
             Map<String, Argument> map = m_mapFormalInfo;
-            if (map == null)
-                {
+            if (map == null) {
                 // use a tree map, to keep the captures in alphabetical order, which will
                 // help to produce lambdas with a "predictable" signature
                 m_mapFormalInfo = map = new TreeMap<>();
-                }
+            }
 
             return map;
-            }
+        }
 
         /**
          * A map from variable name to read/write flag (false is read-only, true is read-write) for
@@ -3137,36 +2704,32 @@ public class Context
          * Set to true iff "this" is captured.
          */
         private boolean m_fCaptureThis;
-        }
+    }
 
 
     // ----- data members --------------------------------------------------------------------------
 
-    public enum Branch
-        {
+    public enum Branch {
         Always, WhenTrue, WhenFalse;
 
         /**
          * @return a complementary branch for this branch
          */
-        public Branch complement()
-            {
-            return switch (this)
-                {
+        public Branch complement() {
+            return switch (this) {
                 case Always    -> Always;
                 case WhenTrue  -> WhenFalse;
                 case WhenFalse -> WhenTrue;
-                };
-            }
+            };
+        }
 
         /**
          * @return a branch for a boolean value
          */
-        public static Branch of(boolean f)
-            {
+        public static Branch of(boolean f) {
             return f ? WhenTrue : WhenFalse;
-            }
         }
+    }
 
     /**
      * The outer context. The root context will not have an outer context, and an artificial
@@ -3231,4 +2794,4 @@ public class Context
      * Cached "this register".
      */
     private Register m_regThis;
-    }
+}

@@ -32,23 +32,19 @@ import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
  * Native ModuleRepository functionality for the core repository.
  */
 public class xCoreRepository
-        extends ClassTemplate
-    {
+        extends ClassTemplate {
     public static xCoreRepository INSTANCE;
 
-    public xCoreRepository(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xCoreRepository(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         TypeConstant typeInception = getInceptionClassConstant().getType();
         TypeConstant typeMask      = getCanonicalType();
 
@@ -58,83 +54,71 @@ public class xCoreRepository
         markNativeMethod("getModule", null, null);
 
         typeInception.invalidateTypeInfo();
-        }
+    }
 
     @Override
-    public TypeConstant getCanonicalType()
-        {
+    public TypeConstant getCanonicalType() {
         return pool().ensureEcstasyTypeConstant("mgmt.ModuleRepository");
-        }
+    }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
-        switch (sPropName)
-            {
-            case "moduleNames":
-                {
-                ModuleRepository repo     = f_container.getModuleRepository();
-                Set<String>      setNames = repo.getModuleNames();
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
+        switch (sPropName) {
+        case "moduleNames": {
+            ModuleRepository repo     = f_container.getModuleRepository();
+            Set<String>      setNames = repo.getModuleNames();
 
-                ArrayHandle hArray = xString.makeArrayHandle(setNames.toArray(Utils.NO_NAMES));
-                return xArray.createListSet(frame, hArray, iReturn);
-                }
-            }
-        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+            ArrayHandle hArray = xString.makeArrayHandle(setNames.toArray(Utils.NO_NAMES));
+            return xArray.createListSet(frame, hArray, iReturn);
         }
+        }
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+    }
 
     @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                              ObjectHandle[] ahArg, int[] aiReturn)
-        {
-        switch (method.getName())
-            {
-            case "getModule": // conditional ModuleTemplate getModule(String name, Version? version = Null)
-                {
-                String           sName  = ((StringHandle) ahArg[0]).getStringValue();
-                ModuleRepository repo   = f_container.getModuleRepository();
-                ModuleStructure  module = repo.loadModule(sName);
+                              ObjectHandle[] ahArg, int[] aiReturn) {
+        switch (method.getName()) {
+        case "getModule": { // conditional ModuleTemplate getModule(String name, Version? version = Null)
+            String           sName  = ((StringHandle) ahArg[0]).getStringValue();
+            ModuleRepository repo   = f_container.getModuleRepository();
+            ModuleStructure  module = repo.loadModule(sName);
 
-                return module == null
-                    ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                    : frame.assignValues(aiReturn, xBoolean.TRUE,
-                            xRTModuleTemplate.makeHandle(frame.f_context.f_container, module));
-                }
-            }
+            return module == null
+                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
+                : frame.assignValues(aiReturn, xBoolean.TRUE,
+                        xRTModuleTemplate.makeHandle(frame.f_context.f_container, module));
+        }
+        }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
-        }
+    }
 
     /**
      * Injection support.
      */
-    public ObjectHandle ensureModuleRepository(Frame frame, ObjectHandle hOpts)
-        {
+    public ObjectHandle ensureModuleRepository(Frame frame, ObjectHandle hOpts) {
         ObjectHandle hRepository = m_hRepository;
-        if (hRepository == null)
-            {
+        if (hRepository == null) {
             m_hRepository = hRepository = makeHandle();
-            }
+        }
 
         return hRepository;
-        }
+    }
 
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
-    public ObjectHandle makeHandle()
-        {
+    public ObjectHandle makeHandle() {
         return new CoreRepoHandle(m_clzRepo);
-        }
+    }
 
     public static class CoreRepoHandle
-            extends ObjectHandle
-        {
-        protected CoreRepoHandle(TypeComposition clazz)
-            {
+            extends ObjectHandle {
+        protected CoreRepoHandle(TypeComposition clazz) {
             super(clazz);
-            }
         }
+    }
 
     private TypeComposition m_clzRepo;
 
@@ -142,4 +126,4 @@ public class xCoreRepository
      * Cached Repository handle.
      */
     private ObjectHandle m_hRepository;
-    }
+}

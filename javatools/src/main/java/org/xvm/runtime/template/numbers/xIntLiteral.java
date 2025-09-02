@@ -39,23 +39,19 @@ import org.xvm.util.PackedInteger;
  * Native IntLiteral implementation.
  */
 public class xIntLiteral
-        extends xConst
-    {
+        extends xConst {
     public static xIntLiteral INSTANCE;
 
-    public xIntLiteral(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xIntLiteral(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         markNativeMethod("construct", STRING, VOID);
 
         markNativeMethod("and",           THIS, THIS);
@@ -91,322 +87,285 @@ public class xIntLiteral
         markNativeMethod("toDecN"   , null, new String[]{"numbers.DecN"});
 
         invalidateTypeInfo();
-        }
+    }
 
     @Override
-    public boolean isGenericHandle()
-        {
+    public boolean isGenericHandle() {
         return false;
-        }
+    }
 
     @Override
-    public int createConstHandle(Frame frame, Constant constant)
-        {
+    public int createConstHandle(Frame frame, Constant constant) {
         LiteralConstant constVal    = (LiteralConstant) constant;
         StringHandle    hText       = (StringHandle) frame.getConstHandle(constVal.getStringConstant());
         IntNHandle      hIntLiteral = makeIntLiteral(constVal.getPackedInteger(), hText);
 
         return frame.pushStack(hIntLiteral);
-        }
+    }
 
     @Override
     public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
-                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
-        {
+                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn) {
         StringHandle hText = (StringHandle) ahVar[0];
         String       sText = hText.getStringValue();
 
         PackedInteger pi;
-        try
-            {
+        try {
             pi = parsePackedInteger(sText);
-            }
-        catch (NumberFormatException e)
-            {
+        } catch (NumberFormatException e) {
             return frame.raiseException(
                 xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
-            }
+        }
 
         return frame.assignValue(iReturn, makeIntLiteral(pi, hText));
-        }
+    }
 
     @Override
-    public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
-        {
-        switch (idProp.getName())
-            {
-            case "text":
-                return frame.assignValue(iReturn, ((IntNHandle) hTarget).getText());
-            }
+    public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn) {
+        switch (idProp.getName()) {
+        case "text":
+            return frame.assignValue(iReturn, ((IntNHandle) hTarget).getText());
+        }
         return frame.raiseException("not supported field: " + idProp.getName());
-        }
+    }
 
     @Override
-    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
+    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
         PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi1.add(pi2)));
-        }
+    }
 
     @Override
-    public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
+    public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
         PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi1.sub(pi2)));
-        }
+    }
 
     @Override
-    public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
+    public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
         PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi1.mul(pi2)));
-        }
+    }
 
     @Override
-    public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
+    public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
         PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi1.div(pi2)));
-        }
+    }
 
     @Override
-    public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
+    public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
         PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi1.mod(pi2)));
-        }
+    }
 
     @Override
-    public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
+    public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         PackedInteger pi    = ((IntNHandle) hTarget).getValue();
         long          count = ((JavaLong) hArg).getValue();
 
-        if (count > Integer.MAX_VALUE)
-            {
+        if (count > Integer.MAX_VALUE) {
             return overflow(frame);
-            }
+        }
         return frame.assignValue(iReturn, makeIntLiteral(pi.shl((int) count)));
-        }
+    }
 
     @Override
-    public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
+    public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         PackedInteger pi    = ((IntNHandle) hTarget).getValue();
         long          count = ((JavaLong) hArg).getValue();
 
-        if (count > Integer.MAX_VALUE)
-            {
+        if (count > Integer.MAX_VALUE) {
             return overflow(frame);
-            }
+        }
         return frame.assignValue(iReturn, makeIntLiteral(pi.shr((int) count)));
-        }
+    }
 
     @Override
-    public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
+    public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         PackedInteger pi    = ((IntNHandle) hTarget).getValue();
         long          count = ((JavaLong) hArg).getValue();
 
-        if (count > Integer.MAX_VALUE)
-            {
+        if (count > Integer.MAX_VALUE) {
             return overflow(frame);
-            }
-        return frame.assignValue(iReturn, makeIntLiteral(pi.ushr((int) count)));
         }
+        return frame.assignValue(iReturn, makeIntLiteral(pi.ushr((int) count)));
+    }
 
     @Override
-    public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
+    public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
         PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi1.and(pi2)));
-        }
+    }
 
     @Override
-    public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
+    public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
         PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi1.or(pi2)));
-        }
+    }
 
     @Override
-    public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
+    public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
         PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi1.xor(pi2)));
-        }
+    }
 
     @Override
-    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn) {
         PackedInteger pi = ((IntNHandle) hTarget).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi.negate()));
-        }
+    }
 
     @Override
-    public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn) {
         PackedInteger pi = ((IntNHandle) hTarget).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi.complement()));
-        }
+    }
 
     @Override
     public int invokeNative1(Frame frame, MethodStructure method,
-                             ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "and":
-                return invokeAnd(frame, hTarget, hArg, iReturn);
+                             ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
+        switch (method.getName()) {
+        case "and":
+            return invokeAnd(frame, hTarget, hArg, iReturn);
 
-            case "or":
-                return invokeOr(frame, hTarget, hArg, iReturn);
+        case "or":
+            return invokeOr(frame, hTarget, hArg, iReturn);
 
-            case "xor":
-                return invokeXor(frame, hTarget, hArg, iReturn);
+        case "xor":
+            return invokeXor(frame, hTarget, hArg, iReturn);
 
-            case "shiftLeft":
-                return invokeShl(frame, hTarget, hArg, iReturn);
+        case "shiftLeft":
+            return invokeShl(frame, hTarget, hArg, iReturn);
 
-            case "shiftRight":
-                return invokeShr(frame, hTarget, hArg, iReturn);
+        case "shiftRight":
+            return invokeShr(frame, hTarget, hArg, iReturn);
 
-            case "shiftAllRight":
-                return invokeShrAll(frame, hTarget, hArg, iReturn);
+        case "shiftAllRight":
+            return invokeShrAll(frame, hTarget, hArg, iReturn);
 
-            case "add":
-                return invokeAdd(frame, hTarget, hArg, iReturn);
+        case "add":
+            return invokeAdd(frame, hTarget, hArg, iReturn);
 
-            case "sub":
-                return invokeSub(frame, hTarget, hArg, iReturn);
+        case "sub":
+            return invokeSub(frame, hTarget, hArg, iReturn);
 
-            case "mul":
-                return invokeMul(frame, hTarget, hArg, iReturn);
+        case "mul":
+            return invokeMul(frame, hTarget, hArg, iReturn);
 
-            case "div":
-                return invokeDiv(frame, hTarget, hArg, iReturn);
+        case "div":
+            return invokeDiv(frame, hTarget, hArg, iReturn);
 
-            case "mod":
-                return invokeMod(frame, hTarget, hArg, iReturn);
-            }
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        case "mod":
+            return invokeMod(frame, hTarget, hArg, iReturn);
         }
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+    }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "toInt8":
-            case "toInt16":
-            case "toInt32":
-            case "toInt64":
-            case "toInt128":
-            case "toUInt8":
-            case "toUInt16":
-            case "toUInt32":
-            case "toUInt64":
-            case "toUInt128":
-            case "toIntN":
-            case "toUIntN":
-            case "toFloatN":
-            case "toDecN":
-                TypeConstant  typeRet  = method.getReturn(0).getType();
-                ClassTemplate template = f_container.getTemplate(typeRet);
-                IntNHandle    hLiteral = (IntNHandle) hTarget;
-                PackedInteger piValue  = hLiteral.getValue();
+                             ObjectHandle[] ahArg, int iReturn) {
+        switch (method.getName()) {
+        case "toInt8":
+        case "toInt16":
+        case "toInt32":
+        case "toInt64":
+        case "toInt128":
+        case "toUInt8":
+        case "toUInt16":
+        case "toUInt32":
+        case "toUInt64":
+        case "toUInt128":
+        case "toIntN":
+        case "toUIntN":
+        case "toFloatN":
+        case "toDecN":
+            TypeConstant  typeRet  = method.getReturn(0).getType();
+            ClassTemplate template = f_container.getTemplate(typeRet);
+            IntNHandle    hLiteral = (IntNHandle) hTarget;
+            PackedInteger piValue  = hLiteral.getValue();
 
-                if (template instanceof xConstrainedInteger templateTo)
-                    {
-                    return templateTo.convertLong(frame, piValue, true, iReturn);
-                    }
-
-                if (template instanceof BaseInt128 templateTo)
-                    {
-                    BigInteger biValue = piValue.getBigInteger();
-                    if (biValue.bitLength() > 128)
-                        {
-                        return templateTo.overflow(frame);
-                        }
-
-                    LongLong llValue = LongLong.fromBigInteger(biValue);
-                    return !templateTo.f_fSigned && llValue.signum() < 0
-                            ? templateTo.overflow(frame)
-                            : frame.assignValue(iReturn, templateTo.makeHandle(llValue));
-                    }
-
-                if (template instanceof xUnconstrainedInteger templateTo)
-                    {
-                    return piValue.isNegative() && !templateTo.f_fSigned
-                            ? templateTo.overflow(frame)
-                            : frame.assignValue(iReturn, templateTo.makeInt(piValue));
-                    }
-                break;
-
-            case "not":
-                return invokeCompl(frame, hTarget, iReturn);
+            if (template instanceof xConstrainedInteger templateTo) {
+                return templateTo.convertLong(frame, piValue, true, iReturn);
             }
+
+            if (template instanceof BaseInt128 templateTo) {
+                BigInteger biValue = piValue.getBigInteger();
+                if (biValue.bitLength() > 128) {
+                    return templateTo.overflow(frame);
+                }
+
+                LongLong llValue = LongLong.fromBigInteger(biValue);
+                return !templateTo.f_fSigned && llValue.signum() < 0
+                        ? templateTo.overflow(frame)
+                        : frame.assignValue(iReturn, templateTo.makeHandle(llValue));
+            }
+
+            if (template instanceof xUnconstrainedInteger templateTo) {
+                return piValue.isNegative() && !templateTo.f_fSigned
+                        ? templateTo.overflow(frame)
+                        : frame.assignValue(iReturn, templateTo.makeInt(piValue));
+            }
+            break;
+
+        case "not":
+            return invokeCompl(frame, hTarget, iReturn);
+        }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
-        }
+    }
 
-    protected IntNHandle makeIntLiteral(PackedInteger piValue)
-        {
+    protected IntNHandle makeIntLiteral(PackedInteger piValue) {
         return new IntNHandle(getCanonicalClass(), piValue, null);
-        }
+    }
 
-    protected IntNHandle makeIntLiteral(PackedInteger piValue, StringHandle hText)
-        {
+    protected IntNHandle makeIntLiteral(PackedInteger piValue, StringHandle hText) {
         return new IntNHandle(getCanonicalClass(), piValue, hText);
-        }
+    }
 
     @Override
-    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
         IntNHandle hLiteral = (IntNHandle) hTarget;
         return frame.assignValue(iReturn, hLiteral.getText());
-        }
+    }
 
 
     // ----- comparison support --------------------------------------------------------------------
 
     @Override
     public int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         IntNHandle h1 = (IntNHandle) hValue1;
         IntNHandle h2 = (IntNHandle) hValue2;
 
         return frame.assignValue(iReturn, xBoolean.makeHandle(h1.getValue().equals(h2.getValue())));
-        }
+    }
 
     @Override
     public int callCompare(Frame frame, TypeComposition clazz,
-                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         IntNHandle h1 = (IntNHandle) hValue1;
         IntNHandle h2 = (IntNHandle) hValue2;
 
         return frame.assignValue(iReturn, xOrdered.makeHandle(h1.getValue().cmp(h2.getValue())));
-        }
+    }
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -415,117 +374,97 @@ public class xIntLiteral
      *
      * @throws NumberFormatException  if parsing failed
      */
-    public static BigInteger parseBigInteger(String sText)
-        {
-        try
-            {
+    public static BigInteger parseBigInteger(String sText) {
+        try {
             return new BigInteger(sText, 10);
-            }
-        catch (NumberFormatException e)
-            {
+        } catch (NumberFormatException e) {
             ErrorList errs  = new ErrorList(5);
             Lexer     lexer = new Lexer(new Source(sText), errs);
 
-            if (!lexer.hasNext())
-                {
+            if (!lexer.hasNext()) {
                 throw e;
-                }
+            }
 
             Token tokLit = lexer.next();
-            if (errs.hasSeriousErrors() || tokLit.getId() != Token.Id.LIT_INT)
-                {
+            if (errs.hasSeriousErrors() || tokLit.getId() != Token.Id.LIT_INT) {
                 throw e;
-                }
+            }
 
             return ((PackedInteger) tokLit.getValue()).getBigInteger();
-            }
         }
+    }
 
     /**
      * Parse the specified text into a PackedInteger value.
      *
      * @throws NumberFormatException  if parsing failed
      */
-    public static PackedInteger parsePackedInteger(String sText)
-        {
-        try
-            {
+    public static PackedInteger parsePackedInteger(String sText) {
+        try {
             return new PackedInteger(Long.parseLong(sText));
-            }
-        catch (NumberFormatException e)
-            {
-            if (sText.isEmpty())
-                {
+        } catch (NumberFormatException e) {
+            if (sText.isEmpty()) {
                 throw e;
-                }
+            }
             boolean   fNeg   = false;
             ErrorList errs   = new ErrorList(5);
             Lexer     lexer  = new Lexer(new Source(sText), errs);
             Token     tokLit = lexer.next();
-            if (tokLit.getId() == Id.SUB)
-                {
+            if (tokLit.getId() == Id.SUB) {
                 fNeg = true;
                 tokLit = lexer.next();
-                }
+            }
 
-            if (errs.hasSeriousErrors() || tokLit.getId() != Token.Id.LIT_INT)
-                {
+            if (errs.hasSeriousErrors() || tokLit.getId() != Token.Id.LIT_INT) {
                 throw e;
-                }
+            }
 
             PackedInteger pi = (PackedInteger) tokLit.getValue();
             return fNeg
                     ? pi.negate()
                     : pi;
-            }
         }
+    }
 
     /**
      * This handle type is used by IntN, UIntN as well as IntLiteral.
      */
     public static class IntNHandle
-            extends ObjectHandle
-        {
-        public IntNHandle(TypeComposition clazz, PackedInteger piValue, StringHandle hText)
-            {
+            extends ObjectHandle {
+        public IntNHandle(TypeComposition clazz, PackedInteger piValue, StringHandle hText) {
             super(clazz);
 
             assert piValue != null;
 
             m_piValue = piValue;
-            }
+        }
 
-        public StringHandle getText()
-            {
+        public StringHandle getText() {
             StringHandle hText = m_hText;
-            if (hText == null)
-                {
+            if (hText == null) {
                 m_hText = hText = xString.makeHandle(m_piValue.toString());
-                }
+            }
             return hText;
-            }
+        }
 
-        public PackedInteger getValue()
-            {
+        public PackedInteger getValue() {
             return m_piValue;
-            }
+        }
 
         @Override
         public int hashCode() { return m_piValue.hashCode(); }
 
         @Override
-        public boolean equals(Object obj)
-            {
+        public boolean equals(Object obj) {
             return obj instanceof IntNHandle that && m_piValue.equals(that.m_piValue);
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return super.toString() + m_piValue.toString();
-            }
+        }
 
         protected PackedInteger m_piValue;
         protected StringHandle  m_hText; // (optional) cached text handle
-        }
     }
+}

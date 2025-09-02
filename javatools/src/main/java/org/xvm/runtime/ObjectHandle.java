@@ -44,16 +44,14 @@ import org.xvm.util.Handy;
  * Note, that the equals() and hashCode() methods should be only for immutable handles.
  */
 public abstract class ObjectHandle
-        implements Cloneable
-    {
+        implements Cloneable {
     protected TypeComposition m_clazz;
     protected boolean m_fMutable;
 
-    protected ObjectHandle(TypeComposition clazz)
-        {
+    protected ObjectHandle(TypeComposition clazz) {
         m_clazz    = clazz;
         m_fMutable = false;
-        }
+    }
 
     /**
      * Clone this handle using the specified TypeComposition.
@@ -62,106 +60,90 @@ public abstract class ObjectHandle
      *
      * @return the new handle
      */
-    public ObjectHandle cloneAs(TypeComposition clazz)
-        {
-        try
-            {
+    public ObjectHandle cloneAs(TypeComposition clazz) {
+        try {
             ObjectHandle handle = (ObjectHandle) super.clone();
             handle.m_clazz = clazz;
             return handle;
-            }
-        catch (CloneNotSupportedException e)
-            {
+        } catch (CloneNotSupportedException e) {
             throw new IllegalStateException();
-            }
         }
+    }
 
     /**
      * Reveal this handle using the "inception" type.
      *
      * @return the "fully accessible" handle
      */
-    public ObjectHandle revealOrigin()
-        {
+    public ObjectHandle revealOrigin() {
         return getComposition().ensureOrigin(this);
-        }
+    }
 
-    public boolean isMutable()
-        {
+    public boolean isMutable() {
         return m_fMutable;
-        }
+    }
 
     /**
      * Mark the object as immutable.
      *
      * @return true if the object has been successfully marked as immutable; false otherwise
      */
-    public boolean makeImmutable()
-        {
+    public boolean makeImmutable() {
         m_fMutable = false;
         return true;
-        }
+    }
 
     /**
      * @return null iff all the fields are assigned; a list of unassigned names otherwise
      */
-    public List<String> validateFields()
-        {
+    public List<String> validateFields() {
         return null;
-        }
+    }
 
-    public boolean isSelfContained()
-        {
+    public boolean isSelfContained() {
         return false;
-        }
+    }
 
     /**
      * @return the TypeComposition for this handle
      */
-    public TypeComposition getComposition()
-        {
+    public TypeComposition getComposition() {
         return m_clazz;
-        }
+    }
 
     /**
      * @return the underlying template for this handle
      */
-    public ClassTemplate getTemplate()
-        {
+    public ClassTemplate getTemplate() {
         return getComposition().getTemplate();
-        }
+    }
 
     /**
      * @return the OpSupport for the inception type of this handle
      */
-    public OpSupport getOpSupport()
-        {
+    public OpSupport getOpSupport() {
         return getComposition().getSupport();
-        }
+    }
 
     /**
      * @return the revealed type of this handle
      */
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return augmentType(getComposition().getType());
-        }
+    }
 
     /**
      * Augment the type based on the handle immutability and serviceability.
      */
-    protected TypeConstant augmentType(TypeConstant type)
-        {
-        if (!isMutable())
-            {
+    protected TypeConstant augmentType(TypeConstant type) {
+        if (!isMutable()) {
             type = type.freeze();
-            }
-        if (isService())
-            {
-            type = type.ensureService();
-            }
-        return type;
         }
+        if (isService()) {
+            type = type.ensureService();
+        }
+        return type;
+    }
 
     /**
      * Some handles may carry a type that belongs to a "foreign" type system. As a general rule,
@@ -169,74 +151,64 @@ public abstract class ObjectHandle
      *
      * @return a TypeConstant that *may* belong to a "foreign" type system
      */
-    public TypeConstant getUnsafeType()
-        {
+    public TypeConstant getUnsafeType() {
         return getType();
-        }
+    }
 
-    public ObjectHandle ensureAccess(Constants.Access access)
-        {
+    public ObjectHandle ensureAccess(Constants.Access access) {
         return getComposition().ensureAccess(this, access);
-        }
+    }
 
     /**
      * @return true iff the specified property has custom code or is Ref-annotated
      */
-    public boolean isInflated(PropertyConstant idProp)
-        {
+    public boolean isInflated(PropertyConstant idProp) {
         FieldInfo field = getComposition().getFieldInfo(idProp);
         return field != null && field.isInflated();
-        }
+    }
 
     /**
      * @return true iff the specified property has an injected value
      */
-    public boolean isInjected(PropertyConstant idProp)
-        {
+    public boolean isInjected(PropertyConstant idProp) {
         return getComposition().isInjected(idProp);
-        }
+    }
 
     /**
      * @return true iff the specified property has an atomic value
      */
-    public boolean isAtomic(PropertyConstant idProp)
-        {
+    public boolean isAtomic(PropertyConstant idProp) {
         return getComposition().isAtomic(idProp);
-        }
+    }
 
     /**
      * @return true iff the handle is an object that is allowed to be passed across service
      *         boundaries within the same container (an immutable, a service or an object that has
      *         all pass-through fields)
      */
-    public boolean isPassThrough()
-        {
+    public boolean isPassThrough() {
         return isPassThrough(null);
-        }
+    }
 
     /**
      * @return true iff the handle is an object that is allowed to be passed across service/container
      *         boundaries (an immutable, a service or an object that has all pass-through fields)
      */
-    public boolean isPassThrough(Container container)
-        {
-        if (isService())
-            {
+    public boolean isPassThrough(Container container) {
+        if (isService()) {
             return true;
-            }
+        }
 
-        if (isMutable())
-            {
+        if (isMutable()) {
             return false;
-            }
+        }
 
-        if (container == null)
-            {
+        if (container == null) {
             return true;
-            }
+        }
 
         return isShared(container, null);
-        }
+    }
 
     /**
      * Check if this immutable handle belongs to the same type system as the one represented by the
@@ -247,10 +219,9 @@ public abstract class ObjectHandle
      *
      * @return true iff this object's type is shared with that pool
      */
-    public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited)
-        {
+    public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited) {
         return true;
-        }
+    }
 
     /**
      * Helper method to check if all the immutable specified handles belongs to the same type system
@@ -263,26 +234,22 @@ public abstract class ObjectHandle
      * @return true iff this object's type is shared with that pool
      */
     protected static boolean areShared(ObjectHandle[] ahValue, Container container,
-                                       Map<ObjectHandle, Boolean> mapVisited)
-        {
-        for (ObjectHandle field : ahValue)
-            {
-            if (field != null && !field.isShared(container, mapVisited))
-                {
+                                       Map<ObjectHandle, Boolean> mapVisited) {
+        for (ObjectHandle field : ahValue) {
+            if (field != null && !field.isShared(container, mapVisited)) {
                 return false;
-                }
             }
-        return true;
         }
+        return true;
+    }
 
     /**
      * @return true iff the handle is a non-constant object for which all method invocations
      *         and properties access need to be proxied across service boundaries
      */
-    public boolean isService()
-        {
+    public boolean isService() {
         return false;
-        }
+    }
 
     /**
      * If method invocations and properties access for this handle need to be proxied across
@@ -290,26 +257,23 @@ public abstract class ObjectHandle
      *
      * @return a ServiceHandle or null of this handle is "not a Service"
      */
-    public ServiceHandle getService()
-        {
+    public ServiceHandle getService() {
         return null;
-        }
+    }
 
     /**
      * @return true iff the handle represents a struct
      */
-    public boolean isStruct()
-        {
+    public boolean isStruct() {
         return getComposition().isStruct();
-        }
+    }
 
     /**
      * @return true iff the handle itself could be used for the equality check
      */
-    public boolean isNativeEqual()
-        {
+    public boolean isNativeEqual() {
         return true;
-        }
+    }
 
     /**
      * Mask this handle to the specified type on behalf of the specified container.
@@ -317,10 +281,9 @@ public abstract class ObjectHandle
      * @return a new handle for this object masked to the specified type or null if the
      *         request cannot be fulfilled
      */
-    public ObjectHandle maskAs(Container owner, TypeConstant typeAs)
-        {
+    public ObjectHandle maskAs(Container owner, TypeConstant typeAs) {
         return this;
-        }
+    }
 
     /**
      * Reveal this handle as the specified type on the context of the specified frame.
@@ -328,10 +291,9 @@ public abstract class ObjectHandle
      * @return a new handle for this object revealed as the specified type or null if the
      *         request cannot be fulfilled
      */
-    public ObjectHandle revealAs(Frame frame, TypeConstant typeAs)
-        {
+    public ObjectHandle revealAs(Frame frame, TypeConstant typeAs) {
         return this;
-        }
+    }
 
     /**
      * If a handle supports deferred call - continue with the processing and place the deferred
@@ -342,216 +304,178 @@ public abstract class ObjectHandle
      *
      * @return Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION
      */
-    public int proceed(Frame frameCaller, Frame.Continuation continuation)
-        {
+    public int proceed(Frame frameCaller, Frame.Continuation continuation) {
         throw new IllegalStateException("Not deferred");
-        }
+    }
 
     /**
      * @return the result of comparison (only for isNativeEqual() handles)
      */
-    public int compareTo(ObjectHandle that)
-        {
+    public int compareTo(ObjectHandle that) {
         throw new UnsupportedOperationException(getClass() + " cannot compare");
-        }
+    }
 
     @Override
-    public int hashCode()
-        {
-        if (isNativeEqual())
-            {
+    public int hashCode() {
+        if (isNativeEqual()) {
             throw new UnsupportedOperationException(getClass() + " must implement \"hashCode()\"");
-            }
+        }
 
         return System.identityHashCode(this);
-        }
+    }
 
     @Override
-    public boolean equals(Object obj)
-        {
-        if (isNativeEqual())
-            {
+    public boolean equals(Object obj) {
+        if (isNativeEqual()) {
             throw new UnsupportedOperationException(getClass() + " must implement \"equals()\"");
-            }
+        }
 
         // we don't use this for natural equality check
         return this == obj;
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         TypeComposition clz = getComposition();
 
         // don't add "immutable" for immutable types
         return "(" + (m_fMutable || clz.getType().isImmutable() ? "" : "immutable ") + clz + ") ";
-        }
+    }
 
     public static class GenericHandle
-            extends ObjectHandle
-        {
-        public GenericHandle(TypeComposition clazz)
-            {
+            extends ObjectHandle {
+        public GenericHandle(TypeComposition clazz) {
             super(clazz);
 
             m_fMutable = true;
 
             m_aFields = clazz.initializeStructure();
-            }
+        }
 
-        public ObjectHandle[] getFields()
-            {
+        public ObjectHandle[] getFields() {
             return m_aFields;
-            }
+        }
 
 
         // ----- id-based field access -------------------------------------------------------------
 
-        public boolean containsField(PropertyConstant idProp)
-            {
+        public boolean containsField(PropertyConstant idProp) {
             return getComposition().getFieldInfo(idProp) != null;
-            }
+        }
 
-        public ObjectHandle getField(Frame frame, PropertyConstant idProp)
-            {
+        public ObjectHandle getField(Frame frame, PropertyConstant idProp) {
             FieldInfo field = getComposition().getFieldInfo(idProp);
 
             return field == null
                     ? missingPropertyException(frame, idProp.getName())
                     : getField(frame, field);
-            }
+        }
 
-        public ObjectHandle getField(Frame frame, String sProp)
-            {
+        public ObjectHandle getField(Frame frame, String sProp) {
             FieldInfo field = getComposition().getFieldInfo(sProp);
 
             return field == null
                     ? missingPropertyException(frame, sProp)
                     : getField(frame, field);
-            }
+        }
 
-        private ObjectHandle missingPropertyException(Frame frame, String sProp)
-            {
+        private ObjectHandle missingPropertyException(Frame frame, String sProp) {
             return new DeferredCallHandle(
                     xException.makeHandle(frame, "Missing property: " + sProp));
-            }
+        }
 
-        public ObjectHandle getField(Frame frame, FieldInfo field)
-            {
+        public ObjectHandle getField(Frame frame, FieldInfo field) {
             return field.isTransient()
                     ? getTransientField(frame, field)
                     : m_aFields[field.getIndex()];
-            }
+        }
 
-        public void setField(Frame frame, PropertyConstant idProp, ObjectHandle hValue)
-            {
+        public void setField(Frame frame, PropertyConstant idProp, ObjectHandle hValue) {
             FieldInfo field = getComposition().getFieldInfo(idProp);
-            if (field.isTransient())
-                {
+            if (field.isTransient()) {
                 setTransientField(frame, field.getIndex(), hValue);
-                }
-            else
-                {
+            } else {
                 m_aFields[field.getIndex()] = hValue;
-                }
             }
+        }
 
-        public void setField(Frame frame, String sProp, ObjectHandle hValue)
-            {
+        public void setField(Frame frame, String sProp, ObjectHandle hValue) {
             FieldInfo field = getComposition().getFieldInfo(sProp);
-            if (field.isTransient())
-                {
+            if (field.isTransient()) {
                 setTransientField(frame, field.getIndex(), hValue);
-                }
-            else
-                {
+            } else {
                 m_aFields[field.getIndex()] = hValue;
-                }
             }
+        }
 
-        public FieldInfo getFieldInfo(PropertyConstant idProp)
-            {
+        public FieldInfo getFieldInfo(PropertyConstant idProp) {
             return getComposition().getFieldInfo(idProp);
-            }
+        }
 
         // ----- index-based field access ----------------------------------------------------------
 
-        public ObjectHandle getField(int iPos)
-            {
+        public ObjectHandle getField(int iPos) {
             return m_aFields[iPos];
-            }
+        }
 
-        public void setField(int iPos, ObjectHandle hValue)
-            {
+        public void setField(int iPos, ObjectHandle hValue) {
             m_aFields[iPos] = hValue;
-            }
+        }
 
-        public ObjectHandle getTransientField(Frame frame, FieldInfo field)
-            {
+        public ObjectHandle getTransientField(Frame frame, FieldInfo field) {
             TransientId  hId    = (TransientId) m_aFields[field.getIndex()];
             ObjectHandle hValue = frame.f_context.getTransientValue(hId);
 
-            if (hValue == null && field.isInflated())
-                {
+            if (hValue == null && field.isInflated()) {
                 RefHandle hRef = field.createRefHandle(frame);
                 hRef.setField(frame, OUTER, this);
                 frame.f_context.setTransientValue(hId, hRef);
                 return hRef;
-                }
+            }
             return hValue;
-            }
+        }
 
-        public void setTransientField(Frame frame, int iPos, ObjectHandle hValue)
-            {
+        public void setTransientField(Frame frame, int iPos, ObjectHandle hValue) {
             frame.f_context.setTransientValue((TransientId) m_aFields[iPos], hValue);
-            }
+        }
 
-        public Container getOwner()
-            {
+        public Container getOwner() {
             return m_owner == null ? getComposition().getContainer() : m_owner;
-            }
+        }
 
-        public void setOwner(Container owner)
-            {
+        public void setOwner(Container owner) {
             m_owner = owner;
-            }
+        }
 
-        public boolean containsMutableFields()
-            {
-            for (ObjectHandle hField : m_aFields)
-                {
-                if (hField != null && hField.isMutable())
-                    {
+        public boolean containsMutableFields() {
+            for (ObjectHandle hField : m_aFields) {
+                if (hField != null && hField.isMutable()) {
                     return true;
-                    }
                 }
-            return false;
             }
+            return false;
+        }
 
         @Override
-        public boolean isService()
-            {
-            if (m_fMutable && getComposition().isInstanceChild())
-                {
+        public boolean isService() {
+            if (m_fMutable && getComposition().isInstanceChild()) {
                 ObjectHandle hParent = getField(null, OUTER);
                 return hParent != null && hParent.isService();
-                }
-
-            return false;
             }
 
+            return false;
+        }
+
         @Override
-        public ServiceHandle getService()
-            {
+        public ServiceHandle getService() {
             ObjectHandle hParent = getField(null, OUTER);
             return hParent == null || !hParent.isService()
                 ? null
                 : hParent.getService();
-            }
+        }
 
         @Override
-        public ObjectHandle cloneAs(TypeComposition clazz)
-            {
+        public ObjectHandle cloneAs(TypeComposition clazz) {
             // when we clone a struct into a non-struct, we need to update the inflated
             // RefHandles to point to a non-struct parent handle;
             // when we clone a non-struct to a struct, we need to do the opposite
@@ -560,101 +484,81 @@ public abstract class ObjectHandle
             GenericHandle  hClone  = (GenericHandle) super.cloneAs(clazz);
             ObjectHandle[] aFields = m_aFields;
 
-            if (fUpdateOuter && aFields != null)
-                {
-                for (FieldInfo field : clazz.getFieldLayout().values())
-                    {
-                    if (field.isInflated() && !field.isTransient())
-                        {
+            if (fUpdateOuter && aFields != null) {
+                for (FieldInfo field : clazz.getFieldLayout().values()) {
+                    if (field.isInflated() && !field.isTransient()) {
                         RefHandle    hValue = (RefHandle) aFields[field.getIndex()];
                         ObjectHandle hOuter = hValue.getField(null, OUTER);
-                        if (hOuter != null)
-                            {
+                        if (hOuter != null) {
                             hValue.setField(null, OUTER, hClone);
-                            }
                         }
                     }
                 }
-            return hClone;
             }
+            return hClone;
+        }
 
         @Override
-        public List<String> validateFields()
-            {
+        public List<String> validateFields() {
             List<String> listUnassigned = null;
             ObjectHandle[] aFields = m_aFields;
-            if (aFields != null)
-                {
+            if (aFields != null) {
                 TypeComposition clazz = getComposition();
-                for (FieldInfo field : clazz.getFieldLayout().values())
-                    {
+                for (FieldInfo field : clazz.getFieldLayout().values()) {
                     ObjectHandle hValue = aFields[field.getIndex()];
-                    if (hValue == null)
-                        {
-                        if (!field.isAllowedUnassigned())
-                            {
-                            if (listUnassigned == null)
-                                {
+                    if (hValue == null) {
+                        if (!field.isAllowedUnassigned()) {
+                            if (listUnassigned == null) {
                                 listUnassigned = new ArrayList<>();
-                                }
-                            listUnassigned.add(field.getName());
                             }
+                            listUnassigned.add(field.getName());
                         }
-                    // no need to recurse to a field; it would throw during its own construction
                     }
+                    // no need to recurse to a field; it would throw during its own construction
                 }
-            return listUnassigned;
             }
+            return listUnassigned;
+        }
 
         @Override
-        public boolean makeImmutable()
-            {
-            if (m_fMutable)
-                {
+        public boolean makeImmutable() {
+            if (m_fMutable) {
                 // mark ourselves as immutable to prevent an infinite recursion
                 m_fMutable = false;
-                if (getComposition().makeStructureImmutable(m_aFields))
-                    {
+                if (getComposition().makeStructureImmutable(m_aFields)) {
                     return true;
-                    }
+                }
                 // the structure could not be made mutable
                 m_fMutable = true;
                 return false;
-                }
+            }
             return true;
-            }
+        }
 
         @Override
-        public boolean isNativeEqual()
-            {
+        public boolean isNativeEqual() {
             return false;
-            }
+        }
 
         @Override
-        public GenericHandle maskAs(Container owner, TypeConstant typeAs)
-            {
-            if (!isService())
-                {
+        public GenericHandle maskAs(Container owner, TypeConstant typeAs) {
+            if (!isService()) {
                 TypeConstant type = getType();
                 assert type.isSingleUnderlyingClass(true);
 
                 ModuleConstant idModule = type.getSingleUnderlyingClass(true).getModuleConstant();
-                if (!idModule.isCoreModule())
-                    {
+                if (!idModule.isCoreModule()) {
                     // even though it's a const, all calls need to be proxied
                     ProxyComposition clzProxy = new ProxyComposition(getComposition(), typeAs);
                     return Proxy.makeHandle(clzProxy, owner.getServiceContext(), this, true);
-                    }
                 }
+            }
 
             Container       ownerOrig = getOwner();
             TypeComposition clzAs;
-            if (owner == ownerOrig || typeAs.isShared(ownerOrig.getConstantPool()))
-                {
+            if (owner == ownerOrig || typeAs.isShared(ownerOrig.getConstantPool())) {
                 clzAs = getComposition().maskAs(typeAs);
-                }
-            else
-                {
+            } else {
                 // the ownership is moved to a different container that is not shared with the
                 // current owner's container; ensure the class composition at the new owner
                 ClassComposition clz           = (ClassComposition) getComposition();
@@ -663,63 +567,54 @@ public abstract class ObjectHandle
 
                 typeInception = (TypeConstant) owner.getConstantPool().register(typeInception);
                 clzAs = owner.ensureClassComposition(typeInception, clz.getTemplate()).maskAs(typeAs);
-                }
+            }
 
-            if (clzAs != null)
-                {
+            if (clzAs != null) {
                 GenericHandle hClone = (GenericHandle) cloneAs(clzAs);
                 hClone.setOwner(owner);
                 return hClone;
-                }
-            return null;
             }
+            return null;
+        }
 
         @Override
-        public GenericHandle revealAs(Frame frame, TypeConstant typeAs)
-            {
+        public GenericHandle revealAs(Frame frame, TypeConstant typeAs) {
             Container owner = m_owner;
-            if (owner != null)
-                {
+            if (owner != null) {
                 // only the owner or its parent(s) can reveal
                 Container caller = frame.f_context.f_container;
-                if (caller != owner && !caller.isParent(owner))
-                    {
+                if (caller != owner && !caller.isParent(owner)) {
                     return null;
-                    }
                 }
+            }
 
             TypeComposition clzAs = getComposition().revealAs(typeAs);
             return clzAs == null
                     ? null
                     : (GenericHandle) cloneAs(clzAs);
-            }
+        }
 
         @Override
-        public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited)
-            {
+        public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited) {
             TypeConstant type = getType();
-            if (!type.isShared(container.getConstantPool()))
-                {
+            if (!type.isShared(container.getConstantPool())) {
                 return false;
-                }
+            }
 
-            if (isService())
-                {
+            if (isService()) {
                 return true;
-                }
+            }
 
-            if (mapVisited == null)
-                {
+            if (mapVisited == null) {
                 mapVisited = new IdentityHashMap<>();
-                }
+            }
 
             if (mapVisited.put(this, Boolean.TRUE) != null ||
-                    areShared(m_aFields, container, mapVisited))
-                {
+                    areShared(m_aFields, container, mapVisited)) {
                 return true;
-                }
-            return false;
             }
+            return false;
+        }
 
         /**
          * The array of field values indexed according to the ClassComposition's field layout.
@@ -736,144 +631,123 @@ public abstract class ObjectHandle
          * Synthetic property holding a reference to a parent instance.
          */
         public static final String OUTER = "$outer";
-        }
+    }
 
     public static class ExceptionHandle
-            extends GenericHandle
-        {
+            extends GenericHandle {
         public final String f_sRTError;
 
         /**
          * @param sRTError  if specified, indicates a *hidden* RT-error message to be logged to the
          *                  system console when an [obscured] exception text is being retrieved
          */
-        public ExceptionHandle(TypeComposition clazz, String sRTError)
-            {
+        public ExceptionHandle(TypeComposition clazz, String sRTError) {
             super(clazz);
 
             f_sRTError = sRTError;
-            }
+        }
 
-        public WrapperException getException()
-            {
+        public WrapperException getException() {
             return new WrapperException();
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             ObjectHandle hText = getField(null, "text");
             return super.toString() +
                 (hText instanceof StringHandle hString
                     ? Handy.quotedString(hString.getStringValue())
                     : "");
-            }
+        }
 
         public class WrapperException
-                extends Exception
-            {
-            public WrapperException()
-                {
+                extends Exception {
+            public WrapperException() {
                 super();
-                }
+            }
 
-            public WrapperException(Throwable cause)
-                {
+            public WrapperException(Throwable cause) {
                 super(cause);
-                }
+            }
 
-            public ExceptionHandle getExceptionHandle()
-                {
+            public ExceptionHandle getExceptionHandle() {
                 return ExceptionHandle.this;
-                }
+            }
 
             @Override
-            public String toString()
-                {
+            public String toString() {
                 return getExceptionHandle().toString();
-                }
             }
         }
+    }
 
     /**
      * A handle for any object that fits in a long.
      */
     public static class JavaLong
-            extends ObjectHandle
-        {
+            extends ObjectHandle {
         protected long m_lValue;
 
-        public JavaLong(TypeComposition clazz, long lValue)
-            {
+        public JavaLong(TypeComposition clazz, long lValue) {
             super(clazz);
             m_lValue = lValue;
-            }
+        }
 
         @Override
-        public boolean isSelfContained()
-            {
+        public boolean isSelfContained() {
             return true;
-            }
+        }
 
-        public long getValue()
-            {
+        public long getValue() {
             return m_lValue;
-            }
+        }
 
         @Override
-        public int hashCode()
-            {
+        public int hashCode() {
             return Long.hashCode(m_lValue);
-            }
+        }
 
         @Override
-        public int compareTo(ObjectHandle that)
-            {
+        public int compareTo(ObjectHandle that) {
             return Long.compare(m_lValue, ((JavaLong) that).m_lValue);
-            }
+        }
 
         @Override
-        public boolean equals(Object obj)
-            {
+        public boolean equals(Object obj) {
             return obj instanceof JavaLong that && m_lValue == that.m_lValue;
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return super.toString() + (m_clazz.getTemplate() == xChar.INSTANCE
                     ? Handy.quotedChar((char) m_lValue)
                     : String.valueOf(m_lValue));
-            }
         }
+    }
 
     /**
      * Native handle that holds a reference to a Constant from the ConstantPool.
      */
     public static class ConstantHandle
-            extends ObjectHandle
-        {
-        public ConstantHandle(Constant constant)
-            {
+            extends ObjectHandle {
+        public ConstantHandle(Constant constant) {
             super(xObject.CLASS);
 
             assert constant != null;
             f_constant = constant;
-            }
+        }
 
-        public Constant getConstant()
-            {
+        public Constant getConstant() {
             return f_constant;
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return f_constant.toString();
-            }
+        }
 
         private final Constant f_constant;
-        }
+    }
 
     /**
      * DeferredCallHandle represents a deferred action, such as a property access or a method call,
@@ -882,65 +756,55 @@ public abstract class ObjectHandle
      * Note: this handle cannot be allocated naturally and must be processed in a special way.
      */
     public static class DeferredCallHandle
-            extends ObjectHandle
-        {
+            extends ObjectHandle {
         protected final Frame           f_frameNext;
         protected final ExceptionHandle f_hException;
 
-        public DeferredCallHandle(Frame frameNext)
-            {
+        public DeferredCallHandle(Frame frameNext) {
             super(null);
 
             f_frameNext  = frameNext;
             f_hException = frameNext.m_hException;
-            }
+        }
 
-        public DeferredCallHandle(ExceptionHandle hException)
-            {
+        public DeferredCallHandle(ExceptionHandle hException) {
             super(null);
 
             f_frameNext  = null;
             f_hException = hException;
-            }
+        }
 
         @Override
-        public int proceed(Frame frameCaller, Frame.Continuation continuation)
-            {
-            if (f_hException == null)
-                {
+        public int proceed(Frame frameCaller, Frame.Continuation continuation) {
+            if (f_hException == null) {
                 Frame frameNext = f_frameNext;
-                if (continuation != null)
-                    {
+                if (continuation != null) {
                     frameNext.addContinuation(continuation);
-                    }
-                return frameCaller.call(frameNext);
                 }
+                return frameCaller.call(frameNext);
+            }
 
             return frameCaller.raiseException(f_hException);
-            }
+        }
 
-        public void addContinuation(Frame.Continuation continuation)
-            {
-            if (f_hException == null)
-                {
+        public void addContinuation(Frame.Continuation continuation) {
+            if (f_hException == null) {
                 f_frameNext.addContinuation(continuation);
-                }
             }
+        }
 
         @Override
-        public boolean isPassThrough(Container container)
-            {
+        public boolean isPassThrough(Container container) {
             throw new IllegalStateException();
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return f_hException == null
                 ? "Deferred call: " + f_frameNext
                 : "Deferred exception: " + f_hException;
-            }
         }
+    }
 
     /**
      * DeferredPropertyHandle represents a deferred property access, which would place the result
@@ -949,59 +813,52 @@ public abstract class ObjectHandle
      * Note: this handle cannot be allocated naturally and must be processed in a special way.
      */
     public static class DeferredPropertyHandle
-            extends DeferredCallHandle
-        {
+            extends DeferredCallHandle {
         private final PropertyConstant f_idProp;
 
-        public DeferredPropertyHandle(PropertyConstant idProp)
-            {
+        public DeferredPropertyHandle(PropertyConstant idProp) {
             super((ExceptionHandle) null);
 
             f_idProp = idProp;
-            }
+        }
 
         @Override
-        public void addContinuation(Frame.Continuation continuation)
-            {
+        public void addContinuation(Frame.Continuation continuation) {
             throw new UnsupportedOperationException();
-            }
+        }
 
-        public PropertyConstant getProperty()
-            {
+        public PropertyConstant getProperty() {
             return f_idProp;
-            }
+        }
 
         @Override
-        public int proceed(Frame frameCaller, Frame.Continuation continuation)
-            {
+        public int proceed(Frame frameCaller, Frame.Continuation continuation) {
             ObjectHandle hThis = frameCaller.getThis();
 
-            switch (hThis.getTemplate().getPropertyValue(frameCaller, hThis, f_idProp, Op.A_STACK))
-                {
-                case Op.R_NEXT:
-                    return continuation.proceed(frameCaller);
+            switch (hThis.getTemplate().getPropertyValue(frameCaller, hThis, f_idProp, Op.A_STACK)) {
+            case Op.R_NEXT:
+                return continuation.proceed(frameCaller);
 
-                case Op.R_CALL:
-                    frameCaller.m_frameNext.addContinuation(continuation);
-                    return Op.R_CALL;
+            case Op.R_CALL:
+                frameCaller.m_frameNext.addContinuation(continuation);
+                return Op.R_CALL;
 
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
 
-                case Op.R_REPEAT:
-                    return Op.R_REPEAT;
+            case Op.R_REPEAT:
+                return Op.R_REPEAT;
 
-                default:
-                    throw new IllegalStateException();
-                }
-            }
-
-        @Override
-        public String toString()
-            {
-            return "Deferred property access: " + f_idProp.getName();
+            default:
+                throw new IllegalStateException();
             }
         }
+
+        @Override
+        public String toString() {
+            return "Deferred property access: " + f_idProp.getName();
+        }
+    }
 
     /**
      * DeferredSingletonHandle represents a deferred singleton calculation, which would place the
@@ -1010,45 +867,38 @@ public abstract class ObjectHandle
      * Note: this handle cannot be allocated naturally and must be processed in a special way.
      */
     public static class DeferredSingletonHandle
-            extends DeferredCallHandle
-        {
+            extends DeferredCallHandle {
         private final SingletonConstant f_constSingleton;
 
-        public DeferredSingletonHandle(SingletonConstant constSingleton)
-            {
+        public DeferredSingletonHandle(SingletonConstant constSingleton) {
             super((ExceptionHandle) null);
 
             f_constSingleton = constSingleton;
-            }
+        }
 
         @Override
-        public void addContinuation(Frame.Continuation continuation)
-            {
+        public void addContinuation(Frame.Continuation continuation) {
             throw new UnsupportedOperationException();
-            }
+        }
 
-        public SingletonConstant getConstant()
-            {
+        public SingletonConstant getConstant() {
             return f_constSingleton;
-            }
+        }
 
         @Override
-        public int proceed(Frame frameCaller, Frame.Continuation continuation)
-            {
+        public int proceed(Frame frameCaller, Frame.Continuation continuation) {
             return Utils.initConstants(frameCaller, Collections.singletonList(f_constSingleton),
-                frame ->
-                    {
+                frame -> {
                     frame.pushStack(f_constSingleton.getHandle());
                     return continuation.proceed(frame);
-                    });
-            }
+                });
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return "Deferred initialization for " + f_constSingleton;
-            }
         }
+    }
 
     /**
      * DeferredArrayHandle represents a deferred array initialization, which would place the array
@@ -1057,277 +907,237 @@ public abstract class ObjectHandle
      * Note: this handle cannot be allocated naturally and must be processed in a special way.
      */
     public static class DeferredArrayHandle
-            extends DeferredCallHandle
-        {
+            extends DeferredCallHandle {
         private final TypeComposition f_clzArray;
         private final ObjectHandle[]  f_ahValue;
 
-        public DeferredArrayHandle(TypeComposition clzArray, ObjectHandle[] ahValue)
-            {
+        public DeferredArrayHandle(TypeComposition clzArray, ObjectHandle[] ahValue) {
             super((ExceptionHandle) null);
 
             f_clzArray = clzArray;
             f_ahValue  = ahValue;
-            }
+        }
 
         @Override
-        public TypeConstant getType()
-            {
+        public TypeConstant getType() {
             return augmentType(f_clzArray.getType());
-            }
+        }
 
         @Override
-        public ObjectHandle revealOrigin()
-            {
+        public ObjectHandle revealOrigin() {
             return this;
-            }
+        }
 
         @Override
-        public void addContinuation(Frame.Continuation continuation)
-            {
+        public void addContinuation(Frame.Continuation continuation) {
             throw new UnsupportedOperationException();
-            }
+        }
 
         @Override
-        public int proceed(Frame frameCaller, Frame.Continuation continuation)
-            {
+        public int proceed(Frame frameCaller, Frame.Continuation continuation) {
             Frame.Continuation stepAssign = frame -> frame.pushStack(
                     xArray.createImmutableArray(f_clzArray, f_ahValue));
 
-            switch (new Utils.GetArguments(f_ahValue, stepAssign).doNext(frameCaller))
-                {
-                case Op.R_NEXT:
-                    return continuation.proceed(frameCaller);
+            switch (new Utils.GetArguments(f_ahValue, stepAssign).doNext(frameCaller)) {
+            case Op.R_NEXT:
+                return continuation.proceed(frameCaller);
 
-                case Op.R_CALL:
-                    frameCaller.m_frameNext.addContinuation(continuation);
-                    return Op.R_CALL;
+            case Op.R_CALL:
+                frameCaller.m_frameNext.addContinuation(continuation);
+                return Op.R_CALL;
 
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
 
-                default:
-                    throw new IllegalStateException();
-                }
-            }
-
-        @Override
-        public String toString()
-            {
-            return "Deferred array initialization: " + getType();
+            default:
+                throw new IllegalStateException();
             }
         }
+
+        @Override
+        public String toString() {
+            return "Deferred array initialization: " + getType();
+        }
+    }
 
     /**
      * A handle that is used for transient fields access.
      */
     public static class TransientId
-            extends ObjectHandle
-        {
-        protected TransientId()
-            {
+            extends ObjectHandle {
+        protected TransientId() {
             super(null);
 
             f_nHash = s_hashCode.getAndAdd(0x61c88647); // see ThreadLocal.java
-            }
+        }
 
         @Override
-        public int hashCode()
-            {
+        public int hashCode() {
             return f_nHash;
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return "Transient";
-            }
+        }
 
         private final int f_nHash;
 
         private static final AtomicInteger s_hashCode = new AtomicInteger();
-        }
+    }
 
     /**
      * A handle that is used during circular singleton initialization process.
      */
     public static class InitializingHandle
-            extends ObjectHandle
-        {
+            extends ObjectHandle {
         private final SingletonConstant f_constSingleton;
 
-        public InitializingHandle(SingletonConstant constSingleton)
-            {
+        public InitializingHandle(SingletonConstant constSingleton) {
             super(null);
 
             f_constSingleton = constSingleton;
-            }
+        }
 
         /**
          * @return the underlying initialized object or null
          */
-        public ObjectHandle getInitialized()
-            {
+        public ObjectHandle getInitialized() {
             ObjectHandle hConst = f_constSingleton.getHandle();
             return hConst == this ? null : hConst;
-            }
+        }
 
         /**
          * @return the underlying initialized object
          * @throws IllegalStateException if the underlying object is not yet initialized
          */
-        protected ObjectHandle assertInitialized()
-            {
+        protected ObjectHandle assertInitialized() {
             ObjectHandle hConst = f_constSingleton.getHandle();
-            if (hConst instanceof InitializingHandle)
-                {
+            if (hConst instanceof InitializingHandle) {
                 throw new IllegalStateException("Circular initialization \"" +
                         f_constSingleton.getValue().getValueString() + '"');
-                }
+            }
             return hConst;
-            }
+        }
 
         @Override
-        public ObjectHandle cloneAs(TypeComposition clazz)
-            {
+        public ObjectHandle cloneAs(TypeComposition clazz) {
             return assertInitialized().cloneAs(clazz);
-            }
+        }
 
         @Override
-        public ObjectHandle revealOrigin()
-            {
+        public ObjectHandle revealOrigin() {
             return assertInitialized().revealOrigin();
-            }
+        }
 
         @Override
-        public List<String> validateFields()
-            {
+        public List<String> validateFields() {
             return assertInitialized().validateFields();
-            }
+        }
 
         @Override
-        public boolean isSelfContained()
-            {
+        public boolean isSelfContained() {
             return assertInitialized().isSelfContained();
-            }
+        }
 
         @Override
-        public TypeComposition getComposition()
-            {
+        public TypeComposition getComposition() {
             return assertInitialized().getComposition();
-            }
+        }
 
         @Override
-        public TypeConstant getType()
-            {
+        public TypeConstant getType() {
             // we don't need to have a handle to answer the "type" question
             return f_constSingleton.getType();
-            }
+        }
 
         @Override
-        public boolean isPassThrough(Container container)
-            {
+        public boolean isPassThrough(Container container) {
             return assertInitialized().isPassThrough(container);
-            }
+        }
 
         @Override
-        public boolean isService()
-            {
+        public boolean isService() {
             return assertInitialized().isService();
-            }
+        }
 
         @Override
-        public ServiceHandle getService()
-            {
+        public ServiceHandle getService() {
             return assertInitialized().getService();
-            }
+        }
 
         @Override
-        public boolean isNativeEqual()
-            {
+        public boolean isNativeEqual() {
             return assertInitialized().isNativeEqual();
-            }
+        }
 
         @Override
-        public ObjectHandle maskAs(Container owner, TypeConstant typeAs)
-            {
+        public ObjectHandle maskAs(Container owner, TypeConstant typeAs) {
             return assertInitialized().maskAs(owner, typeAs);
-            }
+        }
 
         @Override
-        public ObjectHandle revealAs(Frame frame, TypeConstant typeAs)
-            {
+        public ObjectHandle revealAs(Frame frame, TypeConstant typeAs) {
             return assertInitialized().revealAs(frame, typeAs);
-            }
+        }
 
         @Override
-        public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited)
-            {
+        public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited) {
             return assertInitialized().isShared(container, mapVisited);
-            }
+        }
 
         @Override
-        public int compareTo(ObjectHandle that)
-            {
+        public int compareTo(ObjectHandle that) {
             return assertInitialized().compareTo(that);
-            }
+        }
 
         @Override
-        public int hashCode()
-            {
+        public int hashCode() {
             return assertInitialized().hashCode();
-            }
+        }
 
         @Override
-        public boolean equals(Object obj)
-            {
+        public boolean equals(Object obj) {
             return assertInitialized().equals(obj);
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             ObjectHandle hConst = getInitialized();
             return hConst == null ? "<initializing>" : hConst.toString();
-            }
         }
+    }
 
     /**
      * A handle that is used for blocking IO operations.
      */
     public static class NativeFutureHandle
-            extends ObjectHandle
-        {
-        protected NativeFutureHandle(CompletableFuture cf)
-            {
+            extends ObjectHandle {
+        protected NativeFutureHandle(CompletableFuture cf) {
             super(null);
 
             f_future = cf;
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return "Native: " + f_future;
-            }
+        }
 
         public final CompletableFuture f_future;
-        }
+    }
     /**
      * A handle that is used as an indicator for a default method argument value.
      */
-    public static final ObjectHandle DEFAULT = new ObjectHandle(null)
-        {
+    public static final ObjectHandle DEFAULT = new ObjectHandle(null) {
         @Override
-        public TypeConstant getType()
-            {
+        public TypeConstant getType() {
             return null;
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return "<default>";
-            }
-        };
-    }
+        }
+    };
+}

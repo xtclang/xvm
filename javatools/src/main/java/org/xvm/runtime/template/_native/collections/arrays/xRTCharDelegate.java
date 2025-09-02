@@ -29,307 +29,264 @@ import org.xvm.runtime.template.text.xChar;
  * Native RTDelegate<Char> implementation.
  */
 public class xRTCharDelegate
-        extends xRTDelegate
-    {
+        extends xRTDelegate {
     public static xRTCharDelegate INSTANCE;
 
-    public xRTCharDelegate(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTCharDelegate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
-        }
+    public void initNative() {
+    }
 
     @Override
-    public TypeConstant getCanonicalType()
-        {
+    public TypeConstant getCanonicalType() {
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
                 pool.typeChar());
-        }
+    }
 
     @Override
     public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cSize,
-                                         ObjectHandle[] ahContent, Mutability mutability)
-        {
+                                         ObjectHandle[] ahContent, Mutability mutability) {
         char[] ach = new char[cSize];
 
-        for (int i = 0, c = ahContent.length; i < c; i++)
-            {
+        for (int i = 0, c = ahContent.length; i < c; i++) {
             ach[i] = (char) ((JavaLong) ahContent[i]).getValue();
-            }
-        return new CharArrayHandle(getCanonicalClass(), ach, cSize, mutability);
         }
+        return new CharArrayHandle(getCanonicalClass(), ach, cSize, mutability);
+    }
 
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    public int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
-        {
+    public int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn) {
         CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
 
-        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
-            {
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION) {
             return Op.R_EXCEPTION;
-            }
+        }
 
         // we post increment to get the old value and check the range
         char chValue = hDelegate.m_achValue[(int) lIndex]++;
-        if (chValue == Character.MAX_VALUE)
-            {
+        if (chValue == Character.MAX_VALUE) {
             --hDelegate.m_achValue[(int) lIndex];
             return overflow(frame);
-            }
-        return frame.assignValue(iReturn, xChar.makeHandle(chValue+1));
         }
+        return frame.assignValue(iReturn, xChar.makeHandle(chValue+1));
+    }
 
     @Override
-    public int invokePreDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
-        {
+    public int invokePreDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn) {
         CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
 
-        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
-            {
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION) {
             return Op.R_EXCEPTION;
-            }
+        }
 
         // we post decrement to get the old value and check the range
         char chValue = hDelegate.m_achValue[(int) lIndex]--;
-        if (chValue == Character.MIN_VALUE)
-            {
+        if (chValue == Character.MIN_VALUE) {
             ++hDelegate.m_achValue[(int) lIndex];
             return overflow(frame);
-            }
-        return frame.assignValue(iReturn, xChar.makeHandle(chValue-1));
         }
+        return frame.assignValue(iReturn, xChar.makeHandle(chValue-1));
+    }
 
     @Override
-    public int invokePostInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
-        {
+    public int invokePostInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn) {
         CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
 
-        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
-            {
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION) {
             return Op.R_EXCEPTION;
-            }
+        }
 
         char chValue = hDelegate.m_achValue[(int) lIndex]++;
-        if (chValue == Character.MAX_VALUE)
-            {
+        if (chValue == Character.MAX_VALUE) {
             --hDelegate.m_achValue[(int) lIndex];
             return overflow(frame);
-            }
-        return frame.assignValue(iReturn, xChar.makeHandle(chValue));
         }
+        return frame.assignValue(iReturn, xChar.makeHandle(chValue));
+    }
 
     @Override
-    public int invokePostDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
-        {
+    public int invokePostDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn) {
         CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
 
-        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
-            {
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION) {
             return Op.R_EXCEPTION;
-            }
-
-        char chValue = hDelegate.m_achValue[(int) lIndex]--;
-        if (chValue == Character.MIN_VALUE)
-            {
-            ++hDelegate.m_achValue[(int) lIndex];
-            return overflow(frame);
-            }
-        return frame.assignValue(iReturn, xChar.makeHandle(chValue));
         }
 
+        char chValue = hDelegate.m_achValue[(int) lIndex]--;
+        if (chValue == Character.MIN_VALUE) {
+            ++hDelegate.m_achValue[(int) lIndex];
+            return overflow(frame);
+        }
+        return frame.assignValue(iReturn, xChar.makeHandle(chValue));
+    }
+
     @Override
-    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
-        {
+    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue) {
         CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
 
         Arrays.fill(hDelegate.m_achValue, 0, cSize, (char) ((JavaLong) hValue).getValue());
         hDelegate.m_cSize = cSize;
         return hDelegate;
-        }
+    }
 
     @Override
-    public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
+    public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
         CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
 
         return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_achValue.length));
-        }
+    }
 
     @Override
-    public int setPropertyCapacity(Frame frame, ObjectHandle hTarget, long nCapacity)
-        {
+    public int setPropertyCapacity(Frame frame, ObjectHandle hTarget, long nCapacity) {
         CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
 
         char[] achOld = hDelegate.m_achValue;
         int    nSize  = (int) hDelegate.m_cSize;
 
-        if (nCapacity < nSize)
-            {
+        if (nCapacity < nSize) {
             return frame.raiseException(
                 xException.illegalArgument(frame, "Capacity cannot be less then size"));
-            }
+        }
 
         // for now, no trimming
         int nCapacityOld = achOld.length;
-        if (nCapacity > nCapacityOld)
-            {
+        if (nCapacity > nCapacityOld) {
             char[] achNew = new char[(int) nCapacity];
             System.arraycopy(achOld, 0, achNew, 0, achOld.length);
             hDelegate.m_achValue = achNew;
-            }
-        return Op.R_NEXT;
         }
+        return Op.R_NEXT;
+    }
 
     @Override
     public int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         CharArrayHandle h1 = (CharArrayHandle) hValue1;
         CharArrayHandle h2 = (CharArrayHandle) hValue2;
 
         return frame.assignValue(iReturn,
                 xBoolean.makeHandle(Arrays.equals(h1.m_achValue, h2.m_achValue)));
-        }
+    }
 
     @Override
-    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
-        {
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
         CharArrayHandle h1 = (CharArrayHandle) hValue1;
         CharArrayHandle h2 = (CharArrayHandle) hValue2;
 
-        if (h1 == h2)
-            {
+        if (h1 == h2) {
             return true;
-            }
+        }
 
         return h1.getMutability() == h2.getMutability()
             && h1.m_cSize == h2.m_cSize
             && Arrays.equals(h1.m_achValue, h2.m_achValue);
-        }
+    }
 
     @Override
     protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
-                                            long ofStart, long cSize, boolean fReverse)
-        {
+                                            long ofStart, long cSize, boolean fReverse) {
         CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
 
         char[] achValue = Arrays.copyOfRange(
                 hDelegate.m_achValue, (int) ofStart, (int) (ofStart + cSize));
-        if (fReverse)
-            {
+        if (fReverse) {
             achValue = reverse(achValue, (int) cSize);
-            }
-
-        return new CharArrayHandle(hDelegate.getComposition(), achValue, (int) cSize, mutability);
         }
 
+        return new CharArrayHandle(hDelegate.getComposition(), achValue, (int) cSize, mutability);
+    }
+
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn)
-        {
+    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
         CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
 
         return frame.assignValue(iReturn, xChar.makeHandle(hDelegate.m_achValue[(int) lIndex]));
-        }
+    }
 
     @Override
     protected int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
-                                       ObjectHandle hValue)
-        {
+                                       ObjectHandle hValue) {
         CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
 
         int    cSize    = (int) hDelegate.m_cSize;
         char[] achValue = hDelegate.m_achValue;
         int    nIndex   = (int) lIndex;
 
-        if (nIndex >= cSize)
-            {
-            if (nIndex >= achValue.length)
-                {
+        if (nIndex >= cSize) {
+            if (nIndex >= achValue.length) {
                 achValue = hDelegate.m_achValue = grow(achValue, nIndex + 1);
-                }
+            }
 
             hDelegate.m_cSize = nIndex + 1;
-            }
+        }
 
         achValue[nIndex] = (char) ((JavaLong) hValue).getValue();
         return Op.R_NEXT;
-        }
+    }
 
     @Override
-    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex)
-        {
+    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex) {
         CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
         int             cSize     = (int) hDelegate.m_cSize;
         char[]          achValue  = hDelegate.m_achValue;
 
-        if (cSize == achValue.length)
-            {
+        if (cSize == achValue.length) {
             achValue = hDelegate.m_achValue = grow(hDelegate.m_achValue, cSize + 1);
-            }
+        }
         hDelegate.m_cSize++;
 
-        if (lIndex == cSize)
-            {
+        if (lIndex == cSize) {
             achValue[cSize] = (char) ((JavaLong) hElement).getValue();
-            }
-        else
-            {
+        } else {
             // insert
             int nIndex = (int) lIndex;
             System.arraycopy(achValue, nIndex, achValue, nIndex + 1, cSize - nIndex);
             achValue[nIndex] = (char) ((JavaLong) hElement).getValue();
-            }
         }
+    }
 
     @Override
-    protected void deleteElementImpl(DelegateHandle hTarget, long lIndex)
-        {
+    protected void deleteElementImpl(DelegateHandle hTarget, long lIndex) {
         CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
         int             cSize     = (int) hDelegate.m_cSize;
         char[]          achValue  = hDelegate.m_achValue;
         int             nIndex    = (int) lIndex;
 
-        if (nIndex < cSize - 1)
-            {
+        if (nIndex < cSize - 1) {
             System.arraycopy(achValue, nIndex + 1, achValue, nIndex, cSize - nIndex - 1);
-            }
-        achValue[(int) --hDelegate.m_cSize] = 0;
         }
+        achValue[(int) --hDelegate.m_cSize] = 0;
+    }
 
     @Override
-    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete)
-        {
+    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete) {
         CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
         int             cSize     = (int) hDelegate.m_cSize;
         char[]          achValue  = hDelegate.m_achValue;
         int             nIndex    = (int) lIndex;
         int             nDelete   = (int) cDelete;
 
-        if (nIndex < cSize - nDelete)
-            {
+        if (nIndex < cSize - nDelete) {
             System.arraycopy(achValue, nIndex + nDelete, achValue, nIndex, cSize - nIndex - nDelete);
-            }
-        hDelegate.m_cSize -= cDelete;
         }
+        hDelegate.m_cSize -= cDelete;
+    }
 
     @Override
     public int invokeIndexOf(Frame frame, DelegateHandle hTarget, DelegateHandle hThat,
-                             int ofStart, int[] aiReturn)
-        {
+                             int ofStart, int[] aiReturn) {
         // direct port of List.x implementation
         char[] achThis = ((CharArrayHandle) hTarget).m_achValue;
         char[] achThat = ((CharArrayHandle) hThat)  .m_achValue;
@@ -338,155 +295,130 @@ public class xRTCharDelegate
 
         ofStart = Math.max(ofStart, 0);
 
-        if (cchThat == 0)
-            {
+        if (cchThat == 0) {
             return ofStart > cchThis
                 ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
                 : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(ofStart));
-            }
-        if (ofStart > cchThis - cchThat)
-            {
+        }
+        if (ofStart > cchThis - cchThat) {
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
-            }
+        }
 
         char chFirstMatch = achThat[0];
         Next:
-        for (int of = ofStart, stopAt = cchThis - cchThat; of <= stopAt; ++of)
-            {
-            if (achThis[of] == chFirstMatch)
-                {
-                for (int i = 1; i < cchThat; ++i)
-                    {
-                    if (achThis[of + i] != achThat[i])
-                        {
+        for (int of = ofStart, stopAt = cchThis - cchThat; of <= stopAt; ++of) {
+            if (achThis[of] == chFirstMatch) {
+                for (int i = 1; i < cchThat; ++i) {
+                    if (achThis[of + i] != achThat[i]) {
                         continue Next;
-                        }
                     }
-                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(of));
                 }
+                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(of));
             }
+        }
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
-    }
+}
 
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    public static char[] getChars(CharArrayHandle hChars, int ofStart, int cChars, boolean fReverse)
-        {
+    public static char[] getChars(CharArrayHandle hChars, int ofStart, int cChars, boolean fReverse) {
         char[] ach = hChars.m_achValue;
 
         if (hChars.getMutability() == Mutability.Constant &&
-                ofStart == 0 && cChars == ach.length && !fReverse)
-            {
+                ofStart == 0 && cChars == ach.length && !fReverse) {
             return ach;
-            }
+        }
 
         ach = Arrays.copyOfRange(ach, ofStart, ofStart + cChars);
         return fReverse ? reverse(ach, cChars) : ach;
-        }
+    }
 
-    private static char[] reverse(char[] achValue, int cSize)
-        {
+    private static char[] reverse(char[] achValue, int cSize) {
         char[] achValueR = new char[cSize];
-        for (int i = 0; i < cSize; i++)
-            {
+        for (int i = 0; i < cSize; i++) {
             achValueR[i] = achValue[cSize - 1 - i];
-            }
-        return achValueR;
         }
+        return achValueR;
+    }
 
-    private char[] grow(char[] achValue, int cSize)
-        {
+    private char[] grow(char[] achValue, int cSize) {
         int cCapacity = calculateCapacity(achValue.length, cSize);
 
         char[] achNew = new char[cCapacity];
         System.arraycopy(achValue, 0, achNew, 0, achValue.length);
         return achNew;
-        }
+    }
 
     public static class CharArrayHandle
-            extends DelegateHandle
-        {
+            extends DelegateHandle {
         protected char[] m_achValue;
 
         protected CharArrayHandle(TypeComposition clazz, char[] achValue,
-                                  int cSize, Mutability mutability)
-            {
+                                  int cSize, Mutability mutability) {
             super(clazz, mutability);
 
             m_achValue = achValue;
             m_cSize    = cSize;
-            }
+        }
 
         @Override
-        public boolean makeImmutable()
-            {
-            if (isMutable())
-                {
+        public boolean makeImmutable() {
+            if (isMutable()) {
                 purgeUnusedSpace();
-                }
-            return super.makeImmutable();
             }
+            return super.makeImmutable();
+        }
 
-        protected void purgeUnusedSpace()
-            {
+        protected void purgeUnusedSpace() {
             char[] ach = m_achValue;
             int    c   = (int) m_cSize;
-            if (ach.length != c)
-                {
+            if (ach.length != c) {
                 char[] achNew = new char[c];
                 System.arraycopy(ach, 0, achNew, 0, c);
                 m_achValue = achNew;
-                }
             }
+        }
 
         @Override
-        public int compareTo(ObjectHandle that)
-            {
+        public int compareTo(ObjectHandle that) {
             char[] achThis = m_achValue;
             int    cThis   = (int) m_cSize;
             char[] achThat = ((CharArrayHandle) that).m_achValue;
             int    cThat   = (int) ((CharArrayHandle) that).m_cSize;
 
-            if (cThis != cThat)
-                {
+            if (cThis != cThat) {
                 return cThis - cThat;
-                }
+            }
 
-            for (int i = 0; i < cThis; i++)
-                {
+            for (int i = 0; i < cThis; i++) {
                 int iDiff = achThis[i] - achThat[i];
-                if (iDiff != 0)
-                    {
+                if (iDiff != 0) {
                     return iDiff;
-                    }
                 }
+            }
             return 0;
-            }
+        }
 
         @Override
-        public int hashCode()
-            {
+        public int hashCode() {
             return Arrays.hashCode(m_achValue);
-            }
+        }
 
         @Override
-        public boolean equals(Object obj)
-            {
+        public boolean equals(Object obj) {
             return obj instanceof CharArrayHandle
                 && Arrays.equals(m_achValue, ((CharArrayHandle) obj).m_achValue);
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             // for debugging only
             return String.copyValueOf(m_achValue, 0, (int) m_cSize);
-            }
-        }
-
-    public CharArrayHandle makeHandle(char[] ach, Mutability mutability)
-        {
-        return new CharArrayHandle(getCanonicalClass(), ach, ach.length, mutability);
         }
     }
+
+    public CharArrayHandle makeHandle(char[] ach, Mutability mutability) {
+        return new CharArrayHandle(getCanonicalClass(), ach, ach.length, mutability);
+    }
+}

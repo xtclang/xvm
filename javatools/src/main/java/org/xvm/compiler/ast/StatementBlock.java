@@ -85,89 +85,76 @@ import org.xvm.util.Severity;
  * </ol>
  */
 public class StatementBlock
-        extends Statement
-    {
+        extends Statement {
     // ----- constructors --------------------------------------------------------------------------
 
-    public StatementBlock(List<Statement> stmts)
-        {
+    public StatementBlock(List<Statement> stmts) {
         this(stmts, null,
                 stmts.isEmpty() ? 0L : stmts.getFirst().getStartPosition(),
                 stmts.isEmpty() ? 0L : stmts.getLast().getEndPosition());
-        }
+    }
 
-    public StatementBlock(List<Statement> stmts, long lStartPos, long lEndPos)
-        {
+    public StatementBlock(List<Statement> stmts, long lStartPos, long lEndPos) {
         this(stmts, null, lStartPos, lEndPos);
-        }
+    }
 
-    public StatementBlock(List<Statement> stmts, Source source, long lStartPos, long lEndPos)
-        {
+    public StatementBlock(List<Statement> stmts, Source source, long lStartPos, long lEndPos) {
         this.stmts     = stmts;
         this.source    = source;
         this.lStartPos = lStartPos;
         this.lEndPos   = lEndPos;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
-    public List<Statement> getStatements()
-        {
+    public List<Statement> getStatements() {
         return stmts;
-        }
+    }
 
-    public void addStatement(Statement stmt)
-        {
+    public void addStatement(Statement stmt) {
         stmt.setParent(this);
 
         boolean fHasEnclosed = containsEnclosed;
         boolean fAddEnclosed = stmt instanceof StatementBlock block && block.boundary;
         assert !(fHasEnclosed & fAddEnclosed);
-        if (fHasEnclosed)
-            {
+        if (fHasEnclosed) {
             // insert the new statement before the "enclosed" statements
             stmts.add(stmts.size()-1, stmt);
-            }
-        else
-            {
+        } else {
             stmts.add(stmt);
             containsEnclosed |= fAddEnclosed;
-            }
         }
+    }
 
     /**
      * Mark the statement block as representing a file boundary, such that the parent (if any) and
      * each of the child (if any) statements are each assumed to be from separate files.
      */
-    protected void markFileBoundary()
-        {
+    protected void markFileBoundary() {
         boundary = true;
-        }
+    }
 
     /**
      * @return true if this StatementBlock has been marked as a file boundary
      */
-    public boolean isFileBoundary()
-        {
+    public boolean isFileBoundary() {
         return boundary;
-        }
+    }
 
     /**
      * Indicate that the StatementBlock should explicitly suppress its ENTER/EXIT scope.
      */
-    public void suppressScope()
-        {
+    public void suppressScope() {
         m_fSuppressScope = true;
-        }
+    }
 
     /**
      * @return true iff the StatementBlock has its own ENTER/EXIT scope
      */
-    public boolean hasScope()
-        {
+    public boolean hasScope() {
         return !m_fSuppressScope;
-        }
+    }
 
     /**
      * Register an import statement that occurs within this StatementBlock.
@@ -175,35 +162,28 @@ public class StatementBlock
      * @param stmt  the ImportStatement to register
      * @param errs  the ErrorListener to use to log any errors
      */
-    protected void registerImport(ImportStatement stmt, ErrorListener errs)
-        {
-        if (stmt.isWildcard())
-            {
-            if (importsWild == null)
-                {
+    protected void registerImport(ImportStatement stmt, ErrorListener errs) {
+        if (stmt.isWildcard()) {
+            if (importsWild == null) {
                 importsWild = new ArrayList<>();
-                }
-            importsWild.add(stmt);
             }
-        else
-            {
-            if (imports == null)
-                {
+            importsWild.add(stmt);
+        } else {
+            if (imports == null) {
                 imports = new HashMap<>();
-                }
+            }
 
             // make sure that no existing import uses the same alias
             String sAlias = stmt.getAliasName();
-            if (imports.containsKey(sAlias))
-                {
+            if (imports.containsKey(sAlias)) {
                 log(errs, Severity.ERROR, Compiler.DUPLICATE_IMPORT, sAlias);
                 // fall through; don't stop compilation at this point, and just use the new import to
                 // overwrite the old
-                }
+            }
 
             imports.put(stmt.getAliasName(), stmt);
-            }
         }
+    }
 
     /**
      * Obtain the ImportStatement for a particular import alias. This method has different behaviors
@@ -226,96 +206,78 @@ public class StatementBlock
      *
      * @return the ImportStatement, or null
      */
-    public ImportStatement getImport(String sName, Token name, ErrorListener errs)
-        {
-        if (imports != null)
-            {
+    public ImportStatement getImport(String sName, Token name, ErrorListener errs) {
+        if (imports != null) {
             ImportStatement stmt = imports.get(sName);
             if (stmt != null &&
-                    (name == null || name.getStartPosition() > stmt.getStartPosition()))
-                {
+                    (name == null || name.getStartPosition() > stmt.getStartPosition())) {
                 return stmt;
-                }
             }
+        }
 
-        if (importsWild != null)
-            {
+        if (importsWild != null) {
             ImportStatement stmtResult = null;
-            for (ImportStatement stmt : importsWild)
-                {
-                if (name != null && name.getStartPosition() < stmt.getStartPosition())
-                    {
+            for (ImportStatement stmt : importsWild) {
+                if (name != null && name.getStartPosition() < stmt.getStartPosition()) {
                     continue;
-                    }
+                }
                 Constant constant = stmt.getNameResolver().getConstant();
-                if (constant instanceof IdentityConstant id && constant.isClass())
-                    {
+                if (constant instanceof IdentityConstant id && constant.isClass()) {
                     ClassStructure clz = (ClassStructure) id.getComponent();
-                    if (clz != null)
-                        {
+                    if (clz != null) {
                         Component child = clz.getChild(sName);
-                        if (child instanceof ClassStructure || child instanceof TypedefStructure)
-                            {
-                            if (stmtResult == null)
-                                {
+                        if (child instanceof ClassStructure || child instanceof TypedefStructure) {
+                            if (stmtResult == null) {
                                 stmtResult = stmt;
-                                }
-                            else
-                                {
+                            } else {
                                 stmt.log(errs, Severity.ERROR, Compiler.DUPLICATE_IMPORT, sName);
                                 break;
-                                }
                             }
                         }
                     }
                 }
-
-            return stmtResult;
             }
 
-        return null;
+            return stmtResult;
         }
 
+        return null;
+    }
+
     @Override
-    protected AstNode getCodeContainer()
-        {
+    protected AstNode getCodeContainer() {
         AstNode parent = getParent();
         if (       parent instanceof MethodDeclarationStatement
                 || parent instanceof NewExpression
                 || parent instanceof LambdaExpression
-                || parent instanceof StatementExpression)
-            {
+                || parent instanceof StatementExpression) {
             return parent;
-            }
-
-        return super.getCodeContainer();
         }
 
+        return super.getCodeContainer();
+    }
+
     @Override
-    public Source getSource()
-        {
+    public Source getSource() {
         return source == null
                 ? super.getSource()
                 : source;
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return lStartPos;
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return lEndPos;
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
@@ -323,15 +285,13 @@ public class StatementBlock
     /**
      * @return true iff the compilation of this block terminated abnormally
      */
-    public boolean isTerminatedAbnormally()
-        {
-        if (m_fTerminatedAbnormally)
-            {
+    public boolean isTerminatedAbnormally() {
+        if (m_fTerminatedAbnormally) {
             return true;
-            }
+        }
         StatementBlock parentBlock = getParentBlock();
         return parentBlock != null && parentBlock.isTerminatedAbnormally();
-        }
+    }
 
     /**
      * Generate assembly code for a method. This is the entry point for the compilation of a method.
@@ -341,10 +301,9 @@ public class StatementBlock
      *
      * @return true if nothing occurred during the compilation that should stop further progress
      */
-    public boolean compileMethod(Code code, ErrorListener errs)
-        {
+    public boolean compileMethod(Code code, ErrorListener errs) {
         return compileMethod(new RootContext(this, code.getMethodStructure()), code, errs);
-        }
+    }
 
     /**
      * Generate assembly code for a method and the specified context.
@@ -355,33 +314,28 @@ public class StatementBlock
      *
      * @return true if nothing occurred during the compilation that should stop further progress
      */
-    public boolean compileMethod(RootContext ctx, Code code, ErrorListener errs)
-        {
+    public boolean compileMethod(RootContext ctx, Code code, ErrorListener errs) {
         ErrorListener errsValidation = errs.branch(this);
 
         Statement that = this.validate(ctx.validatingContext(), errsValidation);
 
         errsValidation.merge();
 
-        if (that == null || errsValidation.hasSeriousErrors() || errsValidation.isAbortDesired())
-            {
+        if (that == null || errsValidation.hasSeriousErrors() || errsValidation.isAbortDesired()) {
             return false;
-            }
+        }
 
         boolean   fCompletes = that.completes(ctx.emittingContext(code), true, code, errs);
         BinaryAST astRoot    = ctx.getHolder().getAst(this);
 
-        if (fCompletes)
-            {
+        if (fCompletes) {
             TypeConstant[] atypeReturn = code.getMethodStructure().getReturnTypes();
-            if (atypeReturn.length == 0 || isVoid(atypeReturn))
-                {
+            if (atypeReturn.length == 0 || isVoid(atypeReturn)) {
                 // a void method has an implicit "return;" at the end of it
                 code.add(new Return_0());
 
                 // add the return statement to the BinaryAST
-                if (astRoot instanceof StmtBlockAST astBlock)
-                    {
+                if (astRoot instanceof StmtBlockAST astBlock) {
                     BinaryAST[] oldStmts = astBlock.getStmts();
                     int         oldSize  = oldStmts.length;
                     int         newSize  = oldSize + 1;
@@ -389,105 +343,85 @@ public class StatementBlock
                     System.arraycopy(oldStmts, 0, newStmts, 0, oldSize);
                     newStmts[oldSize] = new ReturnStmtAST(ExprAST.NO_EXPRS);
                     astRoot = new StmtBlockAST(newStmts, true);
-                    }
                 }
-            else
-                {
+            } else {
                 errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, getSource(),
                         getEndPosition(), getEndPosition());
-                }
             }
-        else
-            {
+        } else {
             // it is possible that there is a dangling label at the end that is unreachable,
             // and it will not have been eliminated at this point, so "cap" the op code stream
             // with a Nop that will get removed by "dead code elimination"
             code.add(new Nop());
-            }
+        }
 
         ctx.getMethod().setAst(astRoot, ctx.collectParameters());
         return true;
-        }
+    }
 
     @Override
-    protected Statement validateImpl(Context ctx, ErrorListener errs)
-        {
+    protected Statement validateImpl(Context ctx, ErrorListener errs) {
         List<Statement> stmts  = this.stmts;
         boolean         fValid = true;
-        if (stmts != null && !stmts.isEmpty())
-            {
-            if (hasScope())
-                {
+        if (stmts != null && !stmts.isEmpty()) {
+            if (hasScope()) {
                 ctx = new NestedBlockContext(ctx);
-                }
+            }
 
             AstNode parent = getParent();
-            if (parent instanceof LambdaExpression exprLambda)
-                {
+            if (parent instanceof LambdaExpression exprLambda) {
                 // go through all the parameters looking for any implicit de-reference params
                 // (a new local variable will be created for each, effectively hiding the original
                 // parameter)
                 MethodStructure method = exprLambda.getLambda();
-                if (method != null)
-                    {
-                    for (org.xvm.asm.Parameter param : method.getParamArray())
-                        {
-                        if (param.isImplicitDeref())
-                            {
+                if (method != null) {
+                    for (org.xvm.asm.Parameter param : method.getParamArray()) {
+                        if (param.isImplicitDeref()) {
                             String     sName  = param.getName();
                             Register   regVar = (Register) ctx.getVar(sName);
                             Assignment asnVar = ctx.getVarAssignment(sName);
                             Register   regVal = param.deref(regVar, method);
 
                             ctx.ensureNameMap().put(sName, regVal); // shadow using the capture
-                            ctx.setVarAssignment(sName, asnVar);    // ... and copy its assignment                    }
-                            }
+                            ctx.setVarAssignment(sName, asnVar);    // ... and copy its assignment                }
                         }
                     }
-                }
-
-            for (int i = 0, c = stmts.size(); i < c; ++i)
-                {
-                Statement stmtOld = stmts.get(i);
-                Statement stmtNew = stmtOld.validate(ctx, errs);
-                if (stmtNew != stmtOld)
-                    {
-                    if (stmtNew == null)
-                        {
-                        fValid = false;
-                        }
-                    else
-                        {
-                        this.stmts = ensureArrayList(stmts);
-                        stmts.set(i, stmtNew);
-                        }
-                    }
-
-                if (errs.isAbortDesired())
-                    {
-                    break;
-                    }
-                }
-
-            if (hasScope())
-                {
-                ctx.exit();
                 }
             }
 
-        return fValid ? this : null;
+            for (int i = 0, c = stmts.size(); i < c; ++i) {
+                Statement stmtOld = stmts.get(i);
+                Statement stmtNew = stmtOld.validate(ctx, errs);
+                if (stmtNew != stmtOld) {
+                    if (stmtNew == null) {
+                        fValid = false;
+                    } else {
+                        this.stmts = ensureArrayList(stmts);
+                        stmts.set(i, stmtNew);
+                    }
+                }
+
+                if (errs.isAbortDesired()) {
+                    break;
+                }
+            }
+
+            if (hasScope()) {
+                ctx.exit();
+            }
         }
 
+        return fValid ? this : null;
+    }
+
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
-        {
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         boolean fCompletable = fReachable;
 
         AstHolder       holder = ctx.getHolder();
         List<Statement> stmts  = this.stmts;
         BinaryAST[]     asts   = BinaryAST.NO_ASTS;
-        if (stmts != null && !stmts.isEmpty())
-            {
+        if (stmts != null && !stmts.isEmpty()) {
             // there is an implicit scope for the top-most statement block of a method
             AstNode parent         = getParent();
             boolean fMethod        = parent instanceof MethodDeclarationStatement;
@@ -495,16 +429,13 @@ public class StatementBlock
             boolean fSuppressScope = fMethod | fLambda | m_fSuppressScope;
 
             ArrayList<BinaryAST> listAsts = new ArrayList<>(stmts.size());
-            if (fLambda)
-                {
+            if (fLambda) {
                 // go through all the parameters looking for any implicit de-reference params
                 // (a new local variable will be created for each, effectively hiding the original
                 // parameter)
                 MethodStructure method = ((LambdaExpression) parent).getLambda();
-                for (org.xvm.asm.Parameter param : method.getParamArray())
-                    {
-                    if (param.isImplicitDeref())
-                        {
+                for (org.xvm.asm.Parameter param : method.getParamArray()) {
+                    if (param.isImplicitDeref()) {
                         Register regVar = (Register) ctx.getVar(param.getName());
                         Register regVal = param.deref(regVar, method);
                         code.add(new Var_C(regVal, regVar));
@@ -512,182 +443,151 @@ public class StatementBlock
                         BinaryAST astAssign = new AssignAST(regVal.getRegAllocAST(),
                             AssignAST.Operator.Deref, regVar.getRegisterAST());
                         listAsts.add(astAssign);
-                        }
                     }
                 }
-            else if (fMethod)
-                {
+            } else if (fMethod) {
                 RootContext ctxRoot = (RootContext) ctx;
-                if (ctxRoot.isAnonInnerClass())
-                    {
+                if (ctxRoot.isAnonInnerClass()) {
                     Map<String, Register> mapCapture = ctxRoot.m_mapCaptureVars;
-                    if (mapCapture != null)
-                        {
+                    if (mapCapture != null) {
                         assert !code.hasOps();
                         NewExpression  exprNew = ctxRoot.getAnonymousInnerClassExpression();
                         ClassStructure clzAnon = ctxRoot.getEnclosingClass();
-                        for (Map.Entry<String, Register> entry : mapCapture.entrySet())
-                            {
+                        for (Map.Entry<String, Register> entry : mapCapture.entrySet()) {
                             String            sName   = entry.getKey();
                             Register          reg     = entry.getValue();
                             PropertyStructure prop    = (PropertyStructure) clzAnon.getChild(sName);
                             PropertyConstant  id      = prop.getIdentityConstant();
                             ExprAST           astProp = new ConstantExprAST(id);
 
-                            if (exprNew.isImplicitDeref(sName))
-                                {
+                            if (exprNew.isImplicitDeref(sName)) {
                                 code.add(new Var_CN(reg, id.getNameConstant(), id));
 
                                 listAsts.add(new AssignAST(
                                         reg.getRegAllocAST(), AssignAST.Operator.Deref, astProp));
-                                }
-                            else
-                                {
+                            } else {
                                 code.add(new Var_IN(reg, id.getNameConstant(), id));
 
                                 listAsts.add(new AssignAST(
                                         reg.getRegAllocAST(), AssignAST.Operator.Asn, astProp));
-                                }
                             }
                         }
                     }
                 }
+            }
 
-            if (!fSuppressScope)
-                {
+            if (!fSuppressScope) {
                 code.add(new Enter());
-                }
+            }
 
             boolean fLoggedUnreachable = false;
-            for (Statement stmt : stmts)
-                {
-                if (!fReachable && !fLoggedUnreachable && !(stmt instanceof ComponentStatement))
-                    {
+            for (Statement stmt : stmts) {
+                if (!fReachable && !fLoggedUnreachable && !(stmt instanceof ComponentStatement)) {
                     stmt.log(errs, Severity.ERROR, Compiler.NOT_REACHABLE);
                     fLoggedUnreachable = true;
-                    }
+                }
 
                 fCompletable &= stmt.completes(ctx, fReachable, code, errs);
 
-                if (fReachable && !(stmt instanceof ComponentStatement))
-                    {
+                if (fReachable && !(stmt instanceof ComponentStatement)) {
                     BinaryAST bast = holder.getAst(stmt);
-                    if (bast == BinaryAST.POISON)
-                        {
-                        if (!errs.hasSeriousErrors())
-                            {
+                    if (bast == BinaryAST.POISON) {
+                        if (!errs.hasSeriousErrors()) {
                             stmt.log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED,
                                 "BAST for " + stmt.getClass().getSimpleName());
-                            }
+                        }
                         return false;
-                        }
-                    if (bast != null)
-                        {
-                        listAsts.add(bast);
-                        }
                     }
+                    if (bast != null) {
+                        listAsts.add(bast);
+                    }
+                }
 
-                if (fReachable && !fCompletable)
-                    {
-                    if (stmt.isTodo())
-                        {
+                if (fReachable && !fCompletable) {
+                    if (stmt.isTodo()) {
                         // T0D0 expression is allowed to have stuff that follows it that is unreachable
                         m_fTerminatedAbnormally = true;
                         break;
-                        }
+                    }
 
                     fReachable = false;
-                    }
                 }
+            }
 
-            if (!fSuppressScope)
-                {
+            if (!fSuppressScope) {
                 code.add(new Exit());
-                }
+            }
 
             asts = listAsts.toArray(BinaryAST.NO_ASTS);
-            }
+        }
 
         holder.setAst(this, new StmtBlockAST(asts, hasScope()));
         return fCompletable;
-        }
+    }
 
 
     // ----- name resolution -----------------------------------------------------------------------
 
     @Override
-    protected ImportStatement resolveImportBySingleName(String sName, ErrorListener errs)
-        {
+    protected ImportStatement resolveImportBySingleName(String sName, ErrorListener errs) {
         // if this is a synthetic block statement that acts as a collection of multiple files, then
         // the search for the import has just crossed a file boundary, and nothing was found
-        if (isFileBoundary())
-            {
+        if (isFileBoundary()) {
             return null;
-            }
+        }
 
         ImportStatement stmtImport = getImport(sName, null, errs);
         return stmtImport == null
                 ? super.resolveImportBySingleName(sName, errs)
                 : stmtImport;
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
-        if (stmts == null || stmts.isEmpty())
-            {
+    public String toString() {
+        if (stmts == null || stmts.isEmpty()) {
             return "{}";
-            }
+        }
 
         StringBuilder sb = new StringBuilder();
         sb.append('{');
 
         int firstNonEnum = 0;
         if (stmts.get(0) instanceof TypeCompositionStatement stmtType
-                && stmtType.category.getId() == Token.Id.ENUM_VAL)
-            {
+                && stmtType.category.getId() == Token.Id.ENUM_VAL) {
             boolean multiline = false;
-            for (Statement stmt : stmts)
-                {
+            for (Statement stmt : stmts) {
                 if (stmt instanceof TypeCompositionStatement stmtTypeComp &&
-                        stmtTypeComp.category.getId() == Id.ENUM_VAL)
-                    {
+                        stmtTypeComp.category.getId() == Id.ENUM_VAL) {
                     multiline |= stmtType.doc != null || stmtType.body != null;
                     ++firstNonEnum;
-                    }
                 }
+            }
 
             String sBetweenEnums = multiline ? ",\n" : ", ";
-            for (int i = 0; i < firstNonEnum; ++i)
-                {
-                if (i == 0)
-                    {
+            for (int i = 0; i < firstNonEnum; ++i) {
+                if (i == 0) {
                     sb.append('\n');
-                    }
-                else
-                    {
+                } else {
                     sb.append(sBetweenEnums);
-                    }
+                }
                 sb.append(stmts.get(i));
-                }
-            if (firstNonEnum < stmts.size())
-                {
-                sb.append(';');
-                }
             }
+            if (firstNonEnum < stmts.size()) {
+                sb.append(';');
+            }
+        }
 
-        for (int i = firstNonEnum, c = stmts.size(); i < c; ++i)
-            {
+        for (int i = firstNonEnum, c = stmts.size(); i < c; ++i) {
             sb.append('\n')
               .append(stmts.get(i));
-            }
+        }
         sb.append("\n}");
 
         return sb.toString();
-        }
+    }
 
 
     // ----- inner class: RootContext --------------------------------------------------------------
@@ -698,184 +598,153 @@ public class StatementBlock
      * the global names visible to the method.
      */
     public static class RootContext
-            extends Context
-        {
-        public RootContext(StatementBlock stmt, MethodStructure method)
-            {
+            extends Context {
+        public RootContext(StatementBlock stmt, MethodStructure method) {
             super(null, false);
             f_stmt   = stmt;
             f_method = method;
             f_holder = new AstHolder(); // temporary
-            }
+        }
 
         @Override
-        public MethodStructure getMethod()
-            {
+        public MethodStructure getMethod() {
             return f_method;
-            }
+        }
 
-        public StatementBlock getStatementBlock()
-            {
+        public StatementBlock getStatementBlock() {
             return f_stmt;
-            }
+        }
 
-        public AstHolder getHolder()
-            {
+        public AstHolder getHolder() {
             return f_holder;
-            }
+        }
 
         /**
          * @return true iff the code that is being compiled belongs to a class that is an anonymous
          *         inner class
          */
-        public boolean isAnonInnerClass()
-            {
+        public boolean isAnonInnerClass() {
             AstNode parent = getStatementBlock();
-            while (!(parent instanceof TypeCompositionStatement))
-                {
+            while (!(parent instanceof TypeCompositionStatement)) {
                 parent = parent.getParent();
-                }
-
-            return parent.getParent() instanceof NewExpression;
             }
 
-        public NewExpression getAnonymousInnerClassExpression()
-            {
+            return parent.getParent() instanceof NewExpression;
+        }
+
+        public NewExpression getAnonymousInnerClassExpression() {
             AstNode parent = getStatementBlock();
-            while (!(parent instanceof TypeCompositionStatement))
-                {
+            while (!(parent instanceof TypeCompositionStatement)) {
                 parent = parent.getParent();
-                }
+            }
 
             return parent.getParent() instanceof NewExpression exprNew
                     ? exprNew
                     : null;
-            }
+        }
 
         /**
          * @return the ClassStructure that contains the code being compiled
          */
-        public ClassStructure getEnclosingClass()
-            {
+        public ClassStructure getEnclosingClass() {
             AstNode parent = getStatementBlock();
-            while (!(parent instanceof TypeCompositionStatement))
-                {
+            while (!(parent instanceof TypeCompositionStatement)) {
                 parent = parent.getParent();
-                }
+            }
 
             return (ClassStructure) parent.getComponent();
-            }
+        }
 
         @Override
-        public Source getSource()
-            {
+        public Source getSource() {
             return getStatementBlock().getSource();
-            }
+        }
 
         @Override
-        public TypeConstant getThisType()
-            {
-            if (isAnonInnerClass())
-                {
+        public TypeConstant getThisType() {
+            if (isAnonInnerClass()) {
                 NewExpression exprNew = getAnonymousInnerClassExpression();
-                if (exprNew.isValidated())
-                    {
+                if (exprNew.isValidated()) {
                     return exprNew.getType();
-                    }
-                else
-                    {
+                } else {
                     Context ctxC = exprNew.getCaptureContext();
-                    if (ctxC != null)
-                        {
+                    if (ctxC != null) {
                         return ctxC.getThisClass().getFormalType();
-                        }
                     }
                 }
-            return super.getThisType();
             }
+            return super.getThisType();
+        }
 
         @Override
-        public ClassStructure getThisClass()
-            {
-            if (isAnonInnerClass())
-                {
+        public ClassStructure getThisClass() {
+            if (isAnonInnerClass()) {
                 NewExpression exprNew = getAnonymousInnerClassExpression();
                 return (ClassStructure) exprNew.anon.getComponent();
-                }
+            }
             return f_method.getContainingClass();
-            }
+        }
 
         @Override
-        public ConstantPool pool()
-            {
+        public ConstantPool pool() {
             return f_method.getConstantPool();
-            }
+        }
 
         @Override
-        public Context enterFork(boolean fWhenTrue)
-            {
+        public Context enterFork(boolean fWhenTrue) {
             checkValidating();
             throw new IllegalStateException();
-            }
+        }
 
         @Override
-        public Context enter()
-            {
+        public Context enter() {
             checkValidating();
             throw new IllegalStateException();
-            }
+        }
 
         @Override
-        public void registerVar(Token tokName, Register reg, ErrorListener errs)
-            {
+        public void registerVar(Token tokName, Register reg, ErrorListener errs) {
             checkValidating();
             throw new IllegalStateException();
-            }
+        }
 
         @Override
-        public void unregisterVar(Token tokName)
-            {
+        public void unregisterVar(Token tokName) {
             checkValidating();
             throw new IllegalStateException();
-            }
+        }
 
         @Override
-        public boolean isVarDeclaredInThisScope(String sName)
-            {
+        public boolean isVarDeclaredInThisScope(String sName) {
             Argument arg = getNameMap().get(sName);
-            if (arg instanceof Register reg)
-                {
+            if (arg instanceof Register reg) {
                 return reg.isUnknown() || !reg.isPredefined();
-                }
+            }
 
             return false;
-            }
+        }
 
         @Override
-        public Assignment getVarAssignment(String sName)
-            {
-            if (isReservedName(sName))
-                {
+        public Assignment getVarAssignment(String sName) {
+            if (isReservedName(sName)) {
                 return isReservedNameReadable(sName)
                         ? Assignment.AssignedOnce
                         : Assignment.Unassigned;
-                }
-
-            return super.getVarAssignment(sName);
             }
 
+            return super.getVarAssignment(sName);
+        }
+
         @Override
-        public boolean isVarReadable(String sName)
-            {
+        public boolean isVarReadable(String sName) {
             Assignment asn = getVarAssignment(sName);
-            if (asn != null)
-                {
+            if (asn != null) {
                 return asn.isDefinitelyAssigned();
-                }
+            }
 
             // the only other readable variable names are reserved variables
             return isReservedName(sName) && isReservedNameReadable(sName);
-            }
+        }
 
         /**
          * Determine if the specified reserved name is available (has a value) in this context.
@@ -884,90 +753,78 @@ public class StatementBlock
          *
          * @return true iff the reserved name is accessible in this context
          */
-        public boolean isReservedNameReadable(String sName)
-            {
+        public boolean isReservedNameReadable(String sName) {
             checkValidating();
 
-            switch (sName)
-                {
-                case "this":
-                case "this:class":
-                case "this:struct":
-                    return isMethod() || isConstructor();
+            switch (sName) {
+            case "this":
+            case "this:class":
+            case "this:struct":
+                return isMethod() || isConstructor();
 
-                case "this:target":
-                case "this:public":
-                case "this:protected":
-                case "this:private":
-                    return isMethod();
+            case "this:target":
+            case "this:public":
+            case "this:protected":
+            case "this:private":
+                return isMethod();
 
-                case "this:module":
-                case "this:service":
-                    return true;
+            case "this:module":
+            case "this:service":
+                return true;
 
-                case "super":
-                    {
-                    MethodStructure method = getMethod();
-                    if (!method.isSuperAllowed())
-                        {
-                        return false;
-                        }
-
-                    // if the current method is a property accessor, the containing property itself
-                    // may have private access
-                    MethodConstant idMethod   = method.getIdentityConstant();
-                    Access         access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
-                    TypeConstant   typeCtx    = pool().ensureAccessTypeConstant(getThisClass().getFormalType(), access);
-                    TypeInfo       info       = typeCtx.ensureTypeInfo();
-                    MethodInfo     infoMethod = info.getMethodById(idMethod);
-                    return infoMethod != null && infoMethod.hasSuper(info);
-                    }
-
-                default:
-                    throw new IllegalArgumentException("no such reserved name: " + sName);
+            case "super": {
+                MethodStructure method = getMethod();
+                if (!method.isSuperAllowed()) {
+                    return false;
                 }
+
+                // if the current method is a property accessor, the containing property itself
+                // may have private access
+                MethodConstant idMethod   = method.getIdentityConstant();
+                Access         access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
+                TypeConstant   typeCtx    = pool().ensureAccessTypeConstant(getThisClass().getFormalType(), access);
+                TypeInfo       info       = typeCtx.ensureTypeInfo();
+                MethodInfo     infoMethod = info.getMethodById(idMethod);
+                return infoMethod != null && infoMethod.hasSuper(info);
             }
 
+            default:
+                throw new IllegalArgumentException("no such reserved name: " + sName);
+            }
+        }
+
         @Override
-        public boolean requireThis(long lPos, ErrorListener errs)
-            {
+        public boolean requireThis(long lPos, ErrorListener errs) {
             AstNode parent   = f_stmt.getParent();
             boolean fHasThis = parent instanceof LambdaExpression exprLambda
                     ? exprLambda.isRequiredThis()
                     : !isFunction();
 
-            if (!fHasThis && errs != null)
-                {
+            if (!fHasThis && errs != null) {
                 errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
-                }
-            return fHasThis;
             }
+            return fHasThis;
+        }
 
         @Override
-        public void useFormalType(TypeConstant type, ErrorListener errs)
-            {
+        public void useFormalType(TypeConstant type, ErrorListener errs) {
             super.useFormalType(type, errs);
 
-            if (isAnonInnerClass())
-                {
+            if (isAnonInnerClass()) {
                 Context ctx = getAnonymousInnerClassExpression().getCaptureContext();
-                if (ctx != null)
-                    {
+                if (ctx != null) {
                     ctx.useFormalType(type, errs);
-                    }
                 }
             }
+        }
 
         @Override
-        public boolean isVarWritable(String sName)
-            {
+        public boolean isVarWritable(String sName) {
             Argument arg = ensureNameMap().get(sName);
-            if (arg instanceof Register reg)
-                {
+            if (arg instanceof Register reg) {
                 return reg.isWritable();
-                }
-            if (arg instanceof PropertyConstant)
-                {
+            }
+            if (arg instanceof PropertyConstant) {
                 // the context only answers the question of what the _first_ name is, so
                 // in the case of "a.b.c", this method is called only for "a", so if someone
                 // is asking if it's settable, then obviously there is no ".b.c" following;
@@ -976,45 +833,40 @@ public class StatementBlock
                 // a calculated property
                 // TODO: check for a calculated property
                 return true;
-                }
-
-            return false;
             }
 
+            return false;
+        }
+
         @Override
-        public boolean isVarHideable(String sName)
-            {
+        public boolean isVarHideable(String sName) {
             // if the var name is not available, then there is already a variable of that same name
             // registered in this context, which means that it is either an explicit parameter
             // (unhideable) or a capture variable (hideable)
             return super.isVarHideable(sName)
                     || isAnonInnerClass() && getMethod().getParam(sName) == null;
-            }
+        }
 
         @Override
         protected Argument resolveRegularName(Context ctxFrom, String sName, Token name,
-                                              ErrorListener errs)
-            {
+                                              ErrorListener errs) {
             checkValidating();
 
             // check if the name is a parameter name, or a global name that has already been looked
             // up and cached
             Map<String, Argument> mapByName = ensureNameMap();
             Argument              arg       = mapByName.get(sName);
-            if (arg != null)
-                {
+            if (arg != null) {
                 return arg;
-                }
+            }
 
             // check if the name specifies a capture variable from an anonymous inner class to its
             // enclosing method (the method containing the "new" expression that defines the
             // anonymous inner class); this needs to be checked up front, because otherwise we will
             // find the synthetic property of the same name as we walk up the component tree
-            if (isAnonInnerClass())
-                {
+            if (isAnonInnerClass()) {
                 NewExpression exprNew = getAnonymousInnerClassExpression();
-                if (exprNew.isCapture(sName))
-                    {
+                if (exprNew.isCapture(sName)) {
                     // the name refers to a capture variable, which was provided to the
                     // anonymous inner class via a synthetic property
                     PropertyStructure prop = (PropertyStructure) getEnclosingClass().getChild(sName);
@@ -1034,8 +886,8 @@ public class StatementBlock
                     ensureDefiniteAssignments().put(sName,
                             fFinal ? Assignment.AssignedOnce : Assignment.Assigned);
                     return reg;
-                    }
                 }
+            }
 
             // start with the current node, and one by one walk up to the root, asking at
             // each level for the node to resolve the name
@@ -1050,17 +902,12 @@ public class StatementBlock
             TypeInfo         infoPrev  = null;
             ErrorListener    errsTemp  = errs.branch(null);
             IdentityConstant idOuter   = getEnclosingClass().getIdentityConstant();
-            if (idOuter instanceof ClassConstant idClz)
-                {
+            if (idOuter instanceof ClassConstant idClz) {
                 idOuter = idClz.getOutermost();
-                }
-
-            while (node != null)
-                {
+            } while (node != null) {
                 // otherwise, if the node has a component associated with it that is
                 // prepared to resolve names, then ask it to resolve the name
-                if (node.isComponentNode())
-                    {
+                if (node.isComponentNode()) {
                     assert node.canResolveNames();
 
                     Component component = node.getComponent();
@@ -1075,62 +922,49 @@ public class StatementBlock
                     // REVIEW - shouldn't all of this resolution info be present on the TypeInfo? i.e. shouldn't we rely on the TypeInfo instead of the Component?
                     SimpleCollector collector  = new SimpleCollector(errs);
                     Constant        constFound = null;
-                    if (component.resolveName(sName, access, collector) == ResolutionResult.RESOLVED)
-                        {
+                    if (component.resolveName(sName, access, collector) == ResolutionResult.RESOLVED) {
                         Constant constant = collector.getResolvedConstant();
-                        switch (constant.getFormat())
-                            {
-                            // properties and methods will use the TypeInfo for resolution
-                            case Property:
-                            case Method:
-                            case MultiMethod:
-                                constFound = constant;
-                                break;
+                        switch (constant.getFormat()) {
+                        // properties and methods will use the TypeInfo for resolution
+                        case Property:
+                        case Method:
+                        case MultiMethod:
+                            constFound = constant;
+                            break;
 
-                            default:
-                                errsTemp.merge();
-                                return constant;
-                            }
+                        default:
+                            errsTemp.merge();
+                            return constant;
                         }
+                    }
 
                     // second attempt: ask the TypeInfo if it knows what the name refers to
                     // load the TypeInfo for the class that we are looking for names in
                     TypeInfo info;
-                    if (idPrev != null && idClz == idPrev)
-                        {
+                    if (idPrev != null && idClz == idPrev) {
                         info = infoPrev;
-                        }
-                    else
-                        {
+                    } else {
                         TypeConstant typeClz;
-                        if (typeThis == null)
-                            {
+                        if (typeThis == null) {
                             typeClz = ((ClassStructure) idClz.getComponent()).getFormalType();
                             typeClz = pool.ensureAccessTypeConstant(typeClz, access);
-                            }
-                        else if (typeThis.isRelationalType())
-                            {
+                        } else if (typeThis.isRelationalType()) {
                             typeClz = typeThis;
-                            }
-                        else
-                            {
+                        } else {
                             typeClz = pool.ensureAccessTypeConstant(typeThis,
                                 isConstructor() ? Access.STRUCT : Access.PRIVATE);
-                            }
+                        }
 
                         infoPrev = info = typeClz.ensureTypeInfo(errsTemp);
                         idPrev   = idClz;
-                        }
+                    }
 
-                    if (id == idClz)
-                        {
+                    if (id == idClz) {
                         // we're at a class level
                         IdentityConstant idResult = null;
                         PropertyInfo     prop     = info.findProperty(sName);
-                        if (prop == null)
-                            {
-                            if (info.containsMultiMethod(sName))
-                                {
+                        if (prop == null) {
+                            if (info.containsMultiMethod(sName)) {
                                 // we need to find a real multimethod structure now
                                 Set<MethodConstant> setMethods = info.findMethods(sName, -1, TypeInfo.MethodKind.Any);
                                 assert !setMethods.isEmpty();
@@ -1138,114 +972,85 @@ public class StatementBlock
                                 MethodConstant idMethod   = setMethods.iterator().next();
                                 MethodInfo     infoMethod = info.getMethodById(idMethod);
                                 idResult = infoMethod.getIdentity().getParentConstant();
-                                }
                             }
-                        else
-                            {
+                        } else {
                             idResult = prop.getIdentity();
-                            }
+                        }
 
-                        if (idResult != null)
-                            {
+                        if (idResult != null) {
                             return new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps);
-                            }
+                        }
 
-                        if (constFound != null)
-                            {
+                        if (constFound != null) {
                             // the name exists, but is not accessible
-                            if (constFound instanceof PropertyConstant)
-                                {
+                            if (constFound instanceof PropertyConstant) {
                                 f_stmt.log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
                                     sName, info.getType().getValueString());
-                                }
-                            else
-                                {
+                            } else {
                                 f_stmt.log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
                                     sName, info.getType().getValueString());
-                                }
-                            return null;
                             }
+                            return null;
+                        }
                         fHasThis &= !info.isStatic();
                         typeThis  = null;
                         ++cSteps;
-                        }
-                    else if (id instanceof PropertyConstant idProp)
-                        {
+                    } else if (id instanceof PropertyConstant idProp) {
                         // first, look for a property of the given name inside the current
                         // property
                         IdentityConstant idResult = null;
                         PropertyInfo     prop     = info.ensureNestedPropertiesByName(idProp).get(sName);
-                        if (prop == null)
-                            {
+                        if (prop == null) {
                             // second, look for any methods of the given name inside the
                             // current property
-                            if (info.containsNestedMultiMethod(idProp, sName))
-                                {
+                            if (info.containsNestedMultiMethod(idProp, sName)) {
                                 // the multi-method structure does not actually exist on the
                                 // class, but its methods exist in the TypeInfo
                                 idResult = pool.ensureMultiMethodConstant(id, sName);
-                                }
                             }
-                        else
-                            {
+                        } else {
                             idResult = prop.getIdentity().ensureNestedIdentity(pool, idProp);
-                            }
+                        }
 
-                        if (idResult == null)
-                            {
+                        if (idResult == null) {
                             PropertyInfo infoProp = info.findProperty(idProp, false);
                             assert infoProp != null;
 
-                            if (infoProp.hasField() && infoProp.isRefAnnotated())
-                                {
+                            if (infoProp.hasField() && infoProp.isRefAnnotated()) {
                                 ++cSteps;
-                                }
                             }
-                        else
-                            {
+                        } else {
                             return new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps);
-                            }
                         }
-                    else if (id instanceof MethodConstant idMethod)
-                        {
+                    } else if (id instanceof MethodConstant idMethod) {
                         // first, look for a property of the given name inside this method
                         IdentityConstant idResult = null;
                         PropertyInfo     prop     = info.ensureNestedPropertiesByName(idMethod).get(sName);
-                        if (prop == null)
-                            {
+                        if (prop == null) {
                             // second, look for any methods of the given name inside this method
-                            if (info.containsNestedMultiMethod(idMethod, sName))
-                                {
+                            if (info.containsNestedMultiMethod(idMethod, sName)) {
                                 // the multi-method structure does not actually exist on the
                                 // class, but its methods exist in the TypeInfo
                                 idResult = pool.ensureMultiMethodConstant(id, sName);
-                                }
                             }
-                        else
-                            {
+                        } else {
                             idResult = prop.getIdentity();
-                            }
+                        }
 
-                        if (idResult != null)
-                            {
+                        if (idResult != null) {
                             return new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps);
-                            }
                         }
-                    else
-                        {
+                    } else {
                         assert id instanceof MultiMethodConstant;
-                        }
+                    }
 
                     // check if we are nested inside an anonymous inner class and attempting to
                     // capture a variable from the context of the NewExpression
-                    if (node instanceof NewExpression exprNew)
-                        {
+                    if (node instanceof NewExpression exprNew) {
                         AnonInnerClassContext ctx = exprNew.getCaptureContext();
-                        if (ctx != null)
-                            {
+                        if (ctx != null) {
                             Argument argCapture = ctx.getVar(sName);
-                            if (argCapture != null)
-                                {
+                            if (argCapture != null) {
                                 // we are responsible for capturing a variable for code inside an
                                 // anonymous inner class
                                 Register reg = createRegister(argCapture.getType(), name.getValueText());
@@ -1253,367 +1058,318 @@ public class StatementBlock
                                 ensureDefiniteAssignments().put(sName, ctx.getVarAssignment(sName));
                                 ensureCaptureContexts().put(sName, ctx);
                                 return reg;
-                                }
-                            }
-                        }
-
-                    // see if this was the last step on the "WalkUpToTheRoot" that had
-                    // private access to all members
-                    if (id == idOuter)
-                        {
-                        // in the top-most-class down, there is private access
-                        // above the top-most-class, there is public access
-                        access = Access.PUBLIC;
-                        fHasThis = false;
-                        }
-                    else
-                        {
-                        switch (component.getFormat())
-                            {
-                            case ENUM, ENUMVALUE, PACKAGE, MODULE, TYPEDEF:
-                                fHasThis = false;
-                                break;
-
-                            case INTERFACE, CLASS, CONST, ANNOTATION, MIXIN, SERVICE, PROPERTY:
-                                fHasThis &= !component.isStatic();
-                                break;
-
-                            case METHOD:
-                                MethodStructure method = (MethodStructure) component;
-                                fHasThis &= !method.isFunction();
-                                break;
                             }
                         }
                     }
 
-                if (node instanceof StatementBlock block)
-                    {
+                    // see if this was the last step on the "WalkUpToTheRoot" that had
+                    // private access to all members
+                    if (id == idOuter) {
+                        // in the top-most-class down, there is private access
+                        // above the top-most-class, there is public access
+                        access = Access.PUBLIC;
+                        fHasThis = false;
+                    } else {
+                        switch (component.getFormat()) {
+                        case ENUM, ENUMVALUE, PACKAGE, MODULE, TYPEDEF:
+                            fHasThis = false;
+                            break;
+
+                        case INTERFACE, CLASS, CONST, ANNOTATION, MIXIN, SERVICE, PROPERTY:
+                            fHasThis &= !component.isStatic();
+                            break;
+
+                        case METHOD:
+                            MethodStructure method = (MethodStructure) component;
+                            fHasThis &= !method.isFunction();
+                            break;
+                        }
+                    }
+                }
+
+                if (node instanceof StatementBlock block) {
                     // the name may specify an import; check if we have crossed the source boundary,
                     // in which case we cannot use the "name" token position to determine the order
                     // of appearance any longer (which is the only reason we pass the "name" in)
                     ImportStatement stmtImport = block.getImport(sName,
                             node.getSource() == source ? name : null, errs);
-                    if (stmtImport != null)
-                        {
+                    if (stmtImport != null) {
                         NameResolver resolver = stmtImport.getNameResolver();
-                        if (resolver.getResult() != Result.RESOLVED)
-                            {
+                        if (resolver.getResult() != Result.RESOLVED) {
                             // report an unresolvable import name below
                             break;
-                            }
+                        }
                         Constant constant = resolver.getConstant();
                         return stmtImport.isWildcard()
                                 ? ((IdentityConstant) constant).getComponent().
                                         getChild(sName).getIdentityConstant()
                                 : constant;
-                        }
                     }
+                }
 
                 // walk up towards the root
                 node = node.getParent();
-                }
+            }
 
             // last chance: check the implicitly imported names
             Component component = pool.getImplicitlyImportedComponent(sName);
 
-            if (component != null)
-                {
+            if (component != null) {
                 return component.getIdentityConstant();
-                }
-
-            errsTemp.merge(); // report any TypeInfo related errors we might have collected
-            if (name == null)
-                {
-                f_stmt.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
-                }
-            else
-                {
-                name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
-                }
-            return null;
             }
 
+            errsTemp.merge(); // report any TypeInfo related errors we might have collected
+            if (name == null) {
+                f_stmt.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
+            } else {
+                name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
+            }
+            return null;
+        }
+
         @Override
-        protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
-            {
+        protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs) {
             Argument arg = getLocalVar(sName, branch);
             return arg == null
                     ? resolveReservedName(sName, name, errs)
                     : arg;
-            }
+        }
 
         @Override
-        protected TypeConstant resolveFormalType(TypeConstant typeFormal, Branch branch)
-            {
+        protected TypeConstant resolveFormalType(TypeConstant typeFormal, Branch branch) {
             GenericTypeResolver resolver = getLocalResolver(branch);
             return resolver == null
                     ? typeFormal
                     : typeFormal.resolveGenerics(pool(), resolver);
-            }
+        }
 
         @Override
-        protected Argument resolveReservedName(String sName, Token name, ErrorListener errs)
-            {
+        protected Argument resolveReservedName(String sName, Token name, ErrorListener errs) {
             Map<String, Argument> mapByName = ensureNameMap();
             Argument              arg       = mapByName.get(sName);
-            if (arg instanceof Register reg && reg.isPredefined())
-                {
+            if (arg instanceof Register reg && reg.isPredefined()) {
                 return arg;
-                }
+            }
 
             ConstantPool pool     = pool();
             TypeConstant typeThis = getThisClass().getFormalType();
             TypeConstant type;
             int          nReg;
             int          cSteps = 0;
-            switch (sName)
-                {
-                case "this":
-                    if (isConstructor())
-                        {
-                        type = pool.ensureAccessTypeConstant(typeThis, Access.STRUCT);
-                        nReg = Op.A_STRUCT;
-                        }
-                    else
-                        {
-                        type   = typeThis;
-                        nReg   = Op.A_THIS;
-                        cSteps = getMethod().getThisSteps();
-                        }
-                    break;
-
-                case "this:target":
+            switch (sName) {
+            case "this":
+                if (isConstructor()) {
+                    type = pool.ensureAccessTypeConstant(typeThis, Access.STRUCT);
+                    nReg = Op.A_STRUCT;
+                } else {
                     type   = typeThis;
-                    nReg   = Op.A_TARGET;
+                    nReg   = Op.A_THIS;
                     cSteps = getMethod().getThisSteps();
-                    break;
+                }
+                break;
 
-                case "this:public":
-                    type   = pool.ensureAccessTypeConstant(typeThis, Access.PUBLIC);
-                    nReg   = Op.A_PUBLIC;
-                    cSteps = getMethod().getThisSteps();
-                    break;
+            case "this:target":
+                type   = typeThis;
+                nReg   = Op.A_TARGET;
+                cSteps = getMethod().getThisSteps();
+                break;
 
-                case "this:protected":
-                    type   = pool.ensureAccessTypeConstant(typeThis, Access.PROTECTED);
-                    nReg   = Op.A_PROTECTED;
-                    cSteps = getMethod().getThisSteps();
-                    break;
+            case "this:public":
+                type   = pool.ensureAccessTypeConstant(typeThis, Access.PUBLIC);
+                nReg   = Op.A_PUBLIC;
+                cSteps = getMethod().getThisSteps();
+                break;
 
-                case "this:private":
-                    type   = pool.ensureAccessTypeConstant(typeThis, Access.PRIVATE);
-                    nReg   = Op.A_PRIVATE;
-                    cSteps = getMethod().getThisSteps();
-                    break;
+            case "this:protected":
+                type   = pool.ensureAccessTypeConstant(typeThis, Access.PROTECTED);
+                nReg   = Op.A_PROTECTED;
+                cSteps = getMethod().getThisSteps();
+                break;
 
-                case "this:struct":
-                    type   = pool.ensureIntersectionTypeConstant(pool.typeStruct(),
-                                 pool.ensureAccessTypeConstant(typeThis, Access.STRUCT));
-                    nReg   = Op.A_STRUCT;
-                    cSteps = getMethod().getThisSteps();
-                    break;
+            case "this:private":
+                type   = pool.ensureAccessTypeConstant(typeThis, Access.PRIVATE);
+                nReg   = Op.A_PRIVATE;
+                cSteps = getMethod().getThisSteps();
+                break;
 
-                case "this:class":
-                    type   = pool.ensureParameterizedTypeConstant(pool.typeClass(),
-                            pool.ensureAccessTypeConstant(typeThis, Access.PUBLIC),
-                            pool.ensureAccessTypeConstant(typeThis, Access.PROTECTED),
-                            pool.ensureAccessTypeConstant(typeThis, Access.PRIVATE),
-                            pool.ensureIntersectionTypeConstant(pool.typeStruct(),
-                                pool.ensureAccessTypeConstant(typeThis, Access.STRUCT))); // TODO helpers for these all or getThisType passing access
-                    nReg   = Op.A_CLASS;
-                    cSteps = getMethod().getThisSteps();
-                    break;
+            case "this:struct":
+                type   = pool.ensureIntersectionTypeConstant(pool.typeStruct(),
+                             pool.ensureAccessTypeConstant(typeThis, Access.STRUCT));
+                nReg   = Op.A_STRUCT;
+                cSteps = getMethod().getThisSteps();
+                break;
 
-                case "this:service":
-                    type = pool.typeService();
-                    nReg = Op.A_SERVICE;
-                    break;
+            case "this:class":
+                type   = pool.ensureParameterizedTypeConstant(pool.typeClass(),
+                        pool.ensureAccessTypeConstant(typeThis, Access.PUBLIC),
+                        pool.ensureAccessTypeConstant(typeThis, Access.PROTECTED),
+                        pool.ensureAccessTypeConstant(typeThis, Access.PRIVATE),
+                        pool.ensureIntersectionTypeConstant(pool.typeStruct(),
+                            pool.ensureAccessTypeConstant(typeThis, Access.STRUCT))); // TODO helpers for these all or getThisType passing access
+                nReg   = Op.A_CLASS;
+                cSteps = getMethod().getThisSteps();
+                break;
 
-                case "super":
-                    {
-                    // see isReservedNameReadable()
-                    MethodStructure method = getMethod();
-                    if (!method.isSuperAllowed())
-                        {
-                        return null;
-                        }
+            case "this:service":
+                type = pool.typeService();
+                nReg = Op.A_SERVICE;
+                break;
 
-                    MethodConstant    idMethod   = method.getIdentityConstant();
-                    Access            access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
-                    TypeConstant      typeCtx    = pool.ensureAccessTypeConstant(typeThis, access);
-                    TypeInfo          infoType   = typeCtx.ensureTypeInfo();
-                    MethodInfo        infoMethod = infoType.getMethodById(idMethod);
-                    SignatureConstant sigSuper   = infoMethod == null ? null : infoMethod.getSuper(infoType);
-
-                    if (sigSuper == null)
-                        {
-                        if (method.isConstructor()
-                                && getThisClass().containsAnnotation(pool.clzOverride()))
-                            {
-                            // an "@Override" virtual child may not have a compile-time super;
-                            // assume an identical signature
-                            sigSuper = idMethod.getSignature();
-                            }
-                        else
-                            {
-                            return null;
-                            }
-                        }
-
-                    type = sigSuper.asFunctionType();
-                    nReg = Op.A_SUPER;
-                    break;
-                    }
-
-                case "this:module":
-                    // the module can be resolved to the actual module component at compile time
-                    return getModule().getIdentityConstant();
-
-                default:
+            case "super": {
+                // see isReservedNameReadable()
+                MethodStructure method = getMethod();
+                if (!method.isSuperAllowed()) {
                     return null;
                 }
 
-            if (cSteps == 0)
-                {
+                MethodConstant    idMethod   = method.getIdentityConstant();
+                Access            access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
+                TypeConstant      typeCtx    = pool.ensureAccessTypeConstant(typeThis, access);
+                TypeInfo          infoType   = typeCtx.ensureTypeInfo();
+                MethodInfo        infoMethod = infoType.getMethodById(idMethod);
+                SignatureConstant sigSuper   = infoMethod == null ? null : infoMethod.getSuper(infoType);
+
+                if (sigSuper == null) {
+                    if (method.isConstructor()
+                            && getThisClass().containsAnnotation(pool.clzOverride())) {
+                        // an "@Override" virtual child may not have a compile-time super;
+                        // assume an identical signature
+                        sigSuper = idMethod.getSignature();
+                    } else {
+                        return null;
+                    }
+                }
+
+                type = sigSuper.asFunctionType();
+                nReg = Op.A_SUPER;
+                break;
+            }
+
+            case "this:module":
+                // the module can be resolved to the actual module component at compile time
+                return getModule().getIdentityConstant();
+
+            default:
+                return null;
+            }
+
+            if (cSteps == 0) {
                 arg = new Register(type, null, nReg);
-                }
-            else
-                {
+            } else {
                 arg = new TargetInfo(sName, type, cSteps);
-                }
+            }
             mapByName.put(sName, arg);
             return arg;
-            }
+        }
 
         @Override
-        protected boolean hasInitialNames()
-            {
+        protected boolean hasInitialNames() {
             return true;
-            }
+        }
 
         @Override
-        protected void initNameMap(Map<String, Argument> mapByName)
-            {
+        protected void initNameMap(Map<String, Argument> mapByName) {
             MethodStructure         method      = f_method;
             MethodConstant          idMethod    = method.getIdentityConstant();
             Map<String, Assignment> mapAssigned = ensureDefiniteAssignments();
-            for (int i = 0, c = method.getParamCount(); i < c; ++i)
-                {
+            for (int i = 0, c = method.getParamCount(); i < c; ++i) {
                 org.xvm.asm.Parameter param = method.getParam(i);
                 String                sName = param.getName();
 
-                if (!sName.equals(Id.ANY.TEXT))
-                    {
+                if (!sName.equals(Id.ANY.TEXT)) {
                     Register reg;
-                    if (param.isTypeParameter())
-                        {
+                    if (param.isTypeParameter()) {
                         reg = new Register(param.asTypeParameterType(idMethod).getType(), sName, i);
                         reg.markEffectivelyFinal();
-                        }
-                    else
-                        {
+                    } else {
                         reg = new Register(param.getType(), sName, i);
-                        }
+                    }
                     mapByName.put(sName, reg);
 
                     // the variable has been definitely assigned, but not multiple times (i.e. it's
                     // still effectively final)
                     mapAssigned.put(sName, Assignment.AssignedOnce);
-                    }
                 }
             }
+        }
 
         @Override
-        public boolean isMethod()
-            {
+        public boolean isMethod() {
             return !isFunction() && !isConstructor();
-            }
+        }
 
         @Override
-        public boolean isFunction()
-            {
+        public boolean isFunction() {
             Component parent = f_method;
-            while (true)
-                {
-                switch (parent.getFormat())
-                    {
-                    case INTERFACE, CLASS, CONST, ENUM, ENUMVALUE, ANNOTATION, MIXIN,
-                         SERVICE, PACKAGE, MODULE:
+            while (true) {
+                switch (parent.getFormat()) {
+                case INTERFACE, CLASS, CONST, ENUM, ENUMVALUE, ANNOTATION, MIXIN,
+                     SERVICE, PACKAGE, MODULE:
+                    return false;
+
+                case METHOD:
+                    MethodStructure method = (MethodStructure) parent;
+                    if (method.isValidator() ||
+                            method.isConstructor() && !method.isPropertyInitializer()) {
                         return false;
-
-                    case METHOD:
-                        MethodStructure method = (MethodStructure) parent;
-                        if (method.isValidator() ||
-                                method.isConstructor() && !method.isPropertyInitializer())
-                            {
-                            return false;
-                            }
-
-                        if (method.isStatic())
-                            {
-                            return true;
-                            }
-                        break;
-
-                    case PROPERTY, MULTIMETHOD:
-                        break;
-
-                    default:
-                        throw new IllegalStateException();
                     }
 
-                parent = parent.getParent();
+                    if (method.isStatic()) {
+                        return true;
+                    }
+                    break;
+
+                case PROPERTY, MULTIMETHOD:
+                    break;
+
+                default:
+                    throw new IllegalStateException();
                 }
+
+                parent = parent.getParent();
             }
+        }
 
         @Override
-        public boolean isConstructor()
-            {
+        public boolean isConstructor() {
             return f_method.isConstructor() || f_method.isValidator();
-            }
+        }
 
-        public boolean isStaticPropertyInitializer()
-            {
+        public boolean isStaticPropertyInitializer() {
             return f_method.isPropertyInitializer() && f_method.isStatic();
-            }
+        }
 
-        ModuleStructure getModule()
-            {
+        ModuleStructure getModule() {
             Component parent = f_method;
-            while (!(parent instanceof ModuleStructure mms))
-                {
+            while (!(parent instanceof ModuleStructure mms)) {
                 parent = parent.getParent();
-                }
+            }
             return mms;
-            }
+        }
 
         @Override
-        public Context exit()
-            {
+        public Context exit() {
             checkValidating();
             throw new IllegalStateException();
-            }
+        }
 
         @Override
-        public Map<String, Assignment> prepareJump(Context ctxDest)
-            {
+        public Map<String, Assignment> prepareJump(Context ctxDest) {
             checkValidating();
             throw new IllegalStateException();
-            }
+        }
 
         /**
          * @return a Context that can be used while validating code
          */
-        public Context validatingContext()
-            {
+        public Context validatingContext() {
             checkValidating();
             Context ctx = m_ctxValidating;
-            if (ctx == null)
-                {
+            if (ctx == null) {
                 m_ctxValidating = ctx = super.enter();
-                }
-            return ctx;
             }
+            return ctx;
+        }
 
         /**
          * Generate an emitting context, and emit the preamble, if any.
@@ -1622,98 +1378,83 @@ public class StatementBlock
          *
          * @return a Context that can be used while emitting code
          */
-        public RootContext emittingContext(Code code)
-            {
-            if (m_fEmitting)
-                {
+        public RootContext emittingContext(Code code) {
+            if (m_fEmitting) {
                 return this;
-                }
+            }
 
             checkValidating();
             Context ctx = m_ctxValidating;
-            if (ctx != null)
-                {
+            if (ctx != null) {
                 ctx.exit();
                 m_ctxValidating = null;
 
                 // check any variables whose scope is in this root context for "effectively final"
-                for (Map.Entry<String, Assignment> entry : getDefiniteAssignments().entrySet())
-                    {
-                    if (entry.getValue().isEffectivelyFinal())
-                        {
+                for (Map.Entry<String, Assignment> entry : getDefiniteAssignments().entrySet()) {
+                    if (entry.getValue().isEffectivelyFinal()) {
                         Argument arg = ensureNameMap().get(entry.getKey());
-                        if (arg instanceof Register reg)
-                            {
+                        if (arg instanceof Register reg) {
                             reg.markEffectivelyFinal();
-                            }
                         }
                     }
+                }
 
-                if (m_mapCaptureContexts != null)
-                    {
+                if (m_mapCaptureContexts != null) {
                     // this is something like "exit()" processing, except that it's when the root
                     // context switches from validating (which may have captured some variables into
                     // the anonymous inner class) which now need to be reported out to the capture
                     // context for the anonymous inner class, so that it knows what has been read
                     // (assume everything captured is read) and written (assume anything whose
                     // assignment changed was written)
-                    for (Map.Entry<String, AnonInnerClassContext> entry : m_mapCaptureContexts.entrySet())
-                        {
+                    for (Map.Entry<String, AnonInnerClassContext> entry : m_mapCaptureContexts.entrySet()) {
                         String                sName      = entry.getKey();
                         AnonInnerClassContext ctxCapture = entry.getValue();
                         Assignment            asnOrig    = ctxCapture.getVarAssignment(sName);
                         boolean               fModified  = getVarAssignment(sName) != asnOrig;
                         ctxCapture.markVarRead(true, sName, null, true, null);
-                        if (fModified)
-                            {
+                        if (fModified) {
                             ctxCapture.setVarAssignment(sName, asnOrig.applyAssignmentFromCapture());
-                            }
                         }
-                    m_mapCaptureContexts = null;
                     }
+                    m_mapCaptureContexts = null;
                 }
+            }
 
             m_fEmitting = true;
             return this;
-            }
+        }
 
-        private void checkValidating()
-            {
-            if (m_fEmitting)
-                {
+        private void checkValidating() {
+            if (m_fEmitting) {
                 throw new IllegalStateException();
-                }
             }
+        }
 
         /**
          * @return a map of capture contexts being collected during validation that need to be
          *         reported out to the enclosing NewExpression
          */
-        private Map<String, AnonInnerClassContext> ensureCaptureContexts()
-            {
+        private Map<String, AnonInnerClassContext> ensureCaptureContexts() {
             Map<String, AnonInnerClassContext> map = m_mapCaptureContexts;
-            if (map == null)
-                {
+            if (map == null) {
                 m_mapCaptureContexts = map = new ListMap<>();
-                }
+            }
 
             return map;
-            }
+        }
 
         /**
          * @return a map of variables identified during validation that need to be created in the
          *         preamble in order to provide local variables for captured variables
          */
-        private Map<String, Register> ensureCaptureVars()
-            {
+        private Map<String, Register> ensureCaptureVars() {
             Map<String, Register> map = m_mapCaptureVars;
-            if (map == null)
-                {
+            if (map == null) {
                 m_mapCaptureVars = map = new ListMap<>();
-                }
+            }
 
             return map;
-            }
+        }
 
         private final StatementBlock  f_stmt;
         private final MethodStructure f_method;
@@ -1733,7 +1474,7 @@ public class StatementBlock
          * capture-properties in an anonymous inner class.
          */
         private Map<String, Register> m_mapCaptureVars;
-        }
+    }
 
 
     /**
@@ -1741,34 +1482,29 @@ public class StatementBlock
      * StatementBlock, allowing it to resolve imports.
      */
     public class NestedBlockContext
-            extends Context
-        {
-        protected NestedBlockContext(Context ctxOuter)
-            {
+            extends Context {
+        protected NestedBlockContext(Context ctxOuter) {
             super(ctxOuter, true);
-            }
+        }
 
         @Override
         protected Argument resolveRegularName(Context ctxFrom, String sName, Token name,
-                                              ErrorListener errs)
-            {
+                                              ErrorListener errs) {
             ImportStatement stmtImport = getImport(sName, name, errs);
-            if (stmtImport != null)
-                {
+            if (stmtImport != null) {
                 NameResolver resolver = stmtImport.getNameResolver();
-                if (resolver.getResult() == Result.RESOLVED)
-                    {
+                if (resolver.getResult() == Result.RESOLVED) {
                     Constant constant = resolver.getConstant();
                     return stmtImport.isWildcard()
                             ? ((IdentityConstant) constant).getComponent().
                                     getChild(sName).getIdentityConstant()
                             : constant;
-                    }
                 }
+            }
 
             return super.resolveRegularName(ctxFrom, sName, name, errs);
-            }
         }
+    }
 
 
     // ----- inner class: TargetInfo ---------------------------------------------------------------
@@ -1778,8 +1514,7 @@ public class StatementBlock
      * outer "this".
      */
     public static class TargetInfo
-            implements Argument
-        {
+            implements Argument {
         /**
          * Create a new TargetInfo for a multi-method or property.
          *
@@ -1795,8 +1530,7 @@ public class StatementBlock
                 IdentityConstant id,
                 boolean          hasThis,
                 TypeConstant     typeTarget,
-                int              stepsOut)
-            {
+                int              stepsOut) {
             assert id instanceof PropertyConstant || id instanceof MultiMethodConstant;
 
             this.name       = name;
@@ -1805,8 +1539,7 @@ public class StatementBlock
             this.typeTarget = typeTarget;
             this.stepsOut   = stepsOut;
 
-            if (id instanceof PropertyConstant idProp)
-                {
+            if (id instanceof PropertyConstant idProp) {
                 PropertyInfo infoProp = typeTarget.ensureTypeInfo().findProperty(idProp);
 
                 this.type = infoProp == null
@@ -1814,12 +1547,10 @@ public class StatementBlock
                                 ? idProp.getFormalType()
                                 : idProp.getType()
                         : infoProp.inferImmutable(typeTarget);
-                }
-            else
-                {
+            } else {
                 this.type = null;
-                }
             }
+        }
 
         /**
          * Create a new TargetInfo for a method.
@@ -1834,15 +1565,14 @@ public class StatementBlock
                 String           name,
                 MethodStructure  method,
                 TypeConstant     typeTarget,
-                int              stepsOut)
-            {
+                int              stepsOut) {
             this.name       = name;
             this.id         = method.getIdentityConstant();
             this.hasThis    = !method.isFunction();
             this.typeTarget = typeTarget;
             this.stepsOut   = stepsOut;
             this.type       = null;
-            }
+        }
 
         /**
          * Create a new TargetInfo for an "outer this".
@@ -1852,8 +1582,7 @@ public class StatementBlock
          * @param stepsOut    the number of "outer" steps needed to get from the current context
          *                    to the target container
          */
-        public TargetInfo(String name, TypeConstant typeTarget, int stepsOut)
-            {
+        public TargetInfo(String name, TypeConstant typeTarget, int stepsOut) {
             assert typeTarget.isExplicitClassIdentity(true);
 
             this.name       = name;
@@ -1862,7 +1591,7 @@ public class StatementBlock
             this.typeTarget = typeTarget;
             this.stepsOut   = stepsOut;
             this.type       = typeTarget;
-            }
+        }
 
         /**
          * Create a new TargetInfo by narrowing the type of the specified TargetInfo.
@@ -1870,70 +1599,59 @@ public class StatementBlock
          * @param that        the original info
          * @param typeNarrow  the narrowing type
          */
-        public TargetInfo(TargetInfo that, TypeConstant typeNarrow)
-            {
+        public TargetInfo(TargetInfo that, TypeConstant typeNarrow) {
             this.name       = that.name;
             this.id         = that.id;
             this.hasThis    = that.hasThis;
             this.typeTarget = that.typeTarget;
             this.stepsOut   = that.stepsOut;
             this.type       = typeNarrow;
-            }
+        }
 
-        public String getName()
-            {
+        public String getName() {
             return name;
-            }
+        }
 
-        public IdentityConstant getId()
-            {
+        public IdentityConstant getId() {
             return id;
-            }
+        }
 
-        public TypeConstant getTargetType()
-            {
+        public TypeConstant getTargetType() {
             return typeTarget;
-            }
+        }
 
-        public boolean hasThis()
-            {
+        public boolean hasThis() {
             return hasThis;
-            }
+        }
 
-        public int getStepsOut()
-            {
+        public int getStepsOut() {
             return stepsOut;
-            }
+        }
 
         @Override
-        public TypeConstant getType()
-            {
+        public TypeConstant getType() {
             return type;
-            }
+        }
 
         @Override
-        public boolean isStack()
-            {
+        public boolean isStack() {
             return false;
-            }
+        }
 
         @Override
-        public boolean isEffectivelyFinal()
-            {
+        public boolean isEffectivelyFinal() {
             return false;
-            }
+        }
 
         @Override
-        public Argument registerConstants(ConstantRegistry registry)
-            {
+        public Argument registerConstants(ConstantRegistry registry) {
             throw new IllegalStateException();
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return name + "->" + id.getValueString();
-            }
+        }
 
         private final String           name;
         private final IdentityConstant id;
@@ -1941,7 +1659,7 @@ public class StatementBlock
         private final TypeConstant     typeTarget;
         private final int              stepsOut;
         private final TypeConstant     type;
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -1960,4 +1678,4 @@ public class StatementBlock
     private transient boolean m_fTerminatedAbnormally;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(StatementBlock.class, "stmts");
-    }
+}

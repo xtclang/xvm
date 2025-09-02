@@ -10,16 +10,13 @@ import org.xvm.runtime.Container;
  * Native IntNumber support.
  */
 public abstract class xIntNumber
-        extends xNumber
-    {
-    public xIntNumber(Container container, ClassStructure structure, boolean fInstance)
-        {
+        extends xNumber {
+    public xIntNumber(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-        }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         markNativeMethod("toChar", null, new String[]{"text.Char"});
 
         markNativeProperty("bitCount");
@@ -32,5 +29,5 @@ public abstract class xIntNumber
         markNativeMethod("shiftRight", INT, THIS);
 
         super.initNative();
-        }
     }
+}

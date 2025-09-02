@@ -46,167 +46,141 @@ import org.xvm.util.Severity;
  * </pre>
  */
 public class ListExpression
-        extends Expression
-    {
+        extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ListExpression(TypeExpression type, List<Expression> exprs, long lStartPos, long lEndPos)
-        {
+    public ListExpression(TypeExpression type, List<Expression> exprs, long lStartPos, long lEndPos) {
         this.type      = type;
         this.exprs     = exprs;
         this.lStartPos = lStartPos;
         this.lEndPos   = lEndPos;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
-    public List<Expression> getExpressions()
-        {
+    public List<Expression> getExpressions() {
         return exprs;
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return lStartPos;
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return lEndPos;
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType(Context ctx)
-        {
+    public TypeConstant getImplicitType(Context ctx) {
         TypeConstant typeBase = getBaseType(ctx, null);
-        if (!typeBase.isParamsSpecified())
-            {
+        if (!typeBase.isParamsSpecified()) {
             TypeConstant typeElement = getImplicitElementType(ctx);
-            if (typeElement != null)
-                {
+            if (typeElement != null) {
                 typeBase = pool().ensureParameterizedTypeConstant(typeBase, typeElement);
-                }
             }
-        return typeBase;
         }
+        return typeBase;
+    }
 
     /**
      * @return the base type for this ListExpression, which is Array or Set
      */
-    private TypeConstant getBaseType(Context ctx, TypeConstant typeRequired)
-        {
-        if (type == null)
-            {
+    private TypeConstant getBaseType(Context ctx, TypeConstant typeRequired) {
+        if (type == null) {
             ConstantPool pool = pool();
-            if (typeRequired != null && typeRequired.isSingleUnderlyingClass(true))
-                {
+            if (typeRequired != null && typeRequired.isSingleUnderlyingClass(true)) {
                 TypeConstant typeBase = typeRequired.getSingleUnderlyingClass(true).getType();
-                if (!pool.typeArray().isA(typeBase) && pool.typeSet().isA(typeBase))
-                    {
+                if (!pool.typeArray().isA(typeBase) && pool.typeSet().isA(typeBase)) {
                     return pool.typeSet();
-                    }
                 }
+            }
 
             return pool.typeArray();
-            }
+        }
 
         return type.ensureTypeConstant(ctx, null);
-        }
+    }
 
-    private TypeConstant getImplicitElementType(Context ctx)
-        {
+    private TypeConstant getImplicitElementType(Context ctx) {
         int cElements = exprs.size();
-        if (cElements > 0)
-            {
+        if (cElements > 0) {
             TypeConstant[] aElementTypes = new TypeConstant[cElements];
-            for (int i = 0; i < cElements; ++i)
-                {
+            for (int i = 0; i < cElements; ++i) {
                 aElementTypes[i] = exprs.get(i).getImplicitType(ctx);
-                }
-            return TypeCollector.inferFrom(aElementTypes, pool());
             }
-        return null;
+            return TypeCollector.inferFrom(aElementTypes, pool());
         }
+        return null;
+    }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs)
-        {
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs) {
         ConstantPool pool = pool();
 
         // an empty map looks like an empty list to the parser
-        if (typeRequired.isA(pool.typeMap()) && exprs.isEmpty())
-            {
+        if (typeRequired.isA(pool.typeMap()) && exprs.isEmpty()) {
             MapExpression exprNew = new MapExpression(new NamedTypeExpression(this, typeRequired),
                     Collections.emptyList(), Collections.emptyList(), getEndPosition());
             exprNew.setParent(this);
             return exprNew.testFit(ctx, typeRequired, fExhaustive, errs);
-            }
+        }
 
         InferFromRequired:
-        if (typeRequired != null)
-            {
+        if (typeRequired != null) {
             TypeConstant typeElement = getImplicitElementType(ctx);
             if (typeElement != null &&
                     (pool.ensureArrayType(typeElement).isA(typeRequired) ||
-                     pool.ensureSetType(typeElement).isA(typeRequired)))
-                {
+                     pool.ensureSetType(typeElement).isA(typeRequired))) {
                 return TypeFit.Fit;
-                }
+            }
 
             typeElement = resolveElementType(typeRequired);
-            if (typeElement == null)
-                {
+            if (typeElement == null) {
                 break InferFromRequired;
-                }
+            }
 
             TypeConstant typeBase   = getBaseType(ctx, typeRequired);
             TypeConstant typeTarget = typeBase.isParamsSpecified()
                     ? typeBase
                     : pool.ensureParameterizedTypeConstant(typeBase, typeElement);
 
-            if (!isA(ctx, typeTarget, typeRequired))
-                {
+            if (!isA(ctx, typeTarget, typeRequired)) {
                 return TypeFit.NoFit;
-                }
+            }
 
             TypeFit fit = TypeFit.Fit;
-            for (Expression expr : exprs)
-                {
+            for (Expression expr : exprs) {
                 fit = fit.combineWith(expr.testFit(ctx, typeElement, fExhaustive, errs));
-                if (!fit.isFit())
-                    {
+                if (!fit.isFit()) {
                     break;
-                    }
                 }
-            return fit;
             }
-        return super.testFit(ctx, typeRequired, fExhaustive, errs);
+            return fit;
         }
+        return super.testFit(ctx, typeRequired, fExhaustive, errs);
+    }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         ConstantPool pool = pool();
 
         // an empty map looks like an empty list to the parser
-        if (typeRequired != null && typeRequired.isA(pool.typeMap()) && exprs.isEmpty())
-            {
+        if (typeRequired != null && typeRequired.isA(pool.typeMap()) && exprs.isEmpty()) {
             MapExpression exprNew = new MapExpression(new NamedTypeExpression(this, typeRequired),
                     Collections.emptyList(), Collections.emptyList(), getEndPosition());
             return replaceThisWith(exprNew).validate(ctx, typeRequired, errs);
-            }
+        }
 
         TypeFit          fit         = TypeFit.Fit;
         List<Expression> listExprs   = exprs;
@@ -217,299 +191,240 @@ public class ListExpression
         if (typeRequired != null &&
                 (typeElement == null ||
                     !pool.ensureArrayType(typeElement).isA(typeRequired) &&
-                    !pool.ensureSetType(typeElement).isA(typeRequired)))
-            {
+                    !pool.ensureSetType(typeElement).isA(typeRequired))) {
             // the implicit type is not good; try to resolve it based on the required type
             typeElement = resolveElementType(typeRequired);
-            }
+        }
 
-        if (typeElement == null)
-            {
+        if (typeElement == null) {
             typeElement = pool.typeObject();
-            }
+        }
 
         TypeConstant typeActual = getBaseType(ctx, typeRequired);
         boolean      fSet       = typeActual.isA(pool.typeSet());
 
         TypeExpression exprTypeOld = type;
-        if (exprTypeOld != null)
-            {
+        if (exprTypeOld != null) {
             TypeConstant   typeSeqType = pool.typeCollection().getType();
             TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx, typeSeqType, errs);
-            if (exprTypeNew == null)
-                {
+            if (exprTypeNew == null) {
                 fit       = TypeFit.NoFit;
                 fConstant = false;
-                }
-            else
-                {
-                if (exprTypeNew != exprTypeOld)
-                    {
+            } else {
+                if (exprTypeNew != exprTypeOld) {
                     type = exprTypeNew;
-                    }
+                }
 
                 typeActual = exprTypeNew.ensureTypeConstant(ctx, errs).resolveAutoNarrowingBase();
 
                 TypeConstant typeElementNew = resolveElementType(typeActual);
-                if (typeElementNew != null)
-                    {
+                if (typeElementNew != null) {
                     typeElement = typeElementNew;
-                    }
                 }
             }
+        }
 
         typeActual = pool.ensureParameterizedTypeConstant(typeActual, typeElement);
-        if (typeElement.isImmutable() || typeElement.isService())
-            {
+        if (typeElement.isImmutable() || typeElement.isService()) {
             typeActual = typeActual.freeze();
-            }
+        }
 
-        if (cExprs > 0)
-            {
+        if (cExprs > 0) {
             ctx = ctx.enterList();
-            for (int i = 0; i < cExprs; ++i)
-                {
+            for (int i = 0; i < cExprs; ++i) {
                 Expression exprOld = listExprs.get(i);
                 Expression exprNew = exprOld.validate(ctx, typeElement, errs);
-                if (exprNew == null)
-                    {
+                if (exprNew == null) {
                     fit       = TypeFit.NoFit;
                     fConstant = false;
-                    }
-                else
-                    {
-                    if (exprNew != exprOld)
-                        {
+                } else {
+                    if (exprNew != exprOld) {
                         listExprs.set(i, exprNew);
-                        }
-                    fConstant &= exprNew.isConstant();
                     }
+                    fConstant &= exprNew.isConstant();
                 }
-            ctx = ctx.exit();
             }
+            ctx = ctx.exit();
+        }
 
         // build a constant if it's a known container type and all of the elements are constants
         Constant constVal = null;
-        if (fConstant)
-            {
-            if (typeElement == null)
-                {
+        if (fConstant) {
+            if (typeElement == null) {
                 typeElement = pool.typeObject();
-                }
+            }
             TypeConstant typeImpl = pool.ensureImmutableTypeConstant(fSet
                     ? pool.ensureSetType(typeElement)
                     : pool.ensureArrayType(typeElement));
-            if (typeRequired == null || typeImpl.isA(typeRequired)) // [Array | List | Set]<Element>
-                {
-                if (fSet)
-                    {
+            if (typeRequired == null || typeImpl.isA(typeRequired)) { // [Array | List | Set]<Element>
+                if (fSet) {
                     ListSet<Constant> listVal = new ListSet<>(cExprs);
-                    for (int i = 0; i < cExprs; ++i)
-                        {
+                    for (int i = 0; i < cExprs; ++i) {
                         Constant constEl = listExprs.get(i).toConstant();
-                        if (!listVal.add(constEl))
-                            {
+                        if (!listVal.add(constEl)) {
                             log(errs, Severity.ERROR, Compiler.SET_VALUES_DUPLICATE,
                                     constEl.getValueString());
-                            }
                         }
+                    }
 
                     constVal = pool.ensureSetConstant(typeImpl, listVal.toArray(Constant.NO_CONSTS));
-                    }
-                else
-                    {
+                } else {
                     Constant[] aconstVal = new Constant[cExprs];
-                    for (int i = 0; i < cExprs; ++i)
-                        {
+                    for (int i = 0; i < cExprs; ++i) {
                         aconstVal[i] = listExprs.get(i).toConstant();
-                        }
-                    constVal = pool.ensureArrayConstant(typeImpl, aconstVal);
                     }
+                    constVal = pool.ensureArrayConstant(typeImpl, aconstVal);
                 }
             }
+        }
 
         return finishValidation(ctx, typeRequired, typeActual, fit, constVal, errs);
-        }
+    }
 
     @Override
-    public boolean isCompletable()
-        {
-        for (Expression expr : exprs)
-            {
-            if (!expr.isCompletable())
-                {
+    public boolean isCompletable() {
+        for (Expression expr : exprs) {
+            if (!expr.isCompletable()) {
                 return false;
-                }
             }
+        }
 
         return true;
-        }
+    }
 
     @Override
-    public boolean isShortCircuiting()
-        {
-        for (Expression expr : exprs)
-            {
-            if (expr.isShortCircuiting())
-                {
+    public boolean isShortCircuiting() {
+        for (Expression expr : exprs) {
+            if (expr.isShortCircuiting()) {
                 return true;
-                }
             }
+        }
 
         return false;
-        }
+    }
 
     @Override
-    public boolean supportsCompactInit(VariableDeclarationStatement lvalue)
-        {
+    public boolean supportsCompactInit(VariableDeclarationStatement lvalue) {
         // there may be not enough information in the lvalue type to use the VAR_SN op,
         // for example "Object list = [x, y];"
         return lvalue.getRegister().getType().resolveGenericType("Element") != null;
-        }
+    }
 
     @Override
     public void generateCompactInit(
-            Context ctx, Code code, VariableDeclarationStatement lvalue, ErrorListener errs)
-        {
-        if (isConstant())
-            {
+            Context ctx, Code code, VariableDeclarationStatement lvalue, ErrorListener errs) {
+        if (isConstant()) {
             super.generateCompactInit(ctx, code, lvalue, errs);
-            }
-        else
-            {
+        } else {
             StringConstant idName = pool().ensureStringConstant(lvalue.getName());
 
             code.add(new Var_SN(lvalue.getRegister(), idName, collectArguments(ctx, code, errs)));
-            }
         }
+    }
 
     @Override
     public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
-        {
-        if (isConstant())
-            {
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+        if (isConstant()) {
             return toConstant();
-            }
+        }
 
         Register reg = code.createRegister(getType());
         code.add(new Var_S(reg, collectArguments(ctx, code, errs)));
         return reg;
-        }
+    }
 
     /**
      * Helper method to calculate the "Element" type for the specified required type.
      */
-    private TypeConstant resolveElementType(TypeConstant typeRequired)
-        {
-        if (typeRequired.resolveTypedefs() instanceof UnionTypeConstant typeUnion)
-            {
+    private TypeConstant resolveElementType(TypeConstant typeRequired) {
+        if (typeRequired.resolveTypedefs() instanceof UnionTypeConstant typeUnion) {
             // try to calculate an element type that would probably accommodate the required type
             TypeConstant      typeElement = null;
             Set<TypeConstant> setSeqType  = typeUnion.collectMatching(pool().typeList(), null);
-            if (!setSeqType.isEmpty())
-                {
-                for (TypeConstant typeSeq : setSeqType)
-                    {
+            if (!setSeqType.isEmpty()) {
+                for (TypeConstant typeSeq : setSeqType) {
                     TypeConstant typeGuess = typeSeq.resolveGenericType("Element");
-                    if (typeGuess != null)
-                        {
-                        if (typeElement == null)
-                            {
+                    if (typeGuess != null) {
+                        if (typeElement == null) {
                             typeElement = typeGuess;
-                            }
-                        else if (typeElement.isA(typeGuess))
-                            {
+                        } else if (typeElement.isA(typeGuess)) {
                             typeElement = typeGuess;
-                            }
-                        else if (!typeGuess.isA(typeElement))
-                            {
+                        } else if (!typeGuess.isA(typeElement)) {
                             // typeGuess is incompatible with typeElement
                             return null;
-                            }
                         }
                     }
                 }
-            if (typeElement != null)
-                {
-                return typeElement;
-                }
             }
-        return typeRequired.resolveGenericType("Element");
+            if (typeElement != null) {
+                return typeElement;
+            }
         }
+        return typeRequired.resolveGenericType("Element");
+    }
 
     /**
      * Helper method to generate an array of arguments.
      */
-    private Argument[] collectArguments(Context ctx, Code code, ErrorListener errs)
-        {
+    private Argument[] collectArguments(Context ctx, Code code, ErrorListener errs) {
         List<Expression> listExprs = exprs;
         int              cArgs     = listExprs.size();
         Argument[]       aArgs     = new Argument[cArgs];
 
-        for (int i = 0; i < cArgs; ++i)
-            {
+        for (int i = 0; i < cArgs; ++i) {
             Expression expr = listExprs.get(i);
             Argument   arg  = expr.generateArgument(ctx, code, true, false, errs);
             aArgs[i] = expr.ensurePointInTime(code, arg, listExprs, i);
-            }
-        return aArgs;
         }
+        return aArgs;
+    }
 
     @Override
-    public ExprAST getExprAST(Context ctx)
-        {
-        if (isConstant())
-            {
+    public ExprAST getExprAST(Context ctx) {
+        if (isConstant()) {
             return new ConstantExprAST(toConstant());
-            }
+        }
 
         List<Expression> listExprs = exprs;
         int              cArgs     = listExprs.size();
         ExprAST[]        aAstArg   = new ExprAST[cArgs];
 
-        for (int i = 0; i < cArgs; ++i)
-            {
+        for (int i = 0; i < cArgs; ++i) {
             aAstArg[i] = listExprs.get(i).getExprAST(ctx);
-            }
-        return new ListExprAST(getType(), aAstArg);
         }
+        return new ListExprAST(getType(), aAstArg);
+    }
 
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
         sb.append('[');
 
         boolean first = true;
-        for (Expression expr : exprs)
-            {
-            if (first)
-                {
+        for (Expression expr : exprs) {
+            if (first) {
                 first = false;
-                }
-            else
-                {
+            } else {
                 sb.append(", ");
-                }
-            sb.append(expr);
             }
+            sb.append(expr);
+        }
 
         sb.append(']');
 
         return sb.toString();
-        }
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -520,4 +435,4 @@ public class ListExpression
     protected long             lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ListExpression.class, "type", "exprs");
-    }
+}

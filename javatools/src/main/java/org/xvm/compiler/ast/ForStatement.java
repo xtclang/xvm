@@ -50,8 +50,7 @@ import static org.xvm.util.Handy.indentLines;
  */
 public class ForStatement
         extends ConditionalStatement
-        implements LabelAble
-    {
+        implements LabelAble {
     // ----- constructors --------------------------------------------------------------------------
 
     public ForStatement(
@@ -59,31 +58,27 @@ public class ForStatement
             List<Statement> init,
             List<AstNode>   conds,
             List<Statement> update,
-            StatementBlock  block)
-        {
+            StatementBlock  block) {
         super(keyword, conds);
         this.init    = init   == null ? Collections.emptyList() : init;
         this.update  = update == null ? Collections.emptyList() : update;
         this.block   = block;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public boolean isNaturalGotoStatementTarget()
-        {
+    public boolean isNaturalGotoStatementTarget() {
         return true;
-        }
+    }
 
     @Override
-    public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin)
-        {
+    public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin) {
         Context ctxDest = ensureValidationContext();
         Label   label   = getContinueLabel();
 
-        if (ctxOrigin.isReachable())
-            {
+        if (ctxOrigin.isReachable()) {
             // generate a delta of assignment information for the jump
             Map<String, Assignment> mapAsn = new HashMap<>();
             Map<String, Argument>   mapArg = new HashMap<>();
@@ -91,84 +86,72 @@ public class ForStatement
             ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
 
             // record the jump that landed on this statement by recording its assignment impact
-            if (m_listContinues == null)
-                {
+            if (m_listContinues == null) {
                 m_listContinues = new ArrayList<>();
-                }
-            m_listContinues.add(new Break(nodeOrigin, mapAsn, mapArg, label));
             }
+            m_listContinues.add(new Break(nodeOrigin, mapAsn, mapArg, label));
+        }
 
         return label;
-        }
+    }
 
     /**
      * @return true iff there is a continue label for this statement, which indicates that it has
      *         already been requested at least one time
      */
-    public boolean hasContinueLabel()
-        {
+    public boolean hasContinueLabel() {
         return m_labelContinue != null;
-        }
+    }
 
     /**
      * @return the continue label for this statement
      */
-    public Label getContinueLabel()
-        {
+    public Label getContinueLabel() {
         Label label = m_labelContinue;
-        if (label == null)
-            {
+        if (label == null) {
             m_labelContinue = label = new Label("continue_for_" + getLabelId());
-            }
-        return label;
         }
+        return label;
+    }
 
     @Override
-    protected boolean allowsShortCircuit(AstNode nodeChild)
-        {
+    protected boolean allowsShortCircuit(AstNode nodeChild) {
         return     findInitializer(nodeChild) >= 0
                 || findCondition  (nodeChild) >= 0
                 || findUpdate     (nodeChild) >= 0;
-        }
+    }
 
     @Override
-    protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin)
-        {
+    protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin) {
         AstNode nodeChild = findChild(nodeOrigin);
         assert nodeChild != null;
         assert allowsShortCircuit(nodeChild);
 
-        if (findCondition(nodeChild) >= 0)
-            {
+        if (findCondition(nodeChild) >= 0) {
             // short-circuiting a condition is the same as "breaking out of" the loop
             return ensureBreakLabel(nodeOrigin, ctxOrigin);
-            }
+        }
 
         int     index = findInitializer(nodeChild);
         boolean fInit = index >= 0;
         int     count;
         String  desc;
-        if (fInit)
-            {
+        if (fInit) {
             count  = init.size();
             desc   = "init";
-            }
-        else
-            {
+        } else {
             index  = findUpdate(nodeChild);
             count  = update.size();
             desc   = "update";
             assert index >= 0;
-            }
+        }
 
-        if (ctxOrigin.isReachable())
-            {
+        if (ctxOrigin.isReachable()) {
             // short-circuiting an "initializer" or "update" proceeds to the next one
             Context ctxDest = ensureValidationContext();
-            if (m_listShorts == null)
-                {
+            if (m_listShorts == null) {
                 m_listShorts = new ArrayList<>();
-                }
+            }
 
             Map<String, Assignment> mapAsn = new HashMap<>();
             Map<String, Argument>   mapArg = new HashMap<>();
@@ -176,27 +159,23 @@ public class ForStatement
             ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
 
             m_listShorts.add(new Break(nodeOrigin, mapAsn, mapArg, null));
-            }
+        }
 
         // create, store, and return a label for this specific init/update node
         Label   label = new Label("ground_" + desc + "_" + index + "_of_" + count + "_for_" + getLabelId());
         Label[] labels = fInit ? m_alabelInitGround : m_alabelUpdateGround;
-        if (labels == null)
-            {
+        if (labels == null) {
             labels = new Label[count];
-            if (fInit)
-                {
+            if (fInit) {
                 m_alabelInitGround = labels;
-                }
-            else
-                {
+            } else {
                 m_alabelUpdateGround = labels;
-                }
             }
+        }
         labels[index] = label;
 
         return label;
-        }
+    }
 
     /**
      * Search the initializer list for the specified node, and return its index.
@@ -205,20 +184,16 @@ public class ForStatement
      *
      * @return the index of the node in the initializer list, or -1 if the node is not in the list
      */
-    protected int findInitializer(AstNode node)
-        {
-        if (node instanceof Statement)
-            {
-            for (int i = 0, c = init.size(); i < c; ++i)
-                {
-                if (node == init.get(i))
-                    {
+    protected int findInitializer(AstNode node) {
+        if (node instanceof Statement) {
+            for (int i = 0, c = init.size(); i < c; ++i) {
+                if (node == init.get(i)) {
                     return i;
-                    }
                 }
             }
-        return -1;
         }
+        return -1;
+    }
 
     /**
      * Search the "update" list for the specified node, and return its index.
@@ -227,52 +202,43 @@ public class ForStatement
      *
      * @return the index of the node in the update list, or -1 if the node is not in the list
      */
-    protected int findUpdate(AstNode node)
-        {
-        if (node instanceof Statement)
-            {
-            for (int i = 0, c = update.size(); i < c; ++i)
-                {
-                if (node == update.get(i))
-                    {
+    protected int findUpdate(AstNode node) {
+        if (node instanceof Statement) {
+            for (int i = 0, c = update.size(); i < c; ++i) {
+                if (node == update.get(i)) {
                     return i;
-                    }
                 }
             }
+        }
         return -1;
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return block.getEndPosition();
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- LabelAble methods ---------------------------------------------------------------------
 
     @Override
-    public boolean hasLabelVar(String sName)
-        {
+    public boolean hasLabelVar(String sName) {
         return "first".equals(sName) || "count".equals(sName);
-        }
+    }
 
     @Override
-    public Register getLabelVar(Context ctx, String sName)
-        {
+    public Register getLabelVar(Context ctx, String sName) {
         assert hasLabelVar(sName);
 
         boolean fFirst = "first".equals(sName);
 
         Register reg = fFirst ? m_regFirst : m_regCount;
-        if (reg == null)
-            {
+        if (reg == null) {
             // this occurs only during validate()
             assert m_ctxLabelVars != null;
 
@@ -282,25 +248,21 @@ public class ForStatement
             reg = ctx.createRegister(fFirst ? pool().typeBoolean() : pool().typeInt64(), sLabel + '.' + sName);
             m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
 
-            if (fFirst)
-                {
+            if (fFirst) {
                 m_regFirst = reg;
-                }
-            else
-                {
+            } else {
                 m_regCount = reg;
-                }
             }
+        }
 
         return reg;
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validateImpl(Context ctx, ErrorListener errs)
-        {
+    protected Statement validateImpl(Context ctx, ErrorListener errs) {
         boolean fValidInit = true;
 
         // the for() statement will represent its own scope
@@ -308,38 +270,30 @@ public class ForStatement
 
         List<Statement> listInit = init;
         int             cInit    = listInit.size();
-        for (int i = 0; i < cInit; ++i)
-            {
+        for (int i = 0; i < cInit; ++i) {
             Statement stmtOld = listInit.get(i);
             Statement stmtNew = stmtOld.validate(ctx, errs);
-            if (stmtNew == null)
-                {
+            if (stmtNew == null) {
                 fValidInit = false;
-                }
-            else if (stmtNew != stmtOld)
-                {
+            } else if (stmtNew != stmtOld) {
                 listInit.set(i, stmtNew);
-                }
+            }
 
-            if (m_listShorts != null)
-                {
+            if (m_listShorts != null) {
                 boolean fContinues = false;
-                for (Break shortInfo : m_listShorts)
-                    {
-                    if (!shortInfo.node().isDiscarded())
-                        {
+                for (Break shortInfo : m_listShorts) {
+                    if (!shortInfo.node().isDiscarded()) {
                         ctx.merge(shortInfo.mapAssign(), shortInfo.mapNarrow());
                         fContinues = true;
-                        }
                     }
-
-                if (fContinues)
-                    {
-                    ctx.setReachable(true);
-                    }
-                m_listShorts = null;
                 }
+
+                if (fContinues) {
+                    ctx.setReachable(true);
+                }
+                m_listShorts = null;
             }
+        }
 
         // each attempt to validate the loop will log errors into a temporary error list; whichever
         // run is the "keeper" will have its temporary errors moved over (relogged) into the
@@ -366,21 +320,18 @@ public class ForStatement
         // don't let this repeat ad nauseam
         int cTries = 0;
 
-        while (true)
-            {
+        while (true) {
             boolean fValid = true;
 
             // clone the condition(s), updates and the body
             conds = new ArrayList<>(cConds);
-            for (AstNode cond : condsOrig)
-                {
+            for (AstNode cond : condsOrig) {
                 conds.add(cond.clone());
-                }
+            }
             update = new ArrayList<>(cUpdates);
-            for (Statement stmt : updateOrig)
-                {
+            for (Statement stmt : updateOrig) {
                 update.add((Statement) stmt.clone());
-                }
+            }
             block = (StatementBlock) blockOrig.clone();
 
             // create a temporary error list
@@ -401,181 +352,142 @@ public class ForStatement
             ctx = ctx.enterIf();
 
             boolean fAlwaysTrue = cConds == 0; // for(;;) is "always true"
-            for (int i = 0; i < cConds; ++i)
-                {
+            for (int i = 0; i < cConds; ++i) {
                 AstNode cond = getCondition(i);
 
                 // the condition is either a boolean expression or an assignment statement whose R-value
                 // is a multi-value with the first value being a boolean
-                if (cond instanceof AssignmentStatement stmtOld)
-                    {
-                    if (stmtOld.isNegated())
-                        {
+                if (cond instanceof AssignmentStatement stmtOld) {
+                    if (stmtOld.isNegated()) {
                         ctx = ctx.enterNot();
-                        }
+                    }
 
                     AssignmentStatement stmtNew = (AssignmentStatement) stmtOld.validate(ctx, errs);
 
-                    if (stmtOld.isNegated())
-                        {
+                    if (stmtOld.isNegated()) {
                         ctx = ctx.exit();
-                        }
+                    }
 
-                    if (stmtNew == null)
-                        {
+                    if (stmtNew == null) {
                         fValid = false;
-                        }
-                    else if (stmtNew != stmtOld)
-                        {
+                    } else if (stmtNew != stmtOld) {
                         cond = stmtNew;
                         conds.set(i, cond);
-                        }
                     }
-                else
-                    {
+                } else {
                     Expression exprOld = (Expression) cond;
                     Expression exprNew = exprOld.validate(ctx, pool().typeBoolean(), errs);
-                    if (exprNew == null)
-                        {
+                    if (exprNew == null) {
                         fValid = false;
-                        }
-                    else if (exprNew != exprOld)
-                        {
+                    } else if (exprNew != exprOld) {
                         cond = exprNew;
                         conds.set(i, cond);
-                        }
+                    }
 
                     fAlwaysTrue = cond instanceof Expression expr && expr.isConstantTrue();
-                    }
                 }
+            }
 
             // the statement block is equivalent to "if ... then"
 
-            if (fAlwaysTrue)
-                {
+            if (fAlwaysTrue) {
                 if (init.isEmpty() && cConds == 0 && cUpdates == 0 &&
-                        block.getStatements().isEmpty())
-                    {
+                        block.getStatements().isEmpty()) {
                     log(errs, Severity.ERROR, Compiler.INFINITE_LOOP);
                     return null;
-                    }
+                }
                 ctx = ctx.enterInfiniteLoop();
-                }
-            else
-                {
+            } else {
                 ctx = ctx.enterFork(true);
-                }
+            }
 
             StatementBlock blockOld = block;
             StatementBlock blockNew = (StatementBlock) blockOld.validate(ctx, errs);
-            if (blockNew != blockOld)
-                {
-                if (blockNew == null)
-                    {
+            if (blockNew != blockOld) {
+                if (blockNew == null) {
                     fValid = false;
-                    }
-                else
-                    {
+                } else {
                     block = blockNew;
-                    }
                 }
+            }
 
-            if (m_listContinues != null)
-                {
+            if (m_listContinues != null) {
                 // the last "continue" is translated as a "break"
                 boolean fContinues = false;
-                for (Break continueInfo : m_listContinues)
-                    {
-                    if (!continueInfo.node().isDiscarded())
-                        {
+                for (Break continueInfo : m_listContinues) {
+                    if (!continueInfo.node().isDiscarded()) {
                         ctx.merge(continueInfo.mapAssign(), continueInfo.mapNarrow());
                         fContinues = true;
-                        }
                     }
-
-                if (fContinues)
-                    {
-                    ctx.setReachable(true);
-                    }
-                m_listContinues = null;
                 }
+
+                if (fContinues) {
+                    ctx.setReachable(true);
+                }
+                m_listContinues = null;
+            }
 
             List<Statement> listUpdate = update;
-            for (int i = 0; i < cUpdates; ++i)
-                {
+            for (int i = 0; i < cUpdates; ++i) {
                 Statement stmtOld = listUpdate.get(i);
                 Statement stmtNew = stmtOld.validate(ctx, errs);
-                if (stmtNew == null)
-                    {
+                if (stmtNew == null) {
                     fValid = false;
-                    }
-                else if (stmtNew != stmtOld)
-                    {
+                } else if (stmtNew != stmtOld) {
                     listUpdate.set(i, stmtNew);
-                    }
+                }
 
-                if (m_listShorts != null)
-                    {
+                if (m_listShorts != null) {
                     boolean fContinues = false;
-                    for (Break shortInfo : m_listShorts)
-                        {
-                        if (!shortInfo.node().isDiscarded())
-                            {
+                    for (Break shortInfo : m_listShorts) {
+                        if (!shortInfo.node().isDiscarded()) {
                             ctx.merge(shortInfo.mapAssign(), shortInfo.mapNarrow());
                             fContinues = true;
-                            }
                         }
-
-                    if (fContinues)
-                        {
-                        ctx.setReachable(true);
-                        }
-                    m_listShorts = null;
                     }
+
+                    if (fContinues) {
+                        ctx.setReachable(true);
+                    }
+                    m_listShorts = null;
                 }
+            }
 
             // see if there are any assignments that would change our starting assumptions
             Map<String, Assignment> mapAsnAfter = new HashMap<>();
             Map<String, Argument>   mapArgAfter = new HashMap<>();
             ctx.prepareJump(ctxOrig, mapAsnAfter, mapArgAfter);
 
-            if (!mapAsnAfter.equals(mapLoopAsn))
-                {
+            if (!mapAsnAfter.equals(mapLoopAsn)) {
                 // don't let this repeat forever
-                if (++cTries < 10)
-                    {
+                if (++cTries < 10) {
                     mapLoopAsn = mapAsnAfter;
                     mapLoopArg = mapArgAfter;
 
                     // discard the clones created in this pass
-                    for (AstNode cond : conds)
-                        {
+                    for (AstNode cond : conds) {
                         cond.discard(true);
-                        }
-                    for (Statement stmt : update)
-                        {
+                    }
+                    for (Statement stmt : update) {
                         stmt.discard(true);
-                        }
+                    }
                     block.discard(true);
                     continue; // repeat
-                    }
-
-                if (!errs.hasSeriousErrors())
-                    {
-                    log(errs, Severity.ERROR, Compiler.FATAL_ERROR);
-                    }
-                fValid = false;
                 }
+
+                if (!errs.hasSeriousErrors()) {
+                    log(errs, Severity.ERROR, Compiler.FATAL_ERROR);
+                }
+                fValid = false;
+            }
 
             // discard the original nodes (we cloned them already)
-            for (AstNode cond : condsOrig)
-                {
+            for (AstNode cond : condsOrig) {
                 cond.discard(true);
-                }
-            for (Statement stmt : updateOrig)
-                {
+            }
+            for (Statement stmt : updateOrig) {
                 stmt.discard(true);
-                }
+            }
             blockOrig.discard(true);
 
             // leaving the Fork,
@@ -590,11 +502,10 @@ public class ForStatement
             // leaving the scope of the for() statement
             ctx = ctx.exit();
 
-            if (fAlwaysTrue)
-                {
+            if (fAlwaysTrue) {
                 // doesn't complete normally; the breaks will be processed by Statement.validate()
                 ctx.setReachable(false);
-                }
+            }
 
             // lazily created loop vars are only created inside the validation of this statement
             m_ctxLabelVars  = null;
@@ -602,12 +513,11 @@ public class ForStatement
 
             errs.merge();
             return fValidInit && fValid ? this : null;
-            }
         }
+    }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
-        {
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         boolean   fCompletes = fReachable;
         Register  regFirst   = m_regFirst;
         Register  regCount   = m_regCount;
@@ -616,48 +526,41 @@ public class ForStatement
         code.add(new Enter());
 
         RegAllocAST[] aAllocSpecial = null;
-        if (regFirst != null)
-            {
+        if (regFirst != null) {
             StringConstant name = pool().ensureStringConstant(((LabeledStatement) getParent()).getName() + ".first");
             code.add(new Var_IN(m_regFirst, name, pool().valTrue()));
 
             aAllocSpecial    = new RegAllocAST[regCount == null ? 1 : 2];
             aAllocSpecial[0] = regFirst.getRegAllocAST();
-            }
+        }
 
-        if (regCount != null)
-            {
+        if (regCount != null) {
             StringConstant name = pool().ensureStringConstant(((LabeledStatement) getParent()).getName() + ".count");
             code.add(new Var_IN(m_regCount, name, pool().val0()));
 
             RegAllocAST astCount = regCount.getRegAllocAST();
-            if (aAllocSpecial == null)
-                {
+            if (aAllocSpecial == null) {
                 aAllocSpecial = new RegAllocAST[] {astCount};
-                }
-            else
-                {
+            } else {
                 aAllocSpecial[1] = astCount;
-                }
             }
+        }
 
         List<Statement> listInit   = init;
         int             cInit      = listInit.size();
         Label[]         aInitLabel = m_alabelInitGround;
         BinaryAST[]     aAstInit   = new BinaryAST[cInit];
-        for (int i = 0; i < cInit; ++i)
-            {
+        for (int i = 0; i < cInit; ++i) {
             Statement stmt = listInit.get(i);
             fCompletes = stmt.completes(ctx, fCompletes, code, errs);
 
             aAstInit[i] = holder.getAst(stmt);
 
             Label labelGround = aInitLabel == null ? null : aInitLabel[i];
-            if (labelGround != null)
-                {
+            if (labelGround != null) {
                 code.add(labelGround);
-                }
             }
+        }
 
         code.add(new Loop());
 
@@ -665,53 +568,39 @@ public class ForStatement
         // constant); all condition of true results in true (as long as all conditions are constant)
         boolean fAlwaysTrue  = true;
         boolean fAlwaysFalse = !conds.isEmpty(); // no conditions means "true"
-        for (AstNode cond : conds)
-            {
-            if (cond instanceof Expression expr && expr.isConstant())
-                {
-                if (expr.isConstantFalse())
-                    {
+        for (AstNode cond : conds) {
+            if (cond instanceof Expression expr && expr.isConstant()) {
+                if (expr.isConstantFalse()) {
                     fAlwaysTrue = false;
                     break;
-                    }
-                else
-                    {
+                } else {
                     assert expr.isConstantTrue();
                     fAlwaysFalse = false;
-                    }
                 }
-            else
-                {
+            } else {
                 fAlwaysTrue  = false;
                 fAlwaysFalse = false;
                 break;
-                }
             }
+        }
 
         boolean   fBlockReachable = fCompletes;
         ExprAST[] aCondAST        = null;
 
-        if (fAlwaysFalse)
-            {
+        if (fAlwaysFalse) {
             code.add(new Jump(getEndLabel()));
             fBlockReachable = false;
 
             // degenerate case: we don't need to generate neither the "condition" nor "update" AST
             holder.setAst(this, new StmtBlockAST(aAstInit, false));
-            }
-        else if (fAlwaysTrue)
-            {
+        } else if (fAlwaysTrue) {
             aCondAST = BinaryAST.NO_EXPRS;
-            }
-        else
-            {
+        } else {
             int cConds = getConditionCount();
             aCondAST = new ExprAST[cConds];
-            for (int i = 0; i < cConds; ++i)
-                {
+            for (int i = 0; i < cConds; ++i) {
                 AstNode cond = getCondition(i);
-                if (cond instanceof AssignmentStatement stmtCond)
-                    {
+                if (cond instanceof AssignmentStatement stmtCond) {
                     fBlockReachable &= stmtCond.completes(ctx, fCompletes, code, errs);
 
                     code.add(stmtCond.isNegated()
@@ -719,149 +608,125 @@ public class ForStatement
                             : new JumpFalse(stmtCond.getConditionRegister(), getEndLabel()));
 
                     aCondAST[i] = (ExprAST) holder.getAst(stmtCond);
-                    }
-                else
-                    {
+                } else {
                     Expression exprCond = (Expression) cond;
                     exprCond.generateConditionalJump(ctx, code, getEndLabel(), false, errs);
                     fBlockReachable &= exprCond.isCompletable();
 
                     aCondAST[i] = exprCond.getExprAST(ctx);
-                    }
                 }
             }
+        }
 
         Op opLast = null;
-        if (fAlwaysTrue)
-            {
+        if (fAlwaysTrue) {
             opLast = code.getLastOp();
             block.suppressScope();
-            }
+        }
 
         fCompletes &= block.completes(ctx, fBlockReachable, code, errs) || !fAlwaysTrue;
 
         BinaryAST astBody = fAlwaysFalse ? null : holder.getAst(block);
 
-        if (hasContinueLabel())
-            {
+        if (hasContinueLabel()) {
             code.add(getContinueLabel());
-            }
+        }
 
         List<Statement> listUpdate   = update;
         int             cUpdate      = listUpdate.size();
         Label[]         aUpdateLabel = m_alabelUpdateGround;
         BinaryAST[]     aAstUpdate   = new BinaryAST[cUpdate];
-        for (int i = 0; i < cUpdate; ++i)
-            {
+        for (int i = 0; i < cUpdate; ++i) {
             Statement stmt = listUpdate.get(i);
             fCompletes &= stmt.completes(ctx, fBlockReachable, code, errs) || !fAlwaysTrue;
 
-            if (!fAlwaysFalse)
-                {
+            if (!fAlwaysFalse) {
                 aAstUpdate[i] = holder.getAst(stmt);
-                }
+            }
 
             Label labelGround = aUpdateLabel == null ? null : aUpdateLabel[i];
-            if (labelGround != null)
-                {
+            if (labelGround != null) {
                 code.add(labelGround);
-                }
             }
+        }
 
-        if (regFirst != null)
-            {
+        if (regFirst != null) {
             code.add(new Move(pool().valFalse(), regFirst));
-            }
+        }
 
-        if (regCount != null)
-            {
+        if (regCount != null) {
             code.add(new IP_Inc(regCount));
-            }
+        }
 
-        if (fAlwaysTrue && code.getLastOp() == opLast)
-            {
+        if (fAlwaysTrue && code.getLastOp() == opLast) {
             // the block didn't add any ops; this is just an infinite loop
             log(errs, Severity.ERROR, Compiler.INFINITE_LOOP);
-            }
+        }
 
         code.add(new LoopEnd());
         code.add(new Exit());
 
-        if (!fAlwaysFalse)
-            {
+        if (!fAlwaysFalse) {
             holder.setAst(this,
                     new ForStmtAST(aAllocSpecial,
                                    BinaryAST.makeMultiStatement(aAstInit),
                                    BinaryAST.makeCondition(aCondAST),
                                    BinaryAST.makeMultiStatement(aAstUpdate),
                                    astBody));
-            }
-        return !fAlwaysTrue && fCompletes;
         }
+        return !fAlwaysTrue && fCompletes;
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
         sb.append("for (");
 
-        if (init != null)
-            {
+        if (init != null) {
             boolean first = true;
-            for (Statement stmt : init)
-                {
-                if (first)
-                    {
+            for (Statement stmt : init) {
+                if (first) {
                     first = false;
-                    }
-                else
-                    {
+                } else {
                     sb.append(", ");
-                    }
-                sb.append(stmt);
                 }
+                sb.append(stmt);
             }
+        }
 
         sb.append("; ");
 
-        if (conds != null && !conds.isEmpty())
-            {
+        if (conds != null && !conds.isEmpty()) {
             sb.append(conds.get(0));
-            for (int i = 1, c = conds.size(); i < c; ++i)
-                {
+            for (int i = 1, c = conds.size(); i < c; ++i) {
                 sb.append(", ")
                   .append(conds.get(i));
-                }
             }
+        }
 
         sb.append("; ");
 
-        if (update != null)
-            {
+        if (update != null) {
             boolean first = true;
-            for (Statement stmt : update)
-                {
-                if (first)
-                    {
+            for (Statement stmt : update) {
+                if (first) {
                     first = false;
-                    }
-                else
-                    {
+                } else {
                     sb.append(", ");
-                    }
-                sb.append(stmt);
                 }
+                sb.append(stmt);
             }
+        }
 
         sb.append(")\n")
           .append(indentLines(block.toString(), "    "));
 
         return sb.toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -898,4 +763,4 @@ public class ForStatement
     private transient Label[] m_alabelUpdateGround;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ForStatement.class, "init", "conds", "update", "block");
-    }
+}

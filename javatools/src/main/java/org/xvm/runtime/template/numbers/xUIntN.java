@@ -10,17 +10,14 @@ import org.xvm.runtime.Container;
  * Native UIntN support.
  */
 public class xUIntN
-        extends xUnconstrainedInteger
-    {
+        extends xUnconstrainedInteger {
     public static xUIntN INSTANCE;
 
-    public xUIntN(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xUIntN(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
     }
+}

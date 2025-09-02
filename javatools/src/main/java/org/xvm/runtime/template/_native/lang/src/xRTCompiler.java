@@ -65,72 +65,59 @@ import org.xvm.util.Severity;
  * Native xRTCompiler implementation.
  */
 public class xRTCompiler
-        extends xService
-    {
+        extends xService {
     public static xRTCompiler INSTANCE;
 
-    public xRTCompiler(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTCompiler(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         ClassStructure structRepo = f_container.getClassStructure("mgmt.ModuleRepository");
         GET_MODULE_ID = structRepo.findMethod("getModule", 2).getIdentityConstant();
 
         markNativeMethod("compileImpl", null, null);
 
         invalidateTypeInfo();
-        }
+    }
 
     @Override
-    public TypeConstant getCanonicalType()
-        {
+    public TypeConstant getCanonicalType() {
         return pool().ensureEcstasyTypeConstant("lang.src.Compiler");
-        }
+    }
 
     @Override
     public ServiceHandle createServiceHandle(ServiceContext context, ClassComposition clz,
-                                             TypeConstant typeMask)
-        {
+                                             TypeConstant typeMask) {
         CompilerHandle hCompiler =
                 new CompilerHandle(clz.maskAs(typeMask), context, new CompilerAdapter());
         context.setService(hCompiler);
         return hCompiler;
-        }
+    }
 
     @Override
     public int invokeNativeNN(Frame frame, MethodStructure method,
-                              ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
-        {
+                              ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn) {
         CompilerHandle hCompiler = (CompilerHandle) hTarget;
-        switch (method.getName())
-            {
-            case "compileImpl":
-                {
-                try
-                    {
-                    ObjectHandle   hRepo     = ahArg[0];
-                    ArrayHandle    haSources = (ArrayHandle) ahArg[1];
-                    ObjectHandle[] ahSource  = haSources.getTemplate().toArray(frame, haSources);
-                    return invokeCompileImpl(frame, hCompiler, hRepo, ahSource, aiReturn);
-                    }
-                catch (ExceptionHandle.WrapperException e)
-                    {
-                    return frame.raiseException(e);
-                    }
-                }
+        switch (method.getName()) {
+        case "compileImpl":
+            try {
+                ObjectHandle   hRepo     = ahArg[0];
+                ArrayHandle    haSources = (ArrayHandle) ahArg[1];
+                ObjectHandle[] ahSource  = haSources.getTemplate().toArray(frame, haSources);
+                return invokeCompileImpl(frame, hCompiler, hRepo, ahSource, aiReturn);
+            } catch (ExceptionHandle.WrapperException e) {
+                return frame.raiseException(e);
             }
+        }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
-        }
+    }
 
     /**
      * Native implementation of:
@@ -138,15 +125,13 @@ public class xRTCompiler
      *          compileImpl(ModuleRepository repo, OSFileNode[] sources)"
      */
     protected int invokeCompileImpl(Frame frame, CompilerHandle hCompiler, ObjectHandle hRepo,
-                                    ObjectHandle[] ahSources, int[] aiReturn)
-        {
+                                    ObjectHandle[] ahSources, int[] aiReturn) {
         CompilerAdapter compiler = hCompiler.fAdapter;
 
         List<File> listSources = new ArrayList<>();
-        for (ObjectHandle hSource : ahSources)
-            {
+        for (ObjectHandle hSource : ahSources) {
             listSources.add(((NodeHandle) hSource).getPath().toFile());
-            }
+        }
         compiler.setSourceLocations(listSources);
 
         // create a new repository list based on the core repository parts
@@ -155,80 +140,69 @@ public class xRTCompiler
         List<ModuleRepository> listNew = new ArrayList<>();
         listNew.add(new BuildRepository());
 
-        for (ModuleRepository repo : repoCore.asList())
-            {
+        for (ModuleRepository repo : repoCore.asList()) {
             // take all read-only repositories
             if (repo instanceof DirRepository  repoDir  && repoDir .isReadOnly() ||
-                repo instanceof FileRepository repoFile && repoFile.isReadOnly())
-                {
+                repo instanceof FileRepository repoFile && repoFile.isReadOnly()) {
                 listNew.add(repo);
-                }
             }
+        }
 
         compiler.setLibraryRepos(listNew);
 
         return doCompile(frame, compiler, hRepo, null, aiReturn);
-        }
+    }
 
     private int doCompile(Frame frame, CompilerAdapter compiler,
-                          ObjectHandle hRepo, String sMissingPrev, int[] aiReturn)
-        {
-        try
-            {
+                          ObjectHandle hRepo, String sMissingPrev, int[] aiReturn) {
+        try {
             String sMissing = compiler.partialCompile(sMissingPrev != null);
-            if (sMissing != null)
-                {
-                if (sMissing.equals(sMissingPrev) || hRepo == xNullable.NULL)
-                    {
+            if (sMissing != null) {
+                if (sMissing.equals(sMissingPrev) || hRepo == xNullable.NULL) {
                     return completeWithError(frame, compiler, sMissing, aiReturn);
-                    }
-                CallChain chain = computeGetModuleChain(frame, hRepo);
-                switch (chain.invoke(frame, hRepo, xString.makeHandle(sMissing), STACK_2))
-                    {
-                    case Op.R_NEXT:
-                        return popModuleStructure(frame, compiler)
-                            ? doCompile(frame, compiler, hRepo, sMissing, aiReturn)
-                            : completeWithError(frame, compiler, sMissing, aiReturn);
-
-                    case Op.R_CALL:
-                        Frame.Continuation nextStep = frameCaller ->
-                            popModuleStructure(frameCaller, compiler)
-                                ? doCompile(frameCaller, compiler, hRepo, sMissing, aiReturn)
-                                : completeWithError(frameCaller, compiler, sMissing, aiReturn);
-                        frame.m_frameNext.addContinuation(nextStep);
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
                 }
-            return completeCompilation(frame, compiler, null, aiReturn);
-            }
-        catch (Exception e)
-            {
-            return completeCompilation(frame, compiler, e, aiReturn);
-            }
-        }
+                CallChain chain = computeGetModuleChain(frame, hRepo);
+                switch (chain.invoke(frame, hRepo, xString.makeHandle(sMissing), STACK_2)) {
+                case Op.R_NEXT:
+                    return popModuleStructure(frame, compiler)
+                        ? doCompile(frame, compiler, hRepo, sMissing, aiReturn)
+                        : completeWithError(frame, compiler, sMissing, aiReturn);
 
-    private CallChain computeGetModuleChain(Frame frame, ObjectHandle hRepo)
-        {
+                case Op.R_CALL:
+                    Frame.Continuation nextStep = frameCaller ->
+                        popModuleStructure(frameCaller, compiler)
+                            ? doCompile(frameCaller, compiler, hRepo, sMissing, aiReturn)
+                            : completeWithError(frameCaller, compiler, sMissing, aiReturn);
+                    frame.m_frameNext.addContinuation(nextStep);
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+            return completeCompilation(frame, compiler, null, aiReturn);
+        } catch (Exception e) {
+            return completeCompilation(frame, compiler, e, aiReturn);
+        }
+    }
+
+    private CallChain computeGetModuleChain(Frame frame, ObjectHandle hRepo) {
         Object nid = GET_MODULE_ID.resolveNestedIdentity(
                         frame.poolContext(), frame.getGenericsResolver(true));
 
         TypeComposition clazz = hRepo.getComposition();
         CallChain       chain = clazz.getMethodCallChain(nid);
-        if (chain.isEmpty())
-            {
+        if (chain.isEmpty()) {
             return new CallChain.ExceptionChain(xException.makeHandle(frame,
                 "Missing method \"" + GET_MODULE_ID +
                 "\" on " + hRepo.getType().getValueString()));
-            }
+        }
 
         return chain;
-        }
+    }
 
     /**
      * Obtain a ModuleStructure from the natural (conditional ModuleTemplate) return value on the
@@ -236,53 +210,44 @@ public class xRTCompiler
      *
      * @return true iff the module was successfully loaded and added
      */
-    private boolean popModuleStructure(Frame frame, CompilerAdapter compiler)
-        {
+    private boolean popModuleStructure(Frame frame, CompilerAdapter compiler) {
         ObjectHandle hReturn = frame.popStack();
-        if (hReturn instanceof ComponentTemplateHandle hModule)
-            {
+        if (hReturn instanceof ComponentTemplateHandle hModule) {
             assert frame.popStack() == xBoolean.TRUE;
             compiler.addRepo((ModuleStructure) hModule.getComponent());
             return true;
-            }
+        }
 
         assert hReturn == xBoolean.FALSE;
         return false;
-        }
+    }
 
     private int completeWithError(Frame frame, CompilerAdapter compiler, String
-                                  sMissing, int[] aiReturn)
-        {
+                                  sMissing, int[] aiReturn) {
         // org.xvm.compiler.Compiler.MODULE_MISSING
         compiler.log(Severity.FATAL, "Module missing: \"" + sMissing + '"');
         return completeCompilation(frame, compiler, null, aiReturn);
-        }
+    }
 
     private int completeCompilation(Frame frame, CompilerAdapter compiler,
-                                    Exception exception, int[] aiReturn)
-        {
+                                    Exception exception, int[] aiReturn) {
         List<ComponentTemplateHandle> listFiles = new ArrayList<>();
         List<String>                  listErrors = compiler.getErrors();
         boolean      fSuccess;
-        if (exception == null)
-            {
+        if (exception == null) {
             fSuccess = compiler.getSeverity().compareTo(Severity.ERROR) < 0;
-            if (fSuccess)
-                {
+            if (fSuccess) {
                 Container        container = frame.f_context.f_container;
                 ModuleRepository repoBuild = compiler.getBuildRepository();
-                for (String sModule : repoBuild.getModuleNames())
-                    {
+                for (String sModule : repoBuild.getModuleNames()) {
                     listFiles.add(xRTFileTemplate.makeHandle(container,
                             repoBuild.loadModule(sModule).getFileStructure()));
-                    }
                 }
             }
-        else
-            {
+        } else {
             fSuccess   = false;
             listErrors = addError(exception, listErrors);
-            }
+        }
 
         assert fSuccess || !listErrors.isEmpty(); // a compilation failure must report reasons
 
@@ -292,120 +257,100 @@ public class xRTCompiler
 
         ArrayHandle haTemplates;
         ArrayHandle haErrors;
-        if (fSuccess)
-            {
+        if (fSuccess) {
             haTemplates = xArray.makeArrayHandle(clzArray, listFiles.size(),
                             listFiles.toArray(Utils.OBJECTS_NONE), Mutability.Constant);
             haErrors    = xString.ensureEmptyArray();
-            }
-        else
-            {
+        } else {
             haTemplates = xArray.makeArrayHandle(clzArray, 0, Utils.OBJECTS_NONE, Mutability.Constant);
             haErrors    = xString.makeArrayHandle(listErrors.toArray(Utils.NO_NAMES));
-            }
+        }
 
         compiler.reset();
         return frame.assignValues(aiReturn, haTemplates, haErrors);
-        }
+    }
 
-    private List<String> addError(Exception exception, List<String> listErrors)
-        {
-        if (listErrors.isEmpty())
-            {
+    private List<String> addError(Exception exception, List<String> listErrors) {
+        if (listErrors.isEmpty()) {
             listErrors = new ArrayList<>();
-            }
+        }
         listErrors.add(exception.toString());
         return listErrors;
-        }
+    }
 
     /**
      * Injection support.
      */
-    public ObjectHandle ensureCompiler(Frame frame, ObjectHandle hOpts)
-        {
+    public ObjectHandle ensureCompiler(Frame frame, ObjectHandle hOpts) {
         return createServiceHandle(
                 f_container.createServiceContext("Compiler"),
                     getCanonicalClass(), getCanonicalType());
-        }
+    }
 
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     protected static class CompilerHandle
-            extends ServiceHandle
-        {
+            extends ServiceHandle {
         protected final CompilerAdapter fAdapter;
 
-        protected CompilerHandle(TypeComposition clazz, ServiceContext context, CompilerAdapter adapter)
-            {
+        protected CompilerHandle(TypeComposition clazz, ServiceContext context, CompilerAdapter adapter) {
             super(clazz, context);
 
             fAdapter = adapter;
-            }
         }
+    }
 
     /**
      * Adapter into the native compiler.
      */
     protected static class CompilerAdapter
-            extends Compiler
-        {
-        protected CompilerAdapter()
-            {
+            extends Compiler {
+        protected CompilerAdapter() {
             super(null);
-            }
+        }
 
         // ----- accessors -------------------------------------------------------------------------
 
-        protected void setLibraryRepos(List<ModuleRepository> listRepos)
-            {
+        protected void setLibraryRepos(List<ModuleRepository> listRepos) {
             m_listRepos = listRepos;
-            }
+        }
 
-        protected void addRepo(ModuleStructure module)
-            {
+        protected void addRepo(ModuleStructure module) {
             m_listRepos.add(new InstantRepository(module));
-            }
+        }
 
-        protected List<File> getSourceLocations()
-            {
+        protected List<File> getSourceLocations() {
             return m_listSources;
-            }
+        }
 
-        protected void setSourceLocations(List<File> listSources)
-            {
+        protected void setSourceLocations(List<File> listSources) {
             m_listSources = listSources;
-            }
+        }
 
-        protected Version getVersion()
-            {
+        protected Version getVersion() {
             return m_version;
-            }
+        }
 
-        protected void setVersion(Version version)
-            {
+        protected void setVersion(Version version) {
             m_version = version;
-            }
+        }
 
-        protected boolean isForcedRebuild()
-            {
+        protected boolean isForcedRebuild() {
             return true;
-            }
+        }
 
-        protected Severity getSeverity()
-            {
+        protected Severity getSeverity() {
             return m_sevWorst;
-            }
+        }
 
-        protected List<String> getErrors()
-            {
+        protected List<String> getErrors() {
             return m_log == null ? Collections.emptyList() : m_log;
-            }
+        }
 
-        protected ModuleRepository getBuildRepository()
-            {
+        protected ModuleRepository getBuildRepository() {
             return m_repoResults;
-            }
+        }
 
         /**
          * This method is basically a copy of {@link Compiler#process()} implementation that allows
@@ -415,22 +360,18 @@ public class xRTCompiler
          *
          * @return a name of a missing module if any
          */
-        protected String partialCompile(boolean fReenter)
-            {
+        protected String partialCompile(boolean fReenter) {
             org.xvm.compiler.Compiler[] compilers;
             ModuleRepository            repoLib;
             ModuleRepository            repoOutput;
             Node[]                      allNodes;
 
-            if (fReenter)
-                {
+            if (fReenter) {
                 compilers  = m_compilers;
                 repoLib    = configureLibraryRepo(null);
                 repoOutput = m_repoOutput;
                 allNodes   = m_allNodes;
-                }
-            else
-                {
+            } else {
                 File[]           resourceDirs = options().getResourceLocation();
                 File             fileOutput   = options().getOutputLocation();
                 List<ModuleInfo> listTargets  = selectTargets(options().getInputLocations(), resourceDirs, fileOutput);
@@ -439,26 +380,22 @@ public class xRTCompiler
 
                 Map<File, Node> mapTargets     = new ListMap<>(listTargets.size());
                 int             cSystemModules = 0;
-                for (ModuleInfo moduleInfo : listTargets)
-                    {
+                for (ModuleInfo moduleInfo : listTargets) {
                     Node node = moduleInfo.getSourceTree(this);
 
                     // short-circuit the compilation of any up-to-date modules
-                    if (fRebuild || !moduleInfo.isUpToDate())
-                        {
+                    if (fRebuild || !moduleInfo.isUpToDate()) {
                         mapTargets.put(moduleInfo.getSourceFile(), node);
-                        if (moduleInfo.isSystemModule())
-                            {
+                        if (moduleInfo.isSystemModule()) {
                             ++cSystemModules;
-                            }
                         }
                     }
+                }
 
-                if (mapTargets.isEmpty())
-                    {
+                if (mapTargets.isEmpty()) {
                     log(Severity.INFO, "All modules are up to date; terminating compiler");
                     return null;
-                    }
+                }
 
                 allNodes = mapTargets.values().toArray(new Node[0]);
                 flushAndCheckErrors(allNodes);
@@ -467,10 +404,9 @@ public class xRTCompiler
                 repoLib = configureLibraryRepo(options().getModulePath());
                 checkErrors();
 
-                if (cSystemModules == 0)
-                    {
+                if (cSystemModules == 0) {
                     prelinkSystemLibraries(repoLib);
-                    }
+                }
                 checkErrors();
 
                 repoOutput = configureResultRepo(fileOutput);
@@ -481,21 +417,19 @@ public class xRTCompiler
                 flushAndCheckErrors(allNodes);
 
                 compilers = mapCompilers.values().toArray(NO_COMPILERS);
-                }
+            }
 
             // inline linkModules() implementation
-            for (var compiler : compilers)
-                {
+            for (var compiler : compilers) {
                 ModuleConstant idMissing = compiler.linkModules(repoLib);
-                if (idMissing != null)
-                    {
+                if (idMissing != null) {
                     // save off the necessary state
                     m_compilers  = compilers;
                     m_repoOutput = repoOutput;
                     m_allNodes   = allNodes;
                     return idMissing.getName();
-                    }
                 }
+            }
 
             resolveNames(compilers);
             flushAndCheckErrors(allNodes);
@@ -513,11 +447,10 @@ public class xRTCompiler
             flushAndCheckErrors(allNodes);
 
             return null;
-            }
+        }
 
         @Override
-        protected void reset()
-            {
+        protected void reset() {
             super.reset();
 
             m_listSources = null;
@@ -527,100 +460,85 @@ public class xRTCompiler
             m_repoOutput  = null;
             m_allNodes    = null;
             m_log.clear();
-            }
+        }
 
         // ----- Compiler API ----------------------------------------------------------------------
 
         @Override
-        protected ModuleRepository configureLibraryRepo(List<File> ignore)
-            {
+        protected ModuleRepository configureLibraryRepo(List<File> ignore) {
             return new LinkedRepository(true, m_listRepos.toArray(ModuleRepository.NO_REPOS));
-            }
+        }
 
         @Override
-        protected ModuleRepository configureResultRepo(File fileDest)
-            {
+        protected ModuleRepository configureResultRepo(File fileDest) {
             return m_repoResults = makeBuildRepo();
-            }
+        }
 
         @Override
-        public void run()
-            {
+        public void run() {
             // use partialRun() instead
             throw new IllegalStateException();
-            }
+        }
 
         @Override
-        protected void linkModules(org.xvm.compiler.Compiler[] compilers, ModuleRepository repo)
-            {
+        protected void linkModules(org.xvm.compiler.Compiler[] compilers, ModuleRepository repo) {
             // inlined; should not be called
             throw new IllegalStateException();
-            }
+        }
 
         @Override
-        protected void log(Severity sev, String sMsg)
-            {
+        protected void log(Severity sev, String sMsg) {
             List<String> log = m_log;
-            if (log == null)
-                {
+            if (log == null) {
                 log = m_log = new ArrayList<>();
-                }
-
-            if (sev.compareTo(m_sevWorst) > 0)
-                {
-                m_sevWorst = sev;
-                }
-
-            if (sev.compareTo(Severity.WARNING) >= 0)
-                {
-                log.add(sev.desc() + ": " + sMsg);
-                }
             }
+
+            if (sev.compareTo(m_sevWorst) > 0) {
+                m_sevWorst = sev;
+            }
+
+            if (sev.compareTo(Severity.WARNING) >= 0) {
+                log.add(sev.desc() + ": " + sMsg);
+            }
+        }
 
         @Override
-        protected void abort(boolean fError)
-            {
+        protected void abort(boolean fError) {
             throw new CompilerException("");
-            }
+        }
 
         // ----- Options adapter -------------------------------------------------------------------
 
         @Override
-        protected Compiler.Options instantiateOptions()
-            {
+        protected Compiler.Options instantiateOptions() {
             return new Options();
-            }
+        }
 
         /**
          * A non-command-line Options implementation.
          */
         class Options
-                extends Compiler.Options
-            {
+                extends Compiler.Options {
             @Override
-            public List<File> getInputLocations()
-                {
+            public List<File> getInputLocations() {
                 return CompilerAdapter.this.getSourceLocations();
-                }
-
-            @Override
-            public Version getVersion()
-                {
-                return CompilerAdapter.this.getVersion();
-                }
-
-            @Override
-            public boolean isOutputFilenameQualified()
-                {
-                return true;
-                }
-
-            @Override
-            public boolean isForcedRebuild()
-                {
-                return CompilerAdapter.this.isForcedRebuild();
-                }
             }
+
+            @Override
+            public Version getVersion() {
+                return CompilerAdapter.this.getVersion();
+            }
+
+            @Override
+            public boolean isOutputFilenameQualified() {
+                return true;
+            }
+
+            @Override
+            public boolean isForcedRebuild() {
+                return CompilerAdapter.this.isForcedRebuild();
+            }
+        }
 
         // ----- fields ----------------------------------------------------------------------------
 
@@ -634,11 +552,11 @@ public class xRTCompiler
         private org.xvm.compiler.Compiler[] m_compilers;
         private ModuleRepository            m_repoOutput;
         private Node[]                      m_allNodes;
-        }
+    }
 
     // ----- constants -----------------------------------------------------------------------------
 
     private static final int[] STACK_2 = new int[] {Op.A_STACK, Op.A_STACK};
 
     private static MethodConstant GET_MODULE_ID;
-    }
+}

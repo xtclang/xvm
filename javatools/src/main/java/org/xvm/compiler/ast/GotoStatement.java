@@ -13,8 +13,7 @@ import org.xvm.compiler.Token;
  * and "continue", and allow the use of such terms in a far more limited and predictable manner.
  */
 public abstract class GotoStatement
-        extends Statement
-    {
+        extends Statement {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -23,52 +22,46 @@ public abstract class GotoStatement
      * @param keyword  the keyword (either "break" or "continue")
      * @param name     the name specified, or null
      */
-    public GotoStatement(Token keyword, Token name)
-        {
+    public GotoStatement(Token keyword, Token name) {
         this.keyword = keyword;
         this.name    = name;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return keyword.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return name == null ? keyword.getEndPosition() : name.getEndPosition();
-        }
+    }
 
     /**
      * @return true iff the "goto" statement specifies the name of a label
      */
-    public boolean isLabeled()
-        {
+    public boolean isLabeled() {
         return name != null;
-        }
+    }
 
     /**
      * @return the name of the label on the labeled statement, or null
      */
-    public String getLabeledName()
-        {
+    public String getLabeledName() {
         return isLabeled()
                 ? name.getValueText()
                 : null;
-        }
+    }
 
     /**
      * @return the label that this statement will jump to
      */
-    public Label getJumpLabel()
-        {
+    public Label getJumpLabel() {
         return m_label;
-        }
+    }
 
     /**
      * Specify the label to use. This must occur from within the validate() stage, i.e. before the
@@ -76,126 +69,107 @@ public abstract class GotoStatement
      *
      * @param label  the label that the statement jumps to
      */
-    protected void setJumpLabel(Label label)
-        {
+    protected void setJumpLabel(Label label) {
         assert m_label == null;
         m_label = label;
-        }
+    }
 
     /**
      * @return the statement that this "goto" statement refers to
      */
-    protected Statement getTargetStatement()
-        {
-        if (isLabeled())
-            {
+    protected Statement getTargetStatement() {
+        if (isLabeled()) {
             String  sLabel = getLabeledName();
             AstNode node   = getParent();
-            while (true)
-                {
+            while (true) {
                 AstNode nodeParent = node.getParent();
                 if (nodeParent instanceof LabeledStatement stmtLabeled
-                        && stmtLabeled.getName().equals(sLabel))
-                    {
+                        && stmtLabeled.getName().equals(sLabel)) {
                     return (Statement) node;
-                    }
+                }
 
-                if (nodeParent.isComponentNode() || nodeParent instanceof StatementExpression)
-                    {
+                if (nodeParent.isComponentNode() || nodeParent instanceof StatementExpression) {
                     // cannot pass a component boundary (and StatementExpression is a "pretend"
                     // component boundary, because it's supposed to act like a lambda)
                     return null;
-                    }
+                }
 
                 node = nodeParent;
-                }
-            }
-
-        AstNode node = getParent();
-        while (true)
-            {
-            if (node instanceof Statement stmt)
-                {
-                if (stmt.isNaturalGotoStatementTarget())
-                    {
-                    return stmt;
-                    }
-
-                if (stmt.isComponentNode())
-                    {
-                    // cannot pass a component boundary
-                    return null;
-                    }
-                }
-
-            node = node.getParent();
             }
         }
+
+        AstNode node = getParent();
+        while (true) {
+            if (node instanceof Statement stmt) {
+                if (stmt.isNaturalGotoStatementTarget()) {
+                    return stmt;
+                }
+
+                if (stmt.isComponentNode()) {
+                    // cannot pass a component boundary
+                    return null;
+                }
+            }
+
+            node = node.getParent();
+        }
+    }
 
     /**
      * @return the "depth" of the statement that this "goto" statement refers to
      */
-    protected int getTargetDepth()
-        {
-        if (!isLabeled())
-            {
+    protected int getTargetDepth() {
+        if (!isLabeled()) {
             return 0;
-            }
+        }
 
         int     nDepth = 0;
         String  sLabel = getLabeledName();
         AstNode node   = getParent();
-        while (true)
-            {
+        while (true) {
             AstNode nodeParent = node.getParent();
             if (nodeParent instanceof LabeledStatement stmtLabeled
-                    && stmtLabeled.getName().equals(sLabel))
-                {
+                    && stmtLabeled.getName().equals(sLabel)) {
                 return nDepth;
-                }
+            }
 
             if (node instanceof Statement stmt
-                    && stmt.isNaturalGotoStatementTarget())
-                {
+                    && stmt.isNaturalGotoStatementTarget()) {
                 nDepth++;
-                }
+            }
 
-            if (nodeParent.isComponentNode() || nodeParent instanceof StatementExpression)
-                {
+            if (nodeParent.isComponentNode() || nodeParent instanceof StatementExpression) {
                 // cannot pass a component boundary (and StatementExpression is a "pretend"
                 // component boundary, because it's supposed to act like a lambda)
                 return -1;
-                }
+            }
 
             node = nodeParent;
-            }
         }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
         sb.append(keyword.getId().TEXT);
 
-        if (name != null)
-            {
+        if (name != null) {
             sb.append(' ')
               .append(name.getValue());
-            }
+        }
 
         sb.append(';');
         return sb.toString();
-        }
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -204,4 +178,4 @@ public abstract class GotoStatement
     protected Token name;
 
     protected transient Label m_label;
-    }
+}

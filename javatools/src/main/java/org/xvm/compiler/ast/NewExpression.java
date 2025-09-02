@@ -64,8 +64,7 @@ import static org.xvm.util.Handy.indentLines;
  * "New object" expression.
  */
 public class NewExpression
-        extends Expression
-    {
+        extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -80,8 +79,7 @@ public class NewExpression
      * @param body      the body of the anonymous inner class being instantiated, or null
      * @param lEndPos   the expression's end position in the source code
      */
-    public NewExpression(Expression left, Token operator, TypeExpression type, List<Expression> args, int dims, StatementBlock body, long lEndPos)
-        {
+    public NewExpression(Expression left, Token operator, TypeExpression type, List<Expression> args, int dims, StatementBlock body, long lEndPos) {
         assert operator != null;
         assert args != null;
 
@@ -92,209 +90,172 @@ public class NewExpression
         this.dims     = dims;
         this.body     = body;
         this.lEndPos  = lEndPos;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public boolean isComponentNode()
-        {
+    public boolean isComponentNode() {
         return body != null;
-        }
+    }
 
     /**
      * @return true iff the new expression is for a "virtual new" (this.new(...))
      */
-    public boolean isVirtualNew()
-        {
+    public boolean isVirtualNew() {
         return type == null;
-        }
+    }
 
     /**
      * @return true iff there were square brackets as part of the new expression
      */
-    public boolean hasSquareBrackets()
-        {
+    public boolean hasSquareBrackets() {
         return dims >= 0;
-        }
+    }
 
     /**
      * @return the number of constructor arguments that were inside of square brackets
      */
-    public int getDimensionCount()
-        {
+    public int getDimensionCount() {
         return Math.max(dims, 0);
-        }
+    }
 
     @Override
-    public boolean isAutoNarrowingAllowed(TypeExpression type)
-        {
+    public boolean isAutoNarrowingAllowed(TypeExpression type) {
         // auto-narrowing is allowed for type parameters, but not the type itself
         return type != this.type;
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return left == null ? operator.getStartPosition() : left.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return lEndPos;
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- AstNode methods -----------------------------------------------------------------------
 
     @Override
-    public AstNode clone()
-        {
+    public AstNode clone() {
         NewExpression that = (NewExpression) super.clone();
         // the "body" is not a child and has to be handled manually
-        if (body != null)
-            {
+        if (body != null) {
             that.body = anon == null
                     ? (StatementBlock) body.clone()
                     : that.anon.body;
-            }
-        return that;
         }
+        return that;
+    }
 
     @Override
-    protected void discard(boolean fRecurse)
-        {
+    protected void discard(boolean fRecurse) {
         super.discard(fRecurse);
 
-        if (fRecurse && body != null)
-            {
+        if (fRecurse && body != null) {
             body.discard(fRecurse);
-            }
         }
+    }
 
 
     // ----- Code Container methods ----------------------------------------------------------------
 
     @Override
-    protected RuntimeException notCodeContainer()
-        {
+    protected RuntimeException notCodeContainer() {
         // while an inner class is technically a code container, it is not directly a code container
         // in the same sense that a method is, because it cannot directly contain a "return"
         throw new IllegalStateException("invalid return from an anonymous inner class: " + this);
-        }
+    }
 
     /**
      * @return the AnonInnerClassContext, if captures are available from this expression, or null
      */
-    public AnonInnerClassContext getCaptureContext()
-        {
+    public AnonInnerClassContext getCaptureContext() {
         return m_ctxCapture;
-        }
+    }
 
 
     // ----- compilation (Expression) --------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType(Context ctx)
-        {
+    public TypeConstant getImplicitType(Context ctx) {
         return calculateTargetType(ctx, null);
+    }
+
+    private TypeConstant calculateTargetType(Context ctx, ErrorListener errs) {
+        if (isValidated()) {
+            return getType();
         }
 
-    private TypeConstant calculateTargetType(Context ctx, ErrorListener errs)
-        {
-        if (isValidated())
-            {
-            return getType();
-            }
-
-        if (errs == null)
-            {
+        if (errs == null) {
             errs = ErrorListener.BLACKHOLE;
-            }
+        }
 
         TypeConstant typeTarget = null;
-        if (body == null)
-            {
-            if (isVirtualNew())
-                {
+        if (body == null) {
+            if (isVirtualNew()) {
                 // immutability is not carried over
                 typeTarget = (left == null
                         ? ctx.getThisType()
                         : left.getImplicitType(ctx)).removeImmutable();
-                }
-            else
-                {
-                if (left == null)
-                    {
+            } else {
+                if (left == null) {
                     typeTarget = type.ensureTypeConstant(ctx, errs);
-                    }
-                else
-                    {
+                } else {
                     TypeConstant typeLeft = left.getImplicitType(ctx).removeImmutable();
-                    if (typeLeft != null && type instanceof NamedTypeExpression exprNameType)
-                        {
+                    if (typeLeft != null && type instanceof NamedTypeExpression exprNameType) {
                         typeTarget = typeLeft.ensureTypeInfo(errs).
                                 calculateChildType(pool(), exprNameType.getName());
-                        }
                     }
                 }
             }
-        else
-            {
-            if (anon == null)
-                {
+        } else {
+            if (anon == null) {
                 ensureInnerClass(ctx, AnonPurpose.RoughDraft, errs);
                 typeTarget = type.ensureTypeConstant(ctx, errs);
-                }
-            else
-                {
+            } else {
                 // there must be an anonymous inner class skeleton by this point
                 assert anon != null && anon.getComponent() != null;
                 return ((ClassStructure) anon.getComponent()).getFormalType();
-                }
             }
+        }
 
-        if (typeTarget != null && typeTarget.containsUnresolved())
-            {
+        if (typeTarget != null && typeTarget.containsUnresolved()) {
             log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, type.toString());
             return null;
-            }
+        }
 
         return typeTarget;
-        }
+    }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs)
-        {
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs) {
         return calcFit(ctx, calculateTargetType(ctx, errs), typeRequired);
-        }
+    }
 
     @Override
-    protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut)
-        {
-        if (typeIn != null && typeOut != null)
-            {
+    protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut) {
+        if (typeIn != null && typeOut != null) {
             // right-to-left inference to match the "validate" logic
             TypeConstant typeInferred = inferTypeFromRequired(typeIn, typeOut);
-            if (typeInferred != null)
-                {
+            if (typeInferred != null) {
                 typeIn = typeInferred;
-                }
             }
-        return super.calcFit(ctx, typeIn, typeOut);
         }
+        return super.calcFit(ctx, typeIn, typeOut);
+    }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         ConstantPool pool       = pool();
         TypeConstant typeSuper  = null;   // the super class type of the anon inner class
         TypeConstant typeTarget = null;   // the type to look for a constructor at (could be private)
@@ -305,84 +266,60 @@ public class NewExpression
         boolean fAnonymous = body != null;
         boolean fVirtual   = isVirtualNew();
         Plan    plan;
-        if (fAnonymous)
-            {
+        if (fAnonymous) {
             ErrorListener errsTemp = errs.branch(this);
 
             ensureInnerClass(ctx, AnonPurpose.RoughDraft, errsTemp);
 
-            if (errsTemp.hasSeriousErrors())
-                {
+            if (errsTemp.hasSeriousErrors()) {
                 errsTemp.merge();
                 return null;
-                }
-            // don't merge any warnings since we will call "ensureInnerClass" again
             }
+            // don't merge any warnings since we will call "ensureInnerClass" again
+        }
 
-        if (left == null)
-            {
+        if (left == null) {
             typeTarget = ctx.getThisType();
-            if (fVirtual)
-                {
+            if (fVirtual) {
                 // immutability is not carried over
                 typeResult = typeTarget.removeImmutable();
                 plan       = Plan.Virtual;
-                }
-            else
-                {
+            } else {
                 typeResult = type.ensureTypeConstant(ctx, errs);
-                if (typeResult.containsUnresolved())
-                    {
+                if (typeResult.containsUnresolved()) {
                     typeResult = checkDynamicAnnotation(typeResult);
-                    if (typeResult == null)
-                        {
+                    if (typeResult == null) {
                         log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, type.toString());
                         return null;
-                        }
-                    plan = Plan.Regular;
                     }
-                else if (typeResult.isFormalType())
-                    {
-                    if (typeResult.isGenericType())
-                        {
+                    plan = Plan.Regular;
+                } else if (typeResult.isFormalType()) {
+                    if (typeResult.isGenericType()) {
                         m_idFormal = (PropertyConstant) typeResult.getDefiningConstant();
-                        }
-                    else if (typeResult.isTypeParameter())
-                        {
-                        if (type instanceof NamedTypeExpression exprNamed)
-                            {
+                    } else if (typeResult.isTypeParameter()) {
+                        if (type instanceof NamedTypeExpression exprNamed) {
                             m_regFormal = (Register) ctx.getVar(exprNamed.getName());
 
                             assert m_regFormal != null;
-                            }
-                        else
-                            {
+                        } else {
                             log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_TYPE,
                                 typeResult.getValueString());
                             return null;
-                            }
                         }
-                    else if (typeResult.isDynamicType())
-                        {
+                    } else if (typeResult.isDynamicType()) {
                         m_regFormal = ((DynamicFormalConstant) typeResult.
                                 getDefiningConstant()).getRegister();
-                        }
-                    else
-                        {
+                    } else {
                         log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_TYPE,
                             typeResult.getValueString());
                         return null;
-                        }
+                    }
                     plan = Plan.Formal;
-                    }
-                else
-                    {
+                } else {
                     plan = Plan.Regular;
-                    }
                 }
             }
-        else
-            {
+        } else {
             // it must not be possible for this to parse: "left.new T() {...}"
             assert body == null;
 
@@ -390,203 +327,165 @@ public class NewExpression
             // specifies an "outer this" that provides support for virtual construction
             Expression exprLeftOld = this.left;
             Expression exprLeftNew = exprLeftOld.validate(ctx, null, errs);
-            if (exprLeftNew == null)
-                {
+            if (exprLeftNew == null) {
                 return null;
-                }
+            }
 
             this.left = exprLeftNew;
 
             TypeConstant typeLeft = exprLeftNew.getType();
 
-            if (fVirtual)
-                {
+            if (fVirtual) {
                 // left.new(...)
-                if (typeLeft.isFormalTypeType())
-                    {
+                if (typeLeft.isFormalTypeType()) {
                     log(errs, Severity.ERROR, Compiler.NEW_INVALID_FORMAL, left.toString());
                     return null;
-                    }
+                }
                 // immutability is not carried over
                 typeResult = typeTarget = typeLeft.removeImmutable();
                 plan       = Plan.Virtual;
-                }
-            else
-                {
+            } else {
                 // first, assume the name is relative to the parent's class, e.g.:
                 //      parent.new [@Mixin] Child<...>(...)
                 TypeExpression exprType = type;
-                while (exprType instanceof AnnotatedTypeExpression)
-                    {
+                while (exprType instanceof AnnotatedTypeExpression) {
                     exprType = exprType.unwrapIntroductoryType();
-                    }
+                }
 
                 NamedTypeExpression exprNameType = (NamedTypeExpression) exprType;
-                if (exprNameType.isVirtualChild())
-                    {
+                if (exprNameType.isVirtualChild()) {
                     String   sChild   = exprNameType.getName();
                     TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
 
                     typeResult = infoLeft.calculateChildType(pool, sChild);
-                    if (typeResult != null)
-                        {
+                    if (typeResult != null) {
                         exprNameType.setTypeConstant(typeResult);
-                        }
+                    }
                     plan = Plan.Child;
-                    }
-                else
-                    {
+                } else {
                     plan = Plan.Regular;
-                    }
+                }
 
-                if (typeResult == null)
-                    {
+                if (typeResult == null) {
                     // now try to use the NameTypeExpression validation logic for a fully qualified
                     // type scenario, such as:
                     //      parent.new [@Mixin] Parent.Child<...>(...)
                     TypeExpression exprTest = (TypeExpression) type.clone();
                     Context        ctxTest  = ctx.enter();
                     boolean        fValid   = true;
-                    if (exprTest.validate(ctxTest, pool.typeType(), errs) == null)
-                        {
+                    if (exprTest.validate(ctxTest, pool.typeType(), errs) == null) {
                         fValid = false;
-                        }
-                    else
-                        {
+                    } else {
                         typeResult = exprTest.ensureTypeConstant(ctx, errs);
-                        if (typeResult.containsUnresolved())
-                            {
+                        if (typeResult.containsUnresolved()) {
                             typeResult = checkDynamicAnnotation(typeResult);
-                            if (typeResult == null)
-                                {
+                            if (typeResult == null) {
                                 log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE,
                                         exprTest.toString());
                                 fValid = false;
-                                }
                             }
                         }
+                    }
                     ctx.exit();
                     exprTest.discard(true);
 
-                    if (!fValid)
-                        {
+                    if (!fValid) {
                         return null;
-                        }
                     }
+                }
 
-                if (typeResult != null)
-                    {
-                    if (!typeResult.isVirtualChild() || !typeLeft.isA(typeResult.getParentType()))
-                        {
+                if (typeResult != null) {
+                    if (!typeResult.isVirtualChild() || !typeLeft.isA(typeResult.getParentType())) {
                         log(errs, Severity.ERROR, Compiler.NEW_UNRELATED_PARENT,
                                 typeResult.getValueString(), typeLeft.getValueString());
                         return null;
-                        }
                     }
                 }
             }
+        }
 
-        if (!fVirtual)
-            {
-            if (typeRequired != null)
-                {
+        if (!fVirtual) {
+            if (typeRequired != null) {
                 // infer type information from the required type; that information needs to be used to
                 // inform the validation of the type that we are "new-ing"
                 TypeConstant typeInferred = inferTypeFromRequired(typeResult, typeRequired);
-                if (typeInferred != null)
-                    {
-                    if (typeInferred.containsFormalType(true))
-                        {
+                if (typeInferred != null) {
+                    if (typeInferred.containsFormalType(true)) {
                         typeInferred = ctx.resolveFormalType(typeInferred);
-                        }
+                    }
 
                     type.setTypeConstant(typeResult = typeInferred);
 
                     // the inferred type can contain formal types that need to be registered with
                     // the context (used to compute lambda captures)
-                    if (typeInferred.containsFormalType(true))
-                        {
+                    if (typeInferred.containsFormalType(true)) {
                         ctx.useFormalType(typeInferred, errs);
-                        }
                     }
                 }
+            }
 
             // we intentionally do NOT pass the required type to the TypeExpression; instead, we use
             // the inferred target type
             TypeExpression exprTypeOld = this.type;
             TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx,
                     typeResult == null ? null : typeResult.getType(), errs);
-            if (exprTypeNew == null)
-                {
+            if (exprTypeNew == null) {
                 return null;
-                }
+            }
 
             this.type  = exprTypeNew;
             typeResult = exprTypeNew.ensureTypeConstant(ctx, errs);
 
-            if (m_fDynamicAnno)
-                {
+            if (m_fDynamicAnno) {
                 typeResult = ((AnnotatedTypeConstant) typeResult).stripParameters();
-                }
+            }
 
             // strip the annotations and, if necessary, apply them later
             Annotation[] annos;
-            if (typeResult instanceof AnnotatedTypeConstant typeAnno)
-                {
+            if (typeResult instanceof AnnotatedTypeConstant typeAnno) {
                 List<Annotation> listClass = new ArrayList<>();
                 List<Annotation> listMixin = new ArrayList<>();
 
                 typeTarget = typeAnno.extractAnnotation(listClass, listMixin, errs);
-                if (typeTarget == null)
-                    {
+                if (typeTarget == null) {
                     // errors must have been reported
                     return null;
-                    }
+                }
                 assert listClass.isEmpty() && !listMixin.isEmpty();
                 annos = listMixin.toArray(Annotation.NO_ANNOTATIONS);
 
-                for (Annotation anno : annos)
-                    {
+                for (Annotation anno : annos) {
                     TypeConstant typeA = anno.getAnnotationType();
-                    if (typeA.isVirtualChild())
-                        {
-                        if (!typeTarget.isVirtualChild())
-                            {
+                    if (typeA.isVirtualChild()) {
+                        if (!typeTarget.isVirtualChild()) {
                             log(errs, Severity.ERROR, Compiler.PARENT_MISSING, typeA.getValueString());
                             return null;
-                            }
-                        else if (!typeTarget.getParentType().isA(typeA.getParentType()))
-                            {
+                        } else if (!typeTarget.getParentType().isA(typeA.getParentType())) {
                             log(errs, Severity.ERROR, Compiler.NEW_UNRELATED_PARENT,
                                 typeA.getValueString(), typeTarget.getParentType().getValueString());
                             return null;
-                            }
                         }
                     }
                 }
-            else
-                {
+            } else {
                 assert !typeResult.isAnnotated();
                 typeTarget = typeResult;
                 annos      = null;
-                }
+            }
 
-            if (left == null)
-                {
+            if (left == null) {
                 boolean fNestMate = typeTarget.isNestMateOf(ctx.getThisClassId());
 
                 // now we should have enough type information to create the real anon inner class
-                if (fAnonymous)
-                    {
+                if (fAnonymous) {
                     ErrorListener errsTemp = errs.branch(this);
 
                     ensureInnerClass(ctx, AnonPurpose.Actual, errsTemp);
 
                     errsTemp.merge();
-                    if (errsTemp.hasSeriousErrors())
-                        {
+                    if (errsTemp.hasSeriousErrors()) {
                         return null;
-                        }
+                    }
 
                     // since we are going to be extending the specified type, increase visibility from
                     // the public default to protected, which we get when a class "extends" another;
@@ -598,121 +497,104 @@ public class NewExpression
                     ClassStructure clzAnon = (ClassStructure) anon.getComponent();
 
                     typeResult = clzAnon.getIdentityConstant().getType();
-                    if (!ctx.isFunction())
-                        {
+                    if (!ctx.isFunction()) {
                         typeResult = typeResult.adoptParameters(pool, clzAnon.getFormalType());
                         typeResult = typeResult.resolveGenerics(pool, typeTarget);
 
-                        if (!clzAnon.isStatic())
-                            {
+                        if (!clzAnon.isStatic()) {
                             plan = Plan.Child;
-                            }
                         }
+                    }
 
                     typeTarget = pool.ensureAccessTypeConstant(typeResult, Access.PRIVATE);
 
-                    if (annos != null)
-                        {
+                    if (annos != null) {
                         typeResult = pool.ensureAnnotatedTypeConstant(typeResult, annos);
-                        }
                     }
-                else if (type instanceof ArrayTypeExpression exprArray)
-                    {
+                } else if (type instanceof ArrayTypeExpression exprArray) {
                     // this is a "new X[]", "new X[c1]", new X[c1](supply),
                     // or "new X[c1, ...]" construct
                     int cDims = exprArray.getDimensions();
-                    switch (cDims)
-                        {
-                        case 0:
-                            // dynamically growing array; go the normal route
-                            break;
+                    switch (cDims) {
+                    case 0:
+                        // dynamically growing array; go the normal route
+                        break;
 
-                        case 1:
-                            // fixed size array; we'll continue with the standard validation relying
-                            // on the fact that Array has two constructors:
-                            //      construct(Int capacity)
-                            //      construct(Int size, Element | function Element (Int) supply)
-                            // since we know that the ArrayTypeExpression has successfully validated,
-                            // we will emit the second constructor in leu of the first one
-                            // using the default value for the element type as the second argument
-                            int cArgs = args.size();
-                            if (cArgs == 1)
-                                {
-                                // array[capacity] is a fixed size array and is allowed only for
-                                // types with default values
-                                TypeConstant typeElement = typeTarget.getParamType(0);
-                                if (typeElement.getDefaultValue() == null)
-                                    {
-                                    log(errs, Severity.ERROR, Compiler.NO_DEFAULT_VALUE,
-                                        typeElement.getValueString());
-                                    return null;
-                                    }
-                                }
-                            m_fFixedSizeArray = true;
-                            break;
-
-                        default:
-                            log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED,
-                                    "Multi-dimensional array");
-                            return null;
+                    case 1:
+                        // fixed size array; we'll continue with the standard validation relying
+                        // on the fact that Array has two constructors:
+                        //      construct(Int capacity)
+                        //      construct(Int size, Element | function Element (Int) supply)
+                        // since we know that the ArrayTypeExpression has successfully validated,
+                        // we will emit the second constructor in leu of the first one
+                        // using the default value for the element type as the second argument
+                        int cArgs = args.size();
+                        if (cArgs == 1) {
+                            // array[capacity] is a fixed size array and is allowed only for
+                            // types with default values
+                            TypeConstant typeElement = typeTarget.getParamType(0);
+                            if (typeElement.getDefaultValue() == null) {
+                                log(errs, Severity.ERROR, Compiler.NO_DEFAULT_VALUE,
+                                    typeElement.getValueString());
+                                return null;
+                            }
                         }
+                        m_fFixedSizeArray = true;
+                        break;
+
+                    default:
+                        log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED,
+                                "Multi-dimensional array");
+                        return null;
                     }
-                else if (typeTarget.isVirtualChild() || typeTarget.isInnerChildClass())
-                    {
+                } else if (typeTarget.isVirtualChild() || typeTarget.isInnerChildClass()) {
                     ClassStructure clzTarget = (ClassStructure)
                             typeTarget.getSingleUnderlyingClass(false).getComponent();
 
                     plan = Plan.Child;
 
                     int nSteps = ctx.getStepsToOuterClass(clzTarget.getOuter());
-                    if (nSteps >= 0)
-                        {
-                        if (nSteps == 0 && ctx.isConstructor())
-                            {
+                    if (nSteps >= 0) {
+                        if (nSteps == 0 && ctx.isConstructor()) {
                             log(errs, Severity.ERROR, Compiler.PARENT_NOT_CONSTRUCTED,
                                     clzTarget.getSimpleName());
                             return null;
-                            }
+                        }
                         ctx.requireThis(getStartPosition(), errs);
                         m_nParentSteps = nSteps;
-                        }
-                    else
-                        {
+                    } else {
                         log(errs, Severity.ERROR, Compiler.PARENT_MISSING, typeTarget.getValueString());
                         return null;
-                        }
                     }
                 }
             }
+        }
 
         ErrorListener errsTemp = errs.branch(this);
         TypeInfo infoTarget = fAnonymous
                 ? typeTarget.ensureTypeInfo(errsTemp)
                 : getTypeInfo(ctx, typeTarget, errsTemp);
 
-        if (errsTemp.hasSeriousErrors())
-            {
+        if (errsTemp.hasSeriousErrors()) {
             // no reason to proceed
             errsTemp.merge();
             return null;
-            }
+        }
 
         // for a regular or virtual child construction, the target type must be new-able
         if ((plan == Plan.Regular || plan == Plan.Child) &&
-                !infoTarget.isNewable(false, errsTemp))
-            {
+                !infoTarget.isNewable(false, errsTemp)) {
             String sTarget = infoTarget.getType().removeAccess().getValueString();
             infoTarget.reportNotNewable(sTarget, null, false, errsTemp);
             errsTemp.merge();
             return null;
-            }
+        }
 
         List<Expression> listArgs = args;
         MethodConstant   idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
                                         MethodKind.Constructor, true, false, null, errsTemp);
         MethodStructure constructor  = null;
-        if (fAnonymous)
-            {
+        if (fAnonymous) {
             // first, see if the constructor that we're looking for is on the anonymous
             // inner class (which -- other than the zero-args case -- will be rare, but it
             // is still supported); however, since it's not an error for the constructor to
@@ -720,8 +602,7 @@ public class NewExpression
             // that we need on the anonymous inner class, then we will simply use that one (and
             // any required dependency that it has one a super class constructor will be handled
             // as if this were any other normal class)
-            if (idConstruct == null && !listArgs.isEmpty())
-                {
+            if (idConstruct == null && !listArgs.isEmpty()) {
                 // the constructor that we're looking for is not on the anonymous inner class,
                 // so we need to find the specified constructor on the super class (which means
                 // that the super class must NOT be an interface), and we need to verify that
@@ -732,10 +613,9 @@ public class NewExpression
                 TypeInfo       infoSuper = typeSuper.ensureTypeInfo(errs);
                 MethodConstant idSuper   = findMethod(ctx, typeSuper, infoSuper, "construct",
                             listArgs, MethodKind.Constructor, true, false, null, errs);
-                if (idSuper == null)
-                    {
+                if (idSuper == null) {
                     return null;
-                    }
+                }
                 // we found a super constructor that needs to get called from the
                 // constructor on the inner class; find the no-parameter synthetic
                 // "construct()" constructor on the inner class and remove it, replacing it
@@ -753,83 +633,65 @@ public class NewExpression
                 // since we just modified the component, flush the TypeInfo cache for
                 // the type of the anonymous inner class
                 typeTarget.invalidateTypeInfo();
-                }
-            else
-                {
+            } else {
                 // we did find a constructor; there were probably no errors, but just in case
                 // something got logged, transfer it to the real error list
                 errsTemp.merge();
-                }
             }
-        else
-            {
-            if (idConstruct == null)
-                {
+        } else {
+            if (idConstruct == null) {
                 // as the last resort, validate the arguments before looking for the method again
                 // (regardless of the outcome, the validation errors should be reported)
                 TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, null, errs);
-                if (atypeArgs == null)
-                    {
+                if (atypeArgs == null) {
                     errsTemp.merge();
-                    }
-                else
-                    {
+                } else {
                     idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
                                     MethodKind.Constructor, true, false, null, errs);
-                    }
                 }
             }
+        }
 
-        if (idConstruct == null)
-            {
+        if (idConstruct == null) {
             return null;
-            }
+        }
 
-        if (constructor == null)
-            {
+        if (constructor == null) {
             constructor = (MethodStructure) idConstruct.getComponent();
-            if (constructor == null)
-                {
+            if (constructor == null) {
                 constructor = infoTarget.getMethodById(idConstruct).
                                 getTopmostMethodStructure(infoTarget);
                 assert constructor != null;
-                }
             }
+        }
         m_constructor = constructor;
 
-        if (containsNamedArgs(listArgs))
-            {
+        if (containsNamedArgs(listArgs)) {
             listArgs = rearrangeNamedArgs(constructor, listArgs, errs);
-            if (listArgs == null)
-                {
+            if (listArgs == null) {
                 return null;
-                }
+            }
             args = listArgs;
-            }
+        }
 
-        if (validateExpressions(ctx, listArgs, idConstruct.getRawParams(), errs) == null)
-            {
+        if (validateExpressions(ctx, listArgs, idConstruct.getRawParams(), errs) == null) {
             return null;
-            }
+        }
 
-        if (!typeResult.isParamsSpecified())
-            {
+        if (!typeResult.isParamsSpecified()) {
             ClassStructure clz = (ClassStructure) constructor.getParent().getParent();
-            if (clz.isParameterized())
-                {
+            if (clz.isParameterized()) {
                 // the class is parameterized, but the resulting type is not, which means
                 // that the left is the canonical type; let's attempt to narrow it using
                 // the constructor's argument types
                 TypeConstant typeInferred = inferTypeFromConstructor(ctx, clz, constructor, listArgs);
-                if (typeInferred != null)
-                    {
+                if (typeInferred != null) {
                     typeResult = typeInferred;
-                    }
                 }
             }
+        }
 
-        if (fAnonymous)
-            {
+        if (fAnonymous) {
             // at this point, we need to create a temporary copy of the anonymous inner class for
             // the purpose of determining which local variables from this context will be "captured"
             // by the code in the anonymous inner class; to determine the captures, we need to go
@@ -851,10 +713,9 @@ public class NewExpression
             // clean up temporary inner class
             destroyTempInnerClass();
 
-            if (!fValid)
-                {
+            if (!fValid) {
                 return null;
-                }
+            }
 
             // at this point we have a fair bit of data about which variables get captured, but we
             // still lack the effectively final data that will only get reported when the various
@@ -868,134 +729,114 @@ public class NewExpression
 
             // make sure the capture names don't collide
             ClassStructure clzAnon = ctxAnon.getThisClass();
-            for (String sName : m_mapCapture.keySet())
-                {
-                if (clzAnon.getChild(sName) != null)
-                    {
+            for (String sName : m_mapCapture.keySet()) {
+                if (clzAnon.getChild(sName) != null) {
                     log(errs, Severity.ERROR, Compiler.NAME_COLLISION, sName);
                     return null;
-                    }
                 }
             }
+        }
 
         m_plan = plan;
 
         Expression exprResult = finishValidation(ctx, typeRequired, typeResult, TypeFit.Fit, null, errs);
         clearAnonTypeInfos();
         return exprResult;
-        }
+    }
 
     @Override
-    public boolean isStandalone()
-        {
+    public boolean isStandalone() {
         return true;
-        }
+    }
 
     @Override
-    public boolean isCompletable()
-        {
-        for (Expression expr : args)
-            {
-            if (!expr.isCompletable())
-                {
+    public boolean isCompletable() {
+        for (Expression expr : args) {
+            if (!expr.isCompletable()) {
                 return false;
-                }
             }
-
-        return true;
         }
 
+        return true;
+    }
+
     @Override
-    public boolean isShortCircuiting()
-        {
-        for (Expression expr : args)
-            {
-            if (expr.isShortCircuiting())
-                {
+    public boolean isShortCircuiting() {
+        for (Expression expr : args) {
+            if (expr.isShortCircuiting()) {
                 return true;
-                }
             }
+        }
 
         return false;
-        }
+    }
 
     @Override
-    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
-        {
-        switch (super.mightAffect(exprLeft, arg))
-            {
-            case DefNo:
-                return SideEffect.DefNo;
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg) {
+        switch (super.mightAffect(exprLeft, arg)) {
+        case DefNo:
+            return SideEffect.DefNo;
 
-            case AnyCompute:
-                return SideEffect.DefYes;
+        case AnyCompute:
+            return SideEffect.DefYes;
 
-            case Unknown:
-                SideEffect effect = SideEffect.DefNo;
-                for (Expression expr : args)
-                    {
-                    switch (expr.mightAffect(exprLeft, arg))
-                        {
-                        case DefNo, Unknown:
-                            break; // keep going
+        case Unknown:
+            SideEffect effect = SideEffect.DefNo;
+            for (Expression expr : args) {
+                switch (expr.mightAffect(exprLeft, arg)) {
+                    case DefNo, Unknown:
+                        break; // keep going
 
-                        case AnyCompute:
-                            throw new IllegalStateException(); // cannot get here
+                    case AnyCompute:
+                        throw new IllegalStateException(); // cannot get here
 
-                        case DefYes:
-                            return SideEffect.DefYes;
-                        }
-                    }
-                return effect;
-
-            default:
-                throw new IllegalStateException();
+                    case DefYes:
+                        return SideEffect.DefYes;
+                }
             }
+            return effect;
+
+        default:
+            throw new IllegalStateException();
         }
+    }
 
     @Override
-    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
-        {
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs) {
         // 1. To avoid an out-of-order execution, we cannot allow the use of local properties
         //    except for the parent when there are no arguments
         // 2. The arguments are allowed to be pushed on the stack since the run-time knows to load
         //    them up in the inverse order; however, the parent (for the NEWC_* ops should not be
         //    put on the stack unless there are no arguments
 
-        if (LVal.isLocalArgument())
-            {
+        if (LVal.isLocalArgument()) {
             List<Expression> listArgs = args;
             int              cArgs    = listArgs.size();
             Argument[]       aArgs    = new Argument[cArgs];
             ExprAST[]        aAstArgs = new ExprAST[cArgs];
-            for (int i = 0; i < cArgs; ++i)
-                {
+            for (int i = 0; i < cArgs; ++i) {
                 Expression expr = listArgs.get(i);
                 Argument   arg  = expr.generateArgument(ctx, code, false, true, errs);
                 aArgs[i] = expr.ensurePointInTime(code, arg, listArgs, i);
                 aAstArgs[i] = expr.getExprAST(ctx);
-                }
+            }
 
-            if (anon != null)
-                {
+            if (anon != null) {
                 aArgs = addCaptures(code, aArgs);
-                }
+            }
 
             generateNew(ctx, code, aArgs, LVal.getLocalArgument(), aAstArgs, errs);
-            }
-        else
-            {
+        } else {
             super.generateAssignment(ctx, code, LVal, errs);
-            }
         }
+    }
 
     @Override
-    public ExprAST getExprAST(Context ctx)
-        {
+    public ExprAST getExprAST(Context ctx) {
         return m_astNew == null
                 ? super.getExprAST(ctx)
                 : m_astNew;
-        }
+    }
 
 
     // ----- compilation helpers -------------------------------------------------------------------
@@ -1006,111 +847,87 @@ public class NewExpression
      *
      * @return the resolved annotation type stripped of the unresolved parameters; null otherwise
      */
-    private TypeConstant checkDynamicAnnotation(TypeConstant typeUnresolved)
-        {
-        if (typeUnresolved instanceof AnnotatedTypeConstant typeAnno)
-            {
+    private TypeConstant checkDynamicAnnotation(TypeConstant typeUnresolved) {
+        if (typeUnresolved instanceof AnnotatedTypeConstant typeAnno) {
             TypeConstant typeResolved = typeAnno.stripParameters();
-            if (!typeResolved.containsUnresolved())
-                {
+            if (!typeResolved.containsUnresolved()) {
                 m_fDynamicAnno = true;
                 return typeResolved;
-                }
             }
-        return null;
         }
+        return null;
+    }
 
     /**
      * Generate the NEW_* op-code
      */
     private void generateNew(Context ctx, Code code, Argument[] aArgs, Argument argResult,
-                             ExprAST[] aAstArgs, ErrorListener errs)
-        {
+                             ExprAST[] aAstArgs, ErrorListener errs) {
         assert m_constructor.getTypeParamCount() == 0;
 
         TypeConstant typeTarget;
-        if (m_fDynamicAnno)
-            {
+        if (m_fDynamicAnno) {
             // the annotated type cannot have any ref annotations, but can have multiple type
             // annotations (e.g. @A1(arg1) @A2(arg2) C(arg)
             AnnotatedTypeConstant typeAnno = (AnnotatedTypeConstant) type.ensureTypeConstant(ctx, errs);
 
             typeTarget = generateDynamicParameters(ctx, code, typeAnno, errs);
-            }
-        else
-            {
+        } else {
             typeTarget = getType();
-            }
+        }
 
         MethodConstant idConstruct = m_constructor.getIdentityConstant();
         int            cParams     = m_constructor.getParamCount();
         int            cArgs       = aArgs.length;
         int            cDefaults   = cParams - cArgs;
 
-        if (m_fTupleArg)
-            {
+        if (m_fTupleArg) {
             // TODO
             throw notImplemented();
-            }
-        else
-            {
-            if (cDefaults > 0)
-                {
+        } else {
+            if (cDefaults > 0) {
                 Argument[] aArgAll = new Argument[cParams];
                 System.arraycopy(aArgs, 0, aArgAll, 0, cArgs);
                 aArgs = aArgAll;
 
-                for (int i = 0; i < cDefaults; i++)
-                    {
+                for (int i = 0; i < cDefaults; i++) {
                     aArgs[cArgs + i] = Register.DEFAULT;
-                    }
                 }
+            }
 
             Argument argOuter = null;
             ExprAST  astOuter = null;
-            if (m_plan == Plan.Child)
-                {
-                if (left == null)
-                    {
-                    if (m_nParentSteps == 0)
-                        {
+            if (m_plan == Plan.Child) {
+                if (left == null) {
+                    if (m_nParentSteps == 0) {
                         argOuter = ctx.getThisRegister();
                         astOuter = ctx.getThisRegisterAST();
-                        }
-                    else
-                        {
+                    } else {
                         TypeConstant typeParent = typeTarget.getParentType();
                         int          cSteps     = m_nParentSteps;
 
                         argOuter = new Register(typeParent, null, Op.A_STACK);
                         code.add(new MoveThis(cSteps, argOuter));
                         astOuter = new OuterExprAST(ctx.getThisRegisterAST(), cSteps, typeParent);
-                        }
                     }
-                else
-                    {
+                } else {
                     argOuter = left.generateArgument(ctx, code, true, true, errs);
                     astOuter = left.getExprAST(ctx);
-                    }
                 }
+            }
 
-            if (m_plan == Plan.Virtual || m_plan == Plan.Formal)
-                {
+            if (m_plan == Plan.Virtual || m_plan == Plan.Formal) {
                 Register regType;
-                if (m_plan == Plan.Virtual)
-                    {
+                if (m_plan == Plan.Virtual) {
                     Argument argTarget;
                     ExprAST  astTarget;
-                    if (left == null)
-                        {
+                    if (left == null) {
                         argTarget = new Register(ctx.getThisType(), null, Op.A_TARGET);
                         astTarget = new ConstantExprAST(argTarget.getType());
-                        }
-                    else
-                        {
+                    } else {
                         argTarget = left.generateArgument(ctx, code, true, true, errs);
                         astTarget = left.getExprAST(ctx);
-                        }
+                    }
 
                     regType = new Register(pool().typeType(), null, Op.A_STACK);
 
@@ -1118,174 +935,144 @@ public class NewExpression
                     // immutability aspect of the target should not be carried over
                     code.add(new MoveType(argTarget, regType));
                     m_astNew = new NewExprAST(astTarget, idConstruct, aAstArgs);
-                    }
-                else
-                    {
-                    if (typeTarget.isGenericType())
-                        {
+                } else {
+                    if (typeTarget.isGenericType()) {
                         regType = new Register(pool().typeType(), null, Op.A_STACK);
                         code.add(new L_Get(m_idFormal, regType));
-                        }
-                    else
-                        {
+                    } else {
                         regType = m_regFormal;
-                        }
-                    m_astNew = new NewExprAST(typeTarget, idConstruct, aAstArgs);
                     }
-                switch (cParams)
-                    {
+                    m_astNew = new NewExprAST(typeTarget, idConstruct, aAstArgs);
+                }
+                switch (cParams) {
+                case 0:
+                    code.add(new NewV_0(idConstruct, regType, argResult));
+                    break;
+
+                case 1:
+                    code.add(new NewV_1(idConstruct, regType, aArgs[0], argResult));
+                    break;
+
+                default:
+                    code.add(new NewV_N(idConstruct, regType, aArgs, argResult));
+                    break;
+                }
+            } else if (isTypeRequired(typeTarget)) {
+                if (argOuter == null) {
+                    switch (cParams) {
                     case 0:
-                        code.add(new NewV_0(idConstruct, regType, argResult));
+                        code.add(new NewG_0(idConstruct, typeTarget, argResult));
                         break;
 
                     case 1:
-                        code.add(new NewV_1(idConstruct, regType, aArgs[0], argResult));
+                        if (m_fFixedSizeArray) {
+                            Argument[] aArg2 = new Argument[2];
+                            aArg2[0] = aArgs[0];
+                            aArg2[1] = Register.DEFAULT;
+                            idConstruct = ((ArrayTypeExpression) type).getSupplyConstructor();
+
+                            code.add(new NewG_N(idConstruct, typeTarget, aArg2, argResult));
+
+                            aAstArgs = new ExprAST[] {aAstArgs[0], Register.DEFAULT.getRegisterAST()};
+                        } else {
+                            code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
+                        }
                         break;
 
                     default:
-                        code.add(new NewV_N(idConstruct, regType, aArgs, argResult));
+                        code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
                         break;
                     }
-                }
-            else if (isTypeRequired(typeTarget))
-                {
-                if (argOuter == null)
-                    {
-                    switch (cParams)
-                        {
-                        case 0:
-                            code.add(new NewG_0(idConstruct, typeTarget, argResult));
-                            break;
-
-                        case 1:
-                            if (m_fFixedSizeArray)
-                                {
-                                Argument[] aArg2 = new Argument[2];
-                                aArg2[0] = aArgs[0];
-                                aArg2[1] = Register.DEFAULT;
-                                idConstruct = ((ArrayTypeExpression) type).getSupplyConstructor();
-
-                                code.add(new NewG_N(idConstruct, typeTarget, aArg2, argResult));
-
-                                aAstArgs = new ExprAST[] {aAstArgs[0], Register.DEFAULT.getRegisterAST()};
-                                }
-                            else
-                                {
-                                code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
-                                }
-                            break;
-
-                        default:
-                            code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
-                            break;
-                        }
                     m_astNew = new NewExprAST(typeTarget, idConstruct, aAstArgs);
+                } else {
+                    switch (cParams) {
+                    case 0:
+                        code.add(new NewCG_0(idConstruct, argOuter, typeTarget, argResult));
+                        break;
+
+                    case 1:
+                        code.add(new NewCG_1(idConstruct, argOuter, typeTarget, aArgs[0], argResult));
+                        break;
+
+                    default:
+                        code.add(new NewCG_N(idConstruct, argOuter, typeTarget, aArgs, argResult));
+                        break;
                     }
-                else
-                    {
-                    switch (cParams)
-                        {
-                        case 0:
-                            code.add(new NewCG_0(idConstruct, argOuter, typeTarget, argResult));
-                            break;
-
-                        case 1:
-                            code.add(new NewCG_1(idConstruct, argOuter, typeTarget, aArgs[0], argResult));
-                            break;
-
-                        default:
-                            code.add(new NewCG_N(idConstruct, argOuter, typeTarget, aArgs, argResult));
-                            break;
-                        }
                     m_astNew = new NewExprAST(astOuter, typeTarget, idConstruct, aAstArgs);
-                    }
                 }
-            else
-                {
-                if (argOuter == null)
-                    {
-                    switch (cParams)
-                        {
-                        case 0:
-                            code.add(new New_0(idConstruct, argResult));
-                            break;
+            } else {
+                if (argOuter == null) {
+                    switch (cParams) {
+                    case 0:
+                        code.add(new New_0(idConstruct, argResult));
+                        break;
 
-                        case 1:
-                            code.add(new New_1(idConstruct, aArgs[0], argResult));
-                            break;
+                    case 1:
+                        code.add(new New_1(idConstruct, aArgs[0], argResult));
+                        break;
 
-                        default:
-                            code.add(new New_N(idConstruct, aArgs, argResult));
-                            break;
-                        }
+                    default:
+                        code.add(new New_N(idConstruct, aArgs, argResult));
+                        break;
+                    }
                     m_astNew = new NewExprAST(typeTarget, idConstruct, aAstArgs);
+                } else {
+                    switch (cParams) {
+                    case 0:
+                        code.add(new NewC_0(idConstruct, argOuter, argResult));
+                        break;
+
+                    case 1:
+                        code.add(new NewC_1(idConstruct, argOuter, aArgs[0], argResult));
+                        break;
+
+                    default:
+                        code.add(new NewC_N(idConstruct, argOuter, aArgs, argResult));
+                        break;
                     }
-                else
-                    {
-                    switch (cParams)
-                        {
-                        case 0:
-                            code.add(new NewC_0(idConstruct, argOuter, argResult));
-                            break;
-
-                        case 1:
-                            code.add(new NewC_1(idConstruct, argOuter, aArgs[0], argResult));
-                            break;
-
-                        default:
-                            code.add(new NewC_N(idConstruct, argOuter, aArgs, argResult));
-                            break;
-                        }
                     m_astNew = new NewExprAST(astOuter, typeTarget, idConstruct, aAstArgs);
-                    }
                 }
             }
         }
+    }
 
     /**
      * Generate registers for any dynamic (non-constant) parameter of the underlying annotated type
      * and produce the resolved type constant to be used by the NEW_ op.
      */
     private TypeConstant generateDynamicParameters(Context ctx, Code code,
-                                                   AnnotatedTypeConstant typeAnno, ErrorListener errs)
-        {
+                                                   AnnotatedTypeConstant typeAnno, ErrorListener errs) {
         ConstantPool pool = pool();
 
         TypeConstant typeUnderlying = typeAnno.getUnderlyingType();
-        if (typeUnderlying instanceof AnnotatedTypeConstant typeUnder)
-            {
+        if (typeUnderlying instanceof AnnotatedTypeConstant typeUnder) {
             typeUnderlying = generateDynamicParameters(ctx, code, typeUnder, errs);
-            }
+        }
 
         Constant[] aConst = typeAnno.getAnnotationParams();
         boolean    fDiff  = false;
-        for (int j = 0, c = aConst.length; j < c; j++)
-            {
+        for (int j = 0, c = aConst.length; j < c; j++) {
             Constant constArg = aConst[j];
-            if (constArg instanceof ExpressionConstant constExpr)
-                {
+            if (constArg instanceof ExpressionConstant constExpr) {
                 Expression exprArg = constExpr.getExpression();
 
                 Argument argArg = exprArg.generateArgument(ctx, code, true, false, errs);
                 Register regArg;
-                if (argArg instanceof Register regA)
-                    {
+                if (argArg instanceof Register regA) {
                     regArg = regA;
-                    }
-                else
-                    {
+                } else {
                     regArg = code.createRegister(exprArg.getType());
                     code.add(new Var(regArg));
                     code.add(new Move(argArg, regArg));
-                    }
+                }
                 aConst[j] = new RegisterConstant(pool, regArg);
                 fDiff     = true;
-                }
             }
+        }
         return fDiff
                 ? pool.ensureAnnotatedTypeConstant(typeAnno.getAnnotationClass(), aConst, typeUnderlying)
                 : typeAnno;
-        }
+    }
 
     /**
      * Create the necessary AST and Component nodes for the anonymous inner class.
@@ -1294,35 +1081,31 @@ public class NewExpression
      * @param purpose  explains what the inner class that we're creating here will be used for
      * @param errs     the error listener to log any errors to
      */
-    private void ensureInnerClass(Context ctx, AnonPurpose purpose, ErrorListener errs)
-        {
+    private void ensureInnerClass(Context ctx, AnonPurpose purpose, ErrorListener errs) {
         assert body != null;
 
         // check if we're already done
-        if (m_purposeCurrent == purpose)
-            {
+        if (m_purposeCurrent == purpose) {
             return;
-            }
+        }
 
         // check if there is already a temp copy of the anonymous inner class floating around, and
         // if so, get rid of it
         destroyTempInnerClass();
 
-        if (m_purposeCurrent == purpose)
-            {
+        if (m_purposeCurrent == purpose) {
             // we've already accomplished the purpose at this point (either "None" or "Actual")
             return;
-            }
+        }
 
         // backup the actual inner class, if it exists
-        if (m_purposeCurrent == AnonPurpose.Actual)
-            {
+        if (m_purposeCurrent == AnonPurpose.Actual) {
             assert anon != null;
             assert anon.getComponent() != null;
 
             m_anonActualBackup = anon;
             m_clzActualBackup  = (ClassStructure) anon.getComponent();
-            }
+        }
 
         // select a unique (and purposefully syntactically illegal) name for the anonymous inner
         // class
@@ -1331,94 +1114,85 @@ public class NewExpression
         String         sDefault = inner.getDefaultName();
         int            nSuffix  = 1;
         String         sName;
-        while (parent.getChild(sName = sDefault + ":" + nSuffix) != null)
-            {
+        while (parent.getChild(sName = sDefault + ":" + nSuffix) != null) {
             ++nSuffix;
-            }
+        }
         Token tokName = new Token(type.getStartPosition(), type.getEndPosition(), Id.IDENTIFIER, sName);
 
-        switch (purpose)
-            {
-            case RoughDraft:
-                // until we create the actual inner class composition, we need to avoid destroying
-                // the virgin AST nodes
-                assert m_purposeCurrent == AnonPurpose.None;
-                anon = adopt(new TypeCompositionStatement(
-                        this,
-                        clone(inner.getAnnotations()),
-                        inner.getCategory(),
-                        tokName,
-                        null,
-                        clone(inner.getCompositions()),
-                        clone(args),
-                        (StatementBlock) body.clone(),
-                        type.getStartPosition(),
-                        body.getEndPosition()));
-                break;
+        switch (purpose) {
+        case RoughDraft:
+            // until we create the actual inner class composition, we need to avoid destroying
+            // the virgin AST nodes
+            assert m_purposeCurrent == AnonPurpose.None;
+            anon = adopt(new TypeCompositionStatement(
+                    this,
+                    clone(inner.getAnnotations()),
+                    inner.getCategory(),
+                    tokName,
+                    null,
+                    clone(inner.getCompositions()),
+                    clone(args),
+                    (StatementBlock) body.clone(),
+                    type.getStartPosition(),
+                    body.getEndPosition()));
+            break;
 
-            case Actual:
-                // at this point, we are creating the inner class composition that will ultimately
-                // generate the final code
-                anon = adopt(new TypeCompositionStatement(
-                        this,
-                        inner.getAnnotations(),
-                        inner.getCategory(),
-                        tokName,
-                        null,
-                        inner.getCompositions(),
-                        args,
-                        body,
-                        type.getStartPosition(),
-                        body.getEndPosition()));
-                break;
+        case Actual:
+            // at this point, we are creating the inner class composition that will ultimately
+            // generate the final code
+            anon = adopt(new TypeCompositionStatement(
+                    this,
+                    inner.getAnnotations(),
+                    inner.getCategory(),
+                    tokName,
+                    null,
+                    inner.getCompositions(),
+                    args,
+                    body,
+                    type.getStartPosition(),
+                    body.getEndPosition()));
+            break;
 
-            case CaptureAnalysis:
-                // the current inner class composition statement MUST be the "actual" one
-                assert m_purposeCurrent == AnonPurpose.Actual;
-                anon = (TypeCompositionStatement) adopt(anon.clone());
-                anon.setComponent(m_clzActualBackup.replaceWithTemporary());
-                break;
-            }
+        case CaptureAnalysis:
+            // the current inner class composition statement MUST be the "actual" one
+            assert m_purposeCurrent == AnonPurpose.Actual;
+            anon = (TypeCompositionStatement) adopt(anon.clone());
+            anon.setComponent(m_clzActualBackup.replaceWithTemporary());
+            break;
+        }
 
         m_ctxCapture = new AnonInnerClassContext(ctx);
 
         catchUpChildren(errs);
 
-        if (purpose != AnonPurpose.CaptureAnalysis)
-            {
+        if (purpose != AnonPurpose.CaptureAnalysis) {
             // the context is ONLY retained to provide capture information
             m_ctxCapture = null;
-            }
+        }
 
         m_purposeCurrent = purpose;
-        }
+    }
 
     /**
      * If the inner class was created on a temporary basis, then clean up the temporary data and
      * objects. If there was an actual inner class before the temporary was created, then restore
      * that actual inner class.
      */
-    private void destroyTempInnerClass()
-        {
-        if (anon != null && m_purposeCurrent != AnonPurpose.Actual)
-            {
+    private void destroyTempInnerClass() {
+        if (anon != null && m_purposeCurrent != AnonPurpose.Actual) {
             // discard any temporary inner class structure
             ClassStructure clzTemp = (ClassStructure) anon.getComponent();
-            if (clzTemp != null)
-                {
+            if (clzTemp != null) {
                 Component componentParent = clzTemp.getParent();
                 assert componentParent == getComponent();       // the parent should be this method
 
                 ClassStructure clzActual = m_clzActualBackup;
-                if (clzActual == null)
-                    {
+                if (clzActual == null) {
                     componentParent.removeChild(clzTemp);
-                    }
-                else
-                    {
+                } else {
                     clzTemp.replaceTemporaryWith(clzActual);
-                    }
                 }
+            }
 
             // discard the temporary AST
             anon.discard(true);
@@ -1426,30 +1200,27 @@ public class NewExpression
             m_purposeCurrent = AnonPurpose.None;
 
             // restore the real AST, if the actual one exists
-            if (m_anonActualBackup != null)
-                {
+            if (m_anonActualBackup != null) {
                 anon               = m_anonActualBackup;
                 m_anonActualBackup = null;
                 m_clzActualBackup  = null;
                 m_purposeCurrent   = AnonPurpose.Actual;
-                }
             }
         }
+    }
 
     /**
      * Remove synthetic default constructor on the anonymous inner class.
      */
-    private void destroyDefaultConstructor()
-        {
+    private void destroyDefaultConstructor() {
         ClassStructure clz = (ClassStructure) anon.getComponent();
         MethodConstant id  = pool().ensureMethodConstant(clz.getIdentityConstant(), "construct",
                 TypeConstant.NO_TYPES, TypeConstant.NO_TYPES);
         MethodStructure constrDefault = (MethodStructure) id.getComponent();
-        if (constrDefault != null)
-            {
+        if (constrDefault != null) {
             clz.getChild("construct").removeChild(constrDefault);
-            }
         }
+    }
 
     /**
      * Helper to clone a list of AST nodes.
@@ -1458,20 +1229,17 @@ public class NewExpression
      *
      * @return a deeply cloned list
      */
-    private <T extends AstNode> List<T> clone(List<? extends AstNode> list)
-        {
-        if (list == null || list.isEmpty())
-            {
+    private <T extends AstNode> List<T> clone(List<? extends AstNode> list) {
+        if (list == null || list.isEmpty()) {
             return (List<T>) list;
-            }
+        }
 
         List listCopy = new ArrayList<>(list.size());
-        for (AstNode node : list)
-            {
+        for (AstNode node : list) {
             listCopy.add(node.clone());
-            }
-        return listCopy;
         }
+        return listCopy;
+    }
 
     /**
      * Create a synthetic constructor on the inner class that calls the specified super constructor.
@@ -1480,8 +1248,7 @@ public class NewExpression
      *
      * @return the new constructor on the anonymous inner class
      */
-    private MethodStructure createPassThroughConstructor(MethodStructure methodSuper)
-        {
+    private MethodStructure createPassThroughConstructor(MethodStructure methodSuper) {
         // create a constructor that matches the one that we need to route to on the super class
         Parameter[]     aParams    = methodSuper.getParamArray();
         int             cParams    = aParams.length;
@@ -1496,33 +1263,28 @@ public class NewExpression
 
         // call the default initializer
         assert constrThis.isAnonymousClassWrapperConstructor();
-        if (!methodSuper.isAnonymousClassWrapperConstructor())
-            {
+        if (!methodSuper.isAnonymousClassWrapperConstructor()) {
             code.add(new SynInit());
 
             listAsts.add(InitAST.INSTANCE);
-            }
+        }
         RegisterAST[] aAstArgs = new RegisterAST[cParams];
-        if (cParams == 1)
-            {
+        if (cParams == 1) {
             Register regParam = new Register(aParams[0].getType(), null, 0);
             code.add(new Construct_1(idSuper, regParam));
 
             aAstArgs[0] = (RegisterAST) regParam.getRegisterAST();
-            }
-        else
-            {
+        } else {
             assert cParams > 1;
             Register[] aArgs = new Register[cParams];
-            for (int i = 0; i < cParams; ++i)
-                {
+            for (int i = 0; i < cParams; ++i) {
                 Register regParam = new Register(aParams[i].getType(), null, i);
 
                 aArgs[i]    = regParam;
                 aAstArgs[i] = (RegisterAST) regParam.getRegisterAST();
-                }
-            code.add(new Construct_N(idSuper, aArgs));
             }
+            code.add(new Construct_N(idSuper, aArgs));
+        }
         code.add(new Return_0());
 
         listAsts.add(new CallExprAST(
@@ -1530,7 +1292,7 @@ public class NewExpression
         constrThis.setAst(new StmtBlockAST(listAsts.toArray(BinaryAST.NO_ASTS), false), aAstArgs);
 
         return constrThis;
-        }
+    }
 
     /**
      * Apply information that was collected by analyzing the capture behavior of the anonymous inner
@@ -1538,8 +1300,7 @@ public class NewExpression
      *
      * @param code  the code being emitted for the site of the NewExpression
      */
-    private Argument[] addCaptures(Code code, Argument[] aOldArgs)
-        {
+    private Argument[] addCaptures(Code code, Argument[] aOldArgs) {
         // we're going to be making changes, so get rid of any cached TypeInfo
         clearAnonTypeInfos();
 
@@ -1550,10 +1311,9 @@ public class NewExpression
         // if nothing else is captured, then we're done
         Map<String, Boolean>  mapCapture   = m_mapCapture;
         Map<String, Register> mapRegisters = m_mapRegisters;
-        if (mapCapture == null || mapCapture.isEmpty())
-            {
+        if (mapCapture == null || mapCapture.isEmpty()) {
             return aOldArgs;
-            }
+        }
 
         // we're going to replace the constructor by creating a new constructor that calls the old
         // one, but that first stores off all the passed-in binding values
@@ -1570,34 +1330,30 @@ public class NewExpression
         System.arraycopy(aOldParams, 0, aNewParams, 0, cOldParams);
         System.arraycopy(aOldArgs  , 0, aNewArgs  , 0, cOldParams);
 
-        for (Entry<String, Boolean> entry : mapCapture.entrySet())
-            {
+        for (Entry<String, Boolean> entry : mapCapture.entrySet()) {
             String       sName = entry.getKey();
             Register     reg   = mapRegisters.get(sName);
             Boolean      FVar  = entry.getValue();
             TypeConstant type  = reg.getType();
             Register     arg   = reg;
-            if (FVar)
-                {
+            if (FVar) {
                 // it's a read/write capture; obtain the Var of the capture
                 type = pool.ensureParameterizedTypeConstant(pool.typeVar(), type);
                 arg  = new Register(type, null, Op.A_STACK);
                 code.add(new MoveVar(reg, arg));
-                }
-            else if (!reg.isEffectivelyFinal())
-                {
+            } else if (!reg.isEffectivelyFinal()) {
                 // it's a read-only capture, but since we were unable to prove that the
                 // register was effectively final, we need to capture the Ref
                 type = pool.ensureParameterizedTypeConstant(pool.typeRef(), type);
                 arg  = new Register(type, null, Op.A_STACK);
                 code.add(new MoveRef(reg, arg));
-                }
+            }
 
             // the new constructor will have the value/Ref/Var passed in as an additional parameter
             aNewParams[iNewParam] = new Parameter(pool, type, sName, null, false, iNewParam, false);
             aNewArgs  [iNewParam] = arg;
             ++iNewParam;
-            }
+        }
 
         // create a wrapper constructor that takes the additional capture values and then delegates
         // to the original constructor
@@ -1610,21 +1366,18 @@ public class NewExpression
         ArrayList<BinaryAST> listAsts   = new ArrayList<>();
 
         Register[] aRegs = new Register[cNewParams];
-        for (int i = 0; i < cOldParams; i++)
-            {
+        for (int i = 0; i < cOldParams; i++) {
             Parameter param = aOldParams[i];
             aRegs[i] = new Register(param.getType(), param.getName(), i);
-            }
+        }
 
         // for each capture variable needed by the anonymous inner class, create a property that
         // will hold it, and store the value (which is being passed into the new constructor) into
         // that property
-        if (cCaptures > 0)
-            {
+        if (cCaptures > 0) {
             ExprAST astThis = new RegisterAST(Op.A_STRUCT,
                     pool.ensureAccessTypeConstant(clzAnon.getFormalType(), Access.STRUCT), null);
-            for (int iCapture = 0; iCapture < cCaptures; ++iCapture)
-                {
+            for (int iCapture = 0; iCapture < cCaptures; ++iCapture) {
                 iNewParam = cOldParams + iCapture;
                 Parameter    param = aNewParams[iNewParam];
                 String       sName = param.getName();
@@ -1644,52 +1397,47 @@ public class NewExpression
 
                 listAsts.add(new AssignAST(new PropertyExprAST(astThis, idProp),
                                 AssignAST.Operator.Asn, reg.getRegisterAST()));
-                }
             }
+        }
 
-        if (!constrOld.isAnonymousClassWrapperConstructor())
-            {
+        if (!constrOld.isAnonymousClassWrapperConstructor()) {
             // call the default initializer
             codeConstr.add(new SynInit());
 
             listAsts.add(InitAST.INSTANCE);
-            }
+        }
 
         RegisterAST[] aAstRegNew = new RegisterAST[cNewParams];
-        for (int i = 0; i < cNewParams; i++)
-            {
+        for (int i = 0; i < cNewParams; i++) {
             aAstRegNew[i] = (RegisterAST) aRegs[i].getRegisterAST();
-            }
+        }
         // call the previous constructor
         MethodConstant idOld = constrOld.getIdentityConstant();
-        switch (cOldParams)
-            {
-            case 0:
-                codeConstr.add(new Construct_0(idOld));
-                break;
+        switch (cOldParams) {
+        case 0:
+            codeConstr.add(new Construct_0(idOld));
+            break;
 
-            case 1:
-                codeConstr.add(new Construct_1(idOld, aRegs[0]));
-                break;
+        case 1:
+            codeConstr.add(new Construct_1(idOld, aRegs[0]));
+            break;
 
-            default:
-                Register[] aArgs = aRegs;
-                if (cCaptures > 0)
-                    {
-                    aArgs = new Register[cOldParams];
-                    System.arraycopy(aRegs, 0, aArgs, 0, cOldParams);
-                    }
-                codeConstr.add(new Construct_N(idOld, aArgs));
-                break;
+        default:
+            Register[] aArgs = aRegs;
+            if (cCaptures > 0) {
+                aArgs = new Register[cOldParams];
+                System.arraycopy(aRegs, 0, aArgs, 0, cOldParams);
             }
+            codeConstr.add(new Construct_N(idOld, aArgs));
+            break;
+        }
         codeConstr.add(new Return_0());
 
         RegisterAST[] aAstRegOld = aAstRegNew;
-        if (cCaptures > 0)
-            {
+        if (cCaptures > 0) {
             aAstRegOld = new RegisterAST[cOldParams];
             System.arraycopy(aAstRegNew, 0, aAstRegOld, 0, cOldParams);
-            }
+        }
         listAsts.add(new CallExprAST(
                 new ConstantExprAST(idOld), TypeConstant.NO_TYPES, aAstRegOld, false));
         constrNew.setAst(new StmtBlockAST(listAsts.toArray(BinaryAST.NO_ASTS), false), aAstRegNew);
@@ -1698,167 +1446,142 @@ public class NewExpression
         m_constructor = constrNew;
 
         return aNewArgs;
-        }
+    }
 
-    private void clearAnonTypeInfos()
-        {
-        if (anon != null)
-            {
+    private void clearAnonTypeInfos() {
+        if (anon != null) {
             getType().invalidateTypeInfo();
-            }
         }
+    }
 
     /**
      * @return true iff the name specifies a captured variable
      */
-    protected boolean isCapture(String sCaptureName)
-        {
+    protected boolean isCapture(String sCaptureName) {
         return m_mapCapture != null && m_mapCapture.containsKey(sCaptureName);
-        }
+    }
 
     /**
      * @return the type of the value (not the Ref or Var, if implicit deref is used)
      */
-    protected TypeConstant getCaptureType(String sCaptureName)
-        {
+    protected TypeConstant getCaptureType(String sCaptureName) {
         assert m_mapRegisters.containsKey(sCaptureName);
 
         return m_mapRegisters.get(sCaptureName).getType();
-        }
+    }
 
     /**
      * @return true iff the captured variable has been marked as being effectively final
      */
-    protected boolean isCaptureFinal(String sCaptureName)
-        {
+    protected boolean isCaptureFinal(String sCaptureName) {
         assert m_mapRegisters.containsKey(sCaptureName);
 
         return m_mapRegisters.get(sCaptureName).isEffectivelyFinal();
-        }
+    }
 
     /**
      * @return true iff a capture variable needs to be implicitly de-ref'd (via a CVAR)
      */
-    protected boolean isImplicitDeref(String sCaptureName)
-        {
+    protected boolean isImplicitDeref(String sCaptureName) {
         assert m_mapCapture.containsKey(sCaptureName);
 
         Register reg    = m_mapRegisters.get(sCaptureName);
         Boolean  FVar   = m_mapCapture  .get(sCaptureName);
         return FVar || !reg.isEffectivelyFinal();
-        }
+    }
 
     /**
      * @return iff constructing the specified type requires the type in addition to the constructor
      */
-    private static boolean isTypeRequired(TypeConstant type)
-        {
-        if (type.isParamsSpecified() || type.isAnnotated())
-            {
+    private static boolean isTypeRequired(TypeConstant type) {
+        if (type.isParamsSpecified() || type.isAnnotated()) {
             return true;
-            }
-        if (type.isAnonymousClass())
-            {
-            return isTypeRequired(type.getParentType());
-            }
-        return false;
         }
+        if (type.isAnonymousClass()) {
+            return isTypeRequired(type.getParentType());
+        }
+        return false;
+    }
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     /**
      * @return the signature of the constructor invocation
      */
-    public String toSignatureString()
-        {
+    public String toSignatureString() {
         StringBuilder sb = new StringBuilder();
 
-        if (left != null)
-            {
+        if (left != null) {
             sb.append(left)
               .append('.');
-            }
+        }
 
         sb.append(operator.getId().TEXT);
 
-        if (type != null)
-            {
+        if (type != null) {
             sb.append(' ')
               .append(type);
-            }
+        }
 
-        if (args != null)
-            {
+        if (args != null) {
             int iFirst = 0;
 
-            if (hasSquareBrackets())
-                {
+            if (hasSquareBrackets()) {
                 iFirst = getDimensionCount();
 
                 sb.append('[');
                 boolean first = true;
-                for (int i = 0; i < iFirst; ++i)
-                    {
+                for (int i = 0; i < iFirst; ++i) {
                     Expression arg = args.get(i);
-                    if (first)
-                        {
+                    if (first) {
                         first = false;
-                        }
-                    else
-                        {
+                    } else {
                         sb.append(", ");
-                        }
-                    sb.append(arg);
                     }
-                sb.append(']');
+                    sb.append(arg);
                 }
+                sb.append(']');
+            }
 
             sb.append('(');
             boolean first = true;
-            for (int i = iFirst, c = args.size(); i < c; ++i)
-                {
+            for (int i = iFirst, c = args.size(); i < c; ++i) {
                 Expression arg = args.get(i);
-                if (first)
-                    {
+                if (first) {
                     first = false;
-                    }
-                else
-                    {
+                } else {
                     sb.append(", ");
-                    }
-                sb.append(arg);
                 }
-            sb.append(')');
+                sb.append(arg);
             }
-
-        return sb.toString();
+            sb.append(')');
         }
 
+        return sb.toString();
+    }
+
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
         sb.append(toSignatureString());
 
-        if (body != null)
-            {
+        if (body != null) {
             sb.append('\n')
               .append(indentLines(body.toString(), "        "));
-            }
-
-        return sb.toString();
         }
 
+        return sb.toString();
+    }
+
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         String s = toSignatureString();
 
         return body == null
                 ? s
                 : s + "{..}";
-        }
+    }
 
 
     // ----- inner class: CaptureContext -----------------------------------------------------------
@@ -1867,57 +1590,49 @@ public class NewExpression
      * A context for compiling new expressions that define an anonymous inner class.
      */
     public class AnonInnerClassContext
-            extends CaptureContext
-        {
+            extends CaptureContext {
         /**
          * Construct a NewExpression CaptureContext.
          *
          * @param ctxOuter  the context within which this context is nested
          */
-        public AnonInnerClassContext(Context ctxOuter)
-            {
+        public AnonInnerClassContext(Context ctxOuter) {
             super(ctxOuter);
-            }
+        }
 
         @Override
-        public TypeConstant getThisType()
-            {
+        public TypeConstant getThisType() {
             TypeConstant typeBase = type.ensureTypeConstant();
             TypeConstant typeThis = getThisClass().getFormalType();
             return typeThis.resolveGenerics(pool(), typeBase);
-            }
+        }
 
         @Override
-        public ClassStructure getThisClass()
-            {
+        public ClassStructure getThisClass() {
             return (ClassStructure) anon.getComponent();
-            }
+        }
 
         @Override
-        public boolean requireThis(long lPos, ErrorListener errs)
-            {
-            if (getMethod().isStatic())
-                {
-                if (errs != null)
-                    {
+        public boolean requireThis(long lPos, ErrorListener errs) {
+            if (getMethod().isStatic()) {
+                if (errs != null) {
                     errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
-                    }
-                return false;
                 }
+                return false;
+            }
 
             return super.requireThis(lPos, errs);
-            }
+        }
 
         /**
          * @return true iff the inner class captures the outer "this"
          */
-        public boolean isInstanceChild()
-            {
+        public boolean isInstanceChild() {
             // there is no reason to capture a singleton parent
             return isThisCaptured() ||
                     !getMethod().isStatic() && !getMethod().getContainingClass().isSingleton();
-            }
         }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -1995,4 +1710,4 @@ public class NewExpression
     private transient ExprAST m_astNew;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NewExpression.class, "left", "type", "args", "anon");
-    }
+}

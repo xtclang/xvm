@@ -8,7 +8,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
-import org.xvm.asm.OpCondJump;
 import org.xvm.asm.OpTest;
 import org.xvm.asm.Register;
 
@@ -101,29 +100,26 @@ import org.xvm.util.Severity;
  * @see TypeConstant#callCompare
  */
 public class CmpExpression
-        extends BiExpression
-    {
+        extends BiExpression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public CmpExpression(Expression expr1, Token operator, Expression expr2)
-        {
+    public CmpExpression(Expression expr1, Token operator, Expression expr2) {
         super(expr1, operator, expr2);
 
-        switch (operator.getId())
-            {
-            case COMP_EQ:
-            case COMP_NEQ:
-            case COMP_LT:
-            case COMP_GT:
-            case COMP_LTEQ:
-            case COMP_GTEQ:
-            case COMP_ORD:
-                break;
+        switch (operator.getId()) {
+        case COMP_EQ:
+        case COMP_NEQ:
+        case COMP_LT:
+        case COMP_GT:
+        case COMP_LTEQ:
+        case COMP_GTEQ:
+        case COMP_ORD:
+            break;
 
-            default:
-                throw new IllegalArgumentException("operator: " + operator);
-            }
+        default:
+            throw new IllegalArgumentException("operator: " + operator);
         }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -132,41 +128,36 @@ public class CmpExpression
      * @return true iff the expression produces a Boolean value, or false iff the expression
      *         produces an Ordered value
      */
-    public boolean producesBoolean()
-        {
+    public boolean producesBoolean() {
         return operator.getId() != Id.COMP_ORD;
-        }
+    }
 
     /**
      * @return true iff the expression uses a type composition's equals() function, or false iff the
      *         expression uses a type composition's compare() function
      */
-    public boolean usesEquals()
-        {
+    public boolean usesEquals() {
         Id id = operator.getId();
         return id == Id.COMP_EQ | id == Id.COMP_NEQ;
-        }
+    }
 
-    public boolean isAscending()
-        {
+    public boolean isAscending() {
         Id id = operator.getId();
         return id == Id.COMP_LT | id == Id.COMP_LTEQ;
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType(Context ctx)
-        {
+    public TypeConstant getImplicitType(Context ctx) {
         return producesBoolean()
                 ? pool().typeBoolean()
                 : pool().typeOrdered();
-        }
+    }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         ConstantPool pool   = pool();
         boolean      fValid = true;
         boolean      fEqual = usesEquals();
@@ -177,196 +168,156 @@ public class CmpExpression
         // allow the second expression to resolve names based on the first value type's
         // contributions
         boolean fInfer = type1 != null;
-        if (fInfer)
-            {
+        if (fInfer) {
             ctx = ctx.enterInferring(type1);
-            }
+        }
         TypeConstant type2 = expr2.getImplicitType(ctx);
-        if (fInfer)
-            {
+        if (fInfer) {
             ctx = ctx.exit();
-            }
+        }
 
         TypeConstant type1Orig = type1;
         TypeConstant type2Orig = type2;
         if (expr1 instanceof NameExpression exprName &&
-                ctx.getVar(exprName.getName()) instanceof Register reg)
-            {
+                ctx.getVar(exprName.getName()) instanceof Register reg) {
             type1Orig = reg.getOriginalType();
-            }
+        }
         if (expr2 instanceof NameExpression exprName &&
-                ctx.getVar(exprName.getName()) instanceof Register reg)
-            {
+                ctx.getVar(exprName.getName()) instanceof Register reg) {
             type2Orig = reg.getOriginalType();
-            }
+        }
 
         TypeConstant typeRequest = chooseCommonType(pool, fEqual, type1, type1Orig, false,
                                                                   type2, type2Orig, false, false);
         Expression   expr1New    = expr1.validate(ctx, typeRequest, errs);
-        if (expr1New == null)
-            {
+        if (expr1New == null) {
             fValid = false;
-            }
-        else
-            {
+        } else {
             expr1 = expr1New;
             type1 = expr1New.getType();
 
             // if we weren't previously able to determine a "target" type to use, then try again now
             // that the first expression is validated
-            if (typeRequest == null)
-                {
+            if (typeRequest == null) {
                 typeRequest = chooseCommonType(pool, fEqual, type1, type2);
-                }
+            }
 
             // if nothing worked, use the left type for the right expression validation
-            if (typeRequest == null)
-                {
+            if (typeRequest == null) {
                 typeRequest = type1;
-                }
             }
+        }
 
-        if (fInfer)
-            {
+        if (fInfer) {
             ctx = ctx.enterInferring(type1);
-            }
+        }
         Expression expr2New = expr2.validate(ctx, typeRequest, errs);
-        if (fInfer)
-            {
+        if (fInfer) {
             ctx = ctx.exit();
-            }
+        }
 
-        if (expr2New == null)
-            {
+        if (expr2New == null) {
             fValid = false;
-            }
-        else
-            {
+        } else {
             expr2 = expr2New;
             type2 = expr2New.getType();
 
-            if (fValid)
-                {
+            if (fValid) {
                 boolean fConst1 = expr1New.isConstant();
                 boolean fConst2 = expr2New.isConstant();
 
                 // make sure that we can compare the left value to the right value
                 TypeConstant typeCommon = chooseCommonType(pool, fEqual, type1, fConst1,
                                                                          type2, fConst2, true);
-                if (typeCommon == null)
-                    {
+                if (typeCommon == null) {
                     // try to use the original types
                     typeCommon = chooseCommonType(pool, fEqual, type1, type1Orig, fConst1,
                                                                 type2, type2Orig, fConst2, true);
-                    }
-                if (typeCommon == null)
-                    {
+                }
+                if (typeCommon == null) {
                     // try to resolve the types using the current context
                     TypeConstant type1R = ctx.resolveFormalType(type1);
                     TypeConstant type2R = ctx.resolveFormalType(type2);
 
                     typeCommon = chooseCommonType(pool, fEqual, type1R, fConst1, type2R, fConst2, true);
-                    }
+                }
 
-                if (typeCommon == null)
-                    {
+                if (typeCommon == null) {
                     fValid = false;
-                    if (type1.equals(pool.typeNull()))
-                        {
+                    if (type1.equals(pool.typeNull())) {
                         log(errs, Severity.ERROR, Compiler.EXPRESSION_NOT_NULLABLE,
                                 type2.getValueString());
-                        }
-                    else if (type2.equals(pool.typeNull()))
-                        {
+                    } else if (type2.equals(pool.typeNull())) {
                         log(errs, Severity.ERROR, Compiler.EXPRESSION_NOT_NULLABLE,
                                 type1.getValueString());
-                        }
-                    else
-                        {
+                    } else {
                         log(errs, Severity.ERROR, Compiler.TYPES_NOT_COMPARABLE,
                                 type1.getValueString(), type2.getValueString());
-                        }
                     }
-                else
-                    {
+                } else {
                     SignatureConstant sigCmp  = fEqual ? pool.sigEquals() : pool.sigCompare();
                     MethodInfo        infoCmp = typeCommon.ensureTypeInfo(errs).getMethodBySignature(sigCmp);
-                    if (infoCmp == null)
-                        {
+                    if (infoCmp == null) {
                         fValid = false;
                         log(errs, Severity.ERROR, Compiler.MISSING_METHOD,
                                 sigCmp.getName(), typeCommon.getValueString());
-                        }
-                    else
-                        {
+                    } else {
                         m_typeCommon = typeCommon;
                         m_idCmp      = infoCmp.getIdentity();
-                        }
                     }
                 }
             }
+        }
 
         TypeConstant typeResult = getImplicitType(ctx);
         Constant     constVal   = null;
 
         CheckInference:
-        if (fValid)
-            {
-            if (expr1New.isConstant() && expr2New.isConstant())
-                {
-                try
-                    {
+        if (fValid) {
+            if (expr1New.isConstant() && expr2New.isConstant()) {
+                try {
                     constVal = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
-                    }
-                catch (RuntimeException ignore) {}
+                } catch (RuntimeException ignore) {}
                 break CheckInference;
-                }
+            }
 
             m_fArg1Null = type1.equals(pool.typeNull());
             m_fArg2Null = type2.equals(pool.typeNull());
 
-            if (expr1New instanceof NameExpression expr1Name)
-                {
-                if (m_fArg2Null)
-                    {
+            if (expr1New instanceof NameExpression expr1Name) {
+                if (m_fArg2Null) {
                     fValid = checkNullComparison(ctx, expr1Name, errs);
                     break CheckInference;
-                    }
-                if (type2.isTypeOfType())
-                    {
+                }
+                if (type2.isTypeOfType()) {
                     checkFormalType(ctx, expr1Name, type2);
                     break CheckInference;
-                    }
-                if (expr2New.isConstant() && !type2.equals(type1))
-                    {
+                }
+                if (expr2New.isConstant() && !type2.equals(type1)) {
                     checkConstType(ctx, expr1Name, type2);
                     break CheckInference;
-                    }
-                }
-
-            if (expr2New instanceof NameExpression expr2Name)
-                {
-                if (m_fArg1Null)
-                    {
-                    fValid = checkNullComparison(ctx, expr2Name, errs);
-                    break CheckInference;
-                    }
-                if (type1.isTypeOfType())
-                    {
-                    checkFormalType(ctx, expr2Name, type1);
-                    break CheckInference;
-                    }
-                if (expr1New.isConstant() && !type1.equals(type2))
-                    {
-                    checkConstType(ctx, expr2Name, type1);
-                    // break CheckInference;
-                    }
                 }
             }
 
+            if (expr2New instanceof NameExpression expr2Name) {
+                if (m_fArg1Null) {
+                    fValid = checkNullComparison(ctx, expr2Name, errs);
+                    break CheckInference;
+                }
+                if (type1.isTypeOfType()) {
+                    checkFormalType(ctx, expr2Name, type1);
+                    break CheckInference;
+                }
+                if (expr1New.isConstant() && !type1.equals(type2)) {
+                    checkConstType(ctx, expr2Name, type1);
+                    // break CheckInference;
+                }
+            }
+        }
+
         return finishValidation(ctx, typeRequired, typeResult,
                 fValid ? TypeFit.Fit : TypeFit.NoFit, constVal, errs);
-        }
+    }
 
     /**
      * Choose a common type for the specified types and corresponding original types without
@@ -378,31 +329,24 @@ public class CmpExpression
             ConstantPool pool, boolean fEqual,
             TypeConstant type1, TypeConstant type1Orig, boolean fConst1,
             TypeConstant type2, TypeConstant type2Orig, boolean fConst2,
-            boolean fCheck)
-        {
+            boolean fCheck) {
         // start with the inferred types and go down to original types if that fails
         TypeConstant typeCommon = chooseCommonType(pool, fEqual, type1, fConst1, type2, fConst2, fCheck);
-        if (typeCommon == null)
-            {
-            if (type1 != null && type1.equals(type1Orig))
-                {
-                if (!type2.equals(type2Orig))
-                    {
+        if (typeCommon == null) {
+            if (type1 != null && type1.equals(type1Orig)) {
+                if (!type2.equals(type2Orig)) {
                     typeCommon = chooseCommonType(pool, fEqual, type1, fConst1, type2Orig, fConst2, fCheck);
-                    }
                 }
-            else
-                {
+            } else {
                 typeCommon = chooseCommonType(pool, fEqual, type1Orig, fConst1, type2, fConst2, fCheck);
 
-                if (typeCommon == null && type2 != null && !type2.equals(type2Orig))
-                    {
+                if (typeCommon == null && type2 != null && !type2.equals(type2Orig)) {
                     typeCommon = chooseCommonType(pool, fEqual, type1Orig, fConst1, type2Orig, fConst2, fCheck);
-                    }
                 }
             }
-        return typeCommon;
         }
+        return typeCommon;
+    }
 
     /**
      * Choose a common type for the specified types without checking for a required comparison
@@ -411,10 +355,9 @@ public class CmpExpression
      * @return the common type; null if there is no common type
      */
     protected static TypeConstant chooseCommonType(
-            ConstantPool pool, boolean fEqual, TypeConstant type1, TypeConstant type2)
-        {
+            ConstantPool pool, boolean fEqual, TypeConstant type1, TypeConstant type2) {
         return chooseCommonType(pool, fEqual, type1, false, type2, false, false);
-        }
+    }
 
     /**
      * Choose a common type for the specified types.
@@ -431,185 +374,158 @@ public class CmpExpression
     protected static TypeConstant chooseCommonType(ConstantPool pool,  boolean fEqual,
                                                    TypeConstant type1, boolean fConst1,
                                                    TypeConstant type2, boolean fConst2,
-                                                   boolean fCheck)
-        {
+                                                   boolean fCheck) {
         if (type1 == null && type2 == null ||
             type1 != null && type1.containsUnresolved() ||
-            type2 != null && type2.containsUnresolved())
-            {
+            type2 != null && type2.containsUnresolved()) {
             return null;
-            }
+        }
 
-        if (type1 instanceof CastTypeConstant)
-            {
+        if (type1 instanceof CastTypeConstant) {
             type1 = type1.getUnderlyingType2();
-            }
-        if (type2 instanceof CastTypeConstant)
-            {
+        }
+        if (type2 instanceof CastTypeConstant) {
             type2 = type2.getUnderlyingType2();
-            }
+        }
 
         TypeConstant typeCommon = Op.selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
 
-        if (type1 == null || type2 == null)
-            {
+        if (type1 == null || type2 == null) {
             return typeCommon;
-            }
+        }
 
-        if (typeCommon != null && fCheck)
-            {
+        if (typeCommon != null && fCheck) {
             if (fEqual
                     ? typeCommon.supportsEquals (type1, fConst1) &&
                       typeCommon.supportsEquals (type2, fConst2)
                    // Compare
                     : typeCommon.supportsCompare(type1, fConst1) &&
-                      typeCommon.supportsCompare(type2, fConst2))
-                {
+                      typeCommon.supportsCompare(type2, fConst2)) {
                 return typeCommon;
-                }
+            }
 
             // the support check failed; go to the resolution logic
             typeCommon = null;
-            }
+        }
 
-        if (typeCommon == null)
-            {
+        if (typeCommon == null) {
             // equality check for any Ref objects is allowed
             if (fEqual
                     && type1.isA(pool.typeRef())
-                    && type2.isA(pool.typeRef()))
-                {
+                    && type2.isA(pool.typeRef())) {
                 return pool.typeRef();
-                }
+            }
 
             // equality check between Class and Type is allowed as a Type
             if (fEqual &&
                     (type1.isA(pool.typeType()) && type2.isA(pool.typeClass()) ||
-                     type2.isA(pool.typeType()) && type1.isA(pool.typeClass())))
-                {
+                     type2.isA(pool.typeType()) && type1.isA(pool.typeClass()))) {
                 return pool.typeType();
-                }
+            }
 
             // try to resolve formal types
             boolean fFormal1 = type1.containsFormalType(true);
             boolean fFormal2 = type2.containsFormalType(true);
 
-            if (fFormal1 ^ fFormal2)
-                {
-                if (fFormal1)
-                    {
+            if (fFormal1 ^ fFormal2) {
+                if (fFormal1) {
                     type1 = type1.resolveConstraints();
-                    }
-                if (fFormal2)
-                    {
+                }
+                if (fFormal2) {
                     type2 = type2.resolveConstraints();
-                    }
+                }
                 // since it's guaranteed that neither type contains formal, we can recurse
                 typeCommon = chooseCommonType(pool, fEqual, type1, fConst1, type2, fConst2, fCheck);
-                }
             }
-        return typeCommon;
         }
+        return typeCommon;
+    }
 
     /**
      * Infer a type for a name from Null comparison.
      */
-    private boolean checkNullComparison(Context ctx, NameExpression exprTarget, ErrorListener errs)
-        {
+    private boolean checkNullComparison(Context ctx, NameExpression exprTarget, ErrorListener errs) {
         TypeConstant typeTarget = exprTarget.getType();
         TypeConstant typeNull   = pool().typeNull();
         TypeConstant typeTrue   = null;
         TypeConstant typeFalse  = null;
 
-        if (!typeTarget.isNullable() && !typeNull.isA(typeTarget.resolveConstraints()))
-            {
+        if (!typeTarget.isNullable() && !typeNull.isA(typeTarget.resolveConstraints())) {
             log(errs, Severity.ERROR, Compiler.EXPRESSION_NOT_NULLABLE, typeTarget.getValueString());
             return false;
-            }
+        }
 
-        if (typeTarget.isOnlyNullable())
-            {
+        if (typeTarget.isOnlyNullable()) {
             log(errs, Severity.WARNING, Compiler.TYPE_MATCHES_ALWAYS, exprTarget, typeNull, typeNull);
-            }
+        }
 
-        switch (operator.getId())
-            {
-            case COMP_EQ:
-                typeTrue  = typeNull;
-                typeFalse = typeTarget.removeNullable();
-                break;
+        switch (operator.getId()) {
+        case COMP_EQ:
+            typeTrue  = typeNull;
+            typeFalse = typeTarget.removeNullable();
+            break;
 
-            case COMP_NEQ:
-                typeTrue  = typeTarget.removeNullable();
-                typeFalse = typeNull;
-                break;
-            }
+        case COMP_NEQ:
+            typeTrue  = typeTarget.removeNullable();
+            typeFalse = typeNull;
+            break;
+        }
 
         exprTarget.narrowType(ctx, Branch.WhenTrue,  typeTrue);
         exprTarget.narrowType(ctx, Branch.WhenFalse, typeFalse);
         return true;
-        }
+    }
 
     /**
      * Infer a type for a name from a formal type comparison.
      */
-    private void checkFormalType(Context ctx, NameExpression exprTarget, TypeConstant typeType)
-        {
+    private void checkFormalType(Context ctx, NameExpression exprTarget, TypeConstant typeType) {
         TypeConstant typeTarget = exprTarget.getType();
-        if (typeTarget.isFormalTypeType())
-            {
-            switch (operator.getId())
-                {
-                case COMP_EQ:
-                    exprTarget.narrowType(ctx, Branch.WhenTrue, typeType);
-                    break;
+        if (typeTarget.isFormalTypeType()) {
+            switch (operator.getId()) {
+            case COMP_EQ:
+                exprTarget.narrowType(ctx, Branch.WhenTrue, typeType);
+                break;
 
-                case COMP_NEQ:
-                    exprTarget.narrowType(ctx, Branch.WhenFalse, typeType);
-                    break;
-                }
+            case COMP_NEQ:
+                exprTarget.narrowType(ctx, Branch.WhenFalse, typeType);
+                break;
             }
         }
+    }
 
     /**
      * Infer a type for a name from a comparison to a constant value.
      */
-    private void checkConstType(Context ctx, NameExpression exprTarget, TypeConstant type)
-        {
+    private void checkConstType(Context ctx, NameExpression exprTarget, TypeConstant type) {
         // replace an enum value type with the type of the enum; see Op.selectCommonType()
         TypeInfo info = type.ensureTypeInfo();
-        if (info.getFormat() == Component.Format.ENUMVALUE)
-            {
+        if (info.getFormat() == Component.Format.ENUMVALUE) {
             type = info.getExtends();
-            }
-
-        if (!type.equals(exprTarget.getType()))
-            {
-            switch (operator.getId())
-                {
-                case COMP_EQ:
-                    exprTarget.narrowType(ctx, Branch.WhenTrue, type);
-                    break;
-
-                case COMP_NEQ:
-                    exprTarget.narrowType(ctx, Branch.WhenFalse, type);
-                    break;
-                }
-            }
         }
 
+        if (!type.equals(exprTarget.getType())) {
+            switch (operator.getId()) {
+            case COMP_EQ:
+                exprTarget.narrowType(ctx, Branch.WhenTrue, type);
+                break;
+
+            case COMP_NEQ:
+                exprTarget.narrowType(ctx, Branch.WhenFalse, type);
+                break;
+            }
+        }
+    }
+
     @Override
-    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
-        {
-        if (LVal.isLocalArgument())
-            {
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs) {
+        if (LVal.isLocalArgument()) {
             // evaluate the sub-expressions
             Argument arg1      = expr1.ensurePointInTime(code,
                                  expr1.generateArgument(ctx, code, true, true, errs), expr2);
             Argument arg2      = expr2.generateArgument(ctx, code, true, true, errs);
             Argument argResult = LVal.getLocalArgument();
-            OpTest   op = switch (operator.getId())
-                {
+            OpTest   op = switch (operator.getId()) {
                 case COMP_EQ ->
                     m_fArg1Null ? new IsNull(arg2, argResult) :
                     m_fArg2Null ? new IsNull(arg1, argResult) :
@@ -626,30 +542,27 @@ public class CmpExpression
                 case COMP_GTEQ -> new IsGte(m_typeCommon, arg1, arg2, argResult);
                 case COMP_ORD  -> new Cmp(m_typeCommon, arg1, arg2, argResult);
                 default        -> throw new IllegalStateException();
-                };
+            };
 
             // generate the op that combines the two sub-expressions
 
             code.add(op);
             return;
-            }
+        }
 
         super.generateAssignment(ctx, code, LVal, errs);
-        }
+    }
 
     @Override
     public void generateConditionalJump(
-            Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs)
-        {
-        if (!isConstant() && producesBoolean())
-            {
+            Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs) {
+        if (!isConstant() && producesBoolean()) {
             // evaluate the sub-expressions
             Argument   arg1 = expr1.ensurePointInTime(code,
                               expr1.generateArgument(ctx, code, true, true, errs), expr2);
             Argument   arg2 = expr2.generateArgument(ctx, code, true, true, errs);
             // generate the op that combines the two sub-expressions
-            code.add(switch (operator.getId())
-                {
+            code.add(switch (operator.getId()) {
                 case COMP_EQ ->
                     fWhenTrue
                         ? (m_fArg1Null ? new JumpNull(arg2, label) :
@@ -688,21 +601,18 @@ public class CmpExpression
 
                 default ->
                     throw new IllegalStateException();
-                });
+            });
             return;
-            }
-
-        super.generateConditionalJump(ctx, code, label, fWhenTrue, errs);
         }
 
+        super.generateConditionalJump(ctx, code, label, fWhenTrue, errs);
+    }
+
     @Override
-    public ExprAST getExprAST(Context ctx)
-        {
-        if (false)
-            {
+    public ExprAST getExprAST(Context ctx) {
+        if (false) {
             // retaining the code for the "old" approach just in case
-            BiExprAST.Operator op = switch (operator.getId())
-                {
+            BiExprAST.Operator op = switch (operator.getId()) {
                 case COMP_EQ   -> BiExprAST.Operator.CompEq;
                 case COMP_NEQ  -> BiExprAST.Operator.CompNeq;
                 case COMP_LT   -> BiExprAST.Operator.CompLt;
@@ -711,36 +621,33 @@ public class CmpExpression
                 case COMP_GTEQ -> BiExprAST.Operator.CompGtEq;
                 case COMP_ORD  -> BiExprAST.Operator.CompOrd;
                 default -> throw new UnsupportedOperationException(operator.getValueText());
-                };
+            };
             return new CondOpExprAST(expr1.getExprAST(ctx), op, expr2.getExprAST(ctx));
-            }
+        }
 
         ConstantPool pool = pool();
         ExprAST      ast1 = expr1.getExprAST(ctx);
         ExprAST      ast2 = expr2.getExprAST(ctx);
 
-        if (m_fArg1Null || m_fArg2Null)
-            {
+        if (m_fArg1Null || m_fArg2Null) {
             boolean fNot = false;
-            switch (operator.getId())
-                {
-                case COMP_EQ:
-                    break;
-                case COMP_NEQ:
-                    fNot = true;
-                    break;
-                default:
-                    throw new UnsupportedOperationException(operator.getValueText());
-                }
+            switch (operator.getId()) {
+            case COMP_EQ:
+                break;
+            case COMP_NEQ:
+                fNot = true;
+                break;
+            default:
+                throw new UnsupportedOperationException(operator.getValueText());
+            }
 
             // we only have NotNullExprAst, so "x == Null" produces "!(x != Null)"
             ExprAST exprAST = new NotNullExprAST(m_fArg1Null ? ast2 : ast1, pool.typeBoolean());
-            if (!fNot)
-                {
+            if (!fNot) {
                 exprAST = new UnaryOpExprAST(exprAST, UnaryOpExprAST.Operator.Not, pool.typeBoolean());
-                }
-            return exprAST;
             }
+            return exprAST;
+        }
 
         ExprAST[] aAstArgs = new ExprAST[] {
                 toTypeParameterAst(ctx, m_typeCommon.getType()), ast1, ast2};
@@ -749,45 +656,43 @@ public class CmpExpression
         boolean  fNot    = false;
         Operator opCmp   = null;
 
-        switch (operator.getId())
-            {
-            case COMP_ORD:
-                return new CallExprAST(exprCmp, pool.typeOrdered(), aAstArgs);
+        switch (operator.getId()) {
+        case COMP_ORD:
+            return new CallExprAST(exprCmp, pool.typeOrdered(), aAstArgs);
 
-            case COMP_EQ:
-                break;
-            case COMP_NEQ:
-                fNot = true;
-                break;
+        case COMP_EQ:
+            break;
+        case COMP_NEQ:
+            fNot = true;
+            break;
 
-            case COMP_LT:
-                opCmp = Operator.Less;
-                break;
-            case COMP_GT:
-                opCmp = Operator.Greater;
-                break;
-            case COMP_LTEQ:
-                opCmp = Operator.Greater;
-                fNot  = true;
-                break;
-            case COMP_GTEQ:
-                opCmp = Operator.Less;
-                fNot  = true;
-                break;
-            default:
-                throw new UnsupportedOperationException(operator.getValueText());
-            }
+        case COMP_LT:
+            opCmp = Operator.Less;
+            break;
+        case COMP_GT:
+            opCmp = Operator.Greater;
+            break;
+        case COMP_LTEQ:
+            opCmp = Operator.Greater;
+            fNot  = true;
+            break;
+        case COMP_GTEQ:
+            opCmp = Operator.Less;
+            fNot  = true;
+            break;
+        default:
+            throw new UnsupportedOperationException(operator.getValueText());
+        }
 
         ExprAST exprAst = opCmp == null
                 ? new CallExprAST(exprCmp, pool.typeBoolean(), aAstArgs)
                 : new OrderedExprAST(
                         new CallExprAST(exprCmp, pool.typeOrdered(), aAstArgs), opCmp);
-        if (fNot)
-            {
+        if (fNot) {
             exprAst = new UnaryOpExprAST(exprAst, UnaryOpExprAST.Operator.Not, pool.typeBoolean());
-            }
-        return exprAst;
         }
+        return exprAst;
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -803,4 +708,4 @@ public class CmpExpression
 
     private transient boolean m_fArg1Null; // is the first arg equal to "Null"
     private transient boolean m_fArg2Null; // is the second arg equal to "Null"
-    }
+}

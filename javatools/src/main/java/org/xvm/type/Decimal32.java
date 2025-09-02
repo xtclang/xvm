@@ -14,8 +14,7 @@ import java.math.MathContext;
  * A representation of an IEEE-754-2008 32-bit decimal.
  */
 public class Decimal32
-        extends Decimal
-    {
+        extends Decimal {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -26,10 +25,9 @@ public class Decimal32
      * @throws IOException  if an issue occurs reading from the DataInput
      */
     public Decimal32(DataInput in)
-            throws IOException
-        {
+            throws IOException {
         m_nBits = in.readInt();
-        }
+    }
 
     /**
      * Construct a decimal value from a Java <tt>int</tt> whose format is that of an IEEE-754-2008
@@ -37,99 +35,85 @@ public class Decimal32
      *
      * @param nBits  a 32-bit Java <tt>int</tt> containing the bits of an IEEE-754-2008 decimal
      */
-    public Decimal32(int nBits)
-        {
+    public Decimal32(int nBits) {
         m_nBits = nBits;
-        }
+    }
 
     /**
      * Construct a decimal value from a byte array.
      *
      * @param abValue  a byte array containing a 32-bit Decimal
      */
-    public Decimal32(byte[] abValue)
-        {
-        if (abValue == null)
-            {
+    public Decimal32(byte[] abValue) {
+        if (abValue == null) {
             throw new IllegalArgumentException("value required");
-            }
+        }
 
-        if (abValue.length != 4)
-            {
+        if (abValue.length != 4) {
             throw new IllegalArgumentException("byte count != 4 (actual=" + abValue.length + ")");
-            }
+        }
 
         m_nBits = (abValue[0] & 0xFF) << 24
                 | (abValue[1] & 0xFF) << 16
                 | (abValue[2] & 0xFF) <<  8
                 | (abValue[3] & 0xFF);
-        }
+    }
 
     /**
      * Construct a 32-bit IEEE-754-2008 decimal value from a BigDecimal.
      *
      * @param dec  a BigDecimal value
      */
-    public Decimal32(BigDecimal dec)
-        {
-        if (dec == null)
-            {
+    public Decimal32(BigDecimal dec) {
+        if (dec == null) {
             throw new IllegalArgumentException("value required");
-            }
+        }
 
         m_nBits = toIntBits(dec);
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public int getByteLength()
-        {
+    public int getByteLength() {
         return 4;
-        }
+    }
 
     @Override
-    public MathContext getMathContext()
-        {
+    public MathContext getMathContext() {
         return MathContext.DECIMAL32;
-        }
+    }
 
     @Override
-    public int getByte(int i)
-        {
-        if ((i & ~0x3) != 0)
-            {
+    public int getByte(int i) {
+        if ((i & ~0x3) != 0) {
             throw new IllegalArgumentException("index out of range: " + i);
-            }
+        }
 
         return (m_nBits >>> (i*8)) & 0xFF;
-        }
+    }
 
     @Override
-    protected int leftmost7Bits()
-        {
+    protected int leftmost7Bits() {
         return m_nBits >>> 25;
-        }
+    }
 
     @Override
-    public boolean isZero()
-        {
+    public boolean isZero() {
         // G0 and G1 must not both be 1, and G2-G4 must be 0, and T (rightmost 20 bits) must be 0
         return (leftmost7Bits() & 0b0110000) != 0b0110000 && (m_nBits & 0b00011100000011111111111111111111) == 0;
-        }
+    }
 
     @Override
-    public void writeBytes(DataOutput out) throws IOException
-        {
+    public void writeBytes(DataOutput out) throws IOException {
         out.writeInt(m_nBits);
-        }
+    }
 
     /**
      * @return the significand of the decimal as an int
      */
-    public int getSignificand()
-        {
+    public int getSignificand() {
         int nBits = ensureFiniteBits(m_nBits);
         int nToG4 = nBits >>> G4_SHIFT;
         int nSig  = (nToG4 & 0b011000) == 0b011000
@@ -139,13 +123,12 @@ public class Decimal32
         // unpack the digits from most significant declet to least significant declet
         nSig = nSig * 1000 + decletToInt(nBits >>> 10);
         return nSig * 1000 + decletToInt(nBits);
-        }
+    }
 
     /**
      * @return the exponent of the decimal as an int
      */
-    public int getExponent()
-        {
+    public int getExponent() {
         // combination field is 11 bits (from bit 20 to bit 30), including 6 "pure" exponent bits
         int nCombo = ensureFiniteBits(m_nBits) >>> 20;
         int nExp   = (nCombo & 0b011000000000) == 0b011000000000
@@ -155,7 +138,7 @@ public class Decimal32
         // pull the rest of the exponent bits out of "pure" exponent section of the combo bits
         // section, and unbias the exponent
         return (nExp | nCombo & 0b111111) - 101;
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -166,56 +149,45 @@ public class Decimal32
      *
      * @return a 32-bit Java <tt>int</tt> containing the bits of an IEEE-754-2008 decimal
      */
-    public int toIntBits()
-        {
+    public int toIntBits() {
         return m_nBits;
-        }
+    }
 
     @Override
-    public BigDecimal toBigDecimal()
-        {
+    public BigDecimal toBigDecimal() {
         BigDecimal dec = m_dec;
-        if (dec == null && isFinite())
-            {
+        if (dec == null && isFinite()) {
             m_dec = dec = toBigDecimal(m_nBits);
-            }
+        }
         return dec;
-        }
+    }
 
     @Override
-    public Decimal fromBigDecimal(BigDecimal big)
-        {
-        try
-            {
+    public Decimal fromBigDecimal(BigDecimal big) {
+        try {
             return new Decimal32(big);
-            }
-        catch (RangeException e)
-            {
+        } catch (RangeException e) {
             return e.getDecimal();
-            }
         }
+    }
 
     @Override
-    public Decimal infinity(boolean fSigned)
-        {
+    public Decimal infinity(boolean fSigned) {
         return fSigned ? NEG_INFINITY : POS_INFINITY;
-        }
+    }
 
     @Override
-    public Decimal zero(boolean fSigned)
-        {
+    public Decimal zero(boolean fSigned) {
         return fSigned ? NEG_ZERO : POS_ZERO;
-        }
+    }
 
     @Override
-    public Decimal nan()
-        {
+    public Decimal nan() {
         return NaN;
-        }
+    }
 
     @Override
-    public byte[] toByteArray()
-        {
+    public byte[] toByteArray() {
         int    n  = m_nBits;
         byte[] ab = new byte[4];
 
@@ -225,22 +197,20 @@ public class Decimal32
         ab[3] = (byte) (n       );
 
         return ab;
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
-        {
+    public int hashCode() {
         return m_nBits;
-        }
+    }
 
     @Override
-    public boolean equals(Object obj)
-        {
+    public boolean equals(Object obj) {
         return obj instanceof Decimal32 that && this.m_nBits == that.m_nBits;
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -254,14 +224,12 @@ public class Decimal32
      *
      * @throws NumberFormatException if the decimal is either a NaN or an Infinity value
      */
-    public static int ensureFiniteBits(int nBits)
-        {
-        if ((nBits & G0_G3_MASK) == G0_G3_MASK)
-            {
+    public static int ensureFiniteBits(int nBits) {
+        if ((nBits & G0_G3_MASK) == G0_G3_MASK) {
             throw new NumberFormatException("Not a finite value");
-            }
-        return nBits;
         }
+        return nBits;
+    }
 
     /**
      * Convert a Java BigDecimal to an IEEE 754 32-bit decimal.
@@ -272,30 +240,26 @@ public class Decimal32
      *
      * @throws ArithmeticException if the value is out of range
      */
-    public static int toIntBits(BigDecimal dec)
-        {
+    public static int toIntBits(BigDecimal dec) {
         dec = dec.round(MathContext.DECIMAL32);
 
         // obtain the significand
         int nSig = dec.unscaledValue().intValueExact();
-        if (nSig < -9999999 || nSig > 9999999)
-            {
+        if (nSig < -9999999 || nSig > 9999999) {
             throw new ArithmeticException("significand is >7 digits: " + nSig);
-            }
+        }
 
         int nBits = 0;
-        if (nSig < 0)
-            {
+        if (nSig < 0) {
             nBits = SIGN_BIT;
             nSig  = -nSig;
-            }
+        }
 
         // bias the exponent (the scale is basically a negative exponent)
         int nExp = 101 - dec.scale();
-        if (nExp < 0 || nExp >= 192)
-            {
+        if (nExp < 0 || nExp >= 192) {
             throw new ArithmeticException("biased exponent is out of range [0,192): " + nExp);
-            }
+        }
 
         // store the least significant 6 bits of the exponent into the combo field starting at G5
         // store the least significant 6 decimal digits of the significand in two 10-bit declets in T
@@ -312,7 +276,7 @@ public class Decimal32
                 : (          (nSig & 0b00111) | ((nExp & 0b11000000) >>> 3)) << 26;
 
         return nBits;
-        }
+    }
 
     /**
      * Convert the bits of an IEEE 754 decimal to a Java BigDecimal.
@@ -321,8 +285,7 @@ public class Decimal32
      *
      * @return a Java BigDecimal
      */
-    public static BigDecimal toBigDecimal(int nBits)
-        {
+    public static BigDecimal toBigDecimal(int nBits) {
         ensureFiniteBits(nBits);
 
         // combination field is 11 bits (from bit 20 to bit 30), including 6 "pure" exponent bits
@@ -331,16 +294,13 @@ public class Decimal32
         int nSig;
 
         // test G0 and G1
-        if ((nCombo & 0b011000000000) == 0b011000000000)
-            {
+        if ((nCombo & 0b011000000000) == 0b011000000000) {
             // when the most significant five bits of G are 110xx or 1110x, the leading significand
             // digit d0 is 8+G4, a value 8 or 9, and the leading biased exponent bits are 2*G2 + G3,
             // a value of 0, 1, or 2
             nExp |= ((nCombo & 0b000110000000) >>> 1);    // shift right 7, but then shift left 6
             nSig  = ((nCombo & 0b000001000000) >>> 6) + 8;
-            }
-        else
-            {
+        } else {
             // when the most significant five bits of G are 0xxxx or 10xxx, the leading significand
             // digit d0 is 4*G2 + 2*G3 + G4, a value in the range 0 through 7, and the leading
             // biased exponent bits are 2*G0 + G1, a value 0, 1, or 2; consequently if T is 0 and
@@ -348,7 +308,7 @@ public class Decimal32
             //      v = (−1) S * (+0)
             nExp |= (nCombo & 0b011000000000) >>> 3;    // shift right 9, but then shift left 6
             nSig  = (nCombo & 0b000111000000) >>> 6;
-            }
+        }
 
         // unbias the exponent
         nExp -= 101;
@@ -359,7 +319,7 @@ public class Decimal32
                       * (((nBits & SIGN_BIT) >> 31) | 1);       // apply sign
 
         return new BigDecimal(BigInteger.valueOf(nSig), -nExp, MathContext.DECIMAL32);
-        }
+    }
 
 
     // ----- constants -----------------------------------------------------------------------------
@@ -459,4 +419,4 @@ public class Decimal32
      * A cached BigDecimal value.
      */
     private transient BigDecimal m_dec;
-    }
+}

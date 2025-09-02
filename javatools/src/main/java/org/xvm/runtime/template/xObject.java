@@ -12,32 +12,27 @@ import org.xvm.runtime.Container;
  * Native Object functionality implementation.
  */
 public class xObject
-        extends ClassTemplate
-    {
+        extends ClassTemplate {
     public static xObject INSTANCE;
     public static ClassComposition CLASS;
 
-    public xObject(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xObject(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
-        if (this == INSTANCE)
-            {
+    public void initNative() {
+        if (this == INSTANCE) {
             CLASS = getCanonicalClass();
 
             markNativeMethod("equals", null, BOOLEAN);
             markNativeMethod("makeImmutable", VOID, null);
 
             invalidateTypeInfo();
-            }
         }
     }
+}

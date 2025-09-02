@@ -22,8 +22,7 @@ import org.xvm.util.Severity;
  * module needing to be able to be coordinated with compilers for other modules that are
  * co-dependent, i.e. that have dependencies on each other that need to be jointly resolved.
  */
-public class Compiler
-    {
+public class Compiler {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -32,24 +31,20 @@ public class Compiler
      * @param stmtModule  the statement representing all of the code in the module
      * @param errs    the error list to log any errors to during the various phases of compilation
      */
-    public Compiler(TypeCompositionStatement stmtModule, ErrorList errs)
-        {
-        if (stmtModule == null)
-            {
+    public Compiler(TypeCompositionStatement stmtModule, ErrorList errs) {
+        if (stmtModule == null) {
             throw new IllegalArgumentException("AST node for module required");
-            }
-        if (stmtModule.getCategory().getId() != Token.Id.MODULE)
-            {
+        }
+        if (stmtModule.getCategory().getId() != Token.Id.MODULE) {
             throw new IllegalArgumentException("AST node for module is not a module statement");
-            }
-        if (errs == null)
-            {
+        }
+        if (errs == null) {
             throw new IllegalArgumentException("ErrorList required");
-            }
+        }
 
         m_stmtModule = stmtModule;
         m_errs       = errs;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -57,37 +52,33 @@ public class Compiler
     /**
      * @return the TypeCompositionStatement for the module
      */
-    public TypeCompositionStatement getModuleStatement()
-        {
+    public TypeCompositionStatement getModuleStatement() {
         validateCompiler();
         return m_stmtModule;
-        }
+    }
 
     /**
      * @return the ErrorList that the compiler reports errors to
      */
-    public ErrorList getErrorListener()
-        {
+    public ErrorList getErrorListener() {
         validateCompiler();
         return m_errs;
-        }
+    }
 
     /**
      * @return the FileStructure if it has been created
      */
-    public FileStructure getFileStructure()
-        {
+    public FileStructure getFileStructure() {
         validateCompiler();
         return m_structFile;
-        }
+    }
 
     /**
      * @return the current stage of the compiler
      */
-    public Stage getStage()
-        {
+    public Stage getStage() {
         return m_stage;
-        }
+    }
 
     /**
      * Test if the compiler has reached the specified stage.
@@ -96,20 +87,18 @@ public class Compiler
      *
      * @return true if the compiler has already reached or passed the specified stage
      */
-    public boolean alreadyReached(Stage stage)
-        {
+    public boolean alreadyReached(Stage stage) {
         validateCompiler();
         assert stage != null;
         return getStage().compareTo(stage) >= 0;
-        }
+    }
 
     /**
      * @return true if the compiler has decided to abort the process
      */
-    public boolean isAbortDesired()
-        {
+    public boolean isAbortDesired() {
         return m_errs.isAbortDesired();
-        }
+    }
 
 
     // ----- public API ----------------------------------------------------------------------------
@@ -125,31 +114,27 @@ public class Compiler
      *
      * @return the initial file structure
      */
-    public FileStructure generateInitialFileStructure()
-        {
+    public FileStructure generateInitialFileStructure() {
         validateCompiler();
 
         // idempotent: allow this to be called more than necessary without any errors/side effects
-        if (getStage() == Stage.Initial)
-            {
+        if (getStage() == Stage.Initial) {
             setStage(Stage.Registering);
 
             StageMgr mgr = new StageMgr(m_stmtModule, Stage.Registered, m_errs);
-            if (!mgr.processComplete())
-                {
-                if (m_errs.hasSeriousErrors())
-                    {
+            if (!mgr.processComplete()) {
+                if (m_errs.hasSeriousErrors()) {
                     return null;
-                    }
-                throw new CompilerException("failed to create module");
                 }
+                throw new CompilerException("failed to create module");
+            }
             m_structFile = m_stmtModule.getComponent().getFileStructure();
             m_structFile.setErrorListener(ErrorListener.BLACKHOLE);
             setStage(Stage.Registered);
-            }
+        }
 
         return m_structFile;
-        }
+    }
 
     /**
      * Second pass: Link the modules together based on their declared dependencies.
@@ -158,31 +143,27 @@ public class Compiler
      *
      * @return an id of a first missing module, if any
      */
-    public ModuleConstant linkModules(ModuleRepository repo)
-        {
+    public ModuleConstant linkModules(ModuleRepository repo) {
         validateCompiler();
         ensureReached(Stage.Registered);
 
         // idempotent: allow this to be called more than necessary without any errors/side effects
-        if (alreadyReached(Stage.Loaded))
-            {
+        if (alreadyReached(Stage.Loaded)) {
             return null;
-            }
+        }
 
-        try (var ignore = ConstantPool.withPool(m_structFile.getConstantPool()))
-            {
+        try (var ignore = ConstantPool.withPool(m_structFile.getConstantPool())) {
             // first time through, load any module dependencies
             setStage(Stage.Loading);
             ModuleConstant idMissing = m_structFile.linkModules(repo, false);
 
-            if (idMissing == null)
-                {
+            if (idMissing == null) {
                 setStage(Stage.Loaded);
-                }
+            }
 
             return idMissing;
-            }
         }
+    }
 
     /**
      * Third pass: Resolve all of the globally-visible dependencies and names. This pass does not
@@ -199,41 +180,35 @@ public class Compiler
      *
      * @return true iff the pass is complete; false indicates that this method MUST be called again
      */
-    public boolean resolveNames(boolean fLastAttempt)
-        {
+    public boolean resolveNames(boolean fLastAttempt) {
         validateCompiler();
         ensureReached(Stage.Registered);
 
         // idempotent: allow this to be called more than necessary without any errors/side effects
-        if (alreadyReached(Stage.Resolved))
-            {
+        if (alreadyReached(Stage.Resolved)) {
             return true;
-            }
+        }
 
-        try (var ignore = ConstantPool.withPool(m_structFile.getConstantPool()))
-            {
+        try (var ignore = ConstantPool.withPool(m_structFile.getConstantPool())) {
             // recursively resolve all of the unresolved global names, and if anything couldn't get done
             // in one pass, then store it off in a list to tackle next time
-            if (!alreadyReached(Stage.Resolving))
-                {
+            if (!alreadyReached(Stage.Resolving)) {
                 // first time through: resolve starting from the module, and recurse down
                 setStage(Stage.Resolving);
                 m_mgr = new StageMgr(m_stmtModule, Stage.Resolved, m_errs);
-                }
-
-            if (fLastAttempt)
-                {
-                m_mgr.markLastAttempt();
-                }
-
-            if (m_mgr.processComplete())
-                {
-                setStage(Stage.Resolved);
-                }
             }
 
-        return m_mgr.isComplete();
+            if (fLastAttempt) {
+                m_mgr.markLastAttempt();
+            }
+
+            if (m_mgr.processComplete()) {
+                setStage(Stage.Resolved);
+            }
         }
+
+        return m_mgr.isComplete();
+    }
 
     /**
      * Fourth pass: Resolve all types and constants. This does recurse to the full depth of the AST
@@ -249,41 +224,35 @@ public class Compiler
      *                       will be reported as an error
      * @return true iff the pass is complete; false indicates that this method MUST be called again
      */
-    public boolean validateExpressions(boolean fLastAttempt)
-        {
+    public boolean validateExpressions(boolean fLastAttempt) {
         validateCompiler();
         ensureReached(Stage.Resolved);
 
         // idempotent: allow this to be called more than necessary without any errors/side effects
-        if (alreadyReached(Stage.Validated))
-            {
+        if (alreadyReached(Stage.Validated)) {
             return true;
-            }
+        }
 
-        try (var ignored = ConstantPool.withPool(m_structFile.getConstantPool()))
-            {
+        try (var ignored = ConstantPool.withPool(m_structFile.getConstantPool())) {
             // recursively resolve all of the unresolved global names, and if anything couldn't get done
             // in one pass, the manager will keep track of what remains to be done
-            if (!alreadyReached(Stage.Validating))
-                {
+            if (!alreadyReached(Stage.Validating)) {
                 // first time through: resolve starting from the module, and recurse down
                 setStage(Stage.Validating);
                 m_mgr = new StageMgr(m_stmtModule, Stage.Validated, m_errs);
-                }
-
-            if (fLastAttempt)
-                {
-                m_mgr.markLastAttempt();
-                }
-
-            if (m_mgr.processComplete())
-                {
-                setStage(Stage.Validated);
-                }
             }
 
-        return m_mgr.isComplete();
+            if (fLastAttempt) {
+                m_mgr.markLastAttempt();
+            }
+
+            if (m_mgr.processComplete()) {
+                setStage(Stage.Validated);
+            }
         }
+
+        return m_mgr.isComplete();
+    }
 
     /**
      * This stage finishes the compilation by emitting any necessary code and any remaining
@@ -299,79 +268,68 @@ public class Compiler
      *                       reported as an error
      * @return true iff the pass is complete; false indicates that this method MUST be called again
      */
-    public boolean generateCode(boolean fLastAttempt)
-        {
+    public boolean generateCode(boolean fLastAttempt) {
         validateCompiler();
         ensureReached(Stage.Validated);
 
         // idempotent: allow this to be called more than necessary without any errors/side effects
-        if (alreadyReached(Stage.Emitted))
-            {
+        if (alreadyReached(Stage.Emitted)) {
             return true;
-            }
+        }
 
-        try (var ignored = ConstantPool.withPool(m_structFile.getConstantPool()))
-            {
+        try (var ignored = ConstantPool.withPool(m_structFile.getConstantPool())) {
             // recursively resolve all of the unresolved global names, and if anything couldn't get done
             // in one pass, then store it off in a list to tackle next time
-            if (!alreadyReached(Stage.Emitting))
-                {
+            if (!alreadyReached(Stage.Emitting)) {
                 // first time through: resolve starting from the module, and recurse down
                 setStage(Stage.Emitting);
                 m_mgr = new StageMgr(m_stmtModule, Stage.Emitted, m_errs);
-                }
+            }
 
-            if (fLastAttempt)
-                {
+            if (fLastAttempt) {
                 m_mgr.markLastAttempt();
-                }
+            }
 
-            if (m_mgr.processComplete())
-                {
+            if (m_mgr.processComplete()) {
                 setStage(Stage.Emitted);
 
-                if (m_errs.getSeverity().compareTo(Severity.ERROR) < 0)
-                    {
+                if (m_errs.getSeverity().compareTo(Severity.ERROR) < 0) {
                     // "purge" the constant pool and do a final validation on the entire module structure
                     m_structFile.reregisterConstants(true);
                     m_structFile.validate(m_errs);
                     m_structFile.setErrorListener(null);
-                    }
                 }
             }
+        }
 
         return m_mgr.isComplete();
-        }
+    }
 
     /**
      * After a certain number of attempts to resolve names by invoking {@link #resolveNames}, this
      * method will report any unresolved names as fatal errors.
      */
-    public void logRemainingDeferredAsErrors()
-        {
-        if (!m_errs.hasSeriousErrors())
-            {
+    public void logRemainingDeferredAsErrors() {
+        if (!m_errs.hasSeriousErrors()) {
             m_mgr.logDeferredAsErrors(m_errs);
-            }
         }
+    }
 
     /**
      * Discard the compiler. This invalidates the compiler; any further attempts to use the compiler
      * will result in an exception.
      */
-    public void invalidate()
-        {
+    public void invalidate() {
         setStage(Stage.Discarded);
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return "Compiler (Module=" + m_stmtModule.getName() + ", Stage=" + getStage() + ")";
-        }
+    }
 
 
     // ----- internal helpers ----------------------------------------------------------------------
@@ -381,13 +339,11 @@ public class Compiler
      *
      * @throws IllegalStateException  if the compiler has been invalidated
      */
-    private void validateCompiler()
-        {
-        if (getStage() == Stage.Discarded)
-            {
+    private void validateCompiler() {
+        if (getStage() == Stage.Discarded) {
             throw new IllegalStateException();
-            }
         }
+    }
 
     /**
      * Verify that the compiler has reached the specified stage.
@@ -396,13 +352,11 @@ public class Compiler
      *
      * @throws IllegalStateException  if the compiler has not reached the specified stage
      */
-    private void ensureReached(Stage stage)
-        {
-        if (!alreadyReached(stage))
-            {
+    private void ensureReached(Stage stage) {
+        if (!alreadyReached(stage)) {
             throw new IllegalStateException("Stage=" + getStage() + " (expected: " + stage + ")");
-            }
         }
+    }
 
     /**
      * Update the stage to the specified stage, if the specified stage is later than the current
@@ -410,14 +364,12 @@ public class Compiler
      *
      * @param stage  the suggested stage
      */
-    private void setStage(Stage stage)
-        {
+    private void setStage(Stage stage) {
         // stage is a "one way" attribute
-        if (stage != null && stage.compareTo(m_stage) > 0)
-            {
+        if (stage != null && stage.compareTo(m_stage) > 0) {
             m_stage = stage;
-            }
         }
+    }
 
 
     // ----- data members --------------------------------------------------------------------------
@@ -455,8 +407,7 @@ public class Compiler
     /**
      * The stages of compilation.
      */
-    public enum Stage
-        {
+    public enum Stage {
         Initial,
         Registering,
         Registered,
@@ -474,37 +425,34 @@ public class Compiler
          * @return true if this stage is a "target-able" stage, i.e. a stage that a node can be
          *         asked to process towards
          */
-        public boolean isTargetable()
-            {
+        public boolean isTargetable() {
             ensureValid();
 
             // the even ordinals are targets
             int n = ordinal();
             return (n & 0x1) == 0 && n > 0;
-            }
+        }
 
         /**
          * @return true if this stage is an intermediate stage, i.e. indicating that a node is in
          *         the process of moving towards a target-able stage
          */
-        public boolean isTransition()
-            {
+        public boolean isTransition() {
             ensureValid();
 
             // the odd ordinals are intermediates
             return (ordinal() & 0x1) == 1;
-            }
+        }
 
         /**
          * @return the transition stage related to this stage
          */
-        public Stage getTransitionStage()
-            {
+        public Stage getTransitionStage() {
             ensureValid();
             return isTransition()
                     ? this
                     : prev();
-            }
+        }
 
         /**
          * Determine if this stage is at least as far along as that stage.
@@ -513,66 +461,57 @@ public class Compiler
          *
          * @return true iff this Stage is at least as advanced as that stage
          */
-        public boolean isAtLeast(Stage that)
-            {
+        public boolean isAtLeast(Stage that) {
             ensureValid();
             return this.compareTo(that) >= 0;
-            }
+        }
 
         /**
          * Make sure that the stage is not Discarded.
          */
-        public void ensureValid()
-            {
-            if (this == Discarded)
-                {
+        public void ensureValid() {
+            if (this == Discarded) {
                 throw new IllegalStateException();
-                }
             }
+        }
 
         /**
          * @return the Stage that comes before this Stage
          */
-        public Stage prev()
-            {
+        public Stage prev() {
             ensureValid();
             return Stage.valueOf(this.ordinal() - 1);
-            }
+        }
 
         /**
          * @return the Stage that comes after this Stage
          */
-        public Stage next()
-            {
+        public Stage next() {
             ensureValid();
             return Stage.valueOf(this.ordinal() + 1);
-            }
+        }
 
         /**
          * @return the first "target-able" Stage that comes before this Stage
          */
-        public Stage prevTarget()
-            {
+        public Stage prevTarget() {
             Stage that = prev();
-            while (!that.isTargetable())
-                {
+            while (!that.isTargetable()) {
                 that = that.prev();
-                }
-            return that;
             }
+            return that;
+        }
 
         /**
          * @return the first "target-able" Stage that comes after this Stage
          */
-        public Stage nextTarget()
-            {
+        public Stage nextTarget() {
             Stage that = next();
-            while (!that.isTargetable())
-                {
+            while (!that.isTargetable()) {
                 that = that.next();
-                }
-            return that;
             }
+            return that;
+        }
 
         /**
          * Look up a Stage enum by its ordinal.
@@ -581,21 +520,19 @@ public class Compiler
          *
          * @return the Stage enum for the specified ordinal
          */
-        public static Stage valueOf(int i)
-            {
-            if (i >= 0 && i < STAGES.length)
-                {
+        public static Stage valueOf(int i) {
+            if (i >= 0 && i < STAGES.length) {
                 return STAGES[i];
-                }
+            }
 
             throw new IllegalArgumentException("no such stage ordinal: " + i);
-            }
+        }
 
         /**
          * All of the Stage enums.
          */
         private static final Stage[] STAGES = Stage.values();
-        }
+    }
 
 
     // ----- compiler errors -----------------------------------------------------------------------
@@ -1434,4 +1371,4 @@ public class Compiler
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";
-    }
+}

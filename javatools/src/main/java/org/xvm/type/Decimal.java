@@ -64,18 +64,16 @@ import java.math.RoundingMode;
  *      m = c * b^(1-p)
  * </pre></tt>
  */
-public abstract class Decimal
-    {
+public abstract class Decimal {
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
      * @return the size of the IEEE-754-2008 formatted decimal, in bits, generally expected to be 32
      *         or a multiple thereof
      */
-    public int getBitLength()
-        {
+    public int getBitLength() {
         return getByteLength() * 8;
-        }
+    }
 
     /**
      * @return the size of the IEEE-754-2008 formatted decimal, in bytes.
@@ -99,10 +97,9 @@ public abstract class Decimal
     /**
      * @return an int whose 7 LSBs are (left to right): S, G0, G1, G2, G3, G4, G5
      */
-    protected int leftmost7Bits()
-        {
+    protected int leftmost7Bits() {
         return getByte(0) >>> 1;
-        }
+    }
 
     /**
      * @return true iff the decimal is zero, including both positive and negative zero
@@ -113,81 +110,73 @@ public abstract class Decimal
      * @return -1, 0, or 1, depending on if the value is less than zero, zero (regardless of sign),
      *         or greater than zero
      */
-    public int getSignum()
-        {
-        if (isZero())
-            {
+    public int getSignum() {
+        if (isZero()) {
             return 0;
-            }
+        }
 
         return isSigned() ? -1 : 1;
-        }
+    }
 
     /**
      * @return true iff the sign bit is set
      */
-    public boolean isSigned()
-        {
+    public boolean isSigned() {
         // sign bit S must be 1
         // ignore G0..G5
         return (leftmost7Bits() & 0b1000000) == 0b1000000;
-        }
+    }
 
     /**
      * @return true iff the value is neither an infinity nor a NaN
      */
-    public boolean isFinite()
-        {
+    public boolean isFinite() {
         // ignore sign bit S
         // G0..G3 must all be 1 for Infinity or NaN
         // ignore G4..G5
         return (leftmost7Bits() & 0b0111100) != 0b0111100;
-        }
+    }
 
     /**
      * @return true iff the value is an infinity value, regardless of sign
      */
-    public boolean isInfinite()
-        {
+    public boolean isInfinite() {
         // ignore sign bit S
         // G0..G3 must all be 1 for Infinity
         // G4 must be 0 for Infinity
         // ignore G5
         return (leftmost7Bits() & 0b0111110) == 0b0111100;
-        }
+    }
 
     /**
      * @return true iff the value is a NaN value, regardless of sign
      */
-    public boolean isNaN()
-        {
+    public boolean isNaN() {
         // ignore sign bit S
         // G0..G4 must all be 1 for NaN
         // ignore G5
         return (leftmost7Bits() & 0b0111110) == 0b0111110;
-        }
+    }
 
     /**
      * @return true iff the value is a signaling NaN value
      */
-    public boolean isSignalingNaN()
-        {
+    public boolean isSignalingNaN() {
         // ignore sign bit S
         // G0..G4 must all be 1 for NaN
         // G5 must be 1 for signaling
         return (leftmost7Bits() & 0b0111111) == 0b0111111;
-        }
+    }
 
     /**
      * @return true iff the value is a quiet NaN value
      */
-    public boolean isQuietNaN()
-        {
+    public boolean isQuietNaN() {
         // ignore sign bit S
         // G0..G4 must all be 1 for NaN
         // G5 must be 0 for quiet
         return (leftmost7Bits() & 0b0111111) == 0b0111110;
-        }
+    }
 
     /**
      * Convert the specified BigDecimal value to the smallest Decimal form (32-bit, 64-bit, or
@@ -197,17 +186,15 @@ public abstract class Decimal
      *
      * @return the smallest Decimal form that can hold the specified value
      */
-    public static Decimal valueOf(BigDecimal bigdec)
-        {
+    public static Decimal valueOf(BigDecimal bigdec) {
         Decimal dec128 = new Decimal128(bigdec);
         Decimal dec64  = new Decimal64(bigdec);
-        if (!dec64.isSameValue(dec128))
-            {
+        if (!dec64.isSameValue(dec128)) {
             return dec128;
-            }
+        }
         Decimal dec32 = new Decimal32(bigdec);
         return dec32.isSameValue(dec64) ? dec32 : dec64;
-        }
+    }
 
     /**
      * Compare any two decimal values for equality.
@@ -216,79 +203,70 @@ public abstract class Decimal
      *
      * @return true iff the two values are equal in terms of their sign, significand, and exponent
      */
-    public boolean isSameValue(Decimal that)
-        {
-        if (this == that)
-            {
+    public boolean isSameValue(Decimal that) {
+        if (this == that) {
             return true;
-            }
+        }
 
-        if (that == null)
-            {
+        if (that == null) {
             return false;
-            }
+        }
 
-        if (this.getClass() == that.getClass())
-            {
+        if (this.getClass() == that.getClass()) {
             return this.equals(that);
-            }
+        }
 
-        if (!(this.isFinite() && that.isFinite()))
-            {
+        if (!(this.isFinite() && that.isFinite())) {
             return this.isSigned()       == that.isSigned()
                 && this.isInfinite()     == that.isInfinite()
                 && this.isQuietNaN()     == that.isQuietNaN()
                 && this.isSignalingNaN() == that.isSignalingNaN();
-            }
+        }
 
         Decimal dec1 = this;
         Decimal dec2 = that;
-        switch ((dec1.getBitLength() << 8) | dec2.getBitLength())
-            {
-            case ( 64 << 8) | 32:
-                dec1 = that;
-                dec2 = this;
-                // fall through
-            case ( 32 << 8) | 64:
-                {
-                Decimal32 dec32 = (Decimal32) dec1;
-                Decimal64 dec64 = (Decimal64) dec2;
-                return dec32.isSigned()       == dec64.isSigned()
-                    && dec32.getExponent()    == dec64.getExponent()
-                    && dec32.getSignificand() == dec64.getSignificand();
-                }
-
-            case (128 << 8) | 32:
-                dec1 = that;
-                dec2 = this;
-                // fall through
-            case ( 32 << 8) | 128:
-                {
-                Decimal32  dec32  = (Decimal32)  dec1;
-                Decimal128 dec128 = (Decimal128) dec2;
-                return dec32.isSigned()       == dec128.isSigned()
-                    && dec32.getExponent()    == dec128.getExponent()
-                    && BigInteger.valueOf(dec32.getSignificand()).equals(dec128.getSignificand());
-                }
-
-            case (128 << 8) | 64:
-                dec1 = that;
-                dec2 = this;
-                // fall through
-            case ( 64 << 8) | 128:
-                {
-                Decimal64  dec64  = (Decimal64)  dec1;
-                Decimal128 dec128 = (Decimal128) dec2;
-                return dec64.isSigned()       == dec128.isSigned()
-                    && dec64.getExponent()    == dec128.getExponent()
-                    && BigInteger.valueOf(dec64.getSignificand()).equals(dec128.getSignificand());
-                }
-
-            default:
-                throw new UnsupportedOperationException("dec1=" + dec1.getClass().getName()
-                                                    + ", dec2=" + dec1.getClass().getName());
-            }
+        switch ((dec1.getBitLength() << 8) | dec2.getBitLength()) {
+        case ( 64 << 8) | 32:
+            dec1 = that;
+            dec2 = this;
+            // fall through
+        case ( 32 << 8) | 64: {
+            Decimal32 dec32 = (Decimal32) dec1;
+            Decimal64 dec64 = (Decimal64) dec2;
+            return dec32.isSigned()       == dec64.isSigned()
+                && dec32.getExponent()    == dec64.getExponent()
+                && dec32.getSignificand() == dec64.getSignificand();
         }
+
+        case (128 << 8) | 32:
+            dec1 = that;
+            dec2 = this;
+            // fall through
+        case ( 32 << 8) | 128: {
+            Decimal32  dec32  = (Decimal32)  dec1;
+            Decimal128 dec128 = (Decimal128) dec2;
+            return dec32.isSigned()       == dec128.isSigned()
+                && dec32.getExponent()    == dec128.getExponent()
+                && BigInteger.valueOf(dec32.getSignificand()).equals(dec128.getSignificand());
+        }
+
+        case (128 << 8) | 64:
+            dec1 = that;
+            dec2 = this;
+            // fall through
+        case ( 64 << 8) | 128: {
+            Decimal64  dec64  = (Decimal64)  dec1;
+            Decimal128 dec128 = (Decimal128) dec2;
+            return dec64.isSigned()       == dec128.isSigned()
+                && dec64.getExponent()    == dec128.getExponent()
+                && BigInteger.valueOf(dec64.getSignificand()).equals(dec128.getSignificand());
+        }
+
+        default:
+            throw new UnsupportedOperationException("dec1=" + dec1.getClass().getName()
+                                                + ", dec2=" + dec1.getClass().getName());
+        }
+    }
 
     /**
      * Write the bytes of the decimal to the specified output stream.
@@ -298,13 +276,11 @@ public abstract class Decimal
      * @throws IOException if an error occurs writing the decimal to the stream
      */
     public void writeBytes(DataOutput out)
-            throws IOException
-        {
-        for (int i = 0, c = getByteLength(); i < c; ++i)
-            {
+            throws IOException {
+        for (int i = 0, c = getByteLength(); i < c; ++i) {
             out.writeByte(getByte(i));
-            }
         }
+    }
 
     /**
      * Compare this decimal to another decimal for purposes of ordering. Note that this does not
@@ -315,297 +291,240 @@ public abstract class Decimal
      *
      * @return a value that is negative, zero, or positive to indicate less than, equal, or greater
      */
-    public int compareForObjectOrder(Decimal that)
-        {
-        if (this == that)
-            {
+    public int compareForObjectOrder(Decimal that) {
+        if (this == that) {
             return 0;
-            }
+        }
 
         BigDecimal bdecThis = this.toBigDecimal();
         BigDecimal bdecThat = that.toBigDecimal();
-        if (bdecThis == null || bdecThat == null)
-            {
+        if (bdecThis == null || bdecThat == null) {
             // sort NaN, -Infinity, finite, +Infinity
             int nThis = this.isNaN() ? -2 : this.isFinite() ? 0 : this.isSigned() ? -1 : 1;
             int nThat = that.isNaN() ? -2 : that.isFinite() ? 0 : that.isSigned() ? -1 : 1;
             return nThis - nThat;
-            }
+        }
 
         return bdecThis.compareTo(bdecThat);
-        }
+    }
 
 
     // ----- operations ----------------------------------------------------------------------------
 
-    public Decimal abs()
-        {
-        if (isFinite())
-            {
+    public Decimal abs() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(big.abs());
-            }
-        return isSigned() ? infinity(false) : this;
         }
+        return isSigned() ? infinity(false) : this;
+    }
 
-    public Decimal neg()
-        {
-        if (isFinite())
-            {
+    public Decimal neg() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(big.negate());
-            }
-        return infinity(!isSigned());
         }
+        return infinity(!isSigned());
+    }
 
-    public Decimal floor()
-        {
-        if (isFinite())
-            {
+    public Decimal floor() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(big.setScale(0, RoundingMode.FLOOR));
-            }
-        return this;
         }
+        return this;
+    }
 
-    public Decimal ceil()
-        {
-        if (isFinite())
-            {
+    public Decimal ceil() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(big.setScale(0, RoundingMode.CEILING));
-            }
-        return this;
         }
+        return this;
+    }
 
-    public Decimal exp()
-        {
-        if (isFinite())
-            {
+    public Decimal exp() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(BigDecimal.valueOf(Math.exp(big.doubleValue())));
-            }
-        return isSigned() ? zero(false) : this;
         }
+        return isSigned() ? zero(false) : this;
+    }
 
-    public Decimal log()
-        {
-        if (isFinite())
-            {
+    public Decimal log() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(BigDecimal.valueOf(Math.log(big.doubleValue())));
-            }
-        return isSigned() ? nan() : this;
         }
+        return isSigned() ? nan() : this;
+    }
 
-    public Decimal log2()
-        {
-        if (isFinite())
-            {
+    public Decimal log2() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(new BigDecimal(Math.log10(big.doubleValue())*LOG2_10));
-            }
-        return isSigned() ? nan() : this;
         }
+        return isSigned() ? nan() : this;
+    }
 
-    public Decimal log10()
-        {
-        if (isFinite())
-            {
+    public Decimal log10() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(BigDecimal.valueOf(Math.log10(big.doubleValue())));
-            }
-        return isSigned() ? nan() : this;
         }
+        return isSigned() ? nan() : this;
+    }
 
-    public Decimal sqrt()
-        {
-        if (isFinite())
-            {
+    public Decimal sqrt() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(big.sqrt(getMathContext()));
-            }
-        return isSigned() ? nan() : this;
         }
+        return isSigned() ? nan() : this;
+    }
 
-    public Decimal cbrt()
-        {
-        if (isFinite())
-            {
+    public Decimal cbrt() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(BigDecimal.valueOf(Math.cbrt(big.doubleValue())));
-            }
-        return this;
         }
+        return this;
+    }
 
-    public Decimal sin()
-        {
-        if (isFinite())
-            {
+    public Decimal sin() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(BigDecimal.valueOf(Math.sin(big.doubleValue())));
-            }
-        return nan();
         }
+        return nan();
+    }
 
-    public Decimal tan()
-        {
-        if (isFinite())
-            {
+    public Decimal tan() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(BigDecimal.valueOf(Math.tan(big.doubleValue())));
-            }
-        return nan();
         }
+        return nan();
+    }
 
-    public Decimal asin()
-        {
-        if (isFinite())
-            {
+    public Decimal asin() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(BigDecimal.valueOf(Math.asin(big.doubleValue())));
-            }
-        return nan();
         }
+        return nan();
+    }
 
-    public Decimal acos()
-        {
-        if (isFinite())
-            {
+    public Decimal acos() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(BigDecimal.valueOf(Math.acos(big.doubleValue())));
-            }
-        return nan();
         }
+        return nan();
+    }
 
-    public Decimal atan()
-        {
-        if (isFinite())
-            {
+    public Decimal atan() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(BigDecimal.valueOf(Math.atan(big.doubleValue())));
-            }
-        return nan();
         }
+        return nan();
+    }
 
-    public Decimal sinh()
-        {
-        if (isFinite())
-            {
+    public Decimal sinh() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(BigDecimal.valueOf(Math.sinh(big.doubleValue())));
-            }
-        return nan();
         }
+        return nan();
+    }
 
-    public Decimal cosh()
-        {
-        if (isFinite())
-            {
+    public Decimal cosh() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(BigDecimal.valueOf(Math.cosh(big.doubleValue())));
-            }
-        return nan();
         }
+        return nan();
+    }
 
-    public Decimal tanh()
-        {
-        if (isFinite())
-            {
+    public Decimal tanh() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(BigDecimal.valueOf(Math.tanh(big.doubleValue())));
-            }
-        return nan();
         }
+        return nan();
+    }
 
-    public Decimal asinh()
-        {
-        if (isFinite())
-            {
+    public Decimal asinh() {
+        if (isFinite()) {
             double d = toBigDecimal().doubleValue();
             return fromBigDecimal(BigDecimal.valueOf(Math.log(d + Math.sqrt(d * d + 1.0))));
-            }
-        return nan();
         }
+        return nan();
+    }
 
-    public Decimal acosh()
-        {
-        if (isFinite())
-            {
+    public Decimal acosh() {
+        if (isFinite()) {
             double d = toBigDecimal().doubleValue();
             return fromBigDecimal(BigDecimal.valueOf(Math.log(d + Math.sqrt(d * d - 1.0))));
-            }
-        return nan();
         }
+        return nan();
+    }
 
-    public Decimal atanh()
-        {
-        if (isFinite())
-            {
+    public Decimal atanh() {
+        if (isFinite()) {
             double d = toBigDecimal().doubleValue();
             return fromBigDecimal(BigDecimal.valueOf(0.5 * Math.log((d + 1.0) / (d - 1.0))));
-            }
-        return nan();
         }
+        return nan();
+    }
 
-    public Decimal deg2rad()
-        {
-        if (isFinite())
-            {
+    public Decimal deg2rad() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(BigDecimal.valueOf(Math.toRadians(big.doubleValue())));
-            }
-        return this;
         }
+        return this;
+    }
 
-    public Decimal rad2deg()
-        {
-        if (isFinite())
-            {
+    public Decimal rad2deg() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(BigDecimal.valueOf(Math.toDegrees(big.doubleValue())));
-            }
-        return this;
         }
+        return this;
+    }
 
-    public Decimal nextUp()
-        {
-        if (isFinite())
-            {
+    public Decimal nextUp() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(BigDecimal.valueOf(Math.nextUp(big.doubleValue())));
-            }
-        return this;
         }
+        return this;
+    }
 
-    public Decimal nextDown()
-        {
-        if (isFinite())
-            {
+    public Decimal nextDown() {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(BigDecimal.valueOf(Math.nextDown(big.doubleValue())));
-            }
-        return this;
         }
+        return this;
+    }
 
-    public Decimal round(RoundingMode mode)
-        {
-        if (isFinite())
-            {
+    public Decimal round(RoundingMode mode) {
+        if (isFinite()) {
             BigDecimal big = toBigDecimal();
             return fromBigDecimal(big.setScale(0, mode));
-            }
-        return this;
         }
+        return this;
+    }
 
-    public Decimal add(Decimal that)
-        {
-        if (this.isFinite() && that.isFinite())
-            {
+    public Decimal add(Decimal that) {
+        if (this.isFinite() && that.isFinite()) {
             BigDecimal big1 = this.toBigDecimal();
             BigDecimal big2 = that.toBigDecimal();
             return fromBigDecimal(big1.add(big2, getMathContext()));
-            }
+        }
         return isFinite()
             ? that
             : that.isFinite()
@@ -613,16 +532,14 @@ public abstract class Decimal
                 : this.isSigned() == that.isSigned()
                     ? this
                     : nan();
-        }
+    }
 
-    public Decimal subtract(Decimal that)
-        {
-        if (this.isFinite() && that.isFinite())
-            {
+    public Decimal subtract(Decimal that) {
+        if (this.isFinite() && that.isFinite()) {
             BigDecimal big1 = this.toBigDecimal();
             BigDecimal big2 = that.toBigDecimal();
             return fromBigDecimal(big1.subtract(big2, getMathContext()));
-            }
+        }
         return isFinite()
             ? infinity(!that.isSigned())
             : that.isFinite()
@@ -630,82 +547,68 @@ public abstract class Decimal
                 : this.isSigned() == that.isSigned()
                     ? nan()
                     : this;
-        }
+    }
 
-    public Decimal multiply(Decimal that)
-        {
-        if (this.isFinite() && that.isFinite())
-            {
+    public Decimal multiply(Decimal that) {
+        if (this.isFinite() && that.isFinite()) {
             BigDecimal big1 = this.toBigDecimal();
             BigDecimal big2 = that.toBigDecimal();
             return fromBigDecimal(big1.multiply(big2, getMathContext()));
-            }
-        return infinity(that.isSigned() != this.isSigned());
         }
+        return infinity(that.isSigned() != this.isSigned());
+    }
 
-    public Decimal divide(Decimal that)
-        {
-        if (this.isFinite() && that.isFinite())
-            {
+    public Decimal divide(Decimal that) {
+        if (this.isFinite() && that.isFinite()) {
             BigDecimal big1 = this.toBigDecimal();
             BigDecimal big2 = that.toBigDecimal();
             return fromBigDecimal(big1.divide(big2, getMathContext()));
-            }
-        return isFinite() ? zero(this.isSigned() != that.isSigned()) : nan();
         }
+        return isFinite() ? zero(this.isSigned() != that.isSigned()) : nan();
+    }
 
-    public Decimal mod(Decimal that)
-        {
-        if (this.isFinite() && that.isFinite())
-            {
+    public Decimal mod(Decimal that) {
+        if (this.isFinite() && that.isFinite()) {
             BigDecimal big1 = this.toBigDecimal();
             BigDecimal big2 = that.toBigDecimal();
             BigDecimal bigR = big1.remainder(big2, getMathContext());
             return fromBigDecimal(bigR.signum() >= 0 ? bigR : bigR.add(big2));
-            }
-        return nan();
         }
+        return nan();
+    }
 
-    public Decimal pow(Decimal that)
-        {
-        if (isFinite())
-            {
-            if (that.isFinite())
-                {
+    public Decimal pow(Decimal that) {
+        if (isFinite()) {
+            if (that.isFinite()) {
                 BigDecimal big1 = this.toBigDecimal();
                 BigDecimal big2 = that.toBigDecimal();
                 return fromBigDecimal(big1.pow(big2.intValue(), getMathContext()));
-                }
-            return nan();
             }
-        return this;
+            return nan();
         }
+        return this;
+    }
 
-    public Decimal pow(int nPow)
-        {
-        if (isFinite())
-            {
+    public Decimal pow(int nPow) {
+        if (isFinite()) {
             BigDecimal big1 = toBigDecimal();
             return fromBigDecimal(big1.pow(nPow, getMathContext()));
-            }
-        return this;
         }
+        return this;
+    }
 
-    public Decimal atan2(Decimal that)
-        {
-        if (isFinite())
-            {
-            if (that.isFinite())
-                {
+    public Decimal atan2(Decimal that) {
+        if (isFinite()) {
+            if (that.isFinite()) {
                 BigDecimal big1 = this.toBigDecimal();
                 BigDecimal big2 = that.toBigDecimal();
                 return fromBigDecimal(
                     BigDecimal.valueOf(Math.atan2(big1.doubleValue(), big2.doubleValue())));
-                }
-            return that;
             }
-        return this;
+            return that;
         }
+        return this;
+    }
 
     // ----- conversions ---------------------------------------------------------------------------
 
@@ -761,22 +664,19 @@ public abstract class Decimal
     public abstract boolean equals(Object obj);
 
     @Override
-    public String toString()
-        {
-        if (isFinite())
-            {
+    public String toString() {
+        if (isFinite()) {
             return isZero() && isSigned()
                 ? "-0"
                 : toBigDecimal().stripTrailingZeros().toEngineeringString();
-            }
+        }
 
-        if (isInfinite())
-            {
+        if (isInfinite()) {
             return (isSigned() ? '-' : "") + "Infinity";
-            }
+        }
 
         return isSignalingNaN() ? "sNaN" : "NaN";
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -790,10 +690,9 @@ public abstract class Decimal
      *
      * @return a declet
      */
-    public static int intToDeclet(int nDigits)
-        {
+    public static int intToDeclet(int nDigits) {
         return digitsToDeclet((nDigits / 100) % 10, (nDigits / 10) % 10, nDigits % 10);
-        }
+    }
 
     /**
      * Convert three decimal digits to a declet.
@@ -806,26 +705,23 @@ public abstract class Decimal
      *
      * @return a declet
      */
-    public static int digitsToDeclet(int d1, int d2, int d3)
-        {
-        switch ((d1 & 0b1000) >>> 1 | (d2 & 0b1000) >>> 2 | (d3 & 0b1000) >>> 3)
-            {
-            // table 3.4        (const 1's)
-            // d1.0 d2.0 d3.0   b0123456789   b0 b1 b2                         b3 b4 b5                         b7 b8 b9
-            // --------------  ------------   ------------------------------   ------------------------------   ----------
-            case 0b000: return 0b0000000000 | (d1 & 0b111)              << 7 | (d2 & 0b111)              << 4 | d3 & 0b111;
-            case 0b001: return 0b0000001000 | (d1 & 0b111)              << 7 | (d2 & 0b111)              << 4 | d3 & 0b001;
-            case 0b010: return 0b0000001010 | (d1 & 0b111)              << 7 | (d3 & 0b110 | d2 & 0b001) << 4 | d3 & 0b001;
-            case 0b011: return 0b0001001110 | (d1 & 0b111)              << 7 | (d2 & 0b001)              << 4 | d3 & 0b001;
-            case 0b100: return 0b0000001100 | (d3 & 0b110 | d1 & 0b001) << 7 | (d2 & 0b111)              << 4 | d3 & 0b001;
-            case 0b101: return 0b0000101110 | (d2 & 0b110 | d1 & 0b001) << 7 | (d2 & 0b001)              << 4 | d3 & 0b001;
-            case 0b110: return 0b0000001110 | (d3 & 0b110 | d1 & 0b001) << 7 | (d2 & 0b001)              << 4 | d3 & 0b001;
-            case 0b111: return 0b0001101110 | (d1 & 0b001)              << 7 | (d2 & 0b001)              << 4 | d3 & 0b001;
+    public static int digitsToDeclet(int d1, int d2, int d3) {
+        return switch ((d1 & 0b1000) >>> 1 | (d2 & 0b1000) >>> 2 | (d3 & 0b1000) >>> 3) {
+            // table 3.4   (const 1's)
+            // d1.0-d3.0   b0123456789   b0 b1 b2                         b3 b4 b5                         b7 b8 b9
+            // ---------  ------------   ------------------------------   ------------------------------   ----------
+            case 0b000 -> 0b0000000000 | (d1 & 0b111)              << 7 | (d2 & 0b111)              << 4 | d3 & 0b111;
+            case 0b001 -> 0b0000001000 | (d1 & 0b111)              << 7 | (d2 & 0b111)              << 4 | d3 & 0b001;
+            case 0b010 -> 0b0000001010 | (d1 & 0b111)              << 7 | (d3 & 0b110 | d2 & 0b001) << 4 | d3 & 0b001;
+            case 0b011 -> 0b0001001110 | (d1 & 0b111)              << 7 | (d2 & 0b001)              << 4 | d3 & 0b001;
+            case 0b100 -> 0b0000001100 | (d3 & 0b110 | d1 & 0b001) << 7 | (d2 & 0b111)              << 4 | d3 & 0b001;
+            case 0b101 -> 0b0000101110 | (d2 & 0b110 | d1 & 0b001) << 7 | (d2 & 0b001)              << 4 | d3 & 0b001;
+            case 0b110 -> 0b0000001110 | (d3 & 0b110 | d1 & 0b001) << 7 | (d2 & 0b001)              << 4 | d3 & 0b001;
+            case 0b111 -> 0b0001101110 | (d1 & 0b001)              << 7 | (d2 & 0b001)              << 4 | d3 & 0b001;
 
-            default:
-                throw new IllegalArgumentException("d1=" + d1 + ", d2=" + d2 + ", d3=" + d3);
-            }
-        }
+            default -> throw new IllegalArgumentException("d1=" + d1 + ", d2=" + d2 + ", d3=" + d3);
+        };
+    }
 
     /**
      * Convert the passed declet to three decimal digits, and format them as a Java <tt>int</tt> in
@@ -837,66 +733,64 @@ public abstract class Decimal
      *
      * @return three decimal digits in a Java <tt>int</tt> (000-999)
      */
-    public static int decletToInt(int nBits)
-        {
+    public static int decletToInt(int nBits) {
         //               b6 b7 b8                b3 b4
-        switch ((nBits & 0b1110) << 1 | (nBits & 0b1100000) >>> 5)
-            {
-            //     0xxxx                     b0123456789
-            default:
-                return 100 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
-                        10 * (    ((nBits & 0b0001110000) >>> 4)) +   // d2 = b3 b4 b5
-                             (    ((nBits & 0b0000000111)      ));    // d3 = b7 b8 b9
-            //     100xx
-            case 0b10000:
-            case 0b10001:
-            case 0b10010:
-            case 0b10011:
-                return 100 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
-                        10 * (    ((nBits & 0b0001110000) >>> 4)) +   // d2 = b3 b4 b5
-                             (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
-            //     101xx
-            case 0b10100:
-            case 0b10101:
-            case 0b10110:
-            case 0b10111:
-                return 100 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
-                        10 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
-                             (    ((nBits & 0b0001100000) >>> 4)      // d3 = b3 b4
-                                + ((nBits & 0b0000000001)      ));    //    + b9
-            //     110xx
-            case 0b11000:
-            case 0b11001:
-            case 0b11010:
-            case 0b11011:
-                return 100 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
-                        10 * (    ((nBits & 0b0001110000) >>> 4)) +   // d2 = b3 b4 b5
-                             (    ((nBits & 0b1100000000) >>> 7)      // d3 = b0 b1
-                                + ((nBits & 0b0000000001)      ));    //    + b9
-            //     11100
-            case 0b11100:
-                return 100 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
-                        10 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
-                             (    ((nBits & 0b1100000000) >>> 7)      // d3 = b0 b1
-                                + ((nBits & 0b0000000001)      ));    //    + b9
-            //     11101
-            case 0b11101:
-                return 100 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
-                        10 * (    ((nBits & 0b1100000000) >>> 7)      // d2 = b0 b1
-                                + ((nBits & 0b0000010000) >>> 4)) +   //    + b5
-                             (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
-            //     11110
-            case 0b11110:
-                return 100 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
-                        10 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
-                             (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
-            //     11111
-            case 0b11111:
-                return 100 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
-                        10 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
-                             (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
-            }
+        switch ((nBits & 0b1110) << 1 | (nBits & 0b1100000) >>> 5) {
+        //     0xxxx                     b0123456789
+        default:
+            return 100 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
+                    10 * (    ((nBits & 0b0001110000) >>> 4)) +   // d2 = b3 b4 b5
+                         (    ((nBits & 0b0000000111)      ));    // d3 = b7 b8 b9
+        //     100xx
+        case 0b10000:
+        case 0b10001:
+        case 0b10010:
+        case 0b10011:
+            return 100 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
+                    10 * (    ((nBits & 0b0001110000) >>> 4)) +   // d2 = b3 b4 b5
+                         (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
+        //     101xx
+        case 0b10100:
+        case 0b10101:
+        case 0b10110:
+        case 0b10111:
+            return 100 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
+                    10 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
+                         (    ((nBits & 0b0001100000) >>> 4)      // d3 = b3 b4
+                            + ((nBits & 0b0000000001)      ));    //    + b9
+        //     110xx
+        case 0b11000:
+        case 0b11001:
+        case 0b11010:
+        case 0b11011:
+            return 100 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
+                    10 * (    ((nBits & 0b0001110000) >>> 4)) +   // d2 = b3 b4 b5
+                         (    ((nBits & 0b1100000000) >>> 7)      // d3 = b0 b1
+                            + ((nBits & 0b0000000001)      ));    //    + b9
+        //     11100
+        case 0b11100:
+            return 100 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
+                    10 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
+                         (    ((nBits & 0b1100000000) >>> 7)      // d3 = b0 b1
+                            + ((nBits & 0b0000000001)      ));    //    + b9
+        //     11101
+        case 0b11101:
+            return 100 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
+                    10 * (    ((nBits & 0b1100000000) >>> 7)      // d2 = b0 b1
+                            + ((nBits & 0b0000010000) >>> 4)) +   //    + b5
+                         (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
+        //     11110
+        case 0b11110:
+            return 100 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
+                    10 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
+                         (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
+        //     11111
+        case 0b11111:
+            return 100 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
+                    10 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
+                         (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
         }
+    }
 
     /**
      * Convert the passed declet to three decimal digits, and return each of them in the three least
@@ -909,90 +803,85 @@ public abstract class Decimal
      * @return three decimal digits in a Java <tt>int</tt>, such that bits 0-7 contain the least
      *         significant digit, bits 8-15 the second, and bits 16-23 the most significant digit
      */
-    public static int decletToDigits(int nBits)
-        {
+    public static int decletToDigits(int nBits) {
         //               b6 b7 b8                b3 b4
-        switch ((nBits & 0b1110) << 1 | (nBits & 0b1100000) >>> 5)
-            {
-            //     0xxxx                     b0123456789
-            default:
-                return 256 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
-                        16 * (    ((nBits & 0b0001110000) >>> 4)) +   // d2 = b3 b4 b5
-                             (    ((nBits & 0b0000000111)      ));    // d3 = b7 b8 b9
-            //     100xx
-            case 0b10000:
-            case 0b10001:
-            case 0b10010:
-            case 0b10011:
-                return 256 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
-                        16 * (    ((nBits & 0b0001110000) >>> 4)) +   // d2 = b3 b4 b5
-                             (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
-            //     101xx
-            case 0b10100:
-            case 0b10101:
-            case 0b10110:
-            case 0b10111:
-                return 256 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
-                        16 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
-                             (    ((nBits & 0b0001100000) >>> 4)      // d3 = b3 b4
-                                + ((nBits & 0b0000000001)      ));    //    + b9
-            //     110xx
-            case 0b11000:
-            case 0b11001:
-            case 0b11010:
-            case 0b11011:
-                return 256 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
-                        16 * (    ((nBits & 0b0001110000) >>> 4)) +   // d2 = b3 b4 b5
-                             (    ((nBits & 0b1100000000) >>> 7)      // d3 = b0 b1
-                                + ((nBits & 0b0000000001)      ));    //    + b9
-            //     11100
-            case 0b11100:
-                return 256 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
-                        16 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
-                             (    ((nBits & 0b1100000000) >>> 7)      // d3 = b0 b1
-                                + ((nBits & 0b0000000001)      ));    //    + b9
-            //     11101
-            case 0b11101:
-                return 256 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
-                        16 * (    ((nBits & 0b1100000000) >>> 7)      // d2 = b0 b1
-                                + ((nBits & 0b0000010000) >>> 4)) +   //    + b5
-                             (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
-            //     11110
-            case 0b11110:
-                return 256 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
-                        16 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
-                             (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
-            //     11111
-            case 0b11111:
-                return 256 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
-                        16 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
-                             (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
-            }
+        switch ((nBits & 0b1110) << 1 | (nBits & 0b1100000) >>> 5) {
+        //     0xxxx                     b0123456789
+        default:
+            return 256 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
+                    16 * (    ((nBits & 0b0001110000) >>> 4)) +   // d2 = b3 b4 b5
+                         (    ((nBits & 0b0000000111)      ));    // d3 = b7 b8 b9
+        //     100xx
+        case 0b10000:
+        case 0b10001:
+        case 0b10010:
+        case 0b10011:
+            return 256 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
+                    16 * (    ((nBits & 0b0001110000) >>> 4)) +   // d2 = b3 b4 b5
+                         (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
+        //     101xx
+        case 0b10100:
+        case 0b10101:
+        case 0b10110:
+        case 0b10111:
+            return 256 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
+                    16 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
+                         (    ((nBits & 0b0001100000) >>> 4)      // d3 = b3 b4
+                            + ((nBits & 0b0000000001)      ));    //    + b9
+        //     110xx
+        case 0b11000:
+        case 0b11001:
+        case 0b11010:
+        case 0b11011:
+            return 256 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
+                    16 * (    ((nBits & 0b0001110000) >>> 4)) +   // d2 = b3 b4 b5
+                         (    ((nBits & 0b1100000000) >>> 7)      // d3 = b0 b1
+                            + ((nBits & 0b0000000001)      ));    //    + b9
+        //     11100
+        case 0b11100:
+            return 256 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
+                    16 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
+                         (    ((nBits & 0b1100000000) >>> 7)      // d3 = b0 b1
+                            + ((nBits & 0b0000000001)      ));    //    + b9
+        //     11101
+        case 0b11101:
+            return 256 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
+                    16 * (    ((nBits & 0b1100000000) >>> 7)      // d2 = b0 b1
+                            + ((nBits & 0b0000010000) >>> 4)) +   //    + b5
+                         (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
+        //     11110
+        case 0b11110:
+            return 256 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
+                    16 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
+                         (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
+        //     11111
+        case 0b11111:
+            return 256 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
+                    16 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
+                         (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
         }
+    }
 
     /**
      * An extension of the ArithmeticException that carries a suggested infinite or NaN Decimal.
      */
     public static class RangeException
-            extends ArithmeticException
-        {
-        public RangeException(String s, Decimal decNaN)
-            {
+            extends ArithmeticException {
+        public RangeException(String s, Decimal decNaN) {
             super(s);
 
             f_decNaN = decNaN;
-            }
+        }
 
-        public Decimal getDecimal()
-            {
+        public Decimal getDecimal() {
             return f_decNaN;
-            }
+        }
 
         private final Decimal f_decNaN;
-        }
+    }
 
     /**
      * The log2(10) value.
      */
     public static final double LOG2_10 = 1.0/Math.log10(2);
-    }
+}

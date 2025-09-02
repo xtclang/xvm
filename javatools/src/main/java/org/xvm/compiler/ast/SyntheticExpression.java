@@ -18,17 +18,15 @@ import org.xvm.compiler.Compiler.Stage;
  * common functionality to various nodes of the AST.
  */
 public abstract class SyntheticExpression
-        extends Expression
-    {
+        extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public SyntheticExpression(Expression expr)
-        {
+    public SyntheticExpression(Expression expr) {
         this.expr = expr;
 
         expr.getParent().adopt(this);
         this.adopt(expr);
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -36,96 +34,82 @@ public abstract class SyntheticExpression
     /**
      * @return get the TypeExpression for the tuple, if any; otherwise return null
      */
-    public Expression getUnderlyingExpression()
-        {
+    public Expression getUnderlyingExpression() {
         return expr;
-        }
+    }
 
     @Override
-    public Stage getStage()
-        {
+    public Stage getStage() {
         Stage stageThis = super.getStage();
         Stage stageThat = expr.getStage();
         return stageThis.compareTo(stageThat) > 0
                 ? stageThis
                 : stageThat;
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return expr.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return expr.getEndPosition();
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
-    public boolean isAssignable(Context ctx)
-        {
+    public boolean isAssignable(Context ctx) {
         return expr.isAssignable(ctx);
-        }
+    }
 
     @Override
-    public void requireAssignable(Context ctx, ErrorListener errs)
-        {
+    public void requireAssignable(Context ctx, ErrorListener errs) {
         expr.requireAssignable(ctx, errs);
-        }
+    }
 
     @Override
-    public void markAssignment(Context ctx, boolean fCond, ErrorListener errs)
-        {
+    public void markAssignment(Context ctx, boolean fCond, ErrorListener errs) {
         expr.markAssignment(ctx, fCond, errs);
-        }
+    }
 
     @Override
-    public boolean isCompletable()
-        {
+    public boolean isCompletable() {
         return expr.isCompletable();
-        }
+    }
 
     @Override
-    public boolean isShortCircuiting()
-        {
+    public boolean isShortCircuiting() {
         return expr.isShortCircuiting();
-        }
+    }
 
     @Override
-    public ExprAST getExprAST(Context ctx)
-        {
-        if (isConstant())
-            {
+    public ExprAST getExprAST(Context ctx) {
+        if (isConstant()) {
             return expr.getExprAST(ctx);
-            }
+        }
 
-        Operator op = switch (this)
-            {
+        Operator op = switch (this) {
             case PackExpression  ignored -> Operator.Pack;
             case ToIntExpression ignored -> Operator.ToInt;
             case TraceExpression ignored -> Operator.Trace;
             default                      -> throw new UnsupportedOperationException();
-            };
+        };
 
         return new UnaryOpExprAST(expr.getExprAST(ctx), op, getType());
-        }
+    }
 
     @Override
-    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
-        {
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg) {
         return expr.mightAffect(exprLeft, arg);
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -134,10 +118,9 @@ public abstract class SyntheticExpression
     public abstract String toString();
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -148,4 +131,4 @@ public abstract class SyntheticExpression
     protected Expression expr;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SyntheticExpression.class, "expr");
-    }
+}

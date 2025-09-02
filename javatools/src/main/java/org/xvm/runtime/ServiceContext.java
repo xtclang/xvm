@@ -69,54 +69,46 @@ import org.xvm.util.concurrent.VarHandles;
 /**
  * The service context.
  */
-public class ServiceContext
-    {
-    ServiceContext(Container container, String sName, long lId)
-        {
+public class ServiceContext {
+    ServiceContext(Container container, String sName, long lId) {
         f_container = container;
         f_pool      = container.getConstantPool();
         f_sName     = sName;
         f_lId       = lId;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
-    public Runtime getRuntime()
-        {
+    public Runtime getRuntime() {
         return f_container.f_runtime;
-        }
+    }
 
-    public LinkerContext getLinkerContext()
-        {
+    public LinkerContext getLinkerContext() {
         return f_container;
-        }
+    }
 
-    public ServiceContext getMainContext()
-        {
+    public ServiceContext getMainContext() {
         return f_container.getServiceContext();
-        }
+    }
 
-    public ServiceHandle getService()
-        {
+    public ServiceHandle getService() {
         return m_hService;
-        }
+    }
 
-    public void setService(ServiceHandle hService)
-        {
+    public void setService(ServiceHandle hService) {
         assert m_hService == null || m_hService.isStruct() && !hService.isStruct();
         m_hService = hService;
-        }
+    }
 
     /**
      * Supporting method for Service.synchronizedSection.get().
      *
      * @return the current SynchronizedSection? handle
      */
-    public ObjectHandle getSynchronizedSection()
-        {
+    public ObjectHandle getSynchronizedSection() {
         return m_hSynchronizedSection;
-        }
+    }
 
     /**
      * Supporting method for Service.registerSynchronizedSection().
@@ -126,32 +118,27 @@ public class ServiceContext
      *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
-    public int setSynchronizedSection(Frame frame, ObjectHandle hSection)
-        {
+    public int setSynchronizedSection(Frame frame, ObjectHandle hSection) {
         assert hSection != null;
 
-        if (m_hSynchronizedSection != xNullable.NULL && m_fiberSyncOwner != frame.f_fiber)
-            {
+        if (m_hSynchronizedSection != xNullable.NULL && m_fiberSyncOwner != frame.f_fiber) {
             // should never happen
             return frame.raiseException("Attempt to reset unowned SynchronizedSection");
-            }
+        }
 
         m_hSynchronizedSection = hSection;
 
-        if (hSection == xNullable.NULL)
-            {
+        if (hSection == xNullable.NULL) {
             setSynchronicity(null, Synchronicity.Concurrent);
-            }
-        else
-            {
+        } else {
             ObjectHandle hCritical = ((GenericHandle) hSection).getField(frame, "critical");
 
             setSynchronicity(frame.f_fiber, ((BooleanHandle) hCritical).get() ?
                     Synchronicity.Critical : Synchronicity.Synchronized);
-            }
+        }
 
         return Op.R_NEXT;
-        }
+    }
 
     /**
      * Set the synchronicity values.
@@ -159,35 +146,31 @@ public class ServiceContext
      * @param fiber          the owner fiber
      * @param synchronicity  the Synchronicity value
      */
-    public void setSynchronicity(Fiber fiber, Synchronicity synchronicity)
-        {
+    public void setSynchronicity(Fiber fiber, Synchronicity synchronicity) {
         m_fiberSyncOwner = fiber;
         m_synchronicity  = synchronicity;
-        }
+    }
 
     /**
      * @return the currently active frame
      */
-    public Frame getCurrentFrame()
-        {
+    public Frame getCurrentFrame() {
         return m_frameCurrent;
-        }
+    }
 
     /**
      * @return the set of Fibers for this context
      */
-    public Set<Fiber> getFibers()
-        {
+    public Set<Fiber> getFibers() {
         return f_setFibers;
-        }
+    }
 
     /**
      * @return the ServiceContext associated with the current Java thread
      */
-    public static ServiceContext getCurrentContext()
-        {
+    public static ServiceContext getCurrentContext() {
         return s_tloContext.get()[0];
-        }
+    }
 
     /**
      * Note: the value of {@link Synchronicity#Concurrent Concurrent} here actually means
@@ -195,44 +178,39 @@ public class ServiceContext
      *
      * @return the current service Synchronicity value
      */
-    public Synchronicity getSynchronicity()
-        {
+    public Synchronicity getSynchronicity() {
         return m_synchronicity;
-        }
+    }
 
     /**
      * @return the synchronized section owner
      */
-    public Fiber getSynchronizationOwner()
-        {
+    public Fiber getSynchronizationOwner() {
         return m_fiberSyncOwner;
-        }
+    }
 
     /**
      * Check if a debugging session is on.
      */
-    public boolean isDebuggerActive()
-        {
+    public boolean isDebuggerActive() {
         // for now, we use a global flag, but should allow debugging of an individual
         // service/container.
         return f_container.f_runtime.isDebuggerActive();
-        }
+    }
 
     /**
      * Set or clear a debugging session flag.
      */
-    public void setDebuggerActive(boolean fActive)
-        {
+    public void setDebuggerActive(boolean fActive) {
         f_container.f_runtime.setDebuggerActive(fActive);
-        }
+    }
 
     /**
      * @return the active debugger
      */
-    public Debugger getDebugger()
-        {
+    public Debugger getDebugger() {
         return DebugConsole.INSTANCE;
-        }
+    }
 
 
     // ----- Op support ----------------------------------------------------------------------------
@@ -245,16 +223,14 @@ public class ServiceContext
      *
      * @return the op info for the specified category
      */
-    public Object getOpInfo(Op op, Enum category)
-        {
+    public Object getOpInfo(Op op, Enum category) {
         EnumMap mapByCategory = f_mapOpInfo.get(op);
-        if (mapByCategory == null)
-            {
+        if (mapByCategory == null) {
             return null;
-            }
+        }
         WeakReference ref = (WeakReference) mapByCategory.get(category);
         return ref == null ? null : ref.get();
-        }
+    }
 
     /**
      * Store an Op specific info.
@@ -263,40 +239,35 @@ public class ServiceContext
      * @param category the category of the cached info (op specific)
      * @param info     the info
      */
-    public void setOpInfo(Op op, Enum category, Object info)
-        {
+    public void setOpInfo(Op op, Enum category, Object info) {
         f_mapOpInfo.computeIfAbsent(op, (op_) -> new EnumMap(category.getClass()))
                    .put(category, new WeakReference(info));
-        }
+    }
 
     /**
      * @return service-local value represented by the specified ref
      */
-    public ObjectHandle getTransientValue(TransientId ref)
-        {
+    public ObjectHandle getTransientValue(TransientId ref) {
         return ensureTransientMap().get(ref);
-        }
+    }
 
     /**
      * Set service-local value represented by the specified ref.
      */
-    public void setTransientValue(TransientId ref, ObjectHandle value)
-        {
+    public void setTransientValue(TransientId ref, ObjectHandle value) {
         ensureTransientMap().put(ref, value);
-        }
+    }
 
     /**
      * @return the map of service-local values; accessed only by this service
      */
-    private Map<TransientId, ObjectHandle> ensureTransientMap()
-        {
+    private Map<TransientId, ObjectHandle> ensureTransientMap() {
         Map<TransientId, ObjectHandle> map = m_mapTransient;
-        if (map == null)
-            {
+        if (map == null) {
             map = m_mapTransient = new WeakHashMap<>();
-            }
-        return map;
         }
+        return map;
+    }
 
     /**
      * The idea for the Callback map is that it holds all necessary information to create a
@@ -306,23 +277,20 @@ public class ServiceContext
      *
      * @return the map of callbacks keyed by unique ids
      */
-    protected Map<Long, WeakCallback.Callback> ensureCallbackMap()
-        {
+    protected Map<Long, WeakCallback.Callback> ensureCallbackMap() {
         Map<Long, WeakCallback.Callback> map = m_mapCallbacks;
-        if (map == null)
-            {
+        if (map == null) {
             map = m_mapCallbacks = new HashMap<>();
-            }
-        return map;
         }
+        return map;
+    }
 
     /**
      * @return the map of callbacks keyed by unique ids
      */
-    protected Map<Long, WeakCallback.Callback> getCallbackMap()
-        {
+    protected Map<Long, WeakCallback.Callback> getCallbackMap() {
         return m_mapCallbacks;
-        }
+    }
 
 
     // ----- scheduling  ---------------------------------------------------------------------------
@@ -332,107 +300,86 @@ public class ServiceContext
      *
      * @return true if the context has no further processing to perform at this time
      */
-    protected boolean drainWork()
-        {
+    protected boolean drainWork() {
         ServiceContext[] tloCtx   = s_tloContext.get();
         ServiceContext   ctxPrior = tloCtx[0];
         tloCtx[0] = this;
 
         Frame frame = null;
-        try (var ignored = ConstantPool.withPool(f_pool))
-            {
-            while (true)
-                {
+        try (var ignored = ConstantPool.withPool(f_pool)) {
+            while (true) {
                 frame = nextFiber();
-                if (frame == null)
-                    {
+                if (frame == null) {
                     return true; // nothing to do here
-                    }
+                }
 
                 frame = execute(frame);
 
-                if (frame != null)
-                    {
+                if (frame != null) {
                     suspendFiber(frame);
                     return false;
-                    }
                 }
             }
-        catch (Throwable e)
-            {
+        } catch (Throwable e) {
             // must not happen
             terminateFiber(frame.f_fiber, 0);
             System.err.println("Unexpected service execution failure: " + f_sName);
             e.printStackTrace(System.err);
             return !f_queueSuspended.isReady();
-            }
-        finally
-            {
+        } finally {
             tloCtx[0] = ctxPrior;
 
-            if (ctxPrior != null)
-                {
+            if (ctxPrior != null) {
                 // now that we've switched back to the caller's service context process any responses
                 // which may have arrived
                 ctxPrior.processResponses();
-                }
             }
         }
+    }
 
     /**
      * Ensure this service is scheduled for processing.
      *
      * @param fAsync  if true, avoid the in-line optimization for the request execution
      */
-    protected void ensureScheduled(boolean fAsync)
-        {
-        if (tryAcquireSchedulingLock())
-            {
+    protected void ensureScheduled(boolean fAsync) {
+        if (tryAcquireSchedulingLock()) {
             execute(!fAsync);
-            }
-        // else; already scheduled
         }
+        // else; already scheduled
+    }
 
     /**
      * Execute any outstanding work for this service.
      */
-    public void execute(boolean fAllowInlineExecution)
-        {
-        if (fAllowInlineExecution && drainWork())
-            {
-            if (isTerminated())
-                {
+    public void execute(boolean fAllowInlineExecution) {
+        if (fAllowInlineExecution && drainWork()) {
+            if (isTerminated()) {
                 f_container.terminate(this);
-                }
-            else
-                {
+            } else {
                 releaseSchedulingLock();
-                }
             }
-        else
-            {
+        } else {
             f_container.schedule(this);
-            }
         }
+    }
 
     /**
      * Attempt to acquire the context's scheduling lock.
      *
      * @return {@code true} iff acquired
      */
-    protected boolean tryAcquireSchedulingLock()
-        {
+    protected boolean tryAcquireSchedulingLock() {
         // we avoid a pre-check for LOCK_AVAILABLE thus ensuring that if lock is currently held
         // that our failure to obtain it is visible, see releaseSchedulingLock for details on how
         // this is utilized
         return (long) SCHEDULING_LOCK_HANDLE.getAndAdd(this, 1L) == 0L;
-        }
+    }
 
     /**
      * Release the context lock.
      */
-    protected void releaseSchedulingLock()
-        {
+    protected void releaseSchedulingLock() {
         // If isContended is true then the service requires more processing, so we can immediately
         // reschedule, thus transferring our lock ownership. Between checking that state and releasing
         // the lock isContended could transition to true and the thread doing that transition would
@@ -445,71 +392,60 @@ public class ServiceContext
         // to release again, and is thus safe.
 
         long lLockPreState = m_lLockScheduling; // read lock state prior to isContended check
-        if (isContended() || !SCHEDULING_LOCK_HANDLE.compareAndSet(this, lLockPreState, 0L))
-            {
+        if (isContended() || !SCHEDULING_LOCK_HANDLE.compareAndSet(this, lLockPreState, 0L)) {
             // we've detected service or lock contention, reschedule
             f_container.schedule(this);
-            }
-        else if (!f_setFibers.isEmpty())
-            {
+        } else if (!f_setFibers.isEmpty()) {
             // make sure to wake up for the nearest timeout
             long ldtTimeout = Long.MAX_VALUE;
-            for (Fiber fiber : f_setFibers)
-                {
+            for (Fiber fiber : f_setFibers) {
                 long ldtTimeoutFiber = fiber.getTimeoutStamp();
-                if (ldtTimeoutFiber > 0)
-                    {
+                if (ldtTimeoutFiber > 0) {
                     ldtTimeout = Math.min(ldtTimeout, ldtTimeoutFiber);
-                    }
-                }
-
-            if (ldtTimeout != Long.MAX_VALUE)
-                {
-                f_wakeUpScheduler.schedule(ldtTimeout);
                 }
             }
+
+            if (ldtTimeout != Long.MAX_VALUE) {
+                f_wakeUpScheduler.schedule(ldtTimeout);
+            }
         }
+    }
 
     /**
      * Add a message to the service request queue.
      *
      * @return true if the service has become "overwhelmed" - too many outstanding messages
      */
-    public boolean addRequest(Message msg)
-        {
+    public boolean addRequest(Message msg) {
         f_queueMsg.add(msg);
         ensureScheduled(msg.isAsync());
         return isOverwhelmed();
-        }
+    }
 
     /**
      * @return true if the service has too many outstanding fibers
      */
-    public boolean isOverwhelmed()
-        {
+    public boolean isOverwhelmed() {
         return f_queueSuspended.size() > QUEUE_THRESHOLD;
-        }
+    }
 
     /**
      * Add a response to the service response queue.
      */
-    private void respond(Response response)
-        {
+    private void respond(Response response) {
         f_queueResponse.add(response);
         ensureScheduled(true);
-        }
+    }
 
     /**
      * Process all queued responses.
      */
-    private void processResponses()
-        {
+    private void processResponses() {
         Response response;
-        while ((response = f_queueResponse.poll()) != null)
-            {
+        while ((response = f_queueResponse.poll()) != null) {
             response.run();
-            }
         }
+    }
 
     /**
      * Get a next frame ready for execution.
@@ -517,8 +453,7 @@ public class ServiceContext
      * @return a Frame to execute or null if this service doesn't have any frames ready for
      *         execution
      */
-    private Frame nextFiber()
-        {
+    private Frame nextFiber() {
         // responses have the highest priority and no natural code runs there;
         // process all we've got so far
         processResponses();
@@ -527,10 +462,9 @@ public class ServiceContext
         FiberQueue qFiber = f_queueSuspended;
 
         Message message;
-        while ((message = f_queueMsg.poll()) != null)
-            {
+        while ((message = f_queueMsg.poll()) != null) {
             qFiber.add(message.createFrame(this));
-            }
+        }
 
         // allow initial timeouts to be processed always, since they won't run any natural code
         // TODO: return ?f_queueSuspended.getInitialTimeout();
@@ -539,30 +473,27 @@ public class ServiceContext
         return m_frameCurrent == null
                 ? qFiber.getReady()
                 : m_frameCurrent;
-        }
+    }
 
     /**
      * Suspend the fiber that the specified frame belongs to.
      *
      * @param frame  the frame to suspend
      */
-    public void suspendFiber(Frame frame)
-        {
-        switch (frame.f_fiber.getStatus())
-            {
-            case Running -> throw new IllegalStateException();
+    public void suspendFiber(Frame frame) {
+        switch (frame.f_fiber.getStatus()) {
+        case Running -> throw new IllegalStateException();
 
-            case Initial -> f_queueSuspended.add(frame);
+        case Initial -> f_queueSuspended.add(frame);
 
-            case Waiting ->
-                {
-                m_frameCurrent = null;
-                f_queueSuspended.add(frame);
-                }
-
-            case Paused -> m_frameCurrent = frame; // we must resume this frame
-            }
+        case Waiting -> {
+            m_frameCurrent = null;
+            f_queueSuspended.add(frame);
         }
+
+        case Paused -> m_frameCurrent = frame; // we must resume this frame
+        }
+    }
 
     /**
      * Start or resume execution of the specified frame.
@@ -572,290 +503,262 @@ public class ServiceContext
      * @return a frame that has been suspended or null if the fiber associated with this frame has
      *         finished execution or has been terminated due to an exception or any other means
      */
-    public Frame execute(Frame frame)
-        {
+    public Frame execute(Frame frame) {
         Fiber fiber   = frame.f_fiber;
         int   iPC     = frame.m_iPC;
         int   iPCLast = iPC;
 
         m_frameCurrent = frame;
 
-        switch (fiber.prepareRun(frame))
-            {
-            case Op.R_NEXT:
-                // proceed as is
-                break;
+        switch (fiber.prepareRun(frame)) {
+        case Op.R_NEXT:
+            // proceed as is
+            break;
 
-            case Op.R_CALL:
-                // there was a deferred action
-                frame = m_frameCurrent = frame.m_frameNext;
-                iPC = 0;
-                break;
+        case Op.R_CALL:
+            // there was a deferred action
+            frame = m_frameCurrent = frame.m_frameNext;
+            iPC = 0;
+            break;
 
-            case Op.R_EXCEPTION:
-                iPC = Op.R_EXCEPTION;
-                break;
+        case Op.R_EXCEPTION:
+            iPC = Op.R_EXCEPTION;
+            break;
 
-            case Op.R_BLOCK: // there are still some non-completed futures
-                return frame;
+        case Op.R_BLOCK: // there are still some non-completed futures
+            return frame;
 
-            default:
-                throw new IllegalStateException();
-            }
+        default:
+            throw new IllegalStateException();
+        }
 
         Op[] aOp  = frame.f_aOp;
         int  cOps = 0;
 
     nextOp:
-        while (true) // main loop
-            {
-            while (iPC >= 0) // most common op return loop
-                {
+        while (true) { // main loop
+            while (iPC >= 0) { // most common op return loop
                 frame.m_iPC = iPC;
 
-                if (++cOps > MAX_OPS_PER_RUN && !isDebuggerActive())
-                    {
+                if (++cOps > MAX_OPS_PER_RUN && !isDebuggerActive()) {
                     fiber.setStatus(FiberStatus.Paused, cOps);
                     return frame;
-                    }
+                }
 
-                try
-                    {
+                try {
                     iPC = aOp[iPC].process(frame, iPCLast = iPC);
-                    if (iPC == Op.R_NEXT)
-                        {
+                    if (iPC == Op.R_NEXT) {
                         iPC = iPCLast + 1;
-                        }
                     }
-                catch (Throwable e)
-                    {
+                } catch (Throwable e) {
                     e.printStackTrace(System.err);
                     System.err.println(frame.getStackTrace());
                     iPC = frame.raiseException("Run-time error: " + e);
-                    }
-                }
-
-            switch (iPC)
-                {
-                case Op.R_RETURN_CALL:
-                    frame = frame.f_framePrev;
-                    // fall-through
-
-                case Op.R_CALL:
-                    m_frameCurrent = frame.m_frameNext;
-                    frame.m_frameNext = null;
-                    frame = m_frameCurrent;
-                    aOp = frame.f_aOp;
-                    // a new frame can already be in the "exception" state
-                    iPC = frame.m_hException == null ? 0 : Op.R_EXCEPTION;
-                    break;
-
-                case Op.R_RETURN:
-                    {
-                    if (isDebuggerActive())
-                        {
-                        getDebugger().onReturn(frame);
-                        }
-
-                    Frame.Continuation continuation = frame.m_continuation;
-                    frame = m_frameCurrent = frame.f_framePrev; // GC the old frame
-
-                    if (frame != null)
-                        {
-                        iPC = frame.m_iPC + 1;
-                        }
-                    if (continuation != null)
-                        {
-                        int iResult = continuation.proceed(frame);
-                        switch (iResult)
-                            {
-                            case Op.R_NEXT:
-                                break;
-
-                            case Op.R_EXCEPTION:
-                                // continuation is allowed to "throw"
-                                assert frame.m_hException != null;
-
-                                iPC = Op.R_EXCEPTION;
-                                continue; // nextOp
-
-                            case Op.R_CALL:
-                                assert frame.m_frameNext != null;
-
-                                m_frameCurrent = frame.m_frameNext;
-                                frame.m_frameNext = null;
-                                frame = m_frameCurrent;
-
-                                aOp = frame.f_aOp;
-                                iPC = 0;
-                                continue; // nextOp
-
-                            case Op.R_RETURN:
-                                iPC = Op.R_RETURN;
-                                continue; // nextOp
-
-                            default:
-                                if (iResult < 0)
-                                    {
-                                    throw new IllegalStateException();
-                                    }
-                                iPC = iResult;
-                                break;
-                            }
-                        }
-
-                    if (frame == null)
-                        {
-                        // all done
-                        terminateFiber(fiber, cOps);
-                        return m_frameCurrent = null;
-                        }
-
-                    aOp = frame.f_aOp;
-                    break;
-                    }
-
-                case Op.R_RETURN_EXCEPTION:
-                    frame = frame.f_framePrev;
-                    // fall-through
-
-                case Op.R_EXCEPTION:
-                    {
-                    ExceptionHandle hException = frame.m_hException;
-                    assert hException != null;
-
-                    boolean fDebugger = isDebuggerActive();
-
-                    while (true)
-                        {
-                        if (fDebugger)
-                            {
-                            iPC = getDebugger().checkBreakPoint(frame, hException);
-                            switch (iPC)
-                                {
-                                case Op.R_NEXT:
-                                    break;
-
-                                case Op.R_CALL:
-                                    // the debugger made a natural call
-                                    m_frameCurrent = frame.m_frameNext;
-                                    frame.m_frameNext = null;
-                                    frame = m_frameCurrent;
-
-                                    aOp = frame.f_aOp;
-                                    iPC = 0;
-                                    continue nextOp;
-
-                                case Op.R_EXCEPTION:
-                                    // unwind the exception without stopping in the debugger
-                                    fDebugger = false;
-                                    break;
-
-                                default:
-                                    assert iPC >= 0 && frame.m_hException == null;
-
-                                    // the debugger has handled (reported) the exception
-                                    frame = m_frameCurrent = frame.f_framePrev;
-                                    aOp   = frame.f_aOp;
-                                    continue nextOp;
-                                }
-                            }
-
-                        iPC = frame.findGuard(hException);
-                        if (iPC >= 0)
-                            {
-                            // handled exception; go to the handler
-                            m_frameCurrent = frame;
-                            aOp = frame.f_aOp;
-                            break;
-                            }
-
-                        // not handled by this frame
-                        Frame frameCaller = frame.f_framePrev;
-                        if (frameCaller != null)
-                            {
-                            frame = frameCaller;
-                            frame.raiseException(hException);
-                            continue;
-                            }
-
-                        // no one handled the exception, and we have reached the "proto-frame";
-                        // it will process the exception
-                        frame.raiseException(hException);
-                        m_frameCurrent = frame;
-                        aOp = frame.f_aOp;
-                        iPC = frame.m_iPC + 1;
-                        break;
-                        }
-                    break;
-                    }
-
-                case Op.R_REPEAT:
-                    fiber.setStatus(FiberStatus.Waiting, cOps);
-                    return frame;
-
-                case Op.R_BLOCK:
-                    frame.m_iPC = iPCLast + 1;
-                    fiber.setStatus(FiberStatus.Waiting, cOps);
-                    return frame;
-
-                case Op.R_PAUSE:
-                    fiber.setStatus(FiberStatus.Paused, cOps);
-                    return frame;
-
-                case Op.R_RESET:
-                    // this is only possible as a return value by the debugger
-                    frame = frame.f_framePrev;
-                    assert frame != null && !frame.isNativeStack();
-
-                    aOp = frame.f_aOp;
-                    iPC = frame.m_iPC;
-                    insertBreakPointOp(aOp, iPC);
-                    break;
-
-                default:
-                    throw new IllegalStateException("Invalid code: " + iPC);
                 }
             }
+
+            switch (iPC) {
+            case Op.R_RETURN_CALL:
+                frame = frame.f_framePrev;
+                // fall-through
+
+            case Op.R_CALL:
+                m_frameCurrent = frame.m_frameNext;
+                frame.m_frameNext = null;
+                frame = m_frameCurrent;
+                aOp = frame.f_aOp;
+                // a new frame can already be in the "exception" state
+                iPC = frame.m_hException == null ? 0 : Op.R_EXCEPTION;
+                break;
+
+            case Op.R_RETURN: {
+                if (isDebuggerActive()) {
+                    getDebugger().onReturn(frame);
+                }
+
+                Frame.Continuation continuation = frame.m_continuation;
+                frame = m_frameCurrent = frame.f_framePrev; // GC the old frame
+
+                if (frame != null) {
+                    iPC = frame.m_iPC + 1;
+                }
+                if (continuation != null) {
+                    int iResult = continuation.proceed(frame);
+                    switch (iResult) {
+                    case Op.R_NEXT:
+                        break;
+
+                    case Op.R_EXCEPTION:
+                        // continuation is allowed to "throw"
+                        assert frame.m_hException != null;
+
+                        iPC = Op.R_EXCEPTION;
+                        continue; // nextOp
+
+                    case Op.R_CALL:
+                        assert frame.m_frameNext != null;
+
+                        m_frameCurrent = frame.m_frameNext;
+                        frame.m_frameNext = null;
+                        frame = m_frameCurrent;
+
+                        aOp = frame.f_aOp;
+                        iPC = 0;
+                        continue; // nextOp
+
+                    case Op.R_RETURN:
+                        iPC = Op.R_RETURN;
+                        continue; // nextOp
+
+                    default:
+                        if (iResult < 0) {
+                            throw new IllegalStateException();
+                        }
+                        iPC = iResult;
+                        break;
+                    }
+                }
+
+                if (frame == null) {
+                    // all done
+                    terminateFiber(fiber, cOps);
+                    return m_frameCurrent = null;
+                }
+
+                aOp = frame.f_aOp;
+                break;
+            }
+
+            case Op.R_RETURN_EXCEPTION:
+                frame = frame.f_framePrev;
+                // fall-through
+
+            case Op.R_EXCEPTION: {
+                ExceptionHandle hException = frame.m_hException;
+                assert hException != null;
+
+                boolean fDebugger = isDebuggerActive();
+
+                while (true) {
+                    if (fDebugger) {
+                        iPC = getDebugger().checkBreakPoint(frame, hException);
+                        switch (iPC) {
+                        case Op.R_NEXT:
+                            break;
+
+                        case Op.R_CALL:
+                            // the debugger made a natural call
+                            m_frameCurrent = frame.m_frameNext;
+                            frame.m_frameNext = null;
+                            frame = m_frameCurrent;
+
+                            aOp = frame.f_aOp;
+                            iPC = 0;
+                            continue nextOp;
+
+                        case Op.R_EXCEPTION:
+                            // unwind the exception without stopping in the debugger
+                            fDebugger = false;
+                            break;
+
+                        default:
+                            assert iPC >= 0 && frame.m_hException == null;
+
+                            // the debugger has handled (reported) the exception
+                            frame = m_frameCurrent = frame.f_framePrev;
+                            aOp   = frame.f_aOp;
+                            continue nextOp;
+                        }
+                    }
+
+                    iPC = frame.findGuard(hException);
+                    if (iPC >= 0) {
+                        // handled exception; go to the handler
+                        m_frameCurrent = frame;
+                        aOp = frame.f_aOp;
+                        break;
+                    }
+
+                    // not handled by this frame
+                    Frame frameCaller = frame.f_framePrev;
+                    if (frameCaller != null) {
+                        frame = frameCaller;
+                        frame.raiseException(hException);
+                        continue;
+                    }
+
+                    // no one handled the exception, and we have reached the "proto-frame";
+                    // it will process the exception
+                    frame.raiseException(hException);
+                    m_frameCurrent = frame;
+                    aOp = frame.f_aOp;
+                    iPC = frame.m_iPC + 1;
+                    break;
+                }
+                break;
+            }
+
+            case Op.R_REPEAT:
+                fiber.setStatus(FiberStatus.Waiting, cOps);
+                return frame;
+
+            case Op.R_BLOCK:
+                frame.m_iPC = iPCLast + 1;
+                fiber.setStatus(FiberStatus.Waiting, cOps);
+                return frame;
+
+            case Op.R_PAUSE:
+                fiber.setStatus(FiberStatus.Paused, cOps);
+                return frame;
+
+            case Op.R_RESET:
+                // this is only possible as a return value by the debugger
+                frame = frame.f_framePrev;
+                assert frame != null && !frame.isNativeStack();
+
+                aOp = frame.f_aOp;
+                iPC = frame.m_iPC;
+                insertBreakPointOp(aOp, iPC);
+                break;
+
+            default:
+                throw new IllegalStateException("Invalid code: " + iPC);
+            }
         }
+    }
 
     /**
      * Replace an op at the specified index with a synthetic "checkBreakPoint" op.
      */
-    private void insertBreakPointOp(Op[] aOp, int iPC)
-        {
+    private void insertBreakPointOp(Op[] aOp, int iPC) {
         Op opReset = aOp[iPC];
-        aOp[iPC] = new Op()
-            {
+        aOp[iPC] = new Op() {
             @Override
-            public int process(Frame frame, int iPC)
-                {
+            public int process(Frame frame, int iPC) {
                 int nResult = getDebugger().checkBreakPoint(frame, iPC);
-                switch (nResult)
-                    {
-                    default:
-                        System.err.println("Not supported result: " + nResult);
-                        // fall through
-                    case Op.R_NEXT:
-                        aOp[iPC] = opReset;
-                        return iPC; // repeat with a real op
+                switch (nResult) {
+                default:
+                    System.err.println("Not supported result: " + nResult);
+                    // fall through
+                case Op.R_NEXT:
+                    aOp[iPC] = opReset;
+                    return iPC; // repeat with a real op
 
-                    case Op.R_RESET:
-                        aOp[iPC] = opReset;
-                        return Op.R_RESET; // go up a frame
+                case Op.R_RESET:
+                    aOp[iPC] = opReset;
+                    return Op.R_RESET; // go up a frame
 
-                    case Op.R_CALL:
-                        return Op.R_CALL;
-                    }
+                case Op.R_CALL:
+                    return Op.R_CALL;
                 }
+            }
 
             @Override
-            public String toString()
-                {
+            public String toString() {
                 return "Debug";
-                }
-            };
-        }
+            }
+        };
+    }
 
     /**
      * Create a "proto"-frame.
@@ -866,17 +769,13 @@ public class ServiceContext
      *
      * @return a new Frame
      */
-    protected Frame createServiceEntryFrame(Message msg, int cReturns, Op[] aopNative)
-        {
+    protected Frame createServiceEntryFrame(Message msg, int cReturns, Op[] aopNative) {
         TypeConstant typeReturn;
-        switch (cReturns)
-            {
-            case -1 -> {typeReturn = f_pool.typeTuple0(); cReturns = 1;}
-
-            case 0  -> typeReturn = null;
-
-            default -> typeReturn = f_pool.typeObject();
-            }
+        switch (cReturns) {
+        case -1 -> {typeReturn = f_pool.typeTuple0(); cReturns = 1;}
+        case 0  -> typeReturn = null;
+        default -> typeReturn = f_pool.typeObject();
+        }
 
         // create a pseudo frame that has variables to collect the return values
         ObjectHandle[] ahVar = new ObjectHandle[cReturns];
@@ -884,12 +783,11 @@ public class ServiceContext
         Fiber fiber = createFiber(msg);
         Frame frame = new Frame(fiber, msg.f_iCallerPC, aopNative, ahVar, Op.A_IGNORE, null);
 
-        for (int nVar = 0; nVar < cReturns; nVar++)
-            {
+        for (int nVar = 0; nVar < cReturns; nVar++) {
             frame.f_aInfo[nVar] = frame.new VarInfo(typeReturn, Frame.VAR_STANDARD);
-            }
-        return frame;
         }
+        return frame;
+    }
 
     /**
      * Create a new fiber for this service.
@@ -898,12 +796,11 @@ public class ServiceContext
      *
      * @return a new fiber
      */
-    protected Fiber createFiber(Message msg)
-        {
+    protected Fiber createFiber(Message msg) {
         Fiber fiber = new Fiber(this, msg);
         f_setFibers.add(fiber);
         return fiber;
-        }
+    }
 
     /**
      * Terminate the specified fiber.
@@ -911,31 +808,26 @@ public class ServiceContext
      * @param fiber  the fiber that has terminated
      * @param cOps   the number of ops that have been processed
      */
-    protected void terminateFiber(Fiber fiber, long cOps)
-        {
-        if (fiber == m_fiberSyncOwner)
-            {
+    protected void terminateFiber(Fiber fiber, long cOps) {
+        if (fiber == m_fiberSyncOwner) {
             // they somehow terminated the fiber without exiting the critical section;
             // should it be an exception?
             m_fiberSyncOwner = null;
             m_synchronicity  = Synchronicity.Concurrent;
-            }
+        }
 
         fiber.setStatus(FiberStatus.Terminating, cOps);
 
-        if (!fiber.hasPendingRequests())
-            {
+        if (!fiber.hasPendingRequests()) {
             f_setFibers.remove(fiber);
-            }
         }
+    }
 
     /**
      * Shut down all fibers.
      */
-    public int shutdown(Frame frame)
-        {
-        if (m_hService != null)
-            {
+    public int shutdown(Frame frame) {
+        if (m_hService != null) {
             // TODO: fire every registered ShuttingDownNotification
 
             // TODO MF: need a better lock to avoid messages getting into the queue after this point
@@ -945,38 +837,35 @@ public class ServiceContext
 
             // process all outstanding messages
             Message message;
-            while ((message = f_queueMsg.poll()) != null)
-                {
+            while ((message = f_queueMsg.poll()) != null) {
                 qFiber.add(message.createFrame(this));
-                }
+            }
 
             Set<Fiber> setFibers = f_setFibers;
             Fiber      fiberThis = frame == null ? null : frame.f_fiber;
 
-            while (!qFiber.isEmpty())
-                {
+            while (!qFiber.isEmpty()) {
                 Frame frameNext = qFiber.getAny();
                 Fiber fiber     = frameNext.f_fiber;
 
-                if (fiber != fiberThis)
-                    {
+                if (fiber != fiberThis) {
                     fiber.setStatus(FiberStatus.Terminating, 0);
 
                     // this will respond immediately with an exception from "Fiber.prepareRun()"
                     execute(frameNext);
 
                     setFibers.remove(fiber);
-                    }
                 }
+            }
 
             assert setFibers.isEmpty() ||
                    setFibers.size() == 1 && setFibers.contains(fiberThis); // just this fiber left
 
             f_container.terminate(this);
-            }
+        }
 
         return Op.R_NEXT;
-        }
+    }
 
 
     // ----- x:Service methods ---------------------------------------------------------------------
@@ -984,40 +873,34 @@ public class ServiceContext
     /**
      * @return the status indicator (the names must be congruent to natural Service.StatusIndicator)
      */
-    public ServiceStatus getStatus()
-        {
+    public ServiceStatus getStatus() {
         // TODO: ShuttingDown is not currently supported
 
-        if (isTerminated())
-            {
+        if (isTerminated()) {
             return ServiceStatus.Terminated;
-            }
+        }
 
         FiberStatus statusActive = null;
-        for (Fiber fiber : f_setFibers)
-            {
+        for (Fiber fiber : f_setFibers) {
             FiberStatus status = fiber.getStatus();
-            switch (status)
-                {
-                case Initial, Running, Paused:
-                    // won't get busier than that
-                    return ServiceStatus.Busy;
-                }
+            switch (status) {
+            case Initial, Running, Paused:
+                // won't get busier than that
+                return ServiceStatus.Busy;
+            }
             statusActive = status.moreActive(statusActive);
-            }
+        }
 
-        if (statusActive == null)
-            {
+        if (statusActive == null) {
             return ServiceStatus.Idle;
-            }
+        }
 
-        return switch (statusActive)
-            {
+        return switch (statusActive) {
             case Initial, Running, Paused -> ServiceStatus.Busy;
             case Waiting                  -> ServiceStatus.BusyWaiting;
             case Terminating              -> ServiceStatus.IdleWaiting;
-            };
-        }
+        };
+    }
 
     /**
      * A service is considered to be contended if it is running and if any other requests are
@@ -1025,27 +908,24 @@ public class ServiceContext
      *
      * @return true iff the service is contended
      */
-    public boolean isContended()
-        {
+    public boolean isContended() {
         return m_frameCurrent != null || !f_queueResponse.isEmpty() ||
                 !f_queueMsg.isEmpty() || f_queueSuspended.isReady();
-        }
+    }
 
     /**
      * @return true iff the service is Idle
      */
-    public boolean isIdle()
-        {
+    public boolean isIdle() {
         return f_setFibers.isEmpty();
-        }
+    }
 
     /**
      * @return true iff the service is terminated
      */
-    public boolean isTerminated()
-        {
+    public boolean isTerminated() {
         return m_hService == null && m_iFrameCounter > 0;
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -1063,94 +943,78 @@ public class ServiceContext
      * @return Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION
      */
     public int validatePassThrough(Frame frame, ServiceContext ctxDst,
-                                   TypeSupplier typeSupplier, ObjectHandle[] ahArg)
-        {
+                                   TypeSupplier typeSupplier, ObjectHandle[] ahArg) {
         // no need to check the container sharing unless we're crossing the container boundaries
         Container container = ctxDst.f_container == f_container ? null : ctxDst.f_container;
 
         return validatePassThroughArgs(frame, container, typeSupplier, ahArg, ahArg.length, 0);
-        }
+    }
 
     /**
      * Same as the method above, but allows specifying the number of arguments.
      */
     public int validatePassThrough(Frame frame, ServiceContext ctxDst,
-                                   TypeSupplier typeSupplier, ObjectHandle[] ahArg, int cArgs)
-        {
+                                   TypeSupplier typeSupplier, ObjectHandle[] ahArg, int cArgs) {
         Container container = ctxDst.f_container == f_container ? null : ctxDst.f_container;
 
         return validatePassThroughArgs(frame, container, typeSupplier, ahArg, cArgs, 0);
-        }
+    }
 
     private int validatePassThroughArgs(Frame frame, Container container, TypeSupplier typeSupplier,
-                                        ObjectHandle[] ahArg, int cArgs, int ixStart)
-        {
-        for (int i = ixStart; i < cArgs; i++)
-            {
+                                        ObjectHandle[] ahArg, int cArgs, int ixStart) {
+        for (int i = ixStart; i < cArgs; i++) {
             ObjectHandle hArg = ahArg[i];
-            if (hArg == null)
-                {
+            if (hArg == null) {
                 // arguments tail is always empty
                 break;
-                }
+            }
 
-            if (hArg.isPassThrough(container))
-                {
-                if (hArg instanceof FunctionHandle hFn && container != null)
-                    {
+            if (hArg.isPassThrough(container)) {
+                if (hArg instanceof FunctionHandle hFn && container != null) {
                     // this service is passing a function to another container; any call to that
                     // function should be executed in the context of this container
                     ahArg[i] = xRTFunction.makeAsyncDelegatingHandle(getService(), hFn);
-                    }
                 }
-            else if (hArg instanceof ProxyHandle hProxy)
-                {
+            } else if (hArg instanceof ProxyHandle hProxy) {
                 // ProxyHandle is the service and therefore pass-through; the only reason we're
                 // here is that the proxy is being sent back to the owner; we need to unwrap it
                 ahArg[i] = hProxy.getTarget();
-                }
-            else
-                {
+            } else {
                 int ix = i;
-                if (hArg.getType().isA(f_pool.typeAutoFreezable()))
-                    {
-                    return Utils.callFreeze(frame, hArg, null, frameCaller ->
-                        {
+                if (hArg.getType().isA(f_pool.typeAutoFreezable())) {
+                    return Utils.callFreeze(frame, hArg, null, frameCaller -> {
                         ahArg[ix] = frameCaller.popStack();
                         return validatePassThroughArgs(
                                 frameCaller, container, typeSupplier, ahArg, cArgs, ix+1);
-                        });
-                    }
+                    });
+                }
 
                 switch (hArg.getTemplate().createProxyHandle(
                             frame, this, hArg,
-                            typeSupplier == null ? null : typeSupplier.get(i)))
-                    {
-                    case Op.R_NEXT:
-                        ahArg[i] = frame.popStack();
-                        break;
+                            typeSupplier == null ? null : typeSupplier.get(i))) {
+                case Op.R_NEXT:
+                    ahArg[i] = frame.popStack();
+                    break;
 
-                    case Op.R_CALL:
-                        {
-                        frame.m_frameNext.addContinuation(frameCaller ->
-                            {
-                            ahArg[ix] = frameCaller.popStack();
-                            return validatePassThroughArgs(
-                                    frameCaller, container, typeSupplier, ahArg, cArgs, ix+1);
-                            });
-                        return Op.R_CALL;
-                        }
+                case Op.R_CALL: {
+                    frame.m_frameNext.addContinuation(frameCaller -> {
+                        ahArg[ix] = frameCaller.popStack();
+                        return validatePassThroughArgs(
+                                frameCaller, container, typeSupplier, ahArg, cArgs, ix+1);
+                    });
+                    return Op.R_CALL;
+                }
 
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
 
-                    default:
-                        throw new IllegalStateException();
-                    }
+                default:
+                    throw new IllegalStateException();
                 }
             }
-        return Op.R_NEXT;
         }
+        return Op.R_NEXT;
+    }
 
     /**
      * Post an asynchronous "call later" message to this context. Any exception thrown by the
@@ -1161,23 +1025,19 @@ public class ServiceContext
      *
      * @return a CompletableFuture for the call or null if the service has terminated
      */
-    public CompletableFuture<ObjectHandle> callLater(FunctionHandle hFunction, ObjectHandle[] ahArg)
-        {
+    public CompletableFuture<ObjectHandle> callLater(FunctionHandle hFunction, ObjectHandle[] ahArg) {
         CompletableFuture<ObjectHandle> future = postRequest(null, hFunction, ahArg, 0);
 
-        if (future != null)
-            {
-            future.whenComplete((r, x) ->
-                {
-                if (x != null)
-                    {
+        if (future != null) {
+            future.whenComplete((r, x) -> {
+                if (x != null) {
                     callUnhandledExceptionHandler(((WrapperException) x).getExceptionHandle());
-                    }
-                });
-            }
+                }
+            });
+        }
 
         return future;
-        }
+    }
 
     /**
      * Post an asynchronous "call later" message to this context. Any exception thrown by the
@@ -1188,23 +1048,19 @@ public class ServiceContext
      *
      * @return a CompletableFuture for the call or null if the service has terminated
      */
-    public CompletableFuture<ObjectHandle> callLater(Frame frame, FunctionHandle hFunction, ObjectHandle[] ahArg)
-        {
+    public CompletableFuture<ObjectHandle> callLater(Frame frame, FunctionHandle hFunction, ObjectHandle[] ahArg) {
         CompletableFuture<ObjectHandle> future = postRequest(frame, hFunction, ahArg, 0);
 
-        if (future != null)
-            {
-            future.whenComplete((r, x) ->
-                {
-                if (x != null)
-                    {
+        if (future != null) {
+            future.whenComplete((r, x) -> {
+                if (x != null) {
                     callUnhandledExceptionHandler(((WrapperException) x).getExceptionHandle());
-                    }
-                });
-            }
+                }
+            });
+        }
 
         return future;
-        }
+    }
 
     /**
      * Post an asynchronous "call later" message to this context.
@@ -1217,12 +1073,10 @@ public class ServiceContext
      * @return a CompletableFuture for the call or null if the service has terminated
      */
     public CompletableFuture<ObjectHandle> postRequest(Frame frame, FunctionHandle hFunction,
-                                                       ObjectHandle[] ahArg, int cReturns)
-        {
-        if (isTerminated())
-            {
+                                                       ObjectHandle[] ahArg, int cReturns) {
+        if (isTerminated()) {
             return null;
-            }
+        }
 
         Message request = new CallLaterRequest(frame, hFunction, ahArg, cReturns);
 
@@ -1230,7 +1084,7 @@ public class ServiceContext
         addRequest(request);
 
         return request.f_future;
-        }
+    }
 
     /**
      * Send an asynchronous Op-based message to this context with one return value.
@@ -1243,8 +1097,7 @@ public class ServiceContext
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int sendOp1Request(Frame frame, Op op, int iReturn, TypeConstant... typeRet)
-        {
+    public int sendOp1Request(Frame frame, Op op, int iReturn, TypeConstant... typeRet) {
         assert iReturn != Op.A_IGNORE_ASYNC;
 
         OpRequest request = new OpRequest(frame, op, iReturn == Op.A_IGNORE ? 0 : 1,
@@ -1256,7 +1109,7 @@ public class ServiceContext
         frame.f_fiber.registerRequest(request);
 
         return frame.assignFutureResult(iReturn, request.f_future);
-        }
+    }
 
     /**
      * Send an Op-based message to this context with multiple return values.
@@ -1272,8 +1125,7 @@ public class ServiceContext
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int sendOpNRequest(Frame frame, Op op, int[] aiReturn, TypeConstant... typeRet)
-        {
+    public int sendOpNRequest(Frame frame, Op op, int[] aiReturn, TypeConstant... typeRet) {
         int       cRets   = aiReturn.length;
         OpRequest request = new OpRequest(frame, op, cRets, false,
                                 cRets == 0 ? null : i -> typeRet[i]);
@@ -1283,7 +1135,7 @@ public class ServiceContext
         frame.f_fiber.registerRequest(request);
 
         return frame.call(frame.createWaitFrame(request.f_future, aiReturn));
-        }
+    }
 
     /**
      * Send an asynchronous "construct service" request to this context.
@@ -1294,26 +1146,22 @@ public class ServiceContext
      */
     public int sendConstructRequest(Frame frame, TypeComposition clazz,
                                     MethodStructure constructor,
-                                    ObjectHandle hParent, ObjectHandle[] ahArg, int iReturn)
-        {
-        Op opConstruct = new Op()
-            {
-            public int process(Frame frame, int iPC)
-                {
+                                    ObjectHandle hParent, ObjectHandle[] ahArg, int iReturn) {
+        Op opConstruct = new Op() {
+            public int process(Frame frame, int iPC) {
                 xService service = (xService) clazz.getTemplate();
 
                 return service.constructSync(frame, constructor, clazz, hParent, ahArg,
                         iReturn == A_IGNORE ? A_IGNORE : 0);
-                }
+            }
 
-            public String toString()
-                {
+            public String toString() {
                 return "Construct: " + constructor.getContainingClass().getName();
-                }
-            };
+            }
+        };
 
         return sendOp1Request(frame, opConstruct, iReturn);
-        }
+    }
 
     /**
      * Send an asynchronous "allocate structure" request to this context.
@@ -1322,29 +1170,25 @@ public class ServiceContext
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int sendAllocateRequest(Frame frame, TypeComposition clazz, ObjectHandle hParent, int iReturn)
-        {
+    public int sendAllocateRequest(Frame frame, TypeComposition clazz, ObjectHandle hParent, int iReturn) {
         assert iReturn != Op.A_IGNORE;
 
-        Op opAllocate = new Op()
-            {
-            public int process(Frame frame, int iPC)
-                {
+        Op opAllocate = new Op() {
+            public int process(Frame frame, int iPC) {
                 xService service = (xService) (hParent != null && hParent.isService()
                         ? hParent.getService().getTemplate()
                         : clazz.getTemplate());
 
                 return service.allocateSync(frame, clazz, hParent, 0);
-                }
+            }
 
-            public String toString()
-                {
+            public String toString() {
                 return "Allocate: " + ServiceContext.this.f_sName;
-                }
-            };
+            }
+        };
 
         return sendOp1Request(frame, opAllocate, iReturn);
-        }
+    }
 
     /**
      * Send an asynchronous "invoke" request with zero or one return value.
@@ -1356,58 +1200,48 @@ public class ServiceContext
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int sendInvoke1Request(Frame frame, FunctionHandle hFunction,
-                                  ObjectHandle hTarget, ObjectHandle[] ahArg, boolean fTuple, int iReturn)
-        {
-        if (isTerminated())
-            {
+                                  ObjectHandle hTarget, ObjectHandle[] ahArg, boolean fTuple, int iReturn) {
+        if (isTerminated()) {
             return frame.raiseException(xException.serviceTerminated(frame, f_sName));
-            }
+        }
 
         boolean fAsync;
         boolean fHandleExceptions;
         int     cReturns;
-        switch (iReturn)
-            {
-            case Op.A_IGNORE_ASYNC ->
-                {
-                assert !fTuple;
-                fAsync   = fHandleExceptions = true;
-                cReturns = 0;
-                }
+        switch (iReturn) {
+        case Op.A_IGNORE_ASYNC -> {
+            assert !fTuple;
+            fAsync   = fHandleExceptions = true;
+            cReturns = 0;
+        }
 
-            case Op.A_IGNORE ->
-                {
-                assert !fTuple;
-                fAsync   = fHandleExceptions = false;
-                cReturns = 0;
-                }
+        case Op.A_IGNORE -> {
+            assert !fTuple;
+            fAsync   = fHandleExceptions = false;
+            cReturns = 0;
+        }
 
-            default ->
-                {
-                fAsync            = frame.isDynamicVar(iReturn);
-                fHandleExceptions = false;
-                cReturns          = fTuple ? -1 : 1;
-                }
-            }
+        default -> {
+            fAsync            = frame.isDynamicVar(iReturn);
+            fHandleExceptions = false;
+            cReturns          = fTuple ? -1 : 1;
+        }
+        }
 
-        Op opCall = new Op()
-            {
-            public int process(Frame frame, int iPC)
-                {
-                return switch (cReturns)
-                    {
+        Op opCall = new Op() {
+            public int process(Frame frame, int iPC) {
+                return switch (cReturns) {
                     case -1 -> hFunction.callT(frame, hTarget, ahArg, 0);
                     case 0  -> hFunction.call1(frame, hTarget, ahArg, A_IGNORE);
                     case 1  -> hFunction.call1(frame, hTarget, ahArg, 0);
                     default -> throw new IllegalStateException();
-                    };
-                }
+                };
+            }
 
-            public String toString()
-                {
+            public String toString() {
                 return hFunction.toString();
-                }
-            };
+            }
+        };
 
 
         TypeSupplier supplier = resolveFormalReturnTypes(hFunction, ahArg);
@@ -1418,27 +1252,24 @@ public class ServiceContext
         Fiber                           fiber  = frame.f_fiber;
         CompletableFuture<ObjectHandle> future = request.f_future;
 
-        if (fHandleExceptions)
-            {
+        if (fHandleExceptions) {
             // in the case of an ignored return and underwhelmed queue - fire and forget
-            if (!fOverwhelmed)
-                {
-                if (future.isDone())
-                    {
+            if (!fOverwhelmed) {
+                if (future.isDone()) {
                     return frame.assignFutureResult(iReturn, future);
-                    }
+                }
                 fiber.registerUncapturedRequest(request);
                 return Op.R_NEXT;
-                }
+            }
 
             // consider not to block the caller if it is *not* the reason of the callee being
             // overwhelmed, which would require some additional knowledge being retained
-            }
+        }
 
         fiber.registerRequest(request);
 
         return frame.assignFutureResult(iReturn, future);
-        }
+    }
 
     /**
      * Send an asynchronous "invoke" request with multiple return values.
@@ -1448,43 +1279,35 @@ public class ServiceContext
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int sendInvokeNRequest(Frame frame, FunctionHandle hFunction,
-                                  ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
-        {
-        if (isTerminated())
-            {
+                                  ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn) {
+        if (isTerminated()) {
             return frame.raiseException(xException.serviceTerminated(frame, f_sName));
-            }
+        }
 
         int cReturns = aiReturn.length;
-        Op  opCall   = new Op()
-            {
-            public int process(Frame frame, int iPC)
-                {
+        Op  opCall   = new Op() {
+            public int process(Frame frame, int iPC) {
                 // the pseudo-frame's vars are the return values
                 int[] aiReturn = new int[cReturns];
-                for (int i = 0; i < cReturns; i++)
-                    {
+                for (int i = 0; i < cReturns; i++) {
                     aiReturn[i] = i;
-                    }
+                }
 
                 return hFunction.callN(frame, hTarget, ahArg, aiReturn);
-                }
+            }
 
-            public String toString()
-                {
+            public String toString() {
                 return hFunction.toString();
-                }
-            };
+            }
+        };
 
         boolean fAsync = true;
-        for (int iReturn : aiReturn)
-            {
-            if (!frame.isFutureVar(iReturn))
-                {
+        for (int iReturn : aiReturn) {
+            if (!frame.isFutureVar(iReturn)) {
                 fAsync = false;
                 break;
-                }
             }
+        }
 
         TypeSupplier supplier = resolveFormalReturnTypes(hFunction, ahArg);
         OpRequest    request  = new OpRequest(frame, opCall, cReturns, fAsync, supplier);
@@ -1492,36 +1315,32 @@ public class ServiceContext
         CompletableFuture<ObjectHandle[]> future       = request.f_future;
         boolean                           fOverwhelmed = addRequest(request);
 
-        if (cReturns == 0)
-            {
+        if (cReturns == 0) {
             frame.f_fiber.registerUncapturedRequest(request);
             return fOverwhelmed || future.isDone()
                     ? frame.assignFutureResult(Op.A_IGNORE, (CompletableFuture) future)
                     : Op.R_NEXT;
-            }
+        }
 
         frame.f_fiber.registerRequest(request);
-        if (cReturns == 1)
-            {
+        if (cReturns == 1) {
             CompletableFuture<ObjectHandle> cfReturn =
                     future.thenApply(ahResult -> ahResult[0]);
             return frame.assignFutureResult(aiReturn[0], cfReturn);
-            }
+        }
 
-        if (fAsync)
-            {
-            for (int i = 0; i < cReturns; i++)
-                {
+        if (fAsync) {
+            for (int i = 0; i < cReturns; i++) {
                 final int iReturn = i;
                 int iResult =
                         frame.assignFutureResult(aiReturn[i], future.thenApply(ah -> ah[iReturn]));
                 assert iResult == Op.R_NEXT;
-                }
-            return Op.R_NEXT;
             }
+            return Op.R_NEXT;
+        }
 
         return frame.call(frame.createWaitFrame(future, aiReturn));
-        }
+    }
 
     /**
      * Helper method to resolve the formal type parameters in the function's return type.
@@ -1531,66 +1350,55 @@ public class ServiceContext
      * return types (see ClassTemplate.createProxyHandle), but formal type parameters can only be
      * resolved using the type parameters types that are passed in by the caller.
      */
-    private TypeSupplier resolveFormalReturnTypes(FunctionHandle hFunction, ObjectHandle[] ahArg)
-        {
+    private TypeSupplier resolveFormalReturnTypes(FunctionHandle hFunction, ObjectHandle[] ahArg) {
         TypeConstant[] atype = hFunction.getReturnTypes();
-        if (atype.length == 0)
-            {
+        if (atype.length == 0) {
             return null;
-            }
+        }
 
         boolean fFormal = false;
-        for (TypeConstant type : atype)
-            {
-            if (type.containsTypeParameter(true))
-                {
+        for (TypeConstant type : atype) {
+            if (type.containsTypeParameter(true)) {
                 fFormal = true;
                 break;
-                }
             }
+        }
 
-        if (!fFormal)
-            {
+        if (!fFormal) {
             return i -> atype[i];
+        }
+
+        GenericTypeResolver resolver = new GenericTypeResolver() {
+            @Override
+            public TypeConstant resolveGenericType(String sFormalName) {
+                return null;
             }
 
-        GenericTypeResolver resolver = new GenericTypeResolver()
-            {
             @Override
-            public TypeConstant resolveGenericType(String sFormalName)
-                {
-                return null;
-                }
-
-            @Override
-            public TypeConstant resolveFormalType(FormalConstant constFormal)
-                {
-                if (constFormal instanceof TypeParameterConstant constTypeParam)
-                    {
+            public TypeConstant resolveFormalType(FormalConstant constFormal) {
+                if (constFormal instanceof TypeParameterConstant constTypeParam) {
                     int             nRegister = constTypeParam.getRegister();
                     MethodConstant  idMethod  = hFunction.getMethodId();
                     MethodStructure method    = idMethod == null
                             ? null
                             : (MethodStructure) idMethod.getComponent();
                     if (method != null && nRegister < method.getTypeParamCount() &&
-                            method.getParam(nRegister).getName().equals(constTypeParam.getName()))
-                        {
+                            method.getParam(nRegister).getName().equals(constTypeParam.getName())) {
                         return ahArg[nRegister].getType().getParamType(0);
-                        }
                     }
+                }
 
                 return null;
-                }
-            };
+            }
+        };
 
-        return i ->
-            {
+        return i -> {
             TypeConstant type = atype[i];
             return type.containsTypeParameter(true)
                     ? type.resolveGenerics(f_pool, resolver)
                     : type;
-            };
-        }
+        };
+    }
 
     /**
      * Send an asynchronous property "read" operation request.
@@ -1600,17 +1408,13 @@ public class ServiceContext
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int sendProperty01Request(Frame frame, ObjectHandle hTarget,
-                                     PropertyConstant idProp, int iReturn, PropertyOperation01 op)
-        {
-        if (isTerminated())
-            {
+                                     PropertyConstant idProp, int iReturn, PropertyOperation01 op) {
+        if (isTerminated()) {
             return frame.raiseException(xException.serviceTerminated(frame, f_sName));
-            }
+        }
 
-        Op opGet = new Op()
-            {
-            public int process(Frame frame, int iPC)
-                {
+        Op opGet = new Op() {
+            public int process(Frame frame, int iPC) {
                 int iResult = op.invoke(frame, hTarget, idProp,
                                 iReturn == A_IGNORE ? A_IGNORE : 0);
 
@@ -1618,17 +1422,16 @@ public class ServiceContext
                 return idProp.isFutureVar() && iResult == Op.R_NEXT
                     ? ((FutureHandle) frame.f_ahVar[0]).waitAndAssign(frame, 0)
                     : iResult;
-                }
+            }
 
-            public String toString()
-                {
+            public String toString() {
                 return idProp.getPathString();
-                }
-            };
+            }
+        };
 
         return sendOp1Request(frame, opGet, iReturn,
                 idProp.getType().resolveGenerics(f_pool, hTarget.getType()));
-        }
+    }
 
     /**
      * Send an asynchronous property "update" operation request. The caller will be blocked until
@@ -1639,131 +1442,110 @@ public class ServiceContext
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int sendProperty10Request(Frame frame, ObjectHandle hTarget,
-                                     PropertyConstant idProp, ObjectHandle hValue, PropertyOperation10 op)
-        {
-        if (isTerminated())
-            {
+                                     PropertyConstant idProp, ObjectHandle hValue, PropertyOperation10 op) {
+        if (isTerminated()) {
             return frame.raiseException(xException.serviceTerminated(frame, f_sName));
-            }
+        }
 
         // no need to check the container sharing unless we're crossing the container boundaries
         Container containerDst = frame.f_context.f_container == f_container ? null : f_container;
 
-        if (hValue.isPassThrough(containerDst))
-            {
+        if (hValue.isPassThrough(containerDst)) {
             return completeSendProperty10(frame, hTarget, idProp, hValue, op);
-            }
+        }
 
-        if (idProp == null)
-            {
+        if (idProp == null) {
             return frame.raiseException(xException.mutableObject(frame, hValue.getType()));
-            }
+        }
 
         TypeConstant   typeProp = idProp.getType().resolveGenerics(f_pool, hTarget.getType());
         ObjectHandle[] ahValue  = new ObjectHandle[] {hValue};
-        switch (frame.f_context.validatePassThrough(frame, this, i -> typeProp, ahValue, 1))
-            {
-            case Op.R_NEXT:
-                return completeSendProperty10(frame, hTarget, idProp, ahValue[0], op);
+        switch (frame.f_context.validatePassThrough(frame, this, i -> typeProp, ahValue, 1)) {
+        case Op.R_NEXT:
+            return completeSendProperty10(frame, hTarget, idProp, ahValue[0], op);
 
-            case Op.R_CALL:
-                frame.m_frameNext.addContinuation(frameCaller ->
-                    completeSendProperty10(frameCaller, hTarget, idProp, ahValue[0], op));
-                return Op.R_CALL;
+        case Op.R_CALL:
+            frame.m_frameNext.addContinuation(frameCaller ->
+                completeSendProperty10(frameCaller, hTarget, idProp, ahValue[0], op));
+            return Op.R_CALL;
 
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
+        case Op.R_EXCEPTION:
+            return Op.R_EXCEPTION;
 
-            default:
-                throw new IllegalStateException();
-            }
+        default:
+            throw new IllegalStateException();
         }
+    }
 
     private int completeSendProperty10(Frame frame, ObjectHandle hTarget, PropertyConstant idProp,
-                                       ObjectHandle hPassValue, PropertyOperation10 op)
-        {
-        Op opSet = new Op()
-            {
-            public int process(Frame frame, int iPC)
-                {
+                                       ObjectHandle hPassValue, PropertyOperation10 op) {
+        Op opSet = new Op() {
+            public int process(Frame frame, int iPC) {
                 return op.invoke(frame, hTarget, idProp, hPassValue);
-                }
+            }
 
-            public String toString()
-                {
+            public String toString() {
                 return idProp == null ? "<Referent>" : idProp.getPathString();
-                }
-            };
+            }
+        };
 
         return sendOp1Request(frame, opSet, Op.A_IGNORE);
-        }
+    }
 
     /**
      * Send an asynchronous "constant initialization" message.
      */
     public CompletableFuture<ObjectHandle> sendConstantRequest(Frame frame,
-                                                               List<SingletonConstant> listConstants)
-        {
-        Op opInit = new Op()
-            {
-            public int process(Frame frame, int iPC)
-                {
+                                                               List<SingletonConstant> listConstants) {
+        Op opInit = new Op() {
+            public int process(Frame frame, int iPC) {
                 return Utils.initConstants(frame, listConstants,
                     frameCaller -> frameCaller.assignValue(0, xNullable.NULL));
-                }
+            }
 
-            public String toString()
-                {
+            public String toString() {
                 return "StaticInitializationRequest";
-                }
-            };
+            }
+        };
 
         OpRequest request = new OpRequest(frame, opInit, 1, false, null);
 
         addRequest(request);
 
         return request.f_future;
-        }
+    }
 
-    protected void callUnhandledExceptionHandler(ExceptionHandle hException)
-        {
+    protected void callUnhandledExceptionHandler(ExceptionHandle hException) {
         FunctionHandle hFunction = m_hExceptionHandler;
-        if (hFunction == null)
-            {
-            hFunction = new NativeFunctionHandle((frame, ahArg, iReturn) ->
-                {
-                switch (Utils.callToString(frame, ahArg[0]))
-                    {
-                    case Op.R_NEXT ->
-                        {
-                        Utils.log(frame, "\nUnhandled exception: " +
-                            ((StringHandle) frame.popStack()).getStringValue());
+        if (hFunction == null) {
+            hFunction = new NativeFunctionHandle((frame, ahArg, iReturn) -> {
+                switch (Utils.callToString(frame, ahArg[0])) {
+                case Op.R_NEXT -> {
+                    Utils.log(frame, "\nUnhandled exception: " +
+                        ((StringHandle) frame.popStack()).getStringValue());
+                    return Op.R_NEXT;
+                }
+
+                case Op.R_CALL -> {
+                    frame.m_frameNext.addContinuation(frameCaller -> {
+                        Utils.log(frameCaller, "\nUnhandled exception: " +
+                            ((StringHandle) frameCaller.popStack()).getStringValue());
                         return Op.R_NEXT;
-                        }
+                    });
+                    return Op.R_CALL;
+                }
 
-                    case Op.R_CALL ->
-                        {
-                        frame.m_frameNext.addContinuation(frameCaller ->
-                            {
-                            Utils.log(frameCaller, "\nUnhandled exception: " +
-                                ((StringHandle) frameCaller.popStack()).getStringValue());
-                            return Op.R_NEXT;
-                            });
-                        return Op.R_CALL;
-                        }
-
-                    default -> throw new IllegalStateException();
-                    }
-                });
-            }
+                default -> throw new IllegalStateException();
+                }
+            });
+        }
 
         // ignore any exception coming out of the handler
         postRequest(null, hFunction, new ObjectHandle[]{hException}, 0);
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("Service \"")
           .append(f_sName)
@@ -1771,18 +1553,16 @@ public class ServiceContext
           .append(f_lId)
           .append(')');
 
-        if (m_synchronicity != null && m_synchronicity != Synchronicity.Concurrent)
-            {
+        if (m_synchronicity != null && m_synchronicity != Synchronicity.Concurrent) {
             sb.append(" ")
               .append(m_synchronicity.name());
-            }
-        if (m_frameCurrent != null)
-            {
+        }
+        if (m_frameCurrent != null) {
             sb.append(" ")
               .append(m_frameCurrent);
-            }
-        return sb.toString();
         }
+        return sb.toString();
+    }
 
 
     // --- inner classes ---------------------------------------------------------------------------
@@ -1790,29 +1570,24 @@ public class ServiceContext
     /**
      * Base class for an asynchronous cross-service messages based on a CompletableFuture.
      */
-    public abstract static class Message
-        {
-        protected Message(Frame frameCaller)
-            {
-            if (frameCaller == null)
-                {
+    public abstract static class Message {
+        protected Message(Frame frameCaller) {
+            if (frameCaller == null) {
                 f_fiberCaller = null;
                 f_fnCaller    = null;
                 f_iCallerId   = 0;
                 f_iCallerPC   = -1;
                 f_mapTokens   = null;
-                }
-            else
-                {
+            } else {
                 f_fiberCaller = frameCaller.f_fiber;
                 f_fnCaller    = frameCaller.f_function;
                 f_iCallerId   = frameCaller.f_iId;
                 f_iCallerPC   = frameCaller.m_iPC;
                 f_mapTokens   = frameCaller.f_fiber.getTokens();
-                }
+            }
 
             f_future = new CompletableFuture();
-            }
+        }
 
         /**
          * @return true iff the request is sent in asynchronous manner; otherwise the caller is
@@ -1843,66 +1618,58 @@ public class ServiceContext
         /**
          * Send the specified number of return values back to the caller.
          */
-        protected void sendResponse(Fiber fiberCaller, Frame frame, CompletableFuture future, int cReturns)
-            {
+        protected void sendResponse(Fiber fiberCaller, Frame frame, CompletableFuture future, int cReturns) {
             ServiceContext ctxDst = fiberCaller.f_context;
 
-            switch (cReturns)
-                {
-                case 0:
-                    ctxDst.respond(new Response<ObjectHandle>(
-                            fiberCaller, xTuple.H_VOID, frame.m_hException, future));
-                    break;
+            switch (cReturns) {
+            case 0:
+                ctxDst.respond(new Response<ObjectHandle>(
+                        fiberCaller, xTuple.H_VOID, frame.m_hException, future));
+                break;
 
-                case 1:
-                    {
-                    ObjectHandle    hReturn    = frame.f_ahVar[0];
-                    ExceptionHandle hException = frame.m_hException;
+            case 1: {
+                ObjectHandle    hReturn    = frame.f_ahVar[0];
+                ExceptionHandle hException = frame.m_hException;
 
-                    ctxDst.respond(
-                            new Response<ObjectHandle>(fiberCaller, hReturn, hException, future));
-                    break;
-                    }
+                ctxDst.respond(
+                        new Response<ObjectHandle>(fiberCaller, hReturn, hException, future));
+                break;
+            }
 
-                case -1: // tuple return
-                    {
-                    ObjectHandle[]  ahReturn   = frame.f_ahVar;
-                    ExceptionHandle hException = frame.m_hException;
-                    TupleHandle     hTuple     = hException == null ? (TupleHandle) ahReturn[0] : null;
+            case -1: { // tuple return
+                ObjectHandle[]  ahReturn   = frame.f_ahVar;
+                ExceptionHandle hException = frame.m_hException;
+                TupleHandle     hTuple     = hException == null ? (TupleHandle) ahReturn[0] : null;
 
-                    ctxDst.respond(
-                            new Response<ObjectHandle>(fiberCaller, hTuple, hException, future));
-                    break;
-                    }
+                ctxDst.respond(
+                        new Response<ObjectHandle>(fiberCaller, hTuple, hException, future));
+                break;
+            }
 
-                default:
-                    {
-                    assert cReturns > 1;
-                    ObjectHandle[]  ahReturn   = frame.f_ahVar;
-                    ExceptionHandle hException = frame.m_hException;
+            default: {
+                assert cReturns > 1;
+                ObjectHandle[]  ahReturn   = frame.f_ahVar;
+                ExceptionHandle hException = frame.m_hException;
 
-                    if (hException == null)
-                        {
-                        for (int i = 0, c = ahReturn.length; i < c; i++)
-                            {
-                            ObjectHandle hReturn = ahReturn[i];
-                            if (hReturn == null)
-                                {
-                                // this is only possible for a conditional return of "False"
-                                assert i > 0 && ahReturn[0].equals(xBoolean.FALSE);
+                if (hException == null) {
+                    for (int i = 0, c = ahReturn.length; i < c; i++) {
+                        ObjectHandle hReturn = ahReturn[i];
+                        if (hReturn == null) {
+                            // this is only possible for a conditional return of "False"
+                            assert i > 0 && ahReturn[0].equals(xBoolean.FALSE);
 
-                                // since "null" indicates a deferred future value, replace it with
-                                // the DEFAULT value (see Utils.GET_AND_RETURN)
-                                ahReturn[i] = ObjectHandle.DEFAULT;
-                                }
-                            }
+                            // since "null" indicates a deferred future value, replace it with
+                            // the DEFAULT value (see Utils.GET_AND_RETURN)
+                            ahReturn[i] = ObjectHandle.DEFAULT;
                         }
-                    ctxDst.respond(
-                            new Response<ObjectHandle[]>(fiberCaller, ahReturn, hException, future));
-                    break;
                     }
                 }
+                ctxDst.respond(
+                        new Response<ObjectHandle[]>(fiberCaller, ahReturn, hException, future));
+                break;
             }
+            }
+        }
 
         // ----- fields ----------------------------------------------------------------------------
 
@@ -1940,22 +1707,20 @@ public class ServiceContext
          * The caller's context tokens.
          */
         public final Map<ObjectHandle, ObjectHandle> f_mapTokens;
-        }
+    }
 
     /**
      * A cross-service Op based Message.
      */
     public static class OpRequest
-            extends Message
-        {
+            extends Message {
         /**
          * @param fAsync        if true, avoid the in-line optimization for the request execution
          * @param typeSupplier  (optional) the supplier of return types to be used *only* if the
          *                      request's return values need to be proxied
          */
         protected OpRequest(Frame frameCaller, Op op, int cReturns, boolean fAsync,
-                            TypeSupplier typeSupplier)
-            {
+                            TypeSupplier typeSupplier) {
             super(frameCaller);
 
             f_op           = op;
@@ -1965,175 +1730,149 @@ public class ServiceContext
             f_nDepth       = frameCaller.f_nDepth;
             f_hTimeout     = frameCaller.f_fiber.getTimeoutHandle();
             f_ldtTimeout   = frameCaller.f_fiber.getTimeoutStamp();
-            }
+        }
 
         @Override
-        public boolean isAsync()
-            {
+        public boolean isAsync() {
             return f_fAsync;
-            }
+        }
 
         @Override
-        public int getCallDepth()
-            {
+        public int getCallDepth() {
             return f_nDepth;
-            }
+        }
 
         @Override
-        public ObjectHandle getTimeoutHandle()
-            {
+        public ObjectHandle getTimeoutHandle() {
             return f_hTimeout;
-            }
+        }
 
         @Override
-        public long getTimeoutStamp()
-            {
+        public long getTimeoutStamp() {
             return f_ldtTimeout;
-            }
+        }
 
         @Override
-        public Frame createFrame(ServiceContext context)
-            {
-            Op opCheck = new Op()
-                {
-                public int process(Frame frame, int iPC)
-                    {
+        public Frame createFrame(ServiceContext context) {
+            Op opCheck = new Op() {
+                public int process(Frame frame, int iPC) {
                     return checkResponse(f_fiberCaller, frame, f_cReturns, 0);
-                    }
+                }
                 @Override
-                public String toString()
-                    {
+                public String toString() {
                     return "Check";
-                    }
-                };
+                }
+            };
 
-            Op opRespond = new Op()
-                {
-                public int process(Frame frame, int iPC)
-                    {
+            Op opRespond = new Op() {
+                public int process(Frame frame, int iPC) {
                     sendResponse(f_fiberCaller, frame, f_future, f_cReturns);
                     return iPC + 1;
-                    }
+                }
                 @Override
-                public String toString()
-                    {
+                public String toString() {
                     return "Respond";
-                    }
-                };
+                }
+            };
 
             Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
                         new Op[]{f_op, opCheck, opRespond, Return_0.INSTANCE});
 
             m_fiber = frame0.f_fiber;
             return frame0;
-            }
+        }
 
         /**
          * Check the response values and call "freeze" or create proxies if necessary.
          */
-        protected int checkResponse(Fiber fiberCaller, Frame frame, int cReturns, int index)
-            {
+        protected int checkResponse(Fiber fiberCaller, Frame frame, int cReturns, int index) {
             ServiceContext ctxSrc = frame.f_context;
             ServiceContext ctxDst = fiberCaller.f_context;
 
-            switch (cReturns)
-                {
-                case 0:
-                    break;
+            switch (cReturns) {
+            case 0:
+                break;
 
-                case 1:
-                    if (frame.m_hException == null)
-                        {
-                        int iResult = ctxSrc.validatePassThrough(frame, ctxDst, f_typeSupplier,
-                                        frame.f_ahVar, 1);
-                        if (iResult == Op.R_EXCEPTION)
-                            {
-                            Arrays.fill(frame.f_ahVar, null);
-                            }
-                        return iResult;
-                        }
-                    break;
-
-                case -1: // tuple return
-                    {
-                    ObjectHandle[]  ahReturn   = frame.f_ahVar;
-                    ExceptionHandle hException = frame.m_hException;
-                    if (hException == null)
-                        {
-                        TupleHandle hTuple = (TupleHandle) ahReturn[0];
-                        if (hTuple != null)
-                            {
-                            ObjectHandle[] ahValue = hTuple.m_ahValue;
-                            switch (ctxSrc.validatePassThrough(frame, ctxDst, null, ahValue))
-                                {
-                                case Op.R_NEXT:
-                                    // all values are pass-through; mark the tuple itself immutable;
-                                    // we can do it since this tuple was created automatically by
-                                    // "frame.assignTuple()" method
-                                    hTuple.makeImmutable();
-                                    break;
-
-                                case Op.R_CALL:
-                                    frame.m_frameNext.addContinuation(frameCaller ->
-                                        {
-                                        hTuple.makeImmutable();
-                                        return Op.R_NEXT;
-                                        });
-                                    return Op.R_CALL;
-
-                                case Op.R_EXCEPTION:
-                                    Arrays.fill(ahValue, null);
-                                    return Op.R_EXCEPTION;
-
-                                default:
-                                    throw new IllegalStateException();
-                                }
-                            }
-                        }
-                    break;
+            case 1:
+                if (frame.m_hException == null) {
+                    int iResult = ctxSrc.validatePassThrough(frame, ctxDst, f_typeSupplier,
+                                    frame.f_ahVar, 1);
+                    if (iResult == Op.R_EXCEPTION) {
+                        Arrays.fill(frame.f_ahVar, null);
                     }
+                    return iResult;
+                }
+                break;
 
-                default:
-                    {
-                    assert cReturns > 1;
-                    ObjectHandle[]  ahReturn   = frame.f_ahVar;
-                    ExceptionHandle hException = frame.m_hException;
+            case -1: { // tuple return
+                ObjectHandle[]  ahReturn   = frame.f_ahVar;
+                ExceptionHandle hException = frame.m_hException;
+                if (hException == null) {
+                    TupleHandle hTuple = (TupleHandle) ahReturn[0];
+                    if (hTuple != null) {
+                        ObjectHandle[] ahValue = hTuple.m_ahValue;
+                        switch (ctxSrc.validatePassThrough(frame, ctxDst, null, ahValue)) {
+                        case Op.R_NEXT:
+                            // all values are pass-through; mark the tuple itself immutable;
+                            // we can do it since this tuple was created automatically by
+                            // "frame.assignTuple()" method
+                            hTuple.makeImmutable();
+                            break;
 
-                    if (hException == null)
-                        {
-                        for (int i = index; i < cReturns; i++)
-                            {
-                            ObjectHandle hReturn = ahReturn[i];
-                            if (hReturn == null)
-                                {
-                                // this is only possible for a conditional return of "False"
-                                assert i > 0 && ahReturn[0].equals(xBoolean.FALSE);
+                        case Op.R_CALL:
+                            frame.m_frameNext.addContinuation(frameCaller -> {
+                                hTuple.makeImmutable();
+                                return Op.R_NEXT;
+                            });
+                            return Op.R_CALL;
 
-                                // since "null" indicates a deferred future value, replace it with
-                                // the DEFAULT value (see Utils.GET_AND_RETURN)
-                                ahReturn[i] = ObjectHandle.DEFAULT;
-                                }
-                            }
+                        case Op.R_EXCEPTION:
+                            Arrays.fill(ahValue, null);
+                            return Op.R_EXCEPTION;
 
-                        int iResult = ctxSrc.validatePassThrough(frame, ctxDst, f_typeSupplier,
-                                        ahReturn, cReturns);
-                        if (iResult == Op.R_EXCEPTION)
-                            {
-                            Arrays.fill(ahReturn, null);
-                            }
-                        return iResult;
+                        default:
+                            throw new IllegalStateException();
                         }
-                    break;
                     }
                 }
-            return Op.R_NEXT;
+                break;
             }
 
-        @Override
-        public String toString()
-            {
-            return f_op.toString();
+            default: {
+                assert cReturns > 1;
+                ObjectHandle[]  ahReturn   = frame.f_ahVar;
+                ExceptionHandle hException = frame.m_hException;
+
+                if (hException == null) {
+                    for (int i = index; i < cReturns; i++) {
+                        ObjectHandle hReturn = ahReturn[i];
+                        if (hReturn == null) {
+                            // this is only possible for a conditional return of "False"
+                            assert i > 0 && ahReturn[0].equals(xBoolean.FALSE);
+
+                            // since "null" indicates a deferred future value, replace it with
+                            // the DEFAULT value (see Utils.GET_AND_RETURN)
+                            ahReturn[i] = ObjectHandle.DEFAULT;
+                        }
+                    }
+
+                    int iResult = ctxSrc.validatePassThrough(frame, ctxDst, f_typeSupplier,
+                                    ahReturn, cReturns);
+                    if (iResult == Op.R_EXCEPTION) {
+                        Arrays.fill(ahReturn, null);
+                    }
+                    return iResult;
+                }
+                break;
             }
+            }
+            return Op.R_NEXT;
+        }
+
+        @Override
+        public String toString() {
+            return f_op.toString();
+        }
 
         private final Op           f_op;
         private final int          f_cReturns;
@@ -2142,21 +1881,19 @@ public class ServiceContext
         private final int          f_nDepth;
         private final ObjectHandle f_hTimeout;
         private final long         f_ldtTimeout;
-        }
+    }
 
     /**
      * Represents a natural "fire and forget" or a native call request to a service.
      */
     public static class CallLaterRequest
-            extends Message
-        {
+            extends Message {
         private final FunctionHandle f_hFunction;
         private final ObjectHandle[] f_ahArg;
         private final int            f_cReturns;
 
         public CallLaterRequest(Frame frameCaller, FunctionHandle hFunction, ObjectHandle[] ahArg,
-                                int cReturns)
-            {
+                                int cReturns) {
             super(frameCaller);
 
             assert cReturns <= 1; // multiple returns are not supported for now
@@ -2164,173 +1901,142 @@ public class ServiceContext
             f_hFunction = hFunction;
             f_ahArg     = ahArg;
             f_cReturns  = cReturns;
-            }
+        }
 
         @Override
-        public boolean isAsync()
-            {
+        public boolean isAsync() {
             return true;
-            }
+        }
 
         @Override
-        public int getCallDepth()
-            {
+        public int getCallDepth() {
             return 0;
-            }
+        }
 
         @Override
-        public ObjectHandle getTimeoutHandle()
-            {
+        public ObjectHandle getTimeoutHandle() {
             return xNullable.NULL;
-            }
+        }
 
         @Override
-        public long getTimeoutStamp()
-            {
+        public long getTimeoutStamp() {
             return 0L;
-            }
+        }
 
         @Override
-        public Frame createFrame(ServiceContext context)
-            {
-            Op opCall = new Op()
-                {
-                public int process(Frame frame, int iPC)
-                    {
+        public Frame createFrame(ServiceContext context) {
+            Op opCall = new Op() {
+                public int process(Frame frame, int iPC) {
                     return f_hFunction.call1(frame, null, f_ahArg, f_cReturns == 0 ? A_IGNORE : 0);
-                    }
+                }
 
-                public String toString()
-                    {
+                public String toString() {
                     return "CallLaterRequest: " + f_hFunction.getName();
-                    }
-                };
+                }
+            };
 
             Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
                     new Op[] {opCall, Return_0.INSTANCE});
 
             m_fiber = frame0.f_fiber;
 
-            if (f_fiberCaller == null)
-                {
+            if (f_fiberCaller == null) {
                 // since there was no originating fiber, we need to register the request on-the-spot
                 frame0.f_fiber.registerRequest(this);
 
-                frame0.addContinuation(_null ->
-                    {
+                frame0.addContinuation(_null -> {
                     // "callLater" has returned
                     ExceptionHandle hException = frame0.m_hException;
-                    if (hException == null)
-                        {
+                    if (hException == null) {
                         f_future.complete(f_cReturns == 0 ? xTuple.H_VOID : frame0.f_ahVar[0]);
-                        }
-                    else
-                        {
+                    } else {
                         f_future.completeExceptionally(hException.getException());
-                        }
+                    }
                     return Op.R_NEXT;
-                    });
-                }
-            else
-                {
-                frame0.addContinuation(_null ->
-                    {
+                });
+            } else {
+                frame0.addContinuation(_null -> {
                     sendResponse(f_fiberCaller, frame0, f_future, f_cReturns);
                     return Op.R_NEXT;
-                    });
-                }
+                });
+            }
 
             return frame0;
-            }
         }
+    }
 
     /**
      * Represents a service call return.
      */
     public static class Response<T>
-            implements Runnable
-        {
+            implements Runnable {
         private final Fiber                f_fiberCaller;
         private final T                    f_return;
         private final ExceptionHandle      f_hException;
         private final CompletableFuture<T> f_future;
 
         public Response(Fiber fiberCaller, T returnValue, ExceptionHandle hException,
-                        CompletableFuture<T> future)
-            {
+                        CompletableFuture<T> future) {
             assert returnValue != null || hException != null;
 
             f_fiberCaller = fiberCaller;
             f_hException  = hException;
             f_return      = returnValue;
             f_future      = future;
-            }
+        }
 
         @Override
-        public void run()
-            {
+        public void run() {
             f_fiberCaller.onResponse();
 
-            if (f_hException == null)
-                {
+            if (f_hException == null) {
                 f_future.complete(f_return);
-                }
-            else
-                {
+            } else {
                 f_future.completeExceptionally(f_hException.getException());
-                if (xException.isTimedOut(f_hException))
-                    {
+                if (xException.isTimedOut(f_hException)) {
                     f_fiberCaller.clearTimeout();
-                    }
                 }
             }
         }
+    }
 
     /**
      * The wake-up scheduler.
      */
-    protected class WakeUpScheduler
-        {
-        protected void schedule(long ldtWakeUp)
-            {
+    protected class WakeUpScheduler {
+        protected void schedule(long ldtWakeUp) {
             long ldtNow = f_container.currentTimeMillis();
-            if (f_ldtScheduled > 0)
-                {
-                if (ldtNow <= f_ldtScheduled && f_ldtScheduled <= ldtWakeUp)
-                    {
+            if (f_ldtScheduled > 0) {
+                if (ldtNow <= f_ldtScheduled && f_ldtScheduled <= ldtWakeUp) {
                     // the current wake up covers the new one; nothing to do
                     return;
-                    }
-
-                if (ldtNow < f_ldtScheduled)
-                    {
-                    m_taskCurrent.cancel();
-                    }
                 }
 
+                if (ldtNow < f_ldtScheduled) {
+                    m_taskCurrent.cancel();
+                }
+            }
+
             f_ldtScheduled = ldtWakeUp;
-            m_taskCurrent  = new TimerTask()
-                {
-                public void run()
-                    {
+            m_taskCurrent  = new TimerTask() {
+                public void run() {
                     ensureScheduled(true); // don't use this thread - schedule async
-                    }
-                };
+                }
+            };
 
             xLocalClock.TIMER.schedule(m_taskCurrent, Math.max(1, ldtWakeUp - ldtNow));
-            }
+        }
 
         private long      f_ldtScheduled; // when
         private TimerTask m_taskCurrent;  // what
-        }
+    }
 
     /**
      * A type supplier.
      */
-    public interface TypeSupplier
-        {
+    public interface TypeSupplier {
         TypeConstant get(int i);
-        }
+    }
 
     // ----- constants and fields ------------------------------------------------------------------
 
@@ -2444,15 +2150,14 @@ public class ServiceContext
     /**
      * The current service status. Must be the same names as in natural Service.StatusIndicator.
      */
-    public enum ServiceStatus
-        {
+    public enum ServiceStatus {
         Idle,
         IdleWaiting,
         Busy,
         BusyWaiting,
         ShuttingDown,
         Terminated
-        }
+    }
 
     /**
      * The context served by the current thread.
@@ -2485,4 +2190,4 @@ public class ServiceContext
      * A wake-up scheduler to process registered timeouts.
      */
     private final WakeUpScheduler f_wakeUpScheduler = new WakeUpScheduler();
-    }
+}

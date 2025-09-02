@@ -14,15 +14,13 @@ import org.xvm.compiler.Token.Id;
  * variable declaration.
  */
 public class VariableTypeExpression
-        extends TypeExpression
-    {
+        extends TypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public VariableTypeExpression(Token token)
-        {
+    public VariableTypeExpression(Token token) {
         assert token.getId() == Id.VAR || token.getId() == Id.VAL;
         this.token = token;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -32,50 +30,44 @@ public class VariableTypeExpression
      *
      * @return the dot-delimited name
      */
-    public Token getToken()
-        {
+    public Token getToken() {
         return token;
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return token.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return token.getEndPosition();
-        }
+    }
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
-        {
+    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs) {
         // this will be replaced after the actual type is known
         return pool().typeObject();
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return token.getValueText();
-        }
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token token;
-    }
+}

@@ -9,8 +9,7 @@ import java.util.function.Supplier;
  * <p>
  * {@link #allocate allocated} objects are considered to be garbage once they are not reachable from a {@link #addRoot root}.
  */
-public interface GcSpace
-    {
+public interface GcSpace {
     /**
      * Allocate an object.
      *
@@ -103,4 +102,4 @@ public interface GcSpace
      * For weak-refs the field which contains the notifier.
      */
     int WEAK_NOTIFIER_FIELD = 1;
-    }
+}

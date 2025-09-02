@@ -31,59 +31,51 @@ import org.xvm.runtime.template._native.crypto.xRTAlgorithms.KeyForm;
  * Native implementation of the xRTDecryptor.x service.
  */
 public class xRTDecryptor
-        extends xService
-    {
+        extends xService {
     public static xRTDecryptor INSTANCE;
 
-    public xRTDecryptor(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTDecryptor(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         markNativeMethod("encrypt", new String[] {OBJECT[0], OBJECT[0], BYTES[0]}, BYTES);
         markNativeMethod("decrypt", new String[] {OBJECT[0], OBJECT[0], BYTES[0]}, BYTES);
 
         invalidateTypeInfo();
-        }
+    }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "encrypt":
-                return invokeEncrypt(frame, (CipherHandle) ahArg[0], ahArg[1],
-                    (ByteArrayHandle) ((ArrayHandle) ahArg[2]).m_hDelegate, iReturn);
+                             ObjectHandle[] ahArg, int iReturn) {
+        switch (method.getName()) {
+        case "encrypt":
+            return invokeEncrypt(frame, (CipherHandle) ahArg[0], ahArg[1],
+                (ByteArrayHandle) ((ArrayHandle) ahArg[2]).m_hDelegate, iReturn);
 
-            case "decrypt":
-                return invokeDecrypt(frame, (CipherHandle) ahArg[0], ahArg[1],
-                    (ByteArrayHandle) ((ArrayHandle) ahArg[2]).m_hDelegate, iReturn);
-            }
+        case "decrypt":
+            return invokeDecrypt(frame, (CipherHandle) ahArg[0], ahArg[1],
+                (ByteArrayHandle) ((ArrayHandle) ahArg[2]).m_hDelegate, iReturn);
+        }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
-        }
+    }
 
     /**
      * Native implementation of
      *     "Byte[] encrypt(Object cipher, Object secret, Byte[] data)"
      */
     private int invokeEncrypt(Frame frame, CipherHandle hCipher, ObjectHandle hKey,
-                              ByteArrayHandle haData, int iReturn)
-        {
+                              ByteArrayHandle haData, int iReturn) {
         Cipher cipher = hCipher.f_cipher;
         byte[] abData = xRTUInt8Delegate.getBytes(haData);
 
-        try
-            {
+        try {
             Key key = xRTAlgorithms.extractKey(frame, hKey, cipher.getAlgorithm(),
                             KeyForm.PublicOrSecret);
             cipher.init(Cipher.ENCRYPT_MODE, key);
@@ -91,25 +83,21 @@ public class xRTDecryptor
 
             return frame.assignValue(iReturn,
                     xArray.makeByteArrayHandle(abEncoded, Mutability.Constant));
-            }
-        catch (GeneralSecurityException e)
-            {
+        } catch (GeneralSecurityException e) {
             return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
-            }
         }
+    }
 
     /**
      * Native implementation of
      *     "Byte[] decrypt(Object cipher, Object secret, Byte[] bytes)"
      */
     private int invokeDecrypt(Frame frame, CipherHandle hCipher, ObjectHandle hKey,
-                              ByteArrayHandle haData, int iReturn)
-        {
+                              ByteArrayHandle haData, int iReturn) {
         byte[] abData  = xRTUInt8Delegate.getBytes(haData);
         Cipher cipher = hCipher.f_cipher;
 
-        try
-            {
+        try {
             Key key = xRTAlgorithms.extractKey(frame, hKey, cipher.getAlgorithm(),
                         KeyForm.PrivateOrSecret);
 
@@ -118,10 +106,8 @@ public class xRTDecryptor
 
             return frame.assignValue(iReturn,
                     xArray.makeByteArrayHandle(abSig, Mutability.Constant));
-            }
-        catch (GeneralSecurityException e)
-            {
+        } catch (GeneralSecurityException e) {
             return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
-            }
         }
     }
+}

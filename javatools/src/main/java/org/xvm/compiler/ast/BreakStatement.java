@@ -18,34 +18,27 @@ import org.xvm.util.Severity;
  * A break statement represents the "break" keyword.
  */
 public class BreakStatement
-        extends GotoStatement
-    {
+        extends GotoStatement {
     // ----- constructors --------------------------------------------------------------------------
 
-    public BreakStatement(Token keyword, Token name)
-        {
+    public BreakStatement(Token keyword, Token name) {
         super(keyword, name);
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validateImpl(Context ctx, ErrorListener errs)
-        {
+    protected Statement validateImpl(Context ctx, ErrorListener errs) {
         Statement stmtTarget = getTargetStatement();
-        if (stmtTarget == null)
-            {
-            if (isLabeled())
-                {
+        if (stmtTarget == null) {
+            if (isLabeled()) {
                 log(errs, Severity.ERROR, Compiler.MISSING_GOTO_LABEL, getLabeledName());
-                }
-            else
-                {
+            } else {
                 log(errs, Severity.ERROR, Compiler.MISSING_GOTO_TARGET);
-                }
-            return null;
             }
+            return null;
+        }
 
         setJumpLabel(stmtTarget.ensureBreakLabel(this, ctx));
 
@@ -53,14 +46,13 @@ public class BreakStatement
         ctx.setReachable(false);
 
         return this;
-        }
+    }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
-        {
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         code.add(new Jump(getJumpLabel()));
 
         ctx.getHolder().setAst(this, new BreakStmtAST(getTargetDepth()));
         return false;
-        }
     }
+}

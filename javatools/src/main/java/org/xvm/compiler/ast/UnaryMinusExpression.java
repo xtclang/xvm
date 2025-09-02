@@ -17,33 +17,28 @@ import org.xvm.compiler.Token;
  * The "-" that precedes a number.
  */
 public class UnaryMinusExpression
-        extends PrefixExpression
-    {
+        extends PrefixExpression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public UnaryMinusExpression(Token operator, Expression expr)
-        {
+    public UnaryMinusExpression(Token operator, Expression expr) {
         super(operator, expr);
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType(Context ctx)
-        {
+    public TypeConstant getImplicitType(Context ctx) {
         return expr.getImplicitType(ctx);
-        }
+    }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         Expression exprRight = expr;
 
         // in the case of a literal expression, we handle the unary minus by prepending it to the
         // literal
-        if (exprRight instanceof LiteralExpression)
-            {
+        if (exprRight instanceof LiteralExpression) {
             // can't do this twice
             assert !exprRight.isValidated();
 
@@ -53,7 +48,7 @@ public class UnaryMinusExpression
             return exprRight == null
                 ? null // an error must've been reported
                 : replaceThisWith(exprRight);
-            }
+        }
 
         // otherwise, this expression must apply the unary minus as an op
         TypeFit  fit      = TypeFit.Fit;
@@ -64,40 +59,30 @@ public class UnaryMinusExpression
         // possible)
         TypeConstant typeRight = null;
         if (typeRequired != null && exprRight.testFit(ctx, typeRequired, false, null).isFit()
-                && !typeRequired.ensureTypeInfo(errs).findOpMethods("neg", "-#", 0).isEmpty())
-            {
+                && !typeRequired.ensureTypeInfo(errs).findOpMethods("neg", "-#", 0).isEmpty()) {
             typeRight = typeRequired;
-            }
+        }
 
         typeRight = findBestOp(ctx, typeRequired, typeRight, "neg", "-#", errs);
 
-        if (typeRight == null)
-            {
+        if (typeRight == null) {
             fit = TypeFit.NoFit;
-            }
-        else if (exprRight.isConstant())
-            {
-            try
-                {
+        } else if (exprRight.isConstant()) {
+            try {
                 constVal = exprRight.toConstant().apply(operator.getId(), null);
-                }
-            catch (RuntimeException ignore) {}
-            }
+            } catch (RuntimeException ignore) {}
+        }
 
         return finishValidation(ctx, typeRequired, typeRight, fit, constVal, errs);
-        }
+    }
 
     @Override
-    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
-        {
-        if (LVal.isLocalArgument())
-            {
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs) {
+        if (LVal.isLocalArgument()) {
             Argument arg = expr.generateArgument(ctx, code, true, true, errs);
             code.add(new GP_Neg(arg, LVal.getLocalArgument()));
-            }
-        else
-            {
+        } else {
             super.generateAssignment(ctx, code, LVal, errs);
-            }
         }
     }
+}

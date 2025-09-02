@@ -26,15 +26,13 @@ import org.xvm.util.Severity;
  * has been fully resolved.
  */
 public abstract class TypeExpression
-        extends Expression
-    {
+        extends Expression {
     // ----- type specific functionality -----------------------------------------------------------
 
     @Override
-    public TypeExpression toTypeExpression()
-        {
+    public TypeExpression toTypeExpression() {
         return this;
-        }
+    }
 
     /**
      * Obtain the TypeConstant currently associated with this TypeExpression, creating an unresolved
@@ -42,10 +40,9 @@ public abstract class TypeExpression
      *
      * @return a TypeConstant
      */
-    public TypeConstant ensureTypeConstant()
-        {
+    public TypeConstant ensureTypeConstant() {
         return ensureTypeConstant(null, null);
-        }
+    }
 
     /**
      * Obtain the TypeConstant currently associated with this TypeExpression, creating an unresolved
@@ -56,35 +53,28 @@ public abstract class TypeExpression
      *
      * @return a TypeConstant
      */
-    public TypeConstant ensureTypeConstant(Context ctx, ErrorListener errs)
-        {
+    public TypeConstant ensureTypeConstant(Context ctx, ErrorListener errs) {
         TypeConstant constType = m_constType;
-        if (constType != null)
-            {
+        if (constType != null) {
             // if the context has changed we may need to re-instantiate the type
-            if (ctx != null && ctx != m_ctxPrev)
-                {
+            if (ctx != null && ctx != m_ctxPrev) {
                 constType = null;
                 m_ctxPrev = ctx;
-                }
             }
+        }
 
-        if (constType == null)
-            {
-            if (isValidated())
-                {
+        if (constType == null) {
+            if (isValidated()) {
                 // once the expression has validated, we know the type (can be Object for dynamic types)
                 constType = getType().getParamType(0);
-                }
-            else
-                {
+            } else {
                 constType = instantiateTypeConstant(ctx, errs == null ? ErrorListener.BLACKHOLE : errs);
-                }
+            }
 
             m_constType = constType;
-            }
-        return constType;
         }
+        return constType;
+    }
 
     /**
      * @param ctx   an optional Context; may be null
@@ -97,53 +87,47 @@ public abstract class TypeExpression
     /**
      * @return the TypeConstant currently associated with this TypeExpression, or null
      */
-    protected TypeConstant getTypeConstant()
-        {
+    protected TypeConstant getTypeConstant() {
         return m_constType;
-        }
+    }
 
     /**
      * @param constType  the TypeConstant to associate with this TypeExpression
      */
-    protected void setTypeConstant(TypeConstant constType)
-        {
+    protected void setTypeConstant(TypeConstant constType) {
         resetTypeConstant();
 
         // store the new type constant
         m_constType = constType;
-        }
+    }
 
     /**
      * Clear out this expression's type, if it is cached.
      */
-    protected void resetTypeConstant()
-        {
+    protected void resetTypeConstant() {
         m_constType = null;
         AstNode parent = getParent();
-        if (parent instanceof TypeExpression exprType)
-            {
+        if (parent instanceof TypeExpression exprType) {
             exprType.resetTypeConstant();
-            }
         }
+    }
 
     /**
      * Determine if this is an introductory type expression.
      *
      * @return true iff this is an introductory type expression
      */
-    public boolean isIntroductoryType()
-        {
+    public boolean isIntroductoryType() {
         return false;
-        }
+    }
 
     /**
      * @return true iff this is a dynamic type expression representing a type that can only
      *         be calculated at run-time (for example map.Key, where "map" is a local variable)
      */
-    public boolean isDynamic()
-        {
+    public boolean isDynamic() {
         return false;
-        }
+    }
 
     /**
      * For introductory type expressions, obtain the underlying type expression. An introductory
@@ -153,20 +137,18 @@ public abstract class TypeExpression
      *
      * @return the underlying TypeExpression, if any
      */
-    public TypeExpression unwrapIntroductoryType()
-        {
+    public TypeExpression unwrapIntroductoryType() {
         assert !isIntroductoryType();
         return null;
-        }
+    }
 
     /**
      * For introductory type expressions, TODO doc
      */
-    public void replaceIntroducedType(TypeExpression type)
-        {
+    public void replaceIntroducedType(TypeExpression type) {
         assert !isIntroductoryType();
         throw new IllegalStateException();
-        }
+    }
 
 
     // ----- inner class compilation support -------------------------------------------------------
@@ -175,109 +157,93 @@ public abstract class TypeExpression
      * @return the AnonInnerClass that represents the outline of what an anonymous inner class
      *         for this type would look like
      */
-    public final AnonInnerClass inferAnonInnerClass(ErrorListener errs)
-        {
+    public final AnonInnerClass inferAnonInnerClass(ErrorListener errs) {
         AnonInnerClass info = new AnonInnerClass(this, errs);
         collectAnonInnerClassInfo(info);
         return info;
-        }
+    }
 
     /**
      * Collect information into the provided AnonInnerClass.
      *
      * @param info  a mutable collector of information about the shape of an anonymous inner class
      */
-    protected void collectAnonInnerClassInfo(AnonInnerClass info)
-        {
+    protected void collectAnonInnerClassInfo(AnonInnerClass info) {
         log(info.getErrorListener(true), Severity.ERROR, Compiler.INVALID_ANON_CLASS_TYPE);
-        }
+    }
 
 
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    public void resolveNames(StageMgr mgr, ErrorListener errs)
-        {
-        if (mgr.processChildren())
-            {
+    public void resolveNames(StageMgr mgr, ErrorListener errs) {
+        if (mgr.processChildren()) {
             ensureTypeConstant();
-            }
-        else
-            {
+        } else {
             mgr.requestRevisit();
-            }
         }
+    }
 
 
     // ----- Expression methods --------------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType(Context ctx)
-        {
+    public TypeConstant getImplicitType(Context ctx) {
         TypeConstant type = ensureTypeConstant(ctx, null);
-        if (type == null)
-            {
+        if (type == null) {
             throw new IllegalStateException("type has not yet been determined for this: " + this);
-            }
-
-        return type.getType();
         }
 
+        return type.getType();
+    }
+
     @Override
-    protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut)
-        {
+    protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut) {
         return typeIn.isTypeOfType() && (typeOut == null || typeOut.isTypeOfType())
             ? super.calcFit(ctx, getSafeDataType(typeIn), getSafeDataType(typeOut))
             : super.calcFit(ctx, typeIn, typeOut);
-        }
+    }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         TypeConstant type = ensureTypeConstant(ctx, errs);
-        if (typeRequired != null)
-            {
+        if (typeRequired != null) {
             TypeConstant typeInferred = super.inferTypeFromRequired(
                     type, typeRequired.getParamType(0));
-            if (typeInferred != null)
-                {
+            if (typeInferred != null) {
                 type = typeInferred;
-                }
             }
+        }
 
         TypeConstant typeType = type.getType();
 
         return finishValidation(ctx, typeRequired, typeType, TypeFit.Fit, typeType, errs);
-        }
+    }
 
     @Override
     protected Expression finishValidation(Context ctx, TypeConstant typeRequired, TypeConstant typeActual,
-                                          TypeFit fit, Constant constVal, ErrorListener errs)
-        {
+                                          TypeFit fit, Constant constVal, ErrorListener errs) {
         Expression expr = super.finishValidation(ctx, typeRequired, typeActual, fit, constVal, errs);
-        if (expr instanceof TypeExpression exprType)
-            {
+        if (expr instanceof TypeExpression exprType) {
             exprType.resetTypeConstant();
-            }
-        return expr;
         }
+        return expr;
+    }
 
     @Override
-    public ExprAST getExprAST(Context ctx)
-        {
+    public ExprAST getExprAST(Context ctx) {
         TypeConstant type = getType();
         return new ConstantExprAST(type);
-        }
+    }
 
     /**
      * Trivial helper.
      */
-    protected static TypeConstant getSafeDataType(TypeConstant type)
-        {
+    protected static TypeConstant getSafeDataType(TypeConstant type) {
         return type != null && type.isParamsSpecified()
                 ? type.getParamType(0)
                 : null;
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -291,4 +257,4 @@ public abstract class TypeExpression
      * The context for which the type constant was generated.
      */
     private Context m_ctxPrev;
-    }
+}

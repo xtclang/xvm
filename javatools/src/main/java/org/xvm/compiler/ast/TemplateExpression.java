@@ -40,61 +40,52 @@ import static org.xvm.asm.Assignment.AssignedOnce;
  * TODO optimize handling for: $.append($"...") for "append()", "add()"/"+", etc.
  */
 public class TemplateExpression
-        extends Expression
-    {
+        extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public TemplateExpression(List<Expression> exprs, long lStartPos, long lEndPos)
-        {
+    public TemplateExpression(List<Expression> exprs, long lStartPos, long lEndPos) {
         this.exprs     = exprs;
         this.lStartPos = lStartPos;
         this.lEndPos   = lEndPos;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
-    public List<Expression> getExpressions()
-        {
+    public List<Expression> getExpressions() {
         return exprs;
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return lStartPos;
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return lEndPos;
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType(Context ctx)
-        {
+    public TypeConstant getImplicitType(Context ctx) {
         return pool().typeString();
-        }
+    }
 
     @Override
-    protected boolean allowsShortCircuit(AstNode nodeChild)
-        {
+    protected boolean allowsShortCircuit(AstNode nodeChild) {
         return false;
-        }
+    }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         boolean fValid = true;
         boolean fConst = true;
 
@@ -113,89 +104,72 @@ public class TemplateExpression
 
         // validate the expressions that make up the template
         int cExprs = exprs.size();
-        for (int i = 0; i < cExprs; ++i)
-            {
+        for (int i = 0; i < cExprs; ++i) {
             Expression     exprOld = exprs.get(i);
             TypeConstant[] atypeExpr;
-            if (exprOld.testFit(ctx, T_STRING, false, null).isFit())
-                {
+            if (exprOld.testFit(ctx, T_STRING, false, null).isFit()) {
                 atypeExpr = A_STRING;
-                }
-            else if (exprOld.testFit(ctx, T_OBJECT, false, null).isFit())
-                {
+            } else if (exprOld.testFit(ctx, T_OBJECT, false, null).isFit()) {
                 atypeExpr = A_OBJECT;
-                }
-            else
-                {
+            } else {
                 // void expression (e.g. a lambda-style expr explicitly appending to "$"); note that
                 // this is also a catch-all for expressions that will fail to validate (and thus
                 // have failed to respond to testFit())
                 atypeExpr = TypeConstant.NO_TYPES;
-                }
+            }
 
             Expression exprNew = exprOld.validateMulti(ctx, atypeExpr, errs);
-            if (exprNew == null)
-                {
+            if (exprNew == null) {
                 fValid = false;
-                }
-            else
-                {
-                if (exprNew != exprOld)
-                    {
+            } else {
+                if (exprNew != exprOld) {
                     exprs.set(i, exprNew);
-                    }
+                }
 
                 fConst &= exprNew.isConstant();
-                }
             }
+        }
 
         // build the constant value for this template expression, if possible
         Constant constVal = null;
-        if (fValid && fConst)
-            {
+        if (fValid && fConst) {
             ConstantPool  pool = pool();
             StringBuilder sb   = new StringBuilder();
-            for (Expression expr : exprs)
-                {
+            for (Expression expr : exprs) {
                 TypeConstant[] atype = expr.getTypes();
-                if (atype.length > 0)
-                    {
+                if (atype.length > 0) {
                     Constant constExpr = atype[0].getDefiningConstant().equals(pool.clzProperty())
                         ? null // identity mode property constant
                         : expr.toConstant().convertTo(T_STRING);
-                    if (constExpr == null)
-                        {
+                    if (constExpr == null) {
                         fConst = false;
                         break;
-                        }
-                    sb.append(((StringConstant) constExpr).getValue());
                     }
+                    sb.append(((StringConstant) constExpr).getValue());
                 }
-            constVal = fConst ? pool.ensureStringConstant(sb.toString()) : null;
             }
+            constVal = fConst ? pool.ensureStringConstant(sb.toString()) : null;
+        }
 
         ctx = ctx.exit();
 
         return finishValidation(ctx, typeRequired, T_STRING,
                 fValid ? TypeFit.Fit : TypeFit.NoFit, constVal, errs);
-        }
+    }
 
     @Override
-    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
-        {
-        if (isConstant())
-            {
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs) {
+        if (isConstant()) {
             LVal.assign(toConstant(), code, errs);
             return;
-            }
+        }
 
         // use the super-class implementation of generateAssignment() to create a temp variable
         // to avoid having to provide handling for complex LVals in this method
-        if (!LVal.isLocalArgument())
-            {
+        if (!LVal.isLocalArgument()) {
             super.generateAssignment(ctx, code, LVal, errs);
             return;
-            }
+        }
 
         code.add(new Enter());
 
@@ -222,13 +196,11 @@ public class TemplateExpression
         //   yield $.toString();
         int          cchMin   = 0;
         ConstantPool pool     = pool();
-        for (Expression expr : exprs)
-            {
-            if (isStringConst(expr))
-                {
+        for (Expression expr : exprs) {
+            if (isStringConst(expr)) {
                 cchMin += getStringConst(expr).length();
-                }
             }
+        }
 
         // $ = new StringBuffer(cchMin)
         TypeConstant   typeBuf  = pool.typeStringBuffer();
@@ -245,33 +217,25 @@ public class TemplateExpression
         Assignable     lvalObj    = createTempVar(code, typeObj, true);
         MethodConstant idAppendTo = infoStr.findCallable("appendTo", true, false, null, null);
         MethodConstant idAppend   = infoBuf.findCallable("append"  , true, false, null, null);
-        for (Expression expr : exprs)
-            {
-            if (isStringConst(expr))
-                {
+        for (Expression expr : exprs) {
+            if (isStringConst(expr)) {
                 // $.append("...");
                 code.add(new Invoke_10(expr.toConstant(), idAppendTo, m_reg$));
-                }
-            else if (expr.isVoid())
-                {
+            } else if (expr.isVoid()) {
                 // {...}
                 expr.generateVoid(ctx, code, errs);
-                }
-            else if (isStringable(expr))
-                {
+            } else if (isStringable(expr)) {
                 // expr1.appendTo($);
                 expr.generateAssignment(ctx, code, lvalStr, errs);
                 code.add(new Invoke_10(lvalStr.getLocalArgument(), idAppendTo, m_reg$));
-                }
-            else
-                {
+            } else {
                 // $.append(expr2);
                 expr.generateAssignment(ctx, code, lvalObj, errs);
                 // even though append returns a buffer, we already have the buffer, so we use the
                 // invoke_10 instead of the (more correct) invoke_11
                 code.add(new Invoke_10(m_reg$, idAppend, lvalObj.getLocalArgument()));
-                }
             }
+        }
 
         // yield $.toString();
         MethodConstant idToString = infoBuf.findCallable("toString", true, false,
@@ -279,76 +243,64 @@ public class TemplateExpression
         code.add(new Invoke_01(m_reg$, idToString, LVal.getLocalArgument()));
 
         code.add(new Exit());
-        }
+    }
 
     @Override
-    public ExprAST getExprAST(Context ctx)
-        {
+    public ExprAST getExprAST(Context ctx) {
         int       cExprs = exprs.size();
         ExprAST[] aExpr  = new ExprAST[1 + cExprs];
         aExpr[0] = m_reg$.getRegAllocAST();
-        for (int i = 0; i < cExprs; i++)
-            {
+        for (int i = 0; i < cExprs; i++) {
             aExpr[i+1] = exprs.get(i).getExprAST(ctx);
-            }
-        return new TemplateExprAST(aExpr);
         }
+        return new TemplateExprAST(aExpr);
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
         sb.append("$\"");
 
-        for (Expression expr : exprs)
-            {
-            if (isStringConst(expr))
-                {
-                for (char ch : getStringConst(expr).toCharArray())
-                    {
+        for (Expression expr : exprs) {
+            if (isStringConst(expr)) {
+                for (char ch : getStringConst(expr).toCharArray()) {
                     Handy.appendChar(sb, ch);
-                    }
                 }
-            else
-                {
+            } else {
                 sb.append('{')
                   .append(expr)
                   .append('}');
-                }
             }
+        }
 
         sb.append('\"');
 
         return sb.toString();
-        }
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
 
-    boolean isStringConst(Expression expr)
-        {
+    boolean isStringConst(Expression expr) {
         return expr.toConstant() instanceof StringConstant && expr.getTypes().length > 0;
-        }
+    }
 
-    String getStringConst(Expression expr)
-        {
+    String getStringConst(Expression expr) {
         return ((StringConstant) expr.toConstant()).getValue();
-        }
+    }
 
-    boolean isStringable(Expression expr)
-        {
+    boolean isStringable(Expression expr) {
         return expr.getTypes().length > 0 && expr.getType().isA(pool().typeStringable());
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -361,4 +313,4 @@ public class TemplateExpression
     private Register m_reg$;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TemplateExpression.class, "type", "exprs");
-    }
+}

@@ -17,18 +17,15 @@ import org.xvm.runtime.template.xException;
  * Base class for native FPNumber (Float* and Dec*) support.
  */
 public abstract class BaseFP
-        extends xNumber
-    {
-    public BaseFP(Container container, ClassStructure structure, int cBits)
-        {
+        extends xNumber {
+    public BaseFP(Container container, ClassStructure structure, int cBits) {
         super(container, structure, false);
 
         f_cBits = cBits;
-        }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         super.initNative();
 
         // properties
@@ -76,45 +73,38 @@ public abstract class BaseFP
         markNativeMethod("nextDown"   , VOID, THIS);
 
         invalidateTypeInfo();
-        }
+    }
 
     @Override
-    public boolean isGenericHandle()
-        {
+    public boolean isGenericHandle() {
         return false;
-        }
+    }
 
     @Override
-    protected int constructFromString(Frame frame, String sText, int iReturn)
-        {
-        try
-            {
+    protected int constructFromString(Frame frame, String sText, int iReturn) {
+        try {
             return frame.assignValue(Op.A_STACK, makeHandle(Double.valueOf(sText)));
-            }
-        catch (NumberFormatException e)
-            {
+        } catch (NumberFormatException e) {
             return frame.raiseException(
                 xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
-            }
         }
+    }
 
     @Override
-    protected int constructFromBytes(Frame frame, byte[] ab, int cBytes, int iReturn)
-        {
+    protected int constructFromBytes(Frame frame, byte[] ab, int cBytes, int iReturn) {
         return cBytes == f_cBits / 8
             ? frame.assignValue(iReturn, makeHandle(ab, cBytes))
             : frame.raiseException(
                 xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
-        }
+    }
 
     @Override
-    protected int constructFromBits(Frame frame, byte[] ab, int cBits, int iReturn)
-        {
+    protected int constructFromBits(Frame frame, byte[] ab, int cBits, int iReturn) {
         return cBits == f_cBits
             ? frame.assignValue(iReturn, makeHandle(ab, cBits >>> 3))
             : frame.raiseException(
                 xException.illegalArgument(frame, "Invalid bit count: " + cBits));
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -135,26 +125,23 @@ public abstract class BaseFP
     /**
      * A copy of the enum in FPNumber.x
      */
-    enum Rounding
-        {
+    enum Rounding {
         TiesToEven    (RoundingMode.HALF_EVEN),
         TiesToAway    (RoundingMode.UP       ),
         TowardPositive(RoundingMode.CEILING  ),
         TowardZero    (RoundingMode.DOWN     ),
         TowardNegative(RoundingMode.FLOOR    );
 
-        Rounding(RoundingMode mode)
-            {
+        Rounding(RoundingMode mode) {
             f_mode = mode;
-            }
+        }
 
-        public RoundingMode getMode()
-            {
+        public RoundingMode getMode() {
             return f_mode;
-            }
+        }
 
         private final RoundingMode f_mode;
-        }
+    }
 
     /**
      * The log2(10) value.
@@ -165,4 +152,4 @@ public abstract class BaseFP
      * The number of bits for this Float type.
      */
     protected final int f_cBits;
-    }
+}

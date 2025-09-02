@@ -5,8 +5,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateH
 /**
  * A ClassTemplate implementation that knows how to extract/replace bytes in the underlying storage.
  */
-public interface ByteView
-    {
+public interface ByteView {
     /**
      * Obtain an array of bytes.
      *
@@ -37,4 +36,4 @@ public interface ByteView
      * @param bValue     the byte value
      */
     void assignByte(DelegateHandle hDelegate, long of, byte bValue);
-    }
+}

@@ -37,23 +37,19 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
  * Native implementation of _native.mgmt.ContainerControl class.
  */
 public class xContainerControl
-        extends xRTServiceControl
-    {
+        extends xRTServiceControl {
     public static xContainerControl INSTANCE;
 
-    public xContainerControl(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xContainerControl(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         ConstantPool pool     = pool();
         TypeConstant typeMask = pool.ensureEcstasyTypeConstant("mgmt.Container.Control");
 
@@ -66,56 +62,49 @@ public class xContainerControl
         markNativeMethod("kill",   VOID, VOID);
 
         invalidateTypeInfo();
-        }
+    }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         Container container = ((ControlHandle) hTarget).f_container;
-        switch (sPropName)
-            {
-            case "mainService":
-                {
-                ServiceContext ctx = container.getServiceContext();
-                return frame.assignValue(iReturn, ctx == null ? xNullable.NULL : ctx.getService());
-                }
+        switch (sPropName) {
+        case "mainService": {
+            ServiceContext ctx = container.getServiceContext();
+            return frame.assignValue(iReturn, ctx == null ? xNullable.NULL : ctx.getService());
+        }
 
-            case "innerTypeSystem":
-                return getPropertyTypeSystem(frame, container, iReturn);
-            }
+        case "innerTypeSystem":
+            return getPropertyTypeSystem(frame, container, iReturn);
+        }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
+    }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "invoke":
-                return invokeInvoke(frame, (ControlHandle) hTarget,
-                        (StringHandle) ahArg[0], (TupleHandle) ahArg[1], ahArg[2], iReturn);
+                             ObjectHandle[] ahArg, int iReturn) {
+        switch (method.getName()) {
+        case "invoke":
+            return invokeInvoke(frame, (ControlHandle) hTarget,
+                    (StringHandle) ahArg[0], (TupleHandle) ahArg[1], ahArg[2], iReturn);
 
-            case "kill":
-                return invokeKill(frame, (ControlHandle) hTarget, iReturn);
-            }
+        case "kill":
+            return invokeKill(frame, (ControlHandle) hTarget, iReturn);
+        }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
-        }
+    }
 
     /**
      * Native implementation: "Tuple invoke(String methodName, Tuple args = Tuple:(),
      *                         Service? runWithin = Null)".
      */
     protected int invokeInvoke(Frame frame, ControlHandle hCtrl, StringHandle hName,
-                               TupleHandle hTupleArg, ObjectHandle hRunWithin, int iReturn)
-        {
+                               TupleHandle hTupleArg, ObjectHandle hRunWithin, int iReturn) {
         Container    container = hCtrl.f_container;
         ConstantPool pool      = container.getConstantPool();
 
-        try (var ignore = ConstantPool.withPool(pool))
-            {
+        try (var ignore = ConstantPool.withPool(pool)) {
             ServiceContext ctxContainer = container.ensureServiceContext();
 
             ObjectHandle[] ahArg    = hTupleArg.m_ahValue;
@@ -123,135 +112,117 @@ public class xContainerControl
             ModuleConstant idModule = container.getModule();
             MethodConstant idMethod = container.findModuleMethod(sMethod, ahArg);
 
-            if (idMethod == null)
-                {
+            if (idMethod == null) {
                 return frame.raiseException("Missing " + sMethod +
                     " method for " + idModule.getValueString());
-                }
+            }
 
             ServiceHandle hService = hRunWithin == ObjectHandle.DEFAULT ||
                                      hRunWithin == xNullable.NULL
                     ? ctxContainer.getService()
                     : (ServiceHandle) hRunWithin;
 
-            if (hService.f_context.f_container != container)
-                {
+            if (hService.f_context.f_container != container) {
                 return frame.raiseException("Out of context \"runWithin\" service");
-                }
+            }
 
             TypeComposition   clzModule   = container.resolveClass(idModule.getType());
             CallChain         chain       = clzModule.getMethodCallChain(idMethod.getSignature());
             SingletonConstant constModule = pool.ensureSingletonConstConstant(idModule);
-            FunctionHandle    hFunction   = new xRTFunction.AsyncHandle(container, chain)
-                {
+            FunctionHandle    hFunction   = new xRTFunction.AsyncHandle(container, chain) {
                 @Override
-                protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService)
-                    {
+                protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService) {
                     return frame.getConstHandle(constModule);
-                    }
-                };
+                }
+            };
             return hFunction.callT(frame, hService, ahArg, iReturn);
-            }
         }
+    }
 
     /**
      * Native implementation: "void kill()".
      */
-    protected int invokeKill(Frame frame, ControlHandle hCtrl, int iReturn)
-        {
-        if (hCtrl.f_container instanceof NestedContainer container)
-            {
-            switch (closeResourceProvider(frame, container.f_hProvider))
-                {
-                case Op.R_NEXT:
-                    return completeKill(frame, iReturn);
+    protected int invokeKill(Frame frame, ControlHandle hCtrl, int iReturn) {
+        if (hCtrl.f_container instanceof NestedContainer container) {
+            switch (closeResourceProvider(frame, container.f_hProvider)) {
+            case Op.R_NEXT:
+                return completeKill(frame, iReturn);
 
-                case Op.R_CALL:
-                    frame.m_frameNext.addContinuation(
-                        frameCaller -> completeKill(frameCaller, iReturn));
-                    return Op.R_CALL;
+            case Op.R_CALL:
+                frame.m_frameNext.addContinuation(
+                    frameCaller -> completeKill(frameCaller, iReturn));
+                return Op.R_CALL;
 
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
 
-                default:
-                    throw new IllegalStateException();
-                }
+            default:
+                throw new IllegalStateException();
             }
-        return frame.raiseException("Main container cannot be killed");
         }
+        return frame.raiseException("Main container cannot be killed");
+    }
 
-    private int closeResourceProvider(Frame frame, ObjectHandle hProvider)
-        {
+    private int closeResourceProvider(Frame frame, ObjectHandle hProvider) {
         TypeComposition clazz = hProvider.getComposition();
         CallChain       chain = clazz.getMethodCallChain(frame.poolContext().sigClose());
-        if (chain.isNative())
-            {
+        if (chain.isNative()) {
             return Op.R_NEXT;
-            }
+        }
 
         ObjectHandle[] ahVars = new ObjectHandle[chain.getMaxVars()];
         ahVars[0] = xNullable.NULL;
         return chain.invoke(frame, hProvider, ahVars, Op.A_IGNORE);
-        }
+    }
 
-    private int completeKill(Frame frame, int iReturn)
-        {
+    private int completeKill(Frame frame, int iReturn) {
         // Note: the caller is async; we must return the Tuple()
         return frame.assignValue(iReturn, xTuple.H_VOID);
-        }
+    }
 
     /**
      * Native implementation of "innerTypeSystem.get()"
      */
-    protected int getPropertyTypeSystem(Frame frame, Container container, int iReturn)
-        {
+    protected int getPropertyTypeSystem(Frame frame, Container container, int iReturn) {
         // the "ensureTypeSystemHandle" call should be made on the new container's context
-        Op opCall = new Op()
-            {
-            public int process(Frame frame, int iPC)
-                {
+        Op opCall = new Op() {
+            public int process(Frame frame, int iPC) {
                 return container.ensureTypeSystemHandle(frame, 0);
-                }
+            }
 
-            public String toString()
-                {
+            public String toString() {
                 return "CreateTypeSystem";
-                }
-            };
+            }
+        };
 
         return container.ensureServiceContext().sendOp1Request(frame, opCall, iReturn);
-        }
+    }
 
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
-    public ObjectHandle makeHandle(Container container)
-        {
+    public ObjectHandle makeHandle(Container container) {
         return new ControlHandle(m_clzControl, container);
-        }
+    }
 
     protected static class ControlHandle
-            extends xRTServiceControl.ControlHandle
-        {
-        protected ControlHandle(TypeComposition clazz, Container container)
-            {
+            extends xRTServiceControl.ControlHandle {
+        protected ControlHandle(TypeComposition clazz, Container container) {
             super(clazz, container.getServiceContext());
 
             f_container = container;
-            }
+        }
 
         @Override
-        public ServiceContext getContext()
-            {
+        public ServiceContext getContext() {
             return f_container.getServiceContext();
-            }
+        }
 
         /**
          * The container this ControlHandle instance is responsible for managing.
          */
         protected final Container f_container;
-        }
+    }
 
     private TypeComposition m_clzControl;
-    }
+}

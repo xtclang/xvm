@@ -17,37 +17,31 @@ import org.xvm.runtime.template.numbers.xInt128;
  * Native RTDelegate<Int128> implementation.
  */
 public class xRTInt128Delegate
-        extends LongLongDelegate
-    {
+        extends LongLongDelegate {
     public static xRTInt128Delegate INSTANCE;
 
-    public xRTInt128Delegate(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTInt128Delegate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, true);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
-        }
+    public void initNative() {
+    }
 
     @Override
-    public TypeConstant getCanonicalType()
-        {
+    public TypeConstant getCanonicalType() {
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
                 pool.typeInt128());
-        }
+    }
 
     @Override
-    protected ObjectHandle makeElementHandle(LongLong ll)
-        {
+    protected ObjectHandle makeElementHandle(LongLong ll) {
         return xInt128.INSTANCE.makeHandle(ll);
-        }
+    }
    }

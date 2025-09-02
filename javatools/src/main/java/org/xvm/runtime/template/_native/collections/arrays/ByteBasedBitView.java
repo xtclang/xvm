@@ -24,134 +24,118 @@ import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.Sl
  */
 public abstract class ByteBasedBitView
         extends xRTViewToBit
-        implements BitView
-    {
-    public ByteBasedBitView(Container container, ClassStructure structure)
-        {
+        implements BitView {
+    public ByteBasedBitView(Container container, ClassStructure structure) {
         super(container, structure, false);
-        }
+    }
 
     @Override
-    public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability)
-        {
+    public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability) {
         ClassComposition clzView = getCanonicalClass();
-        if (hSource instanceof SliceHandle hSlice)
-            {
+        if (hSource instanceof SliceHandle hSlice) {
             // bytes.slice().asBitArray() -> bytes.asBitArray().slice()
             hSource = hSlice.f_hSource;
 
-            if (hSource instanceof xRTView.ViewHandle hView)
-                {
+            if (hSource instanceof xRTView.ViewHandle hView) {
                 hSource = hView.unwrapSource();
-                }
+            }
 
             DelegateHandle hView = hSource instanceof ByteArrayHandle hBytes
                     ? new ViewHandle(clzView, hBytes, hBytes.getBitCount(), mutability)
                     : xRTViewToBit.INSTANCE.createBitViewDelegate(hSource, mutability);
 
             return slice(hView, hSlice.f_ofStart*8, hSlice.m_cSize*8, false);
-            }
+        }
 
-        if (hSource instanceof xRTView.ViewHandle hView)
-            {
+        if (hSource instanceof xRTView.ViewHandle hView) {
             hSource = hView.unwrapSource();
-            }
+        }
 
         return hSource instanceof ByteArrayHandle hBytes
                     ? new ViewHandle(clzView, hBytes, hBytes.getBitCount(), mutability)
                     : xRTViewToBit.INSTANCE.createBitViewDelegate(hSource, mutability);
-        }
+    }
 
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
     protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
-                                            long ofStart, long cSize, boolean fReverse)
-        {
+                                            long ofStart, long cSize, boolean fReverse) {
         ViewHandle hView = (ViewHandle) hTarget;
 
         byte[] abBits = getBits(hView, ofStart, cSize, fReverse);
 
         return xRTBitDelegate.INSTANCE.makeHandle(abBits, cSize, mutability);
-        }
+    }
 
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn)
-        {
+    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
         ViewHandle hView = (ViewHandle) hTarget;
 
         return frame.assignValue(iReturn, xBit.makeHandle(
                 BitBasedDelegate.getBit(hView.f_hSource.m_abValue, lIndex)));
-        }
+    }
 
     @Override
     public int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
-                                    ObjectHandle hValue)
-        {
+                                    ObjectHandle hValue) {
         ViewHandle hView = (ViewHandle) hTarget;
 
         BitBasedDelegate.setBit(hView.f_hSource.m_abValue, lIndex, ((JavaLong) hValue).getValue() != 0);
         return Op.R_NEXT;
-        }
+    }
 
 
     // ----- BitView implementation ----------------------------------------------------------------
 
     @Override
-    public byte[] getBits(DelegateHandle hDelegate, long ofStart, long cBits, boolean fReverse)
-        {
+    public byte[] getBits(DelegateHandle hDelegate, long ofStart, long cBits, boolean fReverse) {
         ViewHandle hView = (ViewHandle) hDelegate;
 
         byte[] abBits = BitBasedDelegate.extractBits(hView.f_hSource.m_abValue, ofStart, cBits);
 
-        if (fReverse)
-            {
+        if (fReverse) {
             abBits = BitBasedDelegate.reverseBits(abBits, cBits);
-            }
-        return abBits;
         }
+        return abBits;
+    }
 
     @Override
-    public boolean extractBit(DelegateHandle hDelegate, long of)
-        {
+    public boolean extractBit(DelegateHandle hDelegate, long of) {
         ViewHandle hView = (ViewHandle) hDelegate;
 
         return BitBasedDelegate.getBit(hView.f_hSource.m_abValue, of);
-        }
+    }
 
     @Override
-    public void assignBit(DelegateHandle hDelegate, long of, boolean fBit)
-        {
+    public void assignBit(DelegateHandle hDelegate, long of, boolean fBit) {
         ViewHandle hView = (ViewHandle) hDelegate;
 
         BitBasedDelegate.setBit(hView.f_hSource.m_abValue, of, fBit);
-        }
+    }
 
 
     // ----- ByteView implementation ---------------------------------------------------------------
 
     @Override
-    public byte[] getBytes(DelegateHandle hDelegate, long ofStart, long cBytes, boolean fReverse)
-        {
+    public byte[] getBytes(DelegateHandle hDelegate, long ofStart, long cBytes, boolean fReverse) {
         return getBits(hDelegate, ofStart*8, cBytes*8, fReverse);
-        }
+    }
 
     @Override
-    public byte extractByte(DelegateHandle hDelegate, long of)
-        {
+    public byte extractByte(DelegateHandle hDelegate, long of) {
         ViewHandle hView = (ViewHandle) hDelegate;
 
         return hView.f_hSource.m_abValue[(int) of];
-        }
+    }
 
     @Override
-    public void assignByte(DelegateHandle hDelegate, long of, byte bValue)
-        {
+    public void assignByte(DelegateHandle hDelegate, long of, byte bValue) {
         ViewHandle hView = (ViewHandle) hDelegate;
 
         hView.f_hSource.m_abValue[(int) of] = bValue;
-        }
+    }
 
 
     // ----- handle --------------------------------------------------------------------------------
@@ -160,23 +144,20 @@ public abstract class ByteBasedBitView
      * DelegateArray<Bit> view delegate.
      */
     protected static class ViewHandle
-            extends xRTView.ViewHandle
-        {
+            extends xRTView.ViewHandle {
         protected final ByteArrayHandle f_hSource;
 
         protected ViewHandle(TypeComposition clazz, ByteArrayHandle hSource, long cSize,
-                             Mutability mutability)
-            {
+                             Mutability mutability) {
             super(clazz, mutability);
 
             f_hSource = hSource;
             m_cSize   = cSize;
-            }
+        }
 
         @Override
-        public DelegateHandle getSource()
-            {
+        public DelegateHandle getSource() {
             return f_hSource;
-            }
         }
     }
+}

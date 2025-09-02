@@ -29,52 +29,45 @@ import org.xvm.util.Severity;
  * Generic expression for something that follows the pattern "operator expression".
  */
 public abstract class PrefixExpression
-        extends Expression
-    {
+        extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
-    protected PrefixExpression(Token operator, Expression expr)
-        {
+    protected PrefixExpression(Token operator, Expression expr) {
         this.operator = operator;
         this.expr     = expr;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public boolean validateCondition(ErrorListener errs)
-        {
+    public boolean validateCondition(ErrorListener errs) {
         return operator.getId() == Token.Id.NOT
                 ? expr.validateCondition(errs)
                 : super.validateCondition(errs);
-        }
+    }
 
     @Override
-    public ConditionalConstant toConditionalConstant()
-        {
+    public ConditionalConstant toConditionalConstant() {
         return operator.getId() == Token.Id.NOT
                 ? expr.toConditionalConstant().negate()
                 : super.toConditionalConstant();
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return operator.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return expr.getEndPosition();
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -95,12 +88,10 @@ public abstract class PrefixExpression
      *         be chosen
      */
     protected TypeConstant findBestOp(Context ctx, TypeConstant typeRequired,
-                                      TypeConstant typeRight, String sMethod, String sOp, ErrorListener errs)
-        {
+                                      TypeConstant typeRight, String sMethod, String sOp, ErrorListener errs) {
         Expression exprRight = expr.validate(ctx, typeRight, errs);
 
-        if (exprRight != null)
-            {
+        if (exprRight != null) {
             MethodConstant idBest = null;
 
             expr      = exprRight;
@@ -109,165 +100,136 @@ public abstract class PrefixExpression
             TypeInfo            infoRight  = typeRight.ensureTypeInfo(errs);
             Set<MethodConstant> setOps     = infoRight.findOpMethods(sMethod, sOp, 0);
             boolean             fAmbiguous = false;
-            for (MethodConstant idMethod : setOps)
-                {
+            for (MethodConstant idMethod : setOps) {
                 if (typeRequired != null &&
-                        !isAssignable(ctx, idMethod.getSignature().getRawReturns()[0], typeRequired))
-                    {
+                        !isAssignable(ctx, idMethod.getSignature().getRawReturns()[0], typeRequired)) {
                     continue;
-                    }
+                }
 
-                if (idBest == null)
-                    {
+                if (idBest == null) {
                     idBest = idMethod;
-                    }
-                else
-                    {
+                } else {
                     MethodInfo infoMethod = infoRight.getMethodById(idMethod);
                     MethodInfo infoBest   = infoRight.getMethodById(idBest);
-                    if (infoMethod.getIdentity().equals(infoBest.getIdentity()))
-                        {
+                    if (infoMethod.getIdentity().equals(infoBest.getIdentity())) {
                         continue;
-                        }
+                    }
 
                     SignatureConstant sigNew  = infoMethod.getSignature();
                     SignatureConstant sigBest = infoBest.getSignature();
 
                     boolean fNewBetter = sigNew.isSubstitutableFor(sigBest, typeRight);
                     boolean fOldBetter = sigBest.isSubstitutableFor(sigNew, typeRight);
-                    if (fOldBetter ^ fNewBetter)
-                        {
-                        if (fNewBetter)
-                            {
+                    if (fOldBetter ^ fNewBetter) {
+                        if (fNewBetter) {
                             idBest = idMethod;
-                            }
                         }
-                    else
-                        {
+                    } else {
                         // note: theoretically could still be one better than either of these two, but
                         // for now, just assume it's an error at this point
                         fAmbiguous = true;
                         break;
-                        }
                     }
-                }
-
-            if (idBest == null)
-                {
-                if (fAmbiguous)
-                    {
-                    log(errs, Severity.ERROR, Compiler.AMBIGUOUS_OPERATOR_SIGNATURE,
-                            operator.getValueText(), typeRight.getValueString());
-                    }
-                else
-                    {
-                    log(errs, Severity.ERROR, Compiler.MISSING_OPERATOR,
-                            operator.getValueText(), typeRight.getValueString());
-                    }
-                }
-            else
-                {
-                return idBest.getSignature().getRawReturns()[0].removeAutoNarrowing();
                 }
             }
 
-        return null;
+            if (idBest == null) {
+                if (fAmbiguous) {
+                    log(errs, Severity.ERROR, Compiler.AMBIGUOUS_OPERATOR_SIGNATURE,
+                            operator.getValueText(), typeRight.getValueString());
+                } else {
+                    log(errs, Severity.ERROR, Compiler.MISSING_OPERATOR,
+                            operator.getValueText(), typeRight.getValueString());
+                }
+            } else {
+                return idBest.getSignature().getRawReturns()[0].removeAutoNarrowing();
+            }
         }
+
+        return null;
+    }
 
 
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
-    public boolean isTraceworthy()
-        {
+    public boolean isTraceworthy() {
         return false;
-        }
+    }
 
     @Override
-    public boolean isCompletable()
-        {
+    public boolean isCompletable() {
         return expr.isCompletable();
-        }
+    }
 
     @Override
-    public boolean isShortCircuiting()
-        {
+    public boolean isShortCircuiting() {
         return expr.isShortCircuiting();
-        }
+    }
 
     @Override
-    public ExprAST getExprAST(Context ctx)
-        {
+    public ExprAST getExprAST(Context ctx) {
         Operator op;
-        switch (operator.getId())
-            {
-            case NOT:
-                op = Operator.Not;
-                break;
-            case ADD:
-                return expr.getExprAST(ctx); // unary "+" is a no-op
-            case SUB:
-                op = Operator.Minus;
-                break;
-            case BIT_NOT:
-                op = Operator.Compl;
-                break;
-            case INC:
-                op = Operator.PreInc;
-                break;
-            case DEC:
-                op = Operator.PreDec;
-                break;
+        switch (operator.getId()) {
+        case NOT:
+            op = Operator.Not;
+            break;
+        case ADD:
+            return expr.getExprAST(ctx); // unary "+" is a no-op
+        case SUB:
+            op = Operator.Minus;
+            break;
+        case BIT_NOT:
+            op = Operator.Compl;
+            break;
+        case INC:
+            op = Operator.PreInc;
+            break;
+        case DEC:
+            op = Operator.PreDec;
+            break;
 
-            default:
-                throw new UnsupportedOperationException(operator.getValueText());
-            }
+        default:
+            throw new UnsupportedOperationException(operator.getValueText());
+        }
 
         return new UnaryOpExprAST(expr.getExprAST(ctx), op, getType());
-        }
+    }
 
     @Override
-    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
-        {
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg) {
         return expr.mightAffect(exprLeft, arg);
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
         boolean fPre = !(this instanceof SequentialAssignExpression exprSeq) || exprSeq.isPre();
-        if (fPre)
-            {
+        if (fPre) {
             sb.append(operator.getId().TEXT);
-            }
+        }
 
-        if (expr instanceof NameExpression)
-            {
+        if (expr instanceof NameExpression) {
             sb.append(expr);
-            }
-        else
-            {
+        } else {
             sb.append('(').append(expr).append(')');
-            }
+        }
 
-        if (!fPre)
-            {
+        if (!fPre) {
             sb.append(operator.getId().TEXT);
-            }
+        }
 
         return sb.toString();
-        }
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -276,4 +238,4 @@ public abstract class PrefixExpression
     protected Expression expr;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(PrefixExpression.class, "expr");
-    }
+}

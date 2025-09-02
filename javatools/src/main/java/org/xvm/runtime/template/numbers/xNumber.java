@@ -27,34 +27,28 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * Native Number support.
  */
 public abstract class xNumber
-        extends xConst
-    {
-    public xNumber(Container container, ClassStructure structure, boolean fInstance)
-        {
+        extends xConst {
+    public xNumber(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-        }
+    }
 
     @Override
-    public void initNative()
-        {
-        String[] NAMES =
-                {
+    public void initNative() {
+        String[] NAMES = {
                 "Int8",  "Int16",  "Int32",  "Int64",  "Int128",  "IntN",
                 "UInt8", "UInt16", "UInt32", "UInt64", "UInt128", "UIntN",
 
                 "Float16", "Float32", "Float64", "FloatN",
 
                 "Dec32", "Dec64", "Dec128", "DecN"
-                };
+            };
 
-        for (String sName : NAMES)
-            {
+        for (String sName : NAMES) {
             String sNameQ = "numbers." + sName;
-            if (!sNameQ.equals(f_sName))
-                {
+            if (!sNameQ.equals(f_sName)) {
                 markNativeMethod("to" + sName, null, new String[]{sNameQ});
-                }
             }
+        }
 
         markNativeProperty("bits");
 
@@ -62,45 +56,40 @@ public abstract class xNumber
         structure.findMethodDeep("equals",   m -> m.getParamCount() == 3).markNative();
         structure.findMethodDeep("compare",  m -> m.getParamCount() == 3).markNative();
         structure.findMethodDeep("hashCode", m -> m.getParamCount() == 2).markNative();
-        }
+    }
 
     @Override
     public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
-                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
-        {
+                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn) {
         SignatureConstant sig = constructor.getIdentityConstant().getSignature();
-        if (sig.getParamCount() == 1)
-            {
+        if (sig.getParamCount() == 1) {
             TypeConstant typeParam = sig.getRawParams()[0];
-            if (typeParam.equals(pool().typeString()))
-                {
+            if (typeParam.equals(pool().typeString())) {
                 StringHandle hText = (StringHandle) ahVar[0];
                 return constructFromString(frame, hText.getStringValue(), iReturn);
-                }
+            }
 
             TypeConstant typeElement = typeParam.getParamType(0);
-            if (typeElement.equals(pool().typeByte()))
-                {
+            if (typeElement.equals(pool().typeByte())) {
                 // construct(Byte[] bytes)
                 ArrayHandle hArray = (ArrayHandle) ahVar[0];
                 byte[]      abVal  = xByteArray.getBytes(hArray);
                 int         cBytes  = (int) hArray.m_hDelegate.m_cSize;
 
                 return constructFromBytes(frame, abVal, cBytes, iReturn);
-                }
+            }
 
-            if (typeElement.equals(pool().typeBit()))
-                {
+            if (typeElement.equals(pool().typeBit())) {
                 // construct(Bit[] bits)
                 ArrayHandle hArray = (ArrayHandle) ahVar[0];
                 byte[]      abBits = xBitArray.getBits(hArray);
                 int         cBits  = (int) hArray.m_hDelegate.m_cSize;
 
                 return constructFromBits(frame, abBits, cBits, iReturn);
-                }
             }
-        return frame.raiseException(xException.unsupported(frame));
         }
+        return frame.raiseException(xException.unsupported(frame));
+    }
 
     /**
      * Construct a number from the specified string and place it into the specified register.
@@ -119,13 +108,12 @@ public abstract class xNumber
 
     @Override
     public int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         // all numbers are consts with identity being the value
         return frame.assignValue(iReturn,
                 xBoolean.makeHandle(compareIdentity(hValue1, hValue2)));
-        }
+    }
 
     @Override
     public abstract boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2);
-    }
+}

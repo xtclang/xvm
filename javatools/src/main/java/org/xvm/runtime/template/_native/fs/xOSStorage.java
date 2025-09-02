@@ -45,16 +45,13 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
  * Native OSStorage implementation.
  */
 public class xOSStorage
-        extends xService
-    {
-    public xOSStorage(Container container, ClassStructure structure, boolean fInstance)
-        {
+        extends xService {
+    public xOSStorage(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-        }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         s_methodOnEvent = getStructure().findMethodDeep("onEvent", Utils.ANY);
 
         markNativeProperty("homeDir");
@@ -71,241 +68,196 @@ public class xOSStorage
         markNativeMethod("instance", VOID, THIS);
 
         invalidateTypeInfo();
-        }
+    }
 
     @Override
-    public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
-        {
-        if ("fileStore".equals(idProp.getName()))
-            {
+    public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn) {
+        if ("fileStore".equals(idProp.getName())) {
             // optimize out the cross-service call
             return frame.assignValue(iReturn,
                 ((ServiceHandle) hTarget).getField(frame, "fileStore"));
-            }
-
-        return super.getPropertyValue(frame, hTarget, idProp, iReturn);
         }
 
+        return super.getPropertyValue(frame, hTarget, idProp, iReturn);
+    }
+
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         ServiceHandle hStorage = (ServiceHandle) hTarget;
         ObjectHandle  hStore   = hStorage.getField(frame, "fileStore");
 
         // the handles below are cached by the Container.initResources()
-        switch (sPropName)
-            {
-            case "homeDir":
-                return xOSDirectory.INSTANCE.createHandle(frame, hStore,
-                    Paths.get(System.getProperty("user.home")), iReturn);
+        switch (sPropName) {
+        case "homeDir":
+            return xOSDirectory.INSTANCE.createHandle(frame, hStore,
+                Paths.get(System.getProperty("user.home")), iReturn);
 
-            case "curDir":
-                return xOSDirectory.INSTANCE.createHandle(frame, hStore,
-                    Paths.get(System.getProperty("user.dir")), iReturn);
+        case "curDir":
+            return xOSDirectory.INSTANCE.createHandle(frame, hStore,
+                Paths.get(System.getProperty("user.dir")), iReturn);
 
-            case "tmpDir":
-                return xOSDirectory.INSTANCE.createHandle(frame, hStore,
-                    Paths.get(System.getProperty("java.io.tmpdir")), iReturn);
-            }
-        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+        case "tmpDir":
+            return xOSDirectory.INSTANCE.createHandle(frame, hStore,
+                Paths.get(System.getProperty("java.io.tmpdir")), iReturn);
         }
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+    }
 
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle hArg, int iReturn)
-        {
+                             ObjectHandle hArg, int iReturn) {
         ServiceHandle hStorage = (ServiceHandle) hTarget;
 
-        if (frame.f_context != hStorage.f_context)
-            {
+        if (frame.f_context != hStorage.f_context) {
             return xRTFunction.makeAsyncNativeHandle(method).
                 call1(frame, hTarget, new ObjectHandle[] {hArg}, iReturn);
+        }
+
+        switch (method.getName()) {
+        case "names": {
+            StringHandle hPathString = (StringHandle) hArg;
+
+            try {
+                Path     path   = Paths.get(hPathString.getStringValue());
+                String[] asName = path.toFile().list();
+                int      cNames = asName == null ? 0 : asName.length;
+
+                return cNames == 0
+                         ? frame.assignValue(iReturn, xString.ensureEmptyArray())
+                         : frame.assignValue(iReturn, xString.makeArrayHandle(asName));
+            } catch (InvalidPathException e) {
+                return frame.raiseException(xException.ioException(frame, e.getMessage()));
             }
+        }
 
-        switch (method.getName())
-            {
-            case "names":
-                {
-                StringHandle hPathString = (StringHandle) hArg;
+        case "createFile": { // (pathString)
+            StringHandle hPathString = (StringHandle) hArg;
 
-                try
-                    {
-                    Path     path   = Paths.get(hPathString.getStringValue());
-                    String[] asName = path.toFile().list();
-                    int      cNames = asName == null ? 0 : asName.length;
-
-                    return cNames == 0
-                             ? frame.assignValue(iReturn, xString.ensureEmptyArray())
-                             : frame.assignValue(iReturn, xString.makeArrayHandle(asName));
-                    }
-                catch (InvalidPathException e)
-                    {
-                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
-                    }
-                }
-
-            case "createFile":  // (pathString)
-                {
-                StringHandle hPathString = (StringHandle) hArg;
-
-                try
-                    {
-                    Path path = Paths.get(hPathString.getStringValue());
-                    if (Files.exists(path) && !Files.isDirectory(path))
-                        {
-                        return frame.assignValue(iReturn, xBoolean.FALSE);
-                        }
-
-                    return frame.assignValue(iReturn,
-                        xBoolean.makeHandle(path.toFile().createNewFile()));
-                    }
-                catch (IOException|InvalidPathException e)
-                    {
-                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
-                    }
-                }
-
-            case "createDir":  // (pathString)
-                {
-                StringHandle hPathString = (StringHandle) hArg;
-
-                try
-                    {
-                    Path path = Paths.get(hPathString.getStringValue());
-                    if (Files.exists(path) && Files.isDirectory(path))
-                        {
-                        return frame.assignValue(iReturn, xBoolean.FALSE);
-                        }
-
-                    return frame.assignValue(iReturn,
-                        xBoolean.makeHandle(path.toFile().mkdirs()));
-                    }
-                catch (InvalidPathException e)
-                    {
-                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
-                    }
-                }
-
-            case "delete":  // (pathString)
-                {
-                StringHandle hPathString = (StringHandle) hArg;
-
+            try {
                 Path path = Paths.get(hPathString.getStringValue());
-                if (!Files.exists(path))
-                    {
+                if (Files.exists(path) && !Files.isDirectory(path)) {
                     return frame.assignValue(iReturn, xBoolean.FALSE);
-                    }
+                }
 
                 return frame.assignValue(iReturn,
-                    xBoolean.makeHandle(path.toFile().delete()));
-                }
-
-            case "watch":  // (pathStringDir)
-                {
-                StringHandle hPathStringDir = (StringHandle) hArg;
-
-                try
-                    {
-                    Path pathDir = Paths.get(hPathStringDir.getStringValue());
-                    ensureWatchDaemon(pool()).register(pathDir, hStorage);
-                    return Op.R_NEXT;
-                    }
-                catch (IOException|InvalidPathException e)
-                    {
-                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
-                    }
-                }
+                    xBoolean.makeHandle(path.toFile().createNewFile()));
+            } catch (IOException|InvalidPathException e) {
+                return frame.raiseException(xException.ioException(frame, e.getMessage()));
             }
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
+
+        case "createDir": { // (pathString)
+            StringHandle hPathString = (StringHandle) hArg;
+
+            try {
+                Path path = Paths.get(hPathString.getStringValue());
+                if (Files.exists(path) && Files.isDirectory(path)) {
+                    return frame.assignValue(iReturn, xBoolean.FALSE);
+                }
+
+                return frame.assignValue(iReturn,
+                    xBoolean.makeHandle(path.toFile().mkdirs()));
+            } catch (InvalidPathException e) {
+                return frame.raiseException(xException.ioException(frame, e.getMessage()));
+            }
+        }
+
+        case "delete": { // (pathString)
+            StringHandle hPathString = (StringHandle) hArg;
+
+            Path path = Paths.get(hPathString.getStringValue());
+            if (!Files.exists(path)) {
+                return frame.assignValue(iReturn, xBoolean.FALSE);
+            }
+
+            return frame.assignValue(iReturn,
+                xBoolean.makeHandle(path.toFile().delete()));
+        }
+
+        case "watch": { // (pathStringDir)
+            StringHandle hPathStringDir = (StringHandle) hArg;
+
+            try {
+                Path pathDir = Paths.get(hPathStringDir.getStringValue());
+                ensureWatchDaemon(pool()).register(pathDir, hStorage);
+                return Op.R_NEXT;
+            } catch (IOException|InvalidPathException e) {
+                return frame.raiseException(xException.ioException(frame, e.getMessage()));
+            }
+        }
+        }
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+    }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
+                             ObjectHandle[] ahArg, int iReturn) {
         ServiceHandle hStorage = (ServiceHandle) hTarget;
 
-        if (hStorage != null && frame.f_context != hStorage.f_context)
-            {
+        if (hStorage != null && frame.f_context != hStorage.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
             return xRTFunction.makeAsyncNativeHandle(method).call1(frame, hTarget, ahArg, iReturn);
-            }
-
-        switch (method.getName())
-            {
-            case "instance":
-                return frame.assignValue(iReturn,
-                        ((NativeContainer) f_container).ensureOSStorage(frame, null));
-            }
-        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
+
+        switch (method.getName()) {
+        case "instance":
+            return frame.assignValue(iReturn,
+                    ((NativeContainer) f_container).ensureOSStorage(frame, null));
+        }
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+    }
 
     @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                              ObjectHandle[] ahArg, int[] aiReturn)
-        {
+                              ObjectHandle[] ahArg, int[] aiReturn) {
         ServiceHandle hStorage = (ServiceHandle) hTarget;
 
-        if (frame.f_context != hStorage.f_context)
-            {
+        if (frame.f_context != hStorage.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
             return xRTFunction.makeAsyncNativeHandle(method).callN(frame, hTarget, ahArg, aiReturn);
-            }
-
-        switch (method.getName())
-            {
-            case "find":  // (store, pathString)
-                {
-                ObjectHandle hStore      = ahArg[0];
-                StringHandle hPathString = (StringHandle) ahArg[1];
-
-                try
-                    {
-                    Path path = Paths.get(hPathString.getStringValue());
-                    if (Files.exists(path))
-                        {
-                        return Utils.assignConditionalResult(frame,
-                            xOSFileNode.createHandle(frame, hStore, path, Files.isDirectory(path), Op.A_STACK),
-                            aiReturn);
-                        }
-                    return frame.assignValue(aiReturn[0], xBoolean.FALSE);
-                    }
-                catch (InvalidPathException e)
-                    {
-                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
-                    }
-                }
-            }
-        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
+
+        switch (method.getName()) {
+        case "find": { // (store, pathString)
+            ObjectHandle hStore      = ahArg[0];
+            StringHandle hPathString = (StringHandle) ahArg[1];
+
+            try {
+                Path path = Paths.get(hPathString.getStringValue());
+                if (Files.exists(path)) {
+                    return Utils.assignConditionalResult(frame,
+                        xOSFileNode.createHandle(frame, hStore, path, Files.isDirectory(path), Op.A_STACK),
+                        aiReturn);
+                }
+                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            } catch (InvalidPathException e) {
+                return frame.raiseException(xException.ioException(frame, e.getMessage()));
+            }
+        }
+        }
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
+    }
 
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    protected static synchronized WatchServiceDaemon ensureWatchDaemon(ConstantPool pool)
-        {
+    protected static synchronized WatchServiceDaemon ensureWatchDaemon(ConstantPool pool) {
         WatchServiceDaemon daemonWatch = s_daemonWatch;
-        if (daemonWatch == null)
-            {
-            try
-                {
+        if (daemonWatch == null) {
+            try {
                 daemonWatch = s_daemonWatch = new WatchServiceDaemon(pool);
                 daemonWatch.start();
-                }
-            catch (IOException e)
-                {
+            } catch (IOException e) {
                 return null;
-                }
             }
-        return daemonWatch;
         }
+        return daemonWatch;
+    }
 
     protected static class WatchServiceDaemon
-            extends Thread
-        {
+            extends Thread {
         public WatchServiceDaemon(ConstantPool pool)
-                throws IOException
-            {
+                throws IOException {
             super("WatchServiceDaemon");
 
             setDaemon(true);
@@ -313,11 +265,10 @@ public class xOSStorage
             f_pool       = pool;
             f_service    = FileSystems.getDefault().newWatchService();
             f_mapWatches = new ConcurrentHashMap<>();
-            }
+        }
 
         public void register(Path pathDir, ServiceHandle hStorage)
-                throws IOException
-            {
+                throws IOException {
             // on macOS the WatchService implementation simply polls every 10 seconds;
             // for Java 9 and above there is no way to configure that
             WatchKey key = pathDir.register(
@@ -328,38 +279,29 @@ public class xOSStorage
                 );
 
             f_mapWatches.put(key, new WatchContext(pathDir, hStorage));
-            }
+        }
 
         @Override
-        public void run()
-            {
-            try (var ignore = ConstantPool.withPool(f_pool))
-                {
-                while (true)
-                    {
+        public void run() {
+            try (var ignore = ConstantPool.withPool(f_pool)) {
+                while (true) {
                     processKey(f_service.take());
-                    }
                 }
-            catch (InterruptedException e)
-                {
+            } catch (InterruptedException e) {
                 // TODO ?
-                }
+            }
+        }
+
+        protected void processKey(WatchKey key) {
+            if (key == null) {
+                return;
             }
 
-        protected void processKey(WatchKey key)
-            {
-            if (key == null)
-                {
-                return;
-                }
-
-            for (WatchEvent event : key.pollEvents())
-                {
+            for (WatchEvent event : key.pollEvents()) {
                 int iKind = getKindId(event.kind());
-                if (iKind < 0)
-                    {
+                if (iKind < 0) {
                     continue;
-                    }
+                }
 
                 WatchContext context = f_mapWatches.get(key);
 
@@ -373,39 +315,33 @@ public class xOSStorage
                 StringHandle hPathDir  = xString.makeHandle(pathDir.toString());
                 StringHandle hPathNode = xString.makeHandle(pathAbsolute.toString());
 
-                ObjectHandle[] ahArg = new ObjectHandle[]
-                    {
+                ObjectHandle[] ahArg = new ObjectHandle[] {
                     hPathDir, hPathNode, xBoolean.TRUE, xInt64.makeHandle(iKind)
-                    };
+                };
                 context.hStorage.f_context.callLater(hfnOnEvent, ahArg);
-                }
-            key.reset();
             }
+            key.reset();
+        }
 
         /**
          * @return 0 - for CREATE, 1 - for MODIFY, 2 - for DELETE, -1 for OVERFLOW;
          *        -2 for anything else
          */
-        private int getKindId(WatchEvent.Kind kind)
-            {
-            if (kind == StandardWatchEventKinds.ENTRY_CREATE)
-                {
+        private int getKindId(WatchEvent.Kind kind) {
+            if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
                 return 0;
-                }
-            if (kind == StandardWatchEventKinds.ENTRY_MODIFY)
-                {
-                return 1;
-                }
-            if (kind == StandardWatchEventKinds.ENTRY_DELETE)
-                {
-                return 2;
-                }
-            if (kind == StandardWatchEventKinds.OVERFLOW)
-                {
-                return -1;
-                }
-            return -2;
             }
+            if (kind == StandardWatchEventKinds.ENTRY_MODIFY) {
+                return 1;
+            }
+            if (kind == StandardWatchEventKinds.ENTRY_DELETE) {
+                return 2;
+            }
+            if (kind == StandardWatchEventKinds.OVERFLOW) {
+                return -1;
+            }
+            return -2;
+        }
 
         // ----- WatchContext class --------------------------------------------------------------
 
@@ -414,11 +350,11 @@ public class xOSStorage
         private final ConstantPool                f_pool;
         private final Map<WatchKey, WatchContext> f_mapWatches;
         private final WatchService                f_service;
-        }
+    }
 
     // ----- constants -----------------------------------------------------------------------------
 
     private static MethodStructure s_methodOnEvent;
 
     private static WatchServiceDaemon s_daemonWatch;
-    }
+}

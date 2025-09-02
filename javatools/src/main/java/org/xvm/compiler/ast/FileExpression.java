@@ -37,8 +37,7 @@ import org.xvm.util.Severity;
  * program.
  */
 public class FileExpression
-        extends Expression
-    {
+        extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -49,20 +48,16 @@ public class FileExpression
      * @param resource  the resolved directory or file corresponding to the path for which this
      *                  expression exists
      */
-    public FileExpression(TypeExpression type, Token path, Object resource)
-        {
+    public FileExpression(TypeExpression type, Token path, Object resource) {
         this.type = type;
         this.path = path;
 
-        if (resource instanceof File file)
-            {
+        if (resource instanceof File file) {
             m_file = file;
-            }
-        else if (resource instanceof ResourceDir dir)
-            {
+        } else if (resource instanceof ResourceDir dir) {
             m_dir = dir;
-            }
         }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -70,68 +65,56 @@ public class FileExpression
     /**
      * @return one of "FileStore", "Directory", "File", or null (implies Directory or File)
      */
-    public String getSimpleTypeName()
-        {
-        if (type == null)
-            {
+    public String getSimpleTypeName() {
+        if (type == null) {
             return null;
-            }
+        }
 
         String sType = type.toString();
         int of = sType.indexOf('<');
         return of < 0
                 ? sType
                 : sType.substring(0, of);
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return type == null
                 ? path.getStartPosition()
                 : type.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return path.getEndPosition();
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType(Context ctx)
-        {
+    public TypeConstant getImplicitType(Context ctx) {
         ConstantPool pool  = pool();
         String       sType = getSimpleTypeName();
-        if (sType == null)
-            {
-            if (m_dir != null)
-                {
+        if (sType == null) {
+            if (m_dir != null) {
                 return pool.typeFileStore();    // or directory or path ...
-                }
+            }
 
-            if (m_file != null && m_file.exists())
-                {
+            if (m_file != null && m_file.exists()) {
                 return m_file.isDirectory()
                         ? pool.typeFileStore()  // or directory or path ...
                         : pool.typeFile();      // or path ...
-                }
+            }
 
             return pool.typePath();
-            }
-        else
-            {
-            return switch (sType)
-                {
+        } else {
+            return switch (sType) {
                 case "FileStore"   -> pool.typeFileStore();
                 case "Directory"   -> pool.typeDirectory();
                 case "File"        -> pool.typeFile();
@@ -140,78 +123,61 @@ public class FileExpression
                 case "Array<Byte>",
                      "Byte[]"      -> pool.typeByteArray();
                 default            -> throw new IllegalStateException("type=" + sType);
-                };
-            }
+            };
         }
+    }
 
-    private int calcConsumes(TypeConstant typeRequired)
-        {
+    private int calcConsumes(TypeConstant typeRequired) {
         ConstantPool pool = pool();
 
         int nConsumes = NONE;
-        if (typeRequired == null)
-            {
+        if (typeRequired == null) {
             nConsumes = ALL;
-            }
-        else
-            {
-            if (pool.typeFileStore().isA(typeRequired))
-                {
+        } else {
+            if (pool.typeFileStore().isA(typeRequired)) {
                 nConsumes |= FS;
-                }
-
-            if (pool.typeDirectory().isA(typeRequired))
-                {
-                nConsumes |= DIR;
-                }
-
-            if (pool.typeFile().isA(typeRequired))
-                {
-                nConsumes |= FILE;
-                }
-
-            if (pool.typePath().isA(typeRequired))
-                {
-                nConsumes |= PATH;
-                }
-
-            if (pool.typeString().isA(typeRequired))
-                {
-                nConsumes |= STRING;
-                }
-
-            if (pool.typeByteArray().isA(typeRequired))
-                {
-                nConsumes |= BINARY;
-                }
             }
 
-        return nConsumes;
+            if (pool.typeDirectory().isA(typeRequired)) {
+                nConsumes |= DIR;
+            }
+
+            if (pool.typeFile().isA(typeRequired)) {
+                nConsumes |= FILE;
+            }
+
+            if (pool.typePath().isA(typeRequired)) {
+                nConsumes |= PATH;
+            }
+
+            if (pool.typeString().isA(typeRequired)) {
+                nConsumes |= STRING;
+            }
+
+            if (pool.typeByteArray().isA(typeRequired)) {
+                nConsumes |= BINARY;
+            }
         }
 
-    private int calcProduces()
-        {
-        String sType = getSimpleTypeName();
-        if (sType == null)
-            {
-            if (m_dir != null)
-                {
-                return FS | DIR | PATH;
-                }
+        return nConsumes;
+    }
 
-            if (m_file != null && m_file.exists())
-                {
+    private int calcProduces() {
+        String sType = getSimpleTypeName();
+        if (sType == null) {
+            if (m_dir != null) {
+                return FS | DIR | PATH;
+            }
+
+            if (m_file != null && m_file.exists()) {
                 return m_file.isDirectory()
                         ? FS | DIR | PATH
                         : FILE | PATH | STRING | BINARY;
-                }
+            }
 
             return PATH;
-            }
-        else
-            {
-            return switch (sType)
-                {
+        } else {
+            return switch (sType) {
                 case "FileStore"   -> FS;
                 case "Directory"   -> DIR;
                 case "File"        -> FILE;
@@ -220,24 +186,22 @@ public class FileExpression
                 case "Array<Byte>" -> BINARY;
                 case "Byte[]"      -> BINARY;
                 default            -> throw new IllegalStateException("type=" + sType);
-                };
-            }
+            };
         }
+    }
 
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive,
-                           ErrorListener errs)
-        {
+                           ErrorListener errs) {
         int nConsumes = calcConsumes(typeRequired);
         int nProduces = calcProduces();
         return (nConsumes & nProduces) == NONE
                 ? TypeFit.NoFit
                 : TypeFit.Fit;
-        }
+    }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         ConstantPool pool = pool();
 
         TypeFit      fit        = TypeFit.Fit;
@@ -245,123 +209,110 @@ public class FileExpression
         Constant     constVal   = null;
         int          nConsumes  = calcConsumes(typeRequired);
         int          nProduces  = calcProduces();
-        try
-            {
-            switch (nConsumes & nProduces)
-                {
-                case NONE:
-                    if ((nProduces & FS) != 0)
-                        {
-                        typeActual = pool.typeFileStore();
-                        }
-                    if ((nProduces & DIR) != 0)
-                        {
-                        typeActual = typeActual == null
-                                ? pool.typeDirectory()
-                                : pool.ensureUnionTypeConstant(typeActual, pool.typeDirectory());
-                        }
-                    if ((nProduces & FILE) != 0)
-                        {
-                        typeActual = typeActual == null
-                                ? pool.typeFile()
-                                : pool.ensureUnionTypeConstant(typeActual, pool.typeFile());
-                        }
-                    if ((nProduces & PATH) != 0)
-                        {
-                        typeActual = typeActual == null
-                                ? pool.typePath()
-                                : pool.ensureUnionTypeConstant(typeActual, pool.typePath());
-                        }
-                    if ((nProduces & STRING) != 0)
-                        {
-                        typeActual = typeActual == null
-                                ? pool.typeString()
-                                : pool.ensureUnionTypeConstant(typeActual, pool.typeString());
-                        }
-                    if ((nProduces & BINARY) != 0)
-                        {
-                        typeActual = typeActual == null
-                                ? pool.typeByteArray()
-                                : pool.ensureUnionTypeConstant(typeActual, pool.typeByteArray());
-                        }
-                    break;
-
-                case FS:
+        try {
+            switch (nConsumes & nProduces) {
+            case NONE:
+                if ((nProduces & FS) != 0) {
                     typeActual = pool.typeFileStore();
-                    constVal   = buildFileStoreConstant();
-                    break;
-
-                case DIR:
-                    typeActual = pool.typeDirectory();
-                    constVal   = m_dir == null
-                            ? buildDirectoryConstant(pool, m_file)
-                            : buildDirectoryConstant(pool, m_dir);
-                    break;
-
-                case FILE:
-                    typeActual = pool.typeFile();
-                    constVal   = buildFileConstant(pool(), m_file);
-                    break;
-
-                case PATH:
-                    typeActual = pool.typePath();
-                    constVal   = pool.ensureLiteralConstant(Constant.Format.Path, (String) path.getValue());
-                    break;
-
-                case STRING:
-                    typeActual = pool.typeString();
-                    constVal   = pool.ensureStringConstant(new String(Handy.readFileChars(m_file)));
-                    break;
-
-                case BINARY:
-                    typeActual = pool.typeByteArray();
-                    constVal   = pool.ensureByteStringConstant(Handy.readFileBytes(m_file));
-                    break;
-
-                default:
-                    // multiple matches; ambiguous
-                    log(errs, Severity.ERROR, Compiler.AMBIGUOUS_PATH_TYPE);
-                    fit = TypeFit.NoFit;
-                    break;
                 }
+                if ((nProduces & DIR) != 0) {
+                    typeActual = typeActual == null
+                            ? pool.typeDirectory()
+                            : pool.ensureUnionTypeConstant(typeActual, pool.typeDirectory());
+                }
+                if ((nProduces & FILE) != 0) {
+                    typeActual = typeActual == null
+                            ? pool.typeFile()
+                            : pool.ensureUnionTypeConstant(typeActual, pool.typeFile());
+                }
+                if ((nProduces & PATH) != 0) {
+                    typeActual = typeActual == null
+                            ? pool.typePath()
+                            : pool.ensureUnionTypeConstant(typeActual, pool.typePath());
+                }
+                if ((nProduces & STRING) != 0) {
+                    typeActual = typeActual == null
+                            ? pool.typeString()
+                            : pool.ensureUnionTypeConstant(typeActual, pool.typeString());
+                }
+                if ((nProduces & BINARY) != 0) {
+                    typeActual = typeActual == null
+                            ? pool.typeByteArray()
+                            : pool.ensureUnionTypeConstant(typeActual, pool.typeByteArray());
+                }
+                break;
+
+            case FS:
+                typeActual = pool.typeFileStore();
+                constVal   = buildFileStoreConstant();
+                break;
+
+            case DIR:
+                typeActual = pool.typeDirectory();
+                constVal   = m_dir == null
+                        ? buildDirectoryConstant(pool, m_file)
+                        : buildDirectoryConstant(pool, m_dir);
+                break;
+
+            case FILE:
+                typeActual = pool.typeFile();
+                constVal   = buildFileConstant(pool(), m_file);
+                break;
+
+            case PATH:
+                typeActual = pool.typePath();
+                constVal   = pool.ensureLiteralConstant(Constant.Format.Path, (String) path.getValue());
+                break;
+
+            case STRING:
+                typeActual = pool.typeString();
+                constVal   = pool.ensureStringConstant(new String(Handy.readFileChars(m_file)));
+                break;
+
+            case BINARY:
+                typeActual = pool.typeByteArray();
+                constVal   = pool.ensureByteStringConstant(Handy.readFileBytes(m_file));
+                break;
+
+            default:
+                // multiple matches; ambiguous
+                log(errs, Severity.ERROR, Compiler.AMBIGUOUS_PATH_TYPE);
+                fit = TypeFit.NoFit;
+                break;
             }
-        catch (IOException e)
-            {
+        } catch (IOException e) {
             log(errs, Severity.ERROR, Compiler.FATAL_ERROR, e.getMessage());
             fit        = TypeFit.NoFit;
             typeActual = null;
             constVal   = null;
-            }
+        }
 
         return finishValidation(ctx, typeRequired, typeActual, fit, constVal, errs);
-        }
+    }
 
     @Override
-    public ExprAST getExprAST(Context ctx)
-        {
+    public ExprAST getExprAST(Context ctx) {
         assert isConstant();
         return toExprAst(toConstant());
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         String sType = getSimpleTypeName();
         String sPath = (String) path.getValue();
 
         return sType == null
                 ? sPath
                 : sType + ':' + sPath;
-        }
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -372,15 +323,14 @@ public class FileExpression
      * @throws IOException if some low level issue occurs attempting to vacuum in the directory
      */
     protected FileStoreConstant buildFileStoreConstant()
-            throws IOException
-        {
+            throws IOException {
         ConstantPool   pool     = pool();
         String         sPath    = (String) path.getValue();
         FSNodeConstant constDir = m_dir == null
                 ? buildDirectoryConstant(pool, m_file)
                 : buildDirectoryConstant(pool, m_dir);
         return pool.ensureFileStoreConstant(sPath, constDir);
-        }
+    }
 
     /**
      * Build a directory FSNodeConstant for the specified directory.
@@ -393,27 +343,24 @@ public class FileExpression
      * @throws IOException if some low level issue occurs attempting to vacuum in the directory
      */
     public static FSNodeConstant buildDirectoryConstant(ConstantPool pool, File dir)
-            throws IOException
-        {
+            throws IOException {
         File[] aFiles = dir.listFiles();
-        if (aFiles == null)
-            {
+        if (aFiles == null) {
             throw new IOException("failed to obtain contents of directory: " + dir);
-            }
+        }
 
         int              cFiles  = aFiles.length;
         FSNodeConstant[] aConsts = new FSNodeConstant[cFiles];
-        for (int i = 0; i < cFiles; ++i)
-            {
+        for (int i = 0; i < cFiles; ++i) {
             File file = aFiles[i];
             aConsts[i] = file.isDirectory()
                     ? buildDirectoryConstant(pool, file)
                     : buildFileConstant(pool, file);
-            }
+        }
 
         return pool.ensureDirectoryConstant(dir.getName(),
                                             createdTime(dir), modifiedTime(dir), aConsts);
-        }
+    }
 
     /**
      * Build a directory FSNodeConstant for the specified directory.
@@ -426,35 +373,28 @@ public class FileExpression
      * @throws IOException if some low level issue occurs attempting to vacuum in the directory
      */
     public static FSNodeConstant buildDirectoryConstant(ConstantPool pool, ResourceDir dir)
-            throws IOException
-        {
+            throws IOException {
         Set<String>      children = dir.getNames();
         int              cConsts  = children.size();
         FSNodeConstant[] aConsts  = new FSNodeConstant[cConsts];
         int              iConst   = 0;
-        for (String child : children)
-            {
+        for (String child : children) {
             assert iConst < cConsts;
             Object resource = dir.getByName(child);
-            if (resource instanceof ResourceDir subdir)
-                {
+            if (resource instanceof ResourceDir subdir) {
                 aConsts[iConst++] = buildDirectoryConstant(pool, subdir);
-                }
-            else if (resource instanceof File file)
-                {
+            } else if (resource instanceof File file) {
                 aConsts[iConst++] = buildFileConstant(pool, file);
-                }
-            else
-                {
+            } else {
                 throw new IllegalStateException("unknown resource \"" + child + "\" from " + dir +
                                                 " : " + resource);
-                }
             }
+        }
         assert iConst == cConsts;
 
         return pool.ensureDirectoryConstant(dir.getName(),
                 dir.getCreatedTime(), dir.getModifiedTime(), aConsts);
-        }
+    }
 
     /**
      * Build a file FSNodeConstant for the specified file.
@@ -467,12 +407,11 @@ public class FileExpression
      * @throws IOException if some low level issue occurs attempting to vacuum in the file
      */
     public static FSNodeConstant buildFileConstant(ConstantPool pool, File file)
-            throws IOException
-        {
+            throws IOException {
         byte[] ab = Handy.readFileBytes(file);
         return pool.ensureFileConstant(file.getName(),
                                        createdTime(file), modifiedTime(file), ab);
-        }
+    }
 
     /**
      * Determine the created date/time value for the specified directory or file.
@@ -481,18 +420,14 @@ public class FileExpression
      *
      * @return the FileTime for the date/time that the file was created
      */
-    public static FileTime createdTime(File file)
-        {
-        try
-            {
+    public static FileTime createdTime(File file) {
+        try {
             BasicFileAttributes attr = Files.readAttributes(file.toPath(), BasicFileAttributes.class);
             return attr.creationTime();
-            }
-        catch (IOException e)
-            {
+        } catch (IOException e) {
             return null;
-            }
         }
+    }
 
     /**
      * Determine the modified date/time value for the specified directory or file.
@@ -501,18 +436,14 @@ public class FileExpression
      *
      * @return the FileTime for the date/time that the file was modified
      */
-    public static FileTime modifiedTime(File file)
-        {
-        try
-            {
+    public static FileTime modifiedTime(File file) {
+        try {
             BasicFileAttributes attr = Files.readAttributes(file.toPath(), BasicFileAttributes.class);
             return attr.lastModifiedTime();
-            }
-        catch (IOException e)
-            {
+        } catch (IOException e) {
             return null;
-            }
         }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -547,4 +478,4 @@ public class FileExpression
     private ResourceDir m_dir;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(FileExpression.class, "type");
-    }
+}

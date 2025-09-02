@@ -19,75 +19,65 @@ import org.xvm.util.Severity;
  * but it's going to end in misery and compiler errors.
  */
 public class BadTypeExpression
-        extends TypeExpression
-    {
+        extends TypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public BadTypeExpression(Expression nonType)
-        {
+    public BadTypeExpression(Expression nonType) {
         this.nonType = nonType;
-        }
+    }
 
 
     // ----- TypeExpression methods ----------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
-        {
+    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs) {
         return new UnresolvedTypeConstant(pool(),
                 new UnresolvedNameConstant(pool(), nonType.toString()));
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public boolean isCompletable()
-        {
+    public boolean isCompletable() {
         return false;
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return nonType.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return nonType.getEndPosition();
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    public void resolveNames(StageMgr mgr, ErrorListener errs)
-        {
-        }
+    public void resolveNames(StageMgr mgr, ErrorListener errs) {
+    }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, nonType.toString());
         return null;
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return "/* NOT A TYPE!!! */ " + nonType;
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -95,4 +85,4 @@ public class BadTypeExpression
     protected Expression nonType;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(BadTypeExpression.class, "nonType");
-    }
+}

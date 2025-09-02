@@ -67,58 +67,50 @@ import org.xvm.runtime.template._native.reflect.xRTFunction;
  * Native implementation of the RTConnector.x service.
  */
 public class xRTConnector
-        extends xService
-    {
+        extends xService {
     public static xRTConnector INSTANCE;
 
-    public xRTConnector(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTConnector(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
             s_sAgent = "Mozilla/5.0 (compatible; Ecstasy/"
                        + structure.getFileStructure().getModule().getVersionString()
                        + ')' ;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         markNativeMethod("getDefaultHeaders", null, null);
         markNativeMethod("sendRequest", null, null);
 
         invalidateTypeInfo();
-        }
+    }
 
 
     // ----- native implementations ----------------------------------------------------------------
 
     @Override
-    public TypeConstant getCanonicalType()
-        {
+    public TypeConstant getCanonicalType() {
         TypeConstant type = m_typeCanonical;
-        if (type == null)
-            {
+        if (type == null) {
             ConstantPool  pool = pool();
             ClassConstant idClient = pool.ensureClassConstant(
                     pool.ensureModuleConstant("web.xtclang.org"), "Client");
             m_typeCanonical = type = pool.ensureTerminalTypeConstant(
                     pool.ensureClassConstant(idClient, "Connector"));
-            }
-        return type;
         }
+        return type;
+    }
 
     /**
      * Injection support method.
      */
-    public ObjectHandle ensureConnector(Frame frame, ObjectHandle hOpts)
-        {
+    public ObjectHandle ensureConnector(Frame frame, ObjectHandle hOpts) {
         ServiceContext context = f_container.createServiceContext("Connector");
-        try
-            {
+        try {
             CookieHandler cookieHandler = createCookieHandler();
             SSLContext    sslContext    = createSSLContext();
 
@@ -126,50 +118,44 @@ public class xRTConnector
                                             context, cookieHandler, sslContext);
             context.setService(hConnector);
             return hConnector;
-            }
-        catch (GeneralSecurityException e)
-            {
+        } catch (GeneralSecurityException e) {
             return xException.makeObscure(frame, e.getMessage());
-            }
         }
+    }
 
     @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                              ObjectHandle[] ahArg, int[] aiReturn)
-        {
-        switch (method.getName())
-            {
-            case "getDefaultHeaders":
-                return invokeGetDefaultHeaders(frame, aiReturn);
+                              ObjectHandle[] ahArg, int[] aiReturn) {
+        switch (method.getName()) {
+        case "getDefaultHeaders":
+            return invokeGetDefaultHeaders(frame, aiReturn);
 
-            case "sendRequest":
-                {
-                ConnectorHandle hConnector = (ConnectorHandle) hTarget;
-                return frame.f_context == hConnector.f_context
-                        ? invokeSendRequest(frame, hConnector, (StringHandle) ahArg[0],
-                            (StringHandle) ahArg[1], (ArrayHandle) ahArg[2],
-                            (ArrayHandle) ahArg[3], (ArrayHandle) ahArg[4], aiReturn)
-                        : xRTFunction.makeAsyncNativeHandle(method).
-                            callN(frame, hConnector, ahArg, aiReturn);
-                }
-            }
+        case "sendRequest": {
+            ConnectorHandle hConnector = (ConnectorHandle) hTarget;
+            return frame.f_context == hConnector.f_context
+                    ? invokeSendRequest(frame, hConnector, (StringHandle) ahArg[0],
+                        (StringHandle) ahArg[1], (ArrayHandle) ahArg[2],
+                        (ArrayHandle) ahArg[3], (ArrayHandle) ahArg[4], aiReturn)
+                    : xRTFunction.makeAsyncNativeHandle(method).
+                        callN(frame, hConnector, ahArg, aiReturn);
+        }
+        }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
-        }
+    }
 
     /**
      * Implementation of
      *  "(String[] defaultHeaderNames, String[] defaultHeaderValues) getDefaultHeaders()".
      */
-    private int invokeGetDefaultHeaders(Frame frame, int[] aiReturn)
-        {
+    private int invokeGetDefaultHeaders(Frame frame, int[] aiReturn) {
         // REVIEW: should we allow them to specify default headers in the injection definition?
 
         ArrayHandle hNames  = xString.makeArrayHandle(new String[] {"User-Agent"});
         ArrayHandle hValues = xString.makeArrayHandle(new String[] {s_sAgent});
 
         return frame.assignValues(aiReturn, hNames, hValues);
-        }
+    }
 
     /**
      * Implementation of
@@ -178,14 +164,12 @@ public class xRTConnector
      */
     private int invokeSendRequest(Frame frame, ConnectorHandle hConn, StringHandle hMethod,
                                   StringHandle hUrl, ArrayHandle hHeaderNames, ArrayHandle hHeaderValues,
-                                  ArrayHandle hBytes, int[] aiReturn)
-        {
+                                  ArrayHandle hBytes, int[] aiReturn) {
         StringArrayHandle haNames  = (StringArrayHandle) hHeaderNames.m_hDelegate;
         StringArrayHandle haValues = (StringArrayHandle) hHeaderValues.m_hDelegate;
         ByteArrayHandle   haBytes  = (ByteArrayHandle)   hBytes.m_hDelegate;
 
-        try
-            {
+        try {
             long ldtTimeout     = frame.f_fiber.getTimeoutStamp();
             long cTimeoutMillis = ldtTimeout > 0
                     ? Math.max(1, ldtTimeout - frame.f_context.f_container.currentTimeMillis())
@@ -194,15 +178,13 @@ public class xRTConnector
             HttpRequest.Builder builderRequest =
                     HttpRequest.newBuilder(new URI(hUrl.getStringValue()));
 
-            for (int i = 0, c = (int) haNames.m_cSize; i < c; i++)
-                {
+            for (int i = 0, c = (int) haNames.m_cSize; i < c; i++) {
                 builderRequest.header(haNames.get(i), haValues.get(i));
-                }
+            }
 
-            if (cTimeoutMillis > 0)
-                {
+            if (cTimeoutMillis > 0) {
                 builderRequest.timeout(Duration.ofMillis(cTimeoutMillis));
-                }
+            }
 
             byte[] abData = haBytes.m_cSize > 0
                     ? ((ByteBasedDelegate) haBytes.getTemplate()).
@@ -220,31 +202,23 @@ public class xRTConnector
 
             CompletableFuture<HttpResponse<byte[]>> cfSend = frame.f_context.f_container.scheduleIO(task);
 
-            Frame.Continuation continuation = frameCaller ->
-                {
-                try
-                    {
+            Frame.Continuation continuation = frameCaller -> {
+                try {
                     return processResponse(frameCaller, cfSend.get(), aiReturn);
-                    }
-                catch (Throwable e)
-                    {
+                } catch (Throwable e) {
                     return frameCaller.raiseException(
                         xException.ioException(frameCaller, e.getMessage()));
-                    }
-                };
+                }
+            };
 
             return frame.waitForIO(cfSend, continuation);
-            }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             return frame.raiseException(xException.ioException(frame, e.getMessage()));
-            }
         }
+    }
 
-    private int processResponse(Frame frame, HttpResponse<byte[]> response, int[] aiReturn)
-        {
-        try
-            {
+    private int processResponse(Frame frame, HttpResponse<byte[]> response, int[] aiReturn) {
+        try {
             int                       nResponseCode      = response.statusCode();
             Map<String, List<String>> mapResponseHeaders = response.headers().map();
 
@@ -253,26 +227,23 @@ public class xRTConnector
             List<String> listResponseValues = new ArrayList<>(cResponseHeaders);
 
             Iterator<Map.Entry<String, List<String>>> it = mapResponseHeaders.entrySet().iterator();
-            for (int i = 0; i < cResponseHeaders; i++)
-                {
+            for (int i = 0; i < cResponseHeaders; i++) {
                 Map.Entry<String, List<String>> entry = it.next();
 
                 String sName = entry.getKey();
-                if (sName == null)
-                    {
+                if (sName == null) {
                     // this appears to be the HttpStatus entry
                     continue;
-                    }
+                }
 
                 List<String> listValue = entry.getValue();
-                for (String sValue : listValue)
-                    {
+                for (String sValue : listValue) {
                     assert sValue != null;
 
                     listResponseNames.add(sName);
                     listResponseValues.add(sValue);
-                    }
                 }
+            }
 
             String[] asResponseNames  = listResponseNames.toArray(Utils.NO_NAMES);
             String[] asResponseValues = listResponseValues.toArray(Utils.NO_NAMES);
@@ -289,44 +260,37 @@ public class xRTConnector
                     xString.makeArrayHandle(asResponseValues),
                     hResponseBytes
                     );
-            }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             return frame.raiseException(xException.ioException(frame, e.getMessage()));
-            }
         }
+    }
 
-    private static CookieHandler createCookieHandler()
-        {
+    private static CookieHandler createCookieHandler() {
         return new CookieManager(null, CookiePolicy.ACCEPT_ALL);
-        }
+    }
 
     private static SSLContext createSSLContext()
-            throws GeneralSecurityException
-        {
+            throws GeneralSecurityException {
         // allow self-signed certificates
-        TrustManager[] aTrustMgr = new TrustManager[]
-            {
-            new X509TrustManager()
-                {
+        TrustManager[] aTrustMgr = new TrustManager[] {
+            new X509TrustManager() {
                 @Override
-                public X509Certificate[] getAcceptedIssuers()
-                    {
+                public X509Certificate[] getAcceptedIssuers() {
                     return null;
-                    }
+                }
 
                 @Override
                 public void checkClientTrusted(X509Certificate[] chain, String authType) {}
 
                 @Override
                 public void checkServerTrusted(X509Certificate[] chain, String authType) {}
-                }
-            };
+            }
+        };
 
         SSLContext context = SSLContext.getInstance("TLS");
         context.init(null, aTrustMgr, new SecureRandom());
         return context;
-        }
+    }
 
 
     // ----- ObjectHandles -------------------------------------------------------------------------
@@ -335,16 +299,14 @@ public class xRTConnector
      * A {@link ServiceHandle} for the RTConnector service.
      */
     protected static class ConnectorHandle
-            extends ServiceHandle
-        {
+            extends ServiceHandle {
         protected ConnectorHandle(TypeComposition clazz, ServiceContext context,
-                                  CookieHandler cookieHandler, SSLContext sslContext)
-            {
+                                  CookieHandler cookieHandler, SSLContext sslContext) {
             super(clazz, context);
 
             f_cookieHandler = cookieHandler;
             f_sslContext    = sslContext;
-            }
+        }
 
         /**
          * Choose a client with the connection timeout approximated to the request timeout value.
@@ -352,45 +314,38 @@ public class xRTConnector
          * Note: we need to use different pools for different connection to avoid cross-pollination
          *       of cookies.
          */
-        protected HttpClient selectClient(long cTimeoutMillis)
-            {
+        protected HttpClient selectClient(long cTimeoutMillis) {
             Duration timeout;
             int      nSlot;
-            if (cTimeoutMillis == 0)
-                {
+            if (cTimeoutMillis == 0) {
                 timeout = null;
                 nSlot   = 0;
-                }
-            else
-                {
+            } else {
                 int cApprox = Integer.highestOneBit((int) cTimeoutMillis/1000);
 
                 timeout = Duration.ofSeconds(cApprox);
                 nSlot   = Math.min(f_clientPool.length - 1,
                                    1 + Integer.numberOfTrailingZeros(cApprox));
-                }
+            }
 
             HttpClient client = f_clientPool[nSlot];
-            if (client == null)
-                {
+            if (client == null) {
                 HttpClient.Builder builderClient = HttpClient.newBuilder()
                     .followRedirects(HttpClient.Redirect.NEVER) // we process redirect manually
                     .cookieHandler(f_cookieHandler)
                     .sslContext(f_sslContext);
-                if (timeout != null)
-                    {
+                if (timeout != null) {
                     builderClient.connectTimeout(timeout);
-                    }
-                f_clientPool[nSlot] = client = builderClient.build();
                 }
-            return client;
+                f_clientPool[nSlot] = client = builderClient.build();
             }
+            return client;
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return "Connector";
-            }
+        }
 
         /**
          * The {@link CookieHandler} used by this Connector.
@@ -417,7 +372,7 @@ public class xRTConnector
          * TODO: how to close the HttpClients when ConnectionHandle is GC'd?
          */
         private final HttpClient[] f_clientPool = new HttpClient[5];
-        }
+    }
 
 
     // ----- data fields ---------------------------------------------------------------------------
@@ -431,4 +386,4 @@ public class xRTConnector
      * Cached canonical type.
      */
     private TypeConstant m_typeCanonical;
-    }
+}

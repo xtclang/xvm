@@ -81,23 +81,19 @@ import org.xvm.runtime.template._native.collections.arrays.xRTBooleanDelegate;
  * Native implementation of the xRTKeyStore.x service.
  */
 public class xRTKeyStore
-        extends xService
-    {
+        extends xService {
     public static xRTKeyStore INSTANCE;
 
-    public xRTKeyStore(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTKeyStore(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         markNativeProperty("aliases");
 
         markNativeMethod("entryType"         , STRING, null);
@@ -110,29 +106,25 @@ public class xRTKeyStore
                 pool.ensureModuleConstant("crypto.xtclang.org"), "CryptoPassword").getType();
 
         invalidateTypeInfo();
-        }
+    }
 
     @Override
-    public TypeConstant getCanonicalType()
-        {
+    public TypeConstant getCanonicalType() {
         TypeConstant type = m_typeCanonical;
-        if (type == null)
-            {
+        if (type == null) {
             ConstantPool pool = pool();
             m_typeCanonical = type = pool.ensureTerminalTypeConstant(
                 pool.ensureClassConstant(pool.ensureModuleConstant("crypto.xtclang.org"),
                     "KeyStore"));
-            }
-        return type;
         }
+        return type;
+    }
 
     /**
      * Injection support method.
      */
-    public ObjectHandle ensureKeyStore(Frame frame, ObjectHandle hOpts)
-        {
-        try
-            {
+    public ObjectHandle ensureKeyStore(Frame frame, ObjectHandle hOpts) {
+        try {
             GenericHandle hInfo    = (GenericHandle) hOpts;
             ArrayHandle   hContent = (ArrayHandle) hInfo.getField(frame, "content");
             StringHandle  hPwd     = getPassword(frame, hInfo.getField(frame, "password"));
@@ -149,38 +141,32 @@ public class xRTKeyStore
             keyManagerFactory.init(keyStore, achPwd);
 
             X509KeyManager keyManager = null;
-            for (KeyManager mgr : keyManagerFactory.getKeyManagers())
-                {
-                if (mgr instanceof X509KeyManager m)
-                    {
+            for (KeyManager mgr : keyManagerFactory.getKeyManagers()) {
+                if (mgr instanceof X509KeyManager m) {
                     keyManager = m;
                     break;
-                    }
                 }
-            if (keyManager == null)
-                {
+            }
+            if (keyManager == null) {
                 return new DeferredCallHandle(
                         xException.makeHandle(frame, "No X509KeyManager available"));
-                }
+            }
 
             TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance("SunX509");
             trustManagerFactory.init(keyStore);
 
             X509TrustManager trustManager = null;
-            for (TrustManager mgr : trustManagerFactory.getTrustManagers())
-                {
-                if (mgr instanceof X509TrustManager m)
-                    {
+            for (TrustManager mgr : trustManagerFactory.getTrustManagers()) {
+                if (mgr instanceof X509TrustManager m) {
                     trustManager = m;
                     break;
-                    }
                 }
+            }
 
-            if (trustManager == null)
-                {
+            if (trustManager == null) {
                 return new DeferredCallHandle(
                         xException.makeHandle(frame, "No X509TrustManager available"));
-                }
+            }
 
             ServiceContext  context  = f_container.createServiceContext("KeyStore");
             TypeComposition clzStore = getCanonicalClass(f_container);
@@ -194,93 +180,78 @@ public class xRTKeyStore
             // this is a bit of a hack; since the injected service is constructed natively, we're
             // calling the default constructor as a regular method, skipping initializers/finalizers
             CallChain chain = clzStore.getMethodCallChain(ctor.getIdentityConstant().getSignature());
-            switch (invoke1(frame, chain, hService, Utils.OBJECTS_NONE, Op.A_IGNORE))
-                {
-                case Op.R_NEXT:
-                    return hService;
+            switch (invoke1(frame, chain, hService, Utils.OBJECTS_NONE, Op.A_IGNORE)) {
+            case Op.R_NEXT:
+                return hService;
 
-                case Op.R_CALL:
-                    Frame frameNext = frame.m_frameNext;
-                    frameNext.addContinuation(frameCaller -> frameCaller.pushStack(hService));
-                    return new DeferredCallHandle(frameNext);
+            case Op.R_CALL:
+                Frame frameNext = frame.m_frameNext;
+                frameNext.addContinuation(frameCaller -> frameCaller.pushStack(hService));
+                return new DeferredCallHandle(frameNext);
 
-                default:
-                    throw new IllegalStateException();
-                }
+            default:
+                throw new IllegalStateException();
             }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             return new DeferredCallHandle(
                     xException.makeObscure(frame, "Illegal KeyStore arguments: " + e.getMessage()));
-            }
         }
+    }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
-        switch (sPropName)
-            {
-            case "aliases":
-                {
-                KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
+        switch (sPropName) {
+        case "aliases": {
+            KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
 
-                try
-                    {
-                    ArrayList<String> listNames = Collections.list(hStore.f_keyStore.aliases());
-                    return frame.assignValue(iReturn,
-                            xString.makeArrayHandle(listNames.toArray(Utils.NO_NAMES)));
-                    }
-                catch (KeyStoreException e)
-                    {
-                    return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
-                    }
-                }
+            try {
+                ArrayList<String> listNames = Collections.list(hStore.f_keyStore.aliases());
+                return frame.assignValue(iReturn,
+                        xString.makeArrayHandle(listNames.toArray(Utils.NO_NAMES)));
+            } catch (KeyStoreException e) {
+                return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
             }
-        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
+        }
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+    }
 
     @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                              ObjectHandle[] ahArg, int[] aiReturn)
-        {
-        switch (method.getName())
-            {
-            case "entryType":
-                {
-                KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
-                StringHandle   hName  = (StringHandle) ahArg[0];
+                              ObjectHandle[] ahArg, int[] aiReturn) {
+        switch (method.getName()) {
+        case "entryType": {
+            KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
+            StringHandle   hName  = (StringHandle) ahArg[0];
 
-                return invokeEntryType(frame, hStore, hName, aiReturn);
-                }
+            return invokeEntryType(frame, hStore, hName, aiReturn);
+        }
 
-            case "getCertificateInfo":
-                {
-                KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
-                StringHandle   hName  = (StringHandle)   ahArg[0];
-                JavaLong       hIndex = (JavaLong)       ahArg[1];
+        case "getCertificateInfo": {
+            KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
+            StringHandle   hName  = (StringHandle)   ahArg[0];
+            JavaLong       hIndex = (JavaLong)       ahArg[1];
 
-                return invokeGetCertificateInfo(frame, hStore, hName, hIndex, aiReturn);
-                }
+            return invokeGetCertificateInfo(frame, hStore, hName, hIndex, aiReturn);
+        }
 
-            case "getKeyInfo":
-                {
-                KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
-                StringHandle   hName  = (StringHandle) ahArg[0];
+        case "getKeyInfo": {
+            KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
+            StringHandle   hName  = (StringHandle) ahArg[0];
 
-                return invokeGetKeyInfo(frame, hStore, hName, aiReturn);
-                }
+            return invokeGetKeyInfo(frame, hStore, hName, aiReturn);
+        }
 
-            case "getPasswordInfo":
-                {
-                KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
-                StringHandle   hName  = (StringHandle) ahArg[0];
+        case "getPasswordInfo": {
+            KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
+            StringHandle   hName  = (StringHandle) ahArg[0];
 
-                return invokeGetPasswordInfo(frame, hStore, hName, aiReturn);
-                }
-            }
+            return invokeGetPasswordInfo(frame, hStore, hName, aiReturn);
+        }
+        }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
-        }
+    }
 
     /**
      * Native implementation of
@@ -305,31 +276,26 @@ public class xRTKeyStore
      *      getCertificateInfo(String name, Int index)"
      */
     private int invokeGetCertificateInfo(Frame frame, KeyStoreHandle hStore, StringHandle hName,
-                                         JavaLong hIndex, int[] aiReturn)
-        {
+                                         JavaLong hIndex, int[] aiReturn) {
         String sName  = hName.getStringValue();
         int    nIndex = (int) hIndex.getValue();
-        try
-            {
+        try {
             Certificate[] aCert = hStore.f_keyStore.getCertificateChain(sName);
-            if (aCert == null || aCert.length <= nIndex)
-                {
+            if (aCert == null || aCert.length <= nIndex) {
                 return frame.assignValue(aiReturn[0], xBoolean.FALSE);
-                }
+            }
 
-            if (!(aCert[nIndex] instanceof X509Certificate cert509))
-                {
+            if (!(aCert[nIndex] instanceof X509Certificate cert509)) {
                 return frame.raiseException(xException.makeHandle(frame,
                             "Unsupported standard: " + aCert[nIndex].getType()));
-                }
+            }
 
             Date dateNotBefore = cert509.getNotBefore();
             Date dateNotAfter  = cert509.getNotAfter();
-            if (dateNotBefore == null || dateNotAfter == null)
-                {
+            if (dateNotBefore == null || dateNotAfter == null) {
                 // invalid certificate
                 return frame.assignValue(aiReturn[0], xBoolean.FALSE);
-                }
+            }
 
             // issuer
             String sIssuer = cert509.getIssuerX500Principal().toString();
@@ -342,10 +308,9 @@ public class xRTKeyStore
 
             // keyUsage
             boolean[] afUsage = cert509.getKeyUsage();
-            if (afUsage == null)
-                {
+            if (afUsage == null) {
                 afUsage = new boolean[0];
-                }
+            }
             int    cUsage  = afUsage.length;
             byte[] abUsage = xRTBooleanDelegate.toBytes(afUsage);
 
@@ -380,63 +345,52 @@ public class xRTKeyStore
             list.add(xByteArray.makeByteArrayHandle(abDer, Mutability.Constant));
 
             return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
-            }
-        catch (GeneralSecurityException e)
-            {
+        } catch (GeneralSecurityException e) {
             return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
-            }
         }
+    }
 
-    private static void addDate(Date date, List<ObjectHandle> list)
-        {
+    private static void addDate(Date date, List<ObjectHandle> list) {
         Calendar cal = Calendar.getInstance();
         cal.setTime(date);
 
         list.add(xInt64.makeHandle(cal.get(Calendar.YEAR)));
         list.add(xInt64.makeHandle(cal.get(Calendar.MONTH) + 1));
         list.add(xInt64.makeHandle(cal.get(Calendar.DAY_OF_MONTH)));
-        }
+    }
 
     private static int getPublicKeyLength(PublicKey puk)
-            throws InvalidKeyException
-        {
-        if (puk instanceof RSAPublicKey rsaKey)
-            {
+            throws InvalidKeyException {
+        if (puk instanceof RSAPublicKey rsaKey) {
             return rsaKey.getModulus().bitLength();
-            }
+        }
 
-        if (puk instanceof DSAPublicKey dsaKey)
-            {
+        if (puk instanceof DSAPublicKey dsaKey) {
             DSAParams params = dsaKey.getParams();
             return params == null
                 ? dsaKey.getY().bitLength()
                 : params.getP().bitLength();
-            }
+        }
 
-        if (puk instanceof ECPublicKey ecKey)
-            {
+        if (puk instanceof ECPublicKey ecKey) {
             ECParameterSpec spec = ecKey.getParams();
             return spec == null ? 0 :spec.getOrder().bitLength();
-            }
+        }
 
         throw new InvalidKeyException("Unsupported key: " + puk);
-        }
+    }
 
     /**
      * Native implementation of "conditional Int isKey(String name)".
      */
     private int invokeEntryType(Frame frame, KeyStoreHandle hStore, StringHandle hName,
-                                int[] aiReturn)
-        {
+                                int[] aiReturn) {
         KeyStore keyStore = hStore.f_keyStore;
         String   sName    = hName.getStringValue();
-        try
-            {
-            if (keyStore.isKeyEntry(sName))
-                {
+        try {
+            if (keyStore.isKeyEntry(sName)) {
                 int nType;
-                if (keyStore.getCertificate(sName) == null)
-                    {
+                if (keyStore.getCertificate(sName) == null) {
                     Key key = hStore.getKey(sName);
 
                     assert key != null;
@@ -445,24 +399,19 @@ public class xRTKeyStore
                     nType = key instanceof PBEKey || "PBEKey".equals(key.getClass().getSimpleName())
                             ? 3  // Password
                             : 1; // Secret
-                    }
-                else
-                    {
+                } else {
                     nType = 1; // Pair
-                    }
+                }
                 return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(nType));
-                }
-            if (keyStore.isCertificateEntry(sName))
-                {
+            }
+            if (keyStore.isCertificateEntry(sName)) {
                 return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(1)); // Certificate
-                }
+            }
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
-            }
-        catch (GeneralSecurityException e)
-            {
+        } catch (GeneralSecurityException e) {
             return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
-            }
         }
+    }
 
     /**
      * Native implementation of
@@ -475,29 +424,24 @@ public class xRTKeyStore
      *         getKeyInfo(String name)"
      */
     private int invokeGetKeyInfo(Frame frame, KeyStoreHandle hStore, StringHandle hName,
-                                 int[] aiReturn)
-        {
+                                 int[] aiReturn) {
         KeyStore keyStore = hStore.f_keyStore;
         String   sName    = hName.getStringValue();
-        try
-            {
-            if (keyStore.isKeyEntry(sName))
-                {
+        try {
+            if (keyStore.isKeyEntry(sName)) {
                 Key key = hStore.getKey(sName);
-                if (key == null)
-                    {
+                if (key == null) {
                     return frame.assignValue(aiReturn[0], xBoolean.FALSE);
-                    }
+                }
 
                 String      sAlgorithm = key.getAlgorithm();
                 PublicKey   publicKey  = null;
                 byte[]      abPublic   = null;
                 Certificate cert       = keyStore.getCertificate(sName);
-                if (cert != null)
-                    {
+                if (cert != null) {
                     publicKey = cert.getPublicKey();
                     abPublic  = publicKey.getEncoded();
-                    }
+                }
 
                 int cKeyBits = key instanceof RSAPrivateKey privateKey
                                         ? privateKey.getModulus().bitLength()
@@ -508,56 +452,45 @@ public class xRTKeyStore
                 list.add(xString.makeHandle(sAlgorithm));
                 list.add(xInt64.makeHandle(cKeyBits >>> 3));
                 list.add(new SecretHandle(key));
-                if (publicKey == null)
-                    {
+                if (publicKey == null) {
                     list.add(xNullable.NULL);
                     list.add(xArray.ensureEmptyByteArray());
-                    }
-                else
-                    {
+                } else {
                     list.add(new SecretHandle(publicKey));
                     list.add(xArray.makeByteArrayHandle(abPublic, Mutability.Constant));
-                    }
-                return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
                 }
+                return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
+            }
 
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
-            }
-        catch (GeneralSecurityException e)
-            {
+        } catch (GeneralSecurityException e) {
             return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
-            }
         }
+    }
 
     /**
      * Native implementation of "conditional String getPasswordInfo(String name)".
      */
     private int invokeGetPasswordInfo(Frame frame, KeyStoreHandle hStore, StringHandle hName,
-                                      int[] aiReturn)
-        {
+                                      int[] aiReturn) {
         String sName = hName.getStringValue();
-        try
-            {
+        try {
             Key key = hStore.getKey(sName);
-            if (key instanceof PBEKey keyPwd)
-                {
+            if (key instanceof PBEKey keyPwd) {
                 return frame.assignValues(aiReturn,
                         xBoolean.TRUE, xString.makeHandle(keyPwd.getPassword()));
-                }
+            }
 
             // unfortunately com.sun.crypto.provider.PBEKey is not public
-            if ("PBEKey".equals(key.getClass().getSimpleName()))
-                {
+            if ("PBEKey".equals(key.getClass().getSimpleName())) {
                 return frame.assignValues(aiReturn, xBoolean.TRUE,
                         xString.makeHandle(new String(key.getEncoded(), StandardCharsets.UTF_8)));
-                }
+            }
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
-            }
-        catch (GeneralSecurityException e)
-            {
+        } catch (GeneralSecurityException e) {
             return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
-            }
         }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -567,21 +500,18 @@ public class xRTKeyStore
      *
      * Note: this method currently does not support any custom "CryptoPassword" implementations.
      */
-    public static StringHandle getPassword(Frame frame, ObjectHandle hPwd)
-        {
-        if (hPwd instanceof StringHandle hString)
-            {
+    public static StringHandle getPassword(Frame frame, ObjectHandle hPwd) {
+        if (hPwd instanceof StringHandle hString) {
             return hString;
-            }
+        }
 
         hPwd = hPwd.revealAs(frame, s_typeNamedPassword);
-        if (hPwd instanceof GenericHandle hNamed)
-            {
+        if (hPwd instanceof GenericHandle hNamed) {
             return (StringHandle) hNamed.getField(null, "password");
-            }
+        }
         // this is basically an assertion; the result is clearly unusable
         return xString.EMPTY_STRING;
-        }
+    }
 
 
     // ----- handle --------------------------------------------------------------------------------
@@ -590,24 +520,21 @@ public class xRTKeyStore
      * Native handle holding the KeyStore data.
      */
     public static class KeyStoreHandle
-                extends ServiceHandle
-        {
+                extends ServiceHandle {
         public KeyStoreHandle(TypeComposition clz, ServiceContext ctx, KeyStore keyStore, char[] achPwd,
-                              X509KeyManager keyManager, X509TrustManager trustManager)
-            {
+                              X509KeyManager keyManager, X509TrustManager trustManager) {
             super(clz, ctx);
 
             f_keyStore     = keyStore;
             f_achPwd       = achPwd;
             f_keyManager   = keyManager;
             f_trustManager = trustManager;
-            }
+        }
 
         public Key getKey(String sName)
-                throws GeneralSecurityException
-            {
+                throws GeneralSecurityException {
             return f_keyStore.getKey(sName, f_achPwd);
-            }
+        }
 
         /**
          * The wrapped {@link KeyStore}.
@@ -628,7 +555,7 @@ public class xRTKeyStore
          * The underlying {@link TrustManager}.
          */
         public final X509TrustManager f_trustManager;
-        }
+    }
 
 
     // ----- data fields and constants -------------------------------------------------------------
@@ -642,4 +569,4 @@ public class xRTKeyStore
      * Cached NamedPassword type.
      */
     private static TypeConstant s_typeNamedPassword;
-    }
+}

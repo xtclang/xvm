@@ -19,52 +19,44 @@ import org.xvm.runtime.template.numbers.xInt16;
  */
 public class xRTInt16Delegate
         extends LongBasedDelegate
-        implements ByteView
-    {
+        implements ByteView {
     public static xRTInt16Delegate INSTANCE;
 
-    public xRTInt16Delegate(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTInt16Delegate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, 16, true);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
-        }
+    public void initNative() {
+    }
 
     @Override
-    public TypeConstant getCanonicalType()
-        {
+    public TypeConstant getCanonicalType() {
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
                 pool.typeInt16());
-        }
+    }
 
     @Override
-    protected ObjectHandle makeElementHandle(long lValue)
-        {
+    protected ObjectHandle makeElementHandle(long lValue) {
         return xInt16.INSTANCE.makeJavaLong(lValue);
-        }
+    }
 
     /**
      * Pack an array of short values into a long array and create a DelegateHandle.
      */
-    public DelegateHandle packHandle(short[] anValue, Mutability mutability)
-        {
+    public DelegateHandle packHandle(short[] anValue, Mutability mutability) {
         int    cValues  = anValue.length;
         long[] alPacked = new long[storage(cValues)];
 
-        for (int i = 0; i < cValues; i++)
-            {
+        for (int i = 0; i < cValues; i++) {
             setValue(alPacked, i, anValue[i]);
-            }
-        return makeHandle(alPacked, cValues, mutability);
         }
+        return makeHandle(alPacked, cValues, mutability);
     }
+}

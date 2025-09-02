@@ -46,23 +46,19 @@ import org.xvm.runtime.template.numbers.xUInt64;
  * An injectable "Random" number generator.
  */
 public class xRTRandom
-        extends xService
-    {
+        extends xService {
     public static xRTRandom INSTANCE;
 
-    public xRTRandom(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTRandom(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         String[] BIT       = new String[] {"numbers.Bit"};
         String[] BITARRAY  = new String[] {"immutable collections.Array<numbers.Bit>"};
         String[] BYTEARRAY = new String[] {"immutable collections.Array<numbers.UInt8>"};
@@ -95,227 +91,196 @@ public class xRTRandom
         markNativeMethod("float64", VOID     , FLOAT64  );
 
         invalidateTypeInfo();
-        }
+    }
 
     @Override
-    public TypeConstant getCanonicalType()
-        {
+    public TypeConstant getCanonicalType() {
         return pool().ensureEcstasyTypeConstant("numbers.Random");
-        }
+    }
 
     @Override
     public int invokeNative1(Frame frame, MethodStructure method,
-                             ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "bits": // "Bit[] bits(Int size)"
-                {
-                long cBits = ((JavaLong) hArg).getValue();
-                if (cBits < 0)
-                    {
-                    return frame.raiseException(xException.illegalArgument(frame,
-                            "size must be >= 0: " + cBits));
-                    }
-
-                if (cBits > 2_000_000_000L)
-                    {
-                    return frame.raiseException(xException.illegalArgument(frame,
-                            "size limit (2 billion bits) exceeded: " + cBits));
-                    }
-
-                byte[] ab = new byte[(int) ((cBits+7)>>>3)];
-                rnd(hTarget).nextBytes(ab);
-                return frame.assignValue(iReturn, xBitArray.makeBitArrayHandle(ab, (int) cBits, Mutability.Constant));
-                }
-
-            case "bytes": // "Byte[] bytes(Int size)"
-                {
-                long cBytes = ((JavaLong) hArg).getValue();
-                if (cBytes < 0)
-                    {
-                    return frame.raiseException(xException.illegalArgument(frame,
-                            "array size must be >= 0: " + cBytes));
-                    }
-
-                if (cBytes > 2_000_000_000L)
-                    {
-                    return frame.raiseException(xException.illegalArgument(frame,
-                            "array size limit (2 billion bits) exceeded: " + cBytes));
-                    }
-
-                byte[] ab = new byte[(int) cBytes];
-                rnd(hTarget).nextBytes(ab);
-                return frame.assignValue(iReturn, xByteArray.makeByteArrayHandle(ab, Mutability.Constant));
-                }
-
-            case "int":
-                return invokeInt(frame, hTarget, hArg, iReturn);
+                             ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
+        switch (method.getName()) {
+        case "bits": { // "Bit[] bits(Int size)"
+            long cBits = ((JavaLong) hArg).getValue();
+            if (cBits < 0) {
+                return frame.raiseException(xException.illegalArgument(frame,
+                        "size must be >= 0: " + cBits));
             }
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+
+            if (cBits > 2_000_000_000L) {
+                return frame.raiseException(xException.illegalArgument(frame,
+                        "size limit (2 billion bits) exceeded: " + cBits));
+            }
+
+            byte[] ab = new byte[(int) ((cBits+7)>>>3)];
+            rnd(hTarget).nextBytes(ab);
+            return frame.assignValue(iReturn, xBitArray.makeBitArrayHandle(ab, (int) cBits, Mutability.Constant));
         }
+
+        case "bytes": { // "Byte[] bytes(Int size)"
+            long cBytes = ((JavaLong) hArg).getValue();
+            if (cBytes < 0) {
+                return frame.raiseException(xException.illegalArgument(frame,
+                        "array size must be >= 0: " + cBytes));
+            }
+
+            if (cBytes > 2_000_000_000L) {
+                return frame.raiseException(xException.illegalArgument(frame,
+                        "array size limit (2 billion bits) exceeded: " + cBytes));
+            }
+
+            byte[] ab = new byte[(int) cBytes];
+            rnd(hTarget).nextBytes(ab);
+            return frame.assignValue(iReturn, xByteArray.makeByteArrayHandle(ab, Mutability.Constant));
+        }
+
+        case "int":
+            return invokeInt(frame, hTarget, hArg, iReturn);
+        }
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+    }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method,
-                             ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "bit":
-                return frame.assignValue(iReturn, xBit.makeHandle(rnd(hTarget).nextBoolean()));
+                             ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn) {
+        switch (method.getName()) {
+        case "bit":
+            return frame.assignValue(iReturn, xBit.makeHandle(rnd(hTarget).nextBoolean()));
 
-            case "int8":
-                return frame.assignValue(iReturn, xInt8.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
+        case "int8":
+            return frame.assignValue(iReturn, xInt8.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
 
-            case "int16":
-                return frame.assignValue(iReturn, xInt16.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
+        case "int16":
+            return frame.assignValue(iReturn, xInt16.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
 
-            case "int32":
-                return frame.assignValue(iReturn, xInt32.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
+        case "int32":
+            return frame.assignValue(iReturn, xInt32.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
 
-            case "int64":
-                return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(rnd(hTarget).nextLong()));
+        case "int64":
+            return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(rnd(hTarget).nextLong()));
 
-            case "uint8":
-                return frame.assignValue(iReturn, xUInt8.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
+        case "uint8":
+            return frame.assignValue(iReturn, xUInt8.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
 
-            case "uint16":
-                return frame.assignValue(iReturn, xUInt16.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
+        case "uint16":
+            return frame.assignValue(iReturn, xUInt16.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
 
-            case "uint32":
-                return frame.assignValue(iReturn, xUInt32.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
+        case "uint32":
+            return frame.assignValue(iReturn, xUInt32.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
 
-            case "uint64":
-                return frame.assignValue(iReturn, xUInt64.INSTANCE.makeJavaLong(rnd(hTarget).nextLong()));
+        case "uint64":
+            return frame.assignValue(iReturn, xUInt64.INSTANCE.makeJavaLong(rnd(hTarget).nextLong()));
 
-            case "dec64":
-                // Float64 has more precision than Dec64, so this should work fine, although there
-                // won't be as solid of a guarantee on a perfect distribution of random values
-                return frame.assignValue(iReturn, xDec64.INSTANCE.makeHandle(rnd(hTarget).nextDouble()));
+        case "dec64":
+            // Float64 has more precision than Dec64, so this should work fine, although there
+            // won't be as solid of a guarantee on a perfect distribution of random values
+            return frame.assignValue(iReturn, xDec64.INSTANCE.makeHandle(rnd(hTarget).nextDouble()));
 
-            case "float32":
-                return frame.assignValue(iReturn, xFloat32.INSTANCE.makeHandle(rnd(hTarget).nextFloat()));
+        case "float32":
+            return frame.assignValue(iReturn, xFloat32.INSTANCE.makeHandle(rnd(hTarget).nextFloat()));
 
-            case "float64":
-                return frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(rnd(hTarget).nextDouble()));
-            }
+        case "float64":
+            return frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(rnd(hTarget).nextDouble()));
+        }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
-        }
+    }
 
     /**
      * Injection support.
      */
-    public ObjectHandle ensureDefaultRandom(Frame frame, ObjectHandle hOpts)
-        {
+    public ObjectHandle ensureDefaultRandom(Frame frame, ObjectHandle hOpts) {
         long lSeed = hOpts instanceof JavaLong   hInt  ? hInt.getValue() :
                      hOpts instanceof IntNHandle hIntN ? hIntN.getValue().getLong() :
                      0;
-        if (lSeed != 0)
-            {
+        if (lSeed != 0) {
             return createRandomHandle(f_container.createServiceContext("Random"),
                     getCanonicalClass(), getCanonicalType(), lSeed);
-            }
+        }
 
         ObjectHandle hRnd = m_hRandom;
-        if (hRnd == null)
-            {
+        if (hRnd == null) {
             m_hRandom = hRnd = createRandomHandle(
                 f_container.createServiceContext("Random"),
                     getCanonicalClass(), getCanonicalType(), 0L);
-            }
+        }
 
         return hRnd;
-        }
+    }
 
     /**
      * Native implementation of "Int&nbsp;int(Int max)".
      */
-    protected int invokeInt(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
+    protected int invokeInt(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         boolean  fSmall = false;
         long     lMax   = 0;
         LongLong llMax  = null;
 
-        if (hArg instanceof JavaLong hL)
-            {
+        if (hArg instanceof JavaLong hL) {
             fSmall = true;
             lMax   = hL.getValue();
-            }
-        else
-            {
+        } else {
             llMax = ((LongLongHandle) hArg).getValue();
-            if (llMax.isSmall(true))
-                {
+            if (llMax.isSmall(true)) {
                 fSmall = true;
                 lMax   = llMax.getLowValue();
-                }
-            else
-                {
+            } else {
                 throw new IllegalStateException();
-                }
             }
+        }
 
         Random rnd = rnd(hTarget);
 
-        if (lMax <= 0)
-            {
+        if (lMax <= 0) {
             return frame.raiseException(xException.illegalArgument(frame,
                     "Illegal exclusive maximum (" + lMax +"); maximum must be > 0"));
-            }
+        }
 
         return frame.assignValue(iReturn, xInt64.makeHandle(computeRandom(rnd, lMax)));
-        }
+    }
 
     /**
      * @return a random positive long value that is lesser than the specified max
      */
-    private long computeRandom(Random rnd, long lMax)
-        {
+    private long computeRandom(Random rnd, long lMax) {
         assert lMax > 0;
 
-        if (lMax <= Integer.MAX_VALUE)
-            {
+        if (lMax <= Integer.MAX_VALUE) {
             // it's a 32-bit random, so take a fast path in Java that handles 32-bit values
             return rnd.nextInt((int) lMax);
-            }
-        else if ((lMax & (lMax-1)) == 0)
-            {
+        } else if ((lMax & (lMax-1)) == 0) {
             // it's a power of 2, so avoid the 64-bit modulo
             return rnd.nextLong() & (lMax - 1);
-            }
-        else
-            {
+        } else {
             // this works in theory, but has a slightly weaker guarantee on a perfect distribution
             // of random values
             return (rnd.nextLong() % lMax) & ~Long.MIN_VALUE;
-            }
         }
+    }
 
 
     // ----- handle --------------------------------------------------------------------------------
 
     public ServiceHandle createRandomHandle(ServiceContext context,
-                                            ClassComposition clz, TypeConstant typeMask, long lSeed)
-        {
+                                            ClassComposition clz, TypeConstant typeMask, long lSeed) {
         RandomHandle hService = new RandomHandle(clz.maskAs(typeMask), context,
                                         lSeed == 0 ? null : new Random(lSeed));
         context.setService(hService);
         return hService;
-        }
+    }
 
     public static class RandomHandle
-            extends ServiceHandle
-        {
+            extends ServiceHandle {
         public final Random f_random;
 
-        public RandomHandle(TypeComposition clazz, ServiceContext context, Random random)
-            {
+        public RandomHandle(TypeComposition clazz, ServiceContext context, Random random) {
             super(clazz, context);
 
             f_random = random;
-            }
         }
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -323,15 +288,14 @@ public class xRTRandom
     /**
      * @return the Random to use
      */
-    private Random rnd(ObjectHandle hTarget)
-        {
+    private Random rnd(ObjectHandle hTarget) {
         Random random = ((RandomHandle) hTarget).f_random;
 
         return random == null ? ThreadLocalRandom.current() : random;
-        }
+    }
 
     /**
      * Cached Random handle.
      */
     private ObjectHandle m_hRandom;
-    }
+}

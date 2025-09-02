@@ -44,13 +44,11 @@ import org.xvm.util.Severity;
 /**
  * The compiler of the "eval" script used by the debugger.
  */
-public class EvalCompiler
-    {
-    public EvalCompiler(Frame frame, String sMethod)
-        {
+public class EvalCompiler {
+    public EvalCompiler(Frame frame, String sMethod) {
         f_frame  = frame;
         f_source = new Source(sMethod);
-        }
+    }
 
     /**
      * The arguments' indexes.
@@ -65,8 +63,7 @@ public class EvalCompiler
      *
      * @return the newly created lambda or null if the compilation failed
      */
-    public MethodStructure createLambda(TypeConstant typeReturn)
-        {
+    public MethodStructure createLambda(TypeConstant typeReturn) {
         ConstantPool pool = f_frame.poolContext();
         ErrorList    errs = m_errs = new ErrorList(1);
 
@@ -83,40 +80,34 @@ public class EvalCompiler
         lambda.setStatic(method.isFunction());
         lambda.createCode();
 
-        try
-            {
+        try {
             StatementBlock astBody   = new Parser(f_source, errs).parseStatementBlock();
             EvalStatement  astMethod = new EvalStatement(f_frame, lambda, astBody);
 
             StageMgr mgr = new StageMgr(astMethod, Compiler.Stage.Registered, errs);
-            if (!mgr.processComplete())
-                {
+            if (!mgr.processComplete()) {
                 return null;
-                }
+            }
 
             mgr = new StageMgr(astMethod, Compiler.Stage.Loaded, errs);
-            if (!mgr.processComplete())
-                {
+            if (!mgr.processComplete()) {
                 return null;
-                }
+            }
 
             mgr = new StageMgr(astMethod, Compiler.Stage.Resolved, errs);
-            if (!mgr.processComplete())
-                {
+            if (!mgr.processComplete()) {
                 return null;
-                }
+            }
 
             mgr = new StageMgr(astMethod, Compiler.Stage.Validated, errs);
-            if (!mgr.processComplete())
-                {
+            if (!mgr.processComplete()) {
                 return null;
-                }
+            }
 
             mgr = new StageMgr(astMethod, Compiler.Stage.Emitted, errs);
-            if (!mgr.processComplete() || errs.hasSeriousErrors())
-                {
+            if (!mgr.processComplete() || errs.hasSeriousErrors()) {
                 return null;
-                }
+            }
 
             Map<String, Argument> mapCaptures = astMethod.getCaptures();
 
@@ -125,15 +116,14 @@ public class EvalCompiler
             Parameter[]    aparamParams = new Parameter[cParams];
 
             int ix = 0;
-            for (Map.Entry<String, Argument> entry : mapCaptures.entrySet())
-                {
+            for (Map.Entry<String, Argument> entry : mapCaptures.entrySet()) {
                 String       sName = entry.getKey();
                 TypeConstant type  = entry.getValue().getType();
 
                 atypeParams[ix]  = type;
                 aparamParams[ix] = new Parameter(pool, type, sName, null, false, ix, false);
                 ix++;
-                }
+            }
 
             lambda.configureLambda(aparamParams, 0, aparamRets);
             lambda.getIdentityConstant().setSignature(
@@ -145,103 +135,87 @@ public class EvalCompiler
 
             m_aiArg = astMethod.getArguments();
             return lambda;
-            }
-        catch (Exception e)
-            {
-            if (!errs.hasSeriousErrors())
-                {
+        } catch (Exception e) {
+            if (!errs.hasSeriousErrors()) {
                 errs.log(Severity.FATAL, Parser.FATAL_ERROR, null,
                     f_source, f_source.getPosition(), f_source.getPosition());
-                }
-            return null;
             }
+            return null;
         }
+    }
 
     /**
      * @return a list of errors
      */
-    public List<ErrorListener.ErrorInfo> getErrors()
-        {
+    public List<ErrorListener.ErrorInfo> getErrors() {
         return m_errs.getErrors();
-        }
+    }
 
     /**
      * @return the lambda arguments indexes
      */
-    public int[] getArgs()
-        {
+    public int[] getArgs() {
         return m_aiArg;
-        }
+    }
 
     /**
      * A synthetic RootContext used by the {@link EvalStatement}.
      */
     protected static class EvalContext
-            extends RootContext
-        {
-        public EvalContext(Frame frame, StatementBlock stmt, MethodStructure lambda)
-            {
+            extends RootContext {
+        public EvalContext(Frame frame, StatementBlock stmt, MethodStructure lambda) {
             super(stmt, lambda);
 
             f_frame = frame;
-            }
+        }
 
         @Override
-        public TypeConstant getThisType()
-            {
+        public TypeConstant getThisType() {
             ConstantPool pool = pool();
 
             // for the purpose of the eval compilation we always assume PRIVATE access
             MethodStructure function = f_frame.f_function;
-            if (function.isFunction())
-                {
+            if (function.isFunction()) {
                 return pool.ensureAccessTypeConstant(super.getThisType(), Access.PRIVATE);
-                }
+            }
 
             // The type of "this" is possibly narrower than the level of the contributing class
             // teh current frame belongs to
             ClassStructure clz  = function.getContainingClass();
             TypeConstant   type = clz.getFormalType().resolveGenerics(pool, f_frame.getThis().getType());
             return pool.ensureAccessTypeConstant(type, Access.PRIVATE);
-            }
+        }
 
         @Override
-        protected Argument resolveRegularName(Context ctxFrom, String sName, Token name, ErrorListener errs)
-            {
+        protected Argument resolveRegularName(Context ctxFrom, String sName, Token name, ErrorListener errs) {
             Argument arg = super.resolveRegularName(ctxFrom, sName, name, errs);
-            if (arg == null)
-                {
-                try
-                    {
+            if (arg == null) {
+                try {
                     if (!f_frame.f_function.isFunction() &&
-                            f_frame.getArgument(Op.A_PRIVATE) instanceof GenericHandle hThis)
-                        {
+                            f_frame.getArgument(Op.A_PRIVATE) instanceof GenericHandle hThis) {
                         ClassStructure       clz = getThisClass();
                         MultiMethodStructure mms = (MultiMethodStructure) clz.findChildDeep(sName);
-                        if (mms != null)
-                            {
+                        if (mms != null) {
                             arg = new TargetInfo(sName, mms.getIdentityConstant(),
                                     true, getThisType(), 0);
                             ensureNameMap().put(sName, arg);
                             return arg;
-                            }
+                        }
 
                         // try to find it above the current level
                         clz = (ClassStructure) hThis.getType().getSingleUnderlyingClass(true).getComponent();
                         mms = (MultiMethodStructure) clz.findChildDeep(sName);
-                        if (mms != null)
-                            {
+                        if (mms != null) {
                             arg = new TargetInfo(sName, mms.getIdentityConstant(), true,
                                         hThis.getType(), 0);
                             ensureNameMap().put(sName, arg);
                             return arg;
-                            }
                         }
                     }
-                catch (ExceptionHandle.WrapperException ignore) {}
-                }
-            return arg;
+                } catch (ExceptionHandle.WrapperException ignore) {}
             }
+            return arg;
+        }
 
         /**
          * The list of indexes for captured arguments.
@@ -249,22 +223,19 @@ public class EvalCompiler
         public final List<Integer> f_listRegisters = new ArrayList<>();
 
         @Override
-        public ConstantPool pool()
-            {
+        public ConstantPool pool() {
             return f_frame.poolContext();
-            }
+        }
 
         @Override
-        public ClassStructure getEnclosingClass()
-            {
+        public ClassStructure getEnclosingClass() {
             return getMethod().getContainingClass();
-            }
+        }
 
         @Override
-        public boolean isAnonInnerClass()
-            {
+        public boolean isAnonInnerClass() {
             return getEnclosingClass().isAnonInnerClass();
-            }
+        }
 
         /**
          * The current frame.
@@ -277,22 +248,18 @@ public class EvalCompiler
         public final Map<String, Argument> f_mapCapture  = new ListMap<>();
 
         @Override
-        protected Argument getLocalVar(String sName, Branch branch)
-            {
+        protected Argument getLocalVar(String sName, Branch branch) {
             Argument arg = getNameMap().get(sName);
-            if (arg != null)
-                {
+            if (arg != null) {
                 return arg;
-                }
+            }
 
             Frame.VarInfo[] aInfo = f_frame.f_aInfo;
             int             cVars = f_frame.getCurrentVarCount();
 
-            for (int iVar = 0; iVar < cVars; iVar++)
-                {
+            for (int iVar = 0; iVar < cVars; iVar++) {
                 Frame.VarInfo info = aInfo[iVar];
-                if (info != null && info.getName().equals(sName))
-                    {
+                if (info != null && info.getName().equals(sName)) {
                     Register reg = new Register(info.getType(), null, f_listRegisters.size());
 
                     f_mapCapture.put(sName, reg);
@@ -301,40 +268,35 @@ public class EvalCompiler
                     ensureNameMap().put(sName, reg);
                     ensureDefiniteAssignments().put(sName, Assignment.AssignedOnce);
                     return reg;
-                    }
                 }
+            }
 
-            if (!f_frame.f_function.isFunction())
-                {
-                if ("this".equals(sName))
-                    {
+            if (!f_frame.f_function.isFunction()) {
+                if ("this".equals(sName)) {
                     Register reg = getThisRegister();
                     ensureNameMap().put(sName, reg);
                     return reg;
-                    }
+                }
 
-                if (f_frame.getThis().ensureAccess(Access.PRIVATE) instanceof GenericHandle hThis)
-                    {
+                if (f_frame.getThis().ensureAccess(Access.PRIVATE) instanceof GenericHandle hThis) {
                     TypeConstant type = getThisType();
                     PropertyInfo prop = type.ensureTypeInfo().findProperty(sName);
-                    if (prop != null)
-                        {
+                    if (prop != null) {
                         ensureNameMap().put(sName, arg = prop.getIdentity());
                         return arg;
-                        }
+                    }
 
                     type = hThis.getType();
                     prop = type.ensureTypeInfo().findProperty(sName);
-                    if (prop != null)
-                        {
+                    if (prop != null) {
                         ensureNameMap().put(sName, arg = prop.getIdentity());
                         return arg;
-                        }
                     }
                 }
-            return null;
             }
+            return null;
         }
+    }
 
 
     /**
@@ -357,117 +319,101 @@ public class EvalCompiler
      */
     protected class EvalStatement
             extends MethodDeclarationStatement
-            implements ComponentResolver
-        {
-        public EvalStatement(Frame frame, MethodStructure lambda, StatementBlock body)
-            {
+            implements ComponentResolver {
+        public EvalStatement(Frame frame, MethodStructure lambda, StatementBlock body) {
             super(lambda, body);
 
             f_frame = frame;
             f_ctx   = new EvalContext(frame, body, lambda);
-            }
+        }
 
         /**
          * @return the captured registers
          */
-        public Map<String, Argument> getCaptures()
-            {
+        public Map<String, Argument> getCaptures() {
             return f_ctx.f_mapCapture;
-            }
+        }
 
         /**
          * @return the array of indexes for lambda arguments
          */
-        public int[] getArguments()
-            {
+        public int[] getArguments() {
             List<Integer> listIndex = f_ctx.f_listRegisters;
             int           cArgs     = listIndex.size();
             int[]         aIndex    = new int[cArgs];
-            for (int i = 0; i < cArgs; i++)
-                {
+            for (int i = 0; i < cArgs; i++) {
                 aIndex[i] = listIndex.get(i);
-                }
+            }
             return aIndex;
-            }
+        }
 
         @Override
-        public Source getSource()
-            {
+        public Source getSource() {
             return f_source;
-            }
+        }
 
         @Override
-        public ComponentResolver getComponentResolver()
-            {
+        public ComponentResolver getComponentResolver() {
             return this;
-            }
+        }
 
         @Override
-        public boolean isAutoNarrowingAllowed(TypeExpression type)
-            {
+        public boolean isAutoNarrowingAllowed(TypeExpression type) {
             return false;
-            }
+        }
 
         @Override
-        protected void registerStructures(StageMgr mgr, ErrorListener errs)
-            {
+        protected void registerStructures(StageMgr mgr, ErrorListener errs) {
             introduceParentage();
 
             mgr.processChildrenExcept((child) -> child == body);
-            }
+        }
 
         @Override
-        public void resolveNames(StageMgr mgr, ErrorListener errs)
-            {
+        public void resolveNames(StageMgr mgr, ErrorListener errs) {
             mgr.deferChildren();
-            }
+        }
 
         @Override
-        protected void compileBody(StageMgr mgr, MethodStructure method, ErrorListener errs)
-            {
+        protected void compileBody(StageMgr mgr, MethodStructure method, ErrorListener errs) {
             body.compileMethod(f_ctx, method.ensureCode(), errs);
-            }
+        }
 
         @Override
-        public ConstantPool pool()
-            {
+        public ConstantPool pool() {
             return f_frame.poolContext();
-            }
+        }
 
         @Override
-        protected boolean canResolveNames()
-            {
+        protected boolean canResolveNames() {
             return true;
-            }
+        }
 
         @Override
-        protected Field[] getChildFields()
-            {
+        protected Field[] getChildFields() {
             return CHILD_FIELDS;
-            }
+        }
 
 
         // ----- ComponentResolver methods ---------------------------------------------------------
 
         @Override
         public ResolutionResult resolveName(String sName, Constants.Access access,
-                                            ResolutionCollector collector)
-            {
+                                            ResolutionCollector collector) {
             Component component = pool().getImplicitlyImportedComponent(sName);
             return component == null
                     ? ResolutionResult.ERROR
                     : collector.resolvedComponent(component);
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return "EvalStatement";
-            }
+        }
 
         private final Frame       f_frame;
         private final EvalContext f_ctx;
 
         private static final Field[] CHILD_FIELDS = fieldsForNames(MethodDeclarationStatement.class, "body");
-        }
     }
+}

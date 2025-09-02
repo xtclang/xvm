@@ -92,23 +92,19 @@ import static org.xvm.util.Handy.checkElementsNonNull;
  *    short-circuit. This also affects the definite assignment rules.
  */
 public abstract class Expression
-        extends AstNode
-    {
+        extends AstNode {
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    protected boolean usesSuper()
-        {
-        for (AstNode node : children())
-            {
-            if (!(node instanceof ComponentStatement) && node.usesSuper())
-                {
+    protected boolean usesSuper() {
+        for (AstNode node : children()) {
+            if (!(node instanceof ComponentStatement) && node.usesSuper()) {
                 return true;
-                }
             }
+        }
 
         return false;
-        }
+    }
 
     /**
      * Convert this expression into a TypeExpression.
@@ -118,10 +114,9 @@ public abstract class Expression
      *
      * @return this expression, converted to a type expression
      */
-    public TypeExpression toTypeExpression()
-        {
+    public TypeExpression toTypeExpression() {
         return new BadTypeExpression(this);
-        }
+    }
 
     /**
      * Validate that this expression is structurally correct to be a link-time condition.
@@ -138,28 +133,25 @@ public abstract class Expression
      *
      * @return true if the expression is structurally valid
      */
-    public boolean validateCondition(ErrorListener errs)
-        {
+    public boolean validateCondition(ErrorListener errs) {
         log(errs, Severity.ERROR, Compiler.ILLEGAL_CONDITIONAL);
         return false;
-        }
+    }
 
     /**
      * @return this expression as a link-time conditional constant
      */
-    public ConditionalConstant toConditionalConstant()
-        {
+    public ConditionalConstant toConditionalConstant() {
         throw notImplemented();
-        }
+    }
 
     /**
      * Mark this expression as "possibly" asymmetrical - returning conditional "False" on some branch.
      *
      * This method must be called *before* the validation or testFit.
      */
-    public void markConditional()
-        {
-        }
+    public void markConditional() {
+    }
 
 
     // ----- Expression compilation ----------------------------------------------------------------
@@ -167,18 +159,16 @@ public abstract class Expression
     /**
      * @return true iff the expression implements the "single type" / "single value" code path
      */
-    protected boolean hasSingleValueImpl()
-        {
+    protected boolean hasSingleValueImpl() {
         return true;
-        }
+    }
 
     /**
      * @return true iff the expression implements the "n type" / "n value" code path
      */
-    protected boolean hasMultiValueImpl()
-        {
+    protected boolean hasMultiValueImpl() {
         return false;
-        }
+    }
 
     /**
      * (Pre-validation) Determine the type that the expression will resolve to, if it is given no
@@ -192,18 +182,16 @@ public abstract class Expression
      * @return the type of the expression, or the first type of the expression if it yields multiple
      *         types, or null if the expression is void (or if the type cannot be determined)
      */
-    public TypeConstant getImplicitType(Context ctx)
-        {
-        if (!hasMultiValueImpl())
-            {
+    public TypeConstant getImplicitType(Context ctx) {
+        if (!hasMultiValueImpl()) {
             throw notImplemented();
-            }
+        }
 
         TypeConstant[] aTypes = getImplicitTypes(ctx);
         return aTypes == null || aTypes.length == 0
                 ? null
                 : aTypes[0];
-        }
+    }
 
     /**
      * (Pre-validation) Determine the type that the expression will resolve to, if it is given no
@@ -214,18 +202,16 @@ public abstract class Expression
      * @return an array of the types produced by the expression, or an empty array if the expression
      *         is void (or if its type cannot be determined)
      */
-    public TypeConstant[] getImplicitTypes(Context ctx)
-        {
-        if (!hasSingleValueImpl())
-            {
+    public TypeConstant[] getImplicitTypes(Context ctx) {
+        if (!hasSingleValueImpl()) {
             throw notImplemented();
-            }
+        }
 
         TypeConstant type = getImplicitType(ctx);
         return type == null
                 ? TypeConstant.NO_TYPES
                 : new TypeConstant[] {type};
-        }
+    }
 
     /**
      * (Pre-validation) Determine if the expression can yield the specified type.
@@ -244,27 +230,23 @@ public abstract class Expression
      * @return a TypeFit value describing the expression's capability (or lack thereof) to produce
      *         the required type
      */
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs)
-        {
-        if (typeRequired == null)
-            {
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs) {
+        if (typeRequired == null) {
             // all expressions are required to be able to yield a void result
             return TypeFit.Fit;
-            }
+        }
 
-        if (hasSingleValueImpl())
-            {
+        if (hasSingleValueImpl()) {
             return calcFit(ctx, getImplicitType(ctx), typeRequired);
-            }
+        }
 
-        if (hasMultiValueImpl())
-            {
+        if (hasMultiValueImpl()) {
             return testFitMulti(ctx, typeRequired == null ? TypeConstant.NO_TYPES
                                                           : new TypeConstant[] {typeRequired}, fExhaustive, errs);
-            }
+        }
 
         throw notImplemented();
-        }
+    }
 
     /**
      * (Pre-validation) Determine if the expression can yield the specified types.
@@ -284,40 +266,36 @@ public abstract class Expression
      *         the required type(s)
      */
     public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive,
-                                ErrorListener errs)
-        {
-        switch (atypeRequired.length)
-            {
-            case 0:
-                // all expressions are required to be able to yield a void result
-                return TypeFit.Fit;
+                                ErrorListener errs) {
+        switch (atypeRequired.length) {
+        case 0:
+            // all expressions are required to be able to yield a void result
+            return TypeFit.Fit;
 
-            case 1:
-                if (hasSingleValueImpl())
-                    {
-                    return testFit(ctx, atypeRequired[0], fExhaustive, errs);
-                    }
-                // fall through
-
-            default:
-                // anything that is expected to yield separate values must have a "multi"
-                // implementation, so the lack of a "multi" implementation means that this
-                // expression can't yield the desired number of values
-                return hasMultiValueImpl()
-                        ? calcFitMulti(ctx, getImplicitTypes(ctx), atypeRequired)
-                        : TypeFit.NoFit;
+        case 1:
+            if (hasSingleValueImpl()) {
+                return testFit(ctx, atypeRequired[0], fExhaustive, errs);
             }
+            // fall through
+
+        default:
+            // anything that is expected to yield separate values must have a "multi"
+            // implementation, so the lack of a "multi" implementation means that this
+            // expression can't yield the desired number of values
+            return hasMultiValueImpl()
+                    ? calcFitMulti(ctx, getImplicitTypes(ctx), atypeRequired)
+                    : TypeFit.NoFit;
         }
+    }
 
     /**
      * An implementation of the "tesFit" API via the validation of the cloned expression.
      *
      * This implementation could be computationally expensive and should be used sparingly.
      */
-    protected TypeFit testFitExhaustive(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected TypeFit testFitExhaustive(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         return testFitMultiExhaustive(ctx, new TypeConstant[] {typeRequired}, errs);
-        }
+    }
 
     /**
      * An implementation of the "tesFit" API via the validation of the cloned expression.
@@ -325,8 +303,7 @@ public abstract class Expression
      * This implementation could be computationally expensive and should be used sparingly.
      */
     protected TypeFit testFitMultiExhaustive(Context ctx, TypeConstant[] atypeRequired,
-                                             ErrorListener errs)
-        {
+                                             ErrorListener errs) {
         Expression exprTemp = (Expression) clone();
         Context    ctxTemp  = ctx.enter();
         Expression exprNew  = exprTemp.validateMulti(ctxTemp, atypeRequired,
@@ -335,7 +312,7 @@ public abstract class Expression
         ctxTemp.discard();
 
         return exprNew == null ? TypeFit.NoFit : TypeFit.Fit;
-        }
+    }
 
     /**
      * Helper for testFit() and validate() methods.
@@ -347,30 +324,26 @@ public abstract class Expression
      * @return a TypeFit value describing the ability (or lack thereof) to produce the required type
      *         from the specified type
      */
-    protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut)
-        {
+    protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut) {
         // starting type is required
-        if (typeIn == null)
-            {
+        if (typeIn == null) {
             return TypeFit.NoFit;
-            }
+        }
 
         // there are two simple cases to consider:
         // 1) it is always a fit for an expression to go "to void"
         // 2) the most common / desired case is that the type-in is compatible with the type-out
-        if (typeOut == null || isA(ctx, typeIn, typeOut))
-            {
+        if (typeOut == null || isA(ctx, typeIn, typeOut)) {
             return TypeFit.Fit;
-            }
+        }
 
         // check for the existence of an @Auto conversion
-        if (typeIn.getConverterTo(typeOut) != null)
-            {
+        if (typeIn.getConverterTo(typeOut) != null) {
             return TypeFit.Conv;
-            }
+        }
 
         return TypeFit.NoFit;
-        }
+    }
 
     /**
      * Helper for testFit() and validate() methods.
@@ -382,44 +355,38 @@ public abstract class Expression
      * @return a TypeFit value describing the ability (or lack thereof) to produce the required type
      *         from the specified type
      */
-    protected TypeFit calcFitMulti(Context ctx, TypeConstant[] atypeIn, TypeConstant[] atypeOut)
-        {
+    protected TypeFit calcFitMulti(Context ctx, TypeConstant[] atypeIn, TypeConstant[] atypeOut) {
         int cTypesIn  = atypeIn.length;
         int cTypesOut = atypeOut.length;
-        if (cTypesIn < cTypesOut)
-            {
+        if (cTypesIn < cTypesOut) {
             return TypeFit.NoFit;
-            }
+        }
 
         TypeFit fitOut = TypeFit.Fit;
-        if (cTypesOut == 1)
-            {
+        if (cTypesOut == 1) {
             // check for a Tuple packing
             TypeConstant typeOut = atypeOut[0];
             if (typeOut.isTuple() && typeOut.getParamsCount() <= cTypesIn &&
-                    (cTypesIn > 1 || !atypeIn[0].isTuple()))
-                {
+                    (cTypesIn > 1 || !atypeIn[0].isTuple())) {
                 atypeOut  = typeOut.getParamTypesArray();
                 cTypesOut = atypeOut.length;
                 fitOut    = TypeFit.Pack;
-                }
             }
+        }
 
-        for (int i = 0; i < cTypesOut; ++i)
-            {
+        for (int i = 0; i < cTypesOut; ++i) {
             TypeConstant typeIn    = atypeIn [i];
             TypeConstant typeOut   = atypeOut[i];
             TypeFit      fitSingle = calcFit(ctx, typeIn, typeOut);
-            if (!fitOut.isFit())
-                {
+            if (!fitOut.isFit()) {
                 return TypeFit.NoFit;
-                }
-
-            fitOut = fitOut.combineWith(fitSingle);
             }
 
-        return fitOut;
+            fitOut = fitOut.combineWith(fitSingle);
         }
+
+        return fitOut;
+    }
 
     /**
      * Given the specified required type for the expression, resolve names, values, verify definite
@@ -438,19 +405,17 @@ public abstract class Expression
      *
      * @return the resulting expression (typically this), or null if compilation cannot proceed
      */
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
-        if (!hasMultiValueImpl())
-            {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
+        if (!hasMultiValueImpl()) {
             throw notImplemented();
-            }
+        }
 
         TypeConstant[] aTypes = typeRequired == null
                 ? TypeConstant.NO_TYPES
                 : new TypeConstant[] {typeRequired};
 
         return validateMulti(ctx, aTypes, errs);
-        }
+    }
 
     /**
      * Given the specified required type(s) for the expression, resolve names, values, verify
@@ -467,35 +432,30 @@ public abstract class Expression
      *
      * @return the resulting expression (typically this), or null if compilation cannot proceed
      */
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
-        {
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs) {
         int cTypesRequired = atypeRequired == null ? 0 : atypeRequired.length;
-        if (cTypesRequired > 1)
-            {
-            if (!getParent().allowsConditional(this))
-                {
+        if (cTypesRequired > 1) {
+            if (!getParent().allowsConditional(this)) {
                 return new UnpackExpression(this, null).validateMulti(ctx, atypeRequired, errs);
-                }
+            }
 
             // the parent requires more than one type (conditionally), but this expression can only
             // return one; this can only be a "False" part of the conditional return; we'll check
             // afterward unless it's already caught by the validation logic
-            }
+        }
 
-        if (hasSingleValueImpl())
-            {
+        if (hasSingleValueImpl()) {
             Expression exprNew = validate(ctx, cTypesRequired == 0 ? null : atypeRequired[0], errs);
 
             if (cTypesRequired > 1 && exprNew != null &&
-                    !exprNew.getType().equals(pool().typeFalse()))
-                {
+                    !exprNew.getType().equals(pool().typeFalse())) {
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cTypesRequired, 1);
-                }
-            return exprNew;
             }
+            return exprNew;
+        }
 
         throw notImplemented();
-        }
+    }
 
     /**
      * Convert this expression into a TypeExpression and determine if it can yield the specified
@@ -504,35 +464,31 @@ public abstract class Expression
      * @see #testFit(Context, TypeConstant, boolean, ErrorListener)
      */
     protected TypeFit testFitAsType(Context ctx, TypeConstant typeRequired, boolean fExhaustive,
-                                    ErrorListener errs)
-        {
+                                    ErrorListener errs) {
         TypeExpression exprType = toTypeExpression();
         return new StageMgr(exprType, Compiler.Stage.Validated, errs).fastForward(20)
                 ? exprType.testFit(ctx, typeRequired, fExhaustive, ErrorListener.BLACKHOLE)
                 : TypeFit.NoFit;
-        }
+    }
 
     /**
      * Convert this expression into a TypeExpression and validate it.
      *
      * @see #validate(Context, TypeConstant, ErrorListener)
      */
-    protected Expression validateAsType(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validateAsType(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         TypeExpression exprType = toTypeExpression();
 
-        if (new StageMgr(exprType, Compiler.Stage.Validated, ErrorListener.BLACKHOLE).fastForward(20))
-            {
+        if (new StageMgr(exprType, Compiler.Stage.Validated, ErrorListener.BLACKHOLE).fastForward(20)) {
             ErrorListener errsTemp = errs.branch(this);
             Expression    exprNew  = exprType.validate(ctx, typeRequired, errsTemp);
-            if (exprNew != null)
-                {
+            if (exprNew != null) {
                 errsTemp.merge();
                 return exprNew;
-                }
             }
-        return null;
         }
+        return null;
+    }
 
     /**
      * Store the result of validating the Expression.
@@ -558,20 +514,17 @@ public abstract class Expression
             TypeConstant  typeActual,
             TypeFit       fit,
             Constant      constVal,
-            ErrorListener errs)
-        {
+            ErrorListener errs) {
         assert fit != null;
 
-        if (fit.isFit())
-            {
+        if (fit.isFit()) {
             checkShortCircuit(errs);
-            }
+        }
 
         ConstantPool pool = pool();
 
         // a null actual type indicates a fairly dramatic (i.e. halt required) validation failure
-        if (typeActual == null)
-            {
+        if (typeActual == null) {
             assert !fit.isFit();
             assert constVal == null;
 
@@ -580,42 +533,36 @@ public abstract class Expression
             m_oConst = null;
 
             return null;
-            }
+        }
 
         // if there is a constant value, then the type itself indicates the immutable nature of the
         // expression
         if (constVal != null
                 && !constVal.equals(pool.ensureMatchAnyConstant(typeActual))
-                && !typeActual.isA(pool.typeService()))
-            {
+                && !typeActual.isA(pool.typeService())) {
             typeActual = typeActual.freeze();
-            }
+        }
 
         // if a required type is specified and the expression type isn't of the required type, then
         // an @Auto conversion can be used, assuming that we haven't already given up on the type
         // or already applied a type conversion; note that a SingletonConstant value indicates
         // a run-time constant that may not be computable at compile time
         MethodConstant idConv = null;
-        if (typeRequired != null && fit.isFit() && !isA(ctx, typeActual, typeRequired))
-            {
+        if (typeRequired != null && fit.isFit() && !isA(ctx, typeActual, typeRequired)) {
             typeRequired = typeRequired.removeAutoNarrowing();
 
             // a conversion may be necessary to deliver the required type, but only one
             // conversion (per expression value) is allowed
             if (fit.isConverting() ||
-                    (idConv = typeActual.ensureTypeInfo(errs).findConversion(typeRequired)) == null)
-                {
+                    (idConv = typeActual.ensureTypeInfo(errs).findConversion(typeRequired)) == null) {
                 // cannot provide the required type
                 reportTypeMismatch(typeRequired, typeActual, errs);
                 fit = TypeFit.NoFit;
-                }
-            else if (constVal != null && !(constVal instanceof SingletonConstant))
-                {
+            } else if (constVal != null && !(constVal instanceof SingletonConstant)) {
                 // an "out-of-range" error may be logged there, but we'll continue as a "fit"
                 // nevertheless
                 Constant constConv = convertConstant(constVal, typeRequired, errs);
-                if (constConv == null)
-                    {
+                if (constConv == null) {
                     // there is no compile-time conversion available;
                     // continue with run-time conversion
                     // TODO: for now it's most likely our omission
@@ -623,19 +570,16 @@ public abstract class Expression
                         "Constant conversion from \"" + typeActual.getValueString() +
                         "\" to \"" + typeRequired.getValueString() + '"');
                     fit = TypeFit.NoFit;
-                    }
-                else
-                    {
+                } else {
                     typeActual = constConv.getType().freeze();
                     idConv     = null;
                     fit        = TypeFit.Conv;
-                    }
-                constVal = constConv;
                 }
+                constVal = constConv;
             }
+        }
 
-        if (typeActual.containsUnresolved())
-            {
+        if (typeActual.containsUnresolved()) {
             // if the type contains any PendingTypeConstant, resolve it down to its constraints
             typeActual = typeActual.resolveConstraints(true);
 
@@ -643,22 +587,21 @@ public abstract class Expression
             //       specifically an annotated type with not-yet-resolved parameters;
             //       see the corresponding resolution logic in VariableDeclarationStatement#emit()
             //       and NewExpression#generateDynamicParameters()
-            }
+        }
 
         m_fit    = fit;
         m_oType  = typeActual;
         m_oConst = constVal;
 
-        if (!fit.isFit())
-            {
+        if (!fit.isFit()) {
             return null;
-            }
+        }
 
         // if we found an @Auto conversion, then create an expression that does the conversion work
         return idConv == null
                 ? this
                 : new ConvertExpression(this, new MethodConstant[]{idConv}, errs);
-        }
+    }
 
     /**
      * Perform left-to-right inference of type information by augmenting the actual (right)
@@ -669,10 +612,8 @@ public abstract class Expression
      *
      * @return the inferred actual type iff it "isA" required type; null otherwise
      */
-    protected TypeConstant inferTypeFromRequired(TypeConstant typeActual, TypeConstant typeRequired)
-        {
-        if (typeRequired.isNullable() && !typeActual.isNullable())
-            {
+    protected TypeConstant inferTypeFromRequired(TypeConstant typeActual, TypeConstant typeRequired) {
+        if (typeRequired.isNullable() && !typeActual.isNullable()) {
             // consider an example:
             //   class C(Set<Int>? ints) {...}
             //   ...
@@ -681,12 +622,10 @@ public abstract class Expression
             // it's clear that the despite the fact that the required type for the constructor
             // parameter is "Nullable | Set<Int>", the actual type should be HashSet<Int>
             typeRequired = typeRequired.removeNullable();
-            }
+        }
 
-        if (typeRequired.isParameterizedDeep() && !typeActual.equals(typeRequired))
-            {
-            if (typeActual.isParamsSpecified())
-                {
+        if (typeRequired.isParameterizedDeep() && !typeActual.equals(typeRequired)) {
+            if (typeActual.isParamsSpecified()) {
                 // there is a possibility that the type parameters could be in turn inferred, e.g.
                 //   PropertyMapping<structType.DataType>[] fields = new PropertyMapping[];
                 TypeConstant[] atypeRequired = typeRequired.getParamTypesArray();
@@ -695,33 +634,27 @@ public abstract class Expression
                 int            cActual       = atypeActual.length;
                 TypeConstant[] atypeInferred = atypeActual;
 
-                for (int i = 0, c = Math.min(cRequired, cActual); i < c; i++)
-                    {
+                for (int i = 0, c = Math.min(cRequired, cActual); i < c; i++) {
                     TypeConstant typeInferred = inferTypeFromRequired(atypeActual[i], atypeRequired[i]);
-                    if (typeInferred != null)
-                        {
-                        if (atypeInferred == atypeActual)
-                            {
+                    if (typeInferred != null) {
+                        if (atypeInferred == atypeActual) {
                             atypeInferred = atypeInferred.clone();
-                            }
-                        atypeInferred[i] = typeInferred;
                         }
+                        atypeInferred[i] = typeInferred;
                     }
+                }
                 return atypeInferred == atypeActual
                         ? null
                         : typeActual.adoptParameters(pool(), atypeInferred);
-                }
-            else
-                {
+            } else {
                 TypeConstant typeInferred = typeActual.adoptParameters(pool(), typeRequired);
-                if (typeInferred.isA(typeRequired))
-                    {
+                if (typeInferred.isA(typeRequired)) {
                     return typeInferred;
-                    }
                 }
             }
-        return null;
         }
+        return null;
+    }
 
     /**
      * Having a parameterizable class and a constructor on that class resolve the generic types
@@ -735,44 +668,38 @@ public abstract class Expression
      * @return a resolved formal type or null if the resolution was unsuccessful
      */
     protected TypeConstant inferTypeFromConstructor(Context ctx, ClassStructure clz,
-                                                    MethodStructure ctor, List<Expression> listExpr)
-        {
+                                                    MethodStructure ctor, List<Expression> listExpr) {
         TypeConstant[] atypeParam = ctor.getParamTypes();
         int            cArgs      = listExpr.size();
 
         assert cArgs <= atypeParam.length;
 
         Map<String, TypeConstant> mapResolve = new HashMap<>();
-        for (Map.Entry<StringConstant, TypeConstant> entry : clz.getTypeParamsAsList())
-            {
+        for (Map.Entry<StringConstant, TypeConstant> entry : clz.getTypeParamsAsList()) {
             String sName = entry.getKey().getValue();
-            for (int i = 0; i < cArgs; i++)
-                {
+            for (int i = 0; i < cArgs; i++) {
                 TypeConstant typeActual = listExpr.get(i).getImplicitType(ctx);
-                if (typeActual != null)
-                    {
+                if (typeActual != null) {
                     TypeConstant typeResolved = atypeParam[i].
                             resolveTypeParameter(typeActual, sName);
-                    if (typeResolved != null)
-                        {
+                    if (typeResolved != null) {
                         // if the expression's type is an enum value, widen it to its parent
                         // Enumeration; for example, if the argument is Null, widen the type to
                         // Nullable, if the type is True widen it to Boolean, etc.
-                        if (typeResolved.isEnumValue())
-                            {
+                        if (typeResolved.isEnumValue()) {
                             typeResolved = typeResolved.getSingleUnderlyingClass(false).
                                                 getNamespace().getType();
-                            }
-                        mapResolve.put(sName, typeResolved);
                         }
+                        mapResolve.put(sName, typeResolved);
                     }
                 }
             }
+        }
 
         return mapResolve.isEmpty()
             ? null
             : clz.getFormalType().resolveGenerics(pool(), mapResolve::get);
-        }
+    }
 
     /**
      * Store the result of validating the Expression.
@@ -804,204 +731,172 @@ public abstract class Expression
             TypeConstant[] atypeActual,
             TypeFit        fit,
             Constant[]     aconstVal,
-            ErrorListener  errs)
-        {
+            ErrorListener  errs) {
         assert fit != null;
         assert atypeRequired == null || checkElementsNonNull(atypeRequired);
         assert atypeActual   == null || checkElementsNonNull(atypeActual);
         assert aconstVal     == null || checkElementsNonNull(aconstVal) && aconstVal.length == atypeActual.length;
 
-        if (fit.isFit())
-            {
+        if (fit.isFit()) {
             checkShortCircuit(errs);
-            }
+        }
 
         ConstantPool pool = pool();
 
         // a null actual type indicates a fairly dramatic (i.e. halt required) validation failure
-        if (atypeActual == null)
-            {
+        if (atypeActual == null) {
             assert !fit.isFit() && aconstVal == null && (errs.hasSeriousErrors() || errs.isSilent());
             m_fit = TypeFit.NoFit;
             return null;
-            }
+        }
 
         int cActual   = atypeActual.length;
         int cTypeReqs = atypeRequired == null ? 0 : atypeRequired.length;
-        if (cTypeReqs > cActual && fit.isFit())
-            {
+        if (cTypeReqs > cActual && fit.isFit()) {
             log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cTypeReqs, cActual);
             m_fit = TypeFit.NoFit;
             return null;
-            }
+        }
 
         boolean fCloneActual = true;
 
         // for expressions that yield constant values, make sure that the types reflect that
-        for (int i = 0; i < cActual; ++i)
-            {
+        for (int i = 0; i < cActual; ++i) {
             TypeConstant typeActual = atypeActual[i];
-            if (typeActual.containsUnresolved())
-                {
+            if (typeActual.containsUnresolved()) {
                 // see the comment in "finishValidation()"
                 typeActual = typeActual.resolveConstraints(true);
-                }
+            }
 
             Constant constVal = aconstVal == null ? null : aconstVal[i];
             if (constVal != null
                     && !constVal.equals(pool.ensureMatchAnyConstant(typeActual))
-                    && !typeActual.isA(pool.typeService()))
-                {
+                    && !typeActual.isA(pool.typeService())) {
                 TypeConstant typeImm = typeActual.freeze();
 
-                if (!typeActual.equals(typeImm))
-                    {
-                    if (fCloneActual)
-                        {
+                if (!typeActual.equals(typeImm)) {
+                    if (fCloneActual) {
                         atypeActual  = atypeActual.clone();
                         fCloneActual = false;
-                        }
-                    atypeActual[i] = typeImm;
                     }
+                    atypeActual[i] = typeImm;
                 }
             }
+        }
 
         MethodConstant[] aIdConv = null;
-        if (cTypeReqs > 0 && fit.isFit())
-            {
-            for (int i = 0, c = Math.min(cActual, cTypeReqs); i < c; ++i)
-                {
+        if (cTypeReqs > 0 && fit.isFit()) {
+            for (int i = 0, c = Math.min(cActual, cTypeReqs); i < c; ++i) {
                 TypeConstant typeActual   = atypeActual[i];
                 TypeConstant typeRequired = atypeRequired[i];
-                if (isA(ctx, typeActual, typeRequired))
-                    {
+                if (isA(ctx, typeActual, typeRequired)) {
                     continue;
-                    }
+                }
 
                 // look for an @Auto conversion, assuming that we haven't already applied it
                 MethodConstant idConv;
                 if (fit.isConverting() ||
-                        (idConv = typeActual.ensureTypeInfo(errs).findConversion(typeRequired)) == null)
-                    {
+                        (idConv = typeActual.ensureTypeInfo(errs).findConversion(typeRequired)) == null) {
                     // cannot provide the required type
                     reportTypeMismatch(typeRequired, typeActual, errs);
                     fit = TypeFit.NoFit;
-                    }
-                else
-                    {
+                } else {
                     Constant constVal = aconstVal == null ? null : aconstVal[i];
-                    if (constVal != null)
-                        {
+                    if (constVal != null) {
                         Constant constConv = convertConstant(constVal, typeRequired, errs);
-                        if (constConv == null)
-                            {
+                        if (constConv == null) {
                             // there is no compile-time conversion available; continue with run-time
                             // conversion
                             // TODO GG: remove the soft assert below
                             System.err.println("No conversion found for " + constVal);
-                            }
-                        else
-                            {
-                            if (fCloneActual)
-                                {
+                        } else {
+                            if (fCloneActual) {
                                 atypeActual  = atypeActual.clone();
                                 fCloneActual = false;
-                                }
+                            }
                             atypeActual[i] = constConv.getType().freeze();
                             idConv         = null;
-                            }
+                        }
                         aconstVal[i] = constConv;
-                        }
+                    }
 
-                    if (idConv != null)
-                        {
-                        if (aIdConv == null)
-                            {
+                    if (idConv != null) {
+                        if (aIdConv == null) {
                             aIdConv = new MethodConstant[cActual];
-                            }
-                        aIdConv[i] = idConv;
                         }
+                        aIdConv[i] = idConv;
                     }
                 }
             }
+        }
 
-        if (cTypeReqs > cActual && aconstVal != null)
-            {
+        if (cTypeReqs > cActual && aconstVal != null) {
             // we've already reported an error for there not being enough values in the
             // expression to meet the required types, but since we're pretending to continue,
             // we might as well make up some constants to match the number of required types
             Constant[] aconstNew = new Constant[cTypeReqs];
             System.arraycopy(aconstVal, 0, aconstNew, 0, cActual);
             aconstVal = aconstNew;
-            for (int i = cActual; i < cTypeReqs; ++i)
-                {
+            for (int i = cActual; i < cTypeReqs; ++i) {
                 aconstVal[i] = generateFakeConstant(atypeRequired[i]);
-                }
             }
+        }
 
         m_fit    = fit;
         m_oType  = fit.isFit() || atypeRequired == null ? atypeActual : null;
         m_oConst = aconstVal;
 
-        if (!fit.isFit())
-            {
+        if (!fit.isFit()) {
             return null;
-            }
+        }
 
         // apply any conversions that we found previously to be necessary to deliver the required
         // data types
         return aIdConv == null
                 ? this
                 : new ConvertExpression(this, aIdConv, errs);
-        }
+    }
 
     /**
      * @return true iff the "in" type *isA* the "out" type in the specified context
      */
-    protected boolean isA(Context ctx, TypeConstant typeIn, TypeConstant typeOut)
-        {
-        if (typeIn.isA(typeOut))
-            {
+    protected boolean isA(Context ctx, TypeConstant typeIn, TypeConstant typeOut) {
+        if (typeIn.isA(typeOut)) {
             return true;
-            }
+        }
 
-        if (ctx == null)
-            {
+        if (ctx == null) {
             return false;
-            }
+        }
 
         TypeConstant typeInR  = ctx.resolveFormalType(typeIn);
         TypeConstant typeOutR = ctx.resolveFormalType(typeOut);
 
         return (typeInR != typeIn || typeOutR != typeOut) && typeInR.isA(typeOutR);
-        }
+    }
 
     /**
      * @return true iff the "in" type is assignable to the "out" type in the specified context
      */
-    protected boolean isAssignable(Context ctx, TypeConstant typeIn, TypeConstant typeOut)
-        {
-        if (typeIn.isAssignableTo(typeOut))
-            {
+    protected boolean isAssignable(Context ctx, TypeConstant typeIn, TypeConstant typeOut) {
+        if (typeIn.isAssignableTo(typeOut)) {
             return true;
-            }
+        }
 
-        if (ctx == null)
-            {
+        if (ctx == null) {
             return false;
-            }
+        }
 
         TypeConstant typeOutResolved = ctx.resolveFormalType(typeOut);
         return typeOutResolved != typeOut && typeIn.isAssignableTo(typeOutResolved);
-        }
+    }
 
     /**
      * @return true iff the expression can stand alone as its own Statement
      */
-    public boolean isStandalone()
-        {
+    public boolean isStandalone() {
         return false;
-        }
+    }
 
     /**
      * Called by a child Expression that wants to replace itself with a different Expression.
@@ -1010,31 +905,27 @@ public abstract class Expression
      *
      * @return the expression to use in place of this
      */
-    protected Expression replaceThisWith(Expression that)
-        {
+    protected Expression replaceThisWith(Expression that) {
         getParent().adopt(that);
         that.setStage(getStage());
         return that;
-        }
+    }
 
     /**
      * @return true iff the Expression has been validated
      */
-    public boolean isValidated()
-        {
+    public boolean isValidated() {
         return m_fit != null;
-        }
+    }
 
     /**
      * Throw an exception if the Expression has not been validated
      */
-    protected void checkValidated()
-        {
-        if (!isValidated())
-            {
+    protected void checkValidated() {
+        if (!isValidated()) {
             throw new IllegalStateException("Expression has not been validated: " + this);
-            }
         }
+    }
 
     /**
      * (Post-validation) Determine the number of values represented by the expression.
@@ -1047,34 +938,31 @@ public abstract class Expression
      *
      * @return the number of values represented by the expression
      */
-    public int getValueCount()
-        {
+    public int getValueCount() {
         checkValidated();
 
         return m_oType instanceof TypeConstant[] aTypes
                 ? aTypes.length
                 : 1;
-        }
+    }
 
     /**
      * (Post-validation) Determine if the Expression represents no resulting value.
      *
      * @return true iff the Expression represents a "void" expression
      */
-    public boolean isVoid()
-        {
+    public boolean isVoid() {
         return getValueCount() == 0;
-        }
+    }
 
     /**
      * (Post-validation) Determine if the Expression represents exactly one value.
      *
      * @return true iff the Expression represents exactly one value
      */
-    public boolean isSingle()
-        {
+    public boolean isSingle() {
         return getValueCount() == 1;
-        }
+    }
 
     /**
      * (Post-validation) Determine if the expression represents a {@code conditional} result. A
@@ -1088,20 +976,18 @@ public abstract class Expression
      *
      * @return true iff the Expression represents a conditional value
      */
-    public boolean isConditionalResult()
-        {
+    public boolean isConditionalResult() {
         return false;
-        }
+    }
 
     /**
      * @return the TypeFit that was determined during validation
      */
-    public TypeFit getTypeFit()
-        {
+    public TypeFit getTypeFit() {
         checkValidated();
 
         return m_fit;
-        }
+    }
 
     /**
      * (Post-validation) Determine the type of the expression. For a multi-value expression, the
@@ -1111,18 +997,16 @@ public abstract class Expression
      *         void result, otherwise the type of the <i>first</i> (and typically <i>only</i>) value
      *         resulting from the Expression
      */
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         checkValidated();
 
-        if (m_oType instanceof TypeConstant type)
-            {
+        if (m_oType instanceof TypeConstant type) {
             return type;
-            }
+        }
 
         TypeConstant[] atype = (TypeConstant[]) m_oType;
         return atype.length == 0 ? null : atype[0];
-        }
+    }
 
     /**
      * For debugging and error reporting, provide a non-null String representation of the type of
@@ -1132,34 +1016,28 @@ public abstract class Expression
      *
      * @return a String that best describes the type of this expression
      */
-    public String getTypeString(Context ctx)
-        {
-        if (m_oType instanceof TypeConstant type)
-            {
+    public String getTypeString(Context ctx) {
+        if (m_oType instanceof TypeConstant type) {
             return type.getValueString();
-            }
+        }
 
-        if (m_oType instanceof TypeConstant[] aTypes)
-            {
-            return switch (aTypes.length)
-                {
+        if (m_oType instanceof TypeConstant[] aTypes) {
+            return switch (aTypes.length) {
                 case 0   -> "void";
                 case 1  -> aTypes[0].getValueString();
                 default -> aTypes[0].getValueString() + " (+" + (aTypes.length - 1) + " more)";
-                };
-            }
+            };
+        }
 
-        if (ctx != null)
-            {
+        if (ctx != null) {
             TypeConstant type = getImplicitType(ctx);
-            if (type != null)
-                {
+            if (type != null) {
                 return type.getValueString();
-                }
             }
+        }
 
         return "(unknown)";
-        }
+    }
 
     /**
      * (Post-validation) Obtain an array of types, one for each value that this expression yields.
@@ -1168,12 +1046,11 @@ public abstract class Expression
      * @return the types of the multiple values yielded by the expression; a zero-length array
      *         indicates a void type
      */
-    public TypeConstant[] getTypes()
-        {
+    public TypeConstant[] getTypes() {
         return m_oType instanceof TypeConstant[] aTypes
                 ? aTypes
                 : new TypeConstant[] {getType()};
-        }
+    }
 
     /**
      * Obtain a {@link ExprAST binady expression expression} that represents this AST node and can
@@ -1183,23 +1060,21 @@ public abstract class Expression
      *
      * @return an "AST node" from the expression branch of the BinaryAST hierarchy of classes
      */
-    public ExprAST getExprAST(Context ctx)
-        {
+    public ExprAST getExprAST(Context ctx) {
         assert isValidated();
         throw new UnsupportedOperationException(
                 "BAST for Expression: " + this.getClass().getSimpleName());
-        }
+    }
 
     /**
      * Query the expression to determine if it would be a good candidate for tracing.
      *
      * @return true iff the expression claims that it is worthy to be a candidate for debug tracing
      */
-    public boolean isTraceworthy()
-        {
+    public boolean isTraceworthy() {
         assert isValidated();
         return false;
-        }
+    }
 
     /**
      * Create a TraceExpression for this expression.
@@ -1207,19 +1082,17 @@ public abstract class Expression
      * @return a TraceExpression that has already inserted itself as the parent of this expression
      *         and the child of the previous parent
      */
-    public TraceExpression requireTrace()
-        {
-        if (!isValidated() || !isTraceworthy())
-            {
+    public TraceExpression requireTrace() {
+        if (!isValidated() || !isTraceworthy()) {
             throw new IllegalStateException("expr=" + this);
-            }
+        }
 
         AstNode         parent    = getParent();
         TraceExpression exprTrace = new TraceExpression(this);
         parent.replaceChild(this, exprTrace);
         this.setParent(exprTrace);
         return exprTrace;
-        }
+    }
 
     /**
      * (Post-validation) Determine if the expression represents an L-Value, which means that this
@@ -1230,10 +1103,9 @@ public abstract class Expression
      *
      * @return true iff the Expression represents an "L-value" to which a value can be assigned
      */
-    public boolean isAssignable(Context ctx)
-        {
+    public boolean isAssignable(Context ctx) {
         return false;
-        }
+    }
 
     /**
      * Check to make sure that the expression can be assigned to at this point in the validation
@@ -1242,13 +1114,11 @@ public abstract class Expression
      * @param ctx   the validation context
      * @param errs  the error list to log to
      */
-    public void requireAssignable(Context ctx, ErrorListener errs)
-        {
-        if (!isAssignable(ctx))
-            {
+    public void requireAssignable(Context ctx, ErrorListener errs) {
+        if (!isAssignable(ctx)) {
             log(errs, Severity.ERROR, Compiler.ASSIGNABLE_REQUIRED);
-            }
         }
+    }
 
     /**
      * Mark the LValue as being assigned to at this point in the validation process.
@@ -1258,9 +1128,8 @@ public abstract class Expression
      *               definitely assigned if it is true)
      * @param errs   the error list to log to
      */
-    public void markAssignment(Context ctx, boolean fCond, ErrorListener errs)
-        {
-        }
+    public void markAssignment(Context ctx, boolean fCond, ErrorListener errs) {
+    }
 
     /**
      * Test if this expression is used as an R-Value, which is something that yields a value.
@@ -1272,10 +1141,9 @@ public abstract class Expression
      *
 \    * @return true iff this expression is used as an R-Value
      */
-    protected boolean isRValue()
-        {
+    protected boolean isRValue() {
         return getParent().isRValue(this);
-        }
+    }
 
     /**
      * (Post-validation) Determine if the expression can short-circuit.
@@ -1285,32 +1153,28 @@ public abstract class Expression
      *
      * @return true iff the expression is capable of short-circuiting
      */
-    public boolean isShortCircuiting()
-        {
+    public boolean isShortCircuiting() {
         return false;
-        }
+    }
 
     @Override
-    protected boolean allowsShortCircuit(AstNode nodeChild)
-        {
+    protected boolean allowsShortCircuit(AstNode nodeChild) {
         return getParent().allowsShortCircuit(this);
-        }
+    }
 
     @Override
-    protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin)
-        {
+    protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin) {
         // by default, the expression passes the request to its parent AST node
         return getParent().ensureShortCircuitLabel(nodeOrigin, ctxOrigin);
-        }
+    }
 
     /**
      * @return true iff the expression represents a non-value ('?') used to explicitly indicate an
      *         unbound parameter
      */
-    public boolean isNonBinding()
-        {
+    public boolean isNonBinding() {
         return false;
-        }
+    }
 
     /**
      * (Post-validation) Determine if the expression has a constant value available for use by the
@@ -1319,10 +1183,9 @@ public abstract class Expression
      *
      * @return true iff the expression results in a compile-time (ConstantPool) constant value
      */
-    public boolean isConstant()
-        {
+    public boolean isConstant() {
         return m_oConst != null;
-        }
+    }
 
     /**
      * (Post-validation) Determine if the expression should be treated as a constant value at
@@ -1336,10 +1199,9 @@ public abstract class Expression
      * @return true iff the Expression is a constant value that is representable by a constant in
      *         the ConstantPool or by a single constant value at runtime
      */
-    public boolean isRuntimeConstant()
-        {
+    public boolean isRuntimeConstant() {
         return isConstant();
-        }
+    }
 
     /**
      * (Post-validation) Determine if the expression needs to generate code, even if it yields
@@ -1348,12 +1210,11 @@ public abstract class Expression
      * @return true iff the expression needs to produce code, regardless of whether it yields a
      *         compile-time constant value
      */
-    public boolean hasSideEffects()
-        {
+    public boolean hasSideEffects() {
         // generally, an expression that yields a compile-time constant value does not have
         // side effects; this must be overridden by any expression that violates this assumption
         return !isConstant();
-        }
+    }
 
     /**
      * Determine if this expression can potentially affect (mutate the expected value of) a
@@ -1369,22 +1230,19 @@ public abstract class Expression
      *
      * @return one of the {@link SideEffect} values
      */
-    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
-        {
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg) {
         // constants cannot affect anything or be affected
-        if (isConstant() || exprLeft.isConstant())
-            {
+        if (isConstant() || exprLeft.isConstant()) {
             return SideEffect.DefNo;
-            }
+        }
 
-        if (arg instanceof PropertyConstant)
-            {
+        if (arg instanceof PropertyConstant) {
             // any computation (e.g. an invocation or a property access) may impact a property
             return SideEffect.AnyCompute;
-            }
+        }
 
         return SideEffect.Unknown;
-        }
+    }
 
     /**
      * (Post-validation) Determine if the expression can generate a compact variable initialization
@@ -1397,10 +1255,9 @@ public abstract class Expression
      *
      * @return true iff the expression can generate a compact var initialization
      */
-    public boolean supportsCompactInit(VariableDeclarationStatement lvalue)
-        {
+    public boolean supportsCompactInit(VariableDeclarationStatement lvalue) {
         return isConstant();
-        }
+    }
 
     /**
      * (Post-validation) For an expression that provides a compile-time constant, indicated by the
@@ -1412,20 +1269,17 @@ public abstract class Expression
      * @return the compile-time constant value of the expression, or null if the expression is not
      *         constant
      */
-    public Constant toConstant()
-        {
-        if (!isConstant())
-            {
+    public Constant toConstant() {
+        if (!isConstant()) {
             return null;
-            }
+        }
 
-        if (m_oConst instanceof Constant constant)
-            {
+        if (m_oConst instanceof Constant constant) {
             return constant;
-            }
+        }
 
         return ((Constant[]) m_oConst)[0];
-        }
+    }
 
     /**
      * (Post-validation) For an expression that provides compile-time constants, indicated by the
@@ -1437,17 +1291,15 @@ public abstract class Expression
      * @return the compile-time constant values of the expression, or null if the expression is not
      *         constant
      */
-    public Constant[] toConstants()
-        {
-        if (!isConstant())
-            {
+    public Constant[] toConstants() {
+        if (!isConstant()) {
             return null;
-            }
+        }
 
         return m_oConst instanceof Constant[] aConst
                 ? aConst
                 : new Constant[] {toConstant()};
-        }
+    }
 
     /**
      * Generate the necessary code that discards the value of this expression.
@@ -1459,23 +1311,18 @@ public abstract class Expression
      * @param code  the code block
      * @param errs  the error list to log any errors to
      */
-    public void generateVoid(Context ctx, Code code, ErrorListener errs)
-        {
+    public void generateVoid(Context ctx, Code code, ErrorListener errs) {
         // a lack of side effects means that the expression can be ignored altogether
-        if (hasSideEffects())
-            {
-            if (isSingle() && hasSingleValueImpl())
-                {
+        if (hasSideEffects()) {
+            if (isSingle() && hasSingleValueImpl()) {
                 generateAssignment(ctx, code, new Assignable(), errs);
-                }
-            else
-                {
+            } else {
                 Assignable[] asnVoid = new Assignable[getValueCount()];
                 Arrays.fill(asnVoid, new Assignable());
                 generateAssignments(ctx, code, asnVoid, errs);
-                }
             }
         }
+    }
 
     /**
      * Generate the necessary code that initializes an l-value variable.
@@ -1489,13 +1336,12 @@ public abstract class Expression
      * @param errs    the error list to log any errors to
      */
     public void generateCompactInit(
-            Context ctx, Code code, VariableDeclarationStatement lvalue, ErrorListener errs)
-        {
+            Context ctx, Code code, VariableDeclarationStatement lvalue, ErrorListener errs) {
         assert supportsCompactInit(lvalue);
 
         StringConstant idName = pool().ensureStringConstant(lvalue.getName());
         code.add(new Var_IN(lvalue.getRegister(), idName, toConstant()));
-        }
+    }
 
     /**
      * (Post-validation) Generate an argument that represents the result of this expression.
@@ -1513,29 +1359,25 @@ public abstract class Expression
      * @return a resulting argument of the validated type
      */
     public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
-        {
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
         assert !isVoid();
 
-        if (isConstant())
-            {
+        if (isConstant()) {
             return toConstant();
-            }
+        }
 
-        if (hasMultiValueImpl() && (!hasSingleValueImpl() || !isSingle()))
-            {
+        if (hasMultiValueImpl() && (!hasSingleValueImpl() || !isSingle())) {
             return generateArguments(ctx, code, fLocalPropOk, fUsedOnce, errs)[0];
-            }
+        }
 
-        if (hasSingleValueImpl() && !isVoid())
-            {
+        if (hasSingleValueImpl() && !isVoid()) {
             Assignable var = createTempVar(code, getType(), fUsedOnce);
             generateAssignment(ctx, code, var, errs);
             return var.getRegister();
-            }
+        }
 
         throw notImplemented();
-        }
+    }
 
     /**
      * Generate arguments of the specified types for this expression, or generate an error if that
@@ -1555,45 +1397,39 @@ public abstract class Expression
      *         count of the expression, or length 1 for a tuple result iff fPack is true
      */
     public Argument[] generateArguments(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
-        {
-        if (isConstant())
-            {
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+        if (isConstant()) {
             return toConstants();
-            }
+        }
 
-        if (isVoid())
-            {
+        if (isVoid()) {
             // void means that the results of the expression are black-holed
             generateAssignments(ctx, code, NO_LVALUES, errs);
             return NO_RVALUES;
-            }
+        }
 
-        if (hasSingleValueImpl() && isSingle())
-            {
+        if (hasSingleValueImpl() && isSingle()) {
             // optimize for single argument case
             return new Argument[] { generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs) };
-            }
+        }
 
         TypeConstant[] aTypes = getTypes();
         int            cTypes = aTypes.length;
         Assignable[]   aLVals = new Assignable[cTypes];
         aLVals[0] = createTempVar(code, aTypes[0], fUsedOnce);
-        for (int i = 1; i < cTypes; ++i)
-            {
+        for (int i = 1; i < cTypes; ++i) {
             aLVals[i] = createTempVar(code, aTypes[i], false);
-            }
+        }
         generateAssignments(ctx, code, aLVals, errs);
 
         // the temporaries are each represented by a register; return those registers as the
         // generated arguments
         Register[] aRegs = new Register[cTypes];
-        for (int i = 0; i < cTypes; ++i)
-            {
+        for (int i = 0; i < cTypes; ++i) {
             aRegs[i] = aLVals[i].getRegister();
-            }
-        return aRegs;
         }
+        return aRegs;
+    }
 
     /**
      * Generate the necessary code that assigns the value of this expression to the specified
@@ -1607,24 +1443,21 @@ public abstract class Expression
      * @param LVal  the Assignable object representing the L-Value
      * @param errs  the error list to log any errors to
      */
-    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
-        {
-        if (hasSingleValueImpl())
-            {
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs) {
+        if (hasSingleValueImpl()) {
             // this will be overridden by classes that can push down the work
             Argument arg = generateArgument(ctx, code, LVal.supportsLocalPropMode(), true, errs);
             LVal.assign(arg, code, errs);
             return;
-            }
+        }
 
-        if (hasMultiValueImpl())
-            {
+        if (hasMultiValueImpl()) {
             generateAssignments(ctx, code, new Assignable[] {LVal}, errs);
             return;
-            }
+        }
 
         throw notImplemented();
-        }
+    }
 
     /**
      * Generate the necessary code that assigns the values of this expression to the specified
@@ -1638,73 +1471,62 @@ public abstract class Expression
      * @param aLVal  an array of Assignable objects representing the L-Values
      * @param errs   the error list to log any errors to
      */
-    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
-        {
+    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs) {
         int     cLVals = aLVal.length;
         int     cRVals = getValueCount();
         boolean fCond  = isConditionalResult();
 
-        if (isCompletable())
-            {
+        if (isCompletable()) {
             int cRValsActual = fCond ? cRVals + 1 : cRVals;
-            if (cLVals > cRValsActual)
-                {
+            if (cLVals > cRValsActual) {
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cLVals, cRValsActual);
                 return;
-                }
             }
+        }
 
-        if (cLVals < cRVals)
-            {
+        if (cLVals < cRVals) {
             // blackhole the missing LVals
             Assignable[] aLValNew = new Assignable[cRVals];
             Arrays.fill(aLValNew, new Assignable());
             System.arraycopy(aLVal, 0, aLValNew, 0, cLVals);
             aLVal  = aLValNew;
             cLVals = cRVals;
-            }
+        }
 
-        if (!isInAssignment())
-            {
-            switch (cLVals)
-                {
-                case 2:
-                    if (!fCond || cRVals != 1)
-                        {
-                        break;
-                        }
-                    // must be a conditional "false" - fall through
-                case 1:
-                    if (hasSingleValueImpl())
-                        {
-                        markInAssignment();
-                        generateAssignment(ctx, code, aLVal[0], errs);
-                        clearInAssignment();
-                        return;
-                        }
+        if (!isInAssignment()) {
+            switch (cLVals) {
+            case 2:
+                if (!fCond || cRVals != 1) {
                     break;
-
-                case 0:
+                }
+                // must be a conditional "false" - fall through
+            case 1:
+                if (hasSingleValueImpl()) {
                     markInAssignment();
-                    generateVoid(ctx, code, errs);
+                    generateAssignment(ctx, code, aLVal[0], errs);
                     clearInAssignment();
                     return;
                 }
-            }
+                break;
 
-        if (hasMultiValueImpl())
-            {
+            case 0:
+                markInAssignment();
+                generateVoid(ctx, code, errs);
+                clearInAssignment();
+                return;
+            }
+        }
+
+        if (hasMultiValueImpl()) {
             boolean fLocalPropOk = true;
-            for (int i = 0; i < cLVals; ++i)
-                {
+            for (int i = 0; i < cLVals; ++i) {
                 fLocalPropOk &= aLVal[i].supportsLocalPropMode();
-                }
+            }
 
             boolean    fCheckArg0 = fCond && cLVals > 1;
             Argument[] aArg       = generateArguments(ctx, code, fLocalPropOk, !fCheckArg0, errs);
 
-            if (fCheckArg0)
-                {
+            if (fCheckArg0) {
                 Argument argCond = aArg[0];
                 assert !argCond.isStack();
 
@@ -1712,24 +1534,20 @@ public abstract class Expression
 
                 Label label = new Label("skip_assign");
                 code.add(new JumpFalse(argCond, label));
-                for (int i = 1; i < cLVals; ++i)
-                    {
+                for (int i = 1; i < cLVals; ++i) {
                     aLVal[i].assign(aArg[i], code, errs);
-                    }
+                }
                 code.add(label);
-                }
-            else
-                {
-                for (int i = 0; i < cLVals; ++i)
-                    {
+            } else {
+                for (int i = 0; i < cLVals; ++i) {
                     aLVal[i].assign(aArg[i], code, errs);
-                    }
                 }
-            return;
             }
+            return;
+        }
 
         throw notImplemented();
-        }
+    }
 
     /**
      * Generate the necessary code that jumps to the specified label if this expression evaluates
@@ -1743,18 +1561,15 @@ public abstract class Expression
      * @param errs       the error list to log any errors to
      */
     public void generateConditionalJump(
-            Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs)
-        {
+            Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs) {
         assert !isVoid() && getType().isA(pool().typeBoolean());
 
-        if (isConstant())
-            {
-            if (fWhenTrue == toConstant().equals(pool().valTrue()))
-                {
+        if (isConstant()) {
+            if (fWhenTrue == toConstant().equals(pool().valTrue())) {
                 code.add(new Jump(label));
-                }
-            return;
             }
+            return;
+        }
 
         // this is just a generic implementation; sub-classes should override this to simplify the
         // generated code (e.g. by not having to always generate a separate boolean value)
@@ -1762,7 +1577,7 @@ public abstract class Expression
         code.add(fWhenTrue
                 ? new JumpTrue(arg, label)
                 : new JumpFalse(arg, label));
-        }
+    }
 
     /**
      * Produce a temporary variable.
@@ -1774,20 +1589,16 @@ public abstract class Expression
      * @return the Assignable representing the temporary variable; the Assignable will contain a
      *         Register
      */
-    protected Assignable createTempVar(Code code, TypeConstant type, boolean fUsedOnce)
-        {
+    protected Assignable createTempVar(Code code, TypeConstant type, boolean fUsedOnce) {
         Register reg;
-        if (fUsedOnce)
-            {
+        if (fUsedOnce) {
             reg = new Register(type, null, Op.A_STACK);
-            }
-        else
-            {
+        } else {
             reg = code.createRegister(type);
             code.add(new Var(reg));
-            }
-        return new Assignable(reg);
         }
+        return new Assignable(reg);
+    }
 
     /**
      * For an L-Value expression with exactly one value, create a representation of the L-Value.
@@ -1803,20 +1614,17 @@ public abstract class Expression
      *
      * @return an Assignable object
      */
-    public Assignable generateAssignable(Context ctx, Code code, ErrorListener errs)
-        {
-        if (!isAssignable(ctx) || isVoid())
-            {
+    public Assignable generateAssignable(Context ctx, Code code, ErrorListener errs) {
+        if (!isAssignable(ctx) || isVoid()) {
             throw new IllegalStateException();
-            }
+        }
 
-        if (hasMultiValueImpl())
-            {
+        if (hasMultiValueImpl()) {
             return generateAssignables(ctx, code, errs)[0];
-            }
+        }
 
         throw notImplemented();
-        }
+    }
 
     /**
      * For an L-Value expression, create representations of the L-Values.
@@ -1831,25 +1639,22 @@ public abstract class Expression
      *
      * @return an array of {@link #getValueCount()} Assignable objects
      */
-    public Assignable[] generateAssignables(Context ctx, Code code, ErrorListener errs)
-        {
-        if (isVoid())
-            {
+    public Assignable[] generateAssignables(Context ctx, Code code, ErrorListener errs) {
+        if (isVoid()) {
             generateVoid(ctx, code, errs);
             return NO_LVALUES;
-            }
+        }
 
-        if (hasSingleValueImpl() && isSingle())
-            {
+        if (hasSingleValueImpl() && isSingle()) {
             return new Assignable[] { generateAssignable(ctx, code, errs) };
-            }
+        }
 
         // a sub-class should have overridden this method
         assert isAssignable(ctx);
         throw hasMultiValueImpl()
                 ? notImplemented()
                 : new IllegalStateException();
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -1862,44 +1667,39 @@ public abstract class Expression
      *
      * @return true iff this expression can be rendered as the specified argument type
      */
-    public boolean isAssignableTo(TypeConstant typeThat)
-        {
+    public boolean isAssignableTo(TypeConstant typeThat) {
         TypeConstant typeImplicit = getType();
         return typeImplicit.isA(typeThat)
                 || typeImplicit.ensureTypeInfo().findConversion(typeThat) != null;
-        }
+    }
 
     /**
      * @return true iff the Expression is of the type "Boolean"
      */
-    public boolean isTypeBoolean()
-        {
+    public boolean isTypeBoolean() {
         return getType().isEcstasy("Boolean");
-        }
+    }
 
     /**
      * @return true iff the Expression is the constant value "false"
      */
-    public boolean isConstantFalse()
-        {
+    public boolean isConstantFalse() {
         return isConstant() && toConstant().equals(pool().valFalse());
-        }
+    }
 
     /**
      * @return true iff the Expression is the constant value "false"
      */
-    public boolean isConstantTrue()
-        {
+    public boolean isConstantTrue() {
         return isConstant() && toConstant().equals(pool().valTrue());
-        }
+    }
 
     /**
      * @return true iff the Expression is the constant value "Null"
      */
-    public boolean isConstantNull()
-        {
+    public boolean isConstantNull() {
         return isConstant() && toConstant().equals(pool().valNull());
-        }
+    }
 
     /**
      * Given a constant, attempt to convert it to the specified type.
@@ -1909,24 +1709,19 @@ public abstract class Expression
      *
      * @return the constant to use, or null if conversion is not possible
      */
-    protected Constant convertConstant(Constant constIn, TypeConstant typeOut)
-        {
+    protected Constant convertConstant(Constant constIn, TypeConstant typeOut) {
         TypeConstant typeIn = constIn.getType();
-        if (typeIn.isA(typeOut))
-            {
+        if (typeIn.isA(typeOut)) {
             // common case; no conversion is necessary
             return constIn;
-            }
-
-        try
-            {
-            return constIn.convertTo(typeOut);
-            }
-        catch (ArithmeticException e)
-            {
-            return null;
-            }
         }
+
+        try {
+            return constIn.convertTo(typeOut);
+        } catch (ArithmeticException e) {
+            return null;
+        }
+    }
 
     /**
      * Given a constant, verify that it can be assigned to (or somehow converted to) the specified
@@ -1938,27 +1733,22 @@ public abstract class Expression
      *
      * @return the constant to use or null if the compile-time conversion is not possible
      */
-    protected Constant convertConstant(Constant constIn, TypeConstant typeOut, ErrorListener errs)
-        {
+    protected Constant convertConstant(Constant constIn, TypeConstant typeOut, ErrorListener errs) {
         TypeConstant typeIn = constIn.getType();
-        if (typeIn.isA(typeOut))
-            {
+        if (typeIn.isA(typeOut)) {
             // common case; no conversion is necessary
             return constIn;
-            }
+        }
 
-        try
-            {
+        try {
             return constIn.convertTo(typeOut);
-            }
-        catch (ArithmeticException e)
-            {
+        } catch (ArithmeticException e) {
             // conversion failure due to range etc.
             log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, typeOut,
                     constIn.getValueString());
             return generateFakeConstant(typeOut);
-            }
         }
+    }
 
     /**
      * Given a constant, verify that it can be assigned to (or somehow converted to) the specified
@@ -1971,18 +1761,16 @@ public abstract class Expression
      *
      * @return the constant to use (never null)
      */
-    protected Constant validateAndConvertConstant(Constant constIn, TypeConstant typeOut, ErrorListener errs)
-        {
+    protected Constant validateAndConvertConstant(Constant constIn, TypeConstant typeOut, ErrorListener errs) {
         Constant constOut = convertConstant(constIn, typeOut, errs);
-        if (constOut == null)
-            {
+        if (constOut == null) {
             // conversion apparently was not possible
             log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeOut, constIn.getType());
             constOut = generateFakeConstant(typeOut);
-            }
+        }
 
         return constOut;
-        }
+    }
 
     /**
      * Obtain a TypeInfo for the specified type in the specified class context.
@@ -1992,19 +1780,16 @@ public abstract class Expression
      *
      * @param type  the type to get the TypeInfo for; if null - use the context's type
      */
-    protected TypeInfo getTypeInfo(Context ctx, TypeConstant type, ErrorListener errs)
-        {
-        if (type == null)
-            {
+    protected TypeInfo getTypeInfo(Context ctx, TypeConstant type, ErrorListener errs) {
+        if (type == null) {
             return pool().
                 ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE).ensureTypeInfo(errs);
-            }
+        }
 
         TypeInfo info = type.ensureTypeInfo(ctx.getThisClassId(), errs);
-        if (info.getType().isAccessSpecified() || !type.isAccessModifiable())
-            {
+        if (info.getType().isAccessSpecified() || !type.isAccessModifiable()) {
             return info;
-            }
+        }
 
         // The "ensureTypeInfo" didn't see any reason to widen the TypeInfo beyond the "public"
         // access, however:
@@ -2015,7 +1800,7 @@ public abstract class Expression
         // Therefore, we will widen the search to "protected" access, but will enforce
         // the visibility check when a property or method is found.
         return type.ensureAccess(Access.PROTECTED).ensureTypeInfo(errs);
-        }
+    }
 
     /**
      * When a register is needed to store a value that is never used, the "black hole" register is
@@ -2028,10 +1813,9 @@ public abstract class Expression
      *
      * @return a black hole register of the specified type
      */
-    protected Register generateBlackHole(TypeConstant type)
-        {
+    protected Register generateBlackHole(TypeConstant type) {
         return new Register(type == null ? pool().typeObject() : type, null, Op.A_IGNORE);
-        }
+    }
 
     /**
      * When an error occurs during compilation, but a constant of a specific type is required, this
@@ -2041,45 +1825,40 @@ public abstract class Expression
      *
      * @return a constant of the specified type
      */
-    protected Constant generateFakeConstant(TypeConstant type)
-        {
+    protected Constant generateFakeConstant(TypeConstant type) {
         return Constant.defaultValue(type);
-        }
+    }
 
     /**
      * @return true iff the current recursion is coming from assignment processing
      */
-    protected boolean isInAssignment()
-        {
+    protected boolean isInAssignment() {
         return (m_nFlags & IN_ASSIGNMENT) != 0;
-        }
+    }
 
     /**
      * Mark the expression as being "in assignment".
      */
-    protected void markInAssignment()
-        {
+    protected void markInAssignment() {
         assert !isInAssignment();
         m_nFlags |= IN_ASSIGNMENT;
-        }
+    }
 
     /**
      * Mark the expression as no longer being "in assignment".
      */
-    protected void clearInAssignment()
-        {
+    protected void clearInAssignment() {
         assert isInAssignment();
         m_nFlags &= ~IN_ASSIGNMENT;
-        }
+    }
 
     /**
      * @return true iff the "illegal short-circuiting" error has already been logged for this
      *        expression
      */
-    protected boolean isSuppressShortCircuit()
-        {
+    protected boolean isSuppressShortCircuit() {
         return (m_nFlags & ILLEGAL_SHORT) != 0;
-        }
+    }
 
     /**
      * If the expression is short-circuiting in a context that does NOT allow short-circuiting
@@ -2088,15 +1867,13 @@ public abstract class Expression
      *
      * @param errs  the error list to log any errors to
      */
-    protected void checkShortCircuit(ErrorListener errs)
-        {
+    protected void checkShortCircuit(ErrorListener errs) {
         if (!isSuppressShortCircuit() && isShortCircuiting()
-                && !getParent().allowsShortCircuit(this))
-            {
+                && !getParent().allowsShortCircuit(this)) {
             log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_ILLEGAL);
             m_nFlags |= ILLEGAL_SHORT;  // only log the error once
-            }
         }
+    }
 
     /**
      * A helper method to create an array of common types for two arrays.
@@ -2105,12 +1882,10 @@ public abstract class Expression
      * @param atypeElse  the second type array
      * @return           an array of common types (of the minimum of the two array sizes)
      */
-    protected TypeConstant[] selectCommonTypes(TypeConstant[] atypeThen, TypeConstant[] atypeElse)
-        {
+    protected TypeConstant[] selectCommonTypes(TypeConstant[] atypeThen, TypeConstant[] atypeElse) {
         int            cTypes      = Math.min(atypeThen.length, atypeElse.length);
         TypeConstant[] atypeCommon = new TypeConstant[cTypes];
-        for (int i = 0; i < cTypes; i++)
-            {
+        for (int i = 0; i < cTypes; i++) {
             TypeConstant typeThen = atypeThen[i];
             TypeConstant typeElse = atypeElse[i];
 
@@ -2121,9 +1896,9 @@ public abstract class Expression
                     : typeElse.isOnlyNullable() ? pool.ensureNullableTypeConstant(typeThen)
                         : pool.ensureUnionTypeConstant(typeThen, typeElse)
                         : typeCommon;
-            }
-        return atypeCommon;
         }
+        return atypeCommon;
+    }
 
     /**
      * Given that this expression sits in a list of expressions at the specified index, determine if
@@ -2136,23 +1911,19 @@ public abstract class Expression
      *
      * @return a "point-in-time" value, if necessary
      */
-    protected Argument ensurePointInTime(Code code, Argument arg, List<Expression> listExprs, int iExpr)
-        {
+    protected Argument ensurePointInTime(Code code, Argument arg, List<Expression> listExprs, int iExpr) {
         // clearly, the last expression in a list cannot have any side effects, as well as an
         // effectively final argument
         int cExprs = listExprs.size();
-        if (iExpr < cExprs-1 && !arg.isEffectivelyFinal())
-            {
-            for (int iRight = iExpr + 1; iRight < cExprs; ++iRight)
-                {
-                if (listExprs.get(iRight).mightAffect(this, arg) == SideEffect.DefYes)
-                    {
+        if (iExpr < cExprs-1 && !arg.isEffectivelyFinal()) {
+            for (int iRight = iExpr + 1; iRight < cExprs; ++iRight) {
+                if (listExprs.get(iRight).mightAffect(this, arg) == SideEffect.DefYes) {
                     return ensurePointInTime(code, arg);
-                    }
                 }
             }
-        return arg;
         }
+        return arg;
+    }
 
     /**
      * Check it the specified expression has a potential of changing this expression's value (as a
@@ -2163,50 +1934,43 @@ public abstract class Expression
      *
      * @return a "point-in-time" value, if necessary
      */
-    protected Argument ensurePointInTime(Code code, Argument arg, Expression exprRight)
-        {
+    protected Argument ensurePointInTime(Code code, Argument arg, Expression exprRight) {
         return !arg.isEffectivelyFinal() && exprRight.mightAffect(this, arg) == SideEffect.DefYes
                 ? ensurePointInTime(code, arg)
                 : arg;
-        }
+    }
 
      /**
      * Check if the specified argument's value can be changed externally and replace it with a
      * "point-in-time" value if necessary.
      */
-    private Argument ensurePointInTime(Code code, Argument arg)
-        {
+    private Argument ensurePointInTime(Code code, Argument arg) {
         // if the register is a @Future, no need to take a snapshot
         if (arg instanceof PropertyConstant ||
             arg instanceof Register reg &&
-                (!reg.isVar() || !reg.ensureRegType(true).isA(pool().clzFuture().getType())))
-            {
+                (!reg.isVar() || !reg.ensureRegType(true).isA(pool().clzFuture().getType()))) {
             Register regTemp = code.createRegister(arg.getType());
             regTemp.markEffectivelyFinal();
             code.add(new Var_I(regTemp, arg));
             arg = regTemp;
-            }
-        return arg;
         }
+        return arg;
+    }
 
     /**
      * Report a type mismatch, attempting to provide a most useful error.
      */
     protected void reportTypeMismatch(TypeConstant typeRequired, TypeConstant typeActual,
-                                      ErrorListener errs)
-        {
+                                      ErrorListener errs) {
         if (this instanceof LiteralExpression lit &&
                 typeRequired.isA(pool().typeFileNode()) &&
-                lit.getLiteral().getId() == Token.Id.LIT_PATH)
-            {
+                lit.getLiteral().getId() == Token.Id.LIT_PATH) {
             log(errs, Severity.ERROR, Compiler.MISSING_RESOURCE);
-            }
-        else
-            {
+        } else {
             log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                 typeRequired.getValueString(), typeActual.getValueString());
-            }
         }
+    }
 
 
     // ----- inner class: Assignable ---------------------------------------------------------------
@@ -2214,28 +1978,25 @@ public abstract class Expression
     /**
      * Assignable represents an L-Value.
      */
-    public class Assignable
-        {
+    public class Assignable {
         // ----- constructors ------------------------------------------------------------------
 
         /**
          * Construct a black hole L-Value.
          */
-        public Assignable()
-            {
+        public Assignable() {
             m_form = AssignForm.BlackHole;
-            }
+        }
 
         /**
          * Construct an Assignable based on a local variable.
          *
          * @param regVar  the Register, representing the local variable
          */
-        public Assignable(Register regVar)
-            {
+        public Assignable(Register regVar) {
             m_form = AssignForm.LocalVar;
             m_arg  = regVar;
-            }
+        }
 
         /**
          * Construct an Assignable based on a property (either local or "this").
@@ -2243,37 +2004,29 @@ public abstract class Expression
          * @param argTarget  the argument representing the property target
          * @param constProp  the PropertyConstant
          */
-        public Assignable(Argument argTarget, PropertyConstant constProp)
-            {
-            if (argTarget instanceof Register reg)
-                {
-                if (reg.isPredefined())
-                    {
-                    switch (((Register) argTarget).getIndex())
-                        {
-                        case Op.A_THIS:
-                        case Op.A_TARGET:
-                        case Op.A_STRUCT:
-                            m_form = AssignForm.LocalProp;
-                            break;
+        public Assignable(Argument argTarget, PropertyConstant constProp) {
+            if (argTarget instanceof Register reg) {
+                if (reg.isPredefined()) {
+                    switch (((Register) argTarget).getIndex()) {
+                    case Op.A_THIS:
+                    case Op.A_TARGET:
+                    case Op.A_STRUCT:
+                        m_form = AssignForm.LocalProp;
+                        break;
 
-                        default:
-                            m_form = AssignForm.TargetProp;
-                            break;
-                        }
+                    default:
+                        m_form = AssignForm.TargetProp;
+                        break;
                     }
-                else
-                    {
+                } else {
                     m_form = AssignForm.TargetProp;
-                    }
                 }
-            else
-                {
+            } else {
                 m_form = AssignForm.TargetProp;
-                }
+            }
             m_arg  = argTarget;
             m_prop = constProp;
-            }
+        }
 
         /**
          * Construct an Assignable based on a single dimension array local variable.
@@ -2281,12 +2034,11 @@ public abstract class Expression
          * @param argArray  the Register, representing the local variable holding an array
          * @param index     the index into the array
          */
-        public Assignable(Argument argArray, Argument index)
-            {
+        public Assignable(Argument argArray, Argument index) {
             m_form   = AssignForm.Indexed;
             m_arg    = argArray;
             m_oIndex = index;
-            }
+        }
 
         /**
          * Construct an Assignable based on a multi (any) dimension array local variable.
@@ -2294,14 +2046,13 @@ public abstract class Expression
          * @param regArray  the Register, representing the local variable holding an array
          * @param indexes   an array of indexes into the array
          */
-        public Assignable(Argument regArray, Argument[] indexes)
-            {
+        public Assignable(Argument regArray, Argument[] indexes) {
             assert indexes != null && indexes.length > 0;
 
             m_form   = indexes.length == 1 ? AssignForm.Indexed : AssignForm.IndexedN;
             m_arg    = regArray;
             m_oIndex = indexes.length == 1 ? indexes[0] : indexes;
-            }
+        }
 
         /**
          * Construct an Assignable based on a local property that is a single dimension array.
@@ -2309,12 +2060,11 @@ public abstract class Expression
          * @param constProp  the PropertyConstant
          * @param index      the index into the array
          */
-        public Assignable(PropertyConstant constProp, Argument index)
-            {
+        public Assignable(PropertyConstant constProp, Argument index) {
             m_form   = AssignForm.IndexedProp;
             m_prop   = constProp;
             m_oIndex = index;
-            }
+        }
 
         /**
          * Construct an Assignable based on a local property that is a multi (any) dimension array.
@@ -2322,24 +2072,21 @@ public abstract class Expression
          * @param constProp  the PropertyConstant
          * @param indexes    an array of indexes into the array
          */
-        public Assignable(PropertyConstant constProp, Argument[] indexes)
-            {
+        public Assignable(PropertyConstant constProp, Argument[] indexes) {
             assert indexes != null && indexes.length > 0;
 
             m_form   = indexes.length == 1 ? AssignForm.IndexedProp : AssignForm.IndexedNProp;
             m_prop   = constProp;
             m_oIndex = indexes.length == 1 ? indexes[0] : indexes;
-            }
+        }
 
         // ----- accessors ---------------------------------------------------------------------
 
         /**
          * @return the type of the L-Value
          */
-        public TypeConstant getType()
-            {
-            return switch (m_form)
-                {
+        public TypeConstant getType() {
+            return switch (m_form) {
                 case BlackHole ->
                     pool().typeObject();
 
@@ -2355,161 +2102,138 @@ public abstract class Expression
                 case IndexedProp, IndexedNProp ->
                     // TODO
                     throw notImplemented();
-                };
-            }
+            };
+        }
 
         /**
          * @return the form of the Assignable
          */
-        public AssignForm getForm()
-            {
+        public AssignForm getForm() {
             return m_form;
-            }
+        }
 
         /**
          * @return true iff this Assignable represents a "black hole"
          */
-        public boolean isBlackhole()
-            {
+        public boolean isBlackhole() {
             return m_form == AssignForm.BlackHole;
-            }
+        }
 
         /**
          * @return the register, iff this Assignable represents a local variable
          */
-        public Register getRegister()
-            {
-            if (m_form != AssignForm.LocalVar)
-                {
+        public Register getRegister() {
+            if (m_form != AssignForm.LocalVar) {
                 throw new IllegalStateException();
-                }
-            return (Register) m_arg;
             }
+            return (Register) m_arg;
+        }
 
         /**
          * @return true iff the lvalue is a local variable register that is "normal" (but not the
          *         stack)
          */
-        public boolean isNormalVariable()
-            {
+        public boolean isNormalVariable() {
             return m_form == AssignForm.LocalVar && ((Register) m_arg).isNormal();
-            }
+        }
 
         /**
          * @return true iff the lvalue is a local variable register that is on the stack
          */
-        public boolean isStack()
-            {
+        public boolean isStack() {
             return m_form == AssignForm.LocalVar && m_arg.isStack();
-            }
+        }
 
         /**
          * @return true iff the lvalue is a register for a LocalVar, the property constant for a
          *         LocalProp, or the black-hole register for a BlackHole
          */
-        public boolean isLocalArgument()
-            {
-            return switch (m_form)
-                {
+        public boolean isLocalArgument() {
+            return switch (m_form) {
                 case BlackHole, LocalVar, LocalProp -> true;
                 default                             -> false;
-                };
-            }
+            };
+        }
 
         /**
          * @return true iff the lvalue is a property
          */
-        public boolean isProperty()
-            {
-            return switch (m_form)
-                {
+        public boolean isProperty() {
+            return switch (m_form) {
                 case LocalProp, TargetProp -> true;
                 default                    -> false;
-                };
-            }
+            };
+        }
 
         /**
          * @return the register for a LocalVar, the property constant for a LocalProp, or the
          *         black-hole register for a BlackHole
          */
-        public Argument getLocalArgument()
-            {
-            return switch (m_form)
-                {
+        public Argument getLocalArgument() {
+            return switch (m_form) {
                 case BlackHole -> generateBlackHole(null);
                 case LocalVar  -> getRegister();
                 case LocalProp -> getProperty();
                 default        -> throw new IllegalStateException();
-                };
-            }
+            };
+        }
 
         /**
          * @return the property target, iff this Assignable represents a property
          */
-        public Argument getTarget()
-            {
-            if (m_form != AssignForm.LocalProp && m_form != AssignForm.TargetProp)
-                {
+        public Argument getTarget() {
+            if (m_form != AssignForm.LocalProp && m_form != AssignForm.TargetProp) {
                 throw new IllegalStateException();
-                }
-            return m_arg;
             }
+            return m_arg;
+        }
 
         /**
          * @return the property, iff this Assignable represents a property
          */
-        public PropertyConstant getProperty()
-            {
+        public PropertyConstant getProperty() {
             if (m_form != AssignForm.LocalProp && m_form != AssignForm.TargetProp &&
-                m_form != AssignForm.IndexedProp && m_form != AssignForm.IndexedNProp)
-                {
+                m_form != AssignForm.IndexedProp && m_form != AssignForm.IndexedNProp) {
                 throw new IllegalStateException();
-                }
-            return m_prop;
             }
+            return m_prop;
+        }
 
         /**
          * @return the argument for the array, iff this Assignable represents an array
          */
-        public Argument getArray()
-            {
-            if (m_form != AssignForm.Indexed && m_form != AssignForm.IndexedN)
-                {
+        public Argument getArray() {
+            if (m_form != AssignForm.Indexed && m_form != AssignForm.IndexedN) {
                 throw new IllegalStateException();
-                }
-            return m_arg;
             }
+            return m_arg;
+        }
 
         /**
          * @return the array index, iff this Assignable represents a 1-dimensional array
          */
-        public Argument getIndex()
-            {
-            if (m_form == AssignForm.Indexed || m_form == AssignForm.IndexedProp)
-                {
+        public Argument getIndex() {
+            if (m_form == AssignForm.Indexed || m_form == AssignForm.IndexedProp) {
                 return (Argument) m_oIndex;
-                }
+            }
 
             throw new IllegalStateException();
-            }
+        }
 
         /**
          * @return the array indexes, iff this Assignable represents an any-dimensional array
          */
-        public Argument[] getIndexes()
-            {
-            if (m_form == AssignForm.Indexed || m_form == AssignForm.IndexedProp)
-                {
+        public Argument[] getIndexes() {
+            if (m_form == AssignForm.Indexed || m_form == AssignForm.IndexedProp) {
                 return new Argument[] {(Argument) m_oIndex};
-                }
+            }
 
-            if (m_form == AssignForm.IndexedN || m_form == AssignForm.IndexedNProp)
-                {
+            if (m_form == AssignForm.IndexedN || m_form == AssignForm.IndexedNProp) {
                 return (Argument[]) m_oIndex;
-                }
+            }
 
             throw new IllegalStateException();
-            }
+        }
 
         // ----- compilation -------------------------------------------------------------------
 
@@ -2517,11 +2241,10 @@ public abstract class Expression
          * @return false iff the assignment of this LVal can<b>not</b> pull directly from a local
          *         property using the optimized (property constant only) encoding
          */
-        public boolean supportsLocalPropMode()
-            {
+        public boolean supportsLocalPropMode() {
             // TODO
             return true;
-            }
+        }
 
         /**
          * Generate an RValue argument that represents the value that is in the LValue. The RValue
@@ -2541,84 +2264,68 @@ public abstract class Expression
          * @return an argument, if an Assignable was not provided
          */
         public Argument getValue(Assignable LValResult, boolean fLocalPropOk, boolean fUsedOnce,
-                Code code, ErrorListener errs)
-            {
-            switch (m_form)
-                {
-                case BlackHole:
-                    // blackhole has no value
-                    throw new IllegalStateException();
+                Code code, ErrorListener errs) {
+            switch (m_form) {
+            case BlackHole:
+                // blackhole has no value
+                throw new IllegalStateException();
 
-                case LocalVar:
-                    if (LValResult == null)
-                        {
-                        return getRegister();
-                        }
-                    else
-                        {
-                        LValResult.assign(getRegister(), code, errs);
-                        return null;
-                        }
+            case LocalVar:
+                if (LValResult == null) {
+                    return getRegister();
+                } else {
+                    LValResult.assign(getRegister(), code, errs);
+                    return null;
+                }
 
-                case LocalProp:
-                    if (LValResult == null && fLocalPropOk)
-                        {
-                        return getProperty();
-                        }
-                    // fall through
-                case TargetProp:
-                    {
-                    Assignable LValTemp = LValResult == null || !LValResult.isLocalArgument()
-                            ? createTempVar(code, getType(), fUsedOnce)
-                            : LValResult;
-                    code.add(new P_Get(getProperty(), getTarget(), LValTemp.getLocalArgument()));
-                    if (LValResult == null)
-                        {
-                        return LValTemp.getLocalArgument();
-                        }
-                    else
-                        {
-                        if (LValResult != LValTemp)
-                            {
-                            LValResult.assign(LValTemp.getLocalArgument(), code, errs);
-                            }
-                        return null;
-                        }
+            case LocalProp:
+                if (LValResult == null && fLocalPropOk) {
+                    return getProperty();
+                }
+                // fall through
+            case TargetProp: {
+                Assignable LValTemp = LValResult == null || !LValResult.isLocalArgument()
+                        ? createTempVar(code, getType(), fUsedOnce)
+                        : LValResult;
+                code.add(new P_Get(getProperty(), getTarget(), LValTemp.getLocalArgument()));
+                if (LValResult == null) {
+                    return LValTemp.getLocalArgument();
+                } else {
+                    if (LValResult != LValTemp) {
+                        LValResult.assign(LValTemp.getLocalArgument(), code, errs);
                     }
-
-                case Indexed:
-                case IndexedProp:
-                    {
-                    Assignable LValTemp = LValResult == null || !LValResult.isLocalArgument()
-                            ? createTempVar(code, getType(), fUsedOnce)
-                            : LValResult;
-                    Argument argTarget = m_form == AssignForm.Indexed
-                            ? getArray()
-                            : getProperty();
-                    code.add(new I_Get(argTarget, getIndex(), LValTemp.getLocalArgument()));
-                    if (LValResult == null)
-                        {
-                        return LValTemp.getLocalArgument();
-                        }
-                    else
-                        {
-                        if (LValResult != LValTemp)
-                            {
-                            LValResult.assign(LValTemp.getLocalArgument(), code, errs);
-                            }
-                        return null;
-                        }
-                    }
-
-                case IndexedN:
-                case IndexedNProp:
-                    // TODO
-                    throw notImplemented();
-
-                default:
-                    throw new IllegalStateException();
+                    return null;
                 }
             }
+
+            case Indexed:
+            case IndexedProp: {
+                Assignable LValTemp = LValResult == null || !LValResult.isLocalArgument()
+                        ? createTempVar(code, getType(), fUsedOnce)
+                        : LValResult;
+                Argument argTarget = m_form == AssignForm.Indexed
+                        ? getArray()
+                        : getProperty();
+                code.add(new I_Get(argTarget, getIndex(), LValTemp.getLocalArgument()));
+                if (LValResult == null) {
+                    return LValTemp.getLocalArgument();
+                } else {
+                    if (LValResult != LValTemp) {
+                        LValResult.assign(LValTemp.getLocalArgument(), code, errs);
+                    }
+                    return null;
+                }
+            }
+
+            case IndexedN:
+            case IndexedNProp:
+                // TODO
+                throw notImplemented();
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
 
         /**
          * Generate an argument that represents the result of this LValue. This method exists to
@@ -2641,75 +2348,62 @@ public abstract class Expression
          * @return a resulting argument of the validated type
          */
         public Argument generateArgument(
-                Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
-            {
-            switch (m_form)
-                {
-                case LocalVar:
-                    return getRegister();
+                Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+            switch (m_form) {
+            case LocalVar:
+                return getRegister();
 
-                case LocalProp:
-                    {
-                    if (fLocalPropOk)
-                        {
-                        return getProperty();
-                        }
-
-                    if (fUsedOnce)
-                        {
-                        Register reg = new Register(getType(), null, Op.A_STACK);
-                        code.add(new L_Get(getProperty(), reg));
-                        return reg;
-                        }
-
-                    Register reg = code.createRegister(getType());
-                    code.add(new Var_I(reg, getProperty()));
-                    return reg;
-                    }
-
-                case TargetProp:
-                    {
-                    Register reg;
-                    if (fUsedOnce)
-                        {
-                        reg = new Register(getType(), null, Op.A_STACK);
-                        }
-                    else
-                        {
-                        reg = code.createRegister(getType());
-                        code.add(new Var(reg));
-                        }
-                    code.add(new P_Get(getProperty(), getTarget(), reg));
-                    return reg;
-                    }
-
-                case Indexed:
-                    {
-                    Register reg;
-                    if (fUsedOnce)
-                        {
-                        reg = new Register(getType(), null, Op.A_STACK);
-                        }
-                    else
-                        {
-                        reg = code.createRegister(getType());
-                        code.add(new Var(reg));
-                        }
-                    code.add(new I_Get(getArray(), getIndex(), reg));
-                    return reg;
-                    }
-
-                case IndexedN:
-                    // TODO
-                case IndexedProp:       // REVIEW - is this even legal? (side effects)
-                case IndexedNProp:      // REVIEW - is this even legal? (side effects)
-                    throw notImplemented();
-
-                case BlackHole:
-                default:
-                    throw new IllegalStateException("form=" + m_form);
+            case LocalProp: {
+                if (fLocalPropOk) {
+                    return getProperty();
                 }
+
+                if (fUsedOnce) {
+                    Register reg = new Register(getType(), null, Op.A_STACK);
+                    code.add(new L_Get(getProperty(), reg));
+                    return reg;
+                }
+
+                Register reg = code.createRegister(getType());
+                code.add(new Var_I(reg, getProperty()));
+                return reg;
             }
+
+            case TargetProp: {
+                Register reg;
+                if (fUsedOnce) {
+                    reg = new Register(getType(), null, Op.A_STACK);
+                } else {
+                    reg = code.createRegister(getType());
+                    code.add(new Var(reg));
+                }
+                code.add(new P_Get(getProperty(), getTarget(), reg));
+                return reg;
+            }
+
+            case Indexed: {
+                Register reg;
+                if (fUsedOnce) {
+                    reg = new Register(getType(), null, Op.A_STACK);
+                } else {
+                    reg = code.createRegister(getType());
+                    code.add(new Var(reg));
+                }
+                code.add(new I_Get(getArray(), getIndex(), reg));
+                return reg;
+            }
+
+            case IndexedN:
+                // TODO
+            case IndexedProp:       // REVIEW - is this even legal? (side effects)
+            case IndexedNProp:      // REVIEW - is this even legal? (side effects)
+                throw notImplemented();
+
+            case BlackHole:
+            default:
+                throw new IllegalStateException("form=" + m_form);
+            }
+        }
 
         /**
          * Generate the assignment-specific assembly code.
@@ -2718,42 +2412,40 @@ public abstract class Expression
          * @param code  the code object to which the assembly is added
          * @param errs  the error listener to log to
          */
-        public void assign(Argument arg, Code code, ErrorListener errs)
-            {
-            switch (m_form)
-                {
-                case BlackHole:
-                    break;
+        public void assign(Argument arg, Code code, ErrorListener errs) {
+            switch (m_form) {
+            case BlackHole:
+                break;
 
-                case LocalVar:
-                    code.add(new Move(arg, getRegister()));
-                    break;
+            case LocalVar:
+                code.add(new Move(arg, getRegister()));
+                break;
 
-                case LocalProp:
-                    code.add(new L_Set(getProperty(), arg));
-                    break;
+            case LocalProp:
+                code.add(new L_Set(getProperty(), arg));
+                break;
 
-                case TargetProp:
-                    code.add(new P_Set(getProperty(), getTarget(), arg));
-                    break;
+            case TargetProp:
+                code.add(new P_Set(getProperty(), getTarget(), arg));
+                break;
 
-                case Indexed:
-                    code.add(new I_Set(getArray(), getIndex(), arg));
-                    break;
+            case Indexed:
+                code.add(new I_Set(getArray(), getIndex(), arg));
+                break;
 
-                case IndexedProp:
-                    code.add(new I_Set(getProperty(), getIndex(), arg));
-                    break;
+            case IndexedProp:
+                code.add(new I_Set(getProperty(), getIndex(), arg));
+                break;
 
-                case IndexedN:
-                case IndexedNProp:
-                    // TODO
-                    throw notImplemented();
+            case IndexedN:
+            case IndexedNProp:
+                // TODO
+                throw notImplemented();
 
-                default:
-                    throw new IllegalStateException();
-                }
+            default:
+                throw new IllegalStateException();
             }
+        }
 
         /**
          * Generate the sequential operation assembly code. This method is basically a combination
@@ -2772,249 +2464,219 @@ public abstract class Expression
          *         not passed
          */
         public Argument assignSequential(Sequential seq, Assignable LValResult, boolean fUsedOnce,
-                Code code, ErrorListener errs)
-            {
+                Code code, ErrorListener errs) {
             // a blind operation cannot have a result; all other operations will either assign to
             // the result or return a result
             assert !seq.isBlind() || LValResult == null;
 
             // black-hole optimization
-            if (LValResult != null && LValResult.isBlackhole())
-                {
+            if (LValResult != null && LValResult.isBlackhole()) {
                 seq = seq.toBlind();
                 LValResult = null;
-                }
+            }
 
-            switch (m_form)
-                {
-                case LocalVar:
-                case LocalProp:
-                    {
-                    Argument argTarget = getLocalArgument();
-                    switch (seq)
-                        {
-                        case Inc:
-                            code.add(new IP_Inc(argTarget));
-                            return null;
-
-                        case Dec:
-                            code.add(new IP_Dec(argTarget));
-                            return null;
-
-                        case PreInc:
-                        case PreDec:
-                            {
-                            if (LValResult != null && LValResult.isLocalArgument())
-                                {
-                                code.add(seq.isInc()
-                                        ? new IP_PreInc(argTarget, LValResult.getLocalArgument())
-                                        : new IP_PreDec(argTarget, LValResult.getLocalArgument()));
-                                return null;
-                                }
-
-                            Register regResult = code.createRegister(argTarget.getType(), fUsedOnce);
-                            code.add(seq.isInc()
-                                    ? new IP_PreInc(argTarget, regResult)
-                                    : new IP_PreDec(argTarget, regResult));
-
-                            if (LValResult == null)
-                                {
-                                return regResult;
-                                }
-                            LValResult.assign(regResult, code, errs);
-                            return null;
-                            }
-
-                        case PostInc:
-                        case PostDec:
-                            {
-                            Assignable LValTemp = LValResult != null && LValResult.isLocalArgument()
-                                    ? LValResult
-                                    : createTempVar(code, getType(), fUsedOnce);
-                            code.add(seq.isInc()
-                                    ? new IP_PostInc(argTarget, LValTemp.getLocalArgument())
-                                    : new IP_PostDec(argTarget, LValTemp.getLocalArgument()));
-                            if (LValResult == null)
-                                {
-                                return LValTemp.getRegister();
-                                }
-
-                            if (LValResult != LValTemp)
-                                {
-                                LValResult.assign(LValTemp.getRegister(), code, errs);
-                                }
-                            return null;
-                            }
-                        }
-                    break;
-                    }
-
-                case TargetProp:
-                    {
-                    PropertyConstant prop      = getProperty();
-                    Argument         argTarget = getTarget();
-                    if (seq.isBlind())
-                        {
-                        code.add(seq.isInc()
-                                ? new PIP_Inc(prop, argTarget)
-                                : new PIP_Dec(prop, argTarget));
-                        }
-                    else
-                        {
-                        Assignable LValTemp = LValResult != null && LValResult.isLocalArgument()
-                                ? LValResult
-                                : createTempVar(code, getType(), fUsedOnce);
-
-                        Argument argReturn = LValTemp.getLocalArgument();
-                        code.add(seq.isPre()
-                                ? seq.isInc()
-                                    ? new PIP_PreInc(prop, argTarget, argReturn)
-                                    : new PIP_PreDec(prop, argTarget, argReturn)
-                                : seq.isInc()
-                                    ? new PIP_PostInc(prop, argTarget, argReturn)
-                                    : new PIP_PostDec(prop, argTarget, argReturn));
-                        if (LValResult == null)
-                            {
-                            return argReturn;
-                            }
-
-                        if (LValResult != LValTemp)
-                            {
-                            LValResult.assign(argReturn, code, errs);
-                            }
-                        }
-                    return null;
-                    }
-
-                case Indexed:
-                case IndexedProp:
-                    {
-                    Argument argArray = m_form == AssignForm.Indexed
-                            ? getArray()
-                            : getProperty();
-                    Argument argIndex = getIndex();
-                    if (seq.isBlind())
-                        {
-                        code.add(seq.isInc()
-                                ? new IIP_Inc(argArray, argIndex)
-                                : new IIP_Dec(argArray, argIndex));
-                        }
-                    else
-                        {
-                        Assignable LValTemp = LValResult != null && LValResult.isLocalArgument()
-                                ? LValResult
-                                : createTempVar(code, getType().resolveGenericType("Element"), fUsedOnce);
-
-                        Argument argReturn = LValTemp.getLocalArgument();
-                        code.add(seq.isPre()
-                                ? seq.isInc()
-                                    ? new IIP_PreInc(argArray, argIndex, argReturn)
-                                    : new IIP_PreDec(argArray, argIndex, argReturn)
-                                : seq.isInc()
-                                    ? new IIP_PostInc(argArray, argIndex, argReturn)
-                                    : new IIP_PostDec(argArray, argIndex, argReturn));
-                        if (LValResult == null)
-                            {
-                            return argReturn;
-                            }
-
-                        if (LValResult != LValTemp)
-                            {
-                            LValResult.assign(argReturn, code, errs);
-                            }
-                        }
-                    return null;
-                    }
-
-                case IndexedN:
-                case IndexedNProp:
-                    // TODO
-                    throw notImplemented();
-
-                default:
-                    throw new IllegalStateException();
-                }
-
-            // generic implementation
-            switch (seq)
-                {
+            switch (m_form) {
+            case LocalVar:
+            case LocalProp: {
+                Argument argTarget = getLocalArgument();
+                switch (seq) {
                 case Inc:
-                case Dec:
-                    {
-                    Assignable LValTemp = createTempVar(code, getType(), false);
-
-                    // get the original value
-                    getValue(LValTemp, false, false, code, errs);
-
-                    // perform the sequential operation on the temp
-                    LValTemp.assignSequential(seq, null, false, code, errs);
-
-                    // store the operation's result
-                    assign(LValTemp.getRegister(), code, errs);
-
+                    code.add(new IP_Inc(argTarget));
                     return null;
-                    }
+
+                case Dec:
+                    code.add(new IP_Dec(argTarget));
+                    return null;
 
                 case PreInc:
-                case PreDec:
-                    {
-                    Assignable LValTemp = LValResult != null && LValResult.isNormalVariable()
-                            ? LValResult
-                            : createTempVar(code, getType(), false);
-
-                    // get the original value
-                    getValue(LValTemp, false, false, code, errs);
-
-                    // perform the sequential operation on the temp
-                    Sequential seqVoid = seq.isInc() ? Sequential.Inc : Sequential.Dec;
-                    LValTemp.assignSequential(seqVoid, null, false, code, errs);
-
-                    // store the operation's result
-                    assign(LValTemp.getRegister(), code, errs);
-
-                    // return the operation's result
-                    if (LValResult == null)
-                        {
-                        return LValTemp.getRegister();
-                        }
-
-                    if (LValResult != LValTemp)
-                        {
-                        LValResult.assign(LValTemp.getRegister(), code, errs);
-                        }
-                    return null;
+                case PreDec: {
+                    if (LValResult != null && LValResult.isLocalArgument()) {
+                        code.add(seq.isInc()
+                                ? new IP_PreInc(argTarget, LValResult.getLocalArgument())
+                                : new IP_PreDec(argTarget, LValResult.getLocalArgument()));
+                        return null;
                     }
+
+                    Register regResult = code.createRegister(argTarget.getType(), fUsedOnce);
+                    code.add(seq.isInc()
+                            ? new IP_PreInc(argTarget, regResult)
+                            : new IP_PreDec(argTarget, regResult));
+
+                    if (LValResult == null) {
+                        return regResult;
+                    }
+                    LValResult.assign(regResult, code, errs);
+                    return null;
+                }
 
                 case PostInc:
-                case PostDec:
-                    {
-                    Assignable LValTemp  = createTempVar(code, getType(), false);
-                    Argument   argResult = null;
-                    if (LValResult == null)
-                        {
-                        LValResult = createTempVar(code, getType(), fUsedOnce);
-                        argResult  = LValResult.getRegister();
-                        }
-
-                    // get the original value
-                    getValue(LValTemp, false, false, code, errs);
-                    LValResult.assign(LValTemp.getRegister(), code, errs);
-
-                    // perform the sequential operation on the temp
-                    Sequential seqVoid = seq.isInc() ? Sequential.Inc : Sequential.Dec;
-                    LValTemp.assignSequential(seqVoid, null, false, code, errs);
-
-                    // store the operation's result
-                    assign(LValTemp.getRegister(), code, errs);
-
-                    // return the value that preceded the operation
-                    return argResult;
+                case PostDec: {
+                    Assignable LValTemp = LValResult != null && LValResult.isLocalArgument()
+                            ? LValResult
+                            : createTempVar(code, getType(), fUsedOnce);
+                    code.add(seq.isInc()
+                            ? new IP_PostInc(argTarget, LValTemp.getLocalArgument())
+                            : new IP_PostDec(argTarget, LValTemp.getLocalArgument()));
+                    if (LValResult == null) {
+                        return LValTemp.getRegister();
                     }
 
-                default:
-                    throw new IllegalStateException();
+                    if (LValResult != LValTemp) {
+                        LValResult.assign(LValTemp.getRegister(), code, errs);
+                    }
+                    return null;
                 }
+                }
+                break;
             }
+
+            case TargetProp: {
+                PropertyConstant prop      = getProperty();
+                Argument         argTarget = getTarget();
+                if (seq.isBlind()) {
+                    code.add(seq.isInc()
+                            ? new PIP_Inc(prop, argTarget)
+                            : new PIP_Dec(prop, argTarget));
+                } else {
+                    Assignable LValTemp = LValResult != null && LValResult.isLocalArgument()
+                            ? LValResult
+                            : createTempVar(code, getType(), fUsedOnce);
+
+                    Argument argReturn = LValTemp.getLocalArgument();
+                    code.add(seq.isPre()
+                            ? seq.isInc()
+                                ? new PIP_PreInc(prop, argTarget, argReturn)
+                                : new PIP_PreDec(prop, argTarget, argReturn)
+                            : seq.isInc()
+                                ? new PIP_PostInc(prop, argTarget, argReturn)
+                                : new PIP_PostDec(prop, argTarget, argReturn));
+                    if (LValResult == null) {
+                        return argReturn;
+                    }
+
+                    if (LValResult != LValTemp) {
+                        LValResult.assign(argReturn, code, errs);
+                    }
+                }
+                return null;
+            }
+
+            case Indexed:
+            case IndexedProp: {
+                Argument argArray = m_form == AssignForm.Indexed
+                        ? getArray()
+                        : getProperty();
+                Argument argIndex = getIndex();
+                if (seq.isBlind()) {
+                    code.add(seq.isInc()
+                            ? new IIP_Inc(argArray, argIndex)
+                            : new IIP_Dec(argArray, argIndex));
+                } else {
+                    Assignable LValTemp = LValResult != null && LValResult.isLocalArgument()
+                            ? LValResult
+                            : createTempVar(code, getType().resolveGenericType("Element"), fUsedOnce);
+
+                    Argument argReturn = LValTemp.getLocalArgument();
+                    code.add(seq.isPre()
+                            ? seq.isInc()
+                                ? new IIP_PreInc(argArray, argIndex, argReturn)
+                                : new IIP_PreDec(argArray, argIndex, argReturn)
+                            : seq.isInc()
+                                ? new IIP_PostInc(argArray, argIndex, argReturn)
+                                : new IIP_PostDec(argArray, argIndex, argReturn));
+                    if (LValResult == null) {
+                        return argReturn;
+                    }
+
+                    if (LValResult != LValTemp) {
+                        LValResult.assign(argReturn, code, errs);
+                    }
+                }
+                return null;
+            }
+
+            case IndexedN:
+            case IndexedNProp:
+                // TODO
+                throw notImplemented();
+
+            default:
+                throw new IllegalStateException();
+            }
+
+            // generic implementation
+            switch (seq) {
+            case Inc:
+            case Dec: {
+                Assignable LValTemp = createTempVar(code, getType(), false);
+
+                // get the original value
+                getValue(LValTemp, false, false, code, errs);
+
+                // perform the sequential operation on the temp
+                LValTemp.assignSequential(seq, null, false, code, errs);
+
+                // store the operation's result
+                assign(LValTemp.getRegister(), code, errs);
+
+                return null;
+            }
+
+            case PreInc:
+            case PreDec: {
+                Assignable LValTemp = LValResult != null && LValResult.isNormalVariable()
+                        ? LValResult
+                        : createTempVar(code, getType(), false);
+
+                // get the original value
+                getValue(LValTemp, false, false, code, errs);
+
+                // perform the sequential operation on the temp
+                Sequential seqVoid = seq.isInc() ? Sequential.Inc : Sequential.Dec;
+                LValTemp.assignSequential(seqVoid, null, false, code, errs);
+
+                // store the operation's result
+                assign(LValTemp.getRegister(), code, errs);
+
+                // return the operation's result
+                if (LValResult == null) {
+                    return LValTemp.getRegister();
+                }
+
+                if (LValResult != LValTemp) {
+                    LValResult.assign(LValTemp.getRegister(), code, errs);
+                }
+                return null;
+            }
+
+            case PostInc:
+            case PostDec: {
+                Assignable LValTemp  = createTempVar(code, getType(), false);
+                Argument   argResult = null;
+                if (LValResult == null) {
+                    LValResult = createTempVar(code, getType(), fUsedOnce);
+                    argResult  = LValResult.getRegister();
+                }
+
+                // get the original value
+                getValue(LValTemp, false, false, code, errs);
+                LValResult.assign(LValTemp.getRegister(), code, errs);
+
+                // perform the sequential operation on the temp
+                Sequential seqVoid = seq.isInc() ? Sequential.Inc : Sequential.Dec;
+                LValTemp.assignSequential(seqVoid, null, false, code, errs);
+
+                // store the operation's result
+                assign(LValTemp.getRegister(), code, errs);
+
+                // return the value that preceded the operation
+                return argResult;
+            }
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
 
         /**
          * Generate the assignment-specific assembly code for the specified "in place" operator,
@@ -3025,91 +2687,83 @@ public abstract class Expression
          * @param code   the code object to which the assembly is added
          * @param errs   the error listener to log to
          */
-        public void assignInPlaceResult(Token tokOp, Argument arg, Code code, ErrorListener errs)
-            {
+        public void assignInPlaceResult(Token tokOp, Argument arg, Code code, ErrorListener errs) {
             Op op;
-            switch (m_form)
-                {
-                case LocalVar:
-                case LocalProp:
-                    {
-                    Argument argTarget = getLocalArgument();
-                    op = switch (tokOp.getId())
-                        {
-                        case ADD_ASN     -> new IP_Add(argTarget, arg);
-                        case SUB_ASN     -> new IP_Sub(argTarget, arg);
-                        case MUL_ASN     -> new IP_Mul(argTarget, arg);
-                        case DIV_ASN     -> new IP_Div(argTarget, arg);
-                        case MOD_ASN     -> new IP_Mod(argTarget, arg);
-                        case SHL_ASN     -> new IP_Shl(argTarget, arg);
-                        case SHR_ASN     -> new IP_Shr(argTarget, arg);
-                        case USHR_ASN    -> new IP_ShrAll(argTarget, arg);
-                        case BIT_AND_ASN -> new IP_And(argTarget, arg);
-                        case BIT_OR_ASN  -> new IP_Or(argTarget, arg);
-                        case BIT_XOR_ASN -> new IP_Xor(argTarget, arg);
-                        default          -> throw new IllegalStateException("op=" + tokOp.getId().TEXT);
-                        };
-                    break;
-                    }
+            switch (m_form) {
+            case LocalVar:
+            case LocalProp: {
+                Argument argTarget = getLocalArgument();
+                op = switch (tokOp.getId()) {
+                    case ADD_ASN     -> new IP_Add(argTarget, arg);
+                    case SUB_ASN     -> new IP_Sub(argTarget, arg);
+                    case MUL_ASN     -> new IP_Mul(argTarget, arg);
+                    case DIV_ASN     -> new IP_Div(argTarget, arg);
+                    case MOD_ASN     -> new IP_Mod(argTarget, arg);
+                    case SHL_ASN     -> new IP_Shl(argTarget, arg);
+                    case SHR_ASN     -> new IP_Shr(argTarget, arg);
+                    case USHR_ASN    -> new IP_ShrAll(argTarget, arg);
+                    case BIT_AND_ASN -> new IP_And(argTarget, arg);
+                    case BIT_OR_ASN  -> new IP_Or(argTarget, arg);
+                    case BIT_XOR_ASN -> new IP_Xor(argTarget, arg);
+                    default          -> throw new IllegalStateException("op=" + tokOp.getId().TEXT);
+                };
+                break;
+            }
 
-                case TargetProp:
-                    {
-                    PropertyConstant prop      = getProperty();
-                    Argument         argTarget = getTarget();
-                    op = switch (tokOp.getId())
-                        {
-                        case ADD_ASN     -> new PIP_Add(prop, argTarget, arg);
-                        case SUB_ASN     -> new PIP_Sub(prop, argTarget, arg);
-                        case MUL_ASN     -> new PIP_Mul(prop, argTarget, arg);
-                        case DIV_ASN     -> new PIP_Div(prop, argTarget, arg);
-                        case MOD_ASN     -> new PIP_Mod(prop, argTarget, arg);
-                        case SHL_ASN     -> new PIP_Shl(prop, argTarget, arg);
-                        case SHR_ASN     -> new PIP_Shr(prop, argTarget, arg);
-                        case USHR_ASN    -> new PIP_ShrAll(prop, argTarget, arg);
-                        case BIT_AND_ASN -> new PIP_And(prop, argTarget, arg);
-                        case BIT_OR_ASN  -> new PIP_Or(prop, argTarget, arg);
-                        case BIT_XOR_ASN -> new PIP_Xor(prop, argTarget, arg);
-                        default          -> throw new IllegalStateException("op=" + tokOp.getId().TEXT);
-                        };
-                    break;
-                    }
+            case TargetProp: {
+                PropertyConstant prop      = getProperty();
+                Argument         argTarget = getTarget();
+                op = switch (tokOp.getId()) {
+                    case ADD_ASN     -> new PIP_Add(prop, argTarget, arg);
+                    case SUB_ASN     -> new PIP_Sub(prop, argTarget, arg);
+                    case MUL_ASN     -> new PIP_Mul(prop, argTarget, arg);
+                    case DIV_ASN     -> new PIP_Div(prop, argTarget, arg);
+                    case MOD_ASN     -> new PIP_Mod(prop, argTarget, arg);
+                    case SHL_ASN     -> new PIP_Shl(prop, argTarget, arg);
+                    case SHR_ASN     -> new PIP_Shr(prop, argTarget, arg);
+                    case USHR_ASN    -> new PIP_ShrAll(prop, argTarget, arg);
+                    case BIT_AND_ASN -> new PIP_And(prop, argTarget, arg);
+                    case BIT_OR_ASN  -> new PIP_Or(prop, argTarget, arg);
+                    case BIT_XOR_ASN -> new PIP_Xor(prop, argTarget, arg);
+                    default          -> throw new IllegalStateException("op=" + tokOp.getId().TEXT);
+                };
+                break;
+            }
 
-                case Indexed:
-                case IndexedProp:
-                    {
-                    Argument argArray = m_form == AssignForm.Indexed
-                            ? getArray()
-                            : getProperty();
-                    Argument argIndex = getIndex();
-                    op = switch (tokOp.getId())
-                        {
-                        case ADD_ASN     -> new IIP_Add(argArray, argIndex, arg);
-                        case SUB_ASN     -> new IIP_Sub(argArray, argIndex, arg);
-                        case MUL_ASN     -> new IIP_Mul(argArray, argIndex, arg);
-                        case DIV_ASN     -> new IIP_Div(argArray, argIndex, arg);
-                        case MOD_ASN     -> new IIP_Mod(argArray, argIndex, arg);
-                        case SHL_ASN     -> new IIP_Shl(argArray, argIndex, arg);
-                        case SHR_ASN     -> new IIP_Shr(argArray, argIndex, arg);
-                        case USHR_ASN    -> new IIP_ShrAll(argArray, argIndex, arg);
-                        case BIT_AND_ASN -> new IIP_And(argArray, argIndex, arg);
-                        case BIT_OR_ASN  -> new IIP_Or(argArray, argIndex, arg);
-                        case BIT_XOR_ASN -> new IIP_Xor(argArray, argIndex, arg);
-                        default          -> throw new IllegalStateException("op=" + tokOp.getId().TEXT);
-                        };
-                    break;
-                    }
+            case Indexed:
+            case IndexedProp: {
+                Argument argArray = m_form == AssignForm.Indexed
+                        ? getArray()
+                        : getProperty();
+                Argument argIndex = getIndex();
+                op = switch (tokOp.getId()) {
+                    case ADD_ASN     -> new IIP_Add(argArray, argIndex, arg);
+                    case SUB_ASN     -> new IIP_Sub(argArray, argIndex, arg);
+                    case MUL_ASN     -> new IIP_Mul(argArray, argIndex, arg);
+                    case DIV_ASN     -> new IIP_Div(argArray, argIndex, arg);
+                    case MOD_ASN     -> new IIP_Mod(argArray, argIndex, arg);
+                    case SHL_ASN     -> new IIP_Shl(argArray, argIndex, arg);
+                    case SHR_ASN     -> new IIP_Shr(argArray, argIndex, arg);
+                    case USHR_ASN    -> new IIP_ShrAll(argArray, argIndex, arg);
+                    case BIT_AND_ASN -> new IIP_And(argArray, argIndex, arg);
+                    case BIT_OR_ASN  -> new IIP_Or(argArray, argIndex, arg);
+                    case BIT_XOR_ASN -> new IIP_Xor(argArray, argIndex, arg);
+                    default          -> throw new IllegalStateException("op=" + tokOp.getId().TEXT);
+                };
+                break;
+            }
 
-                case IndexedN:
-                case IndexedNProp:
-                    // TODO
-                    throw notImplemented();
+            case IndexedN:
+            case IndexedNProp:
+                // TODO
+                throw notImplemented();
 
-                default:
-                    throw new IllegalStateException();
-                }
+            default:
+                throw new IllegalStateException();
+            }
 
             code.add(op);
-            }
+        }
 
         // ----- fields ------------------------------------------------------------------------
 
@@ -3117,7 +2771,7 @@ public abstract class Expression
         private Argument         m_arg;
         private PropertyConstant m_prop;
         private Object           m_oIndex;
-        }
+    }
 
     /**
      * The form of Assignable.
@@ -3142,50 +2796,44 @@ public abstract class Expression
     /**
      * Describes a pre/post increment/decrement operation.
      */
-    public enum Sequential
-        {
+    public enum Sequential {
         Inc, PreInc, PostInc, Dec, PreDec, PostDec;
 
         /**
          * @return true iff the operation is an increment
          */
-        public boolean isInc()
-            {
+        public boolean isInc() {
             return this.compareTo(PostInc) <= 0;
-            }
+        }
 
         /**
          * @return true iff the operation is a "blind" increment or decrement
          */
-        public boolean isBlind()
-            {
+        public boolean isBlind() {
             return this == Inc | this == Dec;
-            }
+        }
 
         /**
          * @return the "blind" form of this operation
          */
-        public Sequential toBlind()
-            {
+        public Sequential toBlind() {
             return this.isInc() ? Inc : Dec;
-            }
+        }
 
         /**
          * @return true iff the operation is a pre-increment or pre-decrement
          */
-        public boolean isPre()
-            {
+        public boolean isPre() {
             return this == PreInc | this == PreDec;
-            }
+        }
 
         /**
          * @return true iff the operation is a post-increment or post-decrement
          */
-        public boolean isPost()
-            {
+        public boolean isPost() {
             return this == PostInc | this == PostDec;
-            }
         }
+    }
 
 
     // ----- TypeFit enumeration -------------------------------------------------------------------
@@ -3209,8 +2857,7 @@ public abstract class Expression
      * <li>{@code Fit} - the expression can yield the requested type.</li>
      * </ul>
      */
-    public enum TypeFit
-        {
+    public enum TypeFit {
         NoFit         (0b0000),
         ConvPackUnpack(0b1111),
         ConvPack      (0b1011),
@@ -3226,113 +2873,101 @@ public abstract class Expression
          *
          * @param nFlags  bit flags defining how good a fit the TypeFit is
          */
-        TypeFit(int nFlags)
-            {
+        TypeFit(int nFlags) {
             FLAGS = nFlags;
-            }
+        }
 
         /**
          * @return true iff the type fits, regardless of whether it needs conversion or packing or
          *         unpacking
          */
-        public boolean isFit()
-            {
+        public boolean isFit() {
             return (FLAGS & FITS) != 0;
-            }
+        }
 
         /**
          * @return a TypeFit that does everything this TypeFit does, plus fits
          */
-        public TypeFit ensureFit()
-            {
+        public TypeFit ensureFit() {
             return isFit()
                     ? this
                     : Fit;
-            }
+        }
 
         /**
          * @return true iff the type goes through at least one "@Auto" conversion in order to fit
          */
-        public boolean isConverting()
-            {
+        public boolean isConverting() {
             return (FLAGS & CONVERTS) != 0;
-            }
+        }
 
         /**
          * @return a TypeFit that does everything this TypeFit does, plus type conversion
          */
-        public TypeFit addConversion()
-            {
+        public TypeFit addConversion() {
             return isFit()
                     ? forFlags(FLAGS | CONVERTS)
                     : NoFit;
-            }
+        }
 
         /**
          * @return a TypeFit that does everything this TypeFit does, minus type conversion
          */
-        public TypeFit removeConversion()
-            {
+        public TypeFit removeConversion() {
             return isConverting()
                     ? forFlags(FLAGS & ~CONVERTS)
                     : this;
-            }
+        }
 
         /**
          * @return true iff the type goes through a tuple creation
          */
-        public boolean isPacking()
-            {
+        public boolean isPacking() {
             return (FLAGS & PACKS) != 0;
-            }
+        }
 
         /**
          * @return a TypeFit that does everything this TypeFit does, plus Tuple packing
          */
-        public TypeFit addPack()
-            {
+        public TypeFit addPack() {
             return isFit()
                     ? forFlags(FLAGS | PACKS)
                     : NoFit;
-            }
+        }
 
         /**
          * @return a TypeFit that does everything this TypeFit does, minus Tuple packing
          */
-        public TypeFit removePack()
-            {
+        public TypeFit removePack() {
             return isPacking()
                     ? forFlags(FLAGS & ~PACKS)
                     : this;
-            }
+        }
 
         /**
          * @return true iff the type goes through a tuple extraction
          */
-        public boolean isUnpacking()
-            {
+        public boolean isUnpacking() {
             return (FLAGS & UNPACKS) != 0;
-            }
+        }
 
         /**
          * @return a TypeFit that does everything this TypeFit does, plus Tuple unpacking
          */
-        public TypeFit addUnpack()
-            {
+        public TypeFit addUnpack() {
             return isFit()
                     ? forFlags(FLAGS | UNPACKS)
                     : NoFit;
-            }
+        }
 
         /**
          * @return a TypeFit that does everything this TypeFit does, minus Tuple unpacking
          */
-        public TypeFit removeUnpack()
-            {
+        public TypeFit removeUnpack() {
             return isConverting()
                     ? forFlags(FLAGS & ~UNPACKS)
                     : this;
-            }
+        }
 
         /**
          * Produce a fit that combines this fit and that fit.
@@ -3341,12 +2976,11 @@ public abstract class Expression
          *
          * @return a fit that combines all the attributes of this fit and that fit
          */
-        public TypeFit combineWith(TypeFit that)
-            {
+        public TypeFit combineWith(TypeFit that) {
             return this.isFit() && that.isFit()
                     ? forFlags(this.FLAGS | that.FLAGS)
                     : NoFit;
-            }
+        }
 
         /**
          * Determine which is the best fit, and return that best fit.
@@ -3355,10 +2989,9 @@ public abstract class Expression
          *
          * @return whichever fit is considered better
          */
-        public TypeFit betterOf(TypeFit that)
-            {
+        public TypeFit betterOf(TypeFit that) {
             return this.ordinal() > that.ordinal() ? this : that;
-            }
+        }
 
         /**
          * Determine if another fit is better than this fit.
@@ -3367,10 +3000,9 @@ public abstract class Expression
          *
          * @return true iff the other fit is considered to be a better fit than this fit
          */
-        public boolean betterThan(TypeFit that)
-            {
+        public boolean betterThan(TypeFit that) {
             return this.ordinal() > that.ordinal();
-            }
+        }
 
         /**
          * Determine if another fit is worse than this fit.
@@ -3379,10 +3011,9 @@ public abstract class Expression
          *
          * @return true iff the other fit is considered to be a worse fit than this fit
          */
-        public boolean worseThan(TypeFit that)
-            {
+        public boolean worseThan(TypeFit that) {
             return this.ordinal() < that.ordinal();
-            }
+        }
 
         /**
          * Look up a TypeFit enum by its ordinal.
@@ -3391,10 +3022,9 @@ public abstract class Expression
          *
          * @return the TypeFit enum for the specified ordinal
          */
-        public static TypeFit valueOf(int i)
-            {
+        public static TypeFit valueOf(int i) {
             return BY_ORDINAL[i];
-            }
+        }
 
         /**
          * Look up a TypeFit enum by its flags.
@@ -3403,19 +3033,16 @@ public abstract class Expression
          *
          * @return the TypeFit enum for the specified ordinal
          */
-        public static TypeFit forFlags(int nFlags)
-            {
-            if (nFlags >= 0 && nFlags <= BY_FLAGS.length)
-                {
+        public static TypeFit forFlags(int nFlags) {
+            if (nFlags >= 0 && nFlags <= BY_FLAGS.length) {
                 TypeFit fit = BY_FLAGS[nFlags];
-                if (fit != null)
-                    {
+                if (fit != null) {
                     return fit;
-                    }
                 }
+            }
 
             throw new IllegalStateException("no fit for flag value: " + nFlags);
-            }
+        }
 
         /**
          * All the TypeFit enums, by ordinal.
@@ -3427,13 +3054,11 @@ public abstract class Expression
          */
         private static final TypeFit[] BY_FLAGS = new TypeFit[0b10000];
 
-        static
-            {
-            for (TypeFit fit : BY_ORDINAL)
-                {
+        static {
+            for (TypeFit fit : BY_ORDINAL) {
                 BY_FLAGS[fit.FLAGS] = fit;
-                }
             }
+        }
 
         public static final int FITS     = 0b0001;
         public static final int CONVERTS = 0b0010;
@@ -3444,14 +3069,13 @@ public abstract class Expression
          * Represents the state of the TypeFit.
          */
         public final int FLAGS;
-        }
+    }
 
 
     /**
      * Return values for the {@link #mightAffect} method.
      */
-    public enum SideEffect
-        {
+    public enum SideEffect {
         DefNo,      // there is definitely no side effect
         Unknown,    // there is no information one way or another
         AnyCompute, // an expression "on the left" is a property, which could be affected by any
@@ -3459,7 +3083,7 @@ public abstract class Expression
         AnySeqOp,   // an expression "on the left" is a register, which could be affected by any
                     // sequential operation on the same register "on the right"
         DefYes      // side effects are likely
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -3491,4 +3115,4 @@ public abstract class Expression
      * Various temporary flags.
      */
     private transient int m_nFlags;
-    }
+}

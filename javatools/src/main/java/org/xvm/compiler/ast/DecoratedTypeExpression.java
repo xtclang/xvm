@@ -16,51 +16,43 @@ import org.xvm.compiler.Token.Id;
  * of the type expression.
  */
 public class DecoratedTypeExpression
-        extends TypeExpression
-    {
+        extends TypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public DecoratedTypeExpression(Token keyword, TypeExpression type)
-        {
+    public DecoratedTypeExpression(Token keyword, TypeExpression type) {
         this.keyword = keyword;
         this.type    = type;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    protected boolean canResolveNames()
-        {
+    protected boolean canResolveNames() {
         return super.canResolveNames() || type.canResolveNames();
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return keyword.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return type.getEndPosition();
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- TypeExpression methods ----------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
-        {
-        return switch (keyword.getId())
-            {
+    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs) {
+        return switch (keyword.getId()) {
             case IMMUTABLE ->
                 type.ensureTypeConstant(ctx, errs).freeze();
 
@@ -70,52 +62,45 @@ public class DecoratedTypeExpression
 
             default ->
                 throw new IllegalStateException("keyword=" + keyword);
-            };
-        }
+        };
+    }
 
     @Override
-    public boolean isIntroductoryType()
-        {
+    public boolean isIntroductoryType() {
         return true;
-        }
+    }
 
     @Override
-    public TypeExpression unwrapIntroductoryType()
-        {
+    public TypeExpression unwrapIntroductoryType() {
         return type;
-        }
+    }
 
     @Override
-    public void replaceIntroducedType(TypeExpression type)
-        {
+    public void replaceIntroducedType(TypeExpression type) {
         this.type = type;
         type.setParent(this);
-        }
+    }
 
     @Override
-    protected void collectAnonInnerClassInfo(AnonInnerClass info)
-        {
+    protected void collectAnonInnerClassInfo(AnonInnerClass info) {
         type.collectAnonInnerClassInfo(info);
-        if (keyword.getId() == Id.IMMUTABLE)
-            {
+        if (keyword.getId() == Id.IMMUTABLE) {
             info.markImmutable();
-            }
         }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return keyword.getId().TEXT + ' ' + type;
-        }
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -124,4 +109,4 @@ public class DecoratedTypeExpression
     protected TypeExpression type;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(DecoratedTypeExpression.class, "type");
-    }
+}

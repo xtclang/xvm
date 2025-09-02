@@ -27,81 +27,69 @@ import org.xvm.util.Severity;
  * </ul>
  */
 public class ElseExpression
-        extends BiExpression
-    {
+        extends BiExpression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ElseExpression(Expression expr1, Token operator, Expression expr2)
-        {
+    public ElseExpression(Expression expr1, Token operator, Expression expr2) {
         super(expr1, operator, expr2);
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean allowsConditional(Expression exprChild)
-        {
+    protected boolean allowsConditional(Expression exprChild) {
         return getParent().allowsShortCircuit(this) &&
                 (exprChild == expr1 || exprChild == expr2);
-        }
+    }
 
     @Override
-    protected boolean hasSingleValueImpl()
-        {
+    protected boolean hasSingleValueImpl() {
         return false;
-        }
+    }
 
     @Override
-    protected boolean hasMultiValueImpl()
-        {
+    protected boolean hasMultiValueImpl() {
         return true;
-        }
+    }
 
     @Override
-    public TypeConstant[] getImplicitTypes(Context ctx)
-        {
+    public TypeConstant[] getImplicitTypes(Context ctx) {
         TypeConstant[] atype1 = expr1.getImplicitTypes(ctx);
-        if (!expr2.isCompletable())
-            {
+        if (!expr2.isCompletable()) {
             // a non-completable expression (e.g. "parent? : assert") doesn't contribute to the type
             return atype1;
-            }
+        }
 
         TypeConstant[] atype2 = expr2.getImplicitTypes(ctx);
-        if (atype1 == null || atype1.length == 0 || atype2 == null || atype2.length == 0)
-            {
+        if (atype1 == null || atype1.length == 0 || atype2 == null || atype2.length == 0) {
             return TypeConstant.NO_TYPES;
-            }
+        }
 
         return selectCommonTypes(atype1, atype2);
-        }
+    }
 
     @Override
     public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive,
-                                ErrorListener errs)
-        {
+                                ErrorListener errs) {
         TypeFit fit = expr1.testFitMulti(ctx, atypeRequired, fExhaustive, errs);
-        if (fit.isFit() && expr2.isCompletable())
-            {
+        if (fit.isFit() && expr2.isCompletable()) {
             fit = fit.combineWith(expr2.testFitMulti(ctx, atypeRequired, fExhaustive, errs));
-            }
-        return fit;
         }
+        return fit;
+    }
 
     @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
-        {
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs) {
         ctx = ctx.enterIf().enterFork(true);
 
         Expression expr1New = expr1.validateMulti(ctx, atypeRequired, errs);
 
         ctx = ctx.exit();
 
-        if (expr1New == null)
-            {
+        if (expr1New == null) {
             return null;
-            }
+        }
 
         expr1 = expr1New;
 
@@ -109,10 +97,9 @@ public class ElseExpression
         TypeConstant[] atype2Req = selectCommonTypes(atype1, new TypeConstant[atype1.length]);
 
         if (atypeRequired != null && atypeRequired.length > 0 &&
-                (atype2Req == null || !expr2.testFitMulti(ctx, atype2Req, false, null).isFit()))
-            {
+                (atype2Req == null || !expr2.testFitMulti(ctx, atype2Req, false, null).isFit())) {
             atype2Req = atypeRequired;
-            }
+        }
 
         ctx = ctx.enterFork(false);
         ctx.replaceArguments(m_mapElse);
@@ -121,122 +108,102 @@ public class ElseExpression
 
         ctx = ctx.exit().exit();
 
-        if (expr2New == null)
-            {
+        if (expr2New == null) {
             return null;
-            }
+        }
         expr2 = expr2New;
 
-        if (!expr1New.isShortCircuiting())
-            {
+        if (!expr1New.isShortCircuiting()) {
             expr1New.log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_REQUIRED);
             return null;
-            }
+        }
 
         // the only allowed type mismatch is a conditional result on the left (expr1) and the value
         // of "False" on the right (expr2)
         TypeConstant[] atypeResult;
-        if (expr1New.isConditionalResult() && expr2New.isConstantFalse())
-            {
+        if (expr1New.isConditionalResult() && expr2New.isConstantFalse()) {
             atypeResult  = atype1;
             m_fCondFalse = true;
-            }
-        else
-            {
+        } else {
             atypeResult = selectCommonTypes(atype1, expr2New.getTypes());
-            }
+        }
 
         Constant[] aconstVal = null;
-        if (expr1New.isConstant())
-            {
+        if (expr1New.isConstant()) {
             aconstVal = expr1New.toConstants();
-            }
+        }
 
-        if (m_labelElse != null)
-            {
+        if (m_labelElse != null) {
             m_labelElse.restoreNarrowed(ctx);
-            }
+        }
 
         return finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, aconstVal, errs);
-        }
+    }
 
     @Override
-    public boolean isStandalone()
-        {
+    public boolean isStandalone() {
         return expr1.isStandalone() && expr2.isStandalone();
-        }
+    }
 
     @Override
-    public boolean isShortCircuiting()
-        {
+    public boolean isShortCircuiting() {
         // this expression "grounds" any short circuit that happens on the left side of the ":"
         return expr2.isShortCircuiting();
-        }
+    }
 
     @Override
-    public boolean isCompletable()
-        {
+    public boolean isCompletable() {
         // these can complete if the first expression can complete, because the result can
         // be calculated from the first expression, depending on what its answer is
         return expr1.isCompletable();
-        }
+    }
 
     @Override
-    protected boolean allowsShortCircuit(AstNode nodeChild)
-        {
+    protected boolean allowsShortCircuit(AstNode nodeChild) {
         return nodeChild == expr1 || super.allowsShortCircuit(nodeChild);
-        }
+    }
 
     @Override
-    protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin)
-        {
+    protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin) {
         AstNode nodeChild = findChild(nodeOrigin);
-        if (nodeChild != expr1)
-            {
+        if (nodeChild != expr1) {
             assert nodeChild == expr2;
             return super.ensureShortCircuitLabel(nodeOrigin, ctxOrigin);
-            }
+        }
 
         // merge the type assumptions for the "else" branch
         m_mapElse = ctxOrigin.mergeNarrowedElseTypes(m_mapElse);
 
         // generate a "grounding" target label for the "left side child expression"
         Label label = m_labelElse;
-        if (label == null)
-            {
+        if (label == null) {
             m_nLabel    = ++s_nCounter;
             m_labelElse = label = new Label("else_:_" + m_nLabel);
-            }
-        return label;
         }
+        return label;
+    }
 
     @Override
-    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
-        {
-        if (isConstant())
-            {
+    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs) {
+        if (isConstant()) {
             super.generateAssignments(ctx, code, aLVal, errs);
             return;
-            }
+        }
 
         expr1.generateAssignments(ctx, code, aLVal, errs);
 
-        if (m_labelElse != null)
-            {
+        if (m_labelElse != null) {
             Label labelEnd = new Label("end_:_" + m_nLabel);
             code.add(new Jump(labelEnd));
             code.add(m_labelElse);
-            if (m_fCondFalse)
-                {
+            if (m_fCondFalse) {
                 aLVal[0].assign(pool().valFalse(), code, errs);
-                }
-            else
-                {
+            } else {
                 expr2.generateAssignments(ctx, code, aLVal, errs);
-                }
-            code.add(labelEnd);
             }
+            code.add(labelEnd);
         }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -246,4 +213,4 @@ public class ElseExpression
     private transient Label                 m_labelElse;
     private transient Map<String, Argument> m_mapElse;
     private transient boolean               m_fCondFalse;
-    }
+}

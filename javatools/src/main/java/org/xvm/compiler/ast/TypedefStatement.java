@@ -22,105 +22,89 @@ import org.xvm.util.Severity;
  * A typedef statement specifies a type to alias as a simple name.
  */
 public class TypedefStatement
-        extends ComponentStatement
-    {
+        extends ComponentStatement {
     // ----- constructors --------------------------------------------------------------------------
 
-    public TypedefStatement(Expression cond, Token keyword, TypeExpression type, Token alias)
-        {
+    public TypedefStatement(Expression cond, Token keyword, TypeExpression type, Token alias) {
         super(keyword.getStartPosition(), alias.getEndPosition());
 
         this.cond     = cond;
         this.modifier = keyword.getId() == Id.TYPEDEF ? null : keyword;
         this.type     = type;
         this.alias    = alias;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public Access getDefaultAccess()
-        {
-        if (modifier != null)
-            {
-            switch (modifier.getId())
-                {
-                case PUBLIC:
-                    return Access.PUBLIC;
-                case PROTECTED:
-                    return Access.PROTECTED;
-                case PRIVATE:
-                    return Access.PRIVATE;
-                }
+    public Access getDefaultAccess() {
+        if (modifier != null) {
+            switch (modifier.getId()) {
+            case PUBLIC:
+                return Access.PUBLIC;
+            case PROTECTED:
+                return Access.PROTECTED;
+            case PRIVATE:
+                return Access.PRIVATE;
             }
+        }
 
         return super.getDefaultAccess();
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    protected void registerStructures(StageMgr mgr, ErrorListener errs)
-        {
+    protected void registerStructures(StageMgr mgr, ErrorListener errs) {
         // create the structure for this method
-        if (getComponent() == null)
-            {
+        if (getComponent() == null) {
             // create a structure for this typedef
             Component container = getParent().getComponent();
             String    sName     = (String) alias.getValue();
-            if (container != null && container.isClassContainer())
-                {
+            if (container != null && container.isClassContainer()) {
                 Access           access    = getDefaultAccess();
                 TypeConstant     constType = type.ensureTypeConstant();
                 TypedefStructure typedef   = container.createTypedef(access, constType, sName);
                 setComponent(typedef);
-                }
-            else if (!errs.hasSeriousErrors())
-                {
+            } else if (!errs.hasSeriousErrors()) {
                 log(errs, Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED, sName, container);
-                }
             }
         }
+    }
 
     @Override
-    protected Statement validateImpl(Context ctx, ErrorListener errs)
-        {
+    protected Statement validateImpl(Context ctx, ErrorListener errs) {
         return this;
-        }
+    }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
-        {
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         return true;
-        }
+    }
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
-        if (cond != null)
-            {
+        if (cond != null) {
             sb.append("if (")
               .append(cond)
               .append(") { ");
-            }
+        }
 
-        if (modifier != null)
-            {
+        if (modifier != null) {
             sb.append(modifier)
               .append(' ');
-            }
+        }
 
         sb.append("typedef ")
           .append(type)
@@ -128,19 +112,17 @@ public class TypedefStatement
           .append(alias.getValue())
           .append(';');
 
-        if (cond != null)
-            {
+        if (cond != null) {
             sb.append(" }");
-            }
+        }
 
         return sb.toString();
-        }
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -151,4 +133,4 @@ public class TypedefStatement
     protected TypeExpression type;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TypedefStatement.class, "cond", "type");
-    }
+}

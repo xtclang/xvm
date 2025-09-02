@@ -68,8 +68,7 @@ import static org.xvm.util.Handy.indentLines;
  * Common base class for all statements and expressions.
  */
 public abstract class AstNode
-        implements Cloneable
-    {
+        implements Cloneable {
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -77,34 +76,30 @@ public abstract class AstNode
      *
      * @return  the parent node, or null
      */
-    public AstNode getParent()
-        {
+    public AstNode getParent() {
         return m_parent;
-        }
+    }
 
     /**
      * Specify a parent for the AstNode.
      *
      * @param parent  the parent node
      */
-    protected void setParent(AstNode parent)
-        {
+    protected void setParent(AstNode parent) {
         assert parent == null || !this.isDiscarded() && !parent.isDiscarded();
         this.m_parent = parent;
-        }
+    }
 
     /**
      * This method recurses through the tree of AstNode objects, allowing each node to introduce
      * itself as the parent of each node under it.
      */
-    protected void introduceParentage()
-        {
-        for (AstNode node : children())
-            {
+    protected void introduceParentage() {
+        for (AstNode node : children()) {
             node.setParent(this);
             node.introduceParentage();
-            }
         }
+    }
 
     /**
      * Helper: Given an optional Iterable of child AstNode objects, set the parent of each of the
@@ -112,16 +107,13 @@ public abstract class AstNode
      *
      * @param children  an Iterable of AstNode, or null
      */
-    protected void adopt(Iterable<? extends AstNode> children)
-        {
-        if (children != null)
-            {
-            for (AstNode child : children)
-                {
+    protected void adopt(Iterable<? extends AstNode> children) {
+        if (children != null) {
+            for (AstNode child : children) {
                 child.setParent(this);
-                }
             }
         }
+    }
 
     /**
      * Helper: Given an optional AstNode object, set its parent to this node.
@@ -130,26 +122,23 @@ public abstract class AstNode
      *
      * @return the same child as passed, which may be null
      */
-    protected <T extends AstNode> T adopt(T child)
-        {
-        if (child != null)
-            {
+    protected <T extends AstNode> T adopt(T child) {
+        if (child != null) {
             child.setParent(this);
-            }
+        }
 
         return child;
-        }
+    }
 
     /**
      * Return an Iterable/Iterator that represents all the child nodes of this node.
      *
      * @return an Iterable of child nodes (from whence an Iterator can be obtained)
      */
-    public ChildIterator children()
-        {
+    public ChildIterator children() {
         Field[] fields = getChildFields();
         return fields.length == 0 ? ChildIterator.EMPTY : new ChildIteratorImpl(fields);
-        }
+    }
 
     /**
      * Replace the specified child of this AstNode with a new child.
@@ -157,19 +146,16 @@ public abstract class AstNode
      * @param nodeOld  the child to replace
      * @param nodeNew  the new child
      */
-    public void replaceChild(AstNode nodeOld, AstNode nodeNew)
-        {
+    public void replaceChild(AstNode nodeOld, AstNode nodeNew) {
         ChildIterator children = children();
-        for (AstNode node : children)
-            {
-            if (node == nodeOld)
-                {
+        for (AstNode node : children) {
+            if (node == nodeOld) {
                 children.replaceWith(adopt(nodeNew));
                 return;
-                }
             }
-        throw new IllegalStateException("no such child \"" + nodeOld + "\" on \"" + this + '\"');
         }
+        throw new IllegalStateException("no such child \"" + nodeOld + "\" on \"" + this + '\"');
+    }
 
     /**
      * For a node contained somewhere in the AST tree under this node, find the immediate child of
@@ -180,133 +166,103 @@ public abstract class AstNode
      * @return the child that is an immediate child of this node under which the node occurs, or
      *         null
      */
-    public AstNode findChild(AstNode node)
-        {
+    public AstNode findChild(AstNode node) {
         AstNode child  = node;
-        do
-            {
+        do {
             AstNode parent = child.getParent();
-            if (parent == this)
-                {
+            if (parent == this) {
                 return child;
-                }
+            }
 
             child = parent;
-            }
-        while (child != null);
+        } while (child != null);
 
         return null;
-        }
+    }
 
     /**
      * Mark the node as being discarded.
      *
      * @param fRecurse  pass true to discard the entire tree from this node down
      */
-    protected void discard(boolean fRecurse)
-        {
+    protected void discard(boolean fRecurse) {
         m_stage = Stage.Discarded;
-        if (fRecurse)
-            {
-            for (AstNode node : children())
-                {
+        if (fRecurse) {
+            for (AstNode node : children()) {
                 node.discard(true);
-                }
             }
         }
+    }
 
     /**
      * @return true iff the node has been discarded
      */
-    protected boolean isDiscarded()
-        {
+    protected boolean isDiscarded() {
         return m_stage == Stage.Discarded;
-        }
+    }
 
     /**
      * @return an array of fields on this AstNode that contain references to child AstNodes
      */
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return NO_FIELDS;
-        }
+    }
 
     @Override
-    public AstNode clone()
-        {
+    public AstNode clone() {
         AstNode that;
-        try
-            {
+        try {
             that = (AstNode) super.clone();
-            }
-        catch (CloneNotSupportedException e)
-            {
+        } catch (CloneNotSupportedException e) {
             throw new IllegalStateException(e);
+        }
+
+        for (Field field : getChildFields()) {
+            Object oVal;
+            try {
+                oVal = field.get(this);
+            } catch (NullPointerException e) {
+                throw new IllegalStateException("class=" + this.getClass().getSimpleName(), e);
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException(e);
             }
 
-        for (Field field : getChildFields())
-            {
-            Object oVal;
-            try
-                {
-                oVal = field.get(this);
-                }
-            catch (NullPointerException e)
-                {
-                throw new IllegalStateException("class=" + this.getClass().getSimpleName(), e);
-                }
-            catch (IllegalAccessException e)
-                {
-                throw new IllegalStateException(e);
-                }
-
-            if (oVal != null)
-                {
-                if (oVal instanceof AstNode node)
-                    {
+            if (oVal != null) {
+                if (oVal instanceof AstNode node) {
                     AstNode nodeNew = node.clone();
 
                     that.adopt(nodeNew);
                     oVal = nodeNew;
-                    }
-                else if (oVal instanceof List list)
-                    {
+                } else if (oVal instanceof List list) {
                     ArrayList<AstNode> listNew = new ArrayList<>();
-                    for (AstNode node : (List<AstNode>) list)
-                        {
+                    for (AstNode node : (List<AstNode>) list) {
                         listNew.add(node.clone());
-                        }
+                    }
 
                     that.adopt(listNew);
                     oVal = listNew;
-                    }
-                else
-                    {
+                } else {
                     throw new IllegalStateException(
                             "unsupported container type: " + oVal.getClass().getSimpleName());
-                    }
+                }
 
-                try
-                    {
+                try {
                     field.set(that, oVal);
-                    }
-                catch (IllegalAccessException e)
-                    {
+                } catch (IllegalAccessException e) {
                     throw new IllegalStateException(e);
-                    }
                 }
             }
+        }
 
         return that;
-        }
+    }
 
     /**
      * @return the current compilation stage for this node
      */
-    public Stage getStage()
-        {
+    public Stage getStage() {
         return m_stage;
-        }
+    }
 
     /**
      * Test if the node has reached the specified stage.
@@ -315,11 +271,10 @@ public abstract class AstNode
      *
      * @return true if the node has already reached or passed the specified stage
      */
-    protected boolean alreadyReached(Stage stage)
-        {
+    protected boolean alreadyReached(Stage stage) {
         assert stage != null;
         return getStage().compareTo(stage) >= 0;
-        }
+    }
 
     /**
      * Update the stage to the specified stage, if the specified stage is later than the current
@@ -327,14 +282,12 @@ public abstract class AstNode
      *
      * @param stage  the suggested stage
      */
-    protected void setStage(Stage stage)
-        {
+    protected void setStage(Stage stage) {
         // stage is a "one way" attribute
-        if (stage != null && stage.compareTo(m_stage) > 0)
-            {
+        if (stage != null && stage.compareTo(m_stage) > 0) {
             m_stage = stage;
-            }
         }
+    }
 
     /**
      * Obtain the Source for this AstNode, if any. By default, a node uses the same source as its
@@ -342,13 +295,12 @@ public abstract class AstNode
      *
      * @return a Source instance
      */
-    public Source getSource()
-        {
+    public Source getSource() {
         AstNode parent = getParent();
         return parent == null
                 ? null
                 : parent.getSource();
-        }
+    }
 
     /**
      * Determine the starting position in the source at which this AstNode occurs.
@@ -369,53 +321,47 @@ public abstract class AstNode
      *
      * @param method  the MethodStructure to donate the source code to
      */
-    void donateSource(MethodStructure method)
-        {
-        if (method != null)
-            {
+    void donateSource(MethodStructure method) {
+        if (method != null) {
             long   lStart = getStartPosition();
             long   lEnd   = getEndPosition();
             int    iLine  = Source.calculateLine(lStart);
             String sSrc   = getSource().toString(lStart, lEnd);
 
-            if (sSrc.startsWith("{") && sSrc.endsWith("}"))
-                {
+            if (sSrc.startsWith("{") && sSrc.endsWith("}")) {
                 sSrc = sSrc.substring(1, sSrc.length()-1);
-                }
-            method.configureSource(sSrc, iLine);
             }
+            method.configureSource(sSrc, iLine);
         }
+    }
 
     /**
      * @return true iff this node holds a component
      */
-    public boolean isComponentNode()
-        {
+    public boolean isComponentNode() {
         return false;
-        }
+    }
 
     /**
      * Obtain the Component for this AstNode, if any.
      *
      * @return the Component containing this AstNode
      */
-    public Component getComponent()
-        {
+    public Component getComponent() {
         AstNode parent = getParent();
         return parent == null
                 ? null
                 : parent.getComponent();
-        }
+    }
 
     /**
      * Obtain the ComponentResolver for this AstNode, if any.
      *
      * @return the ComponentResolver for this AstNode
      */
-    public ComponentResolver getComponentResolver()
-        {
+    public ComponentResolver getComponentResolver() {
         return getComponent();
-        }
+    }
 
     /**
      * @return the "compilation container" for a statement or expression, which is the method
@@ -423,41 +369,36 @@ public abstract class AstNode
      *         lambda function ({@link LambdaExpression}), or "inlined" lambda
      *         ({@link StatementExpression})
      */
-    protected AstNode getCodeContainer()
-        {
+    protected AstNode getCodeContainer() {
         AstNode parent = getParent();
         return parent == null
                 ? null
                 : parent.getCodeContainer();
-        }
+    }
 
     /**
      * @return a unique counter in the context of the code container
      */
-    protected int getCodeContainerCounter()
-        {
+    protected int getCodeContainerCounter() {
         AstNode parent = getParent();
         return parent == null
                 ? null
                 : parent.getCodeContainerCounter();
-        }
+    }
 
     /**
      * @return the closest StatementBlock parent
      */
-    public StatementBlock getParentBlock()
-        {
+    public StatementBlock getParentBlock() {
         AstNode parent = getParent();
-        while (parent != null)
-            {
-            if (parent instanceof StatementBlock block)
-                {
+        while (parent != null) {
+            if (parent instanceof StatementBlock block) {
                 return block;
-                }
-            parent = parent.getParent();
             }
-        return null;
+            parent = parent.getParent();
         }
+        return null;
+    }
 
     /**
      * Given a type expression that is used as some part of this AstNode, determine if that type is
@@ -468,10 +409,9 @@ public abstract class AstNode
      * @return true iff the specified TypeExpression is being used in a place that supports
      *         auto-narrowing
      */
-    public boolean isAutoNarrowingAllowed(TypeExpression type)
-        {
+    public boolean isAutoNarrowingAllowed(TypeExpression type) {
         return true;
-        }
+    }
 
     /**
      * (Code Container method.)
@@ -480,10 +420,9 @@ public abstract class AstNode
      *         is specified, or from the specified required type during validation, or from the
      *         actual type once the expression is validated
      */
-    public TypeConstant[] getReturnTypes()
-        {
+    public TypeConstant[] getReturnTypes() {
         throw notCodeContainer();
-        }
+    }
 
     /**
      * (Code Container method.) Determine if the code container represents a method or function with
@@ -491,43 +430,38 @@ public abstract class AstNode
      *
      * @return true iff the code container has a conditional return
      */
-    public boolean isReturnConditional()
-        {
+    public boolean isReturnConditional() {
         throw notCodeContainer();
-        }
+    }
 
     /**
      * (Code Container method.) Collect the return types into the specified array.
      *
      * @param atypeRet  the types being returned
      */
-    public void collectReturnTypes(TypeConstant[] atypeRet)
-        {
+    public void collectReturnTypes(TypeConstant[] atypeRet) {
         throw notCodeContainer();
-        }
+    }
 
-    protected RuntimeException notCodeContainer()
-        {
+    protected RuntimeException notCodeContainer() {
         throw new IllegalStateException("not code container: " + this.getClass().getSimpleName());
-        }
+    }
 
     /**
      * @return true iff this AstNode (or an AstNode that it contains) references "super"
      */
-    protected boolean usesSuper()
-        {
+    protected boolean usesSuper() {
         return false;
-        }
+    }
 
     /**
      * (LValue method.)
      *
      * @return true iff this AstNode is syntactically capable of being an L-Value
      */
-    public boolean isLValueSyntax()
-        {
+    public boolean isLValueSyntax() {
         return false;
-        }
+    }
 
     /**
      * (LValue method.)
@@ -535,10 +469,9 @@ public abstract class AstNode
      * @return the syntactically-capable LValue expression, iff {@link #isLValueSyntax()} returns
      *         true
      */
-    public Expression getLValueExpression()
-        {
+    public Expression getLValueExpression() {
         throw notLValue();
-        }
+    }
 
     /**
      * (LValue method.) Update the LValue based on the RValue types.
@@ -549,10 +482,9 @@ public abstract class AstNode
      * @param aTypes  the type of the RValue
      */
     public void updateLValueFromRValueTypes(Context ctx, Context.Branch branch, boolean fCond,
-                                            TypeConstant[] aTypes)
-        {
+                                            TypeConstant[] aTypes) {
         throw notLValue();
-        }
+    }
 
     /**
      * (LValue method.) Reset any inferences for the LValue types (usually due to a compilation
@@ -560,16 +492,14 @@ public abstract class AstNode
      *
      * @param ctx the compiler context
      */
-    public void resetLValueTypes(Context ctx)
-        {
+    public void resetLValueTypes(Context ctx) {
         throw notLValue();
-        }
+    }
 
-    private RuntimeException notLValue()
-        {
+    private RuntimeException notLValue() {
         assert !isLValueSyntax();
         throw new IllegalStateException("not LValue: " + this.getClass().getSimpleName());
-        }
+    }
 
     /**
      * Test if the specified child is used as an R-Value, which is something that yields a value.
@@ -583,10 +513,9 @@ public abstract class AstNode
      *
      * @return true iff the child is used as an R-Value
      */
-    protected boolean isRValue(Expression exprChild)
-        {
+    protected boolean isRValue(Expression exprChild) {
         return true;
-        }
+    }
 
     /**
      * Test if the specified child is allowed to produce a conditional result. For example, certain
@@ -597,10 +526,9 @@ public abstract class AstNode
      *
      * @return true iff the child is allowed to produce a conditional result
      */
-    protected boolean allowsConditional(Expression exprChild)
-        {
+    protected boolean allowsConditional(Expression exprChild) {
         return false;
-        }
+    }
 
     /**
      * Test if the specified child is allowed to short-circuit.
@@ -609,10 +537,9 @@ public abstract class AstNode
      *
      * @return true iff the child is allowed to short-circuit
      */
-    protected boolean allowsShortCircuit(AstNode nodeChild)
-        {
+    protected boolean allowsShortCircuit(AstNode nodeChild) {
         return false;
-        }
+    }
 
     /**
      * This must be overridden by any AST node that supports short-circuiting children. This is
@@ -623,10 +550,9 @@ public abstract class AstNode
      *
      * @return the label to jump to when the expression short-circuits.
      */
-    protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin)
-        {
+    protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin) {
         throw new IllegalStateException("no short circuit label for: " + this.getClass().getSimpleName());
-        }
+    }
 
     /**
      * Collect all the expressions that should be included in tracing debug output. This is used
@@ -635,31 +561,25 @@ public abstract class AstNode
      * @param mapExprs  the expressions collected thus far, keyed by their source code
      *                  representations
      */
-    protected void selectTraceableExpressions(Map<String, Expression> mapExprs)
-        {
-        for (AstNode node : children())
-            {
-            if (node instanceof Expression expr)
-                {
-                if (expr.isValidated() && expr.isTraceworthy())
-                    {
+    protected void selectTraceableExpressions(Map<String, Expression> mapExprs) {
+        for (AstNode node : children()) {
+            if (node instanceof Expression expr) {
+                if (expr.isValidated() && expr.isTraceworthy()) {
                     String sExpr = expr.toString();
-                    if (!mapExprs.containsKey(sExpr))
-                        {
+                    if (!mapExprs.containsKey(sExpr)) {
                         mapExprs.put(sExpr, expr);
-                        }
-                    }
-
-                if (expr.isConstant())
-                    {
-                    // don't recurse constants
-                    continue;
                     }
                 }
 
-            node.selectTraceableExpressions(mapExprs);
+                if (expr.isConstant()) {
+                    // don't recurse constants
+                    continue;
+                }
             }
+
+            node.selectTraceableExpressions(mapExprs);
         }
+    }
 
     /**
      * (Post-validation) Determine if the statement or expression is able to complete normally.
@@ -669,29 +589,26 @@ public abstract class AstNode
      *
      * @return true iff the AST node is able to complete
      */
-    public boolean isCompletable()
-        {
+    public boolean isCompletable() {
         return true;
-        }
+    }
 
     /**
      * @return true iff the AST node is a T0D0 statement or expression
      */
-    public boolean isTodo()
-        {
+    public boolean isTodo() {
         return false;
-        }
+    }
 
     /**
      * @return the constant pool
      */
-    protected ConstantPool pool()
-        {
+    protected ConstantPool pool() {
         AstNode nodeParent = getParent();
         return nodeParent == null
                 ? null
                 : nodeParent.pool();
-        }
+    }
 
     /**
      * For nested nodes, determine the default access if the nodes need to specify an accessibility.
@@ -699,13 +616,12 @@ public abstract class AstNode
      * @return the accessibility that this node should assume if this node has to specify its own
      *         accessibility and no accessibility is specified
      */
-    public Access getDefaultAccess()
-        {
+    public Access getDefaultAccess() {
         AstNode parent = getParent();
         return parent == null
                 ? Access.PUBLIC
                 : parent.getDefaultAccess();
-        }
+    }
 
     /**
      * Helper to log an error related to this AstNode.
@@ -720,15 +636,14 @@ public abstract class AstNode
      * @return true to attempt to abort the process that reported the error, or
      *         false to attempt to continue the process
      */
-    public boolean log(ErrorListener errs, Severity severity, String sCode, Object... aoParam)
-        {
+    public boolean log(ErrorListener errs, Severity severity, String sCode, Object... aoParam) {
         Source source = getSource();
         return errs == null
                 ? severity.ordinal() >= Severity.ERROR.ordinal()
                 : errs.log(severity, sCode, aoParam, source,
                 source == null ? 0L : getStartPosition(),
                 source == null ? 0L : getEndPosition());
-        }
+    }
 
 
     // ----- compile phases ------------------------------------------------------------------------
@@ -752,9 +667,8 @@ public abstract class AstNode
      * @param mgr   the Stage Manager that is conducting the processing
      * @param errs  the error list to log any errors etc. to
      */
-    protected void registerStructures(StageMgr mgr, ErrorListener errs)
-        {
-        }
+    protected void registerStructures(StageMgr mgr, ErrorListener errs) {
+    }
 
     /**
      * Second logical compiler pass. This pass has access to imported modules, and is responsible
@@ -780,9 +694,8 @@ public abstract class AstNode
      * @param mgr   the Stage Manager that is conducting the processing
      * @param errs  the error list to log any errors etc. to
      */
-    public void resolveNames(StageMgr mgr, ErrorListener errs)
-        {
-        }
+    public void resolveNames(StageMgr mgr, ErrorListener errs) {
+    }
 
     /**
      * Third logical compiler pass. This pass is responsible for resolving types, constant values,
@@ -792,9 +705,8 @@ public abstract class AstNode
      * @param mgr   the Stage Manager that is conducting the processing
      * @param errs  the error list to log any errors etc. to
      */
-    public void validateContent(StageMgr mgr, ErrorListener errs)
-        {
-        }
+    public void validateContent(StageMgr mgr, ErrorListener errs) {
+    }
 
     /**
      * Fourth logical compiler pass. Emits the resulting, finished structures.
@@ -802,19 +714,17 @@ public abstract class AstNode
      * @param mgr   the Stage Manager that is conducting the processing
      * @param errs  the error list to log any errors etc. to
      */
-    public void generateCode(StageMgr mgr, ErrorListener errs)
-        {
-        }
+    public void generateCode(StageMgr mgr, ErrorListener errs) {
+    }
 
     /**
      * Helper to update the line number in the code to the line number on which this AstNode began.
      *
      * @param code  the Code being emitted
      */
-    protected void updateLineNumber(Code code)
-        {
+    protected void updateLineNumber(Code code) {
         code.updateLineNumber(Source.calculateLine(getStartPosition()));
-        }
+    }
 
     /**
      * If any of the children of this node have been previously deferred, catch them up now.
@@ -823,78 +733,65 @@ public abstract class AstNode
      *
      * @return true if the children got caught up; false if the catch-up aborted
      */
-    protected boolean catchUpChildren(ErrorListener errs)
-        {
+    protected boolean catchUpChildren(ErrorListener errs) {
         // determine what stage we're trying to catch the children up to
         Stage stageTarget = getStage();
-        if (!stageTarget.isTargetable())
-            {
+        if (!stageTarget.isTargetable()) {
             // we want to catch up to the last target that this component completed, and not
             // actually pass the stage that this component is at, which can be accomplished using
             // StageMgr processChildrenExcept() or processChildren() if the children need to
             // complete the stage that this node is currently working on (if this node is currently
             // in a transition stage)
             stageTarget = stageTarget.prevTarget();
-            if (!stageTarget.isTargetable())
-                {
+            if (!stageTarget.isTargetable()) {
                 assert stageTarget == Stage.Initial;
                 return true;
-                }
             }
+        }
 
         // method children are all deferred up until this stage, so we have to "catch them up" at
         // this point, recreating the various compiler stages here; start by collecting all the
         // children that may need to be processed and figuring out how far behind the oldest is
         Stage         stageOldest  = null;
         List<AstNode> listChildren = new ArrayList<>();
-        for (AstNode node : children())
-            {
+        for (AstNode node : children()) {
             Stage stage = node.getStage();
-            if (stage.compareTo(stageTarget) < 0)
-                {
+            if (stage.compareTo(stageTarget) < 0) {
                 listChildren.add(node);
 
-                if (stageOldest == null)
-                    {
+                if (stageOldest == null) {
                     stageOldest = stage;
-                    }
-                else if (stage.compareTo(stageOldest) < 0)
-                    {
+                } else if (stage.compareTo(stageOldest) < 0) {
                     stageOldest = stage;
-                    }
                 }
             }
-        if (stageOldest == null)
-            {
+        }
+        if (stageOldest == null) {
             return true;
-            }
+        }
 
         ErrorListener errsTemp = errs.branch(this);
-        while (stageOldest.compareTo(stageTarget) < 0)
-            {
+        while (stageOldest.compareTo(stageTarget) < 0) {
             Stage    stageNext = stageOldest.nextTarget();
             StageMgr mgrKids   = new StageMgr(listChildren, stageNext, errsTemp);
-            for (int cTries = 0; !mgrKids.processComplete(); cTries++)
-                {
-                if (errsTemp.isAbortDesired() || cTries > 20)
-                    {
+            for (int cTries = 0; !mgrKids.processComplete(); cTries++) {
+                if (errsTemp.isAbortDesired() || cTries > 20) {
                     mgrKids.logDeferredAsErrors(errsTemp);
                     errsTemp.merge();
                     return false;
-                    }
-                if (cTries == 20)
-                    {
-                    mgrKids.markLastAttempt();
-                    }
                 }
+                if (cTries == 20) {
+                    mgrKids.markLastAttempt();
+                }
+            }
 
             stageOldest = stageNext;
-            }
+        }
 
         boolean fFailure = errsTemp.hasSeriousErrors();
         errsTemp.merge();
         return !fFailure;
-        }
+    }
 
     // ----- name resolution -----------------------------------------------------------------------
 
@@ -906,31 +803,28 @@ public abstract class AstNode
      *
      * @return an ImportStatement, or null
      */
-    protected ImportStatement resolveImportBySingleName(String sName, ErrorListener errs)
-        {
+    protected ImportStatement resolveImportBySingleName(String sName, ErrorListener errs) {
         AstNode parent = getParent();
         return parent == null ? null : parent.resolveImportBySingleName(sName, errs);
-        }
+    }
 
     /**
      * @return true iff this AstNode should be able to resolve names
      */
-    protected boolean canResolveNames()
-        {
-        if (this instanceof NameResolver.NameResolving resolver)
-            {
+    protected boolean canResolveNames() {
+        if (this instanceof NameResolver.NameResolving resolver) {
             // the problem is this: that a NameResolver that hasn't been invoked as part of the
             // natural pass of the resolveNames() recursion has not had a chance to figure out what
             // the effect its imports may have on name resolution, and thus we can't ask it what a
             // name means
             return !resolver.getNameResolver().isFirstTime();
-            }
+        }
 
         // for all other components (that don't override this method because they know more about
         // whether or not they can resolve names), we'll assume that if they haven't been resolved,
         // then they don't know how to resolve names
         return alreadyReached(Stage.Resolving);
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -947,71 +841,54 @@ public abstract class AstNode
      *         if the validation fails, in which case an error has been reported
      */
     protected TypeConstant[] validateExpressions(Context ctx, List<Expression> listExpr,
-                                                 TypeConstant[] atypeRequired, ErrorListener errs)
-        {
+                                                 TypeConstant[] atypeRequired, ErrorListener errs) {
         int            cReq   = atypeRequired == null ? 0 : atypeRequired.length;
         int            cExprs = listExpr.size();
         TypeConstant[] atype  = new TypeConstant[cExprs];
         boolean        fValid = true;
-        for (int i = 0; i < cExprs; ++i)
-            {
+        for (int i = 0; i < cExprs; ++i) {
             Expression exprOld = listExpr.get(i);
-            if (exprOld.isValidated())
-                {
+            if (exprOld.isValidated()) {
                 atype[i] = exprOld.getType();
                 continue;
-                }
+            }
 
             TypeConstant typeRequired = i < cReq ? atypeRequired[i] : null;
-            if (typeRequired != null)
-                {
+            if (typeRequired != null) {
                 ctx = ctx.enterInferring(typeRequired);
-                }
+            }
 
             Expression exprNew = exprOld.validate(ctx, typeRequired, errs);
 
-            if (typeRequired != null)
-                {
+            if (typeRequired != null) {
                 ctx = ctx.exit();
-                }
+            }
 
-            if (exprNew == null)
-                {
+            if (exprNew == null) {
                 fValid = false;
-                }
-            else
-                {
-                if (exprNew != exprOld)
-                    {
+            } else {
+                if (exprNew != exprOld) {
                     listExpr.set(i, exprNew);
-                    }
+                }
 
-                if (exprNew.isSingle())
-                    {
+                if (exprNew.isSingle()) {
                     atype[i] = exprNew.getType();
-                    }
-                else
-                    {
-                    if (cExprs == 1)
-                        {
+                } else {
+                    if (cExprs == 1) {
                         atype = exprNew.getTypes();
-                        }
-                    else if (i == cExprs - 1)
-                        {
+                    } else if (i == cExprs - 1) {
                         // this is the last expression, take the first value
                         atype[i] = exprNew.getType();
-                        }
-                    else
-                        {
+                    } else {
                         exprNew.log(errs, Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT,
                                 1, exprNew.getValueCount());
                         fValid = false;
-                        }
                     }
                 }
             }
-        return fValid ? atype : null;
         }
+        return fValid ? atype : null;
+    }
 
     /**
      * Given an array of expressions representing actual parameters and the TypeInfo of the target,
@@ -1044,8 +921,7 @@ public abstract class AstNode
      */
     protected MethodConstant findMethod(Context ctx, TypeConstant typeTarget, TypeInfo infoTarget,
             String sMethodName, List<Expression> listExprArgs, MethodKind kind, boolean fCall,
-            boolean fAllowNested, TypeConstant[] atypeReturn, ErrorListener errs)
-        {
+            boolean fAllowNested, TypeConstant[] atypeReturn, ErrorListener errs) {
         assert sMethodName != null && !sMethodName.isEmpty();
 
         int cExpr = listExprArgs == null ? 0 : listExprArgs.size();
@@ -1055,45 +931,35 @@ public abstract class AstNode
                 ? collectNamedArgs(listExprArgs, errs)
                 : Collections.emptyMap();
 
-        if (mapNamedExpr == null)
-            {
+        if (mapNamedExpr == null) {
             // an error has been reported
             return null;
-            }
+        }
 
         int                 cArgs      = fCall ? cExpr : -1;
         Set<MethodConstant> setMethods = infoTarget.findMethods(sMethodName, cArgs, kind);
         ErrorListener       errsTemp   = errs.branch(this);
 
-        if (fAllowNested)
-            {
+        if (fAllowNested) {
             IdentityConstant idScope = ctx.getMethod().getIdentityConstant();
-            do
-                {
-                if (infoTarget.containsNestedMultiMethod(idScope, sMethodName))
-                    {
+            do {
+                if (infoTarget.containsNestedMultiMethod(idScope, sMethodName)) {
                     Set<MethodConstant> setNested = infoTarget.findNestedMethods(
                                                         idScope, sMethodName, cArgs);
-                    if (!setNested.isEmpty())
-                        {
-                        if (setMethods.isEmpty())
-                            {
+                    if (!setNested.isEmpty()) {
+                        if (setMethods.isEmpty()) {
                             setMethods = setNested;
-                            }
-                        else
-                            {
+                        } else {
                             setMethods = new HashSet<>(setMethods);
                             setMethods.addAll(setNested);
-                            }
                         }
                     }
-                idScope = idScope.getNamespace();
                 }
-            while (idScope.isNested());
-            }
+                idScope = idScope.getNamespace();
+            } while (idScope.isNested());
+        }
 
-        if (!setMethods.isEmpty())
-            {
+        if (!setMethods.isEmpty()) {
             // collect all theoretically matching methods
             Set<MethodConstant> setIs      = new HashSet<>();
             Set<MethodConstant> setConvert = new HashSet<>();
@@ -1106,67 +972,54 @@ public abstract class AstNode
 
             // now choose the best match
             boolean fArgsComplete = cArgs == 0 || listExprArgs.stream().allMatch(Expression::isCompletable);
-            if (!setIs.isEmpty())
-                {
+            if (!setIs.isEmpty()) {
                 return fArgsComplete
                         ? chooseBest(setIs, typeTarget, mapMethods, errs)
                         : setIs.iterator().next();
-                }
+            }
 
-            if (!setConvert.isEmpty())
-                {
+            if (!setConvert.isEmpty()) {
                 return fArgsComplete
                         ? chooseBest(setConvert, typeTarget, mapMethods, errs)
                         : setConvert.iterator().next();
-                }
             }
+        }
 
-        if (errsTemp.hasSeriousErrors())
-            {
+        if (errsTemp.hasSeriousErrors()) {
             errsTemp.merge();
-            }
-        else
-            {
+        } else {
             // check if there are any potentially matching private methods to give a better error
-            if (!typeTarget.isAccessSpecified() && typeTarget.isAccessModifiable())
-                {
+            if (!typeTarget.isAccessSpecified() && typeTarget.isAccessModifiable()) {
                 if (!typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo(errs).
-                        findMethods(sMethodName, cArgs, kind).isEmpty())
-                    {
+                        findMethods(sMethodName, cArgs, kind).isEmpty()) {
                     log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
                             sMethodName, typeTarget.getValueString());
                     return null;
-                    }
                 }
+            }
 
             // if there was a problem with parameters or return values, collectMatchingMethods()
             // would have reported an error; simply report a miss as a backstop
-            if (kind == MethodKind.Constructor)
-                {
+            if (kind == MethodKind.Constructor) {
                 log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
-                }
-            else
-                {
+            } else {
                 log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sMethodName, typeTarget.getValueString());
-                }
             }
-        return null;
         }
+        return null;
+    }
 
     /**
      * @return true iff the specified list contains a named argument
      */
-    protected boolean containsNamedArgs(List<Expression> listExprArgs)
-        {
-        for (Expression exprArg : listExprArgs)
-            {
-            if (exprArg instanceof LabeledExpression)
-                {
+    protected boolean containsNamedArgs(List<Expression> listExprArgs) {
+        for (Expression exprArg : listExprArgs) {
+            if (exprArg instanceof LabeledExpression) {
                 return true;
-                }
             }
-        return false;
         }
+        return false;
+    }
 
     /**
      * Collect all named (labeled) expression from the specified list into a map.
@@ -1174,44 +1027,34 @@ public abstract class AstNode
      * @return a map of labeled expressions; null if an error was reported
      */
     protected Map<String, Expression> collectNamedArgs(List<Expression> listExprArgs,
-                                                       ErrorListener errs)
-        {
+                                                       ErrorListener errs) {
         Map<String, Expression> mapNamed = null;
 
-        for (int i = 0, cExpr = listExprArgs.size(); i < cExpr; ++i)
-            {
+        for (int i = 0, cExpr = listExprArgs.size(); i < cExpr; ++i) {
             Expression exprArg = listExprArgs.get(i);
 
-            if (exprArg instanceof LabeledExpression exprLabel)
-                {
+            if (exprArg instanceof LabeledExpression exprLabel) {
                 String sName = exprLabel.getName();
 
-                if (mapNamed == null)
-                    {
+                if (mapNamed == null) {
                     mapNamed = new HashMap<>(cExpr);
-                    }
-                else
-                    {
-                    if (mapNamed.containsKey(sName))
-                        {
+                } else {
+                    if (mapNamed.containsKey(sName)) {
                         exprArg.log(errs, Severity.ERROR, Compiler.NAME_COLLISION, sName);
                         return null;
-                        }
                     }
+                }
 
                 mapNamed.put(sName, exprLabel);
-                }
-            else
-                {
-                if (mapNamed != null)
-                    {
+            } else {
+                if (mapNamed != null) {
                     exprArg.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED, i);
                     return null;
-                    }
                 }
             }
-        return mapNamed == null ? Collections.emptyMap() : mapNamed;
         }
+        return mapNamed == null ? Collections.emptyMap() : mapNamed;
+    }
 
     /**
      * Helper method to collect matching methods.
@@ -1228,8 +1071,7 @@ public abstract class AstNode
             Set<MethodConstant>                  setIs,
             Set<MethodConstant>                  setConvert,
             Map<MethodConstant, MethodStructure> mapMethods,
-            ErrorListener                        errs)
-        {
+            ErrorListener                        errs) {
         ConstantPool  pool     = pool();
         int           cExprs   = listExprArgs == null ? 0 : listExprArgs.size();
         int           cReturns = atypeReturn  == null ? 0 : atypeReturn.length;
@@ -1246,8 +1088,7 @@ public abstract class AstNode
         int cArityErrs = 0;
         int cTypeErrs  = 0;
 
-        NextMethod: for (MethodConstant idMethod : setMethods)
-            {
+        NextMethod: for (MethodConstant idMethod : setMethods) {
             MethodInfo        infoMethod = infoTarget.getMethodById(idMethod);
             MethodStructure   method     = infoMethod.getTopmostMethodStructure(infoTarget);
             SignatureConstant sigMethod  = idMethod.getSignature();
@@ -1256,154 +1097,125 @@ public abstract class AstNode
             int cVisible    = method.getVisibleParamCount();
             int cRequired   = method.getRequiredParamCount();
 
-            if (cExprs > cVisible || fCall && cExprs < cRequired)
-                {
-                if (cNameErrs == 0 && cArityErrs++ == 0 && cTypeErrs == 0)
-                    {
+            if (cExprs > cVisible || fCall && cExprs < cRequired) {
+                if (cNameErrs == 0 && cArityErrs++ == 0 && cTypeErrs == 0) {
                     errsKeep = errs.branch(this);
                     log(errsKeep, Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT, cRequired, cExprs);
-                    }
-                continue;
                 }
+                continue;
+            }
 
             int cMethodRets = method.getReturnCount();
-            if (cReturns > cMethodRets)
-                {
+            if (cReturns > cMethodRets) {
                 // the only allowed mismatch is a void method's return into an empty Tuple
                 boolean fTuple = cReturns == 1 && isVoid(atypeReturn);
-                if (cMethodRets != 0 || !fTuple)
-                    {
-                    if (cNameErrs == 0 && cArityErrs++ == 0 && cTypeErrs == 0)
-                        {
+                if (cMethodRets != 0 || !fTuple) {
+                    if (cNameErrs == 0 && cArityErrs++ == 0 && cTypeErrs == 0) {
                         errsKeep = errs.branch(this);
                         log(errsKeep, Severity.ERROR, Compiler.INCOMPATIBLE_RETURN_COUNT,
                             sigMethod.getValueString(), cReturns, cMethodRets);
-                        }
-                    continue;
                     }
+                    continue;
                 }
+            }
 
             List<Expression> listArgs = listExprArgs;
             int              cArgs    = cExprs;
-            if (cArgs > 0 && cNamed > 0)
-                {
+            if (cArgs > 0 && cNamed > 0) {
                 // insert the named expressions to the list of expressions in the correct position
                 listArgs = rearrangeNamedArgs(method, listArgs, mapNamedExpr, errsTemp);
-                if (listArgs == null)
-                    {
+                if (listArgs == null) {
                     // invalid name encountered
-                    if (cNameErrs++ == 0)
-                        {
+                    if (cNameErrs++ == 0) {
                         errsKeep = errsTemp;
-                        }
-                    continue;
                     }
+                    continue;
+                }
                 cArgs = listArgs.size();
 
-                if (fCall)
-                    {
+                if (fCall) {
                     // make sure all the required args are present
-                    for (int i = 0; i < cRequired; i++)
-                        {
-                        if (listArgs.get(i) instanceof NonBindingExpression)
-                            {
+                    for (int i = 0; i < cRequired; i++) {
+                        if (listArgs.get(i) instanceof NonBindingExpression) {
                             continue NextMethod;
-                            }
                         }
                     }
                 }
+            }
 
             TypeConstant[] atypeArgs = new TypeConstant[cArgs];
-            for (int i = 0; i < cArgs; i++)
-                {
+            for (int i = 0; i < cArgs; i++) {
                 Expression exprArg = listArgs.get(i);
 
                 atypeArgs[i] = exprArg.isValidated()
                                 ? exprArg.getType()
                                 : exprArg.getImplicitType(ctx);
-                }
+            }
 
             // now let's assume that the method fits and based on that resolve the type parameters
             // and the method signature
-            if (cTypeParams > 0)
-                {
+            if (cTypeParams > 0) {
                 atypeArgs = transformTypeArguments(ctx, listArgs, atypeArgs);
 
                 ListMap<FormalConstant, TypeConstant> mapTypeParams =
                         method.resolveTypeParameters(pool, typeTarget, atypeArgs, atypeReturn, true);
-                if (mapTypeParams.size() < cTypeParams)
-                    {
+                if (mapTypeParams.size() < cTypeParams) {
                     // different arguments/returns cause the formal type to resolve into
                     // incompatible types
                     continue;
-                    }
-                sigMethod = sigMethod.resolveGenericTypes(pool, GenericTypeResolver.of(mapTypeParams));
                 }
+                sigMethod = sigMethod.resolveGenericTypes(pool, GenericTypeResolver.of(mapTypeParams));
+            }
 
             TypeConstant[] atypeParam = sigMethod.getRawParams();
             TypeFit        fit        = TypeFit.Fit;
             boolean        fExact     = true;
-            for (int i = 0; i < cArgs; ++i)
-                {
+            for (int i = 0; i < cArgs; ++i) {
                 Expression   exprArg   = listArgs.get(i);
                 TypeConstant typeParam = atypeParam[cTypeParams + i];
                 TypeConstant typeArg   = atypeArgs[i];
 
                 // check if the method's parameter type fits the argument expression
-                if (typeParam != null)
-                    {
+                if (typeParam != null) {
                     ctx = ctx.enterInferring(typeParam);
-                    }
+                }
 
                 // while typeArg represents the expression's implicit type, obtain the
                 // implicit type again now using the inferring context
                 TypeConstant typeExpr = exprArg.isValidated()
                         ? exprArg.getType()
                         : exprArg.getImplicitType(ctx);
-                if (typeExpr != null && typeExpr.isA(typeParam))
-                    {
+                if (typeExpr != null && typeExpr.isA(typeParam)) {
                     fit    = TypeFit.Fit;
                     fExact = typeExpr.equals(typeParam);
-                    }
-                else
-                    {
+                } else {
                     // if *all* tests fail, report the errors from the first unsuccessful attempt
                     fit    = exprArg.testFit(ctx, typeParam, true, errsTemp);
                     fExact = false;
-                    }
-                if (fit.isFit())
-                    {
+                }
+                if (fit.isFit()) {
                     // the challenge is that the inferred expression could be more forgiving
                     // than its original implicit type would suggest (e.g. NewExpression);
                     // for the type parameter resolution below, lets pick the narrowest type
-                    if (typeArg == null)
-                        {
+                    if (typeArg == null) {
                         typeArg = typeExpr;
-                        }
-                    else if (typeExpr != null && !typeArg.equals(typeExpr))
-                        {
+                    } else if (typeExpr != null && !typeArg.equals(typeExpr)) {
                         typeArg = typeArg .isA(typeExpr) ? typeArg
                                 : typeExpr.isA(typeArg)  ? typeExpr
                                 :                          null;
-                        }
-                    atypeArgs[i] = typeArg;
                     }
-                else if (typeParam != null && !errsTemp.hasSeriousErrors())
-                    {
+                    atypeArgs[i] = typeArg;
+                } else if (typeParam != null && !errsTemp.hasSeriousErrors()) {
                     if (exprArg instanceof LiteralExpression lit &&
                             typeParam.isA(pool.typeFileNode()) &&
-                            lit.getLiteral().getId() == Token.Id.LIT_PATH)
-                        {
+                            lit.getLiteral().getId() == Token.Id.LIT_PATH) {
                         log(errsTemp, Severity.ERROR, Compiler.MISSING_PARAM_RESOURCE,
                                 String.valueOf(i+1), method.getParam(i).getName(),
                                 lit.getLiteral().getValueText());
-                        }
-                    else
-                        {
-                        if (exprArg instanceof NameExpression exprName)
-                            {
+                    } else {
+                        if (exprArg instanceof NameExpression exprName) {
                             typeExpr = exprName.getImplicitType(ctx, typeParam, ErrorListener.BLACKHOLE);
-                            }
+                        }
 
                         log(errsTemp, Severity.ERROR, Compiler.INCOMPATIBLE_PARAMETER_TYPE,
                                 String.valueOf(i+1), method.getParam(i).getName(),
@@ -1412,27 +1224,23 @@ public abstract class AstNode
                                 typeExpr == null
                                     ? exprArg.toString()
                                     : typeExpr.removeAutoNarrowing().getValueString());
-                        }
-                    }
-
-                if (typeParam != null)
-                    {
-                    ctx = ctx.exit();
-                    }
-
-                if (!fit.isFit())
-                    {
-                    break;
                     }
                 }
 
-            if (fit.isFit() && cTypeParams > 0)
-                {
+                if (typeParam != null) {
+                    ctx = ctx.exit();
+                }
+
+                if (!fit.isFit()) {
+                    break;
+                }
+            }
+
+            if (fit.isFit() && cTypeParams > 0) {
                 // re-resolve the type parameters since we could have narrowed some
                 ListMap<FormalConstant, TypeConstant> mapTypeParams =
                         method.resolveTypeParameters(pool, typeTarget, atypeArgs, atypeReturn, true);
-                if (mapTypeParams.size() < cTypeParams)
-                    {
+                if (mapTypeParams.size() < cTypeParams) {
                     // different arguments/returns cause the formal type to resolve into
                     // incompatible types
                     log(errsTemp, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
@@ -1440,107 +1248,90 @@ public abstract class AstNode
                                 stream().map(NamedConstant::getName).collect(Collectors.toSet())));
 
                     fit = TypeFit.NoFit;
-                    }
-                else
-                    {
+                } else {
                     sigMethod = sigMethod.resolveGenericTypes(pool, GenericTypeResolver.of(mapTypeParams));
-                    }
                 }
+            }
 
-            if (fit.isFit() && cReturns > 0)
-                {
+            if (fit.isFit() && cReturns > 0) {
                 fit = calculateReturnFit(sigMethod, fCall, atypeReturn, typeTarget, errsTemp);
-                }
+            }
 
-            if (!fit.isFit())
-                {
-                if (errsTemp.hasSeriousErrors())
-                    {
-                    if (cNameErrs == 0 && cTypeErrs++ == 0)
-                        {
+            if (!fit.isFit()) {
+                if (errsTemp.hasSeriousErrors()) {
+                    if (cNameErrs == 0 && cTypeErrs++ == 0) {
                         errsKeep = errsTemp;
-                        }
+                    }
 
                     errsTemp = errs.branch(this);
-                    }
-                continue; // NextMethod
                 }
+                continue; // NextMethod
+            }
 
-            if (fExact)
-                {
+            if (fExact) {
                 setConvert.clear();
                 setIs.clear();
                 mapMethods.clear();
-                }
+            }
 
-            if (fit.isConverting())
-                {
+            if (fit.isConverting()) {
                 setConvert.add(idMethod);
-                }
-            else
-                {
+            } else {
                 setIs.add(idMethod);
-                }
+            }
             mapMethods.put(idMethod, method);
 
-            if (fExact)
-                {
+            if (fExact) {
                 return;
-                }
             }
+        }
 
         // if there is any ambiguity, don't report anything; the caller will log a generic
         // "Could not find a matching method" error
-        if (cNameErrs > 0 || cTypeErrs == 1 || (cTypeErrs == 0 && cArityErrs == 1))
-            {
+        if (cNameErrs > 0 || cTypeErrs == 1 || (cTypeErrs == 0 && cArityErrs == 1)) {
             errsKeep.merge();
-            }
         }
+    }
 
     /**
      * Iterate over the specified argument list, and transform all canonical <code>Type<></code>
      * types to the corresponding dynamic types.
      */
     protected TypeConstant[] transformTypeArguments(Context ctx,
-                                                    List<Expression> listArgs, TypeConstant[] atypeArgs)
-        {
+                                                    List<Expression> listArgs, TypeConstant[] atypeArgs) {
         assert listArgs.size() == atypeArgs.length;
 
         TypeConstant typeObj = pool().typeObject();
-        for (int i = 0, cArgs = atypeArgs.length; i < cArgs; i++)
-            {
+        for (int i = 0, cArgs = atypeArgs.length; i < cArgs; i++) {
             TypeConstant type = atypeArgs[i];
             if (type != null && type.isTypeOfType() && type.getParamType(0).equals(typeObj) &&
                     listArgs.get(i) instanceof NameExpression exprName &&
-                        exprName.getMeaning() == Meaning.Variable)
-                {
+                        exprName.getMeaning() == Meaning.Variable) {
                 type = transformType(ctx, exprName);
-                }
+            }
 
             atypeArgs[i] = type;
-            }
-        return atypeArgs;
         }
+        return atypeArgs;
+    }
 
     /**
      * Given a NameExpression whose type is <code>Type<></code>, transform it to a dynamic type
      * constant <code>Type<[name].DataType></code>.
      */
-    protected TypeConstant transformType(Context ctx, NameExpression exprName)
-        {
+    protected TypeConstant transformType(Context ctx, NameExpression exprName) {
         ConstantPool pool = pool();
         TypeConstant type = pool.typeType();
         Argument     arg  = exprName.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
-        if (arg instanceof Register reg)
-            {
+        if (arg instanceof Register reg) {
             PropertyConstant idProp   = type.ensureTypeInfo().findProperty("DataType").getIdentity();
             FormalConstant   idFormal = pool.ensureDynamicFormal(
                 ctx.getMethod().getIdentityConstant(), reg, idProp, exprName.getName());
 
             type = pool.ensureParameterizedTypeConstant(type, idFormal.getType());
-            }
-        return type;
         }
+        return type;
+    }
 
     /**
      * Rearrange the list of argument expressions for the specified method.
@@ -1550,13 +1341,12 @@ public abstract class AstNode
      *         or null if an error has been reported
      */
     protected List<Expression> rearrangeNamedArgs(
-            MethodStructure method, List<Expression> listExprArgs, ErrorListener errs)
-        {
+            MethodStructure method, List<Expression> listExprArgs, ErrorListener errs) {
         Map<String, Expression> mapNamedExpr = collectNamedArgs(listExprArgs, errs);
         return mapNamedExpr == null
                 ? null
                 : rearrangeNamedArgs(method, listExprArgs, mapNamedExpr, errs);
-        }
+    }
 
     /**
      * Rearrange the list of argument expressions for the specified method by taking into
@@ -1568,8 +1358,7 @@ public abstract class AstNode
      */
     protected List<Expression> rearrangeNamedArgs(
             MethodStructure method, List<Expression> listExprArgs,
-            Map<String, Expression> mapNamedExpr, ErrorListener errs)
-        {
+            Map<String, Expression> mapNamedExpr, ErrorListener errs) {
         int cTypeParams = method.getTypeParamCount();
         int cParams     = method.getVisibleParamCount();
         int cArgs       = listExprArgs.size();
@@ -1579,44 +1368,38 @@ public abstract class AstNode
         Expression[] aexpr = new Expression[cParams];
 
         // fill the head of the array with unnamed expressions
-        for (int i = 0; i < cUnnamed; i++)
-            {
+        for (int i = 0; i < cUnnamed; i++) {
             aexpr[i] = listExprArgs.get(i);
-            }
+        }
 
-        for (String sName : mapNamedExpr.keySet())
-            {
+        for (String sName : mapNamedExpr.keySet()) {
             org.xvm.asm.Parameter param = method.getParam(sName);
-            if (param == null)
-                {
+            if (param == null) {
                 log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
                 return null;
-                }
+            }
             int iParam = param.getIndex() - cTypeParams;
-            if (iParam < cUnnamed)
-                {
+            if (iParam < cUnnamed) {
                 log(errs, Severity.ERROR, Compiler.DUPLICATE_PARAMETER, sName);
                 return null;
-                }
+            }
 
             aexpr[iParam] = mapNamedExpr.get(sName);
-            }
+        }
 
         // replace non-specified "holes" with NonBindingExpressions
         long lPos = getStartPosition();
-        for (int i = cUnnamed; i < cParams; i++)
-            {
-            if (aexpr[i] == null)
-                {
+        for (int i = cUnnamed; i < cParams; i++) {
+            if (aexpr[i] == null) {
                 NonBindingExpression exprNB = new NonBindingExpression(lPos, lPos, null);
                 adopt(exprNB);
                 exprNB.setStage(Stage.Validated);
                 aexpr[i] = exprNB;
-                }
             }
+        }
 
         return Arrays.asList(aexpr);
-        }
+    }
 
     /**
      * Choose the best fit out of a non-empty set of methods.
@@ -1630,19 +1413,14 @@ public abstract class AstNode
      *         an error has been reported
      */
     protected MethodConstant chooseBest(Set<MethodConstant> setMethods, TypeConstant typeTarget,
-            Map<MethodConstant, MethodStructure> mapMethods, ErrorListener errs)
-        {
+            Map<MethodConstant, MethodStructure> mapMethods, ErrorListener errs) {
         assert !setMethods.isEmpty();
 
         MethodConstant idBest  = null;
-        for (MethodConstant idMethod : setMethods)
-            {
-            if (idBest == null)
-                {
+        for (MethodConstant idMethod : setMethods) {
+            if (idBest == null) {
                 idBest = idMethod;
-                }
-            else
-                {
+            } else {
                 // don't take the type parameters into the consideration
                 SignatureConstant sigOld = truncateSignature(idBest,   mapMethods.get(idBest));
                 SignatureConstant sigNew = truncateSignature(idMethod, mapMethods.get(idMethod));
@@ -1651,76 +1429,63 @@ public abstract class AstNode
                 int     cParamsNew = sigNew.getParamCount();
                 boolean fOldBetter;
                 boolean fNewBetter;
-                if (cParamsOld == cParamsNew)
-                    {
+                if (cParamsOld == cParamsNew) {
                     fOldBetter = sigNew.isSubstitutableFor(sigOld, typeTarget);
                     fNewBetter = sigOld.isSubstitutableFor(sigNew, typeTarget);
 
-                    if (!fOldBetter && !fNewBetter)
-                        {
+                    if (!fOldBetter && !fNewBetter) {
                         // choose the one that is narrower for every argument
-                        for (int i = 0; i < cParamsOld; i++)
-                            {
+                        for (int i = 0; i < cParamsOld; i++) {
                             TypeConstant typeOld = sigOld.getRawParams()[i];
                             TypeConstant typeNew = sigNew.getRawParams()[i];
 
-                            if (typeOld.isA(typeNew) && !typeNew.isA(typeOld))
-                                {
+                            if (typeOld.isA(typeNew) && !typeNew.isA(typeOld)) {
                                 fOldBetter = true;
-                                }
-                            if (typeNew.isA(typeOld) && !typeOld.isA(typeNew))
-                                {
+                            }
+                            if (typeNew.isA(typeOld) && !typeOld.isA(typeNew)) {
                                 fNewBetter = true;
-                                }
+                            }
 
-                            if (fNewBetter && fOldBetter)
-                                {
+                            if (fNewBetter && fOldBetter) {
                                 // new was better at some but not other arg; still ambiguous
                                 fOldBetter = fNewBetter = false;
                                 break;
-                                }
                             }
                         }
                     }
-                else
-                    {
+                } else {
                     // there are two methods that match, but one has fewer parameters than the
                     // other, which means that the one with more parameters has default values;
                     // therefore, we could safely choose the method with fewer parameters
                     fNewBetter = cParamsNew < cParamsOld;
                     fOldBetter = !fNewBetter;
-                    }
+                }
 
-                if (fOldBetter || fNewBetter)
-                    {
+                if (fOldBetter || fNewBetter) {
                     // if both are substitutable to each other, we can take any
                     // (though we could also get the target's info, find the corresponding
                     //  TypeInfo and choose a more accommodating MethodInfo)
-                    if (fNewBetter)
-                        {
+                    if (fNewBetter) {
                         idBest  = idMethod;
-                        }
                     }
-                else
-                    {
+                } else {
                     // note: theoretically there could still be one better than either of these two,
                     // but for now, just assume it's an error at this point
                     log(errs, Severity.ERROR, Compiler.SIGNATURE_AMBIGUOUS,
                             idBest.getSignature().removeAutoNarrowing().getValueString());
                     return null;
-                    }
                 }
             }
-        return idBest;
         }
+        return idBest;
+    }
 
-    private SignatureConstant truncateSignature(MethodConstant idMethod, MethodStructure method)
-        {
+    private SignatureConstant truncateSignature(MethodConstant idMethod, MethodStructure method) {
         SignatureConstant sig = idMethod.getSignature();
         int               c   = method.getTypeParamCount();
 
         return c > 0 ? sig.truncateParams(c, -1) : sig;
-        }
+    }
 
     /**
      * Calculate the fit for the method return values.
@@ -1735,11 +1500,10 @@ public abstract class AstNode
      */
     protected TypeFit calculateReturnFit(SignatureConstant sigMethod, boolean fCall,
                                          TypeConstant[] atypeReturn, TypeConstant typeCtx,
-                                         ErrorListener errs)
-        {
+                                         ErrorListener errs) {
         return calculateReturnFit(sigMethod.getRawReturns(), sigMethod.getValueString(), fCall,
                                     atypeReturn, typeCtx, errs);
-        }
+    }
 
     /**
      * Calculate the fit for a method or function return values.
@@ -1755,112 +1519,94 @@ public abstract class AstNode
      */
     protected TypeFit calculateReturnFit(TypeConstant[] atypeMethodReturn, String sName,
                                          boolean fCall, TypeConstant[] atypeReturn,
-                                         TypeConstant typeCtx, ErrorListener errs)
-        {
+                                         TypeConstant typeCtx, ErrorListener errs) {
         int      cMethodReturns = atypeMethodReturn.length;
         int      cReturns       = atypeReturn.length;
         TypeFit  fit            = TypeFit.Fit;
 
-        if (cMethodReturns < cReturns)
-            {
+        if (cMethodReturns < cReturns) {
             // we allow such an "asymmetrical" call in just one case:
             // - a "void" method return is allowed to be assigned to an empty Tuple
             //    void f() {...}
             //    Tuple v = f();
             // (also see ConstantPool.checkFunctionOrMethodCompatibility)
-            if (cMethodReturns == 0 && cReturns == 1 && isVoid(atypeReturn))
-                {
+            if (cMethodReturns == 0 && cReturns == 1 && isVoid(atypeReturn)) {
                 return TypeFit.Pack;
-                }
+            }
 
             log(errs, Severity.ERROR, Compiler.INCOMPATIBLE_RETURN_COUNT,
                    sName, String.valueOf(cReturns), String.valueOf(cMethodReturns));
             return TypeFit.NoFit;
-            }
+        }
 
-        if (cMethodReturns > cReturns)
-            {
+        if (cMethodReturns > cReturns) {
             // we allow such an "asymmetrical" call in just one case:
             // - a non-void method return into a matching Tuple:
             //    (Int, String) f() {...}
             //    Tuple<Int, String> t = f();
-            if (cReturns == 1 && atypeReturn[0].isTuple())
-                {
+            if (cReturns == 1 && atypeReturn[0].isTuple()) {
                 fit         = fit.addPack();
                 atypeReturn = atypeReturn[0].getParamTypesArray();
                 cReturns    = atypeReturn.length;
-                }
+            }
 
-            if (cMethodReturns < cReturns)
-                {
+            if (cMethodReturns < cReturns) {
                 log(errs, Severity.ERROR, Compiler.INCOMPATIBLE_RETURN_COUNT,
                        sName, String.valueOf(cReturns), String.valueOf(cMethodReturns));
                 return TypeFit.NoFit;
-                }
             }
+        }
 
-        for (int i = 0; i < cReturns; i++)
-            {
+        for (int i = 0; i < cReturns; i++) {
             TypeConstant typeReturn       = atypeReturn[i];
             TypeConstant typeMethodReturn = atypeMethodReturn[i];
 
-            if (!typeMethodReturn.isCovariantReturn(typeReturn, typeCtx))
-                {
-                if (typeMethodReturn.getConverterTo(typeReturn) != null)
-                    {
+            if (!typeMethodReturn.isCovariantReturn(typeReturn, typeCtx)) {
+                if (typeMethodReturn.getConverterTo(typeReturn) != null) {
                     fit = fit.addConversion();
-                    }
-                else
-                    {
+                } else {
                     // there is one more scenario, when types may not be assignable, but still fit:
                     // - a single value return into a matching Tuple:
                     //    Int f() {...}
                     //    Tuple t = f();
                     if (fCall && cReturns == 1 && cMethodReturns == 1
                         && typeReturn.isTuple() && typeReturn.getParamsCount() <= 1
-                        && typeMethodReturn.isCovariantReturn(typeReturn.getParamType(0), typeCtx))
-                        {
+                        && typeMethodReturn.isCovariantReturn(typeReturn.getParamType(0), typeCtx)) {
                         return TypeFit.Pack;
-                        }
+                    }
 
                     log(errs, Severity.ERROR, Compiler.INCOMPATIBLE_RETURN_TYPE,
                             sName, typeReturn.getValueString(), typeMethodReturn.getValueString());
                     return TypeFit.NoFit;
-                    }
                 }
             }
-        return fit;
         }
+        return fit;
+    }
 
     /**
      * @return true iff all the specified types are {@link PendingTypeConstant}
      */
-    protected static boolean isPending(TypeConstant... atype)
-        {
-        for (TypeConstant type : atype)
-            {
-            if (!(type instanceof PendingTypeConstant))
-                {
+    protected static boolean isPending(TypeConstant... atype) {
+        for (TypeConstant type : atype) {
+            if (!(type instanceof PendingTypeConstant)) {
                 return false;
-                }
             }
-        return true;
         }
+        return true;
+    }
 
     /**
      * @return true iff all the specified types are equal to the "void" tuple
      */
-    protected static boolean isVoid(TypeConstant... atype)
-        {
-        for (TypeConstant type : atype)
-            {
-            if (!type.isTuple() || type.getParamsCount() > 0)
-                {
+    protected static boolean isVoid(TypeConstant... atype) {
+        for (TypeConstant type : atype) {
+            if (!type.isTuple() || type.getParamsCount() > 0) {
                 return false;
-                }
             }
-        return true;
         }
+        return true;
+    }
 
     /**
      * Convert the specified type parameter to a {@link ExprAST binary expression AST}.
@@ -1868,53 +1614,45 @@ public abstract class AstNode
      * @param ctx  the current Context
      * @param arg  the argument representing a formal type parameter
      */
-    protected static ExprAST toTypeParameterAst(Context ctx, Argument arg)
-        {
-        if (arg instanceof TypeConstant type)
-            {
+    protected static ExprAST toTypeParameterAst(Context ctx, Argument arg) {
+        if (arg instanceof TypeConstant type) {
             assert type.isTypeOfType();
 
             TypeConstant typeData = type.getParamType(0);
-            if (typeData.isFormalType())
-                {
+            if (typeData.isFormalType()) {
                 FormalConstant constFormal = (FormalConstant) typeData.getDefiningConstant();
                 ExprAST        ast         = constFormal.toExprAst(ctx);
-                if (ast != null)
-                    {
+                if (ast != null) {
                     return ast;
-                    }
                 }
             }
-        return toExprAst(arg);
         }
+        return toExprAst(arg);
+    }
 
     /**
      * Convert the specified argument to a {@link ExprAST binary expression AST}.
      */
-    protected static ExprAST toExprAst(Argument arg)
-        {
-        if (arg instanceof Register reg)
-            {
+    protected static ExprAST toExprAst(Argument arg) {
+        if (arg instanceof Register reg) {
             return reg.getRegisterAST();
-            }
-        if (arg instanceof Constant constant)
-            {
+        }
+        if (arg instanceof Constant constant) {
             return new ConstantExprAST(constant);
-            }
+        }
 
         throw new UnsupportedOperationException(arg.toString());
-        }
+    }
 
     /**
      * A trivial helper method that ensures the type info for the specified type using a branched
      * {@link ErrorListener} bound to this AstNode.
      */
-    protected TypeInfo ensureTypeInfo(TypeConstant type, ErrorListener errs)
-        {
+    protected TypeInfo ensureTypeInfo(TypeConstant type, ErrorListener errs) {
         TypeInfo info = type.ensureTypeInfo(errs = errs.branch(this));
         errs.merge();
         return info;
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -1922,79 +1660,60 @@ public abstract class AstNode
     @Override
     public abstract String toString();
 
-    public String toDumpString()
-        {
+    public String toDumpString() {
         StringWriter sw = new StringWriter();
         dump(new PrintWriter(sw), "", "");
         return sw.toString();
-        }
+    }
 
-    public void dump()
-        {
+    public void dump() {
         dump(new PrintWriter(System.out, true), "", "");
-        }
+    }
 
-    protected void dump(PrintWriter out, String sIndentFirst, String sIndent)
-        {
+    protected void dump(PrintWriter out, String sIndentFirst, String sIndent) {
         // find the children to dump, but prune out any empty categories
         Map<String, Object> cats = getDumpChildren();
-        for (Iterator<Map.Entry<String, Object>> iter = cats.entrySet().iterator(); iter.hasNext(); )
-            {
+        for (Iterator<Map.Entry<String, Object>> iter = cats.entrySet().iterator(); iter.hasNext(); ) {
             Map.Entry<String, Object> entry = iter.next();
 
             Object value = entry.getValue();
-            switch (value)
-                {
-                case null -> iter.remove();
-                case Map map ->
-                    {
-                    if (map.isEmpty())
-                        {
-                        iter.remove();
-                        }
-                    }
-                case Collection coll ->
-                    {
-                    if (coll.isEmpty())
-                        {
-                        iter.remove();
-                        }
-                    }
-                case Object[] ao ->
-                    {
-                    if (ao.length == 0)
-                        {
-                        iter.remove();
-                        }
-                    }
-                default ->
-                    {
-                    }
+            switch (value) {
+            case null -> iter.remove();
+            case Map map -> {
+                if (map.isEmpty()) {
+                    iter.remove();
                 }
             }
+            case Collection coll -> {
+                if (coll.isEmpty()) {
+                    iter.remove();
+                }
+            }
+            case Object[] ao -> {
+                if (ao.length == 0) {
+                    iter.remove();
+                }
+            }
+            default -> {}
+            }
+        }
 
         // print out a line of info about this node (if more than one line is necessary, then indent
         // the whole thing under the top line)
-        if (!sIndentFirst.isEmpty())
-            {
+        if (!sIndentFirst.isEmpty()) {
             out.print(sIndentFirst + "- ");
-            }
+        }
         out.print(getClass().getSimpleName());
 
         String sThis = getDumpDesc();
-        if (sThis == null || sThis.isEmpty())
-            {
+        if (sThis == null || sThis.isEmpty()) {
             out.println();
-            }
-        else if (sThis.indexOf('\n') < 0)
-            {
+        } else if (sThis.indexOf('\n') < 0) {
             out.println(": " + sThis);
-            }
-        else
-            {
+        } else {
             out.println();
             out.println(indentLines(sThis, sIndent + (cats.isEmpty() ? "      " : " |    ")));
-            }
+        }
 
         // for each category, print the category name, then print the child nodes under it; if
         // there's only one child node, then just stick it on the same line
@@ -2003,8 +1722,7 @@ public abstract class AstNode
         String sIndentLastC = sIndent + "       |";         // last cat kids except last kid
         String sIndentLastK = sIndent + "        ";         // last kid on last cat
         int cCats = 0;
-        for (Map.Entry<String, Object> entry : cats.entrySet())
-            {
+        for (Map.Entry<String, Object> entry : cats.entrySet()) {
             boolean fLastC = (++cCats == cats.size());
             String  sCat   = entry.getKey();
             Object  value  = entry.getValue();
@@ -2015,94 +1733,72 @@ public abstract class AstNode
             // find the kids
             int      cKids;
             Iterator iterK;
-            switch (value)
-                {
-                case Map kids ->
-                    {
-                    cKids = kids.size();
-                    iterK = kids.entrySet().iterator();
-                    }
-                case Collection kids ->
-                    {
-                    cKids = kids.size();
-                    iterK = kids.iterator();
-                    }
-                case Object[] kids ->
-                    {
-                    cKids = kids.length;
-                    iterK = Arrays.asList(kids).iterator();
-                    }
-                case null, default ->
-                    {
-                    cKids = 1;
-                    iterK = Collections.singletonList(value).iterator();
-                    }
-                }
+            switch (value) {
+            case Map kids -> {
+                cKids = kids.size();
+                iterK = kids.entrySet().iterator();
+            }
+            case Collection kids -> {
+                cKids = kids.size();
+                iterK = kids.iterator();
+            }
+            case Object[] kids -> {
+                cKids = kids.length;
+                iterK = Arrays.asList(kids).iterator();
+            }
+            case null, default -> {
+                cKids = 1;
+                iterK = Collections.singletonList(value).iterator();
+            }
+            }
 
-            for (int i = 0; i < cKids; ++i)
-                {
+            for (int i = 0; i < cKids; ++i) {
                 Object  kid      = iterK.next();
                 boolean fFirstK  = (i == 0);
                 boolean fLastK   = (i == cKids - 1);
                 String  sIndent1 = fLastC ? sIndentLastC : sIndentKid;
                 String  sIndent2 = fLastC ? (fLastK ? sIndentLastK : sIndentLastC) : sIndentKid;
 
-                if (kid instanceof AstNode node)
-                    {
-                    if (fFirstK)
-                        {
+                if (kid instanceof AstNode node) {
+                    if (fFirstK) {
                         out.println();
-                        }
+                    }
                     node.dump(out, sIndent1, sIndent2);
-                    }
-                else if (kid instanceof Map.Entry)
-                    {
-                    if (fFirstK)
-                        {
+                } else if (kid instanceof Map.Entry) {
+                    if (fFirstK) {
                         out.println();
-                        }
-                    throw new UnsupportedOperationException("TODO");
                     }
-                else // any old object
-                    {
+                    throw new UnsupportedOperationException("TODO");
+                } else { // any old object
                     String sKid = String.valueOf(kid);
-                    if (sKid.indexOf('\n') < 0)
-                        {
-                        if (cKids == 1)
-                            {
+                    if (sKid.indexOf('\n') < 0) {
+                        if (cKids == 1) {
                             out.print(": ");
-                            }
-                        else
-                            {
-                            if (fFirstK)
-                                {
+                        } else {
+                            if (fFirstK) {
                                 out.println();
-                                }
+                            }
                             out.print(sIndent1 + "- ");
-                            }
                         }
-                    else
-                        {
-                        if (fFirstK)
-                            {
+                    } else {
+                        if (fFirstK) {
                             out.println();
-                            }
+                        }
                         sKid = indentLines(sKid, sIndent2 + "  ");
                         sKid = sIndent1 + "- " + sKid.substring(sIndent1.length() + 2);
-                        }
-                    out.println(sKid);
                     }
+                    out.println(sKid);
                 }
             }
         }
+    }
 
     /**
      * Used for debugging only.
      */
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return null;
-        }
+    }
 
     /**
      * Build and return a map that allows the caller to navigate the children of this node.
@@ -2115,28 +1811,22 @@ public abstract class AstNode
      *
      * @return a map containing all the child information to dump
      */
-    public Map<String, Object> getDumpChildren()
-        {
+    public Map<String, Object> getDumpChildren() {
         Field[] fields = getChildFields();
-        if (fields.length == 0)
-            {
+        if (fields.length == 0) {
             return Collections.emptyMap();
-            }
+        }
 
         Map<String, Object> map = new ListMap<>();
-        for (Field field : fields)
-            {
-            try
-                {
+        for (Field field : fields) {
+            try {
                 map.put(field.getName(), field.get(this));
-                }
-            catch (IllegalAccessException e)
-                {
+            } catch (IllegalAccessException e) {
                 throw new IllegalStateException(e);
-                }
             }
-        return map;
         }
+        return map;
+    }
 
 
     // ----- internal -------------------------------------------------------------------
@@ -2147,10 +1837,9 @@ public abstract class AstNode
      * @return nothing, because the method always throws
      * @throws UnsupportedOperationException this exception is always thrown by this method
      */
-    protected UnsupportedOperationException notImplemented()
-        {
+    protected UnsupportedOperationException notImplemented() {
         throw new UnsupportedOperationException("not implemented by: " + this.getClass().getSimpleName());
-        }
+    }
 
     /**
      * Ensure that the passed list is an ArrayList, replacing it with an ArrayList if necessary.
@@ -2159,12 +1848,11 @@ public abstract class AstNode
      *
      * @return an ArrayList
      */
-    protected static <T> ArrayList<T> ensureArrayList(List<T> list)
-        {
+    protected static <T> ArrayList<T> ensureArrayList(List<T> list) {
         return list instanceof ArrayList alist
                 ? alist
                 : new ArrayList<>(list);
-        }
+    }
 
     /**
      * Collect fields by name.
@@ -2174,55 +1862,43 @@ public abstract class AstNode
      *
      * @return an array of fields corresponding to the specified names on the specified class
      */
-    protected static Field[] fieldsForNames(Class clz, String... names)
-        {
-        if (names == null || names.length == 0)
-            {
+    protected static Field[] fieldsForNames(Class clz, String... names) {
+        if (names == null || names.length == 0) {
             return NO_FIELDS;
-            }
+        }
 
         Field[] fields = new Field[names.length];
-        NextField: for (int i = 0, c = fields.length; i < c; ++i)
-            {
+        NextField: for (int i = 0, c = fields.length; i < c; ++i) {
             Class                clzTry = clz;
             NoSuchFieldException eOrig  = null;
-            while (clzTry != null)
-                {
-                try
-                    {
+            while (clzTry != null) {
+                try {
                     Field field = clzTry.getDeclaredField(names[i]);
                     assert field != null;
-                    if (!field.getType().isInstance(AstNode.class) && field.getType().isInstance(List.class))
-                        {
+                    if (!field.getType().isInstance(AstNode.class) && field.getType().isInstance(List.class)) {
                         throw new IllegalStateException("unsupported field type "
                                 + field.getType().getSimpleName() + " on field "
                                 + clzTry.getSimpleName() + '.' + names[i]);
-                        }
+                    }
                     fields[i] = field;
                     continue NextField;
-                    }
-                catch (NoSuchFieldException e)
-                    {
-                    if (eOrig == null)
-                        {
+                } catch (NoSuchFieldException e) {
+                    if (eOrig == null) {
                         eOrig = e;
-                        }
+                    }
 
                     clzTry = clzTry.getSuperclass();
-                    if (clz == null)
-                        {
+                    if (clz == null) {
                         throw new IllegalStateException(eOrig);
-                        }
                     }
-                catch (SecurityException e)
-                    {
+                } catch (SecurityException e) {
                     throw new IllegalStateException(e);
-                    }
                 }
             }
+        }
 
         return fields;
-        }
+    }
 
 
     // ----- inner class: ChildIterator ------------------------------------------------------------
@@ -2231,13 +1907,11 @@ public abstract class AstNode
      * Represents an Iterator that can also replace the most recently iterated element.
      */
     public interface ChildIterator
-            extends Iterable<AstNode>, Iterator<AstNode>
-        {
+            extends Iterable<AstNode>, Iterator<AstNode> {
         @Override
-        default Iterator<AstNode> iterator()
-            {
+        default Iterator<AstNode> iterator() {
             return this;
-            }
+        }
 
         /**
          * Replace the most recently returned node with the specified new node.
@@ -2245,186 +1919,143 @@ public abstract class AstNode
          * @param nodeNew  the node to use as a replacement for the node most recently returned from
          *                 the {@link #next()} method
          */
-        default void replaceWith(AstNode nodeNew)
-            {
+        default void replaceWith(AstNode nodeNew) {
             throw new IllegalStateException();
-            }
-
-        ChildIterator EMPTY = new ChildIterator()
-            {
-            @Override
-            public boolean hasNext()
-                {
-                return false;
-                }
-
-            @Override
-            public AstNode next()
-                {
-                throw new NoSuchElementException();
-                }
-            };
         }
 
+        ChildIterator EMPTY = new ChildIterator() {
+            @Override
+            public boolean hasNext() {
+                return false;
+            }
+
+            @Override
+            public AstNode next() {
+                throw new NoSuchElementException();
+            }
+        };
+    }
+
     protected final class ChildIteratorImpl
-            implements ChildIterator
-        {
+            implements ChildIterator {
         /**
          * Construct a ChildIterator that will iterate all the children that are held in the
          * specified fields, which are either AstNodes themselves, or are container types thereof.
          *
          * @param fields  an array of fields of the AstNode
          */
-        private ChildIteratorImpl(Field[] fields)
-            {
+        private ChildIteratorImpl(Field[] fields) {
             this.fields = fields;
-            }
+        }
 
-        public boolean hasNext()
-            {
+        public boolean hasNext() {
             return state == HAS_NEXT || prepareNextElement();
-            }
+        }
 
-        public AstNode next()
-            {
-            if (state == HAS_NEXT || prepareNextElement())
-                {
+        public AstNode next() {
+            if (state == HAS_NEXT || prepareNextElement()) {
                 state = HAS_PREV;
-                if (value instanceof AstNode node)
-                    {
+                if (value instanceof AstNode node) {
                     return node;
-                    }
-                else
-                    {
+                } else {
                     return (AstNode) ((Iterator) value).next();
-                    }
                 }
+            }
 
             throw new NoSuchElementException();
-            }
+        }
 
-        private boolean prepareNextElement()
-            {
-            if (value instanceof Iterator iter && iter.hasNext())
-                {
+        private boolean prepareNextElement() {
+            if (value instanceof Iterator iter && iter.hasNext()) {
                 state = HAS_NEXT;
                 return true;
-                }
+            }
 
             boolean prepped = prepareNextField();
             state = prepped ? HAS_NEXT : NOT_PREP;
             return prepped;
-            }
+        }
 
-        private boolean prepareNextField()
-            {
-            while (++iField < fields.length)
-                {
+        private boolean prepareNextField() {
+            while (++iField < fields.length) {
                 Object next;
-                try
-                    {
+                try {
                     next = fields[iField].get(AstNode.this);
-                    }
-                catch (NullPointerException e)
-                    {
+                } catch (NullPointerException e) {
                     throw new IllegalStateException(
                             "class=" + AstNode.this.getClass().getSimpleName()
                                     + ", field=" + iField);
-                    }
-                catch (IllegalAccessException e)
-                    {
+                } catch (IllegalAccessException e) {
                     throw new IllegalStateException(e);
-                    }
+                }
 
-                if (next != null)
-                    {
-                    if (next instanceof List list)
-                        {
-                        if (!list.isEmpty())
-                            {
+                if (next != null) {
+                    if (next instanceof List list) {
+                        if (!list.isEmpty()) {
                             value = list.listIterator();
                             return true;
-                            }
                         }
-                    else if (next instanceof Collection coll)
-                        {
-                        if (!coll.isEmpty())
-                            {
+                    } else if (next instanceof Collection coll) {
+                        if (!coll.isEmpty()) {
                             value = coll.iterator();
                             return true;
-                            }
                         }
-                    else
-                        {
+                    } else {
                         assert next instanceof AstNode;
                         value = next;
                         return true;
-                        }
                     }
                 }
+            }
 
             value = null;
             return false;
-            }
+        }
 
-        public void remove()
-            {
-            if (state == HAS_PREV)
-                {
-                if (value instanceof AstNode)
-                    {
+        public void remove() {
+            if (state == HAS_PREV) {
+                if (value instanceof AstNode) {
                     // null out the field
-                    try
-                        {
+                    try {
                         fields[iField].set(AstNode.this, null);
-                        }
-                    catch (IllegalAccessException e)
-                        {
+                    } catch (IllegalAccessException e) {
                         throw new IllegalStateException(e);
-                        }
+                    }
                     state = NOT_PREP;
                     return;
-                    }
+                }
 
-                if (value instanceof Iterator iter)
-                    {
+                if (value instanceof Iterator iter) {
                     // tell the underlying iterator to remove the value
                     iter.remove();
                     state = NOT_PREP;
                     return;
-                    }
                 }
-
-            throw new IllegalStateException();
             }
 
-        public void replaceWith(AstNode newChild)
-            {
-            if (state == HAS_PREV)
-                {
-                if (value instanceof AstNode)
-                    {
-                    // the field holds a single node; store the new value
-                    try
-                        {
-                        fields[iField].set(AstNode.this, newChild);
-                        }
-                    catch (IllegalAccessException e)
-                        {
-                        throw new IllegalStateException(e);
-                        }
-                    return;
-                    }
+            throw new IllegalStateException();
+        }
 
-                if (value instanceof ListIterator iter)
-                    {
+        public void replaceWith(AstNode newChild) {
+            if (state == HAS_PREV) {
+                if (value instanceof AstNode) {
+                    // the field holds a single node; store the new value
+                    try {
+                        fields[iField].set(AstNode.this, newChild);
+                    } catch (IllegalAccessException e) {
+                        throw new IllegalStateException(e);
+                    }
+                    return;
+                }
+
+                if (value instanceof ListIterator iter) {
                     iter.set(newChild);
                     return;
-                    }
                 }
+            }
 
             throw new IllegalStateException();
-            }
+        }
 
         private static final int NOT_PREP = 0;
         private static final int HAS_NEXT = 1;
@@ -2434,7 +2065,7 @@ public abstract class AstNode
         private int iField = -1;
         private Object value;
         private int state = NOT_PREP;
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -2453,4 +2084,4 @@ public abstract class AstNode
      * The parent of this AstNode.
      */
     private AstNode m_parent;
-    }
+}

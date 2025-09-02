@@ -19,16 +19,14 @@ import org.xvm.asm.constants.TypeConstant;
  * parameter of the function should remain unbound.
  */
 public class NonBindingExpression
-        extends Expression
-    {
+        extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public NonBindingExpression(long lStartPos, long lEndPos, TypeExpression type)
-        {
+    public NonBindingExpression(long lStartPos, long lEndPos, TypeExpression type) {
         this.lStartPos = lStartPos;
         this.lEndPos   = lEndPos;
         this.type      = type;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -36,126 +34,106 @@ public class NonBindingExpression
     /**
      * @return the type expression of the unbound argument, iff one was specified; otherwise null
      */
-    public TypeExpression getArgType()
-        {
+    public TypeExpression getArgType() {
         return type;
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return lStartPos;
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return lEndPos;
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType(Context ctx)
-        {
+    public TypeConstant getImplicitType(Context ctx) {
         return type == null ? null : type.ensureTypeConstant(ctx, null);
-        }
+    }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs)
-        {
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs) {
         return type == null || typeRequired == null
                 ? TypeFit.Fit
                 : type.testFit(ctx, typeRequired.getType(), fExhaustive, errs);
-        }
+    }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         TypeFit fit = TypeFit.Fit;
 
-        if (typeRequired == null)
-            {
+        if (typeRequired == null) {
             typeRequired = pool().typeObject();
-            }
+        }
 
         TypeExpression exprOldType = this.type;
         TypeConstant   typeArg;
-        if (exprOldType == null)
-            {
+        if (exprOldType == null) {
             // non-binding expression without a specified type should fit anything
             typeArg = typeRequired;
-            }
-        else
-            {
+        } else {
             TypeConstant   typeReqType = typeRequired.getType();
             TypeExpression exprNewType = (TypeExpression) exprOldType.validate(ctx, typeReqType, errs);
-            if (exprNewType == null)
-                {
+            if (exprNewType == null) {
                 fit     = TypeFit.NoFit;
                 typeArg = typeRequired;
-                }
-            else
-                {
+            } else {
                 this.type = exprNewType;
                 typeArg   = exprNewType.ensureTypeConstant(ctx, errs).resolveAutoNarrowingBase();
-                }
             }
+        }
 
         return finishValidation(ctx, typeRequired, typeArg, fit, null, errs);
-        }
+    }
 
     @Override
-    public boolean isNonBinding()
-        {
+    public boolean isNonBinding() {
         return true;
-        }
+    }
 
     @Override
     public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
-        {
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
         // we use synthetic NonBindingExpressions to mark non-specified default arguments in a
         // presence of other named arguments (see AstNode.rearrangeNamedArgs);
         // note that "generateArgument" is never called when a method binding is performed
         return Register.DEFAULT;
-        }
+    }
 
     @Override
-    public ExprAST getExprAST(Context ctx)
-        {
+    public ExprAST getExprAST(Context ctx) {
         return RegisterAST.defaultReg(getType());
-        }
+    }
 
     @Override
-    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
-        {
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg) {
         return SideEffect.DefNo;
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return type == null
                 ? "?"
                 : "<" + type + ">?";
-        }
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -165,4 +143,4 @@ public class NonBindingExpression
     protected TypeExpression type;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NonBindingExpression.class, "type");
-    }
+}

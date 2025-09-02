@@ -19,32 +19,27 @@ import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTe
  * Native ClassTemplate implementation.
  */
 public class xClassTemplate
-        extends ClassTemplate
-    {
+        extends ClassTemplate {
     public static xClassTemplate INSTANCE;
 
-    public xClassTemplate(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xClassTemplate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
-        }
+    public void initNative() {
+    }
 
     @Override
     public int callEqualsImpl(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         return hValue1 instanceof ComponentTemplateHandle &&
                 hValue2 instanceof ComponentTemplateHandle
             ? xRTComponentTemplate.INSTANCE.callEquals(frame, clazz, hValue1, hValue2, iReturn)
             : frame.assignValue(iReturn, xBoolean.FALSE);
-        }
     }
+}

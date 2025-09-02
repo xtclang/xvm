@@ -29,67 +29,58 @@ import org.xvm.runtime.template.xEnum.EnumHandle;
  * Native Enumeration implementation.
  */
 public class xEnumeration
-        extends xClass
-    {
+        extends xClass {
     public static xEnumeration INSTANCE;
 
-    public xEnumeration(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xEnumeration(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         markNativeProperty("byName");
 
         invalidateTypeInfo();
-        }
+    }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
-        switch (sPropName)
-            {
-            case "byName":
-                return getPropertyByName(frame, (ClassHandle) hTarget, iReturn);
-            }
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
+        switch (sPropName) {
+        case "byName":
+            return getPropertyByName(frame, (ClassHandle) hTarget, iReturn);
+        }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
+    }
 
     /**
      * Implements property: @Lazy Map<String, EnumType> byName
      */
-    protected int getPropertyByName(Frame frame, ClassHandle hClass, int iReturn)
-        {
+    protected int getPropertyByName(Frame frame, ClassHandle hClass, int iReturn) {
         RefHandle    hByName = (RefHandle) hClass.getField(frame, "byName");
         ObjectHandle hMap    = hByName.getReferent();
-        if (hMap == null)
-            {
+        if (hMap == null) {
             TypeConstant     typePublic = hClass.getType().getParamType(0);
             IdentityConstant idPublic   = (IdentityConstant) typePublic.getDefiningConstant();
             ClassStructure   clzPublic  = (ClassStructure) idPublic.getComponent();
 
             IdentityConstant idEnumeration;
-            switch (clzPublic.getFormat())
-                {
-                case ENUMVALUE:
-                    idEnumeration = clzPublic.getSuper().getIdentityConstant();
-                    break;
+            switch (clzPublic.getFormat()) {
+            case ENUMVALUE:
+                idEnumeration = clzPublic.getSuper().getIdentityConstant();
+                break;
 
-                case ENUM:
-                    idEnumeration = idPublic;
-                    break;
+            case ENUM:
+                idEnumeration = idPublic;
+                break;
 
-                default:
-                    throw new IllegalStateException();
-                }
+            default:
+                throw new IllegalStateException();
+            }
 
             xEnum templateEnumeration = (xEnum) frame.f_context.f_container.getTemplate(idEnumeration);
 
@@ -103,70 +94,61 @@ public class xEnumeration
             ObjectHandle[] ahVal  = new ObjectHandle[cNames];
             boolean        fDefer = false;
 
-            for (int i = 0; i < cNames; i++)
-                {
+            for (int i = 0; i < cNames; i++) {
                 ahName[i] = xString.makeHandle(listNames.get(i));
 
                 EnumHandle hValue = listValues.get(i);
-                if (hValue.isStruct())
-                    {
-                    switch (hValue.getTemplate().completeConstruction(frame, hValue))
-                        {
-                        case Op.R_NEXT:
-                            ahVal[i] = frame.popStack();
-                            break;
+                if (hValue.isStruct()) {
+                    switch (hValue.getTemplate().completeConstruction(frame, hValue)) {
+                    case Op.R_NEXT:
+                        ahVal[i] = frame.popStack();
+                        break;
 
-                        case Op.R_CALL:
-                            ahVal[i] = new DeferredCallHandle(frame.m_frameNext);
-                            fDefer   = true;
-                            break;
+                    case Op.R_CALL:
+                        ahVal[i] = new DeferredCallHandle(frame.m_frameNext);
+                        fDefer   = true;
+                        break;
 
-                        case Op.R_EXCEPTION:
-                            return Op.R_EXCEPTION;
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
 
-                        default:
-                            throw new IllegalStateException();
-                        }
+                    default:
+                        throw new IllegalStateException();
                     }
-                else
-                    {
+                } else {
                     ahVal[i] = hValue;
-                    }
                 }
+            }
 
 
             ConstantPool pool    = frame.poolContext();
             TypeConstant typeMap = pool.ensureMapType(pool.typeString(), idEnumeration.getType());
 
             switch (xListMap.INSTANCE.constructMap(
-                        frame, typeMap, ahName, ahVal, false, fDefer, Op.A_STACK))
-                {
-                case Op.R_NEXT:
-                    {
-                    hMap = frame.popStack();
-                    hByName.setReferent(hMap);
-                    break;
-                    }
-
-                case Op.R_CALL:
-                    {
-                    Frame.Continuation contNext = frameCaller ->
-                        {
-                        ObjectHandle hM = frameCaller.popStack();
-                        hByName.setReferent(hM);
-                        return frameCaller.assignValue(iReturn, hM);
-                        };
-                    frame.m_frameNext.addContinuation(contNext);
-                    return Op.R_CALL;
-                    }
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
+                        frame, typeMap, ahName, ahVal, false, fDefer, Op.A_STACK)) {
+            case Op.R_NEXT: {
+                hMap = frame.popStack();
+                hByName.setReferent(hMap);
+                break;
             }
-        return frame.assignValue(iReturn, hMap);
+
+            case Op.R_CALL: {
+                Frame.Continuation contNext = frameCaller -> {
+                    ObjectHandle hM = frameCaller.popStack();
+                    hByName.setReferent(hM);
+                    return frameCaller.assignValue(iReturn, hM);
+                };
+                frame.m_frameNext.addContinuation(contNext);
+                return Op.R_CALL;
+            }
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
+        return frame.assignValue(iReturn, hMap);
     }
+}

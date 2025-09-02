@@ -10,17 +10,14 @@ import org.xvm.runtime.Container;
  * A base class for native Array implementations based on bit arrays.
  */
 public abstract class BitBasedArray
-        extends xArray
-    {
+        extends xArray {
     public static BitBasedArray INSTANCE;
 
-    protected BitBasedArray(Container container, ClassStructure structure)
-        {
+    protected BitBasedArray(Container container, ClassStructure structure) {
         super(container, structure, false);
-        }
+    }
 
     @Override
-    public void initNative()
-        {
-        }
+    public void initNative() {
     }
+}

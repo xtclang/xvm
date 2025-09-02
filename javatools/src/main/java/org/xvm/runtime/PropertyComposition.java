@@ -33,16 +33,14 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * PropertyComposition represents a "custom" property class.
  */
 public class PropertyComposition
-        implements TypeComposition
-    {
+        implements TypeComposition {
     /**
      * Construct the PropertyComposition for a given property of the specified parent.
      *
      * @param clzParent  the parent's TypeComposition
      * @param infoProp   the property info
      */
-    public PropertyComposition(ClassComposition clzParent, PropertyInfo infoProp)
-        {
+    public PropertyComposition(ClassComposition clzParent, PropertyInfo infoProp) {
         assert !clzParent.isStruct();
 
         Container     container   = clzParent.getContainer();
@@ -55,13 +53,12 @@ public class PropertyComposition
         f_mapMethods = new ConcurrentHashMap<>();
         f_mapGetters = new ConcurrentHashMap<>();
         f_mapSetters = new ConcurrentHashMap<>();
-        }
+    }
 
     /**
      * Construct a PropertyComposition clone that represents a "structure" view.
      */
-    private PropertyComposition(PropertyComposition clzInception)
-        {
+    private PropertyComposition(PropertyComposition clzInception) {
         f_clzParent    = clzInception.f_clzParent;
         f_infoProp     = clzInception.f_infoProp;
         f_clzRef       = clzInception.f_clzRef;
@@ -70,178 +67,148 @@ public class PropertyComposition
         f_mapSetters   = clzInception.f_mapSetters;
         m_clzInception = clzInception;
         m_clzStruct    = this;
-        }
+    }
 
 
     // ----- TypeComposition interface -------------------------------------------------------------
 
     @Override
-    public Container getContainer()
-        {
+    public Container getContainer() {
         return f_clzParent.getContainer();
-        }
+    }
 
     @Override
-    public OpSupport getSupport()
-        {
+    public OpSupport getSupport() {
         return f_clzRef.getSupport();
-        }
+    }
 
     @Override
-    public ClassTemplate getTemplate()
-        {
+    public ClassTemplate getTemplate() {
         return f_clzRef.getTemplate();
-        }
+    }
 
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return getInceptionType();
-        }
+    }
 
     @Override
-    public TypeConstant getInceptionType()
-        {
+    public TypeConstant getInceptionType() {
         TypeConstant typeParent = f_clzParent.getInceptionType();
         return typeParent.getConstantPool().ensurePropertyClassTypeConstant(
                 typeParent, f_infoProp.getIdentity());
-        }
+    }
 
     @Override
-    public TypeConstant getBaseType()
-        {
+    public TypeConstant getBaseType() {
         return f_infoProp.getBaseRefType();
-        }
+    }
 
     @Override
-    public TypeComposition maskAs(TypeConstant type)
-        {
+    public TypeComposition maskAs(TypeConstant type) {
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
-    public TypeComposition revealAs(TypeConstant type)
-        {
+    public TypeComposition revealAs(TypeConstant type) {
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
-    public ObjectHandle ensureOrigin(ObjectHandle handle)
-        {
+    public ObjectHandle ensureOrigin(ObjectHandle handle) {
         return handle;
-        }
+    }
 
     @Override
-    public ObjectHandle ensureAccess(ObjectHandle handle, Access access)
-        {
+    public ObjectHandle ensureAccess(ObjectHandle handle, Access access) {
         assert handle.getComposition() == this;
 
         return access == Access.STRUCT ^ isStruct()
                 ? handle.cloneAs(ensureAccess(access))
                 : handle;
-        }
+    }
 
     @Override
-    public PropertyComposition ensureAccess(Access access)
-        {
-        if (access == Access.STRUCT)
-            {
+    public PropertyComposition ensureAccess(Access access) {
+        if (access == Access.STRUCT) {
             PropertyComposition clzStruct = m_clzStruct;
-            if (clzStruct == null)
-                {
+            if (clzStruct == null) {
                 m_clzStruct = clzStruct = new PropertyComposition(this);
-                }
-            return clzStruct;
             }
+            return clzStruct;
+        }
 
         // for any other access return the inception composition
         return isStruct() ? m_clzInception : this;
-        }
+    }
 
     @Override
-    public boolean isStruct()
-        {
+    public boolean isStruct() {
         return m_clzStruct == this;
-        }
+    }
 
     @Override
-    public boolean isConst()
-        {
+    public boolean isConst() {
         return false;
-        }
+    }
 
     @Override
-    public boolean isInstanceChild()
-        {
+    public boolean isInstanceChild() {
         return false;
-        }
+    }
 
     @Override
-    public MethodStructure ensureAutoInitializer()
-        {
+    public MethodStructure ensureAutoInitializer() {
         return f_clzRef.ensureAutoInitializer();
-        }
+    }
 
     @Override
-    public ObjectHandle[] initializeStructure()
-        {
+    public ObjectHandle[] initializeStructure() {
         return f_clzRef.initializeStructure();
-        }
+    }
 
     @Override
-    public FieldInfo getFieldInfo(Object id)
-        {
+    public FieldInfo getFieldInfo(Object id) {
         return f_clzRef.getFieldInfo(id);
-        }
+    }
 
     @Override
-    public boolean makeStructureImmutable(ObjectHandle[] ahField)
-        {
+    public boolean makeStructureImmutable(ObjectHandle[] ahField) {
         return f_clzRef.makeStructureImmutable(ahField);
-        }
+    }
 
     @Override
-    public boolean hasOuter()
-        {
+    public boolean hasOuter() {
         return f_clzRef.hasOuter();
-        }
+    }
 
     @Override
-    public boolean isInjected(PropertyConstant idProp)
-        {
+    public boolean isInjected(PropertyConstant idProp) {
         return false;
-        }
+    }
 
     @Override
-    public boolean isAtomic(PropertyConstant idProp)
-        {
+    public boolean isAtomic(PropertyConstant idProp) {
         return false;
-        }
+    }
 
     @Override
-    public CallChain getMethodCallChain(Object nidMethod)
-        {
+    public CallChain getMethodCallChain(Object nidMethod) {
         ConstantPool pool = getConstantPool();
-        if (nidMethod instanceof SignatureConstant sig)
-            {
-            if (sig.getConstantPool() != pool)
-                {
+        if (nidMethod instanceof SignatureConstant sig) {
+            if (sig.getConstantPool() != pool) {
                 nidMethod = pool.register(sig);
-                }
             }
-        else
-            {
+        } else {
             NestedIdentity   idNested = (NestedIdentity) nidMethod;
             IdentityConstant idParent = idNested.getIdentityConstant();
-            if (idParent.getConstantPool() != pool)
-                {
+            if (idParent.getConstantPool() != pool) {
                 idParent  = (IdentityConstant) pool.register(idParent);
                 nidMethod = idParent.appendNestedIdentity(pool, idNested);
-                }
             }
+        }
         return f_mapMethods.computeIfAbsent(nidMethod,
-            nid ->
-                {
+            nid -> {
                 PropertyConstant idBase   = f_infoProp.getIdentity();
                 MethodConstant   idNested = (MethodConstant)
                     (nid instanceof NestedIdentity nested &&
@@ -254,20 +221,17 @@ public class PropertyComposition
                 return info == null
                         ? f_clzRef.getMethodCallChain(nid)
                         : new CallChain(info.ensureOptimizedMethodChain(infoParent));
-                });
-        }
+            });
+    }
 
     @Override
-    public CallChain getPropertyGetterChain(PropertyConstant idProp)
-        {
+    public CallChain getPropertyGetterChain(PropertyConstant idProp) {
         ConstantPool pool = getConstantPool();
-        if (idProp.getConstantPool() != pool)
-            {
+        if (idProp.getConstantPool() != pool) {
             idProp = (PropertyConstant) pool.register(idProp);
-            }
+        }
         return f_mapGetters.computeIfAbsent(idProp,
-            id ->
-                {
+            id -> {
                 // see if there's a nested property first; default to the base otherwise
                 PropertyConstant idBase   = f_infoProp.getIdentity();
                 PropertyConstant idNested = id.getNestedDepth() > idBase.getNestedDepth()
@@ -279,20 +243,17 @@ public class PropertyComposition
                 return chain == null
                         ? f_clzRef.getPropertyGetterChain(id)
                         : CallChain.createPropertyCallChain(chain);
-                });
-        }
+            });
+    }
 
     @Override
-    public CallChain getPropertySetterChain(PropertyConstant idProp)
-        {
+    public CallChain getPropertySetterChain(PropertyConstant idProp) {
         ConstantPool pool = getConstantPool();
-        if (idProp.getConstantPool() != pool)
-            {
+        if (idProp.getConstantPool() != pool) {
             idProp = (PropertyConstant) pool.register(idProp);
-            }
+        }
         return f_mapSetters.computeIfAbsent(idProp,
-            id ->
-                {
+            id -> {
                 PropertyConstant idBase   = f_infoProp.getIdentity();
                 PropertyConstant idNested = id.getNestedDepth() > idBase.getNestedDepth()
                         ? id
@@ -303,64 +264,56 @@ public class PropertyComposition
                 return chain == null
                         ? f_clzRef.getPropertySetterChain(id)
                         : new CallChain(chain);
-                });
-        }
+            });
+    }
 
     @Override
-    public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
-        {
+    public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn) {
         RefHandle hRef = (RefHandle) hTarget;
 
-        if (idProp.isTopLevel())
-            {
+        if (idProp.isTopLevel()) {
             xRef template = (xRef) getTemplate();
             return f_infoProp.containsBody(idProp)
                     ? template.getNativeReferent(frame, hRef, iReturn)
                     : template.getFieldValue(frame, hRef, idProp, iReturn);
-            }
-        return f_clzRef.getTemplate().getFieldValue(frame, hRef.getReferentHolder(), idProp, iReturn);
         }
+        return f_clzRef.getTemplate().getFieldValue(frame, hRef.getReferentHolder(), idProp, iReturn);
+    }
 
     @Override
-    public int setFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
-        {
+    public int setFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue) {
         RefHandle hRef = (RefHandle) hTarget;
 
-        if (idProp.isTopLevel())
-            {
+        if (idProp.isTopLevel()) {
             xVar template = (xVar) getTemplate();
             return f_infoProp.containsBody(idProp)
                     ? template.setNativeReferent(frame, hRef, hValue)
                     : template.setFieldValue(frame, hRef, idProp, hValue);
-            }
-        return f_clzRef.getTemplate().setFieldValue(frame, hRef.getReferentHolder(), idProp, hValue);
         }
+        return f_clzRef.getTemplate().setFieldValue(frame, hRef.getReferentHolder(), idProp, hValue);
+    }
 
     @Override
-    public Map<Object, FieldInfo> getFieldLayout()
-        {
+    public Map<Object, FieldInfo> getFieldLayout() {
         // strictly speaking, the list should include the non-top-level fields that are kept in
         // the parent's structure, but those are NestedIdentities, not Strings
         return f_clzRef.getFieldLayout();
-        }
+    }
 
     @Override
-    public StringHandle[] getFieldNameArray()
-        {
+    public StringHandle[] getFieldNameArray() {
         return Utils.STRINGS_NONE;
-        }
+    }
 
     @Override
-    public ObjectHandle[] getFieldValueArray(Frame frame, GenericHandle hValue)
-        {
+    public ObjectHandle[] getFieldValueArray(Frame frame, GenericHandle hValue) {
         return Utils.OBJECTS_NONE;
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return f_clzParent + "." + f_infoProp.getName() + (isStruct() ? ":struct" : "");
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -368,42 +321,37 @@ public class PropertyComposition
     /**
      * @return true if the custom property this class represents is LazyVar annotated.
      */
-    public boolean isLazy()
-        {
+    public boolean isLazy() {
         return f_infoProp.isLazy();
-        }
+    }
 
     /**
      * @return the PropertyInfo for this property composition
      */
-    public PropertyInfo getPropertyInfo()
-        {
+    public PropertyInfo getPropertyInfo() {
         return f_infoProp;
-        }
+    }
 
     /**
      * @return the ClassComposition for this property composition
      */
-    public TypeComposition getPropertyClass()
-        {
+    public TypeComposition getPropertyClass() {
         return f_clzRef;
-        }
+    }
 
     /**
      * @return the ClassComposition for the parent
      */
-    public ClassComposition getParentComposition()
-        {
+    public ClassComposition getParentComposition() {
         return f_clzParent;
-        }
+    }
 
     /**
      * @return the TypeInfo for the parent
      */
-    private TypeInfo getParentInfo()
-        {
+    private TypeInfo getParentInfo() {
         return f_clzParent.getInceptionType().ensureTypeInfo();
-        }
+    }
 
 
     // ----- data fields ---------------------------------------------------------------------------
@@ -426,4 +374,4 @@ public class PropertyComposition
 
     // cached PropertyComposition for the struct class
     private PropertyComposition m_clzStruct;
-    }
+}

@@ -25,117 +25,101 @@ import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.Sl
  * The native RTViewFromBit<Byte> implementation.
  */
 public class xRTViewFromBitToByte
-        extends xRTViewFromBit
-    {
+        extends xRTViewFromBit {
     public static xRTViewFromBitToByte INSTANCE;
 
-    public xRTViewFromBitToByte(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTViewFromBitToByte(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public TypeConstant getCanonicalType()
-        {
+    public TypeConstant getCanonicalType() {
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(), pool.typeByte());
-        }
+    }
 
     @Override
-    public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability)
-        {
+    public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability) {
         ClassComposition clzView = getCanonicalClass();
-        if (hSource instanceof SliceHandle hSlice)
-            {
+        if (hSource instanceof SliceHandle hSlice) {
             // bits.slice().asByteArray() -> bits.asByteArray().slice()
             ViewHandle hView = new ViewHandle(clzView,
                     hSlice.f_hSource, hSlice.f_hSource.m_cSize/8, mutability);
 
             return slice(hView, hSlice.f_ofStart/8, hSlice.m_cSize/8, hSlice.f_fReverse);
-            }
+        }
 
-        if (hSource instanceof LongBasedBitView.ViewHandle hView)
-            {
+        if (hSource instanceof LongBasedBitView.ViewHandle hView) {
             return new ViewHandle(clzView, hView.f_hSource, hView.m_cSize/8, mutability);
-            }
+        }
 
-        if (hSource instanceof xRTViewFromBit.ViewHandle hView)
-            {
+        if (hSource instanceof xRTViewFromBit.ViewHandle hView) {
             return new ViewHandle(clzView, hView.f_hSource, hView.m_cSize/8, mutability);
-            }
+        }
 
-        if (hSource instanceof ByteBasedDelegate.ByteArrayHandle hDelegate)
-            {
+        if (hSource instanceof ByteBasedDelegate.ByteArrayHandle hDelegate) {
             return new ViewHandle(clzView, hDelegate, hDelegate.getBitCount()/8, mutability);
-            }
+        }
 
-        if (hSource instanceof xRTViewToBitFromFloat64.ViewHandle hView)
-            {
+        if (hSource instanceof xRTViewToBitFromFloat64.ViewHandle hView) {
             return new ViewHandle(clzView, hView, hView.m_cSize/8, mutability);
-            }
+        }
 
         throw new UnsupportedOperationException();
-        }
+    }
 
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
     protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
-                                            long ofStart, long cSize, boolean fReverse)
-        {
+                                            long ofStart, long cSize, boolean fReverse) {
         ViewHandle     hView   = (ViewHandle) hTarget;
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof ByteView tView)
-            {
+        if (tSource instanceof ByteView tView) {
             byte[] abBits = tView.getBytes(hSource, ofStart, cSize, fReverse);
 
             return xRTUInt8Delegate.INSTANCE.makeHandle(abBits, cSize, mutability);
-            }
-
-        throw new UnsupportedOperationException();
         }
 
+        throw new UnsupportedOperationException();
+    }
+
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn)
-        {
+    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
         ViewHandle     hView   = (ViewHandle) hTarget;
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof ByteView tView)
-            {
+        if (tSource instanceof ByteView tView) {
             // the underlying delegate is a BitView, which is a ByteView
             return frame.assignValue(iReturn,
                     xUInt8.INSTANCE.makeJavaLong(tView.extractByte(hSource, lIndex)));
-            }
+        }
 
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
     public int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
-                                    ObjectHandle hValue)
-        {
+                                    ObjectHandle hValue) {
         ViewHandle     hView   = (ViewHandle) hTarget;
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof ByteView tView)
-            {
+        if (tSource instanceof ByteView tView) {
             // the underlying delegate is a BitView, which is a ByteView
             tView.assignByte(hSource, lIndex, (byte) ((JavaLong) hValue).getValue());
             return Op.R_NEXT;
-            }
+        }
 
         throw new UnsupportedOperationException();
-        }
     }
+}

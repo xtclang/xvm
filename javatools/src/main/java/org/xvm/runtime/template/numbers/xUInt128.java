@@ -8,40 +8,33 @@ import org.xvm.runtime.Frame;
 
 
 public class xUInt128
-        extends BaseInt128
-    {
+        extends BaseInt128 {
     public static xUInt128 INSTANCE;
 
-    public xUInt128(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xUInt128(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
     protected int convertToConstrainedType(Frame frame, xConstrainedInteger template,
-                                           LongLong ll, boolean fCheckBounds, int iReturn)
-        {
+                                           LongLong ll, boolean fCheckBounds, int iReturn) {
         long lVal = ll.getLowValue();
-        if (fCheckBounds)
-            {
-            if (ll.getHighValue() != 0)
-                {
+        if (fCheckBounds) {
+            if (ll.getHighValue() != 0) {
                 return overflow(frame);
-                }
+            }
 
             // UInt64 fits always
             if (!(template instanceof xUInt64) &&
-                    (lVal < 0 || lVal > template.f_cMaxValue))
-                {
+                    (lVal < 0 || lVal > template.f_cMaxValue)) {
                 return overflow(frame);
-                }
             }
+        }
 
         return frame.assignValue(iReturn, template.makeJavaLong(lVal));
-        }
     }
+}

@@ -46,23 +46,19 @@ import org.xvm.runtime.template._native.io.xRawChannel;
  * Native RawOSFileChannel implementation.
  */
 public class xRawOSFileChannel
-        extends xRawChannel
-    {
+        extends xRawChannel {
     public static xRawOSFileChannel INSTANCE;
 
-    public xRawOSFileChannel(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRawOSFileChannel(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         // RawOSFileChannel
         markNativeProperty("size");
         markNativeProperty("position");
@@ -79,126 +75,102 @@ public class xRawOSFileChannel
         markNativeMethod("close", VOID, VOID);
 
         super.initNative();
-        }
+    }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         ChannelHandle hChannel = (ChannelHandle) hTarget;
 
-        switch (sPropName)
-            {
-            case "size":
-                try
-                    {
-                    return frame.assignValue(iReturn, xInt64.makeHandle(hChannel.f_channel.size()));
-                    }
-                catch (IOException e)
-                    {
-                    return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
-                    }
-
-            case "position":
-                try
-                    {
-                    return frame.assignValue(iReturn, xInt64.makeHandle(hChannel.f_channel.position()));
-                    }
-                catch (IOException e)
-                    {
-                    return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
-                    }
-
-            case "readable":
-                return frame.assignValue(iReturn,
-                    xBoolean.makeHandle(hChannel.f_channel instanceof ReadableByteChannel));
-
-            case "writable":
-                return frame.assignValue(iReturn,
-                    xBoolean.makeHandle(hChannel.f_channel instanceof WritableByteChannel));
-
-            case "closed":
-                return frame.assignValue(iReturn,
-                    xBoolean.makeHandle(!hChannel.f_channel.isOpen()));
+        switch (sPropName) {
+        case "size":
+            try {
+                return frame.assignValue(iReturn, xInt64.makeHandle(hChannel.f_channel.size()));
+            } catch (IOException e) {
+                return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
             }
+
+        case "position":
+            try {
+                return frame.assignValue(iReturn, xInt64.makeHandle(hChannel.f_channel.position()));
+            } catch (IOException e) {
+                return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
+            }
+
+        case "readable":
+            return frame.assignValue(iReturn,
+                xBoolean.makeHandle(hChannel.f_channel instanceof ReadableByteChannel));
+
+        case "writable":
+            return frame.assignValue(iReturn,
+                xBoolean.makeHandle(hChannel.f_channel instanceof WritableByteChannel));
+
+        case "closed":
+            return frame.assignValue(iReturn,
+                xBoolean.makeHandle(!hChannel.f_channel.isOpen()));
+        }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
+    }
 
     @Override
-    public int invokeNativeSet(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
-        {
+    public int invokeNativeSet(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue) {
         ChannelHandle hChannel = (ChannelHandle) hTarget;
 
-        switch (sPropName)
-            {
-            case "size":
-                try
-                    {
-                    long cSize = ((JavaLong) hValue).getValue();
-                    hChannel.f_channel.truncate(cSize);
-                    return Op.R_NEXT;
-                    }
-                catch (IOException e)
-                    {
-                    return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
-                    }
-
-            case "position":
-                try
-                    {
-                    long nPosition = ((JavaLong) hValue).getValue();
-                    hChannel.f_channel.position(nPosition);
-                    return Op.R_NEXT;
-                    }
-                catch (IOException e)
-                    {
-                    return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
-                    }
+        switch (sPropName) {
+        case "size":
+            try {
+                long cSize = ((JavaLong) hValue).getValue();
+                hChannel.f_channel.truncate(cSize);
+                return Op.R_NEXT;
+            } catch (IOException e) {
+                return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
             }
 
-        return super.invokeNativeSet(frame, hTarget, sPropName, hValue);
+        case "position":
+            try {
+                long nPosition = ((JavaLong) hValue).getValue();
+                hChannel.f_channel.position(nPosition);
+                return Op.R_NEXT;
+            } catch (IOException e) {
+                return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
+            }
         }
+
+        return super.invokeNativeSet(frame, hTarget, sPropName, hValue);
+    }
 
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
+                             ObjectHandle[] ahArg, int iReturn) {
         ChannelHandle hChannel = (ChannelHandle) hTarget;
 
-        switch (method.getName())
-            {
-            case "take":
-                return invokeTake(frame, hChannel, iReturn);
+        switch (method.getName()) {
+        case "take":
+            return invokeTake(frame, hChannel, iReturn);
 
-            case "submit":
-                return invokeSubmit(frame, hChannel, ahArg, iReturn);
+        case "submit":
+            return invokeSubmit(frame, hChannel, ahArg, iReturn);
 
-            case "flush":
-                try
-                    {
-                    hChannel.f_channel.force(false); // no metadata
-                    return Op.R_NEXT;
-                    }
-                catch (IOException e)
-                    {
-                    return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
-                    }
-
-            case "close":
-                try
-                    {
-                    hChannel.f_channel.close();
-                    return Op.R_NEXT;
-                    }
-                catch (IOException e)
-                    {
-                    return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
-                    }
+        case "flush":
+            try {
+                hChannel.f_channel.force(false); // no metadata
+                return Op.R_NEXT;
+            } catch (IOException e) {
+                return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
             }
 
-        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        case "close":
+            try {
+                hChannel.f_channel.close();
+                return Op.R_NEXT;
+            } catch (IOException e) {
+                return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
+            }
         }
+
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+    }
 
 
     // ----- method implementations ----------------------------------------------------------------
@@ -206,56 +178,43 @@ public class xRawOSFileChannel
     /**
      * Implementation for: {@code Byte[]|Int take()}.
      */
-    protected int invokeTake(Frame frame, ChannelHandle hChannel, int iReturn)
-        {
+    protected int invokeTake(Frame frame, ChannelHandle hChannel, int iReturn) {
         // we use the HeapByteBuffer as a thin wrapper around the underlying byte array
         ByteBuffer buffer = ByteBuffer.allocate(8192);
 
-        Callable<Integer> task = () ->
-            {
-            try
-                {
+        Callable<Integer> task = () -> {
+            try {
                 return hChannel.f_channel.read(buffer);
-                }
-            catch (NonReadableChannelException e)
-                {
+            } catch (NonReadableChannelException e) {
                 return -2; // InputShutdown
-                }
-            catch (ClosedChannelException e)
-                {
+            } catch (ClosedChannelException e) {
                 return -3; // closed
-                }
-            };
+            }
+        };
 
         CompletableFuture<Integer> cfRead = frame.f_context.f_container.scheduleIO(task);
 
-        Frame.Continuation continuation = frameCaller ->
-            {
-            try
-                {
+        Frame.Continuation continuation = frameCaller -> {
+            try {
                 int cbRead = cfRead.get().intValue();
                 return frameCaller.assignValue(iReturn, cbRead < 0
                         ? xInt64.makeHandle(-1)
                         : xArray.makeByteArrayHandle(buffer.array(), cbRead, Mutability.Constant));
-                }
-            catch (InterruptedException | ExecutionException e)
-                {
+            } catch (InterruptedException | ExecutionException e) {
                 return xOSFileNode.raisePathException(frameCaller, e, hChannel.f_path);
-                }
-            };
+            }
+        };
 
         return frame.waitForIO(cfRead, continuation);
-        }
+    }
 
     /**
      * Implementation for: {@code Int submit(Byte[] buffer, Int start, Int end)}.
      */
-    protected int invokeSubmit(Frame frame, ChannelHandle hChannel, ObjectHandle[] ahArg, int iReturn)
-        {
-        if (!hChannel.f_channel.isOpen())
-            {
+    protected int invokeSubmit(Frame frame, ChannelHandle hChannel, ObjectHandle[] ahArg, int iReturn) {
+        if (!hChannel.f_channel.isOpen()) {
             return frame.assignValue(iReturn, xInt64.makeHandle(-1)); // closed
-            }
+        }
 
         ArrayHandle hArray = (ArrayHandle) ahArg[0];
         JavaLong    hStart = (JavaLong)    ahArg[1];
@@ -274,7 +233,7 @@ public class xRawOSFileChannel
         frame.f_context.f_container.scheduleIO(task); // don't wait
 
         return frame.assignValue(iReturn, xInt64.makeHandle(0)); // OK
-        }
+    }
 
 
     // ----- ObjectHandle --------------------------------------------------------------------------
@@ -289,12 +248,10 @@ public class xRawOSFileChannel
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
-    public int createHandle(Frame frame, FileChannel channel, Path path, int iReturn)
-        {
-        if (iReturn == Op.A_IGNORE)
-            {
+    public int createHandle(Frame frame, FileChannel channel, Path path, int iReturn) {
+        if (iReturn == Op.A_IGNORE) {
             return Op.R_NEXT;
-            }
+        }
 
         Container      container = frame.f_context.f_container;
         ServiceContext context   = container.createServiceContext(path.toString());
@@ -303,38 +260,33 @@ public class xRawOSFileChannel
 
         // this should come from the config
         int cbPreferredSize = 8192;
-        try
-            {
+        try {
             cbPreferredSize = Math.max(1024, Math.min(cbPreferredSize, (int) channel.size()));
-            }
-        catch (IOException ignore) {}
+        } catch (IOException ignore) {}
         hChannel.setPreferredBufferSize(cbPreferredSize);
 
         return frame.assignValue(iReturn, hChannel);
-        }
+    }
 
     /**
      * The handle class for RawOSFileChannel.
      */
     public static class ChannelHandle
-            extends xRawChannel.ChannelHandle
-        {
+            extends xRawChannel.ChannelHandle {
         public final FileChannel f_channel;
         public final Path        f_path;
 
         public ChannelHandle(TypeComposition clazz, ServiceContext context,
-                             FileChannel channel, Path path)
-            {
+                             FileChannel channel, Path path) {
             super(clazz, context);
 
             f_channel = channel;
             f_path    = path;
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return super.toString() + " " + f_path;
-            }
         }
     }
+}

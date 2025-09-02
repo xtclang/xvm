@@ -28,37 +28,30 @@ import org.xvm.runtime.template.collections.xArray;
  * Native ListMap support.
  */
 public class xListMap
-        extends ClassTemplate
-    {
+        extends ClassTemplate {
     public static xListMap INSTANCE;
 
-    public xListMap(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xListMap(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         ensureConstructor();
-        }
+    }
 
     @Override
-    public int createConstHandle(Frame frame, Constant constant)
-        {
-        if (constant instanceof MapConstant constMap)
-            {
+    public int createConstHandle(Frame frame, Constant constant) {
+        if (constant instanceof MapConstant constMap) {
             TypeConstant typeMap = constant.getType();
-            if (typeMap.containsFormalType(true))
-                {
+            if (typeMap.containsFormalType(true)) {
                 typeMap = typeMap.resolveGenerics(frame.poolContext(),
                         frame.getGenericsResolver(typeMap.containsDynamicType()));
-                }
+            }
 
             Map<Constant, Constant> mapValues = constMap.getValue();
             int                     cEntries  = mapValues.size();
@@ -68,8 +61,7 @@ public class xListMap
             boolean        fDeferredKey = false;
             boolean        fDeferredVal = false;
             int            ix           = 0;
-            for (Map.Entry<Constant, Constant> entry : mapValues.entrySet())
-                {
+            for (Map.Entry<Constant, Constant> entry : mapValues.entrySet()) {
                 ObjectHandle hKey = frame.getConstHandle(entry.getKey());
                 ObjectHandle hVal = frame.getConstHandle(entry.getValue());
 
@@ -79,12 +71,12 @@ public class xListMap
                 ahKey[ix] = hKey;
                 ahVal[ix] = hVal;
                 ix++;
-                }
+            }
 
             return constructMap(frame, typeMap, ahKey, ahVal, fDeferredKey, fDeferredVal, Op.A_STACK);
-            }
-        return super.createConstHandle(frame, constant);
         }
+        return super.createConstHandle(frame, constant);
+    }
 
     /**
      * Create an immutable ListMap for a specified type and content.
@@ -100,8 +92,7 @@ public class xListMap
      * @return R_CALL or R_EXCEPTION
      */
     public int constructMap(Frame frame, TypeConstant typeMap, ObjectHandle[] ahKey, ObjectHandle[] ahVal,
-                               boolean fDeferredKey, boolean fDeferredVal, int iReturn)
-        {
+                               boolean fDeferredKey, boolean fDeferredVal, int iReturn) {
         ConstantPool pool         = frame.poolContext();
         TypeConstant typeKey      = typeMap.resolveGenericType("Key");
         TypeConstant typeVal      = typeMap.resolveGenericType("Value");
@@ -124,28 +115,25 @@ public class xListMap
         ahArg[0] = haKeys;
         ahArg[1] = haVals;
 
-        if (fDeferredKey || fDeferredVal)
-            {
+        if (fDeferredKey || fDeferredVal) {
             Frame.Continuation stepNext = frameCaller ->
                 construct(frameCaller, CONSTRUCTOR, clzMap, null, ahArg, iReturn);
 
             return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-            }
+        }
 
         return construct(frame, CONSTRUCTOR, clzMap, null, ahArg, iReturn);
-        }
+    }
 
 
     /**
      * @return structure for "construct(Key[] keys, Value[] vals)"
      */
-    public MethodStructure ensureConstructor()
-        {
-        if (CONSTRUCTOR == null)
-            {
+    public MethodStructure ensureConstructor() {
+        if (CONSTRUCTOR == null) {
             CONSTRUCTOR = getStructure().findMethod("construct", m -> m.getParamCount() == 3);
-            }
-        return CONSTRUCTOR;
         }
-    private static MethodStructure CONSTRUCTOR;
+        return CONSTRUCTOR;
     }
+    private static MethodStructure CONSTRUCTOR;
+}

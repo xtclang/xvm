@@ -19,49 +19,41 @@ import org.xvm.runtime.template.numbers.xBit;
  * Native RTDelegate<Bit> implementation.
  */
 public class xRTBitDelegate
-        extends BitBasedDelegate
-    {
+        extends BitBasedDelegate {
     public static xRTBitDelegate INSTANCE;
 
-    public xRTBitDelegate(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTBitDelegate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
-        }
+    public void initNative() {
+    }
 
     @Override
-    public TypeConstant getCanonicalType()
-        {
+    public TypeConstant getCanonicalType() {
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
                 pool.typeBit());
-        }
-
-    @Override
-    protected boolean isSet(ObjectHandle hValue)
-        {
-        return ((JavaLong) hValue).getValue() != 0;
-        }
-
-    @Override
-    protected ObjectHandle makeBitHandle(boolean f)
-        {
-        return xBit.makeHandle(f);
-        }
-
-    @Override
-    public BitArrayHandle makeHandle(byte[] abValue, long cBits, Mutability mutability)
-        {
-        return new BitArrayHandle(getCanonicalClass(), abValue, cBits, mutability);
-        }
     }
+
+    @Override
+    protected boolean isSet(ObjectHandle hValue) {
+        return ((JavaLong) hValue).getValue() != 0;
+    }
+
+    @Override
+    protected ObjectHandle makeBitHandle(boolean f) {
+        return xBit.makeHandle(f);
+    }
+
+    @Override
+    public BitArrayHandle makeHandle(byte[] abValue, long cBits, Mutability mutability) {
+        return new BitArrayHandle(getCanonicalClass(), abValue, cBits, mutability);
+    }
+}

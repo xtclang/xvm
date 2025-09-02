@@ -15,47 +15,39 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
  * therefore not preventing the underlying service from being stopped and GC'd.
  */
 public class WeakCallback
-        extends WeakReference<ServiceContext>
-    {
-    public WeakCallback(Frame frame, FunctionHandle hFunction)
-        {
+        extends WeakReference<ServiceContext> {
+    public WeakCallback(Frame frame, FunctionHandle hFunction) {
         super(frame.f_context);
 
         f_lCallbackId = frame.f_context.f_container.f_runtime.makeUniqueId();
         frame.f_context.ensureCallbackMap().put(f_lCallbackId, new Callback(frame, hFunction));
-        }
+    }
 
     /**
      * @return the underlying function; never null
      */
-    public Callback extractCallback()
-        {
+    public Callback extractCallback() {
         ServiceContext context = get();
-        if (context != null)
-            {
+        if (context != null) {
             Callback callback = context.getCallbackMap().remove(f_lCallbackId);
-            if (callback != null)
-                {
+            if (callback != null) {
                 return callback;
-                }
             }
-        throw new IllegalStateException();
         }
+        throw new IllegalStateException();
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         ServiceContext context = get();
-        if (context != null)
-            {
+        if (context != null) {
             Callback callback = context.getCallbackMap().get(f_lCallbackId);
-            if (callback != null)
-                {
+            if (callback != null) {
                 return callback.functionHandle().toString();
-                }
             }
-        return "Empty";
         }
+        return "Empty";
+    }
 
     /**
      * The callback data.
@@ -66,4 +58,4 @@ public class WeakCallback
      * The callback data id.
      */
     private final long f_lCallbackId;
-    }
+}

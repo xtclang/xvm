@@ -7,8 +7,7 @@ import org.xvm.asm.Register;
 /**
  * An interface implemented by statements that can expose variables via a label.
  */
-public interface LabelAble
-    {
+public interface LabelAble {
     /**
      * Determine if the statement exposes the specified variable name via its label.
      *
@@ -27,4 +26,4 @@ public interface LabelAble
      * @return the corresponding register
      */
     Register getLabelVar(Context ctx, String sName);
-    }
+}

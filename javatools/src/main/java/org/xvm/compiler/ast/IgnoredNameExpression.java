@@ -28,94 +28,80 @@ import org.xvm.compiler.Token;
  * </li></ul>
  */
 public class IgnoredNameExpression
-        extends NameExpression
-    {
+        extends NameExpression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public IgnoredNameExpression(Token name)
-        {
+    public IgnoredNameExpression(Token name) {
         super(name);
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public TypeExpression toTypeExpression()
-        {
+    public TypeExpression toTypeExpression() {
         return new BadTypeExpression(this);
-        }
+    }
 
     @Override
-    public TypeConstant getImplicitType(Context ctx)
-        {
+    public TypeConstant getImplicitType(Context ctx) {
         return pool().typeObject();
-        }
+    }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs)
-        {
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs) {
         return TypeFit.Fit;
-        }
+    }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         TypeConstant type = typeRequired == null
                 ? pool().typeObject()
                 : typeRequired;
 
         return finishValidation(ctx, type, type, TypeFit.Fit, pool().ensureMatchAnyConstant(type), errs);
-        }
+    }
 
     @Override
-    public boolean isAssignable(Context ctx)
-        {
+    public boolean isAssignable(Context ctx) {
         return true;
-        }
+    }
 
-    public Assignable generateAssignable(Context ctx, Code code, ErrorListener errs)
-        {
+    public Assignable generateAssignable(Context ctx, Code code, ErrorListener errs) {
         return new Assignable();
-        }
+    }
 
     @Override
     public Argument generateArgument(Context ctx, Code code,
-                                     boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
-        {
+                                     boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
         return generateBlackHole(null);
-        }
+    }
 
     @Override
-    public ExprAST getExprAST(Context ctx)
-        {
+    public ExprAST getExprAST(Context ctx) {
         return new RegisterAST(Op.A_IGNORE, pool().typeObject(), null);
-        }
+    }
 
     @Override
-    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
-        {
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg) {
         return SideEffect.DefNo;
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return "_";
-        }
-
-    @Override
-    public String getDumpDesc()
-        {
-        return toString();
-        }
-
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        return Collections.emptyMap();
-        }
     }
+
+    @Override
+    public String getDumpDesc() {
+        return toString();
+    }
+
+    @Override
+    public Map<String, Object> getDumpChildren() {
+        return Collections.emptyMap();
+    }
+}

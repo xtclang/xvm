@@ -17,27 +17,23 @@ import org.xvm.runtime.TypeComposition;
  * Native RTBuffer implementation.
  */
 public class xRTBuffer
-        extends ClassTemplate
-    {
+        extends ClassTemplate {
     public static xRTBuffer INSTANCE;
 
-    public xRTBuffer(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTBuffer(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
-        {
+    public ObjectHandle createStruct(Frame frame, TypeComposition clazz) {
         assert clazz.getTemplate() == this;
 
         return new RTBufferHandle(clazz.ensureAccess(Constants.Access.STRUCT));
-        }
+    }
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
@@ -45,17 +41,14 @@ public class xRTBuffer
      * Native RTBuffer handle. It's allowed to cross the service boundaries.
      */
     private static class RTBufferHandle
-            extends GenericHandle
-        {
-        public RTBufferHandle(TypeComposition clazz)
-            {
+            extends GenericHandle {
+        public RTBufferHandle(TypeComposition clazz) {
             super(clazz);
-            }
+        }
 
         @Override
-        public boolean isPassThrough(Container container)
-            {
+        public boolean isPassThrough(Container container) {
             return true;
-            }
         }
     }
+}

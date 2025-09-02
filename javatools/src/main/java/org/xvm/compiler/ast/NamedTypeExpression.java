@@ -48,16 +48,14 @@ import static org.xvm.compiler.Lexer.isValidQualifiedModule;
  */
 public class NamedTypeExpression
         extends TypeExpression
-        implements NameResolver.NameResolving
-    {
+        implements NameResolver.NameResolving {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Construct a NamedTypeExpression without a "left".
      */
     public NamedTypeExpression(Token immutable, List<Token> names, Token access, Token nonnarrow,
-                               List<TypeExpression> params, long lEndPos)
-        {
+                               List<TypeExpression> params, long lEndPos) {
         this.left       = null;
         this.immutable  = immutable;
         this.names      = names;
@@ -66,14 +64,13 @@ public class NamedTypeExpression
         this.paramTypes = params;
         this.lStartPos  = immutable == null ? names.get(0).getStartPosition() : immutable.getStartPosition();
         this.lEndPos    = lEndPos;
-        }
+    }
 
     /**
      * Construct a NamedTypeExpression with a "left".
      */
     public NamedTypeExpression(TypeExpression left, List<Token> names,
-                               List<TypeExpression> params, long lEndPos)
-        {
+                               List<TypeExpression> params, long lEndPos) {
         this.left       = left;
         this.immutable  = null;
         this.names      = names;
@@ -82,13 +79,12 @@ public class NamedTypeExpression
         this.paramTypes = params;
         this.lStartPos  = names.get(0).getStartPosition();
         this.lEndPos    = lEndPos;
-        }
+    }
 
     /**
      * Construct a synthetic validated NamedTypeExpression.
      */
-    public NamedTypeExpression(Expression exprSource, TypeConstant type)
-        {
+    public NamedTypeExpression(Expression exprSource, TypeConstant type) {
         this.left       = null;
         this.immutable  = null;
         this.access     = null;
@@ -101,14 +97,13 @@ public class NamedTypeExpression
         setTypeConstant(type);
         setStage(Stage.Validated);
         setParent(exprSource);
-        }
+    }
 
     /**
      * Construct a NamedTypeExpression with an optional module. (This is NOT for the compiler.)
      */
     public NamedTypeExpression(List<Token> module, List<Token> names,
-                               List<TypeExpression> params, long lEndPos)
-        {
+                               List<TypeExpression> params, long lEndPos) {
         this.module     = module;
         this.left       = null;
         this.immutable  = null;
@@ -118,7 +113,7 @@ public class NamedTypeExpression
         this.paramTypes = params;
         this.lStartPos  = (module == null ? names : module).get(0).getStartPosition();
         this.lEndPos    = lEndPos;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -129,130 +124,106 @@ public class NamedTypeExpression
      *
      * @return the dot-delimited name of the module, or null if no module is specified
      */
-    public String getModule()
-        {
-        if (module == null)
-            {
+    public String getModule() {
+        if (module == null) {
             return null;
-            }
+        }
 
         StringBuilder sb = new StringBuilder();
 
         boolean first = true;
-        for (Token name : module)
-            {
-            if (first)
-                {
+        for (Token name : module) {
+            if (first) {
                 first = false;
-                }
-            else
-                {
+            } else {
                 sb.append('.');
-                }
-            sb.append(name.getValueText());
             }
+            sb.append(name.getValueText());
+        }
 
         return sb.toString();
-        }
+    }
 
     /**
      * Assemble the qualified name.
      *
      * @return the dot-delimited name
      */
-    public String getName()
-        {
-        if (names == null)
-            {
+    public String getName() {
+        if (names == null) {
             return "";
-            }
+        }
 
         StringBuilder sb = new StringBuilder();
 
         boolean first = true;
-        for (Token name : names)
-            {
-            if (first)
-                {
+        for (Token name : names) {
+            if (first) {
                 first = false;
-                }
-            else
-                {
+            } else {
                 sb.append('.');
-                }
-            sb.append(name.getValueText());
             }
-
-        return sb.toString();
+            sb.append(name.getValueText());
         }
 
-    public String[] getNames()
-        {
+        return sb.toString();
+    }
+
+    public String[] getNames() {
         List<Token> list = names;
         int         c    = list == null ? 0 : list.size();
         String[]    as   = new String[c];
-        for (int i = 0; i < c; ++i)
-            {
+        for (int i = 0; i < c; ++i) {
             as[i] = list.get(i).getValueText();
-            }
-        return as;
         }
+        return as;
+    }
 
-    public Constant getIdentityConstant()
-        {
+    public Constant getIdentityConstant() {
         Constant constId = m_constId;
-        if (constId == null)
-            {
+        if (constId == null) {
             m_constUnresolved = new UnresolvedNameConstant(pool(), getNames(), isExplicitlyNonAutoNarrowing());
             m_constId = constId = m_constUnresolved;
-            }
-        else
-            {
+        } else {
             m_constId = constId = constId.resolve();
-            }
+        }
         return constId;
-        }
+    }
 
-    public List<TypeExpression> getParamTypes()
-        {
+    public List<TypeExpression> getParamTypes() {
         return paramTypes;
-        }
+    }
 
     /**
      * @return null if no access is explicit; otherwise one of PUBLIC, PROTECTED, PRIVATE
      */
-    public Access getExplicitAccess()
-        {
-        if (access == null)
-            {
+    public Access getExplicitAccess() {
+        if (access == null) {
             return null;
-            }
+        }
 
-        return switch (access.getId())
-            {
+        return switch (access.getId()) {
             case PUBLIC    -> Access.PUBLIC;
             case PROTECTED -> Access.PROTECTED;
             case PRIVATE   -> Access.PRIVATE;
             case STRUCT    -> Access.STRUCT;
             default        -> throw new IllegalStateException("access=" + access);
-            };
-        }
+        };
+    }
 
     /**
      * @return true iff the type is explicitly non-auto-narrowing (the '!' post-operator)
      */
-    public boolean isExplicitlyNonAutoNarrowing()
-        {
+    public boolean isExplicitlyNonAutoNarrowing() {
         return nonnarrow != null;
-        }
+    }
 
     /**
      * @return true iff the type represents a virtual child
      */
-    public boolean isVirtualChild()
-        {
+    public boolean isVirtualChild() {
         return m_fVirtualChild;
-        }
+    }
 
     /**
      * Auto-narrowing is allowed for a type used in the following scenarios:
@@ -265,61 +236,50 @@ public class NamedTypeExpression
      * @return true iff this type is used as part of a property type, a method return type, a method
      *         parameter type,
      */
-    public boolean isAutoNarrowingAllowed()
-        {
+    public boolean isAutoNarrowingAllowed() {
         TypeExpression type   = this;
         AstNode        parent = getParent();
-        while (true)
-            {
-            if (!parent.isAutoNarrowingAllowed(type))
-                {
+        while (true) {
+            if (!parent.isAutoNarrowingAllowed(type)) {
                 // annotation; disallow auto-narrowing
                 return false;
-                }
+            }
 
-            if (parent.isComponentNode())
-                {
+            if (parent.isComponentNode()) {
                 // the containing component didn't reject; we are good to auto-narrow
                 return true;
-                }
+            }
 
-            if (parent instanceof AnnotatedTypeExpression exprAnno && type == exprAnno.type)
-                {
+            if (parent instanceof AnnotatedTypeExpression exprAnno && type == exprAnno.type) {
                 type = exprAnno;
-                }
+            }
 
             parent = parent.getParent();
-            }
         }
+    }
 
     /**
      * @return the constant to use
      */
-    protected Constant inferAutoNarrowing(Constant constId, ErrorListener errs)
-        {
+    protected Constant inferAutoNarrowing(Constant constId, ErrorListener errs) {
         // check for auto-narrowing
-        if (!constId.containsUnresolved() && isAutoNarrowingAllowed() != isExplicitlyNonAutoNarrowing())
-            {
-            if (isExplicitlyNonAutoNarrowing())
-                {
+        if (!constId.containsUnresolved() && isAutoNarrowingAllowed() != isExplicitlyNonAutoNarrowing()) {
+            if (isExplicitlyNonAutoNarrowing()) {
                 log(errs, Severity.ERROR, Compiler.AUTO_NARROWING_ILLEGAL);
-                }
-            else if (constId instanceof ClassConstant idClz) // isAutoNarrowingAllowed()
-                {
+            } else if (constId instanceof ClassConstant idClz) { // isAutoNarrowingAllowed()
                 Component      component = getComponent();
                 ClassStructure clzThis   = component instanceof ClassStructure clz
                     ? clz
                     : component.getContainingClass();
-                if (clzThis != null && clzThis.getIdentityConstant().getFormat() == Format.Class)
-                    {
+                if (clzThis != null && clzThis.getIdentityConstant().getFormat() == Format.Class) {
                     return ((ClassConstant) clzThis.getIdentityConstant()).
                             calculateAutoNarrowingConstant(idClz);
-                    }
                 }
             }
+        }
 
         return constId;
-        }
+    }
 
     /**
      * Build a list of names for this NamedTypeExpression.
@@ -328,33 +288,27 @@ public class NamedTypeExpression
      *
      * @return a list of names
      */
-    protected List<String> collectNames(int cNames)
-        {
+    protected List<String> collectNames(int cNames) {
         List<Token>  listThis   = names;
         int          cNamesThis = listThis == null ? 0 : listThis.size();
         List<String> listNames;
 
-        if (left instanceof NamedTypeExpression exprName)
-            {
+        if (left instanceof NamedTypeExpression exprName) {
             listNames = exprName.collectNames(cNames + cNamesThis);
-            }
-        else
-            {
+        } else {
             listNames = new ArrayList<>(cNames + cNamesThis);
-            }
-
-        for (int i = 0; i < cNamesThis; ++i)
-            {
-            listNames.add(listThis.get(i).getValueText());
-            }
-        return listNames;
         }
+
+        for (int i = 0; i < cNamesThis; ++i) {
+            listNames.add(listThis.get(i).getValueText());
+        }
+        return listNames;
+    }
 
     /**
      * @return true iff this expression fully specifies a virtual child class identity
      */
-    protected boolean isFullyQualifiedChild()
-        {
+    protected boolean isFullyQualifiedChild() {
         assert m_resolver != null && m_resolver.getResult() == NameResolver.Result.RESOLVED;
 
         IdentityConstant idFirst = (IdentityConstant) m_resolver.getBaseConstant();
@@ -362,7 +316,7 @@ public class NamedTypeExpression
         // module and package are always "fully qualified" and so are non-child classes
         return !(idFirst instanceof ClassConstant)
             || !((ClassStructure) idFirst.getComponent()).isVirtualChild();
-        }
+    }
 
     /**
      * Determine if this NamedTypeExpression could be a module name.
@@ -370,450 +324,372 @@ public class NamedTypeExpression
      * @return true iff this NamedTypeExpression is just a name, and that name is a legal name for
      *         a module
      */
-    public boolean isValidModuleName()
-        {
+    public boolean isValidModuleName() {
         return immutable == null && access == null && (paramTypes == null || paramTypes.isEmpty())
                 && isValidQualifiedModule(getName());
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return lStartPos;
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return lEndPos;
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- NameResolving methods -----------------------------------------------------------------
 
     @Override
-    public NameResolver getNameResolver()
-        {
+    public NameResolver getNameResolver() {
         NameResolver resolver = m_resolver;
-        if (resolver == null || resolver.getNode() != this)
-            {
+        if (resolver == null || resolver.getNode() != this) {
             m_resolver = resolver = new NameResolver(this, collectNames(0).iterator());
-            }
-        return resolver;
         }
+        return resolver;
+    }
 
 
     // ----- TypeExpression methods ----------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
-        {
+    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs) {
         Constant             constId    = getIdentityConstant();
         Access               access     = getExplicitAccess();
         List<TypeExpression> listParams = paramTypes;
 
-        if (constId instanceof TypeConstant type)
-            {
+        if (constId instanceof TypeConstant type) {
             // access needs to be null
-            if (access != null)
-                {
+            if (access != null) {
                 throw new IllegalStateException("log error: access override unexpected");
-                }
+            }
 
             // must be no type params
-            if (listParams != null && !listParams.isEmpty())
-                {
+            if (listParams != null && !listParams.isEmpty()) {
                 throw new IllegalStateException("log error: type params unexpected");
-                }
+            }
 
             return type;
-            }
+        }
 
         // constId has been already "auto-narrowed" by resolveNames()
         ConstantPool pool = pool();
         TypeConstant type = calculateDefaultType(ctx, constId, ErrorListener.BLACKHOLE);
 
-        if (listParams != null)
-            {
+        if (listParams != null) {
             int            cParams     = listParams.size();
             TypeConstant[] atypeParams = new TypeConstant[cParams];
-            for (int i = 0; i < cParams; ++i)
-                {
+            for (int i = 0; i < cParams; ++i) {
                 atypeParams[i] = listParams.get(i).ensureTypeConstant(ctx, errs);
-                }
+            }
 
             type = pool.ensureParameterizedTypeConstant(type, atypeParams);
-            }
+        }
 
-        if (access != null && access != Access.PUBLIC)
-            {
+        if (access != null && access != Access.PUBLIC) {
             type = pool.ensureAccessTypeConstant(type, access);
-            }
+        }
 
-        if (immutable != null)
-            {
+        if (immutable != null) {
             type = type.freeze();
-            }
+        }
 
         return type;
-        }
+    }
 
     @Override
-    protected void setTypeConstant(TypeConstant constType)
-        {
-        if (!constType.containsUnresolved())
-            {
+    protected void setTypeConstant(TypeConstant constType) {
+        if (!constType.containsUnresolved()) {
             m_constId = constType;
-            }
+        }
 
         super.setTypeConstant(constType);
-        }
+    }
 
     @Override
-    protected void collectAnonInnerClassInfo(AnonInnerClass info)
-        {
+    protected void collectAnonInnerClassInfo(AnonInnerClass info) {
         info.addContribution(this);
-        }
+    }
 
     @Override
-    public boolean isDynamic()
-        {
+    public boolean isDynamic() {
         return m_exprDynamic != null;
-        }
+    }
 
 
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    public void resolveNames(StageMgr mgr, ErrorListener errs)
-        {
-        if (left == null)
-            {
+    public void resolveNames(StageMgr mgr, ErrorListener errs) {
+        if (left == null) {
             // check for a virtual child scenario: "parent.new [@Mixin] Child<...>(...)"
             AstNode parent = getParent();
-            while (parent instanceof AnnotatedTypeExpression)
-                {
+            while (parent instanceof AnnotatedTypeExpression) {
                 parent = parent.getParent();
-                }
-            if (parent instanceof NewExpression exprNew)
-                {
-                if (exprNew.left != null)
-                    {
+            }
+            if (parent instanceof NewExpression exprNew) {
+                if (exprNew.left != null) {
                     // defer the virtual child name resolution till validation time
                     m_fVirtualChild = true;
                     return;
-                    }
                 }
-
-            while (parent != null)
-                {
-                if (parent instanceof TypeCompositionStatement stmt)
-                    {
+            } while (parent != null) {
+                if (parent instanceof TypeCompositionStatement stmt) {
                     ClassStructure clz = (ClassStructure) stmt.getComponent();
-                    if (stmt.getName().equals(getName()))
-                        {
-                        if (!stmt.alreadyReached(Stage.Resolved))
-                            {
+                    if (stmt.getName().equals(getName())) {
+                        if (!stmt.alreadyReached(Stage.Resolved)) {
                             // mixins naturally imply formal type parameters from their contributions
                             // (most likely the "into"s); there is logic in TypeCompositionStatement that
                             // adds implicit type parameters, and we need to defer the resolution util
                             // then - see TypeCompositionStatement.addImplicitTypeParameters()
                             if (clz != null && clz.getFormat() == Component.Format.MIXIN &&
-                                    !clz.isParameterized())
-                                {
+                                    !clz.isParameterized()) {
                                 mgr.requestRevisit();
                                 return;
-                                }
                             }
+                        }
                         // once we found the name we're looking for, we're done
                         break;
-                        }
+                    }
 
-                    if (clz != null && clz.isTopLevel())
-                        {
+                    if (clz != null && clz.isTopLevel()) {
                         // the only reason we're in the loop in the first place is to look for an
                         // enclosing annotation or mixin of the same name; at this point, we've
                         // proven that it is not the case
                         break;
-                        }
                     }
-                parent = parent.getParent();
                 }
+                parent = parent.getParent();
             }
-        else
-            {
+        } else {
             // process "left" first
             boolean fDone = mgr.processChildrenExcept(node -> node != left);
-            if (!fDone)
-                {
+            if (!fDone) {
                 mgr.requestRevisit();
                 return;
-                }
-            }
-
-        ErrorListener errsTemp = errs.branch(this);
-        NameResolver  resolver = getNameResolver();
-        switch (resolver.resolve(errsTemp))
-            {
-            case DEFERRED:
-                mgr.requestRevisit();
-                return;
-
-            case RESOLVED:
-                {
-                if (!mgr.processChildren())
-                    {
-                    mgr.requestRevisit();
-                    return;
-                    }
-
-                Constant constId = resolver.getConstant();
-                boolean fProceed = checkValidType(constId, errsTemp);
-
-                if (!fProceed)
-                    {
-                    errsTemp.merge();
-                    mgr.deferChildren();
-                    return;
-                    }
-
-                // now that we have the resolved constId, update the unresolved m_constId to point to
-                // the resolved one (just in case anyone is holding the wrong one
-                Constant constIdNew = m_constId = inferAutoNarrowing(constId, errsTemp);
-
-                if (!errsTemp.hasSeriousErrors())
-                    {
-                    if (m_constUnresolved != null)
-                        {
-                        m_constUnresolved.resolve(constIdNew);
-                        m_constUnresolved = null;
-                        }
-
-                    UnresolvedTypeConstant typeUnresolved = m_typeUnresolved;
-                    if (typeUnresolved != null)
-                        {
-                        if (typeUnresolved.containsUnresolved())
-                            {
-                            TypeConstant typeNew = calculateDefaultType(null, constIdNew, errsTemp);
-                            if (typeNew.containsUnresolved())
-                                {
-                                mgr.requestRevisit();
-                                return;
-                                }
-                            typeUnresolved.resolve(typeNew);
-                            }
-                        m_typeUnresolved = null;
-                        }
-                    }
-
-                if (errsTemp.hasSeriousErrors())
-                    {
-                    // cannot proceed
-                    errsTemp.merge();
-                    mgr.deferChildren();
-                    return;
-                    }
-
-                // reset the type constant
-                resetTypeConstant();
-                break;
-                }
-
-            case ERROR:
-                if (left == null && names != null && access == null
-                        && immutable == null && paramTypes == null && getCodeContainer() != null)
-                    {
-                    // assume that the type is "dynamic", for example:
-                    // "that.Element" or "that.Key.Element"
-                    NameExpression exprDyn = new NameExpression(names.get(0));
-                    getParent().adopt(exprDyn);
-
-                    for (int i = 1, cNames = names.size(); i < cNames; i++)
-                        {
-                        NameExpression exprNext = new NameExpression(exprDyn, null, names.get(i), null, lEndPos);
-                        exprDyn.adopt(exprNext);
-                        exprDyn = exprNext;
-                        }
-                    m_exprDynamic = exprDyn;
-                    return;
-                    }
-
-                // cannot proceed
-                errsTemp.merge();
-                break;
             }
         }
 
+        ErrorListener errsTemp = errs.branch(this);
+        NameResolver  resolver = getNameResolver();
+        switch (resolver.resolve(errsTemp)) {
+        case DEFERRED:
+            mgr.requestRevisit();
+            return;
+
+        case RESOLVED: {
+            if (!mgr.processChildren()) {
+                mgr.requestRevisit();
+                return;
+            }
+
+            Constant constId = resolver.getConstant();
+            boolean fProceed = checkValidType(constId, errsTemp);
+
+            if (!fProceed) {
+                errsTemp.merge();
+                mgr.deferChildren();
+                return;
+            }
+
+            // now that we have the resolved constId, update the unresolved m_constId to point to
+            // the resolved one (just in case anyone is holding the wrong one
+            Constant constIdNew = m_constId = inferAutoNarrowing(constId, errsTemp);
+
+            if (!errsTemp.hasSeriousErrors()) {
+                if (m_constUnresolved != null) {
+                    m_constUnresolved.resolve(constIdNew);
+                    m_constUnresolved = null;
+                }
+
+                UnresolvedTypeConstant typeUnresolved = m_typeUnresolved;
+                if (typeUnresolved != null) {
+                    if (typeUnresolved.containsUnresolved()) {
+                        TypeConstant typeNew = calculateDefaultType(null, constIdNew, errsTemp);
+                        if (typeNew.containsUnresolved()) {
+                            mgr.requestRevisit();
+                            return;
+                        }
+                        typeUnresolved.resolve(typeNew);
+                    }
+                    m_typeUnresolved = null;
+                }
+            }
+
+            if (errsTemp.hasSeriousErrors()) {
+                // cannot proceed
+                errsTemp.merge();
+                mgr.deferChildren();
+                return;
+            }
+
+            // reset the type constant
+            resetTypeConstant();
+            break;
+        }
+
+        case ERROR:
+            if (left == null && names != null && access == null
+                    && immutable == null && paramTypes == null && getCodeContainer() != null) {
+                // assume that the type is "dynamic", for example:
+                // "that.Element" or "that.Key.Element"
+                NameExpression exprDyn = new NameExpression(names.get(0));
+                getParent().adopt(exprDyn);
+
+                for (int i = 1, cNames = names.size(); i < cNames; i++) {
+                    NameExpression exprNext = new NameExpression(exprDyn, null, names.get(i), null, lEndPos);
+                    exprDyn.adopt(exprNext);
+                    exprDyn = exprNext;
+                }
+                m_exprDynamic = exprDyn;
+                return;
+            }
+
+            // cannot proceed
+            errsTemp.merge();
+            break;
+        }
+    }
+
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         ConstantPool pool = pool();
 
-        if (m_exprDynamic != null)
-            {
+        if (m_exprDynamic != null) {
             NameExpression exprOld = m_exprDynamic;
             NameExpression exprNew = (NameExpression) exprOld.validate(ctx, pool.typeType(), errs);
-            if (exprNew == null)
-                {
+            if (exprNew == null) {
                 return null;
-                }
+            }
             m_exprDynamic = exprNew;
 
             TypeConstant typeType = exprNew.getType();
 
-            if (exprNew.isSimpleName() && typeType.getParamType(0).equals(pool.typeObject()))
-                {
+            if (exprNew.isSimpleName() && typeType.getParamType(0).equals(pool.typeObject())) {
                 typeType = transformType(ctx, exprNew);
-                }
+            }
 
             // the underlying type could be either dynamic formal (e.g. array.Element),
             // or an actual type (e.g. Person.StructType, which is equivalent to Person:struct)
             m_constId = typeType.getParamType(0);
             return finishValidation(ctx, typeRequired, typeType, TypeFit.Fit, null, errs);
-            }
+        }
 
-        if (m_constId == null || m_constId.containsUnresolved())
-            {
+        if (m_constId == null || m_constId.containsUnresolved()) {
             // first, try to re-resolve the type
             ErrorListener errsTemp = errs.branch(this);
             NameResolver  resolver = getNameResolver();
-            switch (resolver.resolve(errsTemp))
-                {
-                case DEFERRED:
-                case ERROR:
+            switch (resolver.resolve(errsTemp)) {
+            case DEFERRED:
+            case ERROR:
+                errsTemp.merge();
+                return null;
+
+            case RESOLVED: {
+                Constant constId = resolver.getConstant();
+                if (!checkValidType(constId, errsTemp)) {
                     errsTemp.merge();
                     return null;
-
-                case RESOLVED:
-                    {
-                    Constant constId = resolver.getConstant();
-                    if (!checkValidType(constId, errsTemp))
-                        {
-                        errsTemp.merge();
-                        return null;
-                        }
-                    m_constId = inferAutoNarrowing(constId, errsTemp);
-                    }
                 }
+                m_constId = inferAutoNarrowing(constId, errsTemp);
             }
+            }
+        }
 
         TypeConstant type;
-        if (left == null)
-            {
-            if (m_constId instanceof TypeConstant constType)
-                {
+        if (left == null) {
+            if (m_constId instanceof TypeConstant constType) {
                 type = constType;
-                }
-            else
-                {
+            } else {
                 type = calculateDefaultType(ctx, m_constId, errs);
-                if (type.containsUnresolved())
-                    {
+                if (type.containsUnresolved()) {
                     log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, getName());
                     return null;
-                    }
                 }
+            }
 
             // there is no reason to look at the type parameters; the validation logic recurses
             // into the underlying NameTypeExpression nodes
-            if (type.containsFormalType(false))
-                {
+            if (type.containsFormalType(false)) {
                 // the type is either a simple formal (Element), a formal child (Element.Key),
                 // or a narrowed formal type (Element + Stringable)
                 ctx.useFormalType(type, errs);
-                }
+            }
 
-            if (m_fExternalTypedef)
-                {
-                if (type.containsGenericType(true))
-                    {
+            if (m_fExternalTypedef) {
+                if (type.containsGenericType(true)) {
                     TypeConstant typeParent =
                         ((TypedefConstant) m_constId).getParentConstant().getType();
                     type = type.resolveGenerics(pool, typeParent.normalizeParameters());
-                    }
                 }
             }
-        else
-            {
+        } else {
             TypeExpression exprOld = left;
             Expression     exprNew = exprOld.validate(ctx, null, errs);
-            if (exprNew == null)
-                {
+            if (exprNew == null) {
                 return null;
-                }
+            }
 
             type = left.getType().getParamType(0); // Type<DataType, OuterType>
 
-            for (Token name : names)
-                {
+            for (Token name : names) {
                 TypeInfo infoLeft = type.ensureTypeInfo(errs);
                 String   sName    = name.getValueText();
 
                 type = infoLeft.calculateChildType(pool, sName);
-                if (type == null)
-                    {
+                if (type == null) {
                     log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
                     return null;
-                    }
                 }
             }
+        }
 
         List<TypeExpression> listParams = paramTypes;
-        if (listParams != null)
-            {
+        if (listParams != null) {
             TypeConstant[] atypeParams = validateParameters(ctx, listParams, errs);
-            if (atypeParams == null)
-                {
+            if (atypeParams == null) {
                 return null;
-                }
-            if (type.isParamsSpecified())
-                {
+            }
+            if (type.isParamsSpecified()) {
                 TypeConstant[] atypeActual = type.getParamTypesArray();
-                if (!Arrays.equals(atypeActual, atypeParams))
-                    {
+                if (!Arrays.equals(atypeActual, atypeParams)) {
                     // this can happen for example, if m_constId is a typedef for a function
                     log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                     return null;
-                    }
                 }
-            else
-                {
+            } else {
                 // this is a duplicate of the check in calculateDefaultType() in case we got
                 // to this point bypassing that logic
                 if (type.isExplicitClassIdentity(true) &&
-                        (type.isTuple() || atypeParams.length <= type.getMaxParamsCount()))
-                    {
+                        (type.isTuple() || atypeParams.length <= type.getMaxParamsCount())) {
                     type = pool.ensureParameterizedTypeConstant(type, atypeParams);
-                    }
-                else
-                    {
+                } else {
                     log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                     return null;
-                    }
                 }
             }
+        }
 
         Access access = getExplicitAccess();
-        if (access != null && access != Access.PUBLIC)
-            {
+        if (access != null && access != Access.PUBLIC) {
             type = pool.ensureAccessTypeConstant(type, access);
-            }
+        }
 
-        if (immutable != null)
-            {
+        if (immutable != null) {
             type = type.freeze();
-            }
+        }
 
         TypeConstant typeType = type.getType();
         return finishValidation(ctx, typeRequired, typeType, TypeFit.Fit,
                 type.isFormalType() ? null : typeType, errs);
-        }
+    }
 
     /**
      * Validate the type parameters.
@@ -821,32 +697,28 @@ public class NamedTypeExpression
      * @return the type parameter types or null if the validation failed
      */
     private TypeConstant[] validateParameters(Context ctx, List<TypeExpression> listParams,
-                                              ErrorListener errs)
-        {
+                                              ErrorListener errs) {
         ConstantPool pool   = pool();
         boolean      fValid = true;
 
         TypeConstant[] atypeParams = new TypeConstant[listParams.size()];
-        for (int i = 0, c = listParams.size(); i < c; ++i)
-            {
+        for (int i = 0, c = listParams.size(); i < c; ++i) {
             TypeExpression exprOld = listParams.get(i);
             TypeExpression exprNew = (TypeExpression) exprOld.validate(ctx, pool.typeType(), errs);
 
-            if (exprNew == null)
-                {
+            if (exprNew == null) {
                 fValid = false;
                 continue;
-                }
+            }
 
-            if (exprNew != exprOld)
-                {
+            if (exprNew != exprOld) {
                 listParams.set(i, exprNew);
-                }
+            }
 
             atypeParams[i] = exprNew.ensureTypeConstant(ctx, errs);
-            }
-        return fValid ? atypeParams : null;
         }
+        return fValid ? atypeParams : null;
+    }
 
     /**
      * Considering the containing class, calculate a type for the specified target constant in the
@@ -856,178 +728,149 @@ public class NamedTypeExpression
      *
      * @return a resulting type
      */
-    protected TypeConstant calculateDefaultType(Context ctx, Constant constTarget, ErrorListener errs)
-        {
+    protected TypeConstant calculateDefaultType(Context ctx, Constant constTarget, ErrorListener errs) {
         ConstantPool pool = pool();
 
-        if (left == null)
-            {
+        if (left == null) {
             // in a context of "this compilation unit", an absence of type parameters
             // is treated as "formal types" (only for virtual children).
             // Consider an example:
             //
-            //  class Parent<T0>
-            //    {
-            //    void foo()
-            //       {
-            //       Parent p;  // (1) means Parent<T0>
-            //       Child1 c1; // (2) means Child1<Parent<T0>>
-            //       Child2 c2; // (3) means Child2<Parent<T0>, ?>
-            //       Child3 c3; // (3) means naked Child3 type
-            //       }
+            // class Parent<T0> {
+            //     void foo() {
+            //         Parent p;  // (1) means Parent<T0>
+            //         Child1 c1; // (2) means Child1<Parent<T0>>
+            //         Child2 c2; // (3) means Child2<Parent<T0>, ?>
+            //         Child3 c3; // (3) means naked Child3 type
+            //     }
             //
-            //    class Child1
-            //      {
-            //      void foo()
-            //         {
-            //         Parent p;  // (4) means Parent<T0>
-            //         Child1 c1; // (5) means Child1<Parent<T0>>
-            //         Child2 c2; // (6) means Child2<Parent<T0>, ?>
+            //     class Child1 {
+            //         void foo() {
+            //             Parent p;  // (4) means Parent<T0>
+            //             Child1 c1; // (5) means Child1<Parent<T0>>
+            //             Child2 c2; // (6) means Child2<Parent<T0>, ?>
             //         }
-            //      }
+            //     }
             //
-            //    class Child2<T2>
-            //      {
-            //      void foo()
-            //         {
-            //         Parent p;  // (4) means Parent<T0>
-            //         Child2 c2; // (5) means Child1<Parent<T0>, T2>
-            //         Child1 c1; // (7) means Child1<Parent<T0>>
+            //     class Child2<T2> {
+            //         void foo() {
+            //             Parent p;  // (4) means Parent<T0>
+            //             Child2 c2; // (5) means Child1<Parent<T0>, T2>
+            //             Child1 c1; // (7) means Child1<Parent<T0>>
             //         }
-            //      }
-            //    }
-            //
+            //     }
+            // }
 
             boolean       fAllowFormal = false;
             boolean       fParent      = false;
             boolean       fRetainConst = true;
             ClassConstant idTarget;
-            switch (constTarget.getFormat())
-                {
-                case ParentClass:
-                    fParent = true;
-                    // fall through
-                case ThisClass:
-                    // we can only generate an implicit formal type for "this" or "parent"
-                    fAllowFormal = true;
-                    idTarget     = (ClassConstant) ((PseudoConstant) constTarget).getDeclarationLevelClass();
-                    break;
+            switch (constTarget.getFormat()) {
+            case ParentClass:
+                fParent = true;
+                // fall through
+            case ThisClass:
+                // we can only generate an implicit formal type for "this" or "parent"
+                fAllowFormal = true;
+                idTarget     = (ClassConstant) ((PseudoConstant) constTarget).getDeclarationLevelClass();
+                break;
 
-                case ChildClass:
-                    // we don't retain the child const unless it's a virtual child
-                    fRetainConst = false;
-                    idTarget     = (ClassConstant) ((ChildClassConstant) constTarget).getDeclarationLevelClass();
-                    break;
+            case ChildClass:
+                // we don't retain the child const unless it's a virtual child
+                fRetainConst = false;
+                idTarget     = (ClassConstant) ((ChildClassConstant) constTarget).getDeclarationLevelClass();
+                break;
 
-                case Class:
-                    idTarget = (ClassConstant) constTarget;
-                    break;
+            case Class:
+                idTarget = (ClassConstant) constTarget;
+                break;
 
-                case Property:
-                    {
-                    PropertyConstant idProp = (PropertyConstant) constTarget;
-                    if (idProp.isFormalType())
-                        {
-                        if (ctx != null)
-                            {
-                            // see if the FormalType was narrowed
-                            Argument arg = ctx.getVar(idProp.getName());
-                            if (arg != null)
-                                {
-                                TypeConstant typeType = arg.getType();
-                                assert typeType.isTypeOfType();
-                                return typeType.getParamType(0);
-                                }
-                            }
-
-                        return idProp.getFormalType();
-                        }
-                    else
-                        {
-                        return new UnresolvedTypeConstant(pool,
-                            new UnresolvedNameConstant(pool, idProp.getName()));
+            case Property: {
+                PropertyConstant idProp = (PropertyConstant) constTarget;
+                if (idProp.isFormalType()) {
+                    if (ctx != null) {
+                        // see if the FormalType was narrowed
+                        Argument arg = ctx.getVar(idProp.getName());
+                        if (arg != null) {
+                            TypeConstant typeType = arg.getType();
+                            assert typeType.isTypeOfType();
+                            return typeType.getParamType(0);
                         }
                     }
 
-                case Typedef:
-                    {
-                    TypedefConstant  idTypedef = (TypedefConstant) constTarget;
-                    TypeConstant     typeRef   = idTypedef.getReferredToType();
-                    IdentityConstant idFrom    = idTypedef.getParentConstant();
-                    IdentityConstant idClass   = getComponent().getContainingClass().getIdentityConstant();
-
-                    if (!idFrom.isNestMateOf(idClass))
-                        {
-                        if (idFrom.equals(pool.clzType()))
-                            {
-                            // transform Type's typedefs, for example:
-                            //      Element.Comparer => Type<Element>.Comparer
-                            Constant idLeft = m_resolver.getBaseConstant();
-                            if (idLeft instanceof PropertyConstant idProp)
-                                {
-                                typeRef = typeRef.resolveGenerics(pool,
-                                        idProp.getFormalType().getType());
-                                }
-                            else if (idLeft instanceof TypeParameterConstant)
-                                {
-                                typeRef = typeRef.resolveGenerics(pool, idLeft.getType().getType());
-                                }
-                            }
-
-                        // we are "importing" a typedef from an outside class and need to resolve all
-                        // formal types to their canonical values; but we cannot do it until all names
-                        // are resolved
-                        m_fExternalTypedef = true;
-                        }
-
-                    return typeRef;
-                    }
-
-                case UnresolvedName:
-                    if (m_exprDynamic != null && ctx != null)
-                        {
-                        TypeConstant type = m_exprDynamic.getImplicitType(ctx);
-                        if (type != null && type.isTypeOfType())
-                            {
-                            return type.getParamType(0);
-                            }
-                        }
-                    return m_typeUnresolved =
-                            new UnresolvedTypeConstant(pool, (UnresolvedNameConstant) constTarget);
-
-                case TypeParameter:
-                default:
-                    idTarget = null;
-                    break;
+                    return idProp.getFormalType();
+                } else {
+                    return new UnresolvedTypeConstant(pool,
+                        new UnresolvedNameConstant(pool, idProp.getName()));
                 }
+            }
+
+            case Typedef: {
+                TypedefConstant  idTypedef = (TypedefConstant) constTarget;
+                TypeConstant     typeRef   = idTypedef.getReferredToType();
+                IdentityConstant idFrom    = idTypedef.getParentConstant();
+                IdentityConstant idClass   = getComponent().getContainingClass().getIdentityConstant();
+
+                if (!idFrom.isNestMateOf(idClass)) {
+                    if (idFrom.equals(pool.clzType())) {
+                        // transform Type's typedefs, for example:
+                        //      Element.Comparer => Type<Element>.Comparer
+                        Constant idLeft = m_resolver.getBaseConstant();
+                        if (idLeft instanceof PropertyConstant idProp) {
+                            typeRef = typeRef.resolveGenerics(pool,
+                                    idProp.getFormalType().getType());
+                        } else if (idLeft instanceof TypeParameterConstant) {
+                            typeRef = typeRef.resolveGenerics(pool, idLeft.getType().getType());
+                        }
+                    }
+
+                    // we are "importing" a typedef from an outside class and need to resolve all
+                    // formal types to their canonical values; but we cannot do it until all names
+                    // are resolved
+                    m_fExternalTypedef = true;
+                }
+
+                return typeRef;
+            }
+
+            case UnresolvedName:
+                if (m_exprDynamic != null && ctx != null) {
+                    TypeConstant type = m_exprDynamic.getImplicitType(ctx);
+                    if (type != null && type.isTypeOfType()) {
+                        return type.getParamType(0);
+                    }
+                }
+                return m_typeUnresolved =
+                        new UnresolvedTypeConstant(pool, (UnresolvedNameConstant) constTarget);
+
+            case TypeParameter:
+            default:
+                idTarget = null;
+                break;
+            }
 
             TypeConstant   typeTarget = null;
             Component      component  = getComponent();
             ClassStructure clzClass   = component.getContainingClass();
-            if (idTarget != null && clzClass != null)
-                {
+            if (idTarget != null && clzClass != null) {
                 IdentityConstant idClass   = clzClass.getIdentityConstant();
                 ClassStructure   clzTarget = (ClassStructure) idTarget.getComponent();
 
-                if (idTarget.isNestMateOf(idClass))
-                    {
-                    if (clzTarget.isVirtualChild())
-                        {
+                if (idTarget.isNestMateOf(idClass)) {
+                    if (clzTarget.isVirtualChild()) {
                         ClassConstant  idBase  = idTarget.getAutoNarrowingBase();
                         ClassStructure clzBase = (ClassStructure) idBase.getComponent();
-                        if (clzBase.containsUnresolvedContribution())
-                            {
+                        if (clzBase.containsUnresolvedContribution()) {
                             return new UnresolvedTypeConstant(pool,
                                 new UnresolvedNameConstant(pool, clzTarget.getName()));
-                            }
+                        }
 
                         // keep the formal types when in constructors or lambdas (a lambda that
                         // refers to a virtual child will make a decision to become a method later)
                         boolean fFormalParent = true;
-                        if (component instanceof MethodStructure method)
-                            {
+                        if (component instanceof MethodStructure method) {
                             fFormalParent = !method.isFunction() || method.isLambda();
-                            }
+                        }
                         boolean fFormalChild = fFormalParent && fAllowFormal && paramTypes == null;
 
                         typeTarget = fParent
@@ -1035,9 +878,7 @@ public class NamedTypeExpression
                                 : pool.ensureVirtualTypeConstant(
                                     clzBase, clzTarget, fFormalParent, fFormalChild, constTarget);
                         assert typeTarget != null;
-                        }
-                    else if (clzClass.isVirtualDescendant(idTarget))
-                        {
+                    } else if (clzClass.isVirtualDescendant(idTarget)) {
                         // the target is the context class itself (e.g. Interval type referred to
                         // by a method in Interval mixin), or
                         // the context class is a virtual child referring to its ascendant
@@ -1047,165 +888,134 @@ public class NamedTypeExpression
                         if (paramTypes == null && clzTarget.isParameterized() &&
                             (!component.isStatic() ||
                               component instanceof MethodStructure method &&
-                                    method.isConstructor() && !method.isPropertyInitializer()))
-                            {
+                                    method.isConstructor() && !method.isPropertyInitializer())) {
                             typeTarget = pool.ensureClassTypeConstant(constTarget, null,
                                 clzTarget.getFormalType().getParamTypesArray());
-                            }
-                        }
-
-                    if (ctx != null && typeTarget != null)
-                        {
-                        typeTarget = ctx.resolveFormalType(typeTarget);
                         }
                     }
-                else if (clzTarget.isVirtualChild())
-                    {
+
+                    if (ctx != null && typeTarget != null) {
+                        typeTarget = ctx.resolveFormalType(typeTarget);
+                    }
+                } else if (clzTarget.isVirtualChild()) {
                     ClassConstant  idBase  = idTarget.getAutoNarrowingBase();
                     ClassStructure clzBase = (ClassStructure) idBase.getComponent();
 
-                    if (clzBase.containsUnresolvedContribution())
-                        {
+                    if (clzBase.containsUnresolvedContribution()) {
                         return new UnresolvedTypeConstant(pool,
                                 new UnresolvedNameConstant(pool, clzTarget.getName()));
-                        }
-                    typeTarget = pool.ensureVirtualTypeConstant(clzBase, clzTarget, false, false, idTarget);
                     }
-
-                else if (clzTarget.isInnerChild())
-                    {
+                    typeTarget = pool.ensureVirtualTypeConstant(clzBase, clzTarget, false, false, idTarget);
+                } else if (clzTarget.isInnerChild()) {
                     ClassStructure clzParent = clzTarget.getContainingClass();
 
                     typeTarget = pool.ensureInnerChildTypeConstant(clzParent.getFormalType(), idTarget);
-                    }
+                }
 
                 boolean fValid;
-                if (clzTarget.isParameterized())
-                    {
+                if (clzTarget.isParameterized()) {
                     int cParams = paramTypes == null ? 0 : paramTypes.size();
                     fValid = clzTarget.isTuple() || cParams <= clzTarget.getTypeParamCount();
-                    }
-                else
-                    {
+                } else {
                     fValid = paramTypes == null;
-                    }
-
-                if (!fValid)
-                    {
-                    log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
-                    }
                 }
+
+                if (!fValid) {
+                    log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                }
+            }
 
             return typeTarget == null
                     ? pool.ensureTerminalTypeConstant(fRetainConst ? constTarget : idTarget)
                     : typeTarget;
-            }
-        else
-            {
+        } else {
             TypeConstant type = left.ensureTypeConstant(ctx, errs);
 
-            switch (m_constId.getFormat())
-                {
-                case ChildClass:
-                case Class:
-                    if (names != null)
-                        {
-                        for (Token name : names)
-                            {
-                            if (!type.isExplicitClassIdentity(true))
-                                {
-                                log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, type.getValueString());
-                                break;
-                                }
-
-                            ClassConstant  idLeft  = (ClassConstant) type.getSingleUnderlyingClass(true);
-                            ClassStructure clzLeft = (ClassStructure) idLeft.getComponent();
-                            String         sChild  = name.getValueText();
-                            Component      child   = clzLeft.findChildDeep(sChild);
-                            if (child instanceof ClassStructure clzChild)
-                                {
-                                if (clzChild.isVirtualChild())
-                                    {
-                                    type = isExplicitlyNonAutoNarrowing()
-                                            ? pool.ensureVirtualChildTypeConstant(type, sChild)
-                                            : pool.ensureThisVirtualChildTypeConstant(type, sChild);
-                                    }
-                                else
-                                    {
-                                    type = clzChild.getIdentityConstant().getType();
-                                    }
-                                }
-                            else
-                                {
-                                log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE,
-                                        child.getIdentityConstant());
-                                break;
-                                }
-                            }
+            switch (m_constId.getFormat()) {
+            case ChildClass:
+            case Class:
+                if (names != null) {
+                    for (Token name : names) {
+                        if (!type.isExplicitClassIdentity(true)) {
+                            log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, type.getValueString());
+                            break;
                         }
-                    return type;
 
-                case Typedef:
-                    {
-                    // resolve the typedef in the context of the referring type
-                    TypeConstant typeTypedef = ((TypedefConstant) m_constId).getReferredToType();
-                    return typeTypedef.resolveGenerics(pool, type);
+                        ClassConstant  idLeft  = (ClassConstant) type.getSingleUnderlyingClass(true);
+                        ClassStructure clzLeft = (ClassStructure) idLeft.getComponent();
+                        String         sChild  = name.getValueText();
+                        Component      child   = clzLeft.findChildDeep(sChild);
+                        if (child instanceof ClassStructure clzChild) {
+                            if (clzChild.isVirtualChild()) {
+                                type = isExplicitlyNonAutoNarrowing()
+                                        ? pool.ensureVirtualChildTypeConstant(type, sChild)
+                                        : pool.ensureThisVirtualChildTypeConstant(type, sChild);
+                            } else {
+                                type = clzChild.getIdentityConstant().getType();
+                            }
+                        } else {
+                            log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE,
+                                    child.getIdentityConstant());
+                            break;
+                        }
                     }
-
-                case UnresolvedName:
-                    return m_typeUnresolved =
-                        new UnresolvedTypeConstant(pool, (UnresolvedNameConstant) m_constId);
-
-                default:
-                    // invalid name; leave unresolved to be reported later
-                    return new UnresolvedTypeConstant(pool,
-                            new UnresolvedNameConstant(pool, getNames(), false));
                 }
+                return type;
+
+            case Typedef: {
+                // resolve the typedef in the context of the referring type
+                TypeConstant typeTypedef = ((TypedefConstant) m_constId).getReferredToType();
+                return typeTypedef.resolveGenerics(pool, type);
+            }
+
+            case UnresolvedName:
+                return m_typeUnresolved =
+                    new UnresolvedTypeConstant(pool, (UnresolvedNameConstant) m_constId);
+
+            default:
+                // invalid name; leave unresolved to be reported later
+                return new UnresolvedTypeConstant(pool,
+                        new UnresolvedNameConstant(pool, getNames(), false));
             }
         }
+    }
 
     @Override
     public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
-        {
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
         return isDynamic()
                 ? m_exprDynamic.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs)
                 : getType().resolveAutoNarrowingBase();
-        }
+    }
 
     @Override
-    public ExprAST getExprAST(Context ctx)
-        {
+    public ExprAST getExprAST(Context ctx) {
         return isDynamic()
                 ? m_exprDynamic.getExprAST(ctx)
                 : new ConstantExprAST(getType().resolveAutoNarrowingBase());
-        }
+    }
 
 
     // ----- AstNode methods -----------------------------------------------------------------------
 
     @Override
-    public AstNode clone()
-        {
+    public AstNode clone() {
         NamedTypeExpression that = (NamedTypeExpression) super.clone();
         // the "m_exprDynamic" is not a child and has to be handled manually
-        if (m_exprDynamic != null)
-            {
+        if (m_exprDynamic != null) {
             that.m_exprDynamic = (NameExpression) m_exprDynamic.clone();
-            }
-        return that;
         }
+        return that;
+    }
 
     @Override
-    protected void discard(boolean fRecurse)
-        {
+    protected void discard(boolean fRecurse) {
         super.discard(fRecurse);
 
-        if (fRecurse && m_exprDynamic != null)
-            {
+        if (fRecurse && m_exprDynamic != null) {
             m_exprDynamic.discard(fRecurse);
-            }
         }
+    }
 
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -1214,98 +1024,81 @@ public class NamedTypeExpression
      * @return false iff the specified constant doesn't represent a valid type and an error
      *         has been reported
      */
-    private boolean checkValidType(Constant constId, ErrorListener errs)
-        {
+    private boolean checkValidType(Constant constId, ErrorListener errs) {
         Format format = constId.getFormat();
-        if (!format.isTypeable())
-            {
+        if (!format.isTypeable()) {
             log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, constId.getValueString());
             return false;
-            }
+        }
 
-        if (format == Format.Property || format == Format.Typedef)
-            {
-            if (paramTypes != null)
-                {
+        if (format == Format.Property || format == Format.Typedef) {
+            if (paramTypes != null) {
                 log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                 return false;
-                }
+            }
             if (format == Format.Property &&
                     (!((PropertyConstant) constId).isFormalType() ||
-                        names != null && names.size() > 1))
-                {
+                        names != null && names.size() > 1)) {
                 log(errs, Severity.ERROR, Compiler.INVALID_FORMAL_TYPE_IDENTITY);
                 return false;
-                }
             }
-        return true;
         }
+        return true;
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
-        if (module != null)
-            {
+        if (module != null) {
             sb.append(getModule())
               .append(':');
-            }
+        }
 
-        if (left != null)
-            {
+        if (left != null) {
             sb.append(left)
               .append('.');
-            }
+        }
 
-        if (immutable != null)
-            {
+        if (immutable != null) {
             sb.append("immutable ");
-            }
+        }
 
         sb.append(getName());
 
-        if (access != null)
-            {
+        if (access != null) {
             sb.append(':')
               .append(access.getId().TEXT);
-            }
+        }
 
-        if (nonnarrow != null)
-            {
+        if (nonnarrow != null) {
             sb.append('!');
-            }
+        }
 
-        if (paramTypes != null)
-            {
+        if (paramTypes != null) {
             sb.append('<');
             boolean first = true;
-            for (TypeExpression type : paramTypes)
-                {
-                if (first)
-                    {
+            for (TypeExpression type : paramTypes) {
+                if (first) {
                     first = false;
-                    }
-                else
-                    {
+                } else {
                     sb.append(", ");
-                    }
-                sb.append(type);
                 }
-            sb.append('>');
+                sb.append(type);
             }
+            sb.append('>');
+        }
 
         return sb.toString();
-        }
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -1331,4 +1124,4 @@ public class NamedTypeExpression
     protected transient UnresolvedTypeConstant m_typeUnresolved;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NamedTypeExpression.class, "left", "paramTypes");
-    }
+}

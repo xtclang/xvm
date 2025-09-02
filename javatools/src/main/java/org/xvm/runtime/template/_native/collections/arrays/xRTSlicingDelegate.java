@@ -21,80 +21,68 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
  * The native RTSlicingDelegate<Object> implementation.
  */
 public class xRTSlicingDelegate
-        extends xRTDelegate
-    {
+        extends xRTDelegate {
     public static xRTSlicingDelegate INSTANCE;
 
-    public xRTSlicingDelegate(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTSlicingDelegate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
-        }
+    public void initNative() {
+    }
 
     @Override
-    public ClassTemplate getTemplate(TypeConstant type)
-        {
+    public ClassTemplate getTemplate(TypeConstant type) {
         return this;
-        }
+    }
 
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    protected int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
+    protected int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
         return getPropertySize(frame, hTarget, iReturn);
-        }
+    }
 
     @Override
-    protected int setPropertyCapacity(Frame frame, ObjectHandle hTarget, long nCapacity)
-        {
+    protected int setPropertyCapacity(Frame frame, ObjectHandle hTarget, long nCapacity) {
         SliceHandle hSlice = (SliceHandle) hTarget;
 
         return nCapacity == hSlice.m_cSize
             ? Op.R_NEXT
             : frame.raiseException(xException.readOnly(frame, hSlice.getMutability()));
-        }
+    }
 
     @Override
     protected int invokeInsertElement(Frame frame, ObjectHandle hTarget,
-                                      ObjectHandle.JavaLong hIndex, ObjectHandle hValue, int iReturn)
-        {
+                                      ObjectHandle.JavaLong hIndex, ObjectHandle hValue, int iReturn) {
         return frame.raiseException(
                 xException.readOnly(frame, ((SliceHandle) hTarget).getMutability()));
-        }
+    }
 
     @Override
-    protected int invokeDeleteElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
-        {
+    protected int invokeDeleteElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn) {
         return frame.raiseException(
                 xException.readOnly(frame, ((SliceHandle) hTarget).getMutability()));
-        }
+    }
 
     @Override
-    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
-        {
+    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue) {
         return null;
-        }
+    }
 
     @Override
-    public DelegateHandle deleteRange(DelegateHandle hTarget, long ofStart, long cSize)
-        {
+    public DelegateHandle deleteRange(DelegateHandle hTarget, long ofStart, long cSize) {
         return null;
-        }
+    }
 
     @Override
-    public DelegateHandle slice(DelegateHandle hTarget, long ofStart, long cSize, boolean fReverse)
-        {
+    public DelegateHandle slice(DelegateHandle hTarget, long ofStart, long cSize, boolean fReverse) {
         SliceHandle    hSlice  = (SliceHandle) hTarget;
         DelegateHandle hSource = hSlice.f_hSource;
 
@@ -102,46 +90,42 @@ public class xRTSlicingDelegate
                 ? hSlice
                 : ((xRTDelegate) hSource.getTemplate()).slice(hSource,
                         ofStart + hSlice.f_ofStart, cSize, fReverse ^ hSlice.f_fReverse);
-        }
+    }
 
     @Override
     protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
-                                            long ofStart, long cSize, boolean fReverse)
-        {
+                                            long ofStart, long cSize, boolean fReverse) {
         SliceHandle    hSlice  = (SliceHandle) hTarget;
         DelegateHandle hSource = hSlice.f_hSource;
 
         return ((xRTDelegate) hSource.getTemplate()).createCopyImpl(hSource, mutability,
                 (int) translateIndex(hSlice, ofStart), cSize, hSlice.f_fReverse);
-        }
+    }
 
     @Override
-    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn)
-        {
+    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
         SliceHandle    hSlice  = (SliceHandle) hTarget;
         DelegateHandle hSource = hSlice.f_hSource;
 
         return ((xRTDelegate) hSource.getTemplate()).
                 extractArrayValue(frame, hSource, translateIndex(hSlice, lIndex), iReturn);
-        }
+    }
 
     @Override
     protected int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
-                                       ObjectHandle hValue)
-        {
+                                       ObjectHandle hValue) {
         SliceHandle    hSlice  = (SliceHandle) hTarget;
         DelegateHandle hSource = hSlice.f_hSource;
 
         return ((xRTDelegate) hSource.getTemplate()).
                 assignArrayValue(frame, hSource, translateIndex(hSlice, lIndex), hValue);
-        }
+    }
 
-    private static long translateIndex(SliceHandle hSlice, long lIndex)
-        {
+    private static long translateIndex(SliceHandle hSlice, long lIndex) {
         return hSlice.f_fReverse
                 ? hSlice.f_ofStart + hSlice.m_cSize - 1 - lIndex
                 : hSlice.f_ofStart + lIndex;
-        }
+    }
 
 
     // ----- handle --------------------------------------------------------------------------------
@@ -149,40 +133,36 @@ public class xRTSlicingDelegate
     /**
      * Make a slicing handle into the specified source.
      */
-    public SliceHandle makeHandle(DelegateHandle hSource, long ofStart, long cSize, boolean fReverse)
-        {
+    public SliceHandle makeHandle(DelegateHandle hSource, long ofStart, long cSize, boolean fReverse) {
         TypeConstant typeElement = hSource.getType().getParamType(0);
         TypeConstant typeSlice   = typeElement.getConstantPool().
                 ensureParameterizedTypeConstant(getClassConstant().getType(), typeElement);
         return new SliceHandle(ensureClass(hSource.getComposition().getContainer(), typeSlice),
                 hSource, Mutability.Fixed, (int) ofStart, (int) cSize, fReverse);
-        }
+    }
 
     /**
      * Array slice delegate.
      */
     public static class SliceHandle
-            extends DelegateHandle
-        {
+            extends DelegateHandle {
         public final DelegateHandle f_hSource;
         public final long           f_ofStart;
         public final boolean        f_fReverse;
 
         protected SliceHandle(TypeComposition clazz, DelegateHandle hSource,
-                              Mutability mutability, long ofStart, long cSize, boolean fReverse)
-            {
+                              Mutability mutability, long ofStart, long cSize, boolean fReverse) {
             super(clazz, mutability);
 
             f_hSource  = hSource;
             f_ofStart  = ofStart;
             f_fReverse = fReverse;
             m_cSize    = cSize;
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return super.toString() + " @" + f_ofStart;
-            }
         }
     }
+}

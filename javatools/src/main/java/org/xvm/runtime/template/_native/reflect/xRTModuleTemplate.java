@@ -32,23 +32,19 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * Native ModuleTemplate implementation.
  */
 public class xRTModuleTemplate
-        extends xRTClassTemplate
-    {
+        extends xRTClassTemplate {
     public static xRTModuleTemplate INSTANCE;
 
-    public xRTModuleTemplate(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTModuleTemplate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         ConstantPool pool = f_container.getConstantPool();
 
         MODULE_TEMPLATE_TYPE = pool.ensureEcstasyTypeConstant("reflect.ModuleTemplate");
@@ -59,59 +55,50 @@ public class xRTModuleTemplate
         markNativeProperty("resolved");
 
         invalidateTypeInfo();
-        }
+    }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         ComponentTemplateHandle hTemplate = (ComponentTemplateHandle) hTarget;
-        switch (sPropName)
-            {
-            case "qualifiedName":
-                {
-                ModuleStructure module = (ModuleStructure) hTemplate.getComponent();
-                return frame.assignValue(iReturn,
-                    xString.makeHandle(module.getIdentityConstant().getName()));
-                }
+        switch (sPropName) {
+        case "qualifiedName": {
+            ModuleStructure module = (ModuleStructure) hTemplate.getComponent();
+            return frame.assignValue(iReturn,
+                xString.makeHandle(module.getIdentityConstant().getName()));
+        }
 
-            case "versionString":
-                {
-                ModuleStructure module   = (ModuleStructure) hTemplate.getComponent();
-                String          sVersion;
-                if (module.isFingerprint())
-                    {
-                    VersionTree vtree = module.getFingerprintVersions();
-                    sVersion = vtree.isEmpty()
-                            ? null
-                            : vtree.findLowestVersion().toString();
-                    }
-                else
-                    {
-                    sVersion = module.getVersionString();
-                    }
-                return frame.assignValue(iReturn, sVersion == null
-                    ? xNullable.NULL
-                    : xString.makeHandle(sVersion));
-                }
-
-            case "modulesByPath":
-                return getPropertyModulesByPath(frame, hTemplate, iReturn);
-
-            case "resolved":
-                {
-                ModuleStructure module = (ModuleStructure) hTemplate.getComponent();
-                return frame.assignValue(iReturn, xBoolean.makeHandle(module.isLinked()));
-                }
+        case "versionString": {
+            ModuleStructure module   = (ModuleStructure) hTemplate.getComponent();
+            String          sVersion;
+            if (module.isFingerprint()) {
+                VersionTree vtree = module.getFingerprintVersions();
+                sVersion = vtree.isEmpty()
+                        ? null
+                        : vtree.findLowestVersion().toString();
+            } else {
+                sVersion = module.getVersionString();
             }
+            return frame.assignValue(iReturn, sVersion == null
+                ? xNullable.NULL
+                : xString.makeHandle(sVersion));
+        }
+
+        case "modulesByPath":
+            return getPropertyModulesByPath(frame, hTemplate, iReturn);
+
+        case "resolved": {
+            ModuleStructure module = (ModuleStructure) hTemplate.getComponent();
+            return frame.assignValue(iReturn, xBoolean.makeHandle(module.isLinked()));
+        }
+        }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
+    }
 
     /**
      * Implements property: modulesByPath.get()
      */
-    public int getPropertyModulesByPath(Frame frame, ComponentTemplateHandle hTemplate, int iReturn)
-        {
+    public int getPropertyModulesByPath(Frame frame, ComponentTemplateHandle hTemplate, int iReturn) {
         // TODO GG: how to cache the result?
         ModuleStructure module    = (ModuleStructure) hTemplate.getComponent();
         Container       container = frame.f_context.f_container;
@@ -124,46 +111,41 @@ public class xRTModuleTemplate
         StringHandle[]            ahPaths    = new StringHandle[cModules];
         ComponentTemplateHandle[] ahTemplate = new ComponentTemplateHandle[cModules];
         int                       index      = 0;
-        for (Map.Entry<ModuleConstant, String> entry : mapModulePaths.entrySet())
-            {
+        for (Map.Entry<ModuleConstant, String> entry : mapModulePaths.entrySet()) {
             ModuleConstant idDep = entry.getKey();
-            if (!idDep.equals(module.getIdentityConstant()))
-                {
+            if (!idDep.equals(module.getIdentityConstant())) {
                 ModuleStructure moduleDep = module.getFileStructure().getModule(idDep);
 
                 ahPaths[index]    = xString.makeHandle(entry.getValue());
                 ahTemplate[index] = makeHandle(container, moduleDep);
                 ++index;
-                }
             }
+        }
         ObjectHandle haPaths     = xArray.makeStringArrayHandle(ahPaths);
         ObjectHandle haTemplates = makeTemplateArrayHandle(container, ahTemplate);
 
         return Utils.constructListMap(frame, clzMap, haPaths, haTemplates, iReturn);
-        }
+    }
 
     /**
      * @return the TypeConstant for ListMap<String, ModuleTemplate>
      */
-    private static TypeConstant ensureListMapType()
-        {
+    private static TypeConstant ensureListMapType() {
         TypeConstant type = LISTMAP_TYPE;
-        if (type == null)
-            {
+        if (type == null) {
             ConstantPool pool = INSTANCE.pool();
             LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
                     pool.ensureEcstasyTypeConstant("maps.ListMap"),
                     pool.typeString(), MODULE_TEMPLATE_TYPE);
-            }
-        return type;
         }
+        return type;
+    }
 
-    private static ArrayHandle makeTemplateArrayHandle(Container container, ObjectHandle[] ahTemplate)
-        {
+    private static ArrayHandle makeTemplateArrayHandle(Container container, ObjectHandle[] ahTemplate) {
         TypeComposition clzArray = container.ensureClassComposition(
                 container.getConstantPool().ensureArrayType(MODULE_TEMPLATE_TYPE), xArray.INSTANCE);
         return xArray.makeArrayHandle(clzArray, ahTemplate.length, ahTemplate, Mutability.Constant);
-        }
+    }
 
     // ----- ObjectHandle support ------------------------------------------------------------------
 
@@ -174,17 +156,16 @@ public class xRTModuleTemplate
      *
      * @return the resulting {@link ComponentTemplateHandle}
      */
-    public static ComponentTemplateHandle makeHandle(Container container, ModuleStructure module)
-        {
+    public static ComponentTemplateHandle makeHandle(Container container, ModuleStructure module) {
         // note: no need to initialize the struct because there are no natural fields
         TypeComposition clz = INSTANCE.ensureClass(container,
                                 INSTANCE.getCanonicalType(), MODULE_TEMPLATE_TYPE);
         return new ComponentTemplateHandle(clz, module);
-        }
+    }
 
 
     // ----- constants -----------------------------------------------------------------------------
 
     private static TypeConstant MODULE_TEMPLATE_TYPE;
     private static TypeConstant LISTMAP_TYPE;
-    }
+}

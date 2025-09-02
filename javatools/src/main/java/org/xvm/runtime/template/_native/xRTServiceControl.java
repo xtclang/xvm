@@ -27,29 +27,24 @@ import org.xvm.runtime.template._native.reflect.xRTFunction;
  * Native implementation of _native.RTServiceControl class.
  */
 public class xRTServiceControl
-        extends ClassTemplate
-    {
+        extends ClassTemplate {
     public static xRTServiceControl INSTANCE;
 
-    public xRTServiceControl(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTServiceControl(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public boolean isGenericHandle()
-        {
+    public boolean isGenericHandle() {
         return false;
-        }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         TypeConstant typeInception = getCanonicalType();
         TypeConstant typeMask      = pool().ensureEcstasyTypeConstant("Service.ServiceControl");
 
@@ -67,90 +62,79 @@ public class xRTServiceControl
         markNativeMethod("kill", VOID, VOID);
 
         typeInception.invalidateTypeInfo();
-        }
+    }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
+                             ObjectHandle[] ahArg, int iReturn) {
         ControlHandle hControl = (ControlHandle) hTarget;
 
-        switch (method.getName())
-            {
-            case "shutdown":
-                {
-                ServiceContext context  = hControl.getContext();
-                ServiceHandle  hService = context.getService();
-                if (hService == null)
-                    {
-                    // already shut down
-                    return Op.R_NEXT;
-                    }
-                return frame.f_context == context
-                    ? context.shutdown(frame)
-                    : xRTFunction.makeAsyncNativeHandle(method).call1(frame, hService, ahArg, iReturn);
-                }
-
-            case "kill":
-                // TODO GG
+        switch (method.getName()) {
+        case "shutdown": {
+            ServiceContext context  = hControl.getContext();
+            ServiceHandle  hService = context.getService();
+            if (hService == null) {
+                // already shut down
+                return Op.R_NEXT;
             }
+            return frame.f_context == context
+                ? context.shutdown(frame)
+                : xRTFunction.makeAsyncNativeHandle(method).call1(frame, hService, ahArg, iReturn);
+        }
+
+        case "kill":
+            // TODO GG
+        }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
-        }
+    }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         ControlHandle hControl = (ControlHandle) hTarget;
 
-        switch (sPropName)
-            {
-            case "contended":
-                return frame.assignValue(iReturn,
-                        xBoolean.makeHandle(hControl.getContext().isContended()));
+        switch (sPropName) {
+        case "contended":
+            return frame.assignValue(iReturn,
+                    xBoolean.makeHandle(hControl.getContext().isContended()));
 
-            case "statusIndicator":
-                {
-                xEnum.EnumHandle hStatus = SERVICE_STATUS.getEnumByName(
-                        hControl.getContext().getStatus().name());
-                return Utils.assignInitializedEnum(frame, hStatus, iReturn);
-                }
-            }
+        case "statusIndicator": {
+            xEnum.EnumHandle hStatus = SERVICE_STATUS.getEnumByName(
+                    hControl.getContext().getStatus().name());
+            return Utils.assignInitializedEnum(frame, hStatus, iReturn);
+        }
+        }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
+    }
 
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
-    public static ObjectHandle makeHandle(ServiceContext context)
-        {
+    public static ObjectHandle makeHandle(ServiceContext context) {
         return new ControlHandle(INSTANCE.m_clzControl, context);
-        }
+    }
 
     protected static class ControlHandle
-            extends ObjectHandle
-        {
-        protected ControlHandle(TypeComposition clazz, ServiceContext context)
-            {
+            extends ObjectHandle {
+        protected ControlHandle(TypeComposition clazz, ServiceContext context) {
             super(clazz);
 
             f_context = context;
-            }
+        }
 
         /**
          * @return  the ServiceContext this ControlHandle instance is responsible for managing
          */
-        public ServiceContext getContext()
-            {
+        public ServiceContext getContext() {
             return f_context;
-            }
+        }
 
         /**
          * The ServiceContext this control is managing.
          */
         protected final ServiceContext f_context;
-        }
+    }
 
 
     // ----- constants -----------------------------------------------------------------------------
@@ -161,4 +145,4 @@ public class xRTServiceControl
     protected static xEnum SERVICE_STATUS;
 
     private TypeComposition m_clzControl;
-    }
+}

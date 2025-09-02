@@ -17,113 +17,98 @@ import org.xvm.asm.constants.TypeInfo;
  * Note: at the moment it's used only for Class and Type compositions.
  */
 public class CanonicalizedTypeComposition
-        extends DelegatingComposition
-    {
+        extends DelegatingComposition {
     /**
      * Construct a CanonicalizedTypeComposition based on the canonical class and actual type.
      *
      * @param clzCanonical  the underlying ClassComposition for the canonical type
      * @param typeActual
      */
-    public CanonicalizedTypeComposition(ClassComposition clzCanonical, TypeConstant typeActual)
-        {
+    public CanonicalizedTypeComposition(ClassComposition clzCanonical, TypeConstant typeActual) {
         super(clzCanonical);
 
         f_typeActual = typeActual;
-        }
+    }
 
     /**
      * @return the underlying canonical ClassComposition
      */
-    protected ClassComposition getCanonicalComposition()
-        {
+    protected ClassComposition getCanonicalComposition() {
         return (ClassComposition) f_clzOrigin;
-        }
+    }
 
 
     // ----- TypeComposition interface -------------------------------------------------------------
 
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return f_typeActual;
-        }
+    }
 
     @Override
-    public TypeConstant getInceptionType()
-        {
+    public TypeConstant getInceptionType() {
         return f_typeActual;
-        }
+    }
 
     @Override
-    public TypeConstant getBaseType()
-        {
+    public TypeConstant getBaseType() {
         return f_typeActual;
-        }
+    }
 
     @Override
-    public TypeComposition maskAs(TypeConstant type)
-        {
+    public TypeComposition maskAs(TypeConstant type) {
         return this;
-        }
+    }
 
     @Override
-    public TypeComposition revealAs(TypeConstant type)
-        {
+    public TypeComposition revealAs(TypeConstant type) {
         return this;
-        }
+    }
 
     @Override
-    public ObjectHandle ensureOrigin(ObjectHandle handle)
-        {
+    public ObjectHandle ensureOrigin(ObjectHandle handle) {
         return handle;
-        }
+    }
 
     @Override
-    public ObjectHandle ensureAccess(ObjectHandle handle, Access access)
-        {
+    public ObjectHandle ensureAccess(ObjectHandle handle, Access access) {
         return access == f_typeActual.getAccess()
             ? handle
             : handle.cloneAs(ensureAccess(access));
-        }
+    }
 
     @Override
-    public TypeComposition ensureAccess(Access access)
-        {
+    public TypeComposition ensureAccess(Access access) {
         TypeConstant typeActual = f_typeActual;
         return access == typeActual.getAccess()
             ? this
             : getCanonicalComposition().ensureCanonicalizedComposition(
                 typeActual.getConstantPool().ensureAccessTypeConstant(typeActual, access));
-        }
+    }
 
     @Override
-    public boolean isStruct()
-        {
+    public boolean isStruct() {
         return f_typeActual.getAccess() == Access.STRUCT;
-        }
+    }
 
     @Override
-    public CallChain getMethodCallChain(Object nidMethod)
-        {
+    public CallChain getMethodCallChain(Object nidMethod) {
         CallChain chain = super.getMethodCallChain(nidMethod);
-        if (chain.isEmpty() && nidMethod instanceof SignatureConstant sig)
-            {
+        if (chain.isEmpty() && nidMethod instanceof SignatureConstant sig) {
             // we assume that the information on the canonical TypeInfo is sufficient
             ClassComposition    clzCanonical  = getCanonicalComposition();
             TypeInfo            infoCanonical = clzCanonical.getType().ensureTypeInfo();
             Set<MethodConstant> setMethods    = infoCanonical.findMethods(
                     sig.getName(), sig.getParamCount(), TypeInfo.MethodKind.Any);
-            if (!setMethods.isEmpty())
-                {
+            if (!setMethods.isEmpty()) {
                 chain = clzCanonical.getMethodCallChain(setMethods.iterator().next().getSignature());
-                }
             }
-        return chain;
         }
+        return chain;
+    }
 
 
     // ----- data fields ---------------------------------------------------------------------------
 
     private final TypeConstant f_typeActual;
-    }
+}

@@ -40,285 +40,240 @@ import org.xvm.util.Severity;
  *
  */
 public class NotNullExpression
-        extends Expression
-    {
+        extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public NotNullExpression(Expression expr, Token operator)
-        {
+    public NotNullExpression(Expression expr, Token operator) {
         this.expr     = expr;
         this.operator = operator;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public TypeExpression toTypeExpression()
-        {
-        if (operator.getId() == Token.Id.COND)
-            {
+    public TypeExpression toTypeExpression() {
+        if (operator.getId() == Token.Id.COND) {
             // convert "expr?" to "type?"
             TypeExpression exprType = new NullableTypeExpression(
                     expr.toTypeExpression(), getEndPosition());
             exprType.setParent(getParent());
             return exprType;
-            }
+        }
 
         return super.toTypeExpression();
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return expr.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return operator.getEndPosition();
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType(Context ctx)
-        {
+    public TypeConstant getImplicitType(Context ctx) {
         TypeConstant[] atype = expr.getImplicitTypes(ctx);
-        switch (atype.length)
-            {
-            case 0:
-                return null;
+        switch (atype.length) {
+        case 0:
+            return null;
 
-            case 1:
-                {
-                TypeConstant type = atype[0];
-                return type.isNullable() ? type.removeNullable() : null;
-                }
-
-            default:
-                {
-                TypeConstant type0 = atype[0];
-                return type0.isA(pool().typeBoolean())
-                        ? atype[1]
-                        : type0.isNullable() ? type0.removeNullable() : null;
-                }
-            }
+        case 1: {
+            TypeConstant type = atype[0];
+            return type.isNullable() ? type.removeNullable() : null;
         }
 
+        default: {
+            TypeConstant type0 = atype[0];
+            return type0.isA(pool().typeBoolean())
+                    ? atype[1]
+                    : type0.isNullable() ? type0.removeNullable() : null;
+        }
+        }
+    }
+
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs)
-        {
-        if (typeRequired != null)
-            {
-            if (typeRequired.isTypeOfType())
-                {
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs) {
+        if (typeRequired != null) {
+            if (typeRequired.isTypeOfType()) {
                 TypeFit fit = toTypeExpression().testFit(ctx, typeRequired, fExhaustive, ErrorListener.BLACKHOLE);
-                if (fit.isFit())
-                    {
+                if (fit.isFit()) {
                     return fit;
-                    }
                 }
+            }
 
             TypeFit fit = expr.testFitMulti(ctx, new TypeConstant[]{pool().typeBoolean(), typeRequired},
                     fExhaustive, ErrorListener.BLACKHOLE);
-            if (fit.isFit())
-                {
+            if (fit.isFit()) {
                 return fit;
-                }
             }
-
-        return super.testFit(ctx, typeRequired, fExhaustive, errs);
         }
 
+        return super.testFit(ctx, typeRequired, fExhaustive, errs);
+    }
+
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         // we have to make a decision: either this expression takes a "T?" and strips the null off
         // and returns the T, or it takes a "conditional T" / "(Boolean, T)" and returns the T
         ConstantPool   pool      = pool();
         boolean        fCond     = false;
         TypeConstant[] atypeCond = new TypeConstant[]{pool.typeBoolean(), pool.typeObject()};
         Expression     exprNew;
-        if (expr.testFitMulti(ctx, atypeCond, true, ErrorListener.BLACKHOLE).isFit())
-            {
+        if (expr.testFitMulti(ctx, atypeCond, true, ErrorListener.BLACKHOLE).isFit()) {
             m_fCond = fCond = true;
 
-            if (typeRequired != null)
-                {
+            if (typeRequired != null) {
                 atypeCond[1] = typeRequired;
-                }
-            exprNew = expr.validateMulti(ctx, atypeCond, errs);
             }
-        else
-            {
-            if (typeRequired != null && typeRequired.isTypeOfType())
-                {
+            exprNew = expr.validateMulti(ctx, atypeCond, errs);
+        } else {
+            if (typeRequired != null && typeRequired.isTypeOfType()) {
                 Expression exprType = validateAsType(ctx, typeRequired, errs);
-                if (exprType != null)
-                    {
+                if (exprType != null) {
                     return exprType;
-                    }
                 }
+            }
 
             TypeConstant typeRequest = typeRequired == null ? null : typeRequired.ensureNullable();
             exprNew = expr.validate(ctx, typeRequest, errs);
-            }
+        }
 
-        if (exprNew == null)
-            {
+        if (exprNew == null) {
             return null;
-            }
+        }
 
         expr = exprNew;
         TypeConstant typeResult = fCond ? exprNew.getTypes()[1] : exprNew.getType();
 
         // the second check is for not-nullable type that is still allowed to be assigned from null
         // (e.g. Object or Const)
-        if (!fCond && !typeResult.isNullable() && !pool().typeNull().isA(typeResult.resolveConstraints()))
-            {
+        if (!fCond && !typeResult.isNullable() && !pool().typeNull().isA(typeResult.resolveConstraints())) {
             exprNew.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
             return null;
-            }
+        }
 
         AstNode parent = getParent();
-        if (!parent.allowsShortCircuit(this))
-            {
+        if (!parent.allowsShortCircuit(this)) {
             exprNew.log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_ILLEGAL);
             return null;
-            }
+        }
 
-        if (!fCond && exprNew.isConstantNull())
-            {
+        if (!fCond && exprNew.isConstantNull()) {
             exprNew.log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_ALWAYS_NULL);
             return null;
-            }
+        }
 
         m_labelShort = parent.ensureShortCircuitLabel(this, ctx);
 
-        if (!fCond)
-            {
+        if (!fCond) {
             typeResult = typeResult.removeNullable();
 
-            if (exprNew instanceof NameExpression exprName && exprName.left == null)
-                {
+            if (exprNew instanceof NameExpression exprName && exprName.left == null) {
                 String   sName = exprName.getName();
                 Argument arg   = ctx.getVar(sName);
-                if (arg instanceof Register regCurr)
-                    {
+                if (arg instanceof Register regCurr) {
                     TypeConstant typeCurr = regCurr.getType();
 
-                    if (!typeCurr.isA(typeResult))
-                        {
+                    if (!typeCurr.isA(typeResult)) {
                         assert typeResult.isA(typeCurr);
 
                         ctx.narrowLocalRegister(sName, regCurr, Branch.Always, typeResult);
                         m_labelShort.addRestore(sName, regCurr);
-                        }
                     }
                 }
             }
+        }
 
         return finishValidation(ctx, typeRequired, typeResult, TypeFit.Fit, null, errs);
-        }
+    }
 
     @Override
-    public boolean isShortCircuiting()
-        {
+    public boolean isShortCircuiting() {
         return true;
-        }
+    }
 
     @Override
-    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
-        {
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg) {
         return expr.mightAffect(exprLeft, arg);
-        }
+    }
 
     @Override
-    protected boolean allowsConditional(Expression exprChild)
-        {
+    protected boolean allowsConditional(Expression exprChild) {
         return m_fCond;
-        }
+    }
 
     @Override
-    public void resetLValueTypes(Context ctx)
-        {
+    public void resetLValueTypes(Context ctx) {
         expr.resetLValueTypes(ctx);
-        }
+    }
 
     @Override
     public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
-        {
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
         TypeConstant typeExpr = getType();
-        if (isConstant() || !m_fCond && pool().typeNull().isA(typeExpr.resolveConstraints()))
-            {
+        if (isConstant() || !m_fCond && pool().typeNull().isA(typeExpr.resolveConstraints())) {
             return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
-            }
+        }
 
-        if (m_fCond)
-            {
+        if (m_fCond) {
             Assignable   varCond = createTempVar(code, pool().typeBoolean(), true);
             Assignable   varVal  = createTempVar(code, getType(), false);
             Assignable[] LVals   = new Assignable[] {varCond, varVal};
             expr.generateAssignments(ctx, code, LVals, errs);
             code.add(new JumpFalse(varCond.getRegister(), m_labelShort));
             return varVal.getRegister();
-            }
-        else
-            {
+        } else {
             TypeConstant typeTemp = typeExpr.ensureNullable();
             Assignable   var      = createTempVar(code, typeTemp, false);
             generateAssignment(ctx, code, var, errs);
             return var.getRegister().narrowType(typeExpr);
-            }
         }
+    }
 
     @Override
-    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
-        {
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs) {
         if (isConstant() || m_fCond || !LVal.isLocalArgument() ||
-                !pool().typeNull().isA(LVal.getType().resolveConstraints()))
-            {
+                !pool().typeNull().isA(LVal.getType().resolveConstraints())) {
             super.generateAssignment(ctx, code, LVal, errs);
             return;
-            }
+        }
 
         // generate a temporary argument to avoid overwriting the destination LVal with a potential
         // Null value
         Argument arg = expr.generateArgument(ctx, code, true, false, errs);
         code.add(new JumpNull(arg, m_labelShort));
         LVal.assign(arg, code, errs);
-        }
+    }
 
     @Override
-    public ExprAST getExprAST(Context ctx)
-        {
+    public ExprAST getExprAST(Context ctx) {
         return new NotNullExprAST(expr.getExprAST(ctx), getType());
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return expr + operator.getId().TEXT;
-        }
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -333,4 +288,4 @@ public class NotNullExpression
     private transient Label   m_labelShort;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NotNullExpression.class, "expr");
-    }
+}

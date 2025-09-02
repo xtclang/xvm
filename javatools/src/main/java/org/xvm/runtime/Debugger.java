@@ -3,8 +3,7 @@ package org.xvm.runtime;
 /**
  * Debugger interface.
  */
-public interface Debugger
-    {
+public interface Debugger {
     /**
      * Activate the debugger.
      *
@@ -43,4 +42,4 @@ public interface Debugger
      *         exception needs to be continued to be traced (until caught)
      */
     int checkBreakPoint(Frame frame, ObjectHandle.ExceptionHandle hEx);
-    }
+}

@@ -23,42 +23,37 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
  * Base class for RawChannel implementations.
  */
 public abstract class xRawChannel
-        extends xService
-    {
-    public xRawChannel(Container container, ClassStructure structure)
-        {
+        extends xService {
+    public xRawChannel(Container container, ClassStructure structure) {
         super(container, structure, false);
-        }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         markNativeMethod("allocate", BOOLEAN, null);
         markNativeMethod("incRefCount", BYTES, VOID);
         markNativeMethod("decRefCount", BYTES, VOID);
 
         invalidateTypeInfo();
-        }
+    }
 
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle hArg, int iReturn)
-        {
+                             ObjectHandle hArg, int iReturn) {
         ChannelHandle hChannel = (ChannelHandle) hTarget;
-        switch (method.getName())
-            {
-            case "allocate":
-                return invokeAllocate(frame, hChannel, ((BooleanHandle) hArg).get(), iReturn);
+        switch (method.getName()) {
+        case "allocate":
+            return invokeAllocate(frame, hChannel, ((BooleanHandle) hArg).get(), iReturn);
 
-            case "incRefCount":
-                return invokeUpdateRefCount(frame, hChannel, (ArrayHandle) hArg, true);
+        case "incRefCount":
+            return invokeUpdateRefCount(frame, hChannel, (ArrayHandle) hArg, true);
 
-            case "decRefCount":
-                return invokeUpdateRefCount(frame, hChannel, (ArrayHandle) hArg, false);
-            }
+        case "decRefCount":
+            return invokeUpdateRefCount(frame, hChannel, (ArrayHandle) hArg, false);
+        }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
-        }
+    }
 
 
     // ----- method implementations ----------------------------------------------------------------
@@ -66,23 +61,21 @@ public abstract class xRawChannel
     /**
      * Implementation for: {@code Byte[]|Int allocate(Boolean internal)}.
      */
-    protected int invokeAllocate(Frame frame, ChannelHandle hChannel, boolean fInternal, int iReturn)
-        {
+    protected int invokeAllocate(Frame frame, ChannelHandle hChannel, boolean fInternal, int iReturn) {
         // at the moment, there is nothing special about the byte array returned here;
         // it's *always* going to be wrapped by the native RTBuffer
         return frame.assignValue(iReturn, xArray.makeByteArrayHandle(
                 new byte[hChannel.m_cPreferredBufferSize], Mutability.Mutable));
-        }
+    }
 
     /**
      * Implementation for: {@code incRefCount(Byte[] buffer) and decRefCount(Byte[] buffer)}.
      */
     protected int invokeUpdateRefCount(Frame frame, ChannelHandle hChannel, ArrayHandle hBuffer,
-                                       boolean fInc)
-        {
+                                       boolean fInc) {
         // TODO
         return Op.R_NEXT;
-        }
+    }
 
 
     // ----- ObjectHandle --------------------------------------------------------------------------
@@ -91,17 +84,14 @@ public abstract class xRawChannel
      * The base handle class.
      */
     public static abstract class ChannelHandle
-            extends ServiceHandle
-        {
-        public ChannelHandle(TypeComposition clazz, ServiceContext context)
-            {
+            extends ServiceHandle {
+        public ChannelHandle(TypeComposition clazz, ServiceContext context) {
             super(clazz, context);
-            }
-
-        public void setPreferredBufferSize(int cb)
-            {
-            m_cPreferredBufferSize = cb;
-            }
-        protected int m_cPreferredBufferSize;
         }
+
+        public void setPreferredBufferSize(int cb) {
+            m_cPreferredBufferSize = cb;
+        }
+        protected int m_cPreferredBufferSize;
     }
+}

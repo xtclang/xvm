@@ -9,8 +9,7 @@ import org.xvm.asm.constants.TypeConstant;
 /**
  * {@link OpSupport} represents a run-time facet of a type.
  */
-public interface OpSupport
-    {
+public interface OpSupport {
     /**
      * Obtain an underlying ClassTemplate for this {@link OpSupport} and the specified type.
      *
@@ -261,4 +260,4 @@ public interface OpSupport
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn);
-    }
+}

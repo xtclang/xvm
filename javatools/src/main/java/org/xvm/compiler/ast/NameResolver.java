@@ -40,8 +40,7 @@ import org.xvm.util.Severity;
  * This represents the progress toward resolution of a name for a particular AstNode.
  */
 public class NameResolver
-        implements ResolutionCollector
-    {
+        implements ResolutionCollector {
     /**
      * Create a resolver for a single name, for the purpose of resolving a reference to a value
      * (including a type, which can be treated as if it were a value) or a multi-method (which can
@@ -50,13 +49,12 @@ public class NameResolver
      * @param node   the node which is requesting the resolution of the name
      * @param sName  the name to resolve
      */
-    public NameResolver(AstNode node, String sName)
-        {
+    public NameResolver(AstNode node, String sName) {
         m_node      = node;
         m_iter      = Collections.emptyIterator();
         m_sName     = sName;
         m_fTypeGoal = false;
-        }
+    }
 
     /**
      * Create a resolver used during the resolveNames() process that can evaluate a sequence of
@@ -65,8 +63,7 @@ public class NameResolver
      * @param node       the NameResolving AstNode for which the resolution is occurring
      * @param iterNames  the iterator of the sequence of names
      */
-    public NameResolver(AstNode node, Iterator<String> iterNames)
-        {
+    public NameResolver(AstNode node, Iterator<String> iterNames) {
         assert node instanceof NameResolving;
         assert iterNames != null && iterNames.hasNext();
 
@@ -74,7 +71,7 @@ public class NameResolver
         m_iter      = iterNames;
         m_sName     = m_iter.next();
         m_fTypeGoal = true;
-        }
+    }
 
     /**
      * If the compilation stage is past the stage in which deferral can occur, then just force the
@@ -84,30 +81,27 @@ public class NameResolver
      *
      * @return the constant representing the name, or null if the name could not be resolved
      */
-    public Constant forceResolve(ErrorListener errs)
-        {
-        switch (resolve(errs))
-            {
-            case RESOLVED:
-                return m_constant;
+    public Constant forceResolve(ErrorListener errs) {
+        switch (resolve(errs)) {
+        case RESOLVED:
+            return m_constant;
 
-            case DEFERRED:
-                m_node.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
-                m_stage = Stage.ERROR;
-                // fall through
-            case ERROR:
-            default:
-                return null;
-            }
+        case DEFERRED:
+            m_node.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
+            m_stage = Stage.ERROR;
+            // fall through
+        case ERROR:
+        default:
+            return null;
         }
+    }
 
     /**
      * @return true iff the NameResolver has not begun the process of resolving the name
      */
-    public boolean isFirstTime()
-        {
+    public boolean isFirstTime() {
         return m_stage == Stage.CHECK_IMPORTS;
-        }
+    }
 
     /**
      * Resolve the name, or at least try to make progress doing so.
@@ -119,468 +113,397 @@ public class NameResolver
      *         logged an error to {@code errs} and given up all hope of resolving the name, or
      *         {@link Result#RESOLVED} to indicate that the name has been successfully resolved
      */
-    public Result resolve(ErrorListener errs)
-        {
+    public Result resolve(ErrorListener errs) {
         // store off the error list for use by call backs
         // (note: there's no attempt to clean this up later)
         m_errs = errs;
 
-        switch (m_stage)
-            {
-            case CHECK_IMPORTS:
-                // the first name could be an import, in which case that needs to be evaluated right
-                // away (because the imports will continue to be registered as the AST is resolved,
-                // so the answers to the questions about the imports will change if we don't ask now
-                // and store off the result); even if we find the name in the imports, we do NOT use
-                // it at this point -- it is held in case we work our way up to the point where the
-                // import is registered, at which point we will use the result that we found here
-                m_stmtImport = m_node.resolveImportBySingleName(m_sName, errs);
-                if (m_stmtImport != null)
-                    {
-                    if (m_stmtImport == m_node)
-                        {
-                        // report a self-referencing import as a "name collision"
-                        StringBuilder sb = new StringBuilder(m_sName);
-                        while (m_iter.hasNext())
-                            {
-                            sb.append('.')
-                              .append(m_iter.next());
-                            }
-                        m_stmtImport.log(errs, Severity.ERROR, Compiler.NAME_COLLISION, sb.toString());
-                        m_stage = Stage.ERROR;
-                        return Result.ERROR;
-                        }
-
-                    m_blockImport = m_stmtImport.getParentBlock();
+        switch (m_stage) {
+        case CHECK_IMPORTS:
+            // the first name could be an import, in which case that needs to be evaluated right
+            // away (because the imports will continue to be registered as the AST is resolved,
+            // so the answers to the questions about the imports will change if we don't ask now
+            // and store off the result); even if we find the name in the imports, we do NOT use
+            // it at this point -- it is held in case we work our way up to the point where the
+            // import is registered, at which point we will use the result that we found here
+            m_stmtImport = m_node.resolveImportBySingleName(m_sName, errs);
+            if (m_stmtImport != null) {
+                if (m_stmtImport == m_node) {
+                    // report a self-referencing import as a "name collision"
+                    StringBuilder sb = new StringBuilder(m_sName);
+                    while (m_iter.hasNext()) {
+                        sb.append('.')
+                          .append(m_iter.next());
                     }
-                m_stage = Stage.RESOLVE_FIRST_NAME;
-                // fall through
-
-            case RESOLVE_FIRST_NAME:
-                {
-                // resolve the first name if possible; otherwise defer (to come back to this point).
-                // remember to check the import statement if it exists (but only use it when we make
-                // our way up to the node that the import was registered with). if no one knows what
-                // the first name is, then check if it is an implicitly imported identity.
-
-                // start with the current node, and one by one walk up to the root, asking at
-                // each level for the node to resolve the name
-                boolean          fPossibleFormal = false;
-                AstNode          node            = m_node;
-                Access           access          = Access.PRIVATE;
-                IdentityConstant idOuter         = null;
-                String           sName           = m_sName;
-                WalkUpToTheRoot: while (node != null)
-                    {
-                    // if the first name refers to an import, then ask that import to figure out
-                    // what the corresponding qualified name refers to (i.e. delegate!)
-                    if (node == m_blockImport)
-                        {
-                        Result result = resolveImport(m_stmtImport, errs);
-                        if (result == Result.RESOLVED)
-                            {
-                            break;
-                            }
-                        return result;
-                        }
-
-                    // otherwise, if the node has a component associated with it that is
-                    // prepared to resolve names, then ask it to resolve the name, and if it
-                    // isn't ready, we'll come back later
-                    if (node.isComponentNode())
-                        {
-                        if (!node.canResolveNames())
-                            {
-                            // not ready yet
-                            return Result.DEFERRED;
-                            }
-
-                        ComponentResolver componentResolver = node.getComponentResolver();
-                        if (componentResolver == null)
-                            {
-                            // corresponding component isn't available (yet?)
-                            return Result.DEFERRED;
-                            }
-
-                        // ask the component to resolve the name
-                        switch (componentResolver.resolveName(sName, access, this))
-                            {
-                            case POSSIBLE:
-                                // formal types could not be resolved; keep walking up
-                                fPossibleFormal = true;
-                                // fall-through
-                            case UNKNOWN:
-                                if (node.getParent() == null)
-                                    {
-                                    // we've reached the top, and it's possible we've never checked
-                                    // the topmost statement block's imports on the way up
-                                    // (this can happen for module contribution clauses)
-                                    StatementBlock  body = ((TypeCompositionStatement) node).ensureBody();
-                                    ImportStatement stmt = body.resolveImportBySingleName(sName, errs);
-                                    if (stmt != null)
-                                        {
-                                        resolveImport(stmt, errs);
-                                        }
-                                    }
-                                break;
-
-                            case RESOLVED:
-                                // the component resolved the first name
-                                break WalkUpToTheRoot;
-
-                            case ERROR:
-                                m_stage = Stage.ERROR;
-                                return Result.ERROR;
-
-                            default:
-                                throw new IllegalStateException();
-                            }
-
-                        if (componentResolver instanceof Component component)
-                            {
-                            // the identity of the component corresponding to the current node as
-                            // we "WalkUpToTheRoot"
-                            IdentityConstant id = component.getIdentityConstant();
-
-                            // first time through, figure out the "outermost" class, which is the
-                            // boundary where we will transition from looking at all (including
-                            // private) members, to looking at only public members
-                            IdentityConstant idClz = id.getClassIdentity();
-                            if (idOuter == null)
-                                {
-                                idOuter = idClz instanceof ClassConstant clz ? clz.getOutermost() : idClz;
-                                }
-
-                            // see if this was the last step on the "WalkUpToTheRoot" that had
-                            // private access to all members
-                            if (id == idOuter)
-                                {
-                                // in the top-most-class down, there is private access
-                                // above the top-most-class, there is public access
-                                access = Access.PUBLIC;
-                                }
-                            }
-                        }
-
-                    // walk up towards the root
-                    node = node.getParent();
-                    }
-
-                // last chance: check the implicitly imported names
-                if (m_constant == null)
-                    {
-                    Component component = getPool().getImplicitlyImportedComponent(sName);
-                    if (component == null)
-                        {
-                        if (fPossibleFormal)
-                            {
-                            return Result.DEFERRED;
-                            }
-                        m_node.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
-                        m_stage = Stage.ERROR;
-                        return Result.ERROR;
-                        }
-                    else
-                        {
-                        if (resolvedComponent(component) != ResolutionResult.RESOLVED)
-                            {
-                            return Result.ERROR;
-                            }
-                        assert m_constant != null;
-                        }
-                    }
-                m_constantFirst = m_constant;
-
-                // first name has been resolved
-                m_stage = Stage.RESOLVE_DOT_NAME;
-                m_sName = m_iter.hasNext() ? m_iter.next() : null;
-                // fall through
+                    m_stmtImport.log(errs, Severity.ERROR, Compiler.NAME_COLLISION, sb.toString());
+                    m_stage = Stage.ERROR;
+                    return Result.ERROR;
                 }
 
-            case RESOLVE_DOT_NAME:
-                // at this point, we have a component (or other identity) to work from, so the next
-                // name has to be relative to that component
-                while (m_sName != null)
-                    {
-                    XvmStructure structure = ensurePartiallyResolvedComponent();
-                    if (structure == null)
-                        {
-                        return getResult();
-                        }
-
-                    if (structure instanceof PropertyStructure prop)
-                        {
-                        if (!prop.isGenericTypeParameter())
-                            {
-                            m_node.log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, m_sName);
-                            return Result.ERROR;
-                            }
-
-                        Result result = resolveFormalDotName(prop.getType(), errs);
-                        if (result != Result.RESOLVED)
-                            {
-                            return result;
-                            }
-                        }
-                    else if (structure instanceof TypeParameterConstant constTypeParam)
-                        {
-                        MethodConstant  idMethod  = constTypeParam.getMethod();
-                        int             nRegister = constTypeParam.getRegister();
-                        MethodStructure method    = (MethodStructure) idMethod.getComponent();
-                        TypeConstant    typeParam = method == null
-                                ? idMethod.getRawParams()[nRegister]
-                                : method.getParam(nRegister).getType();
-                        assert typeParam.isTypeOfType();
-
-                        Result result = resolveFormalDotName(typeParam.getParamType(0), errs);
-                        if (result != Result.RESOLVED)
-                            {
-                            return result;
-                            }
-                        }
-                    else
-                        {
-                        Component component = (Component) structure;
-                        switch (component.resolveName(m_sName, Access.PRIVATE, this))
-                            {
-                            case POSSIBLE:
-                                // the component's type has some unresolved parts, which is not a
-                                // consideration at this point; process as unknown
-                            case UNKNOWN:
-                                m_node.log(errs, Severity.ERROR, Compiler.NAME_MISSING, m_sName, m_constant);
-                                m_stage = Stage.ERROR;
-                                return Result.ERROR;
-
-                            case RESOLVED:
-                                // the component resolved the name; advance to the next one
-                                m_sName = m_iter.hasNext() ? m_iter.next() : null;
-                                break;
-
-                            case ERROR:
-                                assert errs.hasSeriousErrors();
-                                m_stage = Stage.ERROR;
-                                return Result.ERROR;
-
-                            default:
-                                throw new IllegalStateException();
-                            }
-                        }
-                    }
-
-                // no names left to resolve, but what we resolved to has not yet been resolved
-                m_stage = Stage.RESOLVE_TURTLES;
-                // fall through
-
-            case RESOLVE_TURTLES:
-                // stay in this stage until the constant that we have resolved to is itself resolved
-                if (m_constant.canResolve())
-                    {
-                    // no turtles left to resolve
-                    m_stage = Stage.RESOLVED;
-                    }
-                else
-                    {
-                    return Result.DEFERRED;
-                    }
-                // fall through
-
-            case RESOLVED:
-                // already resolved
-                return Result.RESOLVED;
-
-            default:
-            case ERROR:
-                // already determined to be unresolvable
-                return Result.ERROR;
+                m_blockImport = m_stmtImport.getParentBlock();
             }
+            m_stage = Stage.RESOLVE_FIRST_NAME;
+            // fall through
+
+        case RESOLVE_FIRST_NAME: {
+            // resolve the first name if possible; otherwise defer (to come back to this point).
+            // remember to check the import statement if it exists (but only use it when we make
+            // our way up to the node that the import was registered with). if no one knows what
+            // the first name is, then check if it is an implicitly imported identity.
+
+            // start with the current node, and one by one walk up to the root, asking at
+            // each level for the node to resolve the name
+            boolean          fPossibleFormal = false;
+            AstNode          node            = m_node;
+            Access           access          = Access.PRIVATE;
+            IdentityConstant idOuter         = null;
+            String           sName           = m_sName;
+            WalkUpToTheRoot: while (node != null) {
+                // if the first name refers to an import, then ask that import to figure out
+                // what the corresponding qualified name refers to (i.e. delegate!)
+                if (node == m_blockImport) {
+                    Result result = resolveImport(m_stmtImport, errs);
+                    if (result == Result.RESOLVED) {
+                        break;
+                    }
+                    return result;
+                }
+
+                // otherwise, if the node has a component associated with it that is
+                // prepared to resolve names, then ask it to resolve the name, and if it
+                // isn't ready, we'll come back later
+                if (node.isComponentNode()) {
+                    if (!node.canResolveNames()) {
+                        // not ready yet
+                        return Result.DEFERRED;
+                    }
+
+                    ComponentResolver componentResolver = node.getComponentResolver();
+                    if (componentResolver == null) {
+                        // corresponding component isn't available (yet?)
+                        return Result.DEFERRED;
+                    }
+
+                    // ask the component to resolve the name
+                    switch (componentResolver.resolveName(sName, access, this)) {
+                    case POSSIBLE:
+                        // formal types could not be resolved; keep walking up
+                        fPossibleFormal = true;
+                        // fall-through
+                    case UNKNOWN:
+                        if (node.getParent() == null) {
+                            // we've reached the top, and it's possible we've never checked
+                            // the topmost statement block's imports on the way up
+                            // (this can happen for module contribution clauses)
+                            StatementBlock  body = ((TypeCompositionStatement) node).ensureBody();
+                            ImportStatement stmt = body.resolveImportBySingleName(sName, errs);
+                            if (stmt != null) {
+                                resolveImport(stmt, errs);
+                            }
+                        }
+                        break;
+
+                    case RESOLVED:
+                        // the component resolved the first name
+                        break WalkUpToTheRoot;
+
+                    case ERROR:
+                        m_stage = Stage.ERROR;
+                        return Result.ERROR;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+
+                    if (componentResolver instanceof Component component) {
+                        // the identity of the component corresponding to the current node as
+                        // we "WalkUpToTheRoot"
+                        IdentityConstant id = component.getIdentityConstant();
+
+                        // first time through, figure out the "outermost" class, which is the
+                        // boundary where we will transition from looking at all (including
+                        // private) members, to looking at only public members
+                        IdentityConstant idClz = id.getClassIdentity();
+                        if (idOuter == null) {
+                            idOuter = idClz instanceof ClassConstant clz ? clz.getOutermost() : idClz;
+                        }
+
+                        // see if this was the last step on the "WalkUpToTheRoot" that had
+                        // private access to all members
+                        if (id == idOuter) {
+                            // in the top-most-class down, there is private access
+                            // above the top-most-class, there is public access
+                            access = Access.PUBLIC;
+                        }
+                    }
+                }
+
+                // walk up towards the root
+                node = node.getParent();
+            }
+
+            // last chance: check the implicitly imported names
+            if (m_constant == null) {
+                Component component = getPool().getImplicitlyImportedComponent(sName);
+                if (component == null) {
+                    if (fPossibleFormal) {
+                        return Result.DEFERRED;
+                    }
+                    m_node.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
+                    m_stage = Stage.ERROR;
+                    return Result.ERROR;
+                } else {
+                    if (resolvedComponent(component) != ResolutionResult.RESOLVED) {
+                        return Result.ERROR;
+                    }
+                    assert m_constant != null;
+                }
+            }
+            m_constantFirst = m_constant;
+
+            // first name has been resolved
+            m_stage = Stage.RESOLVE_DOT_NAME;
+            m_sName = m_iter.hasNext() ? m_iter.next() : null;
+            // fall through
         }
+
+        case RESOLVE_DOT_NAME:
+            // at this point, we have a component (or other identity) to work from, so the next
+            // name has to be relative to that component
+            while (m_sName != null) {
+                XvmStructure structure = ensurePartiallyResolvedComponent();
+                if (structure == null) {
+                    return getResult();
+                }
+
+                if (structure instanceof PropertyStructure prop) {
+                    if (!prop.isGenericTypeParameter()) {
+                        m_node.log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, m_sName);
+                        return Result.ERROR;
+                    }
+
+                    Result result = resolveFormalDotName(prop.getType(), errs);
+                    if (result != Result.RESOLVED) {
+                        return result;
+                    }
+                } else if (structure instanceof TypeParameterConstant constTypeParam) {
+                    MethodConstant  idMethod  = constTypeParam.getMethod();
+                    int             nRegister = constTypeParam.getRegister();
+                    MethodStructure method    = (MethodStructure) idMethod.getComponent();
+                    TypeConstant    typeParam = method == null
+                            ? idMethod.getRawParams()[nRegister]
+                            : method.getParam(nRegister).getType();
+                    assert typeParam.isTypeOfType();
+
+                    Result result = resolveFormalDotName(typeParam.getParamType(0), errs);
+                    if (result != Result.RESOLVED) {
+                        return result;
+                    }
+                } else {
+                    Component component = (Component) structure;
+                    switch (component.resolveName(m_sName, Access.PRIVATE, this)) {
+                    case POSSIBLE:
+                        // the component's type has some unresolved parts, which is not a
+                        // consideration at this point; process as unknown
+                    case UNKNOWN:
+                        m_node.log(errs, Severity.ERROR, Compiler.NAME_MISSING, m_sName, m_constant);
+                        m_stage = Stage.ERROR;
+                        return Result.ERROR;
+
+                    case RESOLVED:
+                        // the component resolved the name; advance to the next one
+                        m_sName = m_iter.hasNext() ? m_iter.next() : null;
+                        break;
+
+                    case ERROR:
+                        assert errs.hasSeriousErrors();
+                        m_stage = Stage.ERROR;
+                        return Result.ERROR;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+            }
+
+            // no names left to resolve, but what we resolved to has not yet been resolved
+            m_stage = Stage.RESOLVE_TURTLES;
+            // fall through
+
+        case RESOLVE_TURTLES:
+            // stay in this stage until the constant that we have resolved to is itself resolved
+            if (m_constant.canResolve()) {
+                // no turtles left to resolve
+                m_stage = Stage.RESOLVED;
+            } else {
+                return Result.DEFERRED;
+            }
+            // fall through
+
+        case RESOLVED:
+            // already resolved
+            return Result.RESOLVED;
+
+        default:
+        case ERROR:
+            // already determined to be unresolvable
+            return Result.ERROR;
+        }
+    }
 
     /**
      * @return the component that is responsible for resolving the next name or null if an error
      *         has been reported
      */
-    private XvmStructure ensurePartiallyResolvedComponent()
-        {
+    private XvmStructure ensurePartiallyResolvedComponent() {
         Component component = m_component;
-        if (m_typeMode == null)
-            {
-            if (component.getFormat().isDeadEnd())
-                {
+        if (m_typeMode == null) {
+            if (component.getFormat().isDeadEnd()) {
                 // for methods (and multi-methods), it is not possible to further resolve the name,
                 // because methods are opaque from the outside, and multi-methods can only be
                 // resolved by analyzing signatures (not names)
                 m_node.log(m_errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
                 m_stage = Stage.ERROR;
                 return null;
-                }
-            else
-                {
+            } else {
                 return component;
-                }
             }
+        }
 
         // once we get into the domain of type parameters, the "resolving component to use next"
         // is not pre-loaded. the quintessential example is the type parameter "MapType extends
         // Map", and then resolving "MapType.Key", where there is no actual type (or
         // component) for MapType, but the "Map" component is used instead
         Constant id = m_constant;
-        while (true)
-            {
+        while (true) {
             TypeConstant type;
-            switch (id.getFormat())
-                {
-                case Module:
-                case Package:
-                case Class:
+            switch (id.getFormat()) {
+            case Module:
+            case Package:
+            case Class:
+                return component;
+
+            case Property:
+                if (component instanceof PropertyStructure) {
                     return component;
-
-                case Property:
-                    if (component instanceof PropertyStructure)
-                        {
-                        return component;
-                        }
-
-                    if (component instanceof CompositeComponent composite)
-                        {
-                        List<Component>   listProps = composite.components();
-                        PropertyStructure prop0     = (PropertyStructure) listProps.get(0);
-                        TypeConstant      type0     = prop0.getType();
-                        for (int i = 1, c = listProps.size(); i < c; ++i)
-                            {
-                            TypeConstant typeN = ((PropertyStructure) listProps.get(i)).getType();
-                            if (!type0.equals(typeN))
-                                {
-                                // eventual To-Do: we need to handle cases where composite
-                                // components differ in substantial ways, such as type, but for
-                                // now this is just an assertion that the type does not vary
-                                throw new UnsupportedOperationException("non-uniform composite property type: "
-                                        + id + "; 0=" + type0 + ", " + i + "=" + typeN);
-                                }
-                            }
-                        return prop0;
-                        }
-                    else
-                        {
-                        throw new IllegalStateException("id=" + id + ", prop=" + component);
-                        }
-
-                case Typedef:
-                    if (component instanceof TypedefStructure typedef)
-                        {
-                        type = typedef.getType();
-                        }
-                    else if (component instanceof CompositeComponent composite)
-                        {
-                        List<Component> listTypedefs = composite.components();
-                        type = ((TypedefStructure) listTypedefs.get(0)).getType();
-                        for (int i = 1, c = listTypedefs.size(); i < c; ++i)
-                            {
-                            TypeConstant constTypeN = ((TypedefStructure) listTypedefs.get(i)).getType();
-                            if (!type.equals(constTypeN))
-                                {
-                                // eventual To-Do: we need to handle cases where composite
-                                // components differ in substantial ways, such as type, but for
-                                // now this is just an assertion that the type does not vary
-                                throw new UnsupportedOperationException("non-uniform composite typedef type: "
-                                        + id + "; 0=" + type + ", " + i + "=" + constTypeN);
-                                }
-                            }
-                        }
-                    else
-                        {
-                        throw new IllegalStateException("id=" + id + ", typedef=" + component);
-                        }
-                    break;
-
-                case TypeParameter:
-                    // type parameters could refer to not yet fully resolved method constant;
-                    // let the caller deal with that
-                    return id;
-
-                case ThisClass:
-                case ChildClass:
-                case ParentClass:
-                    {
-                    PseudoConstant constClass = (PseudoConstant) id;
-                    return constClass.getDeclarationLevelClass().getComponent();
-                    }
-
-                case FormalTypeChild:
-                    {
-                    FormalTypeChildConstant constFormal = (FormalTypeChildConstant) id;
-                    type = constFormal.getConstraintType().getType();
-                    break;
-                    }
-
-                default:
-                    throw new IllegalStateException("illegal type param constant id: " + id);
                 }
 
-            if (!type.isTypeOfType())
-                {
+                if (component instanceof CompositeComponent composite) {
+                    List<Component>   listProps = composite.components();
+                    PropertyStructure prop0     = (PropertyStructure) listProps.get(0);
+                    TypeConstant      type0     = prop0.getType();
+                    for (int i = 1, c = listProps.size(); i < c; ++i) {
+                        TypeConstant typeN = ((PropertyStructure) listProps.get(i)).getType();
+                        if (!type0.equals(typeN)) {
+                            // eventual To-Do: we need to handle cases where composite
+                            // components differ in substantial ways, such as type, but for
+                            // now this is just an assertion that the type does not vary
+                            throw new UnsupportedOperationException("non-uniform composite property type: "
+                                    + id + "; 0=" + type0 + ", " + i + "=" + typeN);
+                        }
+                    }
+                    return prop0;
+                } else {
+                    throw new IllegalStateException("id=" + id + ", prop=" + component);
+                }
+
+            case Typedef:
+                if (component instanceof TypedefStructure typedef) {
+                    type = typedef.getType();
+                } else if (component instanceof CompositeComponent composite) {
+                    List<Component> listTypedefs = composite.components();
+                    type = ((TypedefStructure) listTypedefs.get(0)).getType();
+                    for (int i = 1, c = listTypedefs.size(); i < c; ++i) {
+                        TypeConstant constTypeN = ((TypedefStructure) listTypedefs.get(i)).getType();
+                        if (!type.equals(constTypeN)) {
+                            // eventual To-Do: we need to handle cases where composite
+                            // components differ in substantial ways, such as type, but for
+                            // now this is just an assertion that the type does not vary
+                            throw new UnsupportedOperationException("non-uniform composite typedef type: "
+                                    + id + "; 0=" + type + ", " + i + "=" + constTypeN);
+                        }
+                    }
+                } else {
+                    throw new IllegalStateException("id=" + id + ", typedef=" + component);
+                }
+                break;
+
+            case TypeParameter:
+                // type parameters could refer to not yet fully resolved method constant;
+                // let the caller deal with that
+                return id;
+
+            case ThisClass:
+            case ChildClass:
+            case ParentClass: {
+                PseudoConstant constClass = (PseudoConstant) id;
+                return constClass.getDeclarationLevelClass().getComponent();
+            }
+
+            case FormalTypeChild: {
+                FormalTypeChildConstant constFormal = (FormalTypeChildConstant) id;
+                type = constFormal.getConstraintType().getType();
+                break;
+            }
+
+            default:
+                throw new IllegalStateException("illegal type param constant id: " + id);
+            }
+
+            if (!type.isTypeOfType()) {
                 m_errs.log(Severity.ERROR, Compiler.NOT_CLASS_TYPE,
                         new Object[] {id.getValueString()}, component);
                 m_stage = Stage.ERROR;
                 return null;
-                }
+            }
 
             TypeConstant typeParam = type.getParamType(0);
-            if (typeParam.isSingleDefiningConstant())
-                {
+            if (typeParam.isSingleDefiningConstant()) {
                 id = typeParam.getDefiningConstant();
                 component = id instanceof IdentityConstant constId ? constId.getComponent() : null;
-                }
-            else
-                {
+            } else {
                 throw new IllegalStateException("not a single defining constant: " + typeParam);
-                }
             }
         }
+    }
 
     /**
      * @return the resolution result using the specified import statement
      */
-    protected Result resolveImport(ImportStatement stmtImport, ErrorListener errs)
-        {
+    protected Result resolveImport(ImportStatement stmtImport, ErrorListener errs) {
         NameResolver resolver = stmtImport.getNameResolver();
-        switch (resolver.resolve(errs))
-            {
-            case RESOLVED:
-                if (stmtImport.isWildcard())
-                    {
-                    Component component =
-                        ((IdentityConstant) resolver.getConstant()).getComponent().getChild(m_sName);
-                    assert component instanceof ClassStructure ||
-                           component instanceof TypedefStructure;
-                    if (component instanceof PackageStructure pkg && pkg.isModuleImport())
-                        {
-                        ModuleStructure module = pkg.getImportedModule();
-                        if (module.isFingerprint())
-                            {
-                            component = module.getFingerprintOrigin();
-                            }
-                        }
-                    m_constant  = component.getIdentityConstant();
-                    m_component = component;
+        switch (resolver.resolve(errs)) {
+        case RESOLVED:
+            if (stmtImport.isWildcard()) {
+                Component component =
+                    ((IdentityConstant) resolver.getConstant()).getComponent().getChild(m_sName);
+                assert component instanceof ClassStructure ||
+                       component instanceof TypedefStructure;
+                if (component instanceof PackageStructure pkg && pkg.isModuleImport()) {
+                    ModuleStructure module = pkg.getImportedModule();
+                    if (module.isFingerprint()) {
+                        component = module.getFingerprintOrigin();
                     }
-                else
-                    {
-                    m_constant  = resolver.m_constant;
-                    m_component = resolver.m_component;
-                    }
-                return Result.RESOLVED;
-
-            case DEFERRED:
-                // dependent on a node that is deferred, so this is deferred
-                return Result.DEFERRED;
-
-            default:
-            case ERROR:
-                // no need to log an error; the import already should have
-                m_stage = Stage.ERROR;
-                return Result.ERROR;
+                }
+                m_constant  = component.getIdentityConstant();
+                m_component = component;
+            } else {
+                m_constant  = resolver.m_constant;
+                m_component = resolver.m_component;
             }
+            return Result.RESOLVED;
+
+        case DEFERRED:
+            // dependent on a node that is deferred, so this is deferred
+            return Result.DEFERRED;
+
+        default:
+        case ERROR:
+            // no need to log an error; the import already should have
+            m_stage = Stage.ERROR;
+            return Result.ERROR;
         }
+    }
 
     /**
      * Resolve the next name for a formal partially resolved component that represents either
@@ -591,11 +514,9 @@ public class NameResolver
      *
      * @return the resolution result
      */
-    private Result resolveFormalDotName(TypeConstant typeConstraint, ErrorListener errs)
-        {
+    private Result resolveFormalDotName(TypeConstant typeConstraint, ErrorListener errs) {
         ResolutionResult result = ResolutionResult.UNKNOWN;
-        if (typeConstraint.isSingleDefiningConstant())
-            {
+        if (typeConstraint.isSingleDefiningConstant()) {
             // try to use the constraint type
             // (e.g. CompileType.Key where CompileType is known to be a Map)
             Constant id         = typeConstraint.getDefiningConstant();
@@ -604,52 +525,47 @@ public class NameResolver
                     : id instanceof PseudoConstant constPseudo
                         ? constPseudo.getDeclarationLevelClass().getComponent()
                         : null;
-            if (component != null)
-                {
+            if (component != null) {
                 result = component.resolveName(m_sName, Access.PRIVATE, this);
-                }
             }
+        }
 
-        if (result == ResolutionResult.UNKNOWN)
-            {
+        if (result == ResolutionResult.UNKNOWN) {
             // since the formal type is a Type, now try the Type's children;
             // (e.g. CompileType.OuterType )
             //
             // REVIEW: we should strongly consider creating a dedicated constant for this,
             //         so there is no ambiguity at compile- or run-time resolution
             result = getPool().clzType().getComponent().resolveName(m_sName, Access.PUBLIC, this);
-            }
-
-        switch (result)
-            {
-            case UNKNOWN:
-                // the component didn't know the name
-                m_node.log(errs, Severity.ERROR, Compiler.NAME_MISSING, m_sName, m_constant);
-                // break through
-            case POSSIBLE:
-                // should not be possible
-            case ERROR:
-                m_stage = Stage.ERROR;
-                return Result.ERROR;
-
-            case RESOLVED:
-                // the component resolved the name; advance to the next one
-                m_sName = m_iter.hasNext() ? m_iter.next() : null;
-                return Result.RESOLVED;
-
-            default:
-                throw new IllegalStateException();
-            }
         }
+
+        switch (result) {
+        case UNKNOWN:
+            // the component didn't know the name
+            m_node.log(errs, Severity.ERROR, Compiler.NAME_MISSING, m_sName, m_constant);
+            // break through
+        case POSSIBLE:
+            // should not be possible
+        case ERROR:
+            m_stage = Stage.ERROR;
+            return Result.ERROR;
+
+        case RESOLVED:
+            // the component resolved the name; advance to the next one
+            m_sName = m_iter.hasNext() ? m_iter.next() : null;
+            return Result.RESOLVED;
+
+        default:
+            throw new IllegalStateException();
+        }
+    }
 
     /**
      * @return the result of the NameResolver thus far; the ERROR and RESOLVED states are the
      *         terminal states
      */
-    public Result getResult()
-        {
-        return switch (m_stage)
-            {
+    public Result getResult() {
+        return switch (m_stage) {
             case CHECK_IMPORTS, RESOLVE_FIRST_NAME, RESOLVE_DOT_NAME ->
                 // not done yet
                 Result.DEFERRED;
@@ -661,173 +577,147 @@ public class NameResolver
             case RESOLVE_TURTLES, ERROR ->
                 // cannot complete successfully
                 Result.ERROR;
-            };
-        }
+        };
+    }
 
     /**
      * @return the Constant that the NameResolver has resolved the first part of the name to;
      *         this value can only be depended on after stage value is RESOLVE_FIRST_NAME
      */
-    public Constant getBaseConstant()
-        {
+    public Constant getBaseConstant() {
         return m_constantFirst;
-        }
+    }
 
     /**
      * @return the Constant that the NameResolver has resolved to thus far; this value can only be
      *         depended on after the NameResolver result is RESOLVED
      */
-    public Constant getConstant()
-        {
+    public Constant getConstant() {
         return m_constant;
-        }
+    }
 
     /**
      * @return the ConstantPool
      */
-    private ConstantPool getPool()
-        {
+    private ConstantPool getPool() {
         return m_node.pool();
-        }
+    }
 
 
     // ----- ResolutionCollector -------------------------------------------------------------------
 
     @Override
-    public ResolutionResult resolvedComponent(Component component)
-        {
+    public ResolutionResult resolvedComponent(Component component) {
         // it is possible that the name "resolved to" an ambiguous component, which is an error
         IdentityConstant id = component.getIdentityConstant();
-        if (component instanceof CompositeComponent composite && composite.isAmbiguous())
-            {
+        if (component instanceof CompositeComponent composite && composite.isAmbiguous()) {
             m_node.log(m_errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName);
             m_stage = Stage.ERROR;
             return ResolutionResult.ERROR;
+        }
+
+        if (m_typeMode != null) {
+            boolean fNameMissing = false;
+            switch (component.getFormat()) {
+            case TYPEDEF:
+                // typedef is allowed in type mode, but not in formal type mode
+                if (m_typeMode == TypeMode.FORMAL_TYPE &&
+                        !component.getParent().getIdentityConstant().equals(getPool().clzType())) {
+                    m_node.log(m_errs, Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED,
+                            m_sName, id.getParentConstant().getValueString());
+                    m_stage = Stage.ERROR;
+                    return ResolutionResult.ERROR;
+                }
+                break;
+
+            case CLASS:
+            case INTERFACE:
+            case MIXIN:
+                // a virtual child type of a formal type's constraint is allowed in type mode
+                if (((ClassStructure) component).isVirtualChild()) {
+                    m_typeMode = TypeMode.TYPE;
+                } else {
+                    fNameMissing = true;
+                }
+                break;
+
+            case PROPERTY:
+                // type params are allowed in type modes
+                if (((PropertyStructure) component).isGenericTypeParameter()) {
+                    if (m_typeMode == TypeMode.FORMAL_TYPE) {
+                        m_component = null;
+                        m_constant  = getPool().ensureFormalTypeChildConstant(
+                                (FormalConstant) m_constant, m_sName);
+                        return ResolutionResult.RESOLVED;
+                    }
+
+                    m_typeMode = TypeMode.FORMAL_TYPE;
+                } else {
+                    fNameMissing = true;
+                }
+                break;
+
+            default:
+                // nothing else is allowed in type mode (can't switch back to a value mode,
+                // i.e. an "identity mode")
+                fNameMissing = true;
+                break;
             }
 
-        if (m_typeMode != null)
-            {
-            boolean fNameMissing = false;
-            switch (component.getFormat())
-                {
-                case TYPEDEF:
-                    // typedef is allowed in type mode, but not in formal type mode
-                    if (m_typeMode == TypeMode.FORMAL_TYPE &&
-                            !component.getParent().getIdentityConstant().equals(getPool().clzType()))
-                        {
-                        m_node.log(m_errs, Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED,
-                                m_sName, id.getParentConstant().getValueString());
-                        m_stage = Stage.ERROR;
-                        return ResolutionResult.ERROR;
-                        }
-                    break;
-
-                case CLASS:
-                case INTERFACE:
-                case MIXIN:
-                    // a virtual child type of a formal type's constraint is allowed in type mode
-                    if (((ClassStructure) component).isVirtualChild())
-                        {
-                        m_typeMode = TypeMode.TYPE;
-                        }
-                    else
-                        {
-                        fNameMissing = true;
-                        }
-                    break;
-
-                case PROPERTY:
-                    // type params are allowed in type modes
-                    if (((PropertyStructure) component).isGenericTypeParameter())
-                        {
-                        if (m_typeMode == TypeMode.FORMAL_TYPE)
-                            {
-                            m_component = null;
-                            m_constant  = getPool().ensureFormalTypeChildConstant(
-                                    (FormalConstant) m_constant, m_sName);
-                            return ResolutionResult.RESOLVED;
-                            }
-
-                        m_typeMode = TypeMode.FORMAL_TYPE;
-                        }
-                    else
-                        {
-                        fNameMissing = true;
-                        }
-                    break;
-
-                default:
-                    // nothing else is allowed in type mode (can't switch back to a value mode,
-                    // i.e. an "identity mode")
-                    fNameMissing = true;
-                    break;
-                }
-
-            if (fNameMissing)
-                {
+            if (fNameMissing) {
                 m_node.log(m_errs, Severity.ERROR, Compiler.NAME_MISSING, component.getName(), m_constant);
                 m_stage = Stage.ERROR;
                 return ResolutionResult.ERROR;
-                }
             }
-        else if (m_fTypeGoal)
-            {
+        } else if (m_fTypeGoal) {
             // when resolving for a type name, encountering a typedef or a type parameter
             // transitions the NameResolver into a "type mode", which is a one-way transition
-            switch (component.getFormat())
-                {
-                case PACKAGE:
-                    PackageStructure pkg = (PackageStructure) component;
-                    if (pkg.isModuleImport())
-                        {
-                        ModuleStructure module = pkg.getImportedModule();
-                        component = module.isFingerprint()
-                                ? module.getFingerprintOrigin()
-                                : module;
-                        if (component == null)
-                            {
-                            m_node.log(m_errs, Severity.ERROR, Compiler.MODULE_MISSING, module.getName());
-                            m_stage = Stage.ERROR;
-                            return ResolutionResult.ERROR;
-                            }
-                        id = module.getIdentityConstant();
-                        }
-                    break;
-
-                case PROPERTY:
-                    if (((PropertyStructure) component).isGenericTypeParameter())
-                        {
-                        m_typeMode = TypeMode.FORMAL_TYPE;
-                        }
-                    break;
-
-                case TYPEDEF:
-                    m_typeMode = TypeMode.TYPE;
-                    break;
+            switch (component.getFormat()) {
+            case PACKAGE:
+                PackageStructure pkg = (PackageStructure) component;
+                if (pkg.isModuleImport()) {
+                    ModuleStructure module = pkg.getImportedModule();
+                    component = module.isFingerprint()
+                            ? module.getFingerprintOrigin()
+                            : module;
+                    if (component == null) {
+                        m_node.log(m_errs, Severity.ERROR, Compiler.MODULE_MISSING, module.getName());
+                        m_stage = Stage.ERROR;
+                        return ResolutionResult.ERROR;
+                    }
+                    id = module.getIdentityConstant();
                 }
+                break;
+
+            case PROPERTY:
+                if (((PropertyStructure) component).isGenericTypeParameter()) {
+                    m_typeMode = TypeMode.FORMAL_TYPE;
+                }
+                break;
+
+            case TYPEDEF:
+                m_typeMode = TypeMode.TYPE;
+                break;
             }
+        }
 
         m_component = component;
         m_constant  = id;
         return ResolutionResult.RESOLVED;
-        }
+    }
 
     @Override
-    public ResolutionResult resolvedConstant(Constant constant)
-        {
-        if (constant == null)
-            {
+    public ResolutionResult resolvedConstant(Constant constant) {
+        if (constant == null) {
             return ResolutionResult.UNKNOWN;
-            }
+        }
 
-        if (constant instanceof IdentityConstant id)
-            {
+        if (constant instanceof IdentityConstant id) {
             Component component = id.getComponent();
-            if (component != null)
-                {
+            if (component != null) {
                 return resolvedComponent(component);
-                }
             }
+        }
 
         m_constant  = constant;
         m_component = null;
@@ -836,19 +726,17 @@ public class NameResolver
                 : m_fTypeGoal ? TypeMode.TYPE : null;
 
         return ResolutionResult.RESOLVED;
-        }
+    }
 
     @Override
-    public AstNode getNode()
-        {
+    public AstNode getNode() {
         return m_node;
-        }
+    }
 
     @Override
-    public ErrorListener getErrorListener()
-        {
+    public ErrorListener getErrorListener() {
         return m_errs;
-        }
+    }
 
 
     // ----- inner classes -------------------------------------------------------------------------
@@ -857,10 +745,9 @@ public class NameResolver
      * Classes that can provide a NameResolver should implement this interface.
      */
     @FunctionalInterface
-    public interface NameResolving
-        {
+    public interface NameResolving {
         NameResolver getNameResolver();
-        }
+    }
 
     /**
      * The result of an attempt to resolve the name.
@@ -945,4 +832,4 @@ public class NameResolver
      * The ErrorListener to log errors to.
      */
     private ErrorListener m_errs;
-    }
+}

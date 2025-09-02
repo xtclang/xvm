@@ -10,16 +10,14 @@ import java.lang.reflect.Field;
  * Used for named arguments.
  */
 public class LabeledExpression
-        extends DelegatingExpression
-    {
+        extends DelegatingExpression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public LabeledExpression(Token name, Expression expr)
-        {
+    public LabeledExpression(Token name, Expression expr) {
         super(expr);
 
         this.name = name;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -27,45 +25,39 @@ public class LabeledExpression
     /**
      * @return the token that provides the label (the name) for the expression
      */
-    public Token getNameToken()
-        {
+    public Token getNameToken() {
         return name;
-        }
+    }
 
     /**
      * @return the label name
      */
-    public String getName()
-        {
+    public String getName() {
         return name.getValueText();
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return name.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return expr.getEndPosition();
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return name + " = " + expr;
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -73,4 +65,4 @@ public class LabeledExpression
     private final Token name;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(LabeledExpression.class, "expr");
-    }
+}

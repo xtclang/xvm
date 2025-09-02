@@ -26,22 +26,20 @@ import org.xvm.util.Severity;
 /**
  * The AnonInnerClass represents the suggested shape for an anonymous inner class.
  */
-public class AnonInnerClass
-    {
+public class AnonInnerClass {
     /**
      * Construct an AnonInnerClass data collector.
      *
      * @param expr  the type expression for which this AnonInnerClass is collecting data
      * @param errs  the error listener to use to log errors to
      */
-    public AnonInnerClass(TypeExpression expr, ErrorListener errs)
-        {
+    public AnonInnerClass(TypeExpression expr, ErrorListener errs) {
         assert expr != null;
         assert errs != null;
 
         m_exprType = expr;
         f_errs     = errs;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -49,65 +47,57 @@ public class AnonInnerClass
     /**
      * @return the original type expression that serves as the basis for the anonymous inner class
      */
-    public TypeExpression getTypeExpression()
-        {
+    public TypeExpression getTypeExpression() {
         return m_exprType;
-        }
+    }
 
     /**
      * @return true iff there were no errors in the creation of the AnonInnerClass
      */
-    public boolean isValid()
-        {
+    public boolean isValid() {
         return !m_fError;
-        }
+    }
 
     /**
      * @return one of: CLASS, CONST, SERVICE
      */
-    public Format getFormat()
-        {
+    public Format getFormat() {
         return m_fmt == null ? Format.CLASS : m_fmt;
-        }
+    }
 
     /**
      * @return a token for "class", "const", or "service"
      */
-    public Token getCategory()
-        {
+    public Token getCategory() {
         AstNode location = getTypeExpression();
-        return switch (getFormat())
-            {
+        return switch (getFormat()) {
             case CLASS   -> genKeyword(location, Id.CLASS);
             case CONST   -> genKeyword(location, Id.CONST);
             case SERVICE -> genKeyword(location, Id.SERVICE);
             default      -> throw new IllegalStateException();
-            };
-        }
+        };
+    }
 
     /**
      * @return the suggested name for the anonymous inner class
      */
-    public String getDefaultName()
-        {
+    public String getDefaultName() {
         return m_sName == null ? "Object" : m_sName;
-        }
+    }
 
     /**
      * @return the Contributions suggested for the anonymous inner class
      */
-    public List<CompositionNode> getCompositions()
-        {
+    public List<CompositionNode> getCompositions() {
         return m_listCompositions == null ? Collections.emptyList() : m_listCompositions;
-        }
+    }
 
     /**
      * @return the Annotations suggested for the anonymous inner class
      */
-    public List<AnnotationExpression> getAnnotations()
-        {
+    public List<AnnotationExpression> getAnnotations() {
         return m_listAnnos == null ? Collections.emptyList() : m_listAnnos;
-        }
+    }
 
 
     // ----- data collection -----------------------------------------------------------------------
@@ -117,15 +107,13 @@ public class AnonInnerClass
      *
      * @return the error listener to use to report errors
      */
-    protected ErrorListener getErrorListener(boolean fError)
-        {
-        if (fError)
-            {
+    protected ErrorListener getErrorListener(boolean fError) {
+        if (fError) {
             markInvalid();
-            }
+        }
 
         return f_errs;
-        }
+    }
 
     /**
      * Helper to log an error.
@@ -133,73 +121,60 @@ public class AnonInnerClass
      * @param sCode    the error code that identifies the error message
      * @param aoParam  the parameters for the error message; may be null
      */
-    private void logError(String sCode, Object... aoParam)
-        {
+    private void logError(String sCode, Object... aoParam) {
         getTypeExpression().log(getErrorListener(true), Severity.ERROR, sCode, aoParam);
-        }
+    }
 
     /**
      * Mark that the anonymous inner class cannot be instantiated due to a declaration error.
      */
-    private void markInvalid()
-        {
+    private void markInvalid() {
         m_fError = true;
-        }
+    }
 
     /**
      * Make sure that the anonymous inner class is not already required to be immutable.
      */
-    private void ensureMutable()
-        {
-        if (m_fmt == Format.CONST)
-            {
+    private void ensureMutable() {
+        if (m_fmt == Format.CONST) {
             logError(Compiler.ANON_CLASS_MUTABILITY_CONFUSED);
-            }
         }
+    }
 
     /**
      * Mark that the anonymous inner class as defining a class of immutable objects.
      */
-    protected void markImmutable()
-        {
-        if (m_fmt == Format.SERVICE)
-            {
+    protected void markImmutable() {
+        if (m_fmt == Format.SERVICE) {
             logError(Compiler.ANON_CLASS_MUTABILITY_CONFUSED);
-            }
-        else
-            {
+        } else {
             m_fmt = Format.CONST;
-            }
         }
+    }
 
     /**
      * Add an annotation to the definition of the anonymous inner class.
      *
      * @param anno  the annotation
      */
-    protected void addAnnotation(AnnotationExpression anno)
-        {
+    protected void addAnnotation(AnnotationExpression anno) {
         assert anno != null;
         ensureAnnotations().add(anno);
-        }
+    }
 
     /**
      * Add a component contribution to the anonymous inner class.
      *
      * @param exprType  the type of the contribution to add
      */
-    protected void addContribution(TypeExpression exprType)
-        {
+    protected void addContribution(TypeExpression exprType) {
         TypeConstant type = exprType.ensureTypeConstant().resolveTypedefs();
-        if (type.containsUnresolved())
-            {
+        if (type.containsUnresolved()) {
             logError(Compiler.NAME_UNRESOLVABLE, type.getValueString());
-            }
-        else
-            {
+        } else {
             addContribution(exprType, type);
-            }
         }
+    }
 
     /**
      * Add a component contribution to the anonymous inner class.
@@ -207,106 +182,99 @@ public class AnonInnerClass
      * @param exprType  the AST type (used primarily for error reporting)
      * @param type      the type of the contribution to add
      */
-    private void addContribution(TypeExpression exprType, TypeConstant type)
-        {
+    private void addContribution(TypeExpression exprType, TypeConstant type) {
         // this is largely duplicated from what the TypeExpression classes do, primarily in order
         // to handle the situation in which a typedef expands to something that would have been
         // represented by a tree of specialized TypeExpression classes
-        switch (type.getFormat())
-            {
-            case ImmutableType:
-                // unwrap the type
-                addContribution(exprType, type.getUnderlyingType());
+        switch (type.getFormat()) {
+        case ImmutableType:
+            // unwrap the type
+            addContribution(exprType, type.getUnderlyingType());
+            markImmutable();
+            return;
+
+        case AnnotatedType: {
+            addContribution(exprType, type.getUnderlyingType());
+            addAnnotation(new AnnotationExpression(((AnnotatedTypeConstant) type).getAnnotation(), exprType));
+            return;
+        }
+
+        case IntersectionType: {
+            addContribution(exprType, type.getUnderlyingType());
+            addContribution(exprType, type.getUnderlyingType2());
+            return;
+        }
+
+        case UnionType:
+            exprType.log(getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_UNION);
+            return;
+
+        case VirtualChildType:  // treat it as a terminal type
+        case InnerChildType:    // treat it as a terminal type
+            break;
+
+        case DifferenceType:    // treat it as an interface
+        case AccessType:        // treat it as an interface
+        case TerminalType:      // treat it as whatever the type turns out to be
+        case ParameterizedType: // whatever is parameterized, drop through and handle it
+            // fall out of this switch
+            break;
+
+        default:
+            throw new IllegalStateException("type=" + type);
+        }
+
+        // handling for all class, annotation & mixin types
+        if (type.isExplicitClassIdentity(true)) {
+            switch (type.getExplicitClassFormat()) {
+            case CLASS:
+                setSuper(exprType, type);
+                m_fmt = Format.CLASS;
+                return;
+
+            case ENUM:
+            case ENUMVALUE:
+            case PACKAGE:
+            case MODULE:
+                exprType.log(getErrorListener(true), Severity.ERROR,
+                        Compiler.ANON_CLASS_EXTENDS_ILLEGAL,
+                        type.getExplicitClassFormat().toString().toLowerCase());
+                // fall through
+            case CONST:
+                setSuper(exprType, type);
                 markImmutable();
+                m_fmt = Format.CONST;
                 return;
 
-            case AnnotatedType:
-                {
-                addContribution(exprType, type.getUnderlyingType());
-                addAnnotation(new AnnotationExpression(((AnnotatedTypeConstant) type).getAnnotation(), exprType));
-                return;
-                }
-
-            case IntersectionType:
-                {
-                addContribution(exprType, type.getUnderlyingType());
-                addContribution(exprType, type.getUnderlyingType2());
-                return;
-                }
-
-            case UnionType:
-                exprType.log(getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_UNION);
+            case SERVICE:
+                ensureMutable();
+                setSuper(exprType, type);
+                m_fmt = Format.SERVICE;
                 return;
 
-            case VirtualChildType:  // treat it as a terminal type
-            case InnerChildType:    // treat it as a terminal type
-                break;
+            case MIXIN:
+                ensureCompositions().add(new Incorporates(null,
+                        genKeyword(exprType, Id.INCORPORATES), exprType, null, null));
+                return;
 
-            case DifferenceType:    // treat it as an interface
-            case AccessType:        // treat it as an interface
-            case TerminalType:      // treat it as whatever the type turns out to be
-            case ParameterizedType: // whatever is parameterized, drop through and handle it
+            case INTERFACE:
                 // fall out of this switch
                 break;
 
             default:
-                throw new IllegalStateException("type=" + type);
+                throw new IllegalStateException("type=" + type +
+                                                ", format=" + type.getExplicitClassFormat());
             }
-
-        // handling for all class, annotation & mixin types
-        if (type.isExplicitClassIdentity(true))
-            {
-            switch (type.getExplicitClassFormat())
-                {
-                case CLASS:
-                    setSuper(exprType, type);
-                    m_fmt = Format.CLASS;
-                    return;
-
-                case ENUM:
-                case ENUMVALUE:
-                case PACKAGE:
-                case MODULE:
-                    exprType.log(getErrorListener(true), Severity.ERROR,
-                            Compiler.ANON_CLASS_EXTENDS_ILLEGAL,
-                            type.getExplicitClassFormat().toString().toLowerCase());
-                    // fall through
-                case CONST:
-                    setSuper(exprType, type);
-                    markImmutable();
-                    m_fmt = Format.CONST;
-                    return;
-
-                case SERVICE:
-                    ensureMutable();
-                    setSuper(exprType, type);
-                    m_fmt = Format.SERVICE;
-                    return;
-
-                case MIXIN:
-                    ensureCompositions().add(new Incorporates(null,
-                            genKeyword(exprType, Id.INCORPORATES), exprType, null, null));
-                    return;
-
-                case INTERFACE:
-                    // fall out of this switch
-                    break;
-
-                default:
-                    throw new IllegalStateException("type=" + type +
-                                                    ", format=" + type.getExplicitClassFormat());
-                }
-            }
+        }
 
         // handling for all interface types
-        if (m_sName == null)
-            {
+        if (m_sName == null) {
             m_sName = type.isExplicitClassIdentity(true)
                     ? type.getSingleUnderlyingClass(true).getName()
                     : type.getValueString().replace(" ", "");
-            }
-        ensureCompositions().add(new Implements(null, genKeyword(exprType, Id.IMPLEMENTS), exprType));
         }
+        ensureCompositions().add(new Implements(null, genKeyword(exprType, Id.IMPLEMENTS), exprType));
+    }
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -314,15 +282,13 @@ public class AnonInnerClass
     /**
      * @return a mutable non-null list of annotations
      */
-    private List<AnnotationExpression> ensureAnnotations()
-        {
+    private List<AnnotationExpression> ensureAnnotations() {
         List<AnnotationExpression> list = m_listAnnos;
-        if (list == null)
-            {
+        if (list == null) {
             m_listAnnos = list = new ArrayList<>();
-            }
-        return list;
         }
+        return list;
+    }
 
     /**
      * Create a fake token.
@@ -332,11 +298,10 @@ public class AnonInnerClass
      *
      * @return the token
      */
-    private Token genKeyword(AstNode location, Id id)
-        {
+    private Token genKeyword(AstNode location, Id id) {
         long lPos = location.getStartPosition();
         return new Token(lPos, lPos, id);
-        }
+    }
 
     /**
      * Store the super class designation in the list of contributions.
@@ -346,8 +311,7 @@ public class AnonInnerClass
      *
      * @return false iff the specified expression cannot be used
      */
-    private void setSuper(TypeExpression exprType, TypeConstant type)
-        {
+    private void setSuper(TypeExpression exprType, TypeConstant type) {
         assert exprType != null;
         assert type.isClassType();
 
@@ -355,60 +319,53 @@ public class AnonInnerClass
         m_sName = idSuper.getName();
 
         List<CompositionNode> list = ensureCompositions();
-        if (!list.isEmpty() && list.getFirst() instanceof Extends nodeFirst)
-            {
+        if (!list.isEmpty() && list.getFirst() instanceof Extends nodeFirst) {
             getTypeExpression().log(getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_MULTI,
                     nodeFirst.getType().ensureTypeConstant().getValueString(), type.getValueString());
             return;
-            }
+        }
 
         list.addFirst(new Extends(null, genKeyword(exprType, Id.EXTENDS), exprType));
-        }
+    }
 
     /**
      * @return a mutable non-null list of contributions
      */
-    private List<CompositionNode> ensureCompositions()
-        {
+    private List<CompositionNode> ensureCompositions() {
         List<CompositionNode> list = m_listCompositions;
-        if (list == null)
-            {
+        if (list == null) {
             m_listCompositions = list = new ArrayList<>();
-            }
-        return list;
         }
+        return list;
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
-        if (!isValid())
-            {
+        if (!isValid()) {
             sb.append("**ERROR** ");
-            }
+        }
 
-        for (AnnotationExpression anno : getAnnotations())
-            {
+        for (AnnotationExpression anno : getAnnotations()) {
             sb.append(anno)
               .append(' ');
-            }
+        }
 
         sb.append(getFormat())
           .append(' ')
           .append(getDefaultName());
 
-        for (CompositionNode comp : getCompositions())
-            {
+        for (CompositionNode comp : getCompositions()) {
             sb.append(' ')
               .append(comp);
-            }
+        }
 
         return sb.toString();
-        }
+    }
 
 
     // ----- data members --------------------------------------------------------------------------
@@ -448,4 +405,4 @@ public class AnonInnerClass
      * The error listener to use to log any errors.
      */
     private final ErrorListener f_errs;
-    }
+}

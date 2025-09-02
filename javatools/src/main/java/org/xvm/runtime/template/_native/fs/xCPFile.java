@@ -25,24 +25,19 @@ import org.xvm.runtime.template.xConst;
  * Native CPFile implementation.
  */
 public class xCPFile
-        extends xConst
-    {
-    public xCPFile(Container container, ClassStructure structure, boolean fInstance)
-        {
+        extends xConst {
+    public xCPFile(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-        }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         s_constructor = getStructure().findConstructor(f_container.getConstantPool().typeObject());
-        }
+    }
 
     @Override
-    public int createConstHandle(Frame frame, Constant constant)
-        {
-        if (constant instanceof FSNodeConstant constFile && constant.getFormat() == Format.FSFile)
-            {
+    public int createConstHandle(Frame frame, Constant constant) {
+        if (constant instanceof FSNodeConstant constFile && constant.getFormat() == Format.FSFile) {
             TypeComposition clz    = ensureClass(frame.f_context.f_container,
                                         getCanonicalType(), frame.poolContext().typeFile());
             GenericHandle  hStruct = new GenericHandle(clz.ensureAccess(Access.STRUCT));
@@ -50,13 +45,13 @@ public class xCPFile
             ahVar[0] = new ConstantHandle(constFile);
 
             return proceedConstruction(frame, s_constructor, true, hStruct, ahVar, Op.A_STACK);
-            }
+        }
 
         return super.createConstHandle(frame, constant);
-        }
+    }
 
 
     // ----- constants -----------------------------------------------------------------------------
 
     private static MethodStructure s_constructor;
-    }
+}

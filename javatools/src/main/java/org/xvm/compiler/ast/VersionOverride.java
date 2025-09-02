@@ -16,8 +16,7 @@ import org.xvm.compiler.Token.Id;
  * A version override specifies allowable, avoided, and preferred version information.
  */
 public class VersionOverride
-        extends AstNode
-    {
+        extends AstNode {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -25,10 +24,9 @@ public class VersionOverride
      *
      * @param exprVer  denotes the version required
      */
-    public VersionOverride(LiteralExpression exprVer)
-        {
+    public VersionOverride(LiteralExpression exprVer) {
         this(null, exprVer);
-        }
+    }
 
     /**
      * Construct a version override.
@@ -36,12 +34,11 @@ public class VersionOverride
      * @param verb     the overriding verb ("allow", "avoid", or "prefer")
      * @param exprVer  denotes the version associated with the verb
      */
-    public VersionOverride(Token verb, LiteralExpression exprVer)
-        {
+    public VersionOverride(Token verb, LiteralExpression exprVer) {
         assert exprVer != null && exprVer.literal.getId() == Id.LIT_VERSION;
         this.verb    = verb;
         this.exprVer = exprVer;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -49,67 +46,58 @@ public class VersionOverride
     /**
      * @return the version number
      */
-    public Version getVersion()
-        {
+    public Version getVersion() {
         return exprVer.getVersion();
-        }
+    }
 
     /**
      * @return true iff the version is allowed or preferred, or false if the version is avoided
      */
-    public boolean isAllowed()
-        {
+    public boolean isAllowed() {
         return verb == null || verb.getId() != Token.Id.AVOID;
-        }
+    }
 
     /**
      * @return true iff the version is a preferred version
      */
-    public boolean isPreferred()
-        {
+    public boolean isPreferred() {
         return verb != null && verb.getId() == Token.Id.PREFER;
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return verb == null
                 ? exprVer.getStartPosition()
                 : verb.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return exprVer.getEndPosition();
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return verb == null ? exprVer.toString() : (verb.getId().TEXT + ' ' + exprVer.toString());
-        }
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
     @Override
-    public Map<String, Object> getDumpChildren()
-        {
+    public Map<String, Object> getDumpChildren() {
         return Collections.emptyMap();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -127,4 +115,4 @@ public class VersionOverride
     protected LiteralExpression exprVer;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(VersionOverride.class, "exprVer");
-    }
+}

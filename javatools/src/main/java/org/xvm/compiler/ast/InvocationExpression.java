@@ -213,17 +213,15 @@ import org.xvm.util.Severity;
  * </ul>
  */
 public class InvocationExpression
-        extends Expression
-    {
+        extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public InvocationExpression(Expression expr, boolean async, List<Expression> args, long lEndPos)
-        {
+    public InvocationExpression(Expression expr, boolean async, List<Expression> args, long lEndPos) {
         this.expr    = expr;
         this.async   = async;
         this.args    = args;
         this.lEndPos = lEndPos;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -231,14 +229,12 @@ public class InvocationExpression
     /**
      * @return true iff this invocation is marked as asynchronous
      */
-    public boolean isAsync()
-        {
+    public boolean isAsync() {
         return async;
-        }
+    }
 
     @Override
-    public boolean validateCondition(ErrorListener errs)
-        {
+    public boolean validateCondition(ErrorListener errs) {
         return expr instanceof NameExpression exprName
                 && "versionMatches".equals(exprName.getName())
                 && args.size() == 1
@@ -247,104 +243,88 @@ public class InvocationExpression
                 && exprName.getLeftExpression() != null
                 && exprName.isOnlyNames()
                 || super.validateCondition(errs);
-        }
+    }
 
     @Override
-    public ConditionalConstant toConditionalConstant()
-        {
-        if (validateCondition(null))
-            {
+    public ConditionalConstant toConditionalConstant() {
+        if (validateCondition(null)) {
             // build the qualified module name
             StringBuilder sb    = new StringBuilder();
             List<Token>   names = ((NameExpression) expr).getNameTokens();
-            for (int i = 0, c = names.size() - 1; i < c; ++i)
-                {
-                if (i > 0)
-                    {
+            for (int i = 0, c = names.size() - 1; i < c; ++i) {
+                if (i > 0) {
                     sb.append('.');
-                    }
-                sb.append(names.get(i).getValueText());
                 }
+                sb.append(names.get(i).getValueText());
+            }
 
             ConstantPool pool    = pool();
             String       sModule = sb.toString();
             Version      version = ((LiteralExpression) args.get(0)).getVersion();
             return pool.ensureImportVersionCondition(
                     pool.ensureModuleConstant(sModule), pool.ensureVersionConstant(version));
-            }
+        }
 
         return super.toConditionalConstant();
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return expr.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return lEndPos;
-        }
+    }
 
     @Override
-    protected void updateLineNumber(Code code)
-        {
-        if (expr instanceof NameExpression exprName)
-            {
+    protected void updateLineNumber(Code code) {
+        if (expr instanceof NameExpression exprName) {
             // use the line that contains the method name (etc...) as the current line;
             // this is dramatically better for fluent style coding convention
             code.updateLineNumber(Source.calculateLine(exprName.getNameToken().getStartPosition()));
-            }
-        else
-            {
+        } else {
             super.updateLineNumber(code);
-            }
         }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
 
     @Override
-    protected boolean hasSingleValueImpl()
-        {
+    protected boolean hasSingleValueImpl() {
         return false;
-        }
+    }
 
     @Override
-    protected boolean hasMultiValueImpl()
-        {
+    protected boolean hasMultiValueImpl() {
         return true;
-        }
+    }
 
     @Override
-    public TypeConstant[] getImplicitTypes(Context ctx)
-        {
+    public TypeConstant[] getImplicitTypes(Context ctx) {
         return resolveReturnTypes(ctx, null, false, ErrorListener.BLACKHOLE);
-        }
+    }
 
     @Override
     public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive,
-                                ErrorListener errs)
-        {
-        if (atypeRequired == null || atypeRequired.length == 0)
-            {
+                                ErrorListener errs) {
+        if (atypeRequired == null || atypeRequired.length == 0) {
             return TypeFit.Fit;
-            }
+        }
 
         TypeConstant[] atype = resolveReturnTypes(ctx, atypeRequired, fExhaustive,
                                     errs == null ? ErrorListener.BLACKHOLE : errs);
 
         return calcFitMulti(ctx, atype, atypeRequired);
-        }
+    }
 
     /**
      * A common implementation for both {@link #getImplicitType} and
@@ -359,55 +339,46 @@ public class InvocationExpression
      *         is void (or if its type cannot be determined)
      */
     protected TypeConstant[] resolveReturnTypes(Context ctx, TypeConstant[] atypeRequired,
-                                                boolean fExhaustive, ErrorListener errs)
-        {
-        if (isValidated())
-            {
+                                                boolean fExhaustive, ErrorListener errs) {
+        if (isValidated()) {
             return getTypes();
-            }
+        }
 
         ConstantPool pool = pool();
 
-        if (expr instanceof NameExpression exprName)
-            {
+        if (expr instanceof NameExpression exprName) {
             Expression   exprLeft = exprName.left;
             TypeConstant typeLeft = null;
-            if (exprLeft != null)
-                {
+            if (exprLeft != null) {
                 typeLeft = exprLeft.getImplicitType(ctx);
-                if (typeLeft == null)
-                    {
+                if (typeLeft == null) {
                     // the fact that getImplicitType() returned null may mean that the "left" name
                     // is not resolvable; try to produce a proper error message in that case
                     exprLeft.testFit(ctx, pool.typeObject(), fExhaustive, errs);
                     return TypeConstant.NO_TYPES;
-                    }
                 }
+            }
 
             // the return types are a combination of required and redundant types
             TypeConstant[]       atypeReturn   = atypeRequired;
             List<TypeExpression> listRedundant = exprName.getTrailingTypeParams();
 
-            if (listRedundant != null)
-                {
+            if (listRedundant != null) {
                 // collect as many redundant return types as possible to help narrow down the
                 // possible method/function matches and combine with required types
                 atypeReturn = applyRedundantTypes(ctx, atypeRequired, listRedundant, false, errs);
-                if (atypeReturn == null)
-                    {
+                if (atypeReturn == null) {
                     return TypeConstant.NO_TYPES;
-                    }
                 }
+            }
 
             Argument argMethod = resolveName(ctx, false, typeLeft, atypeReturn, errs);
-            if (argMethod == null)
-                {
+            if (argMethod == null) {
                 return TypeConstant.NO_TYPES;
-                }
+            }
 
             // handle conversion to function
-            if (m_idConvert != null)
-                {
+            if (m_idConvert != null) {
                 // the first return type of the idConvert method must be a function, which in turn
                 // has two sub-types, the first of which is its "params" and the second of which is
                 // its "returns", and the returns is a tuple type parameterized by the types of the
@@ -416,61 +387,53 @@ public class InvocationExpression
                 TypeConstant   typeFn        = atypeConvRets[0];
 
                 assert typeFn.isA(pool.typeFunction());
-                if (m_fCall)
-                    {
+                if (m_fCall) {
                     return pool.extractFunctionReturns(typeFn);
-                    }
-
-                if (m_fBindParams)
-                    {
-                    typeFn = bindFunctionParameters(typeFn);
-                    }
-                return new TypeConstant[]{typeFn};
                 }
 
+                if (m_fBindParams) {
+                    typeFn = bindFunctionParameters(typeFn);
+                }
+                return new TypeConstant[]{typeFn};
+            }
+
             // handle method or function
-            if (argMethod instanceof MethodConstant idMethod)
-                {
+            if (argMethod instanceof MethodConstant idMethod) {
                 MethodStructure     method      = m_method;
                 int                 cTypeParams = method.getTypeParamCount();
                 int                 cReturns    = method.getReturnCount();
                 GenericTypeResolver resolver    = null;
 
-                if (cTypeParams > 0)
-                    {
+                if (cTypeParams > 0) {
                     // resolve the type parameters against all the arg types we know by now
                     TypeConstant[] atype = m_fCall || cReturns == 0 || atypeReturn == null
                             ? atypeReturn
                             : pool.extractFunctionReturns(atypeReturn[0]);
                     resolver = makeTypeParameterResolver(ctx, method, false, typeLeft, atype,
                                     ErrorListener.BLACKHOLE);
-                    }
+                }
 
-                if (m_fCall)
-                    {
-                    if (cReturns == 0)
-                        {
+                if (m_fCall) {
+                    if (cReturns == 0) {
                         // we allow a void method's return into an empty Tuple
                         return atypeReturn != null && atypeReturn.length == 1 && isVoid(atypeReturn)
                                 ? atypeReturn
                                 : TypeConstant.NO_TYPES;
-                        }
+                    }
 
-                    if (method.isFunction() || method.isConstructor())
-                        {
+                    if (method.isFunction() || method.isConstructor()) {
                         return resolveTypes(resolver, idMethod.getSignature().getRawReturns());
-                        }
-                    if (typeLeft == null)
-                        {
+                    }
+                    if (typeLeft == null) {
                         typeLeft = m_targetInfo == null
                                 ? ctx.getThisType()
                                 : m_targetInfo.getTargetType();
-                        }
+                    }
                     SignatureConstant sigMethod = idMethod.getSignature();
 
                     return resolveTypes(resolver,
                             sigMethod.resolveAutoNarrowing(pool, typeLeft, null).getRawReturns());
-                    }
+                }
 
                 TypeConstant typeFn = m_fBindTarget
                         ? method.isVirtualConstructor()
@@ -478,62 +441,50 @@ public class InvocationExpression
                             : idMethod.getSignature().asFunctionType()
                         : idMethod.getValueType(pool, typeLeft);
 
-                if (cTypeParams > 0)
-                    {
+                if (cTypeParams > 0) {
                     typeFn = removeTypeParameters(typeFn, cTypeParams);
-                    }
-
-                if (resolver != null)
-                    {
-                    typeFn = typeFn.resolveGenerics(pool, resolver);
-                    }
-
-                if (m_fBindParams)
-                    {
-                    typeFn = bindFunctionParameters(typeFn);
-                    }
-                return new TypeConstant[]{typeFn};
                 }
+
+                if (resolver != null) {
+                    typeFn = typeFn.resolveGenerics(pool, resolver);
+                }
+
+                if (m_fBindParams) {
+                    typeFn = bindFunctionParameters(typeFn);
+                }
+                return new TypeConstant[]{typeFn};
+            }
 
             // must be a property or a variable of type function (@Auto conversion possibility
             // already handled above); the function has two tuple sub-types, the second of which is
             // the "return types" of the function
             TypeConstant typeArg;
-            if (argMethod instanceof PropertyConstant idProp)
-                {
+            if (argMethod instanceof PropertyConstant idProp) {
                 TypeInfo     infoLeft = getTypeInfo(ctx, typeLeft, errs);
                 PropertyInfo infoProp = infoLeft.findProperty(idProp);
 
                 typeArg = infoProp == null ? pool.typeObject() : infoProp.inferImmutable(typeLeft);
-                }
-            else
-                {
+            } else {
                 assert argMethod instanceof Register;
                 typeArg = argMethod.getType().resolveTypedefs();
-                }
+            }
 
-            if (typeArg.isA(pool.typeFunction()) || typeArg.isA(pool.typeMethod()))
-                {
+            if (typeArg.isA(pool.typeFunction()) || typeArg.isA(pool.typeMethod())) {
                 return calculateReturnType(typeArg);
-                }
+            }
 
             // try to guess what went wrong
-            if (argMethod instanceof PropertyConstant)
-                {
-                if (typeLeft == null)
-                    {
+            if (argMethod instanceof PropertyConstant) {
+                if (typeLeft == null) {
                     typeLeft = ctx.getThisType();
-                    }
+                }
                 log(errs, Severity.ERROR, Compiler.SUSPICIOUS_PROPERTY_USE,
                         exprName.getName(), typeLeft.getValueString());
-                }
             }
-        else // not a NameExpression
-            {
+        } else { // not a NameExpression
             // it has to either be a function or convertible to a function
             TypeConstant typeFn = expr.getImplicitType(ctx);
-            if (typeFn != null)
-                {
+            if (typeFn != null) {
                 // since we didn't call "resolveName", need to set the corresponding values
                 m_fBindTarget = false;
                 m_fBindParams = isAnyArgBound();
@@ -541,14 +492,13 @@ public class InvocationExpression
                 m_fNamedArgs  = containsNamedArgs(args);
 
                 typeFn = testFunction(ctx, typeFn, 0, 0, atypeRequired, errs);
-                if (typeFn != null)
-                    {
+                if (typeFn != null) {
                     return calculateReturnType(typeFn);
-                    }
                 }
             }
-        return TypeConstant.NO_TYPES;
         }
+        return TypeConstant.NO_TYPES;
+    }
 
     /**
      * Calculate the return types by combining the required and redundant type information.
@@ -563,127 +513,97 @@ public class InvocationExpression
      */
     private TypeConstant[] applyRedundantTypes(Context ctx, TypeConstant[] atypeRequired,
                                                List<TypeExpression> listRedundant,
-                                               boolean fValidate, ErrorListener errs)
-        {
+                                               boolean fValidate, ErrorListener errs) {
         ConstantPool   pool    = pool();
         boolean        fNoCall = isSuppressCall();
         TypeConstant   typeFn;
         TypeConstant[] atypeReturn;
 
-        if (fNoCall)
-            {
-            if (atypeRequired == null)
-                {
+        if (fNoCall) {
+            if (atypeRequired == null) {
                 typeFn      = pool.typeFunction();
                 atypeReturn = TypeConstant.NO_TYPES;
-                }
-            else
-                {
+            } else {
                 typeFn = atypeRequired[0];
-                if (typeFn.isA(pool.typeFunction()))
-                    {
+                if (typeFn.isA(pool.typeFunction())) {
                     atypeReturn = pool.extractFunctionReturns(typeFn);
-                    }
-                else if (pool.typeFunction().isA(typeFn)) // e.g. Object
-                    {
+                } else if (pool.typeFunction().isA(typeFn)) { // e.g. Object
                     typeFn      = pool.typeFunction();
                     atypeReturn = TypeConstant.NO_TYPES;
-                    }
-                else
-                    {
+                } else {
                     // no fit
-                    if (fValidate)
-                        {
+                    if (fValidate) {
                         log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                                 "Function", typeFn.getValueString());
-                        }
-                    return null;
                     }
+                    return null;
                 }
             }
-        else
-            {
+        } else {
             typeFn      = null;
             atypeReturn = atypeRequired == null ? TypeConstant.NO_TYPES : atypeRequired.clone();
-            }
+        }
 
         int     cRequired  = atypeReturn.length;
         int     cRedundant = listRedundant.size();
         boolean fCond      = false;
 
-        if (cRedundant > cRequired)
-            {
+        if (cRedundant > cRequired) {
             atypeReturn = Arrays.copyOf(atypeReturn, cRedundant);
-            }
-        else if (cRedundant < cRequired)
-            {
+        } else if (cRedundant < cRequired) {
             // the only case when we have fewer types than required is a conditional return
-            if (cRequired == cRedundant + 1 && atypeRequired[0].isA(pool.typeBoolean()))
-                {
+            if (cRequired == cRedundant + 1 && atypeRequired[0].isA(pool.typeBoolean())) {
                 fCond = true;
-                }
-            else
-                {
-                if (fValidate)
-                    {
+            } else {
+                if (fValidate) {
                     log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_MISMATCH);
-                    }
-                return null;
                 }
+                return null;
             }
+        }
 
-        for (int i = 0; i < cRedundant; ++i)
-            {
+        for (int i = 0; i < cRedundant; ++i) {
             TypeExpression exprType = listRedundant.get(i);
 
-            if (fValidate)
-                {
+            if (fValidate) {
                 int          ixType      = fCond ? i + 1 : i;
                 TypeConstant typeTypeReq = i < cRequired
                         ? atypeReturn[ixType].getType()
                         : pool.typeType();
 
                 TypeExpression exprTypeNew = (TypeExpression) exprType.validate(ctx, typeTypeReq, errs);
-                if (exprTypeNew == null)
-                    {
+                if (exprTypeNew == null) {
                     return null;
-                    }
+                }
 
-                if (exprTypeNew != exprType)
-                    {
+                if (exprTypeNew != exprType) {
                     // WARNING: mutating contents of the NameExpression, which has been
                     //          _subsumed_ by this InvocationExpression
                     listRedundant.set(i, exprTypeNew);
-                    }
+                }
                 atypeReturn[ixType] = exprTypeNew.getType().getParamType(0);
-                }
-            else
-                {
+            } else {
                 TypeConstant typeParam = exprType.getImplicitType(ctx);
-                if (typeParam == null || !typeParam.isTypeOfType())
-                    {
+                if (typeParam == null || !typeParam.isTypeOfType()) {
                     return null;
-                    }
-                TypeConstant typeReturn = typeParam.getParamType(0);
-                if (typeReturn.containsUnresolved())
-                    {
-                    return null;
-                    }
-                atypeReturn[i] = typeReturn;
                 }
+                TypeConstant typeReturn = typeParam.getParamType(0);
+                if (typeReturn.containsUnresolved()) {
+                    return null;
+                }
+                atypeReturn[i] = typeReturn;
             }
-
-        if (fNoCall)
-            {
-            typeFn      = pool.buildFunctionType(pool.extractFunctionParams(typeFn), atypeReturn);
-            atypeReturn = new TypeConstant[] {typeFn};
-            }
-        return atypeReturn;
         }
 
+        if (fNoCall) {
+            typeFn      = pool.buildFunctionType(pool.extractFunctionParams(typeFn), atypeReturn);
+            atypeReturn = new TypeConstant[] {typeFn};
+        }
+        return atypeReturn;
+    }
+
     @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
-        {
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs) {
         // the reason for tracking success (fValid) is that we want to get as many things
         // validated as possible, but if some expressions didn't validate, we can't predictably find
         // the desired method or function (e.g. without a left expression providing validated type
@@ -696,67 +616,55 @@ public class InvocationExpression
         // because the name resolution is the responsibility of this InvocationExpression, and
         // the NameExpression itself will error on resolving a method/function name
         Validate:
-        if (expr instanceof NameExpression exprName)
-            {
+        if (expr instanceof NameExpression exprName) {
             // if the name expression has an expression on _its_ left, then we are now responsible
             // for validating that "left's left" expression
             Expression   exprLeft = exprName.left;
             TypeConstant typeLeft = null;
-            if (exprLeft != null)
-                {
+            if (exprLeft != null) {
                 Expression exprNew = exprLeft.validate(ctx, null, errs);
-                if (exprNew == null)
-                    {
+                if (exprNew == null) {
                     return null;
-                    }
+                }
 
-                if (exprNew != exprLeft)
-                    {
+                if (exprNew != exprLeft) {
                     // WARNING: mutating contents of the NameExpression, which has been
                     //          _subsumed_ by this InvocationExpression
                     exprName.left = exprLeft = exprNew;
-                    }
+                }
 
                 typeLeft = exprLeft.getType();
-                if (typeLeft == null)
-                    {
+                if (typeLeft == null) {
                     exprLeft.log(errs, Severity.ERROR, Compiler.RETURN_REQUIRED);
                     return null;
-                    }
                 }
+            }
 
             // the return types are a combination of required and redundant types
             TypeConstant[]       atypeReturn   = atypeRequired;
             List<TypeExpression> listRedundant = exprName.getTrailingTypeParams();
-            if (listRedundant != null)
-                {
+            if (listRedundant != null) {
                 atypeReturn = applyRedundantTypes(ctx, atypeRequired, listRedundant, true, errs);
-                if (atypeReturn == null)
-                    {
+                if (atypeReturn == null) {
                     return null;
-                    }
                 }
+            }
 
             // transform the return types using the current context if possible
-            if (atypeReturn != null)
-                {
-                for (int i = 0, c = atypeReturn.length; i < c; i++)
-                    {
+            if (atypeReturn != null) {
+                for (int i = 0, c = atypeReturn.length; i < c; i++) {
                     TypeConstant typeRet = atypeReturn[i];
-                    if (typeRet != null && typeRet.containsGenericType(true))
-                        {
+                    if (typeRet != null && typeRet.containsGenericType(true)) {
                         TypeConstant typeRetR = typeRet.resolveGenerics(pool, ctx.getThisType());
-                        if (typeRetR != typeRet)
-                            {
-                            if (atypeReturn == atypeRequired)
-                                {
+                        if (typeRetR != typeRet) {
+                            if (atypeReturn == atypeRequired) {
                                 atypeReturn = atypeRequired.clone();
-                                }
-                            atypeReturn[i] = typeRetR;
                             }
+                            atypeReturn[i] = typeRetR;
                         }
                     }
                 }
+            }
 
             // resolving the name will yield a method, a function, or something else that needs
             // to yield a function, such as a property or variable that holds a function or
@@ -765,82 +673,68 @@ public class InvocationExpression
             ErrorListener    errsTemp = errs.branch(this);
 
             Argument argMethod = resolveName(ctx, true, typeLeft, atypeReturn, errsTemp);
-            if (argMethod == null)
-                {
+            if (argMethod == null) {
                 // as the last resort, validate the arguments before trying to resolve the name again
                 // (regardless of the outcome, this final validation errors should be reported, but
                 // the order in which they were encountered needs to be preserved)
                 ErrorListener  errsMain  = errs.branch(this);
                 TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, null, errsMain);
-                if (atypeArgs == null)
-                    {
+                if (atypeArgs == null) {
                     errsTemp.merge();
                     errsMain.merge();
                     return null;
-                    }
+                }
 
                 errsMain.merge();
                 argMethod = resolveName(ctx, true, typeLeft, atypeReturn, errs);
-                if (argMethod == null)
-                    {
+                if (argMethod == null) {
                     return null;
-                    }
                 }
+            }
 
-            if (m_idFormal != null)
-                {
+            if (m_idFormal != null) {
                 // argMethod is a function on a formal type or a formal property
                 assert typeLeft.isTypeOfType();
                 typeLeft = typeLeft.getParamType(0);
-                }
+            }
 
-            if (m_fNamedArgs)
-                {
+            if (m_fNamedArgs) {
                 assert argMethod instanceof MethodConstant;
                 listArgs = rearrangeNamedArgs(m_method, listArgs, errs);
-                if (listArgs == null)
-                    {
+                if (listArgs == null) {
                     // invalid names encountered
                     return null;
-                    }
-                args = listArgs;
                 }
+                args = listArgs;
+            }
 
             // when the expression is a name, and it is NOT a ".name", then we have to
             // record the dependency on the name, whether it's a variable (or an instance
             // property on the implicit "this") that contains a function reference, or (most
             // commonly) an implicit "this" for a method call
-            if (exprLeft == null)
-                {
-                if (argMethod instanceof Register)
-                    {
+            if (exprLeft == null) {
+                if (argMethod instanceof Register) {
                     ctx.markVarRead(exprName.getNameToken(), true, errs);
-                    }
-                else
-                    {
+                } else {
                     boolean fStatic = argMethod instanceof MethodConstant idMethod
                             ? getMethod(ctx, idMethod).isFunction()
                             : getProperty(ctx, (PropertyConstant) argMethod).isStatic();
 
-                    if (!fStatic)
-                        {
+                    if (!fStatic) {
                         // there is a read of the implicit "this" variable
                         Token tokName = exprName.getNameToken();
                         long  lPos    = tokName.getStartPosition();
                         Token tokThis = new Token(lPos, lPos, Id.THIS);
                         ctx.markVarRead(tokThis, true, errs);
-                        }
                     }
                 }
-            else if (m_fBjarne)
-                {
+            } else if (m_fBjarne) {
                 listArgs.add(0, exprLeft);
                 typeLeft = null;
-                }
+            }
 
             // handle conversion to function
-            if (m_idConvert != null)
-                {
+            if (m_idConvert != null) {
                 // the first return type of the idConvert method must be a function, which in turn
                 // has two sub-types, the first of which is its "params" and the second of which is
                 // its "returns", and the returns is a tuple type parameterized by the types of the
@@ -850,24 +744,19 @@ public class InvocationExpression
 
                 assert typeFn.isA(pool.typeFunction());
 
-                if (fCall)
-                    {
+                if (fCall) {
                     atypeResult = pool.extractFunctionReturns(typeFn);
-                    }
-                else
-                    {
-                    if (m_fBindParams)
-                        {
+                } else {
+                    if (m_fBindParams) {
                         typeFn = bindFunctionParameters(typeFn);
-                        }
-                    atypeResult = new TypeConstant[]{typeFn};
                     }
-                break Validate;
+                    atypeResult = new TypeConstant[]{typeFn};
                 }
+                break Validate;
+            }
 
             // handle method or function
-            if (argMethod instanceof MethodConstant idMethod)
-                {
+            if (argMethod instanceof MethodConstant idMethod) {
                 MethodStructure method      = m_method;
                 TypeConstant[]  atypeParams = idMethod.getRawParams();
                 int             cTypeParams = method.getTypeParamCount();
@@ -875,10 +764,8 @@ public class InvocationExpression
                 int             cReturns    = atypeReturn == null ? 0 : atypeReturn.length;
                 boolean         fCondReturn = method.isConditionalReturn() && cReturns > 1;
 
-                if (cParams > 0)
-                    {
-                    if (cTypeParams > 0)
-                        {
+                if (cParams > 0) {
+                    if (cTypeParams > 0) {
                         // purge the type parameters and resolve the method signature
                         // against all the types we know by now (marking unresolved as "pending")
                         GenericTypeResolver resolver = makeTypeParameterResolver(ctx, method, true,
@@ -886,59 +773,48 @@ public class InvocationExpression
                                 fCall || cReturns == 0
                                     ? atypeReturn
                                     : pool.extractFunctionReturns(atypeReturn[0]), errs);
-                        if (resolver == null)
-                            {
+                        if (resolver == null) {
                             return null;
-                            }
+                        }
 
                         TypeConstant[] atype = new TypeConstant[cParams];
                         System.arraycopy(atypeParams, cTypeParams, atype, 0, cParams);
 
                         atypeParams = resolveTypes(resolver, atype);
-                        }
-                    else
-                        {
+                    } else {
                         atypeParams = atypeParams.clone();
-                        }
                     }
-                else
-                    {
+                } else {
                     atypeParams = TypeConstant.NO_TYPES;
-                    }
+                }
 
                 // now try to resolve the formal types for parameters validation
-                for (int i = 0, c = atypeParams.length; i < c; i++)
-                    {
+                for (int i = 0, c = atypeParams.length; i < c; i++) {
                     TypeConstant type = atypeParams[i];
-                    if (type instanceof PendingTypeConstant)
-                        {
+                    if (type instanceof PendingTypeConstant) {
                         log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
                             method.getParam(i).getName());
                         return null;
-                        }
-                    if (type.containsFormalType(true))
-                        {
+                    }
+                    if (type.containsFormalType(true)) {
                         // choose the wider type between the original and resolved ones
                         atypeParams[i] = type.union(pool, ctx.resolveFormalType(type));
-                        }
                     }
+                }
 
-                if (typeLeft == null && !m_method.isFunction())
-                    {
+                if (typeLeft == null && !m_method.isFunction()) {
                     typeLeft = m_targetInfo == null
                             ? ctx.getThisType()
                             : m_targetInfo.getTargetType();
-                    }
+                }
 
                 TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, atypeParams, errs);
-                if (atypeArgs == null)
-                    {
+                if (atypeArgs == null) {
                     return null;
-                    }
+                }
 
                 Map<FormalConstant, TypeConstant> mapTypeParams = Collections.emptyMap();
-                if (cTypeParams > 0)
-                    {
+                if (cTypeParams > 0) {
                     transformTypeArguments(ctx, listArgs, atypeArgs);
 
                     // re-resolve against the validated types
@@ -948,207 +824,167 @@ public class InvocationExpression
                         fCall || cReturns == 0
                             ? atypeReturn
                             : pool.extractFunctionReturns(atypeReturn[0]), false);
-                    if (mapTypeParams.size() < cTypeParams)
-                        {
+                    if (mapTypeParams.size() < cTypeParams) {
                         log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
                             method.collectUnresolvedTypeParameters(mapTypeParams.keySet().
                                 stream().map(NamedConstant::getName).collect(Collectors.toSet())));
                         return null;
-                        }
+                    }
 
                     Argument[]   aargTypeParam  = new Argument[mapTypeParams.size()];
                     List<String> listUnresolved = null;
                     int          iArg           = 0;
-                    for (TypeConstant typeArg : mapTypeParams.values())
-                        {
-                        if (typeArg.containsUnresolved())
-                            {
-                            if (listUnresolved == null)
-                                {
+                    for (TypeConstant typeArg : mapTypeParams.values()) {
+                        if (typeArg.containsUnresolved()) {
+                            if (listUnresolved == null) {
                                 listUnresolved = new ArrayList<>();
-                                }
+                            }
                             listUnresolved.add(method.getParam(iArg++).getName());
                             continue;
-                            }
+                        }
 
                         TypeConstant typeConstraint = idMethod.getRawParams()[iArg].getParamType(0);
 
                         // there's a possibility that type parameter constraints refer to
                         // previous type parameters, for example:
                         //   <T1 extends Base, T2 extends T1> foo(T1 v1, T2 v2) {...}
-                        if (typeConstraint.containsTypeParameter(true))
-                            {
+                        if (typeConstraint.containsTypeParameter(true)) {
                             typeConstraint = typeConstraint.resolveGenerics(pool,
                                                 GenericTypeResolver.of(mapTypeParams));
-                            }
+                        }
 
-                        if (!typeArg.isA(typeConstraint))
-                            {
+                        if (!typeArg.isA(typeConstraint)) {
                             log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                                     typeConstraint.getValueString(), typeArg.getValueString());
                             return null;
-                            }
+                        }
                         aargTypeParam[iArg++] = typeArg.getType();
-                        }
-
-                    if (listUnresolved != null)
-                        {
-                        log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE, listUnresolved);
-                        return null;
-                        }
-                    m_aargTypeParams = aargTypeParam;
                     }
 
-                if (fCall)
-                    {
+                    if (listUnresolved != null) {
+                        log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE, listUnresolved);
+                        return null;
+                    }
+                    m_aargTypeParams = aargTypeParam;
+                }
+
+                if (fCall) {
                     SignatureConstant sigMethod = idMethod.getSignature();
-                    if (sigMethod.containsAutoNarrowing(true))
-                        {
+                    if (sigMethod.containsAutoNarrowing(true)) {
                         sigMethod = sigMethod.resolveAutoNarrowing(pool, typeLeft, null);
-                        }
-                    if (!mapTypeParams.isEmpty())
-                        {
+                    }
+                    if (!mapTypeParams.isEmpty()) {
                         sigMethod = sigMethod.resolveGenericTypes(pool,
                                         GenericTypeResolver.of(mapTypeParams));
-                        }
+                    }
                     atypeResult = sigMethod.getRawReturns();
 
-                    if (fCondReturn)
-                        {
-                        if (getParent().allowsConditional(this))
-                            {
+                    if (fCondReturn) {
+                        if (getParent().allowsConditional(this)) {
                             m_fCondResult = true;
-                            }
-                        else
-                            {
+                        } else {
                             log(errs, Severity.ERROR, Compiler.CONDITIONAL_RETURN_NOT_ALLOWED,
                                 method.getIdentityConstant().getValueString());
                             return null;
-                            }
                         }
-                    if (cReturns > 0)
-                        {
+                    }
+                    if (cReturns > 0) {
                         // check for Tuple conversion for the return value; we know that the
                         // method should fit, so the only thing to figure out is whether
                         // "packing" to a Tuple is necessary
-                        if (atypeReturn.length == 0)
-                            {
+                        if (atypeReturn.length == 0) {
                             atypeResult = atypeReturn;
-                            }
-                        else if (calculateReturnFit(sigMethod, fCall, atypeReturn, ctx.getThisType(),
-                                ErrorListener.BLACKHOLE).isPacking())
-                            {
+                        } else if (calculateReturnFit(sigMethod, fCall, atypeReturn, ctx.getThisType(),
+                                ErrorListener.BLACKHOLE).isPacking()) {
                             atypeResult = new TypeConstant[]{pool.ensureTupleType(atypeResult)};
                             m_fPack     = true;
-                            }
                         }
                     }
-                else
-                    {
-                    if (atypeReturn == null || atypeReturn.length == 0)
-                        {
+                } else {
+                    if (atypeReturn == null || atypeReturn.length == 0) {
                         // binding without an l-value to assign the result into makes no sense
                         log(errs, Severity.ERROR, Compiler.LVALUE_REQUIRED);
                         return null;
-                        }
+                    }
                     TypeConstant typeFn = m_fBindTarget
                             ? method.isVirtualConstructor()
                                 ? idMethod.getSignature().asConstructorType(pool, typeLeft)
                                 : idMethod.getSignature().asFunctionType()
                             : idMethod.getValueType(pool, typeLeft);
 
-                    if (cTypeParams > 0)
-                        {
+                    if (cTypeParams > 0) {
                         typeFn = removeTypeParameters(typeFn, cTypeParams);
-                        }
+                    }
 
-                    if (m_fBindParams)
-                        {
+                    if (m_fBindParams) {
                         typeFn = bindFunctionParameters(typeFn);
-                        }
+                    }
 
-                    if (!mapTypeParams.isEmpty())
-                        {
+                    if (!mapTypeParams.isEmpty()) {
                         typeFn = typeFn.resolveGenerics(pool, GenericTypeResolver.of(mapTypeParams));
-                        }
+                    }
 
                     atypeResult = new TypeConstant[] {typeFn};
-                    }
                 }
-            else
-                {
+            } else {
                 // must be a property or a variable of type function (@Auto conversion possibility
                 // already handled above); the function has two tuple sub-types, the second of which is
                 // the "return types" of the function
                 int          cTypeParams = 0;
                 int          cDefaults   = 0;
                 TypeConstant typeFn;
-                if (argMethod instanceof PropertyConstant idProp)
-                    {
-                    if (m_targetInfo != null)
-                        {
+                if (argMethod instanceof PropertyConstant idProp) {
+                    if (m_targetInfo != null) {
                         typeLeft = m_targetInfo.getTargetType();
-                        }
-                    else if (m_typeTarget != null)
-                        {
+                    } else if (m_typeTarget != null) {
                         typeLeft = m_typeTarget;
-                        }
+                    }
                     TypeInfo     infoLeft = getTypeInfo(ctx, typeLeft, errs);
                     PropertyInfo infoProp = infoLeft.findProperty(idProp);
-                    if (infoProp == null)
-                        {
+                    if (infoProp == null) {
                         log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
                                 idProp.getValueString(), typeLeft.getValueString());
                         return null;
-                        }
-                    typeFn = infoProp.inferImmutable(typeLeft);
                     }
-                else
-                    {
+                    typeFn = infoProp.inferImmutable(typeLeft);
+                } else {
                     assert argMethod instanceof Register;
 
                     typeFn = argMethod.getType().resolveTypedefs();
 
-                    if (((Register) argMethod).isSuper())
-                        {
+                    if (((Register) argMethod).isSuper()) {
                         MethodStructure method = ctx.getMethod();
 
                         cDefaults   = method.getDefaultParamCount();
                         cTypeParams = method.getTypeParamCount();
-                        if (cTypeParams > 0 && typeFn.isA(pool.typeFunction()))
-                            {
+                        if (cTypeParams > 0 && typeFn.isA(pool.typeFunction())) {
                             Argument[] aargTypeParam = new Argument[cTypeParams];
-                            for (int i = 0; i < cTypeParams; i++)
-                                {
+                            for (int i = 0; i < cTypeParams; i++) {
                                 aargTypeParam[i] = ctx.getParameter(i);
-                                }
-                            m_aargTypeParams = aargTypeParam;
                             }
+                            m_aargTypeParams = aargTypeParam;
                         }
                     }
+                }
 
-                if (!typeFn.isA(pool.typeFunction()) && !typeFn.isA(pool.typeMethod()))
-                    {
+                if (!typeFn.isA(pool.typeFunction()) && !typeFn.isA(pool.typeMethod())) {
                     log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                             "Function", typeFn.getValueString());
                     return null;
-                    }
+                }
 
-                if (exprName.isSuppressDeref())
-                    {
-                    if (typeFn.isA(pool.typeMethod()))
-                        {
+                if (exprName.isSuppressDeref()) {
+                    if (typeFn.isA(pool.typeMethod())) {
                         log(errs, Severity.ERROR, Compiler.INVALID_PROPERTY_REF);
                         return null;
-                        }
+                    }
                     assert argMethod instanceof Register && !fCall;
 
                     // this must be a scenario of binding a function at a register, e.g.:
                     //      function void (Int) fn1 = ...
                     //      function void ()    fn0 = &fn1(42);
                     // validation of the exprName would produce a Ref<Function> (&fn1), so we skip it;
-                    if (((Register) argMethod).isSuper() && cTypeParams > 0)
-                        {
+                    if (((Register) argMethod).isSuper() && cTypeParams > 0) {
                         // the caller doesn't expect to see type parameters in the signature;
                         // we need to remove them from the function type
                         TypeConstant[] atypeFnParams  = pool.extractFunctionParams(typeFn);
@@ -1157,42 +993,34 @@ public class InvocationExpression
                                 Arrays.copyOfRange(atypeFnParams, cTypeParams, atypeFnParams.length),
                                 atypeFnReturns);
                         cTypeParams = 0;
-                        }
                     }
-                else
-                    {
+                } else {
                     Expression exprNew = exprName.validate(ctx, typeFn, errs);
-                    if (exprNew == null)
-                        {
+                    if (exprNew == null) {
                         return null;
-                        }
+                    }
 
                     expr   = exprNew;
                     typeFn = exprNew.getType();
 
-                    if (typeFn.isA(pool.typeMethod()))
-                        {
+                    if (typeFn.isA(pool.typeMethod())) {
                         TypeConstant typeTarget = typeFn.getParamType(0);
-                        if (!typeLeft.isA(typeTarget))
-                            {
+                        if (!typeLeft.isA(typeTarget)) {
                             log(errs, Severity.ERROR, Compiler.INVALID_METHOD_TARGET,
                                 typeTarget.getValueString(), exprName.getName());
                             return null;
-                            }
+                        }
                         m_fBindTarget = true;
                         m_argMethod   = argMethod;
-                        }
                     }
+                }
 
                 atypeResult = validateFunction(ctx, typeFn, cTypeParams, cDefaults, atypeRequired, errs);
-                }
             }
-        else // the expr is NOT a NameExpression
-            {
+        } else { // the expr is NOT a NameExpression
             // it has to either be a function or convertible to a function
             Expression exprNew = expr.validate(ctx, pool.typeFunction(), errs);
-            if (exprNew != null)
-                {
+            if (exprNew != null) {
                 expr = exprNew;
 
                 // since we didn't call "resolveName", need to set the corresponding values
@@ -1205,193 +1033,163 @@ public class InvocationExpression
                 // sufficient information about parameter and return types, and that it fits with
                 // the arguments that we have
                 TypeConstant typeFn = testFunction(ctx, exprNew.getType(), 0, 0, atypeRequired, errs);
-                if (typeFn == null)
-                    {
+                if (typeFn == null) {
                     return null;
-                    }
+                }
 
                 atypeResult = validateFunction(ctx, typeFn, 0, 0, atypeRequired, errs);
-                }
             }
+        }
 
-        if (atypeResult == null)
-            {
+        if (atypeResult == null) {
             return null;
-            }
+        }
 
-        if (async)
-            {
-            if (!fCall)
-                {
+        if (async) {
+            if (!fCall) {
                 log(errs, Severity.ERROR, Compiler.ASYNC_NOT_ALLOWED);
                 return null;
-                }
+            }
 
-            if (atypeRequired == null || atypeRequired.length == 0)
-                {
+            if (atypeRequired == null || atypeRequired.length == 0) {
                 // no required type means there's no left; however, there could be a continuation
                 // expression, assuming the result is a future, e.g.:
                 //      svc.f^().whenComplete(handler);
                 // this expression will produce the result as "@Future Var<T>"
                 m_fAutoFuture = true;
-                if (atypeResult.length > 0)
-                    {
+                if (atypeResult.length > 0) {
                     atypeResult = atypeResult.clone(); // don't mess up the actual types
-                    for (int i = 0, c = atypeResult.length; i < c; i++)
-                        {
+                    for (int i = 0, c = atypeResult.length; i < c; i++) {
                         atypeResult[i] = pool.ensureFutureVar(atypeResult[i]);
-                        }
                     }
-                else
-                    {
+                } else {
                     // @Future<Void>
                     atypeResult = new TypeConstant[] {pool.ensureFutureVar(pool.typeTuple0())};
-                    }
                 }
             }
+        }
         return finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, null, errs);
-        }
+    }
 
     @Override
-    public boolean isStandalone()
-        {
+    public boolean isStandalone() {
         return true;
-        }
+    }
 
     @Override
-    public boolean isTraceworthy()
-        {
+    public boolean isTraceworthy() {
         return m_fCall;
-        }
+    }
 
     @Override
-    public boolean isCompletable()
-        {
-        for (Expression arg : args)
-            {
-            if (!arg.isCompletable())
-                {
+    public boolean isCompletable() {
+        for (Expression arg : args) {
+            if (!arg.isCompletable()) {
                 return false;
-                }
             }
+        }
 
         return true;
-        }
+    }
 
     @Override
-    public boolean isShortCircuiting()
-        {
+    public boolean isShortCircuiting() {
         return expr.isShortCircuiting() || args.stream().anyMatch(Expression::isShortCircuiting);
-        }
+    }
 
     @Override
-    protected boolean allowsShortCircuit(AstNode nodeChild)
-        {
+    protected boolean allowsShortCircuit(AstNode nodeChild) {
         return super.allowsShortCircuit(nodeChild) &&
                 (nodeChild == expr ||
                  nodeChild instanceof Expression exprChild && args.contains(exprChild));
-        }
+    }
 
     @Override
-    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
-        {
-        switch (super.mightAffect(exprLeft, arg))
-            {
-            case DefNo:
-                return SideEffect.DefNo;
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg) {
+        switch (super.mightAffect(exprLeft, arg)) {
+        case DefNo:
+            return SideEffect.DefNo;
 
-            case AnyCompute:
-                if (!isSuppressCall())
-                    {
-                    return SideEffect.DefYes;
-                    }
-                // fall through
-            case Unknown:
-                SideEffect effect = SideEffect.DefNo;
-                for (Expression expr : args)
-                    {
-                    switch (expr.mightAffect(exprLeft, arg))
-                        {
-                        case DefNo, Unknown, AnyCompute:
-                            break; // keep going
-
-                        case DefYes:
-                            return SideEffect.DefYes;
-                        }
-                    }
-                return effect;
-
-            default:
-                throw new IllegalStateException();
+        case AnyCompute:
+            if (!isSuppressCall()) {
+                return SideEffect.DefYes;
             }
+            // fall through
+        case Unknown:
+            SideEffect effect = SideEffect.DefNo;
+            for (Expression expr : args) {
+                switch (expr.mightAffect(exprLeft, arg)) {
+                    case DefNo, Unknown, AnyCompute:
+                        break; // keep going
+
+                    case DefYes:
+                        return SideEffect.DefYes;
+                }
+            }
+            return effect;
+
+        default:
+            throw new IllegalStateException();
         }
+    }
 
     @Override
-    public boolean isConditionalResult()
-        {
+    public boolean isConditionalResult() {
         return m_fCondResult;
-        }
+    }
 
     @Override
     public Argument[] generateArguments(Context ctx, Code code, boolean fLocalPropOk,
-                                        boolean fUsedOnce, ErrorListener errs)
-        {
-        if (async)
-            {
+                                        boolean fUsedOnce, ErrorListener errs) {
+        if (async) {
             TypeConstant[] atype  = getTypes();
             int            cRVals = getValueCount();
             Assignable[]   aLVal  = new Assignable[cRVals];
 
-            if (m_fAutoFuture)
-                {
-                for (int i = 0; i < cRVals; i++)
-                    {
+            if (m_fAutoFuture) {
+                for (int i = 0; i < cRVals; i++) {
                     Register reg = code.createRegister(atype[i], null);
                     code.add(new Var_D(reg));
 
                     aLVal[i] = new Assignable(reg);
-                    }
+                }
 
                 generateAssignments(ctx, code, aLVal, errs);
 
                 Argument[] aargResult = new Argument[cRVals];
-                for (int i = 0; i < cRVals; i++)
-                    {
+                for (int i = 0; i < cRVals; i++) {
                     Register regVar = code.createRegister(atype[i], null);
 
                     code.add(new MoveVar(aLVal[i].getRegister(), regVar));
                     aargResult[i] = regVar;
-                    }
-                return aargResult;
                 }
+                return aargResult;
+            }
 
-            if (getParent() instanceof ReturnStatement)
-                {
+            if (getParent() instanceof ReturnStatement) {
                 // let the caller deal with dynamic return values
                 ConstantPool pool       = pool();
                 Argument[]   aargResult = new Argument[cRVals];
 
-                for (int i = 0; i < cRVals; i++)
-                    {
+                for (int i = 0; i < cRVals; i++) {
                     Register reg = code.createRegister(pool.ensureFutureVar(atype[i]), null);
 
                     code.add(new Var_D(reg));
 
                     aLVal[i]      = new Assignable(reg);
                     aargResult[i] = reg;
-                    }
+                }
 
                 generateAssignments(ctx, code, aLVal, errs);
                 return aargResult;
-                }
             }
-
-        return super.generateArguments(ctx, code, fLocalPropOk, fUsedOnce & !async, errs);
         }
 
+        return super.generateArguments(ctx, code, fLocalPropOk, fUsedOnce & !async, errs);
+    }
+
     @Override
-    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
-        {
+    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs) {
         ConstantPool pool   = pool();
         int          cLVals = aLVal.length;
         int          cRVals = getValueCount();
@@ -1400,26 +1198,21 @@ public class InvocationExpression
         assert !m_fPack || cLVals == 1; // pack must be into a single LValue
 
         Argument[] aargResult = new Argument[cRVals];
-        for (int i = 0; i < cRVals; i++)
-            {
-            if (i < cLVals)
-                {
+        for (int i = 0; i < cRVals; i++) {
+            if (i < cLVals) {
                 Assignable LVal = aLVal[i];
-                if (!LVal.isLocalArgument())
-                    {
+                if (!LVal.isLocalArgument()) {
                     // create a temp register for every assignable
                     super.generateAssignments(ctx, code, aLVal, errs);
                     return;
-                    }
+                }
 
                 aargResult[i] = LVal.getLocalArgument();
-                }
-            else
-                {
+            } else {
                 aargResult[i] = new Register(pool.typeObject(),
                                              null, fAsync ? Op.A_IGNORE_ASYNC : Op.A_IGNORE);
-                }
             }
+        }
 
         // 1. NameExpression cannot (must not!) attempt to resolve method / function names; it is an
         //    assertion or error if it tries; that is the responsibility of InvocationExpression
@@ -1440,18 +1233,14 @@ public class InvocationExpression
         int        cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
         boolean    fTargetOnStack = cArgs == 0 || args.stream().allMatch(Expression::isConstant);
 
-        if (expr instanceof NameExpression exprName)
-            {
+        if (expr instanceof NameExpression exprName) {
             Expression exprLeft = exprName.left;
-            if (m_argMethod instanceof MethodConstant idMethod)
-                {
+            if (m_argMethod instanceof MethodConstant idMethod) {
                 idMethod = rebaseMethodConstant(idMethod, m_method);
                 astFn    = new ConstantExprAST(idMethod);
 
-                if (m_method.isFunction() || m_method.isConstructor())
-                    {
-                    if (m_fBindTarget)
-                        {
+                if (m_method.isFunction() || m_method.isConstructor()) {
+                    if (m_fBindTarget) {
                         // this is a virtual construction, e.g. "map.&new();"
                         assert m_method.isVirtualConstructor();
                         Argument argTarget = generateTarget(ctx, code, exprLeft, fLocalPropOk,
@@ -1461,62 +1250,47 @@ public class InvocationExpression
                                 idMethod.getSignature().asConstructorType(pool, argTarget.getType()));
                         code.add(new MBind(argTarget, idMethod, argFn));
                         astFn = new BindMethodAST(m_astTarget, idMethod, argFn.getType());
-                        }
-                    else
-                        {
+                    } else {
                         // use the function identity as the argument and drop to the function handling
                         assert exprLeft == null || !exprLeft.hasSideEffects() ||
                                 m_fBjarne || m_idFormal != null;
-                        if (m_idFormal == null)
-                            {
+                        if (m_idFormal == null) {
                             argFn      = m_method.getIdentityConstant();
                             fConstruct = m_method.isConstructor();
-                            if (exprLeft instanceof TraceExpression)
-                                {
+                            if (exprLeft instanceof TraceExpression) {
                                 // give the TraceExpression a chance to generate arguments
                                 exprLeft.generateVoid(ctx, code, errs);
-                                }
                             }
-                        else
-                            {
+                        } else {
                             // create a synthetic method constant for the formal type (for a funky
                             // interface type)
-                            if (exprLeft != null)
-                                {
+                            if (exprLeft != null) {
                                 TypeConstant typeType = exprLeft.getType();
                                 assert typeType.isTypeOfType();
                                 TypeConstant typeLeft = typeType.getParamType(0);
 
-                                if (typeLeft.isFormalType())
-                                    {
-                                    if (exprLeft instanceof TraceExpression)
-                                        {
+                                if (typeLeft.isFormalType()) {
+                                    if (exprLeft instanceof TraceExpression) {
                                         // same as above; allow the TraceExpression to generate args
                                         exprLeft.generateVoid(ctx, code, errs);
-                                        }
                                     }
-                                else
-                                    {
+                                } else {
                                     Register regType = (Register) exprLeft.generateArgument(
                                                             ctx, code, fLocalPropOk, false, errs);
                                     m_idFormal = pool.ensureDynamicFormal(ctx.getMethod().getIdentityConstant(),
                                             regType, m_idFormal, exprName.getName());
-                                    }
                                 }
+                            }
                             argFn      = pool.ensureMethodConstant(m_idFormal, idMethod.getSignature());
                             fConstruct = false;
-                            }
                         }
                     }
-                else
-                    {
+                } else {
                     // idMethod is a MethodConstant for a method (including "finally")
-                    if (m_fBindTarget)
-                        {
+                    if (m_fBindTarget) {
                         Argument argTarget = generateTarget(ctx, code, exprLeft, fLocalPropOk,
                                                 fTargetOnStack, errs);
-                        if (m_fCall)
-                            {
+                        if (m_fCall) {
                             updateLineNumber(code);
 
                             // it's a method, and we need to generate the necessary code that calls it;
@@ -1530,276 +1304,212 @@ public class InvocationExpression
 
                             assert cTypeParams + cArgs + cDefaults == cAll;
 
-                            if (cAll == 0)
-                                {
+                            if (cAll == 0) {
                                 chArgs = '0';
                                 aArgs  = NO_RVALUES;
                                 aAsts  = BinaryAST.NO_EXPRS;
-                                }
-                            else if (cAll == 1)
-                                {
+                            } else if (cAll == 1) {
                                 chArgs = '1';
-                                if (cArgs == 1)
-                                    {
+                                if (cArgs == 1) {
                                     Expression expr = args.get(0);
                                     arg0  = expr.generateArgument(ctx, code, true, true, errs);
                                     aAsts = new ExprAST[] {expr.getExprAST(ctx)};
-                                    }
-                                else if (cTypeParams == 1)
-                                    {
+                                } else if (cTypeParams == 1) {
                                     arg0  = aargTypeParams[0];
                                     aAsts = new ExprAST[] {toTypeParameterAst(ctx, arg0)};
-                                    }
-                                else // (cDefaults == 1)
-                                    {
+                                } else { // (cDefaults == 1)
                                     arg0 = Register.DEFAULT;
                                     aAsts = new ExprAST[] {RegisterAST.defaultReg(idMethod.getRawParams()[0])};
-                                    }
                                 }
-                            else
-                                {
+                            } else {
                                 chArgs = 'N';
                                 aArgs  = new Argument[cAll];
                                 aAsts  = new ExprAST[cAll];
 
-                                if (cTypeParams > 0)
-                                    {
+                                if (cTypeParams > 0) {
                                     System.arraycopy(aargTypeParams, 0, aArgs, 0, cTypeParams);
-                                    for (int i = 0; i < cTypeParams; i++)
-                                        {
+                                    for (int i = 0; i < cTypeParams; i++) {
                                         aAsts[i] = toTypeParameterAst(ctx, aargTypeParams[i]);
-                                        }
                                     }
+                                }
 
-                                for (int i = 0; i < cArgs; ++i)
-                                    {
+                                for (int i = 0; i < cArgs; ++i) {
                                     Expression expr = args.get(i);
                                     Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
                                     int        iArg = cTypeParams + i;
                                     aArgs[iArg] = expr.ensurePointInTime(code, arg, args, i);
                                     aAsts[iArg] = expr.getExprAST(ctx);
-                                    }
+                                }
 
-                                for (int i = 0; i < cDefaults; ++i)
-                                    {
+                                for (int i = 0; i < cDefaults; ++i) {
                                     int iArg = cTypeParams + cArgs + i;
                                     aArgs[iArg] = Register.DEFAULT;
                                     aAsts[iArg] = RegisterAST.defaultReg(idMethod.getRawParams()[cArgs + i]);
-                                    }
                                 }
+                            }
 
                             char chRets;
-                            switch (cRets)
-                                {
-                                case 0:
-                                    if (!fAsync)
-                                        {
-                                        chRets = '0';
-                                        break;
-                                        }
-                                    aargResult = new Argument[] {Register.ASYNC};
-                                    // fall through
-                                case 1:
-                                    chRets = '1';
-                                    break;
-
-                                default:
-                                    chRets = 'N';
+                            switch (cRets) {
+                            case 0:
+                                if (!fAsync) {
+                                    chRets = '0';
                                     break;
                                 }
+                                aargResult = new Argument[] {Register.ASYNC};
+                                // fall through
+                            case 1:
+                                chRets = '1';
+                                break;
 
-                            switch (combine(chArgs, chRets))
-                                {
-                                case _00:
-                                    code.add(new Invoke_00(argTarget, idMethod));
-                                    break;
+                            default:
+                                chRets = 'N';
+                                break;
+                            }
 
-                                case _10:
-                                    if (m_fTupleArg)
-                                        {
-                                        code.add(new Invoke_T0(argTarget, idMethod, arg0));
-                                        }
-                                    else
-                                        {
-                                        code.add(new Invoke_10(argTarget, idMethod, arg0));
-                                        }
-                                    break;
+                            switch (combine(chArgs, chRets)) {
+                            case _00:
+                                code.add(new Invoke_00(argTarget, idMethod));
+                                break;
 
-                                case _N0:
-                                    code.add(new Invoke_N0(argTarget, idMethod, aArgs));
-                                    break;
-
-                                case _01:
-                                    if (m_fPack)
-                                        {
-                                        code.add(new Invoke_0T(argTarget, idMethod, aargResult[0]));
-                                        }
-                                    else
-                                        {
-                                        code.add(new Invoke_01(argTarget, idMethod, aargResult[0]));
-                                        }
-                                    break;
-
-                                case _11:
-                                    if (m_fPack)
-                                        {
-                                        if (m_fTupleArg)
-                                            {
-                                            code.add(new Invoke_TT(argTarget, idMethod, arg0, aargResult[0]));
-                                            }
-                                        else
-                                            {
-                                            code.add(new Invoke_1T(argTarget, idMethod, arg0, aargResult[0]));
-                                            }
-                                        }
-                                    else
-                                        {
-                                        if (m_fTupleArg)
-                                            {
-                                            code.add(new Invoke_T1(argTarget, idMethod, arg0, aargResult[0]));
-                                            }
-                                        else
-                                            {
-                                            code.add(new Invoke_11(argTarget, idMethod, arg0, aargResult[0]));
-                                            }
-                                        }
-                                    break;
-
-                                case _N1:
-                                    if (m_fPack)
-                                        {
-                                        code.add(new Invoke_NT(argTarget, idMethod, aArgs, aargResult[0]));
-                                        }
-                                    else
-                                        {
-                                        code.add(new Invoke_N1(argTarget, idMethod, aArgs, aargResult[0]));
-                                        }
-                                    break;
-
-                                case _0N:
-                                    code.add(new Invoke_0N(argTarget, idMethod, aargResult));
-                                    break;
-
-                                case _1N:
-                                    if (m_fTupleArg)
-                                        {
-                                        code.add(new Invoke_TN(argTarget, idMethod, arg0, aargResult));
-                                        }
-                                    else
-                                        {
-                                        code.add(new Invoke_1N(argTarget, idMethod, arg0, aargResult));
-                                        }
-                                    break;
-
-                                case _NN:
-                                    code.add(new Invoke_NN(argTarget, idMethod, aArgs, aargResult));
-                                    break;
-
-                                default:
-                                    throw new UnsupportedOperationException("invocation: " + combine(chArgs, chRets));
+                            case _10:
+                                if (m_fTupleArg) {
+                                    code.add(new Invoke_T0(argTarget, idMethod, arg0));
+                                } else {
+                                    code.add(new Invoke_10(argTarget, idMethod, arg0));
                                 }
+                                break;
 
-                            if (m_fPack)
-                                {
+                            case _N0:
+                                code.add(new Invoke_N0(argTarget, idMethod, aArgs));
+                                break;
+
+                            case _01:
+                                if (m_fPack) {
+                                    code.add(new Invoke_0T(argTarget, idMethod, aargResult[0]));
+                                } else {
+                                    code.add(new Invoke_01(argTarget, idMethod, aargResult[0]));
+                                }
+                                break;
+
+                            case _11:
+                                if (m_fPack) {
+                                    if (m_fTupleArg) {
+                                        code.add(new Invoke_TT(argTarget, idMethod, arg0, aargResult[0]));
+                                    } else {
+                                        code.add(new Invoke_1T(argTarget, idMethod, arg0, aargResult[0]));
+                                    }
+                                } else {
+                                    if (m_fTupleArg) {
+                                        code.add(new Invoke_T1(argTarget, idMethod, arg0, aargResult[0]));
+                                    } else {
+                                        code.add(new Invoke_11(argTarget, idMethod, arg0, aargResult[0]));
+                                    }
+                                }
+                                break;
+
+                            case _N1:
+                                if (m_fPack) {
+                                    code.add(new Invoke_NT(argTarget, idMethod, aArgs, aargResult[0]));
+                                } else {
+                                    code.add(new Invoke_N1(argTarget, idMethod, aArgs, aargResult[0]));
+                                }
+                                break;
+
+                            case _0N:
+                                code.add(new Invoke_0N(argTarget, idMethod, aargResult));
+                                break;
+
+                            case _1N:
+                                if (m_fTupleArg) {
+                                    code.add(new Invoke_TN(argTarget, idMethod, arg0, aargResult));
+                                } else {
+                                    code.add(new Invoke_1N(argTarget, idMethod, arg0, aargResult));
+                                }
+                                break;
+
+                            case _NN:
+                                code.add(new Invoke_NN(argTarget, idMethod, aArgs, aargResult));
+                                break;
+
+                            default:
+                                throw new UnsupportedOperationException("invocation: " + combine(chArgs, chRets));
+                            }
+
+                            if (m_fPack) {
                                 TypeConstant typeTuple = getType();
                                 assert typeTuple.isTuple();
 
                                 ExprAST astInvoke = new InvokeExprAST(idMethod,
                                         typeTuple.getParamTypesArray(), m_astTarget, aAsts, fAsync);
                                 m_astInvoke = new TupleExprAST(typeTuple, new ExprAST[] {astInvoke});
-                                }
-                            else
-                                {
+                            } else {
                                 m_astInvoke = new InvokeExprAST(idMethod,
                                         getTypes(), m_astTarget, aAsts, fAsync);
-                                }
-                            return;
                             }
-                        else // _NOT_ m_fCall
-                            {
+                            return;
+                        } else { // _NOT_ m_fCall
                             // the method gets bound to become a function; do this and drop through
                             // to the function handling
                             argFn = code.createRegister(idMethod.getSignature().asFunctionType());
                             code.add(new MBind(argTarget, idMethod, argFn));
                             astFn = new BindMethodAST(m_astTarget, idMethod, argFn.getType());
-                            }
                         }
-                    else // _NOT_ m_fBindTarget
-                        {
+                    } else { // _NOT_ m_fBindTarget
                         // the method instance itself is the result, e.g. "Method m = Frog.&jump();"
                         assert m_idConvert == null && !m_fBindParams && !m_fCall;
-                        if (cLVals > 0)
-                            {
+                        if (cLVals > 0) {
                             aLVal[0].assign(idMethod, code, errs);
-                            }
-                        return;
                         }
+                        return;
                     }
                 }
-            else // it is a NameExpression but _NOT_ a MethodConstant
-                {
-                if (m_fBindTarget)
-                    {
+            } else { // it is a NameExpression but _NOT_ a MethodConstant
+                if (m_fBindTarget) {
                     // this is a method call; the method itself is a property or a register
                     Argument argTarget = generateTarget(ctx, code, exprLeft, fLocalPropOk,
                                             fTargetOnStack, errs);
-                    if (m_argMethod instanceof PropertyConstant idProp)
-                        {
+                    if (m_argMethod instanceof PropertyConstant idProp) {
                         PropertyStructure prop = (PropertyStructure) idProp.getComponent();
-                        if (prop.isConstant() && prop.hasInitialValue())
-                            {
+                        if (prop.isConstant() && prop.hasInitialValue()) {
                             MethodConstant idMethod = (MethodConstant) prop.getInitialValue();
 
                             argFn = code.createRegister(idMethod.getSignature().asFunctionType());
                             astFn = new ConstantExprAST(idProp);
 
                             code.add(new MBind(argTarget, idMethod, argFn));
-                            }
-                        else
-                            {
+                        } else {
                             log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Dynamic method invocation");
                             return;
-                            }
                         }
-                    else
-                        {
+                    } else {
                         log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Dynamic method invocation");
                         return;
-                        }
                     }
-                else
-                    {
-                    if (m_argMethod instanceof Register regFn)
-                        {
+                } else {
+                    if (m_argMethod instanceof Register regFn) {
                         argFn = regFn;
                         astFn = regFn.getRegisterAST();
-                        }
-                    else
-                        {
+                    } else {
                         // evaluate to find the argument (e.g. "var.prop", where prop holds a function)
                         argFn = exprName.generateArgument(ctx, code, false, fTargetOnStack, errs);
                         astFn = exprName.getExprAST(ctx);
-                        }
                     }
                 }
             }
-        else // _NOT_ an InvocationExpression of a NameExpression (i.e. it's just a function)
-            {
+        } else { // _NOT_ an InvocationExpression of a NameExpression (i.e. it's just a function)
             // obtain the function that will be bound and/or called
             assert !m_fBindTarget;
             argFn = expr.generateArgument(ctx, code, false, fTargetOnStack, errs);
             astFn = expr.getExprAST(ctx);
             assert argFn.getType().isA(pool.typeFunction());
-            }
+        }
 
         // bind arguments and/or generate a call to the function specified by argFn; first, convert
         // it to the desired function if necessary
         TypeConstant   typeFn = argFn.getType().resolveTypedefs();
         MethodConstant idConv = m_idConvert;
-        if (idConv == null)
-            {
-            if (!(argFn instanceof MethodConstant || argFn instanceof Register))
-                {
+        if (idConv == null) {
+            if (!(argFn instanceof MethodConstant || argFn instanceof Register)) {
                 // the run-time logic in the interpreter (see any Call_ op-code) assumes that a
                 // function is either static (i.e. a MethodConstant) or resolved (i.e. already in
                 // the register); what is left behind is a scenario when argFn is a SingletonConstant
@@ -1808,23 +1518,20 @@ public class InvocationExpression
                 Register regFn = code.createRegister(typeFn, fTargetOnStack);
                 code.add(new Move(argFn, regFn));
                 argFn = regFn;
-                }
             }
-        else
-            {
+        } else {
             // argFn isn't a function; convert whatever-it-is into the desired function
             typeFn = idConv.getRawReturns()[0];
             Register regFn = code.createRegister(typeFn, fTargetOnStack);
             code.add(new Invoke_01(argFn, idConv, regFn));
             argFn = regFn;
             astFn = new ConvertExprAST(astFn, typeFn, idConv);
-            }
+        }
 
         TypeConstant[] atypeParams = pool.extractFunctionParams(typeFn);
         int            cAll        = atypeParams == null ? 0 : atypeParams.length;
 
-        if (m_fCall)
-            {
+        if (m_fCall) {
             updateLineNumber(code);
 
             int        cDefaults = cAll - cTypeParams - cArgs;
@@ -1836,206 +1543,167 @@ public class InvocationExpression
             assert !m_fBindParams || cArgs > 0;
             assert cDefaults >= 0;
 
-            switch (cAll)
-                {
-                case 0:
-                    chArgs = '0';
-                    aArgs  = NO_RVALUES;
-                    aAsts  = BinaryAST.NO_EXPRS;
-                    break;
+            switch (cAll) {
+            case 0:
+                chArgs = '0';
+                aArgs  = NO_RVALUES;
+                aAsts  = BinaryAST.NO_EXPRS;
+                break;
 
-                case 1:
-                    chArgs = '1';
-                    if (cArgs == 1)
-                        {
-                        Expression expr = args.get(0);
-                        arg0  = expr.generateArgument(ctx, code, true, true, errs);
-                        aAsts = new ExprAST[] {expr.getExprAST(ctx)};
-                        }
-                    else if (cTypeParams == 1)
-                        {
-                        arg0  = aargTypeParams[0];
-                        aAsts = new ExprAST[] {toTypeParameterAst(ctx, arg0)};
-                        }
-                    else // (cDefaults == 1)
-                        {
-                        arg0  = Register.DEFAULT;
-                        aAsts = new ExprAST[] {RegisterAST.defaultReg(atypeParams[0])};
-                        }
-                    break;
+            case 1:
+                chArgs = '1';
+                if (cArgs == 1) {
+                    Expression expr = args.get(0);
+                    arg0  = expr.generateArgument(ctx, code, true, true, errs);
+                    aAsts = new ExprAST[] {expr.getExprAST(ctx)};
+                } else if (cTypeParams == 1) {
+                    arg0  = aargTypeParams[0];
+                    aAsts = new ExprAST[] {toTypeParameterAst(ctx, arg0)};
+                } else { // (cDefaults == 1)
+                    arg0  = Register.DEFAULT;
+                    aAsts = new ExprAST[] {RegisterAST.defaultReg(atypeParams[0])};
+                }
+                break;
 
-                default:
-                    chArgs = 'N';
-                    aArgs  = new Argument[cAll];
-                    aAsts  = new ExprAST[cAll];
+            default:
+                chArgs = 'N';
+                aArgs  = new Argument[cAll];
+                aAsts  = new ExprAST[cAll];
 
-                    if (cTypeParams > 0)
-                        {
-                        System.arraycopy(aargTypeParams, 0, aArgs, 0, cTypeParams);
-                        for (int i = 0; i < cTypeParams; i++)
-                            {
-                            aAsts[i] = toTypeParameterAst(ctx, aArgs[i]);
-                            }
-                        }
-
-                    for (int i = 0; i < cArgs; ++i)
-                        {
-                        Expression expr = args.get(i);
-                        Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
-                        int        iArg = cTypeParams + i;
-                        aArgs[iArg] = expr.ensurePointInTime(code, arg, args, i);
-                        aAsts[iArg] = expr.getExprAST(ctx);
-                        }
-
-                    for (int i = 0; i < cDefaults; ++i)
-                        {
-                        int iArg = cTypeParams + cArgs + i;
-                        aArgs[iArg] = Register.DEFAULT;
-                        aAsts[iArg] = RegisterAST.defaultReg(atypeParams[i]);
-                        }
-                    break;
+                if (cTypeParams > 0) {
+                    System.arraycopy(aargTypeParams, 0, aArgs, 0, cTypeParams);
+                    for (int i = 0; i < cTypeParams; i++) {
+                        aAsts[i] = toTypeParameterAst(ctx, aArgs[i]);
+                    }
                 }
 
-            if (fConstruct)
-                {
+                for (int i = 0; i < cArgs; ++i) {
+                    Expression expr = args.get(i);
+                    Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
+                    int        iArg = cTypeParams + i;
+                    aArgs[iArg] = expr.ensurePointInTime(code, arg, args, i);
+                    aAsts[iArg] = expr.getExprAST(ctx);
+                }
+
+                for (int i = 0; i < cDefaults; ++i) {
+                    int iArg = cTypeParams + cArgs + i;
+                    aArgs[iArg] = Register.DEFAULT;
+                    aAsts[iArg] = RegisterAST.defaultReg(atypeParams[i]);
+                }
+                break;
+            }
+
+            if (fConstruct) {
                 MethodConstant idConstruct = (MethodConstant) argFn;
-                switch (chArgs)
-                    {
-                    case '0' -> code.add(new Construct_0(idConstruct));
-                    case '1' -> code.add(new Construct_1(idConstruct, arg0));
-                    case 'N' -> code.add(new Construct_N(idConstruct, aArgs));
-                    case 'T' -> throw new UnsupportedOperationException("TODO: Construct_T");
-                    default  -> throw new IllegalStateException();
-                    }
+                switch (chArgs) {
+                case '0' -> code.add(new Construct_0(idConstruct));
+                case '1' -> code.add(new Construct_1(idConstruct, arg0));
+                case 'N' -> code.add(new Construct_N(idConstruct, aArgs));
+                case 'T' -> throw new UnsupportedOperationException("TODO: Construct_T");
+                default  -> throw new IllegalStateException();
+                }
                 m_astInvoke = new CallExprAST(astFn, TypeConstant.NO_TYPES, aAsts, fAsync);
                 return;
-                }
+            }
 
             // generate registers for the return values
             char chRets;
-            switch (cRets)
-                {
-                case 0:
-                    if (!fAsync)
-                        {
-                        chRets = '0';
-                        break;
-                        }
-                    aargResult = new Argument[] {Register.ASYNC};
-                    // fall through
-                case 1:
-                    chRets = '1';
-                    break;
-                default:
-                    chRets = 'N';
+            switch (cRets) {
+            case 0:
+                if (!fAsync) {
+                    chRets = '0';
                     break;
                 }
+                aargResult = new Argument[] {Register.ASYNC};
+                // fall through
+            case 1:
+                chRets = '1';
+                break;
+            default:
+                chRets = 'N';
+                break;
+            }
 
-            switch (combine(chArgs, chRets))
-                {
-                case _00:
-                    code.add(new Call_00(argFn));
-                    break;
+            switch (combine(chArgs, chRets)) {
+            case _00:
+                code.add(new Call_00(argFn));
+                break;
 
-                case _10:
-                    if (m_fTupleArg)
-                        {
-                        code.add(new Call_T0(argFn, arg0));
-                        }
-                    else
-                        {
-                        code.add(new Call_10(argFn, arg0));
-                        }
-                    break;
-
-                case _N0:
-                    code.add(new Call_N0(argFn, aArgs));
-                    break;
-
-                case _01:
-                    if (m_fPack)
-                        {
-                        code.add(new Call_0T(argFn, aargResult[0]));
-                        }
-                    else
-                        {
-                        code.add(new Call_01(argFn, aargResult[0]));
-                        }
-                    break;
-
-                case _11:
-                    if (m_fPack)
-                        {
-                        if (m_fTupleArg)
-                            {
-                            code.add(new Call_TT(argFn, arg0, aargResult[0]));
-                            }
-                        else
-                            {
-                            code.add(new Call_1T(argFn, arg0, aargResult[0]));
-                            }
-                        }
-                    else
-                        {
-                        if (m_fTupleArg)
-                            {
-                            code.add(new Call_T1(argFn, arg0, aargResult[0]));
-                            }
-                        else
-                            {
-                            code.add(new Call_11(argFn, arg0, aargResult[0]));
-                            }
-                        }
-                    break;
-
-                case _N1:
-                    if (m_fPack)
-                        {
-                        code.add(new Call_NT(argFn, aArgs, aargResult[0]));
-                        }
-                    else
-                        {
-                        code.add(new Call_N1(argFn, aArgs, aargResult[0]));
-                        }
-                    break;
-
-                case _0N:
-                    code.add(new Call_0N(argFn, aargResult));
-                    break;
-
-                case _1N:
-                    if (m_fTupleArg)
-                        {
-                        code.add(new Call_TN(argFn, arg0, aargResult));
-                        }
-                    else
-                        {
-                        code.add(new Call_1N(argFn, arg0, aargResult));
-                        }
-                    break;
-
-                case _NN:
-                    code.add(new Call_NN(argFn, aArgs, aargResult));
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException("invocation " + combine(chArgs, chRets));
+            case _10:
+                if (m_fTupleArg) {
+                    code.add(new Call_T0(argFn, arg0));
+                } else {
+                    code.add(new Call_10(argFn, arg0));
                 }
+                break;
 
-            if (m_fPack)
-                {
+            case _N0:
+                code.add(new Call_N0(argFn, aArgs));
+                break;
+
+            case _01:
+                if (m_fPack) {
+                    code.add(new Call_0T(argFn, aargResult[0]));
+                } else {
+                    code.add(new Call_01(argFn, aargResult[0]));
+                }
+                break;
+
+            case _11:
+                if (m_fPack) {
+                    if (m_fTupleArg) {
+                        code.add(new Call_TT(argFn, arg0, aargResult[0]));
+                    } else {
+                        code.add(new Call_1T(argFn, arg0, aargResult[0]));
+                    }
+                } else {
+                    if (m_fTupleArg) {
+                        code.add(new Call_T1(argFn, arg0, aargResult[0]));
+                    } else {
+                        code.add(new Call_11(argFn, arg0, aargResult[0]));
+                    }
+                }
+                break;
+
+            case _N1:
+                if (m_fPack) {
+                    code.add(new Call_NT(argFn, aArgs, aargResult[0]));
+                } else {
+                    code.add(new Call_N1(argFn, aArgs, aargResult[0]));
+                }
+                break;
+
+            case _0N:
+                code.add(new Call_0N(argFn, aargResult));
+                break;
+
+            case _1N:
+                if (m_fTupleArg) {
+                    code.add(new Call_TN(argFn, arg0, aargResult));
+                } else {
+                    code.add(new Call_1N(argFn, arg0, aargResult));
+                }
+                break;
+
+            case _NN:
+                code.add(new Call_NN(argFn, aArgs, aargResult));
+                break;
+
+            default:
+                throw new UnsupportedOperationException("invocation " + combine(chArgs, chRets));
+            }
+
+            if (m_fPack) {
                 TypeConstant typeTuple = getType();
                 assert typeTuple.isTuple();
 
                 ExprAST astCall = new CallExprAST(astFn, typeTuple.getParamTypesArray(), aAsts, fAsync);
                 m_astInvoke = new TupleExprAST(typeTuple, new ExprAST[] {astCall});
-                }
-            else
-                {
+            } else {
                 m_astInvoke = new CallExprAST(astFn, getTypes(), aAsts, fAsync);
-                }
-            return;
             }
+            return;
+        }
 
         // see if we need to bind (or partially bind) the function
         int[]      aiArg = null;
@@ -2050,130 +1718,103 @@ public class InvocationExpression
         // and an expression "&foo(true)" will result into a function of the type
         // "function void (Int, String)", that leaves arguments "b" and "c" unbound
         int cBind = cTypeParams;
-        for (int i = 0; i < cArgs; ++i)
-            {
-            if (!args.get(i).isNonBinding())
-                {
+        for (int i = 0; i < cArgs; ++i) {
+            if (!args.get(i).isNonBinding()) {
                 ++cBind;
-                }
             }
+        }
 
-        if (cBind > 0)
-            {
+        if (cBind > 0) {
             aiArg = new int[cBind];
             aArg  = new Argument[cBind];
             aAst  = new ExprAST[cBind];
-            for (int i = 0; i < cTypeParams; ++i)
-                {
+            for (int i = 0; i < cTypeParams; ++i) {
                 aiArg[i] = i;
                 aArg [i] = aargTypeParams[i];
                 aAst [i] = toTypeParameterAst(ctx, aargTypeParams[i]);
-                }
+            }
 
-            for (int i = 0, iBind = cTypeParams; i < cArgs; ++i)
-                {
+            for (int i = 0, iBind = cTypeParams; i < cArgs; ++i) {
                 Expression exprArg = args.get(i);
-                if (!exprArg.isNonBinding())
-                    {
+                if (!exprArg.isNonBinding()) {
                     Argument arg = exprArg.generateArgument(ctx, code, false, true, errs);
                     aiArg[iBind] = cTypeParams + i;
                     aArg [iBind] = exprArg.ensurePointInTime(code, arg, args, i);
                     aAst [iBind] = exprArg.getExprAST(ctx);
 
                     iBind++;
-                    }
                 }
             }
-        else if (argFn instanceof Register regFn && regFn.isSuper())
-            {
+        } else if (argFn instanceof Register regFn && regFn.isSuper()) {
             // non-bound super(...) function still needs to bind a target
             aiArg = new int[0];
             aArg  = NO_RVALUES;
             aAst  = ExprAST.NO_EXPRS;
-            }
+        }
 
-        if (cLVals == 0)
-            {
+        if (cLVals == 0) {
             // should never get here - already checked during validation
             log(errs, Severity.ERROR, Compiler.LVALUE_REQUIRED);
             return;
-            }
+        }
 
         Assignable lval = aLVal[0];
-        if (aiArg == null)
-            {
+        if (aiArg == null) {
             lval.assign(argFn, code, errs);
             m_astInvoke = astFn;
-            }
-        else
-            {
-            if (lval.isLocalArgument())
-                {
+        } else {
+            if (lval.isLocalArgument()) {
                 code.add(new FBind(argFn, aiArg, aArg, lval.getLocalArgument()));
-                }
-            else
-                {
+            } else {
                 Register regFn = code.createRegister(getType());
                 code.add(new FBind(argFn, aiArg, aArg, regFn));
                 lval.assign(regFn, code, errs);
-                }
-            m_astInvoke = new BindFunctionAST(astFn, aiArg, aAst, getType());
             }
+            m_astInvoke = new BindFunctionAST(astFn, aiArg, aAst, getType());
         }
+    }
 
     /**
      * @return the Argument for the target and set the {@link #m_astTarget}
      */
     private Argument generateTarget(Context ctx, Code code, Expression exprLeft,
-                                    boolean fLocalPropOk, boolean fTargetOnStack, ErrorListener errs)
-        {
+                                    boolean fLocalPropOk, boolean fTargetOnStack, ErrorListener errs) {
         // the method needs a target (its "this")
         Argument argTarget;
-        if (exprLeft == null)
-            {
+        if (exprLeft == null) {
             TargetInfo targetInfo = m_targetInfo;
             Register   regTarget;
-            if (targetInfo == null)
-                {
+            if (targetInfo == null) {
                 regTarget   = ctx.getThisRegister();
                 m_astTarget = regTarget.getRegisterAST();
-                }
-            else
-                {
+            } else {
                 TypeConstant typeTarget = targetInfo.getTargetType();
                 int          cStepsOut  = targetInfo.getStepsOut();
-                if (cStepsOut > 0)
-                    {
+                if (cStepsOut > 0) {
                     regTarget = code.createRegister(typeTarget, fTargetOnStack);
                     code.add(new MoveThis(cStepsOut, regTarget));
                     m_astTarget = new OuterExprAST(ctx.getThisRegisterAST(), cStepsOut, typeTarget);
-                    }
-                else
-                    {
+                } else {
                     regTarget = ctx.getThisRegister();
-                    if (!typeTarget.equals(regTarget.getType()))
-                        {
+                    if (!typeTarget.equals(regTarget.getType())) {
                         // most likely the typeTarget has "private" access
                         regTarget = regTarget.narrowType(typeTarget);
-                        }
-                    m_astTarget = regTarget.getRegisterAST();
                     }
+                    m_astTarget = regTarget.getRegisterAST();
                 }
-            argTarget = regTarget;
             }
-        else
-            {
+            argTarget = regTarget;
+        } else {
             argTarget   = exprLeft.generateArgument(ctx, code, fLocalPropOk, fTargetOnStack, errs);
             m_astTarget = exprLeft.getExprAST(ctx);
-            }
-        return argTarget;
         }
+        return argTarget;
+    }
 
     @Override
-    public ExprAST getExprAST(Context ctx)
-        {
+    public ExprAST getExprAST(Context ctx) {
         return m_astInvoke == null ? super.getExprAST(ctx) : m_astInvoke;
-        }
+    }
 
 
     // ----- method resolution helpers -------------------------------------------------------------
@@ -2182,43 +1823,36 @@ public class InvocationExpression
      * @return true iff this expression does not actually result in an invocation, but instead
      *         resolves to a reference to a method or a function as its result
      */
-    protected boolean isSuppressCall()
-        {
+    protected boolean isSuppressCall() {
         return (expr instanceof NameExpression exprName && exprName.isSuppressDeref())
                 || isAnyArgUnbound();
-        }
+    }
 
     /**
      * @return true iff any argument will be bound
      */
-    protected boolean isAnyArgBound()
-        {
-        for (Expression expr : args)
-            {
-            if (!expr.isNonBinding())
-                {
+    protected boolean isAnyArgBound() {
+        for (Expression expr : args) {
+            if (!expr.isNonBinding()) {
                 return true;
-                }
             }
+        }
 
         return false;
-        }
+    }
 
     /**
      * @return true iff any argument will be left unbound
      */
-    protected boolean isAnyArgUnbound()
-        {
-        for (Expression expr : args)
-            {
-            if (expr.isNonBinding())
-                {
+    protected boolean isAnyArgUnbound() {
+        for (Expression expr : args) {
+            if (expr.isNonBinding()) {
                 return true;
-                }
             }
+        }
 
         return false;
-        }
+    }
 
     /**
      * Resolve the expression to determine the referred to method or function. Responsible for
@@ -2235,12 +1869,10 @@ public class InvocationExpression
      *         been reported
      */
     protected Argument resolveName(Context ctx, boolean fForce, TypeConstant typeLeft,
-                                   TypeConstant[] atypeReturn, ErrorListener errs)
-        {
-        if (!fForce && m_argMethod != null)
-            {
+                                   TypeConstant[] atypeReturn, ErrorListener errs) {
+        if (!fForce && m_argMethod != null) {
             return m_argMethod;
-            }
+        }
 
         boolean fNoFBind   = !isAnyArgBound();
         boolean fNoCall    = isSuppressCall();
@@ -2255,33 +1887,26 @@ public class InvocationExpression
         m_fNamedArgs  = fNamedArgs;
 
         ConstantPool pool = pool();
-        if (atypeReturn != null && atypeReturn.length > 0 && fNoCall)
-            {
+        if (atypeReturn != null && atypeReturn.length > 0 && fNoCall) {
             // "no call" means that we are expected to produce a function, but the code below
             // treats atypeReturn as function return types
-            if (atypeReturn.length > 1)
-                {
+            if (atypeReturn.length > 1) {
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, 1, atypeReturn.length);
                 return null;
-                }
+            }
 
             TypeConstant typeFn = atypeReturn[0];
 
-            if (typeFn.containsFunctionType())
-                {
+            if (typeFn.containsFunctionType()) {
                 atypeReturn = pool.extractFunctionReturns(typeFn);
-                }
-            else if (pool.typeFunction().isA(typeFn)) // e.g. Object
-                {
+            } else if (pool.typeFunction().isA(typeFn)) { // e.g. Object
                 // whatever the invocation finds is going to work
                 atypeReturn = TypeConstant.NO_TYPES;
-                }
-            else
-                {
+            } else {
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE, "Function", typeFn.getValueString());
                 return null;
-                }
             }
+        }
 
         // if the name does not have a left expression, then walk up the AST parent node chain
         // looking for a registered name, i.e. a local variable of that name, stopping once the
@@ -2293,174 +1918,147 @@ public class InvocationExpression
         boolean        fConstruct = "construct".equals(sName);
         boolean        fSingleton = false;
         Expression     exprLeft   = exprName.left;
-        if (exprLeft == null)
-            {
+        if (exprLeft == null) {
             Argument arg = ctx.resolveName(tokName, ErrorListener.BLACKHOLE);
 
-            if (arg == null)
-                {
+            if (arg == null) {
                 typeLeft = ctx.getThisType();
 
-                if (ctx.isMethod())
-                    {
+                if (ctx.isMethod()) {
                     // try to use the type info
                     TypeInfo infoLeft = getTypeInfo(ctx, typeLeft, errs);
 
                     arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Any,
                                 true, atypeReturn, ErrorListener.BLACKHOLE);
-                    if (arg instanceof MethodConstant idMethod)
-                        {
+                    if (arg instanceof MethodConstant idMethod) {
                         MethodStructure method = getMethod(ctx, typeLeft, infoLeft, idMethod);
-                        if (method == null)
-                            {
+                        if (method == null) {
                             log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
                                     idMethod.getValueString(), typeLeft.getValueString());
                             return null;
-                            }
+                        }
 
                         m_argMethod   = idMethod;
                         m_method      = method;
                         m_fBindTarget = !method.isFunction();
                         m_targetInfo  = new TargetInfo(sName, method, typeLeft, 0);
                         return idMethod;
-                        }
                     }
+                }
 
                 // report the error
-                if ("construct".equals(sName))
-                    {
+                if ("construct".equals(sName)) {
                     log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR,
                             ctx.getThisType().getValueString());
-                    }
-                else if ("super".equals(sName))
-                    {
+                } else if ("super".equals(sName)) {
                     log(errs, Severity.ERROR, Compiler.NO_SUPER);
-                    }
-                else
-                    {
+                } else {
                     TypeConstant typeTarget = ctx.getThisType();
                     TypeInfo     infoTarget = getTypeInfo(ctx, null, ErrorListener.BLACKHOLE);
 
                     // check if the method would be callable from outside the constructor
                     if (ctx.isConstructor() &&
                             findCallable(ctx, typeTarget, infoTarget, sName, MethodKind.Any,
-                                true, atypeReturn, ErrorListener.BLACKHOLE) != null)
-                        {
+                                true, atypeReturn, ErrorListener.BLACKHOLE) != null) {
                         log(errs, Severity.ERROR, Compiler.INVALID_CALL_FROM_CONSTRUCT, sName);
-                        }
-                    else
-                        {
+                    } else {
                         log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName,
                                 typeTarget.getValueString());
-                        }
                     }
-                return null;
                 }
+                return null;
+            }
 
-            if (arg instanceof Register reg)
-                {
+            if (arg instanceof Register reg) {
                 int cTypeParams = 0;
                 int cDefaults   = 0;
-                if (reg.isPredefined())
-                    {
+                if (reg.isPredefined()) {
                     // report specific error messages for incorrect "this" or "super" use
-                    switch (reg.getIndex())
-                        {
-                        case Op.A_THIS:
-                        case Op.A_TARGET:
-                        case Op.A_PUBLIC:
-                        case Op.A_PROTECTED:
-                        case Op.A_PRIVATE:
-                        case Op.A_STRUCT:
-                            if (ctx.isFunction())
-                                {
-                                exprName.log(errs, Severity.ERROR, Compiler.NO_THIS);
-                                return null;
-                                }
-                            break;
-
-                        case Op.A_SUPER:
-                            {
-                            if (ctx.isFunction())
-                                {
-                                exprName.log(errs, Severity.ERROR, Compiler.NO_SUPER);
-                                return null;
-                                }
-
-                            if (ctx.isConstructor())
-                                {
-                                // carved out special use for using direct "super()" in constructors
-                                Contribution contribExtends = ctx.getThisClass().
-                                        findContribution(Component.Composition.Extends);
-                                if (contribExtends == null || ctx.isFunction())
-                                    {
-                                    exprName.log(errs, Severity.ERROR, Compiler.NON_VIRTUAL_SUPER);
-                                    return null;
-                                    }
-
-                                if (fNoCall)
-                                    {
-                                    exprName.log(errs, Severity.ERROR, Compiler.INVALID_SUPER_REFERENCE);
-                                    return null;
-                                    }
-
-                                TypeConstant typeSuper = pool.ensureAccessTypeConstant(
-                                        contribExtends.getTypeConstant(), Access.PROTECTED);
-
-                                TypeInfo       infoSuper   = typeSuper.ensureTypeInfo(errs);
-                                MethodConstant idConstruct = (MethodConstant) findCallable(ctx, typeSuper,
-                                        infoSuper, "construct", MethodKind.Constructor,
-                                        false, atypeReturn, ErrorListener.BLACKHOLE);
-                                if (idConstruct == null)
-                                    {
-                                    log(errs, Severity.ERROR, Compiler.IMPLICIT_SUPER_CONSTRUCTOR_MISSING,
-                                        ctx.getThisType().getValueString(), typeSuper.getValueString());
-                                    return null;
-                                    }
-
-                                MethodStructure ctor = getMethod(ctx, typeSuper, infoSuper, idConstruct);
-                                if (ctor == null)
-                                    {
-                                    log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
-                                            idConstruct.getValueString(), typeSuper.getValueString());
-                                    return null;
-                                    }
-
-                                m_argMethod   = idConstruct;
-                                m_method      = ctor;
-                                m_fBindTarget = false;
-                                return idConstruct;
-                                }
-
-                            // the code below is slightly opportunistic; there is a chance that
-                            // none of the "super" methods have the required number of arguments
-                            // DEFERRED: we need to add a corresponding check, which is not as
-                            // simple as just getting the MethodInfo from the context class -
-                            // the current method can be a nested property accessor as well
-                            MethodStructure method = ctx.getMethod();
-
-                            cTypeParams = method.getTypeParamCount();
-                            cDefaults   = method.getDefaultParamCount();
-                            break;
-                            }
+                    switch (reg.getIndex()) {
+                    case Op.A_THIS:
+                    case Op.A_TARGET:
+                    case Op.A_PUBLIC:
+                    case Op.A_PROTECTED:
+                    case Op.A_PRIVATE:
+                    case Op.A_STRUCT:
+                        if (ctx.isFunction()) {
+                            exprName.log(errs, Severity.ERROR, Compiler.NO_THIS);
+                            return null;
                         }
-                    }
+                        break;
 
-                if (testFunction(ctx, arg.getType(), cTypeParams, cDefaults, atypeReturn, errs) == null)
-                    {
-                    return null;
+                    case Op.A_SUPER: {
+                        if (ctx.isFunction()) {
+                            exprName.log(errs, Severity.ERROR, Compiler.NO_SUPER);
+                            return null;
+                        }
+
+                        if (ctx.isConstructor()) {
+                            // carved out special use for using direct "super()" in constructors
+                            Contribution contribExtends = ctx.getThisClass().
+                                    findContribution(Component.Composition.Extends);
+                            if (contribExtends == null || ctx.isFunction()) {
+                                exprName.log(errs, Severity.ERROR, Compiler.NON_VIRTUAL_SUPER);
+                                return null;
+                            }
+
+                            if (fNoCall) {
+                                exprName.log(errs, Severity.ERROR, Compiler.INVALID_SUPER_REFERENCE);
+                                return null;
+                            }
+
+                            TypeConstant typeSuper = pool.ensureAccessTypeConstant(
+                                    contribExtends.getTypeConstant(), Access.PROTECTED);
+
+                            TypeInfo       infoSuper   = typeSuper.ensureTypeInfo(errs);
+                            MethodConstant idConstruct = (MethodConstant) findCallable(ctx, typeSuper,
+                                    infoSuper, "construct", MethodKind.Constructor,
+                                    false, atypeReturn, ErrorListener.BLACKHOLE);
+                            if (idConstruct == null) {
+                                log(errs, Severity.ERROR, Compiler.IMPLICIT_SUPER_CONSTRUCTOR_MISSING,
+                                    ctx.getThisType().getValueString(), typeSuper.getValueString());
+                                return null;
+                            }
+
+                            MethodStructure ctor = getMethod(ctx, typeSuper, infoSuper, idConstruct);
+                            if (ctor == null) {
+                                log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
+                                        idConstruct.getValueString(), typeSuper.getValueString());
+                                return null;
+                            }
+
+                            m_argMethod   = idConstruct;
+                            m_method      = ctor;
+                            m_fBindTarget = false;
+                            return idConstruct;
+                        }
+
+                        // the code below is slightly opportunistic; there is a chance that
+                        // none of the "super" methods have the required number of arguments
+                        // DEFERRED: we need to add a corresponding check, which is not as
+                        // simple as just getting the MethodInfo from the context class -
+                        // the current method can be a nested property accessor as well
+                        MethodStructure method = ctx.getMethod();
+
+                        cTypeParams = method.getTypeParamCount();
+                        cDefaults   = method.getDefaultParamCount();
+                        break;
                     }
-                m_argMethod = arg;
-                return arg;
+                    }
                 }
 
-            if (arg instanceof TargetInfo target)
-                {
+                if (testFunction(ctx, arg.getType(), cTypeParams, cDefaults, atypeReturn, errs) == null) {
+                    return null;
+                }
+                m_argMethod = arg;
+                return arg;
+            }
+
+            if (arg instanceof TargetInfo target) {
                 TypeConstant     typeTarget = target.getTargetType();
                 TypeInfo         infoTarget = typeTarget.ensureTypeInfo(errs);
                 IdentityConstant id         = target.getId();
-                if (id instanceof MultiMethodConstant)
-                    {
+                if (id instanceof MultiMethodConstant) {
                     // find the method based on the signature
                     // TODO this only finds methods immediately contained within the class; does not find nested methods!!!
                     MethodKind kind =
@@ -2470,90 +2068,70 @@ public class InvocationExpression
                     ErrorListener  errsTemp   = errs.branch(this);
                     MethodConstant idCallable = findMethod(ctx, typeTarget, infoTarget, sName,
                             args, kind, !fNoCall, id.isNested(), atypeReturn, errsTemp);
-                    if (idCallable == null)
-                        {
+                    if (idCallable == null) {
                         // check to see if we had found something had we included methods in the
                         // search
                         if (kind == MethodKind.Function &&
                                 findMethod(ctx, typeTarget, infoTarget, sName, args, MethodKind.Method,
-                                    !fNoCall, id.isNested(), atypeReturn, ErrorListener.BLACKHOLE) != null)
-                            {
-                            if (target.getStepsOut() > 0)
-                                {
+                                    !fNoCall, id.isNested(), atypeReturn, ErrorListener.BLACKHOLE) != null) {
+                            if (target.getStepsOut() > 0) {
                                 exprName.log(errs, Severity.ERROR, Compiler.NO_OUTER_METHOD,
                                     target.getTargetType().removeAccess().getValueString(), sName);
-                                }
-                            else
-                                {
+                            } else {
                                 exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD,
                                     sName, target.getTargetType().removeAccess().getValueString());
-                                }
                             }
-                        else
-                            {
+                        } else {
                             errsTemp.merge();
-                            }
-                        return null;
                         }
-                    else
-                        {
+                        return null;
+                    } else {
                         m_targetInfo  = target; // (only used for non-constants)
                         m_argMethod   = idCallable;
                         m_method      = getMethod(ctx, typeTarget, infoTarget, idCallable);
-                        if (m_method == null)
-                            {
+                        if (m_method == null) {
                             log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
                                     idCallable.getValueString(), typeTarget.getValueString());
                             return null;
-                            }
+                        }
                         m_fBindTarget = !m_method.isFunction();
 
                         errsTemp.merge();
                         return idCallable;
-                        }
                     }
-                else if (id instanceof PropertyConstant idProp)
-                    {
+                } else if (id instanceof PropertyConstant idProp) {
                     PropertyInfo prop = infoTarget.findProperty(idProp);
-                    if (prop == null)
-                        {
+                    if (prop == null) {
                         log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
                                 idProp.getName(), target.getTargetType().getValueString());
                         return null;
-                        }
+                    }
 
-                    if (testFunction(ctx, prop.getType(), 0, 0, atypeReturn, errs) == null)
-                        {
+                    if (testFunction(ctx, prop.getType(), 0, 0, atypeReturn, errs) == null) {
                         return null;
-                        }
+                    }
 
-                    if (prop.isConstant() || infoTarget.isSingleton() || target.hasThis())
-                        {
+                    if (prop.isConstant() || infoTarget.isSingleton() || target.hasThis()) {
                         m_targetInfo = target; // (only used for non-constants)
                         m_argMethod  = id;
                         return id;
-                        }
-                    else
-                        {
+                    } else {
                         // the property requires a target, but there is no "left." before the prop
                         // name, and there is no "this." (explicit or implicit) because there is no
                         // "this"
                         exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_PROPERTY, sName, target.getTargetType());
                         return null;
-                        }
                     }
-                else
-                    {
+                } else {
                     log(errs, Severity.ERROR, Compiler.ILLEGAL_INVOCATION, target.getName());
                     return null;
-                    }
                 }
+            }
 
             // must NOT have resolved the name to a method constant (that should be impossible)
             assert !(arg instanceof MethodConstant);
 
-            if (arg instanceof MultiMethodConstant idMM)
-                {
+            if (arg instanceof MultiMethodConstant idMM) {
                 // an import name can specify a MultiMethodConstant;
                 // we only allow functions (not methods or constructors)
                 IdentityConstant idClz      = idMM.getParentConstant();
@@ -2561,61 +2139,53 @@ public class InvocationExpression
                 TypeInfo         infoTarget = getTypeInfo(ctx, typeTarget, errs);
                 MethodConstant   idMethod   = findMethod(ctx, typeTarget, infoTarget, sName,
                         args, MethodKind.Any, !fNoCall, false, atypeReturn, errs);
-                if (idMethod == null)
-                    {
+                if (idMethod == null) {
                     return null;
-                    }
+                }
 
                 MethodStructure method = getMethod(ctx, typeTarget, infoTarget, idMethod);
-                if (method == null)
-                    {
+                if (method == null) {
                     log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
                             idMethod.getValueString(), typeTarget.getValueString());
                     return null;
-                    }
-                if (!method.isFunction())
-                    {
+                }
+                if (!method.isFunction()) {
                     exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_PROPERTY,
                             sName, idMethod.getParentConstant().getValueString());
                     return null;
-                    }
+                }
                 m_method      = method;
                 m_argMethod   = idMethod;
                 m_fBindTarget = false;
                 return idMethod;
-                }
+            }
 
-            if (arg instanceof PropertyConstant idProp)
-                {
+            if (arg instanceof PropertyConstant idProp) {
                 // an import name can specify a static PropertyConstant
                 return testStaticProperty(ctx, idProp, atypeReturn, errs);
-                }
+            }
 
             log(errs, Severity.ERROR, Compiler.ILLEGAL_INVOCATION, tokName.getValueText());
             return null;
-            }
+        }
 
         // there is a "left" expression for the name
-        if (tokName.isSpecial())
-            {
+        if (tokName.isSpecial()) {
             tokName.log(errs, getSource(), Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, tokName.getValueText());
             return null;
-            }
+        }
 
         // the left expression provides the scope to search for a matching method/function;
         // if the left expression is itself a NameExpression, and it's in identity mode (i.e. a
         // possible identity), then check the identity first
         boolean fIdentityMode = false;
-        if (exprLeft instanceof NameExpression nameLeft)
-            {
-            if ("super".equals(nameLeft.getName()))
-                {
+        if (exprLeft instanceof NameExpression nameLeft) {
+            if ("super".equals(nameLeft.getName())) {
                 log(errs, Severity.ERROR, Compiler.INVALID_SUPER_REFERENCE);
                 return null;
-                }
+            }
 
-            if (nameLeft.isIdentityMode(ctx, true))
-                {
+            if (nameLeft.isIdentityMode(ctx, true)) {
                 // the left identity
                 // - methods are included because there is a left, but since it is to obtain a
                 //   method reference, there must not be any arg binding or actual invocation
@@ -2623,77 +2193,64 @@ public class InvocationExpression
                 IdentityConstant idLeft = nameLeft.getIdentity(ctx);
                 Access           access = fConstruct ? Access.PROTECTED : Access.PUBLIC;
                 // TODO: if left is a super class or other contribution, use PROTECTED access as well
-                if (ctx.getThisClassId().isNestMateOf(idLeft))
-                    {
+                if (ctx.getThisClassId().isNestMateOf(idLeft)) {
                     access = Access.PRIVATE;
-                    }
+                }
 
                 TypeInfo infoLeft;
-                if (nameLeft.getMeaning() == NameExpression.Meaning.Type)
-                    {
+                if (nameLeft.getMeaning() == NameExpression.Meaning.Type) {
                     // "Class" meaning in IdentityMode can only indicate a "type-of-class" scenario
                     assert typeLeft.isTypeOfType();
 
                     typeLeft = typeLeft.getParamType(0);
-                    if (access != typeLeft.getAccess())
-                        {
+                    if (access != typeLeft.getAccess()) {
                         typeLeft = pool.ensureAccessTypeConstant(typeLeft, access);
-                        }
-                    infoLeft = typeLeft.ensureTypeInfo(errs);
                     }
-                else
-                    {
-                    if (fConstruct)
-                        {
+                    infoLeft = typeLeft.ensureTypeInfo(errs);
+                } else {
+                    if (fConstruct) {
                         // this can only be a "construct X(...)" call coming from "this:struct"
                         // context
                         ClassStructure clzThis = ctx.getThisClass();
                         Contribution   contrib = clzThis.findContribution(idLeft);
-                        if (contrib == null)
-                            {
+                        if (contrib == null) {
                             log(errs, Severity.ERROR, Compiler.INVALID_CONSTRUCT_CALL,
                                     idLeft.getValueString());
                             return null;
-                            }
+                        }
 
                         TypeConstant typeContrib = contrib.getTypeConstant();
-                        switch (contrib.getComposition())
-                            {
-                            case Equal:
-                                assert typeContrib.equals(ctx.getThisType());
-                                access = Access.PRIVATE;
-                                break;
+                        switch (contrib.getComposition()) {
+                        case Equal:
+                            assert typeContrib.equals(ctx.getThisType());
+                            access = Access.PRIVATE;
+                            break;
 
-                            case Annotation:
-                            case Incorporates:
-                                if (clzThis.isVirtualChild())
-                                    {
-                                    TypeConstant typeParent = ctx.getThisType().getParentType();
-                                    if (typeContrib.isA(typeParent))
-                                        {
-                                        log(errs, Severity.ERROR, Constants.VE_CYCLICAL_CONTRIBUTION,
-                                                clzThis.getIdentityConstant().getPathString(),
-                                                typeContrib.getValueString());
-                                        return null;
-                                        }
-                                    }
-                                break;
-
-                            case Extends:
-                                if (!clzThis.getSuper().getIdentityConstant().equals(idLeft))
-                                    {
-                                    log(errs, Severity.WARNING, Compiler.SUPER_CONSTRUCTOR_SKIPPED);
-                                    }
-                                break;
-
-                            default:
-                                break;
+                        case Annotation:
+                        case Incorporates:
+                            if (clzThis.isVirtualChild()) {
+                                TypeConstant typeParent = ctx.getThisType().getParentType();
+                                if (typeContrib.isA(typeParent)) {
+                                    log(errs, Severity.ERROR, Constants.VE_CYCLICAL_CONTRIBUTION,
+                                            clzThis.getIdentityConstant().getPathString(),
+                                            typeContrib.getValueString());
+                                    return null;
+                                }
                             }
+                            break;
+
+                        case Extends:
+                            if (!clzThis.getSuper().getIdentityConstant().equals(idLeft)) {
+                                log(errs, Severity.WARNING, Compiler.SUPER_CONSTRUCTOR_SKIPPED);
+                            }
+                            break;
+
+                        default:
+                            break;
+                        }
                         typeLeft = pool.ensureAccessTypeConstant(typeContrib, access);
                         infoLeft = typeLeft.ensureTypeInfo(errs);
-                        }
-                    else
-                        {
+                    } else {
                         // this is either:
                         // - a function call (e.g. Duration.ofSeconds(1)), or
                         // - a function call with an explicit formal target type (e.g.
@@ -2703,23 +2260,20 @@ public class InvocationExpression
                         //   not be changed
                         // - a method call for a singleton (e.g. TestReflection.report(...))
                         TypeConstant typeTarget = idLeft.getType();
-                        if (access != Access.PUBLIC)
-                            {
+                        if (access != Access.PUBLIC) {
                             typeTarget = typeTarget.ensureAccess(access);
-                            }
+                        }
                         infoLeft = typeTarget.ensureTypeInfo(errs);
 
-                        if (typeTarget.isParamsSpecified())
-                            {
-                            if (infoLeft.isSingleton() || typeTarget.isA(pool.typeClass()))
-                                {
+                        if (typeTarget.isParamsSpecified()) {
+                            if (infoLeft.isSingleton() || typeTarget.isA(pool.typeClass())) {
                                 exprLeft.log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                                 return null;
-                                }
-                            m_typeTarget = typeTarget;
                             }
+                            m_typeTarget = typeTarget;
                         }
                     }
+                }
                 fSingleton = infoLeft.isSingleton();
 
                 MethodKind kind = fConstruct                        ? MethodKind.Constructor :
@@ -2732,126 +2286,111 @@ public class InvocationExpression
 
                 if (arg == null && kind == MethodKind.Function &&
                         findCallable(ctx, infoLeft.getType(), infoLeft, sName,
-                            MethodKind.Any, false, atypeReturn, ErrorListener.BLACKHOLE) != null)
-                    {
+                            MethodKind.Any, false, atypeReturn, ErrorListener.BLACKHOLE) != null) {
                     exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD,
                             sName, infoLeft.getType().getValueString());
                     return null;
-                    }
-                if (arg instanceof MethodConstant idMethod)
-                    {
+                }
+                if (arg instanceof MethodConstant idMethod) {
                     errsTemp.merge();
 
                     MethodInfo infoMethod = infoLeft.getMethodById(idMethod);
                     assert infoMethod != null;
 
-                    if (infoMethod.isAbstractFunction())
-                        {
+                    if (infoMethod.isAbstractFunction()) {
                         log(errs, Severity.ERROR, Compiler.ILLEGAL_FUNKY_CALL,
                                 idMethod.getValueString());
                         return null;
-                        }
+                    }
 
                     m_argMethod   = idMethod;
                     m_method      = infoMethod.getTopmostMethodStructure(infoLeft);
                     m_fBindTarget = fSingleton && !m_method.isFunction();
                     return idMethod;
-                    }
-                if (arg instanceof PropertyConstant idProp)
-                    {
+                }
+                if (arg instanceof PropertyConstant idProp) {
                     errsTemp.merge();
                     return testStaticProperty(ctx, idProp, atypeReturn, errs);
-                    }
-                fIdentityMode = true;
                 }
+                fIdentityMode = true;
+            }
 
-            switch (nameLeft.getMeaning())
-                {
-                case Class:
-                    fSingleton = typeLeft.ensureTypeInfo(errs).isSingleton();
-                    break;
+            switch (nameLeft.getMeaning()) {
+            case Class:
+                fSingleton = typeLeft.ensureTypeInfo(errs).isSingleton();
+                break;
 
-                case Property:
-                    {
-                    PropertyConstant idProp = (PropertyConstant) nameLeft.resolveRawArgument(ctx, false, errs);
-                    if (idProp.isFormalType())
-                        {
-                        // Example (NaturalHasher.x):
-                        //   Int hashOf(Value value)
-                        //     {
-                        //     return Value.hashCode(value);
-                        //     }
-                        //
-                        // "this" is "Value.hashCode(value)"
-                        // idProp.getFormalType() is NaturalHasher.Value
+            case Property: {
+                PropertyConstant idProp = (PropertyConstant) nameLeft.resolveRawArgument(ctx, false, errs);
+                if (idProp.isFormalType()) {
+                    // Example (NaturalHasher.x):
+                    //   Int hashOf(Value value) {
+                    //       return Value.hashCode(value);
+                    //   }
+                    //
+                    // "this" is "Value.hashCode(value)"
+                    // idProp.getFormalType() is NaturalHasher.Value
 
-                        TypeConstant type     = nameLeft.getImplicitType(ctx).getParamType(0);
-                        TypeInfo     infoType = getTypeInfo(ctx, type, errs);
+                    TypeConstant type     = nameLeft.getImplicitType(ctx).getParamType(0);
+                    TypeInfo     infoType = getTypeInfo(ctx, type, errs);
 
-                        ErrorListener errsTemp = errs.branch(this);
+                    ErrorListener errsTemp = errs.branch(this);
 
-                        Argument arg = findCallable(ctx, type, infoType, sName, MethodKind.Function,
-                                        false, atypeReturn, errsTemp);
-                        if (arg instanceof MethodConstant idMethod)
-                            {
-                            m_argMethod = idMethod;
-                            m_method    = getMethod(ctx, type, infoType, idMethod);
-                            if (m_method == null)
-                                {
-                                log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
-                                        idMethod.getValueString(), type.getValueString());
-                                return null;
-                                }
-                            m_fBindTarget = false;
-                            m_idFormal    = idProp;
-                            errsTemp.merge();
-                            return idMethod;
-                            }
-                        }
-                    break;
-                    }
-
-                case FormalChildType:
-                    {
-                    // Example:
-                    //   static <CompileType extends Hasher> Int hashCode(CompileType array)
-                    //      {
-                    //      Int hash = 0;
-                    //      for (CompileType.Element el : array)
-                    //          {
-                    //          hash += CompileType.Element.hashCode(el);
-                    //          }
-                    //      return hash;
-                    //      }
-                    // "this" is "CompileType.Element.hashCode(el)"
-                    //  typeLeft is a type of "CompileType.Element" formal type child
-
-                    assert typeLeft.isTypeOfType();
-                    TypeConstant  typeFormal = typeLeft.getParamType(0);
-                    TypeInfo      infoFormal = typeFormal.ensureTypeInfo(errs);
-                    ErrorListener errsTemp   = errs.branch(this);
-
-                    Argument arg = findCallable(ctx, typeFormal, infoFormal, sName, MethodKind.Function,
-                                                false, atypeReturn, errsTemp);
-                    if (arg instanceof MethodConstant idMethod)
-                        {
+                    Argument arg = findCallable(ctx, type, infoType, sName, MethodKind.Function,
+                                    false, atypeReturn, errsTemp);
+                    if (arg instanceof MethodConstant idMethod) {
                         m_argMethod = idMethod;
-                        m_method    = getMethod(ctx, typeFormal, infoFormal, idMethod);
-                        if (m_method == null)
-                            {
+                        m_method    = getMethod(ctx, type, infoType, idMethod);
+                        if (m_method == null) {
                             log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
-                                    idMethod.getValueString(), typeFormal.getValueString());
+                                    idMethod.getValueString(), type.getValueString());
                             return null;
-                            }
+                        }
                         m_fBindTarget = false;
-                        m_idFormal    = (FormalTypeChildConstant) nameLeft.getIdentity(ctx);
+                        m_idFormal    = idProp;
                         errsTemp.merge();
                         return idMethod;
-                        }
-                    break;
                     }
                 }
+                break;
             }
+
+            case FormalChildType: {
+                // Example:
+                //   static <CompileType extends Hasher> Int hashCode(CompileType array) {
+                //      Int hash = 0;
+                //      for (CompileType.Element el : array) {
+                //          hash += CompileType.Element.hashCode(el);
+                //      }
+                //      return hash;
+                //  }
+                // "this" is "CompileType.Element.hashCode(el)"
+                //  typeLeft is a type of "CompileType.Element" formal type child
+
+                assert typeLeft.isTypeOfType();
+                TypeConstant  typeFormal = typeLeft.getParamType(0);
+                TypeInfo      infoFormal = typeFormal.ensureTypeInfo(errs);
+                ErrorListener errsTemp   = errs.branch(this);
+
+                Argument arg = findCallable(ctx, typeFormal, infoFormal, sName, MethodKind.Function,
+                                            false, atypeReturn, errsTemp);
+                if (arg instanceof MethodConstant idMethod) {
+                    m_argMethod = idMethod;
+                    m_method    = getMethod(ctx, typeFormal, infoFormal, idMethod);
+                    if (m_method == null) {
+                        log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
+                                idMethod.getValueString(), typeFormal.getValueString());
+                        return null;
+                    }
+                    m_fBindTarget = false;
+                    m_idFormal    = (FormalTypeChildConstant) nameLeft.getIdentity(ctx);
+                    errsTemp.merge();
+                    return idMethod;
+                }
+                break;
+            }
+            }
+        }
 
         // use the type of the left expression to get the TypeInfo that must contain the
         // method/function to call
@@ -2864,31 +2403,25 @@ public class InvocationExpression
                                               MethodKind.Method;
 
         Argument arg = findCallable(ctx, typeLeft, infoLeft, sName, kind, false, atypeReturn, errsMain);
-        if (arg != null)
-            {
-            if (arg instanceof MethodConstant idMethod)
-                {
+        if (arg != null) {
+            if (arg instanceof MethodConstant idMethod) {
                 m_argMethod = idMethod;
                 m_method    = getMethod(ctx, typeLeft, infoLeft, idMethod);
-                if (m_method == null)
-                    {
+                if (m_method == null) {
                     log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
                             idMethod.getValueString(), typeLeft.getValueString());
                     return null;
-                    }
-                m_fBindTarget = !m_method.isFunction();
                 }
-            else
-                {
+                m_fBindTarget = !m_method.isFunction();
+            } else {
                 // just return the property; the rest will be handled by the caller
                 assert arg instanceof PropertyConstant;
-                }
+            }
             errsMain.merge();
             return arg;
-            }
+        }
 
-        if (typeLeft.isFormalTypeType())
-            {
+        if (typeLeft.isFormalTypeType()) {
             // allow for a function on a formal type to be called, e.g.:
             //  CompileType.f(x), where CompileType's constraint type has the function "f(x)"
             FormalConstant idFormal       = (FormalConstant) typeLeft.getParamType(0).getDefiningConstant();
@@ -2899,24 +2432,20 @@ public class InvocationExpression
 
             MethodConstant idMethod = findMethod(ctx, typeConstraint, infoConstraint, sName,
                     args, MethodKind.Function, !fNoCall, false, atypeReturn, errsAlt);
-            if (idMethod != null)
-                {
+            if (idMethod != null) {
                 m_argMethod = idMethod;
                 m_method    = getMethod(ctx, typeConstraint, infoConstraint, idMethod);
-                if (m_method == null)
-                    {
+                if (m_method == null) {
                     log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
                             idMethod.getValueString(), typeConstraint.getValueString());
                     return null;
-                    }
+                }
                 m_fBindTarget = false;
                 m_idFormal    = idFormal;
                 errsAlt.merge();
                 return idMethod;
-                }
             }
-        else if (typeLeft.isTypeOfType())
-            {
+        } else if (typeLeft.isTypeOfType()) {
             // almost identical to the above case, allow calling a function on a class represented
             // by the DataType; this for example allows writing (assuming "Type<Number> numType")
             //      "numType.fixedBitLength()"
@@ -2929,25 +2458,21 @@ public class InvocationExpression
 
             MethodConstant idMethod = findMethod(ctx, typeDataType, infoDataType, sName, args,
                     MethodKind.Function, !fNoCall, false, atypeReturn, errsAlt);
-            if (idMethod != null)
-                {
+            if (idMethod != null) {
                 m_argMethod = idMethod;
                 m_method    = getMethod(ctx, typeDataType, infoDataType, idMethod);
-                if (m_method == null)
-                    {
+                if (m_method == null) {
                     log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
                             idMethod.getValueString(), typeDataType.getValueString());
                     return null;
-                    }
+                }
                 m_fBindTarget = false;
                 m_idFormal    = (PropertyConstant) pool.clzType().getComponent().
                                     getChild("DataType").getIdentityConstant();
                 errsAlt.merge();
                 return idMethod;
-                }
             }
-        else if (!isSuppressCall() && !isAnyArgUnbound() && !fIdentityMode)
-            {
+        } else if (!isSuppressCall() && !isAnyArgUnbound() && !fIdentityMode) {
             // allow for a function on the "left type" to be called (Bjarne'd):
             //    x.f(y, z) -> X.f(x, y, z), where X is the class of x
             List<Expression> listArgs = new ArrayList<>(args);
@@ -2957,107 +2482,93 @@ public class InvocationExpression
 
             MethodConstant idMethod = findMethod(ctx, typeLeft, infoLeft, sName, listArgs,
                     MethodKind.Function, !fNoCall, false, atypeReturn, errsAlt);
-            if (idMethod != null)
-                {
+            if (idMethod != null) {
                 m_argMethod = idMethod;
                 m_method    = getMethod(ctx, typeLeft, infoLeft, idMethod);
-                if (m_method == null)
-                    {
+                if (m_method == null) {
                     log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
                             idMethod.getValueString(), typeLeft.getValueString());
                     return null;
-                    }
+                }
                 m_fBindTarget = false;
                 m_fBjarne     = true;
                 errsAlt.merge();
                 return idMethod;
-                }
             }
+        }
 
-        if (exprLeft instanceof NameExpression nameLeft && typeLeft.isA(pool.typeFunction()))
-            {
+        if (exprLeft instanceof NameExpression nameLeft && typeLeft.isA(pool.typeFunction())) {
             // it appears that they try to use a variable or property, but have a function instead
             if (errsMain.hasError(Compiler.MISSING_METHOD) &&
-                    infoLeft.findMethods(sName, -1, MethodKind.Any).isEmpty())
-                {
+                    infoLeft.findMethods(sName, -1, MethodKind.Any).isEmpty()) {
                 IdentityConstant idParent = nameLeft.isIdentityMode(ctx, false)
                     ? nameLeft.getIdentity(ctx).getNamespace()
-                    : switch (nameLeft.getMeaning())
-                        {
+                    : switch (nameLeft.getMeaning()) {
                         case Property -> ((PropertyConstant) nameLeft.
                                             resolveRawArgument(ctx, false, errs)).getNamespace();
                         case Variable -> ctx.getMethod().getIdentityConstant();
                         default       -> null;
-                        };
+                    };
 
-                if (idParent != null)
-                    {
+                if (idParent != null) {
                     log(errsMain, Severity.ERROR, Compiler.SUSPICIOUS_FUNCTION_USE,
                             nameLeft.getName(), idParent.getValueString());
-                    }
                 }
             }
+        }
 
         errsMain.merge();
         return null;
-        }
+    }
 
     /**
      * @return a MethodStructure for the specified id
      */
-    private MethodStructure getMethod(Context ctx, MethodConstant idMethod)
-        {
+    private MethodStructure getMethod(Context ctx, MethodConstant idMethod) {
         MethodStructure method = m_method;
-        if (method == null)
-            {
+        if (method == null) {
             method = (MethodStructure) idMethod.getComponent();
-            if (method == null)
-                {
+            if (method == null) {
                 TypeConstant type = m_targetInfo.getTargetType();
                 TypeInfo     info = getTypeInfo(ctx, type, ErrorListener.BLACKHOLE);
 
                 method = getMethod(ctx, type, info, idMethod);
-                }
             }
-        return method;
         }
+        return method;
+    }
 
     /**
      * @return a method structure for the specified argument; null if not a method constant
      */
     private MethodStructure getMethod(Context ctx, TypeConstant typeTarget, TypeInfo infoTarget,
-                                      MethodConstant idMethod)
-        {
+                                      MethodConstant idMethod) {
         MethodInfo infoMethod = infoTarget.getMethodById(idMethod);
 
         if (infoMethod != null && !typeTarget.isAccessSpecified() &&
-                infoTarget.getType().getAccess() != Access.PRIVATE)
-            {
+                infoTarget.getType().getAccess() != Access.PRIVATE) {
             // see the comments in getTypeInfo()
-            if (!infoMethod.isVisible(ctx.getThisClassId()))
-                {
+            if (!infoMethod.isVisible(ctx.getThisClassId())) {
                 return null;
-                }
             }
+        }
 
         return infoMethod.getTopmostMethodStructure(infoTarget);
-        }
+    }
 
     /**
      * @return a PropertyStructure for the specified id
      */
-    private PropertyStructure getProperty(Context ctx, PropertyConstant idProp)
-        {
+    private PropertyStructure getProperty(Context ctx, PropertyConstant idProp) {
         PropertyStructure prop = (PropertyStructure) idProp.getComponent();
-        if (prop == null)
-            {
+        if (prop == null) {
             TypeConstant type = m_targetInfo.getTargetType();
             TypeInfo     info = getTypeInfo(ctx, type, ErrorListener.BLACKHOLE);
 
             prop = info.findProperty(idProp).getHead().getStructure();
-            }
-        return prop;
         }
+        return prop;
+    }
 
     /**
      * Find a named method or function that best matches the specified requirements.
@@ -3085,25 +2596,22 @@ public class InvocationExpression
             MethodKind     kind,
             boolean        fAllowNested,
             TypeConstant[] aRedundant,
-            ErrorListener  errs)
-        {
+            ErrorListener  errs) {
         // check for a property of that name; if one exists, it must be of type function, or a type
         // with an @Auto conversion to function - which will be verified by testFunction()
         PropertyInfo prop = infoParent.findProperty(sName);
-        if (prop != null)
-            {
+        if (prop != null) {
             return prop.getIdentity();
-            }
+        }
 
-        if (sName.equals("new"))
-            {
+        if (sName.equals("new")) {
             sName      = "construct";
             kind       = MethodKind.Constructor;
             aRedundant = TypeConstant.NO_TYPES;
-            }
+        }
         return findMethod(ctx, typeParent, infoParent, sName, args, kind,
                     m_fCall, fAllowNested, aRedundant, errs);
-        }
+    }
 
     /**
      * Check if the specified property is a static function that matches the specified return types.
@@ -3117,30 +2625,27 @@ public class InvocationExpression
      * @return the property id or null if an error has been reported
      */
     protected Argument testStaticProperty(Context ctx, PropertyConstant idProp,
-                                        TypeConstant[] atypeReturn, ErrorListener errs)
-        {
+                                        TypeConstant[] atypeReturn, ErrorListener errs) {
         ConstantPool      pool  = pool();
         String            sName = idProp.getName();
         PropertyStructure prop  = (PropertyStructure) idProp.getComponent();
 
-        if (!prop.isConstant())
-            {
+        if (!prop.isConstant()) {
             expr.log(errs, Severity.ERROR, Compiler.NO_THIS_PROPERTY,
                     sName, idProp.getParentConstant().getValueString());
             return null;
-            }
+        }
 
-        if (testFunction(ctx, prop.getType(), 0, 0, atypeReturn, errs) == null)
-            {
+        if (testFunction(ctx, prop.getType(), 0, 0, atypeReturn, errs) == null) {
             expr.log(errs, Severity.ERROR, Compiler.NOT_TYPE_OF_TYPE,
                     sName, pool.typeFunction().getValueString());
             return null;
-            }
+        }
 
         m_typeTarget = idProp.getParentConstant().getType();
         m_argMethod  = idProp;
         return idProp;
-        }
+    }
 
     /**
      * Check the type of the thing that is either a function or needs to be converted into a
@@ -3165,8 +2670,7 @@ public class InvocationExpression
             int            cTypeParams,
             int            cDefaults,
             TypeConstant[] atypeReturn,
-            ErrorListener  errs)
-        {
+            ErrorListener  errs) {
         ConstantPool pool = pool();
 
         // if a match is found, then that is the function to use, and it is an error if the
@@ -3176,57 +2680,44 @@ public class InvocationExpression
 
         boolean        fFunction = typeFn.isA(pool.typeFunction());
         MethodConstant idConvert = null;
-        if (!fFunction)
-            {
-            if (typeFn.isA(pool.typeMethod()))
-                {
-                if (ctx.isMethod())
-                    {
+        if (!fFunction) {
+            if (typeFn.isA(pool.typeMethod())) {
+                if (ctx.isMethod()) {
                     TypeConstant typeThis   = ctx.getThisType();
                     TypeConstant typeTarget = typeFn.getParamType(0);
-                    if (!typeThis.isA(typeTarget))
-                        {
+                    if (!typeThis.isA(typeTarget)) {
                         log(errs, Severity.ERROR, Compiler.INVALID_METHOD_TARGET,
                                 typeTarget.getValueString(), typeThis.getValueString());
                         return null;
-                        }
-                    ctx.requireThis(getStartPosition(), errs);
                     }
-                else
-                    {
+                    ctx.requireThis(getStartPosition(), errs);
+                } else {
                     log(errs, Severity.ERROR, Compiler.NO_THIS);
                     return null;
-                    }
                 }
-            else
-                {
+            } else {
                 idConvert = typeFn.getConverterTo(pool.typeFunction());
-                if (idConvert == null)
-                    {
+                if (idConvert == null) {
                     log(errs, Severity.ERROR, Compiler.WRONG_TYPE, "Function", typeFn.getValueString());
                     return null;
-                    }
-                else
-                    {
+                } else {
                     typeFn = idConvert.getRawReturns()[0];
-                    }
                 }
             }
+        }
 
         // function must be parameterized by 2 fields: param types and return types
         // each is a parameterized "tuple" type constant with an array of types
         TypeConstant[] atypeParams = pool.extractFunctionParams(typeFn);
-        if (atypeParams == null)
-            {
+        if (atypeParams == null) {
             log(errs, Severity.ERROR, Compiler.MISSING_PARAM_INFORMATION);
             return null;
-            }
+        }
 
-        if (m_fNamedArgs)
-            {
+        if (m_fNamedArgs) {
             log(errs, Severity.ERROR, Compiler.ILLEGAL_ARG_NAME);
             return null;
-            }
+        }
 
         int     cAllParams = atypeParams.length;
         int     cVisible   = cAllParams - cTypeParams;
@@ -3235,63 +2726,53 @@ public class InvocationExpression
 
         List<Expression> listArgs = args;
         int              cArgs    = listArgs.size();
-        if (cArgs > cVisible || cArgs < cRequired)
-            {
+        if (cArgs > cVisible || cArgs < cRequired) {
             log(errs, Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT, cRequired, cArgs);
             fValid = false;
-            }
+        }
 
-        for (int i = 0, c = Math.min(cVisible, cArgs); i < c; ++i)
-            {
+        for (int i = 0, c = Math.min(cVisible, cArgs); i < c; ++i) {
             TypeConstant typeParam = atypeParams[cTypeParams + i];
             Expression   exprArg   = listArgs.get(i);
 
             ctx = ctx.enterInferring(typeParam);
-            if (!exprArg.testFit(ctx, typeParam, false, errs).isFit())
-                {
-                if (!errs.hasSeriousErrors())
-                    {
+            if (!exprArg.testFit(ctx, typeParam, false, errs).isFit()) {
+                if (!errs.hasSeriousErrors()) {
                     log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                             typeParam.getValueString(), exprArg.getTypeString(ctx));
-                    }
-                fValid = false;
                 }
-            ctx = ctx.exit();
+                fValid = false;
             }
+            ctx = ctx.exit();
+        }
 
-        if (cArgs < cVisible)
-            {
+        if (cArgs < cVisible) {
             // there are some default arguments; strip them from the function type
             typeFn = pool.buildFunctionType(
                     Arrays.copyOfRange(atypeParams, 0, cArgs),
                     pool.extractFunctionReturns(typeFn));
-            }
+        }
 
-        if (atypeReturn != null)
-            {
+        if (atypeReturn != null) {
             TypeConstant[] atypeFnRet = pool.extractFunctionReturns(typeFn);
-            if (atypeFnRet == null)
-                {
+            if (atypeFnRet == null) {
                 log(errs, Severity.ERROR, Compiler.MISSING_PARAM_INFORMATION);
                 return null;
-                }
+            }
 
             TypeFit fit = calculateReturnFit(atypeFnRet, expr.toString(), m_fCall,
                                 atypeReturn, ctx.getThisType(), errs);
             m_fPack = fit.isPacking();
             fValid  = fit.isFit();
-            }
+        }
 
-        if (fValid)
-            {
+        if (fValid) {
             m_idConvert = idConvert;
             return typeFn;
-            }
-        else
-            {
+        } else {
             return null;
-            }
         }
+    }
 
     /**
      * Validate each of the arguments against their required types as dictated by the function type.
@@ -3313,8 +2794,7 @@ public class InvocationExpression
             int            cTypeParams,
             int            cDefaults,
             TypeConstant[] atypeRequired,
-            ErrorListener  errs)
-        {
+            ErrorListener  errs) {
         ConstantPool   pool        = pool();
         TypeConstant[] atypeParams = pool.extractFunctionParams(typeFn);
         int            cAllParams  = atypeParams.length;
@@ -3322,39 +2802,32 @@ public class InvocationExpression
         int            cRequired   = cVisible - cDefaults;
         int            cArgs       = args.size();
 
-        if (cArgs > cVisible || cArgs < cRequired)
-            {
+        if (cArgs > cVisible || cArgs < cRequired) {
             log(errs, Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT, cRequired, cArgs);
             return null;
-            }
+        }
 
-        if (cTypeParams > 0)
-            {
+        if (cTypeParams > 0) {
             atypeParams = Arrays.copyOfRange(atypeParams, cTypeParams, cAllParams);
-            }
+        }
 
-        if (validateExpressions(ctx, args, atypeParams, errs) == null)
-            {
+        if (validateExpressions(ctx, args, atypeParams, errs) == null) {
             return null;
-            }
+        }
 
-        if (m_fCall)
-            {
+        if (m_fCall) {
             return m_fPack
                 ? new TypeConstant[] {typeFn.getParamType(1)}
                 : pool.extractFunctionReturns(typeFn);
-            }
+        }
 
-        if (m_fBindParams)
-            {
+        if (m_fBindParams) {
             typeFn = bindFunctionParameters(typeFn);
-            }
+        }
 
-        if (atypeRequired != null && atypeRequired.length > 0)
-            {
+        if (atypeRequired != null && atypeRequired.length > 0) {
             TypeConstant typeReqFn = atypeRequired[0];
-            if (!typeReqFn.equals(pool.typeObject())) // any function is an Object
-                {
+            if (!typeReqFn.equals(pool.typeObject())) { // any function is an Object
                 // the isA() on a function allows a reduction of the parameter number
                 // (allowing for default arguments), so we need to compensate here
                 TypeConstant[] atypeReqParams = pool.extractFunctionParams(typeReqFn);
@@ -3362,43 +2835,38 @@ public class InvocationExpression
                 int            cReqParams     = atypeReqParams == null ? 0 : atypeReqParams.length;
                 int            cFnParams      = atypeFnParams  == null ? 0 : atypeFnParams.length;
 
-                if (cReqParams < cFnParams)
-                    {
+                if (cReqParams < cFnParams) {
                     // report the "wrong type" rather than the "wrong argument count"
                     log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeReqFn, typeFn);
                     return null;
-                    }
                 }
             }
+        }
 
         return new TypeConstant[] {typeFn};
-        }
+    }
 
     /**
      * @return return type for the specified argument type, which is known to be a Function
      */
-    protected TypeConstant[] calculateReturnType(TypeConstant typeFn)
-        {
+    protected TypeConstant[] calculateReturnType(TypeConstant typeFn) {
         TypeConstant[] atypeReturn;
-        if (m_fCall)
-            {
+        if (m_fCall) {
             atypeReturn = pool().extractFunctionReturns(typeFn);
             return atypeReturn == null ? TypeConstant.NO_TYPES :
                    m_fPack             ? new TypeConstant[] {pool().ensureTupleType(atypeReturn)}
                                        : atypeReturn;
-            }
+        }
 
-        if (m_fBindParams)
-            {
-            if (args.size() > pool().extractFunctionParams(typeFn).length)
-                {
+        if (m_fBindParams) {
+            if (args.size() > pool().extractFunctionParams(typeFn).length) {
                 return TypeConstant.NO_TYPES;
-                }
-            typeFn = bindFunctionParameters(typeFn);
             }
+            typeFn = bindFunctionParameters(typeFn);
+        }
 
         return new TypeConstant[] {typeFn};
-        }
+    }
 
     /**
      * @return a type parameter resolver for a given method and array of return types or null if the
@@ -3406,59 +2874,51 @@ public class InvocationExpression
      *         the error list
      */
     private GenericTypeResolver makeTypeParameterResolver(Context ctx, MethodStructure method,
-            boolean fAllowPending, TypeConstant typeTarget, TypeConstant[] atypeReturn, ErrorListener errs)
-        {
+            boolean fAllowPending, TypeConstant typeTarget, TypeConstant[] atypeReturn, ErrorListener errs) {
         List<Expression> listArgs = args;
         int              cArgs    = listArgs.size();
         TypeConstant[] atypeArgs = new TypeConstant[cArgs];
-        for (int i = 0; i < cArgs; i++)
-            {
+        for (int i = 0; i < cArgs; i++) {
             atypeArgs[i] = listArgs.get(i).getImplicitType(ctx);
-            }
+        }
 
         transformTypeArguments(ctx, listArgs, atypeArgs);
 
         Map<FormalConstant, TypeConstant> mapTypeParams =
                 method.resolveTypeParameters(pool(), typeTarget, atypeArgs, atypeReturn, fAllowPending);
 
-        if (mapTypeParams.size() == method.getTypeParamCount())
-            {
+        if (mapTypeParams.size() == method.getTypeParamCount()) {
             return GenericTypeResolver.of(mapTypeParams);
-            }
+        }
 
         log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
                 method.collectUnresolvedTypeParameters(mapTypeParams.keySet().
                     stream().map(NamedConstant::getName).collect(Collectors.toSet())));
         return null;
-        }
+    }
 
     /**
      * Resolve the specified types against the specified resolver.
      *
      * @return an array of resolved types
      */
-    private TypeConstant[] resolveTypes(GenericTypeResolver resolver, TypeConstant[] atype)
-        {
+    private TypeConstant[] resolveTypes(GenericTypeResolver resolver, TypeConstant[] atype) {
         TypeConstant[] atypeResolved = atype;
-        if (resolver != null)
-            {
+        if (resolver != null) {
             ConstantPool pool = pool();
-            for (int i = 0, c = atype.length; i < c; i++)
-                {
+            for (int i = 0, c = atype.length; i < c; i++) {
                 TypeConstant typeOriginal = atype[i];
                 TypeConstant typeResolved = typeOriginal.resolveGenerics(pool, resolver);
-                if (typeResolved != typeOriginal)
-                    {
-                    if (atypeResolved == atype)
-                        {
+                if (typeResolved != typeOriginal) {
+                    if (atypeResolved == atype) {
                         atypeResolved = atype.clone();
-                        }
-                    atypeResolved[i] = typeResolved;
                     }
+                    atypeResolved[i] = typeResolved;
                 }
             }
-        return atypeResolved;
         }
+        return atypeResolved;
+    }
 
     /**
      * Create a new function type by binding all bounded expressions.
@@ -3467,20 +2927,17 @@ public class InvocationExpression
      *
      * @return a new function type that skips all bound parameters
      */
-    private TypeConstant bindFunctionParameters(TypeConstant typeFn)
-        {
+    private TypeConstant bindFunctionParameters(TypeConstant typeFn) {
         ConstantPool     pool     = pool();
         List<Expression> listArgs = args;
-        for (int i = listArgs.size() - 1; i >= 0; --i)
-            {
+        for (int i = listArgs.size() - 1; i >= 0; --i) {
             Expression expr = listArgs.get(i);
-            if (!expr.isNonBinding())
-                {
+            if (!expr.isNonBinding()) {
                 typeFn = pool.bindFunctionParam(typeFn, i);
-                }
             }
-        return typeFn;
         }
+        return typeFn;
+    }
 
     /**
      * Create a new function type by removing the type parameters from the function arguments.
@@ -3490,15 +2947,14 @@ public class InvocationExpression
      *
      * @return a new function type that skips all bound parameters
      */
-    private TypeConstant removeTypeParameters(TypeConstant typeFn, int cTypeParams)
-        {
+    private TypeConstant removeTypeParameters(TypeConstant typeFn, int cTypeParams) {
         ConstantPool   pool        = pool();
         TypeConstant[] atypeParams = pool.extractFunctionParams(typeFn);
 
         return pool.buildFunctionType(
                 Arrays.copyOfRange(atypeParams, cTypeParams, atypeParams.length),
                 pool.extractFunctionReturns(typeFn));
-        }
+    }
 
     /**
      * There are scenarios, when a MethodConstant doesn't actually point to a method structure.
@@ -3516,67 +2972,54 @@ public class InvocationExpression
      * @return the MethodConstant whose name space is the same as the method structure parent's
      *         identity
      */
-    private MethodConstant rebaseMethodConstant(MethodConstant idMethod, MethodStructure method)
-        {
-        if (!method.equals(idMethod.getComponent()))
-            {
-            if (method.getAccess() == Access.PRIVATE)
-                {
+    private MethodConstant rebaseMethodConstant(MethodConstant idMethod, MethodStructure method) {
+        if (!method.equals(idMethod.getComponent())) {
+            if (method.getAccess() == Access.PRIVATE) {
                 // for private methods, the idMethod *must be* the actual identity
                 idMethod = method.getIdentityConstant();
-                }
-            else if (idMethod.isTopLevel()) // exempt methods inside properties or methods
-                {
+            } else if (idMethod.isTopLevel()) { // exempt methods inside properties or methods
                 Component parentId     = idMethod.getNamespace().getComponent();
                 Component parentMethod = method.getParent().getParent();
-                if (!parentId.equals(parentMethod))
-                    {
+                if (!parentId.equals(parentMethod)) {
                     idMethod = pool().ensureMethodConstant(
                             parentMethod.getIdentityConstant(), idMethod.getSignature());
-                    }
                 }
             }
+        }
 
         return idMethod;
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(expr);
-        if (async)
-            {
+        if (async) {
             sb.append('^');
-            }
+        }
         sb.append('(');
 
         boolean first = true;
-        for (Expression arg : args)
-            {
-            if (first)
-                {
+        for (Expression arg : args) {
+            if (first) {
                 first = false;
-                }
-            else
-                {
+            } else {
                 sb.append(", ");
-                }
-            sb.append(arg);
             }
+            sb.append(arg);
+        }
 
         sb.append(')');
         return sb.toString();
-        }
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -3587,10 +3030,9 @@ public class InvocationExpression
      *
      * @return an int value that combines p|r
      */
-    static int combine(int p, int r)
-        {
+    static int combine(int p, int r) {
         return (p << 8) | r;
-        }
+    }
 
     static final int _00 = ('0' << 8) | '0';
     static final int _01 = ('0' << 8) | '1';
@@ -3648,4 +3090,4 @@ public class InvocationExpression
     private transient ExprAST m_astInvoke;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(InvocationExpression.class, "expr", "args");
-    }
+}

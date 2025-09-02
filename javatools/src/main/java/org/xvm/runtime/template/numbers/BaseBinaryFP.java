@@ -28,355 +28,322 @@ import org.xvm.runtime.template.text.xString;
  * Base class for native BinaryFPNumber (Float16, 32, 64) support.
  */
 public abstract class BaseBinaryFP
-        extends BaseFP
-    {
-    public BaseBinaryFP(Container container, ClassStructure structure, int cBits)
-        {
+        extends BaseFP {
+    public BaseBinaryFP(Container container, ClassStructure structure, int cBits) {
         super(container, structure, cBits);
-        }
+    }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         double d = ((FloatHandle) hTarget).getValue();
 
-        switch (sPropName)
-            {
-            case "bits":
-                return frame.assignValue(iReturn,
-                    xArray.makeBitArrayHandle(getBits(d), f_cBits, Mutability.Constant));
+        switch (sPropName) {
+        case "bits":
+            return frame.assignValue(iReturn,
+                xArray.makeBitArrayHandle(getBits(d), f_cBits, Mutability.Constant));
 
-            case "infinity":
-                return frame.assignValue(iReturn, xBoolean.makeHandle(Double.isInfinite(d)));
+        case "infinity":
+            return frame.assignValue(iReturn, xBoolean.makeHandle(Double.isInfinite(d)));
 
-            case "NaN":
-                return frame.assignValue(iReturn, xBoolean.makeHandle(Double.isNaN(d)));
-            }
+        case "NaN":
+            return frame.assignValue(iReturn, xBoolean.makeHandle(Double.isNaN(d)));
+        }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
+    }
 
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle hArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "add":
-                return invokeAdd(frame, hTarget, hArg, iReturn);
+                             ObjectHandle hArg, int iReturn) {
+        switch (method.getName()) {
+        case "add":
+            return invokeAdd(frame, hTarget, hArg, iReturn);
 
-            case "sub":
-                return invokeSub(frame, hTarget, hArg, iReturn);
+        case "sub":
+            return invokeSub(frame, hTarget, hArg, iReturn);
 
-            case "mul":
-                return invokeMul(frame, hTarget, hArg, iReturn);
+        case "mul":
+            return invokeMul(frame, hTarget, hArg, iReturn);
 
-            case "div":
-                return invokeDiv(frame, hTarget, hArg, iReturn);
+        case "div":
+            return invokeDiv(frame, hTarget, hArg, iReturn);
 
-            case "mod":
-                return invokeMod(frame, hTarget, hArg, iReturn);
+        case "mod":
+            return invokeMod(frame, hTarget, hArg, iReturn);
 
-            case "pow":
-                {
-                double d1 = ((FloatHandle) hTarget).getValue();
-                double d2 = ((FloatHandle) hArg).getValue();
+        case "pow": {
+            double d1 = ((FloatHandle) hTarget).getValue();
+            double d2 = ((FloatHandle) hArg).getValue();
 
-                return frame.assignValue(iReturn, makeHandle(Math.pow(d1, d2)));
-                }
+            return frame.assignValue(iReturn, makeHandle(Math.pow(d1, d2)));
+        }
 
-            case "round":
-                {
-                double d = ((FloatHandle) hTarget).getValue();
-                int    i = hArg == ObjectHandle.DEFAULT
-                            ? 0
-                            : ((EnumHandle) hArg).getOrdinal();
-                double r = new BigDecimal(d).setScale(0, Rounding.values()[i].getMode()).doubleValue();
+        case "round": {
+            double d = ((FloatHandle) hTarget).getValue();
+            int    i = hArg == ObjectHandle.DEFAULT
+                        ? 0
+                        : ((EnumHandle) hArg).getOrdinal();
+            double r = new BigDecimal(d).setScale(0, Rounding.values()[i].getMode()).doubleValue();
 
-                return frame.assignValue(iReturn, makeHandle(r));
-                }
+            return frame.assignValue(iReturn, makeHandle(r));
+        }
 
-            case "scaleByPow":
-                {
-                double d = ((FloatHandle) hTarget).getValue();
-                long   l = ((JavaLong) hArg).getValue();
+        case "scaleByPow": {
+            double d = ((FloatHandle) hTarget).getValue();
+            long   l = ((JavaLong) hArg).getValue();
 
-                return frame.assignValue(iReturn, makeHandle(Math.pow(d, l)));
-                }
+            return frame.assignValue(iReturn, makeHandle(Math.pow(d, l)));
+        }
 
-            case "atan2":
-                {
-                double d1 = ((FloatHandle) hTarget).getValue();
-                double d2 = ((FloatHandle) hArg).getValue();
+        case "atan2": {
+            double d1 = ((FloatHandle) hTarget).getValue();
+            double d2 = ((FloatHandle) hArg).getValue();
 
-                return frame.assignValue(iReturn, makeHandle(Math.atan2(d1, d2)));
-                }
-            }
+            return frame.assignValue(iReturn, makeHandle(Math.atan2(d1, d2)));
+        }
+        }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
-        }
+    }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
+                             ObjectHandle[] ahArg, int iReturn) {
         // hTarget could be null for a native function call
         double d = hTarget == null ? 0 : ((FloatHandle) hTarget).getValue();
-        switch (method.getName())
-            {
-            case "abs":
-                return frame.assignValue(iReturn, makeHandle(Math.abs(d)));
+        switch (method.getName()) {
+        case "abs":
+            return frame.assignValue(iReturn, makeHandle(Math.abs(d)));
 
-            case "toInt64":
-                {
-                boolean  fCheckBound = ahArg[0] == xBoolean.TRUE;
-                Rounding rounding    = Rounding.values()[ahArg[1] == ObjectHandle.DEFAULT
-                                            ? 0
-                                            : ((EnumHandle) ahArg[1]).getOrdinal()];
-                if (fCheckBound && !Double.isFinite(d))
-                    {
-                    return overflow(frame);
-                    }
-
-                long l = switch (rounding)
-                    {
-                    case TiesToEven     -> (long) d;
-                    case TiesToAway     -> d < 0 ? -Math.round(-d) : Math.round(d);
-                    case TowardPositive -> (long) Math.ceil(d);
-                    case TowardZero     -> (long) (d < 0 ? Math.ceil(d) : Math.floor(d));
-                    case TowardNegative -> (long) Math.floor(d);
-                    };
-                return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(l));
-                }
-
-            case "toDec64":
-                return frame.assignValue(iReturn, xDec64.INSTANCE.makeHandle(d));
-
-            case "toFloat32":
-                return frame.assignValue(iReturn, xFloat32.INSTANCE.makeHandle(d));
-
-            case "toFloat64":
-                return frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(d));
-
-            case "toIntN":
-            case "toUIntN":
-            case "toFloatN":
-            case "toDecN":
-                throw new UnsupportedOperationException(); // TODO
-
-            case "neg":
-                // same as invokeNeg()
-                return frame.assignValue(iReturn, makeHandle(-d));
-
-            case "floor":
-                return frame.assignValue(iReturn, makeHandle(Math.floor(d)));
-
-            case "ceil":
-                return frame.assignValue(iReturn, makeHandle(Math.ceil(d)));
-
-            case "exp":
-                return frame.assignValue(iReturn, makeHandle(Math.exp(d)));
-
-            case "log":
-                return frame.assignValue(iReturn, makeHandle(Math.log(d)));
-
-            case "log2":
-                return frame.assignValue(iReturn, makeHandle(Math.log10(d)*LOG2_10));
-
-            case "log10":
-                return frame.assignValue(iReturn, makeHandle(Math.log10(d)));
-
-            case "sqrt":
-                return frame.assignValue(iReturn, makeHandle(Math.sqrt(d)));
-
-            case "cbrt":
-                return frame.assignValue(iReturn, makeHandle(Math.cbrt(d)));
-
-            case "sin":
-                return frame.assignValue(iReturn, makeHandle(Math.sin(d)));
-
-            case "tan":
-                return frame.assignValue(iReturn, makeHandle(Math.tan(d)));
-
-            case "asin":
-                return frame.assignValue(iReturn, makeHandle(Math.asin(d)));
-
-            case "acos":
-                return frame.assignValue(iReturn, makeHandle(Math.acos(d)));
-
-            case "atan":
-                return frame.assignValue(iReturn, makeHandle(Math.atan(d)));
-
-            case "sinh":
-                return frame.assignValue(iReturn, makeHandle(Math.sinh(d)));
-
-            case "cosh":
-                return frame.assignValue(iReturn, makeHandle(Math.cosh(d)));
-
-            case "tanh":
-                return frame.assignValue(iReturn, makeHandle(Math.tanh(d)));
-
-            case "asinh":
-                return frame.assignValue(iReturn, makeHandle(Math.log(d+Math.sqrt(d*d+1.0))));
-
-            case "acosh":
-                return frame.assignValue(iReturn, makeHandle( Math.log(d+Math.sqrt(d*d-1.0))));
-
-            case "atanh":
-                return frame.assignValue(iReturn, makeHandle(0.5*Math.log((d+1.0)/(d-1.0))));
-
-            case "deg2rad":
-                return frame.assignValue(iReturn, makeHandle(Math.toRadians(d)));
-
-            case "rad2deg":
-                return frame.assignValue(iReturn, makeHandle(Math.toDegrees(d)));
-
-            case "nextUp":
-                return frame.assignValue(iReturn, makeHandle(Math.nextUp(d)));
-
-            case "nextDown":
-                return frame.assignValue(iReturn, makeHandle(Math.nextDown(d)));
-
+        case "toInt64": {
+            boolean  fCheckBound = ahArg[0] == xBoolean.TRUE;
+            Rounding rounding    = Rounding.values()[ahArg[1] == ObjectHandle.DEFAULT
+                                        ? 0
+                                        : ((EnumHandle) ahArg[1]).getOrdinal()];
+            if (fCheckBound && !Double.isFinite(d)) {
+                return overflow(frame);
             }
+
+            long l = switch (rounding) {
+                case TiesToEven     -> (long) d;
+                case TiesToAway     -> d < 0 ? -Math.round(-d) : Math.round(d);
+                case TowardPositive -> (long) Math.ceil(d);
+                case TowardZero     -> (long) (d < 0 ? Math.ceil(d) : Math.floor(d));
+                case TowardNegative -> (long) Math.floor(d);
+            };
+            return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(l));
+        }
+
+        case "toDec64":
+            return frame.assignValue(iReturn, xDec64.INSTANCE.makeHandle(d));
+
+        case "toFloat32":
+            return frame.assignValue(iReturn, xFloat32.INSTANCE.makeHandle(d));
+
+        case "toFloat64":
+            return frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(d));
+
+        case "toIntN":
+        case "toUIntN":
+        case "toFloatN":
+        case "toDecN":
+            throw new UnsupportedOperationException(); // TODO
+
+        case "neg":
+            // same as invokeNeg()
+            return frame.assignValue(iReturn, makeHandle(-d));
+
+        case "floor":
+            return frame.assignValue(iReturn, makeHandle(Math.floor(d)));
+
+        case "ceil":
+            return frame.assignValue(iReturn, makeHandle(Math.ceil(d)));
+
+        case "exp":
+            return frame.assignValue(iReturn, makeHandle(Math.exp(d)));
+
+        case "log":
+            return frame.assignValue(iReturn, makeHandle(Math.log(d)));
+
+        case "log2":
+            return frame.assignValue(iReturn, makeHandle(Math.log10(d)*LOG2_10));
+
+        case "log10":
+            return frame.assignValue(iReturn, makeHandle(Math.log10(d)));
+
+        case "sqrt":
+            return frame.assignValue(iReturn, makeHandle(Math.sqrt(d)));
+
+        case "cbrt":
+            return frame.assignValue(iReturn, makeHandle(Math.cbrt(d)));
+
+        case "sin":
+            return frame.assignValue(iReturn, makeHandle(Math.sin(d)));
+
+        case "tan":
+            return frame.assignValue(iReturn, makeHandle(Math.tan(d)));
+
+        case "asin":
+            return frame.assignValue(iReturn, makeHandle(Math.asin(d)));
+
+        case "acos":
+            return frame.assignValue(iReturn, makeHandle(Math.acos(d)));
+
+        case "atan":
+            return frame.assignValue(iReturn, makeHandle(Math.atan(d)));
+
+        case "sinh":
+            return frame.assignValue(iReturn, makeHandle(Math.sinh(d)));
+
+        case "cosh":
+            return frame.assignValue(iReturn, makeHandle(Math.cosh(d)));
+
+        case "tanh":
+            return frame.assignValue(iReturn, makeHandle(Math.tanh(d)));
+
+        case "asinh":
+            return frame.assignValue(iReturn, makeHandle(Math.log(d+Math.sqrt(d*d+1.0))));
+
+        case "acosh":
+            return frame.assignValue(iReturn, makeHandle( Math.log(d+Math.sqrt(d*d-1.0))));
+
+        case "atanh":
+            return frame.assignValue(iReturn, makeHandle(0.5*Math.log((d+1.0)/(d-1.0))));
+
+        case "deg2rad":
+            return frame.assignValue(iReturn, makeHandle(Math.toRadians(d)));
+
+        case "rad2deg":
+            return frame.assignValue(iReturn, makeHandle(Math.toDegrees(d)));
+
+        case "nextUp":
+            return frame.assignValue(iReturn, makeHandle(Math.nextUp(d)));
+
+        case "nextDown":
+            return frame.assignValue(iReturn, makeHandle(Math.nextDown(d)));
+        }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
-        }
+    }
 
     @Override
-    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
-        {
-        switch (method.getName())
-            {
-            case "split":
-                {
-                double d = ((FloatHandle) hTarget).getValue();
-                long   l = Double.doubleToRawLongBits(d);
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn) {
+        switch (method.getName()) {
+        case "split": {
+            double d = ((FloatHandle) hTarget).getValue();
+            long   l = Double.doubleToRawLongBits(d);
 
-                boolean fSign     = (l & SIGN_MASK) != 0;
-                int     iExp      = Math.getExponent(d);
-                long    lMantissa = l & MANTISSA_MASK;
-                return frame.assignValues(aiReturn, xBoolean.makeHandle(fSign),
-                                          xInt64.makeHandle(lMantissa), xInt64.makeHandle(iExp));
-                }
-            }
+            boolean fSign     = (l & SIGN_MASK) != 0;
+            int     iExp      = Math.getExponent(d);
+            long    lMantissa = l & MANTISSA_MASK;
+            return frame.assignValues(aiReturn, xBoolean.makeHandle(fSign),
+                                      xInt64.makeHandle(lMantissa), xInt64.makeHandle(iExp));
+        }
+        }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
-        }
+    }
 
     @Override
-    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
+    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         double d1 = ((FloatHandle) hTarget).getValue();
         double d2 = ((FloatHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeHandle(d1+d2));
-        }
+    }
 
     @Override
-    public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
+    public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         double d1 = ((FloatHandle) hTarget).getValue();
         double d2 = ((FloatHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeHandle(d1-d2));
-        }
+    }
 
     @Override
-    public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
+    public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         double d1 = ((FloatHandle) hTarget).getValue();
         double d2 = ((FloatHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeHandle(d1*d2));
-        }
+    }
 
     @Override
-    public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
+    public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         double d1 = ((FloatHandle) hTarget).getValue();
         double d2 = ((FloatHandle) hArg).getValue();
 
-        if (d2 == 0.0)
-            {
+        if (d2 == 0.0) {
             return overflow(frame);
-            }
+        }
 
         return frame.assignValue(iReturn, makeHandle(d1/d2));
-        }
+    }
 
     @Override
-    public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
+    public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         double d1 = ((FloatHandle) hTarget).getValue();
         double d2 = ((FloatHandle) hArg).getValue();
 
-        if (d2 == 0.0)
-            {
+        if (d2 == 0.0) {
             return overflow(frame);
-            }
-
-        return frame.assignValue(iReturn, makeHandle(d1%d2));
         }
 
+        return frame.assignValue(iReturn, makeHandle(d1%d2));
+    }
+
     @Override
-    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn) {
         double d = ((FloatHandle) hTarget).getValue();
 
         return frame.assignValue(iReturn, makeHandle(-d));
-        }
+    }
 
 
     // ----- comparison support --------------------------------------------------------------------
 
     @Override
     public int callCompare(Frame frame, TypeComposition clazz,
-                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         FloatHandle h1 = (FloatHandle) hValue1;
         FloatHandle h2 = (FloatHandle) hValue2;
 
         return frame.assignValue(iReturn,
                 xOrdered.makeHandle(Double.compare(h1.getValue(), h2.getValue())));
-        }
+    }
 
     @Override
-    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
-        {
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
         return ((FloatHandle) hValue1).getValue() == ((FloatHandle) hValue2).getValue();
-        }
+    }
 
     @Override
-    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
-        {
+    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         double d = ((FloatHandle) hTarget).getValue();
 
         return frame.assignValue(iReturn, xInt64.makeHandle(Double.hashCode(d)));
-        }
+    }
 
     @Override
-    protected int callEstimateLength(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
+    protected int callEstimateLength(Frame frame, ObjectHandle hTarget, int iReturn) {
         double d = ((FloatHandle) hTarget).getValue();
 
         return frame.assignValue(iReturn, xInt64.makeHandle(toString(d).length()));
-        }
+    }
 
     @Override
-    protected int callAppendTo(Frame frame, ObjectHandle hTarget, ObjectHandle hAppender, int iReturn)
-        {
+    protected int callAppendTo(Frame frame, ObjectHandle hTarget, ObjectHandle hAppender, int iReturn) {
         double d = ((FloatHandle) hTarget).getValue();
 
         return xString.callAppendTo(frame, xString.makeHandle(toString(d)), hAppender, iReturn);
-        }
+    }
 
     @Override
-    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
         double d = ((FloatHandle) hTarget).getValue();
 
         return frame.assignValue(iReturn, xString.makeHandle(toString(d)));
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -386,10 +353,9 @@ public abstract class BaseBinaryFP
      *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
-    public int convertLong(Frame frame, long lValue, int iReturn)
-        {
+    public int convertLong(Frame frame, long lValue, int iReturn) {
         return frame.assignValue(iReturn, makeHandle((double) lValue));
-        }
+    }
 
     /**
      * @return a bit array for the specified double value
@@ -413,34 +379,29 @@ public abstract class BaseBinaryFP
     // ----- handle --------------------------------------------------------------------------------
 
     @Override
-    protected ObjectHandle makeHandle(byte[] aBytes, int cBytes)
-        {
+    protected ObjectHandle makeHandle(byte[] aBytes, int cBytes) {
         return makeHandle(fromLong(xConstrainedInteger.fromByteArray(aBytes, cBytes, false)));
-        }
+    }
 
     @Override
-    public FloatHandle makeHandle(double dValue)
-        {
+    public FloatHandle makeHandle(double dValue) {
         return new FloatHandle(getCanonicalClass(), dValue);
-        }
+    }
 
     public static class FloatHandle
-            extends ObjectHandle
-        {
-        protected FloatHandle(ClassComposition clz, double dValue)
-            {
+            extends ObjectHandle {
+        protected FloatHandle(ClassComposition clz, double dValue) {
             super(clz);
 
             f_dValue = dValue;
-            }
+        }
 
-        public double getValue()
-            {
+        public double getValue() {
             return f_dValue;
-            }
+        }
 
         private final double f_dValue;
-        }
+    }
 
 
     // ----- constants -----------------------------------------------------------------------------
@@ -459,4 +420,4 @@ public abstract class BaseBinaryFP
      * Bit mask for the mantissa of a double value.
      */
     public static final long MANTISSA_MASK = 0x000FFFFFFFFFFFFFL;
-    }
+}

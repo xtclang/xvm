@@ -17,94 +17,82 @@ import org.xvm.util.Severity;
  * A nullable type expression is a type expression followed by a question mark.
  */
 public class NullableTypeExpression
-        extends TypeExpression
-    {
+        extends TypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public NullableTypeExpression(TypeExpression type, long lEndPos)
-        {
+    public NullableTypeExpression(TypeExpression type, long lEndPos) {
         this.type    = type;
         this.lEndPos = lEndPos;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    protected boolean canResolveNames()
-        {
+    protected boolean canResolveNames() {
         return super.canResolveNames() || type.canResolveNames();
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return type.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return lEndPos;
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
-        {
+    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs) {
         ConstantPool pool = pool();
         return pool.ensureUnionTypeConstant(
                 pool.typeNullable(), type.ensureTypeConstant(ctx, errs));
-        }
+    }
 
     @Override
-    protected void collectAnonInnerClassInfo(AnonInnerClass info)
-        {
+    protected void collectAnonInnerClassInfo(AnonInnerClass info) {
         log(info.getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_UNION);
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         TypeExpression exprOld = type;
         TypeExpression exprNew = (TypeExpression) exprOld.validate(ctx, typeRequired, errs);
-        if (exprNew == null)
-            {
+        if (exprNew == null) {
             return null;
-            }
+        }
         type = exprNew;
 
         TypeConstant typeActual = pool().ensureNullableTypeConstant(exprNew.ensureTypeConstant(ctx, errs));
         TypeConstant typeType   = typeActual.getType();
 
         return finishValidation(ctx, typeRequired, typeType, TypeFit.Fit, typeType, errs);
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return type + "?";
-        }
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -113,4 +101,4 @@ public class NullableTypeExpression
     protected long           lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NullableTypeExpression.class, "type");
-    }
+}

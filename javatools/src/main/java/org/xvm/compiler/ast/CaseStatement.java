@@ -25,16 +25,14 @@ import org.xvm.compiler.Token;
  * it's more like a label.)
  */
 public class CaseStatement
-        extends Statement
-    {
+        extends Statement {
     // ----- constructors --------------------------------------------------------------------------
 
-    public CaseStatement(Token keyword, List<Expression> exprs, Token tokColon)
-        {
+    public CaseStatement(Token keyword, List<Expression> exprs, Token tokColon) {
         this.keyword = keyword;
         this.exprs   = exprs;
         this.lEndPos = tokColon.getEndPosition();
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -42,78 +40,68 @@ public class CaseStatement
     /**
      * @return true iff this is the "default:" case
      */
-    public boolean isDefault()
-        {
+    public boolean isDefault() {
         return exprs == null;
-        }
+    }
 
     /**
      * @return the expressions of the values of the case, or null if this is the "default:" case
      */
-    public List<Expression> getExpressions()
-        {
+    public List<Expression> getExpressions() {
         return exprs;
-        }
+    }
 
     /**
      * @return the number of expressions
      */
-    public int getExpressionCount()
-        {
+    public int getExpressionCount() {
         return exprs == null ? 0 : exprs.size();
-        }
+    }
 
     /**
      * @return the label assigned to this case statement, or null if none has been assigned
      */
-    public Label getLabel()
-        {
+    public Label getLabel() {
         return m_label;
-        }
+    }
 
     /**
      * @param label  the label for this case statement
      */
-    void setLabel(Label label)
-        {
+    void setLabel(Label label) {
         assert m_label == null;
         m_label = label;
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return keyword.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return lEndPos;
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validateImpl(Context ctx, ErrorListener errs)
-        {
+    protected Statement validateImpl(Context ctx, ErrorListener errs) {
         // the case statement is a marker; it's just data, not an actual compilable AST node
         throw new IllegalStateException();
-        }
+    }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
-        {
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         // the case statement is a marker; it's just data, not an actual compilable AST node
         throw new IllegalStateException();
-        }
+    }
 
     /**
      * Collect the constants for the case expressions and place them into the specified array.
@@ -123,66 +111,54 @@ public class CaseStatement
      *
      * @return the index past the last collected constant
      */
-    protected int collectConstants(int iCase, Constant[] aconstCase)
-        {
-        if (exprs == null)
-            {
+    protected int collectConstants(int iCase, Constant[] aconstCase) {
+        if (exprs == null) {
             // this is the "default:" statement
             aconstCase[++iCase] = null;
-            }
-        else
-            {
-            for (Expression expr : exprs)
-                {
+        } else {
+            for (Expression expr : exprs) {
                 Constant constVal = expr.toConstant();
                 if (constVal instanceof MatchAnyConstant
                     || constVal instanceof ArrayConstant tup
                         && tup.getFormat() == Format.Tuple
-                        && Arrays.stream(tup.getValue()).allMatch(c -> c instanceof MatchAnyConstant))
-                    {
+                        && Arrays.stream(tup.getValue()).allMatch(c -> c instanceof MatchAnyConstant)) {
                     aconstCase[++iCase] = null;
-                    }
-                else
-                    {
+                } else {
                     aconstCase[++iCase] = constVal;
-                    }
                 }
             }
-        return iCase;
         }
+        return iCase;
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
         sb.append(keyword.getId().TEXT);
 
-        if (exprs != null)
-            {
+        if (exprs != null) {
             sb.append(' ')
               .append(exprs.get(0));
 
-            for (int i = 1, c = exprs.size(); i < c; ++i)
-                {
+            for (int i = 1, c = exprs.size(); i < c; ++i) {
                 sb.append(", ")
                   .append(exprs.get(i));
-                }
             }
+        }
 
         sb.append(':');
 
         return sb.toString();
-        }
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -194,4 +170,4 @@ public class CaseStatement
     private transient Label m_label;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(CaseStatement.class, "exprs");
-    }
+}

@@ -55,21 +55,18 @@ import static org.xvm.util.Handy.toPathString;
  * </li></ul>
  */
 public abstract class Launcher
-        implements ErrorListener, Runnable
-    {
+        implements ErrorListener, Runnable {
     /**
      * Entry point from the OS.
      *
      * @param asArg  command line arguments
      */
-    public static void main(String[] asArg)
-        {
+    public static void main(String[] asArg) {
         int argc = asArg.length;
-        if (argc < 1)
-            {
+        if (argc < 1) {
             System.err.println("Command name is missing");
             return;
-            }
+        }
 
         String cmd = asArg[0];
 
@@ -78,83 +75,73 @@ public abstract class Launcher
         System.arraycopy(asArg, 1, argv, 0, argc);
 
         // if the command is prefixed with "debug", then strip that off
-        if (cmd.length() > 5 && cmd.toLowerCase().startsWith("debug"))
-            {
+        if (cmd.length() > 5 && cmd.toLowerCase().startsWith("debug")) {
             cmd = cmd.substring("debug".length());
-            if (cmd.charAt(0) == '_')
-                {
+            if (cmd.charAt(0) == '_') {
                 cmd = cmd.substring(1);
-                }
-            }
-
-        switch (cmd)
-            {
-            case "xtc":
-                System.out.println("Note: Command name \"xtc\" will be renamed to \"xcc\"");
-                // TODO JK this spot is reserved for you to build a do-it-all "go"-style command
-                // fall through (until the new xtc command is in place)
-            case "xcc":
-                Compiler.main(argv);
-                break;
-
-            case "xec":
-                Runner.main(argv);
-                break;
-
-            default:
-                System.err.println("Command name \"" + cmd + "\" is not supported");
-                break;
             }
         }
+
+        switch (cmd) {
+        case "xtc":
+            System.out.println("Note: Command name \"xtc\" will be renamed to \"xcc\"");
+            // TODO JK this spot is reserved for you to build a do-it-all "go"-style command
+            // fall through (until the new xtc command is in place)
+        case "xcc":
+            Compiler.main(argv);
+            break;
+
+        case "xec":
+            Runner.main(argv);
+            break;
+
+        default:
+            System.err.println("Command name \"" + cmd + "\" is not supported");
+            break;
+        }
+    }
 
     /**
      * @param asArgs  the Launcher's command-line arguments
      */
-    public Launcher(String[] asArgs, Console console)
-        {
+    public Launcher(String[] asArgs, Console console) {
         m_asArgs  = asArgs;
         m_console = console == null ? DefaultConsole : console;
-        }
+    }
 
     /**
      * Execute the Launcher tool.
      */
     @Override
-    public void run()
-        {
+    public void run() {
         Options opts = options();
 
         boolean fHelp = opts.parse(m_asArgs);
-        if (Runtime.version().version().get(0) < 21)
-            {
+        if (Runtime.version().version().get(0) < 21) {
             log(Severity.INFO, "The suggested minimum JVM version is 21; this JVM version ("
                     + Runtime.version() + ") appears to be older");
-            }
-        else
-            {
+        } else {
             log(Severity.INFO, "JVM version: " + Runtime.version());
-            }
+        }
 
-            
+
         checkErrors(fHelp);
 
-        if (opts.isVerbose())
-            {
+        if (opts.isVerbose()) {
             out();
             out(opts);
             out();
-            }
+        }
 
         opts.validate();
         checkErrors();
 
         process();
 
-        if (opts.isVerbose())
-            {
+        if (opts.isVerbose()) {
             out();
-            }
         }
+    }
 
     protected abstract void process();
 
@@ -167,150 +154,126 @@ public abstract class Launcher
      * @param sev   the severity (may indicate an error)
      * @param sMsg  the message or error to display
      */
-    protected void log(Severity sev, String sMsg)
-        {
-        if (errorsSuspended())
-            {
+    protected void log(Severity sev, String sMsg) {
+        if (errorsSuspended()) {
             return;
-            }
+        }
 
-        if (sev.compareTo(m_sevWorst) > 0)
-            {
+        if (sev.compareTo(m_sevWorst) > 0) {
             m_sevWorst = sev;
-            }
+        }
 
         Options opts = options();
-        if (opts.isBadEnoughToPrint(sev))
-            {
+        if (opts.isBadEnoughToPrint(sev)) {
             m_console.log(sev, sMsg);
-            }
-
-        if (sev == Severity.FATAL)
-            {
-            abort(true);
-            }
         }
+
+        if (sev == Severity.FATAL) {
+            abort(true);
+        }
+    }
 
     /**
      * Log a sequence of errors from an ErrorList.
      *
      * @param errs  the ErrorList
      */
-    protected void log(ErrorList errs)
-        {
-        for (ErrorInfo err : errs.getErrors())
-            {
+    protected void log(ErrorList errs) {
+        for (ErrorInfo err : errs.getErrors()) {
             log(err.getSeverity(), err.toString());
-            }
         }
+    }
 
     /**
      * Print a blank line to the terminal.
      */
-    public void out()
-        {
+    public void out() {
         m_console.out();
-        }
+    }
 
     /**
      * Print the String value of some object to the terminal.
      */
-    public void out(Object o)
-        {
+    public void out(Object o) {
         m_console.out(o);
-        }
+    }
 
     /**
      * Print a blank line to the terminal.
      */
-    public void err()
-        {
+    public void err() {
         m_console.err();
-        }
+    }
 
     /**
      * Print the String value of some object to the terminal.
      */
-    public void err(Object o)
-        {
+    public void err(Object o) {
         m_console.err(o);
-        }
+    }
 
     /**
      * Suspend error detection.
      */
-    protected void suspendErrors()
-        {
+    protected void suspendErrors() {
         ++m_cSuspended;
-        }
+    }
 
     /**
      * @return true if errors are currently suspended
      */
-    protected boolean errorsSuspended()
-        {
+    protected boolean errorsSuspended() {
         return m_cSuspended > 0;
-        }
+    }
 
     /**
      * Suspend error detection.
      */
-    protected void resumeErrors()
-        {
-        if (m_cSuspended > 0)
-            {
+    protected void resumeErrors() {
+        if (m_cSuspended > 0) {
             --m_cSuspended;
-            }
-        else
-            {
+        } else {
             log(Severity.FATAL, "Attempt to resume errors when errors have not been suspended");
-            }
         }
+    }
 
     /**
      * Determine if a previously logged error should cause the program to exit, and if so, exit.
      */
-    protected void checkErrors()
-        {
-        if (options().isBadEnoughToAbort(m_sevWorst))
-            {
+    protected void checkErrors() {
+        if (options().isBadEnoughToAbort(m_sevWorst)) {
             abort(true);
-            }
         }
+    }
 
     /**
      * Determine if a previously logged error should cause the program to exit, and if so, exit.
      *
      * @param fHelp  true iff the help message should be displayed and the program should exit
      */
-    protected void checkErrors(boolean fHelp)
-        {
-        if (fHelp)
-            {
+    protected void checkErrors(boolean fHelp) {
+        if (fHelp) {
             displayHelp();
-            }
-
-        if (fHelp || options().isBadEnoughToAbort(m_sevWorst))
-            {
-            abort(options().isBadEnoughToAbort(m_sevWorst));
-            }
         }
+
+        if (fHelp || options().isBadEnoughToAbort(m_sevWorst)) {
+            abort(options().isBadEnoughToAbort(m_sevWorst));
+        }
+    }
 
     /**
      * Abort the command line with or without an error status.
      *
      * @param fError  true to abort with an error status
      */
-    protected void abort(boolean fError)
-        {
+    protected void abort(boolean fError) {
         throw new LauncherException(fError);
-        }
+    }
 
     /**
      * Display a help message describing how to use this command-line tool.
      */
-    public void displayHelp()
-        {
+    public void displayHelp() {
         out();
         out(desc());
         out();
@@ -320,46 +283,37 @@ public abstract class Launcher
         String[]            asName    = mapOpts.keySet().toArray(Handy.NO_ARGS);
         int                 maxSyntax = Arrays.stream(asName).map(n ->
                                 mapOpts.get(n).syntax().length()).max(Integer::compareTo).get();
-        Arrays.sort(asName, (s1, s2) ->
-            {
-            if (s1.equals(s2))
-                {
+        Arrays.sort(asName, (s1, s2) -> {
+            if (s1.equals(s2)) {
                 return 0;
-                }
-            if (s1.equals(ArgV))
-                {
+            }
+            if (s1.equals(ArgV)) {
                 return 1;
-                }
-            if (s2.equals(ArgV))
-                {
+            }
+            if (s2.equals(ArgV)) {
                 return -1;
-                }
-            if (s1.equals(Trailing))
-                {
+            }
+            if (s1.equals(Trailing)) {
                 return 1;
-                }
-            if (s2.equals(Trailing))
-                {
+            }
+            if (s2.equals(Trailing)) {
                 return -1;
-                }
+            }
             int n = s1.compareToIgnoreCase(s2);
-            if (n == 0)
-                {
+            if (n == 0) {
                 n = s1.compareTo(s2);
-                }
+            }
             return n;
-            });
+        });
 
         out("Options:");
         HashSet<String> alreadyDisplayed = new HashSet<>();
-        for (String sName : asName)
-            {
+        for (String sName : asName) {
             Option opt = mapOpts.get(sName);
             if (opt.posixName() != null && alreadyDisplayed.contains(opt.posixName()) ||
-                opt.linuxName() != null && alreadyDisplayed.contains(opt.linuxName()))
-                {
+                opt.linuxName() != null && alreadyDisplayed.contains(opt.linuxName())) {
                 continue;
-                }
+            }
 
             String sMsg = sName.equals(Trailing) && !mapOpts.containsKey(ArgV)
                     ? ArgV
@@ -369,26 +323,24 @@ public abstract class Launcher
             sb.append("  ")
               .append(sMsg);
 
-            for (int i = 0, c = maxSyntax - sMsg.length() + 4; i < c; ++i)
-                {
+            for (int i = 0, c = maxSyntax - sMsg.length() + 4; i < c; ++i) {
                 sb.append(' ');
-                }
+            }
 
             sb.append(options.descriptionFor(sName));
             out(sb);
             alreadyDisplayed.add(sName);
-            }
+        }
 
         out();
-        }
+    }
 
     /**
      * @return a description of this command-line tool
      */
-    public String desc()
-        {
+    public String desc() {
         return this.getClass().getSimpleName();
-        }
+    }
 
     /**
      * Produce a string representation of the specified option value.
@@ -398,67 +350,57 @@ public abstract class Launcher
      *
      * @return a string representation of the value
      */
-    public static String stringFor(Object oVal, Form form)
-        {
-        switch (form)
-            {
-            case Name:
-            case Boolean:
-            case Int:
-            case AsIs:
-                return String.valueOf(oVal);
+    public static String stringFor(Object oVal, Form form) {
+        switch (form) {
+        case Name:
+        case Boolean:
+        case Int:
+        case AsIs:
+            return String.valueOf(oVal);
 
-            case String:
-                return quotedString((String) oVal);
+        case String:
+            return quotedString((String) oVal);
 
-            case File:
-                return toPathString((File) oVal);
+        case File:
+            return toPathString((File) oVal);
 
-            case Repo:
-                StringBuilder sb    = new StringBuilder();
-                boolean      first = true;
-                for (File file : (List<File>) oVal)
-                    {
-                    if (first)
-                        {
-                        first = false;
-                        }
-                    else
-                        {
-                        sb.append(':');
-                        }
-                    sb.append(toPathString(file));
-                    }
-                return sb.toString();
-
-            default:
-                throw new IllegalStateException();
+        case Repo:
+            StringBuilder sb    = new StringBuilder();
+            boolean      first = true;
+            for (File file : (List<File>) oVal) {
+                if (first) {
+                    first = false;
+                } else {
+                    sb.append(':');
+                }
+                sb.append(toPathString(file));
             }
+            return sb.toString();
+
+        default:
+            throw new IllegalStateException();
         }
+    }
 
 
     // ----- ErrorListener interface ---------------------------------------------------------------
 
-    @Override public boolean log(ErrorInfo err)
-        {
+    @Override public boolean log(ErrorInfo err) {
         log(err.getSeverity(), err.toString());
         return isAbortDesired();
-        }
+    }
 
-    @Override public boolean isAbortDesired()
-        {
+    @Override public boolean isAbortDesired() {
         return options().isBadEnoughToAbort(m_sevWorst);
-        }
+    }
 
-    @Override public boolean hasSeriousErrors()
-        {
+    @Override public boolean hasSeriousErrors() {
         return m_sevWorst.compareTo(Severity.ERROR) >= 0;
-        }
+    }
 
-    @Override public boolean isSilent()
-        {
+    @Override public boolean isSilent() {
         return errorsSuspended();
-        }
+    }
 
 
     // ----- options -------------------------------------------------------------------------------
@@ -466,15 +408,13 @@ public abstract class Launcher
     /**
      * @return the Options for this Launcher
      */
-    public Options options()
-        {
+    public Options options() {
         Options options = m_options;
-        if (options == null)
-            {
+        if (options == null) {
             m_options = options = instantiateOptions();
-            }
-        return options;
         }
+        return options;
+    }
 
     /**
      * @return a new Options object
@@ -484,17 +424,15 @@ public abstract class Launcher
     /**
      * A collection point and validator for Launcher options.
      */
-    public class Options
-        {
+    public class Options {
         /**
          * Construct a holder for command-line options.
          */
-        public Options()
-            {
+        public Options() {
             addOption(null, "help",    Form.Name, false, "Displays this help message");
             addOption("v",  "verbose", Form.Name, false, "Enables \"verbose\" logging and messages");
             addOption(null, "version", Form.Name, false, "Displays the Ecstasy runtime version");
-            }
+        }
 
         /**
          * Determine the options that are available for the Launcher.
@@ -502,10 +440,9 @@ public abstract class Launcher
          * @return a Map containing the named options that are available, and the Form and other
          *         info for each
          */
-        public Map<String, Option> options()
-            {
+        public Map<String, Option> options() {
             return m_mapOptions;
-            }
+        }
 
         /**
          * (Internal) Add meta-data for an option that is supported for this command line tool.
@@ -524,25 +461,22 @@ public abstract class Launcher
             assert form != null;
 
             Option opt = new Option(sPosix, sLinux, form, fMulti, sDesc);
-            if (sPosix != null)
-                {
+            if (sPosix != null) {
                 var prev = options().put(sPosix, opt);
                 assert prev == null;
-                }
-            if (sLinux != null && !sLinux.equals(sPosix))
-                {
+            }
+            if (sLinux != null && !sLinux.equals(sPosix)) {
                 var prev = options().put(sLinux, opt);
                 assert prev == null;
-                }
+            }
 
             assert ArgV.equals(sPosix) == (form == Form.AsIs);
-            if (form == Form.AsIs)
-                {
+            if (form == Form.AsIs) {
                 assert !m_fArgV;
                 assert fMulti;
                 m_fArgV = true;
-                }
             }
+        }
 
         /**
          * Determine the form of the specified option.
@@ -551,11 +485,10 @@ public abstract class Launcher
          *
          * @return the form of the option, or null if the option does not exist
          */
-        public Form formOf(String sName)
-            {
+        public Form formOf(String sName) {
             Option opt = options().get(sName);
             return opt == null ? null : opt.form();
-            }
+        }
 
         /**
          * Determine if the specified option can be specified more than once.
@@ -564,21 +497,19 @@ public abstract class Launcher
          *
          * @return true iff the specified option can be specified more than once
          */
-        public boolean allowMultiple(String sName)
-            {
+        public boolean allowMultiple(String sName) {
             Option opt = options().get(sName);
             return (opt != null && opt.isMulti());
-            }
+        }
 
         /**
          * Determine the values of the various options for the Launcher.
          *
          * @return a Map containing the options that are set, and what the value is for each
          */
-        public Map<String, Object> values()
-            {
+        public Map<String, Object> values() {
             return m_mapValues;
-            }
+        }
 
         /**
          * Determine if an option has already specified.
@@ -587,10 +518,9 @@ public abstract class Launcher
          *
          * @return true iff the option has already been specified
          */
-        public boolean specified(String sName)
-            {
+        public boolean specified(String sName) {
             return values().containsKey(sName);
-            }
+        }
 
         /**
          * Register that the specified option is specified.
@@ -599,20 +529,16 @@ public abstract class Launcher
          *
          * @return true if the option is accepted; false if specifying the option is an error
          */
-        public boolean specify(String sName)
-            {
+        public boolean specify(String sName) {
             boolean fMulti;
             if (formOf(sName) == Form.Name &&
-                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName)))
-                {
+                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName))) {
                 store(sName, fMulti, "specified");
                 return true;
-                }
-            else
-                {
+            } else {
                 return false;
-                }
             }
+        }
 
         /**
          * Register a value for the specified option.
@@ -622,20 +548,16 @@ public abstract class Launcher
          *
          * @return true if the value is accepted; false if the value represents an error
          */
-        public boolean specify(String sName, boolean f)
-            {
+        public boolean specify(String sName, boolean f) {
             boolean fMulti;
             if (formOf(sName) == Form.Boolean &&
-                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName)))
-                {
+                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName))) {
                 store(sName, fMulti, f);
                 return true;
-                }
-            else
-                {
+            } else {
                 return false;
-                }
             }
+        }
 
         /**
          * Register a value for the specified option.
@@ -645,20 +567,16 @@ public abstract class Launcher
          *
          * @return true if the value is accepted; false if the value represents an error
          */
-        public boolean specify(String sName, int n)
-            {
+        public boolean specify(String sName, int n) {
             boolean fMulti;
             if (formOf(sName) == Form.Int &&
-                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName)))
-                {
+                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName))) {
                 store(sName, fMulti, n);
                 return true;
-                }
-            else
-                {
+            } else {
                 return false;
-                }
             }
+        }
 
         /**
          * Register a value for the specified option.
@@ -668,20 +586,16 @@ public abstract class Launcher
          *
          * @return true if the value is accepted; false if the value represents an error
          */
-        public boolean specify(String sName, String s)
-            {
+        public boolean specify(String sName, String s) {
             boolean fMulti;
             if (formOf(sName) == Form.String &&
-                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName)))
-                {
+                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName))) {
                 store(sName, fMulti, s);
                 return true;
-                }
-            else
-                {
+            } else {
                 return false;
-                }
             }
+        }
 
         /**
          * Register a value for the specified option.
@@ -691,20 +605,16 @@ public abstract class Launcher
          *
          * @return true if the value is accepted; false if the value represents an error
          */
-        public boolean specify(String sName, File file)
-            {
+        public boolean specify(String sName, File file) {
             boolean fMulti;
             if (formOf(sName) == Form.File &&
-                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName)))
-                {
+                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName))) {
                 store(sName, fMulti, file);
                 return true;
-                }
-            else
-                {
+            } else {
                 return false;
-                }
             }
+        }
 
         /**
          * Register a value for the specified option.
@@ -714,20 +624,16 @@ public abstract class Launcher
          *
          * @return true if the value is accepted; false if the value represents an error
          */
-        public boolean specify(String sName, List<File> listFiles)
-            {
+        public boolean specify(String sName, List<File> listFiles) {
             boolean fMulti;
             if (formOf(sName) == Form.Repo &&
-                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName)))
-                {
+                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName))) {
                 store(sName, fMulti, listFiles);
                 return true;
-                }
-            else
-                {
+            } else {
                 return false;
-                }
             }
+        }
 
         /**
          * Register a value for the specified option of the Pair Form (key/value).
@@ -737,31 +643,25 @@ public abstract class Launcher
          *
          * @return true if the value is accepted; false if the value represents an error
          */
-        public boolean specify(String sName, Map<String,String> pairs)
-            {
+        public boolean specify(String sName, Map<String,String> pairs) {
             boolean fMulti;
             if (formOf(sName) == Form.Pair &&
-                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName) && pairs.size() <= 1))
-                {
-                if (!pairs.isEmpty())
-                    {
+                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName) && pairs.size() <= 1)) {
+                if (!pairs.isEmpty()) {
                     store(sName, fMulti, pairs);
-                    }
+                }
                 return true;
-                }
-            else
-                {
+            } else {
                 return false;
-                }
             }
+        }
 
         /**
          * @return true if a "show version" option has been specified
          */
-        boolean isShowVersion()
-            {
+        boolean isShowVersion() {
             return specified("version");
-            }
+        }
 
         /**
          * Parse the command line arguments into
@@ -770,31 +670,25 @@ public abstract class Launcher
          *
          * @return true iff help should be shown
          */
-        public boolean parse(String[] asArgs)
-            {
+        public boolean parse(String[] asArgs) {
             boolean fHelp = false;
 
-            if (asArgs == null)
-                {
+            if (asArgs == null) {
                 return fHelp;
-                }
+            }
 
             String              sPrev    = null;
             Map<String, Option> mapNames = options();
 
-            NextArg: for (int i = 0, c = asArgs.length; i < c; ++i)
-                {
+            NextArg: for (int i = 0, c = asArgs.length; i < c; ++i) {
                 String sArg = asArgs[i];
                 assert sArg != null;
-                if (sArg.isEmpty())
-                    {
+                if (sArg.isEmpty()) {
                     continue;
-                    }
+                }
 
-                if (sPrev == null)
-                    {
-                    if (sArg.charAt(0) == '-')
-                        {
+                if (sPrev == null) {
+                    if (sArg.charAt(0) == '-') {
                         // there are several possibilities:
                         // 1) for any single "posix" argument:
                         //    -arg                      // no value ("specified" for Name form)
@@ -817,305 +711,229 @@ public abstract class Launcher
                         String  sOrig  = sOpts;
                         String  sVal   = fEq ? sArg.substring(ofEq+1) : null;
 
-                        if (sOpts.isEmpty())
-                            {
+                        if (sOpts.isEmpty()) {
                             log(Severity.FATAL, "Missing argument name. (Name is \"\".)");
-                            }
+                        }
 
-                        if (fLinux && "help".equals(sOpts))
-                            {
+                        if (fLinux && "help".equals(sOpts)) {
                             fHelp = true;
                             continue; // NextArg;
-                            }
+                        }
 
-                        do
-                            {
+                        do {
                             String sOpt;
-                            if (fPosix)
-                                {
+                            if (fPosix) {
                                 sOpt  = sOpts.substring(0,1);
                                 sOpts = sOpts.substring(1);
-                                if ("?".equals(sOpt))
-                                    {
+                                if ("?".equals(sOpt)) {
                                     fHelp = true;
                                     continue;
-                                    }
                                 }
-                            else
-                                {
+                            } else {
                                 sOpt = sOpts;
-                                }
+                            }
 
                             Option opt = mapNames.get(sOpt);
-                            if (opt == null || !sOpt.equals(fPosix ? opt.posixName() : opt.linuxName()))
-                                {
+                            if (opt == null || !sOpt.equals(fPosix ? opt.posixName() : opt.linuxName())) {
                                 fHelp = true;
-                                if (opt == null && !mapNames.containsKey(sOrig))
-                                    {
+                                if (opt == null && !mapNames.containsKey(sOrig)) {
                                     log(Severity.ERROR, "Unknown argument: \"" + (fPosix ? "-" : "--") + sOpt + '\"');
-                                    }
-                                else if (fPosix)
-                                    {
+                                } else if (fPosix) {
                                     log(Severity.ERROR, "Option \"-" + sOrig + "\" must use two preceding hyphens: \"--" + sOrig + "\"");
-                                    }
-                                else
-                                    {
+                                } else {
                                     log(Severity.ERROR, "Option \"--" + sOrig + "\" must use only one preceding hyphen: \"-" + sOrig + "\"");
-                                    }
-                                continue NextArg;
                                 }
+                                continue NextArg;
+                            }
 
                             Form   form  = opt.form();
                             String sName = opt.simplestName();
-                            if (form == Form.Name)
-                                {
+                            if (form == Form.Name) {
                                 // the name is either present or it is not
-                                if (specified(sName) && !allowMultiple(sName))
-                                    {
+                                if (specified(sName) && !allowMultiple(sName)) {
                                     log(Severity.WARNING,
                                             "Redundant option argument: \"-" + sOpt + '\"');
-                                    }
-                                else
-                                    {
+                                } else {
                                     specify(sName);
-                                    }
                                 }
-                            else
-                                {
-                                if (sPrev != null)
-                                    {
+                            } else {
+                                if (sPrev != null) {
                                     log(Severity.ERROR, "Options \"-" + sPrev + "\" and \"-" + sOpt
                                             + "\" cannot appear in the same cluster, since they"
                                             + " both require a trailing value");
-                                    }
-                                else
-                                    {
+                                } else {
                                     sPrev = sName;
                                     sArg  = sVal;
-                                    }
                                 }
                             }
-                        while (fPosix && !sOpts.isEmpty());
-                        }
-                    else
-                        {
+                        } while (fPosix && !sOpts.isEmpty());
+                    } else {
                         Option optTrail = mapNames.get(Trailing);
-                        if (optTrail != null && (optTrail.isMulti() || !specified(Trailing)))
-                            {
+                        if (optTrail != null && (optTrail.isMulti() || !specified(Trailing))) {
                             sPrev = Trailing;
-                            }
-                        else
-                            {
+                        } else {
                             Option optArgV = mapNames.get(ArgV);
-                            if (optArgV != null)
-                                {
+                            if (optArgV != null) {
                                 // take EVERYTHING, and take it AS IS
                                 List<String> listArgs = new ArrayList<>(c - i);
                                 listArgs.addAll(Arrays.asList(asArgs).subList(i, c));
                                 store(ArgV, true, listArgs);
                                 break;
-                                }
-                            else
-                                {
+                            } else {
                                 log(Severity.ERROR,
                                         "Unsupported argument: " + quotedString(sArg));
                                 fHelp = true;
-                                }
                             }
                         }
                     }
+                }
 
-                if (sPrev != null && sArg != null)
-                    {
+                if (sPrev != null && sArg != null) {
                     // this arg is an "option value" portion of some previous "option name"
                     Form    form   = formOf(sPrev);
                     boolean fMulti = allowMultiple(sPrev);
                     Object  oVal   = null;
                     assert form != null && form != Form.Name;
-                    switch (form)
-                        {
-                        case Boolean:
-                            if (sArg.length() == 1)
-                                {
-                                switch (sArg.charAt(0))
-                                    {
-                                    case 'T': case 't':
-                                    case 'Y': case 'y':
-                                    case '1':
-                                        oVal = true;
-                                        break;
-
-                                    case 'F': case 'f':
-                                    case 'N': case 'n':
-                                    case '0':
-                                        oVal = false;
-                                        break;
-                                    }
-                                }
-                            else if ("true".equalsIgnoreCase(sArg) || "yes".equalsIgnoreCase(sArg))
-                                {
+                    switch (form) {
+                    case Boolean:
+                        if (sArg.length() == 1) {
+                            switch (sArg.charAt(0)) {
+                            case 'T': case 't':
+                            case 'Y': case 'y':
+                            case '1':
                                 oVal = true;
-                                }
-                            else if ("false".equalsIgnoreCase(sArg) || "no".equalsIgnoreCase(sArg))
-                                {
-                                oVal = true;
-                                }
-                            break;
+                                break;
 
-                        case Int:
-                            try
-                                {
-                                oVal = Integer.valueOf(sArg);
-                                }
-                            catch (NumberFormatException ignore) {}
-                            break;
-
-                        case String:
-                            if (sArg.isEmpty())
-                                {
-                                oVal = "";
-                                }
-                            else if (sArg.charAt(0) == '\"')
-                                {
-                                if (sArg.length() >= 2 && sArg.charAt(sArg.length()-1) == '\"')
-                                    {
-                                    sArg = sArg.substring(1, sArg.length()-1);
-                                    }
-                                }
-                            else
-                                {
-                                oVal = sArg;
-                                }
-                            break;
-
-                        case File:
-                            if (!sArg.isEmpty())
-                                {
-                                List<File> listFiles;
-                                try
-                                    {
-                                    listFiles = resolvePath(sArg);
-                                    }
-                                catch (IOException e)
-                                    {
-                                    log(Severity.ERROR, "Exception resolving path \"" + sArg + "\": " + e);
-                                    break;
-                                    }
-
-                                switch (listFiles.size())
-                                    {
-                                    case 0:
-                                        break;
-
-                                    case 1:
-                                        oVal = listFiles.get(0);
-                                        break;
-
-                                    default:
-                                        if (fMulti)
-                                            {
-                                            oVal = listFiles;
-                                            }
-                                        else
-                                            {
-                                            oVal = listFiles.get(0);
-                                            log(Severity.ERROR, "Multiple (" + listFiles.size()
-                                                    + ") files specified for \"" + sPrev
-                                                    + "\", but only one file allowed");
-                                            }
-                                        break;
-                                    }
-                                }
-                            break;
-
-                        case Repo:
-                            if (!sArg.isEmpty())
-                                {
-                                List<File> repo = new ArrayList<>();
-                                for (String sPath : parseDelimitedString(sArg, File.pathSeparatorChar))
-                                    {
-                                    List<File> files;
-                                    try
-                                        {
-                                        files = resolvePath(sPath);
-                                        }
-                                    catch (IOException e)
-                                        {
-                                        log(Severity.ERROR, "Exception resolving path \""
-                                                + sPath + "\": " + e);
-                                        continue;
-                                        }
-
-                                    if (files.isEmpty())
-                                        {
-                                        log(Severity.ERROR, "Could not resolve: \"" + sPath + "\"");
-                                        }
-                                    else
-                                        {
-                                        for (File file : files)
-                                            {
-                                            if (file.canRead())
-                                                {
-                                                repo.add(file);
-                                                }
-                                            else if (file.exists())
-                                                {
-                                                log(Severity.ERROR, (file.isDirectory() ? "Directory"
-                                                        : "File") + " not readable: " + file);
-                                                }
-                                            }
-                                        }
-                                    }
-                                oVal = repo;
-                                }
-                            break;
-
-                        case Pair:
-                            if (!sArg.isEmpty())
-                                {
-                                oVal = parseStringMap(sArg);
-                                }
-                            break;
-                        }
-
-                    if (oVal == null)
-                        {
-                        log(Severity.ERROR, "Illegal " + form.name() + " value: \"" + sArg + '\"');
-                        }
-                    else
-                        {
-                        if (!specified(sPrev) || fMulti)
-                            {
-                            store(sPrev, fMulti, oVal);
+                            case 'F': case 'f':
+                            case 'N': case 'n':
+                            case '0':
+                                oVal = false;
+                                break;
                             }
-                        else
-                            {
+                        } else if ("true".equalsIgnoreCase(sArg) || "yes".equalsIgnoreCase(sArg)) {
+                            oVal = true;
+                        } else if ("false".equalsIgnoreCase(sArg) || "no".equalsIgnoreCase(sArg)) {
+                            oVal = true;
+                        }
+                        break;
+
+                    case Int:
+                        try {
+                            oVal = Integer.valueOf(sArg);
+                        } catch (NumberFormatException ignore) {}
+                        break;
+
+                    case String:
+                        if (sArg.isEmpty()) {
+                            oVal = "";
+                        } else if (sArg.charAt(0) == '\"') {
+                            if (sArg.length() >= 2 && sArg.charAt(sArg.length()-1) == '\"') {
+                                sArg = sArg.substring(1, sArg.length()-1);
+                            }
+                        } else {
+                            oVal = sArg;
+                        }
+                        break;
+
+                    case File:
+                        if (!sArg.isEmpty()) {
+                            List<File> listFiles;
+                            try {
+                                listFiles = resolvePath(sArg);
+                            } catch (IOException e) {
+                                log(Severity.ERROR, "Exception resolving path \"" + sArg + "\": " + e);
+                                break;
+                            }
+
+                            switch (listFiles.size()) {
+                            case 0:
+                                break;
+
+                            case 1:
+                                oVal = listFiles.get(0);
+                                break;
+
+                            default:
+                                if (fMulti) {
+                                    oVal = listFiles;
+                                } else {
+                                    oVal = listFiles.get(0);
+                                    log(Severity.ERROR, "Multiple (" + listFiles.size()
+                                            + ") files specified for \"" + sPrev
+                                            + "\", but only one file allowed");
+                                }
+                                break;
+                            }
+                        }
+                        break;
+
+                    case Repo:
+                        if (!sArg.isEmpty()) {
+                            List<File> repo = new ArrayList<>();
+                            for (String sPath : parseDelimitedString(sArg, File.pathSeparatorChar)) {
+                                List<File> files;
+                                try {
+                                    files = resolvePath(sPath);
+                                } catch (IOException e) {
+                                    log(Severity.ERROR, "Exception resolving path \""
+                                            + sPath + "\": " + e);
+                                    continue;
+                                }
+
+                                if (files.isEmpty()) {
+                                    log(Severity.ERROR, "Could not resolve: \"" + sPath + "\"");
+                                } else {
+                                    for (File file : files) {
+                                        if (file.canRead()) {
+                                            repo.add(file);
+                                        } else if (file.exists()) {
+                                            log(Severity.ERROR, (file.isDirectory() ? "Directory"
+                                                    : "File") + " not readable: " + file);
+                                        }
+                                    }
+                                }
+                            }
+                            oVal = repo;
+                        }
+                        break;
+
+                    case Pair:
+                        if (!sArg.isEmpty()) {
+                            oVal = parseStringMap(sArg);
+                        }
+                        break;
+                    }
+
+                    if (oVal == null) {
+                        log(Severity.ERROR, "Illegal " + form.name() + " value: \"" + sArg + '\"');
+                    } else {
+                        if (!specified(sPrev) || fMulti) {
+                            store(sPrev, fMulti, oVal);
+                        } else {
                             log(Severity.ERROR, "A value for \"-" + sPrev
                                     + "\" is specified more than once.");
-                            }
                         }
+                    }
 
                     sPrev = null;
-                    }
                 }
+            }
 
-            if (sPrev != null)
-                {
+            if (sPrev != null) {
                 // a trailing value was required
                 log(Severity.ERROR, "Missing value for \"" + sPrev + "\" option");
-                }
+            }
 
             return fHelp;
-            }
+        }
 
         /**
          * Validate the options once the options have all been registered successfully.
          *
          * @return null on success, or a String to describe the validation error
          */
-        public void validate()
-            {
-            }
+        public void validate() {
+        }
 
         /**
          * Obtain a description for the specified option.
@@ -1124,85 +942,69 @@ public abstract class Launcher
          *
          * @return the option description
          */
-        public String descriptionFor(String sName)
-            {
+        public String descriptionFor(String sName) {
             Option opt = options().get(sName);
-            if (opt == null)
-                {
+            if (opt == null) {
                 return null;
-                }
+            }
 
             String sDesc = opt.desc();
             return sDesc == null
                     ? opt.form().desc()
                     : sDesc;
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             StringBuilder sb = new StringBuilder("Options\n    {\n");
             final String sIndent = "    ";
-            for (Entry<String, Object> entry : values().entrySet())
-                {
+            for (Entry<String, Object> entry : values().entrySet()) {
                 String  sName  = entry.getKey();
                 Object  oVal   = entry.getValue();
                 Form    form   = formOf(sName);
                 boolean fMulti = allowMultiple(sName);
 
-                if (sName.equals(Trailing))
-                    {
+                if (sName.equals(Trailing)) {
                     sb.append("    Target(s)");
-                    }
-                else
-                    {
+                } else {
                     sb.append(sIndent)
                       .append('-')
                       .append(sName);
-                    }
+                }
 
-                if (oVal instanceof Map)
-                    {
+                if (oVal instanceof Map) {
                     sb.append(":\n");
                     Map<String, String> map = (Map) oVal;
-                    for (Map.Entry<String, String> e : map.entrySet())
-                        {
+                    for (Map.Entry<String, String> e : map.entrySet()) {
                         sb.append(sIndent)
                           .append("   ")
                           .append(e.getKey())
                           .append("=")
                           .append(quotedString(String.valueOf(e.getValue())))
                           .append('\n');
-                        }
                     }
-                else if (fMulti || oVal instanceof List)
-                    {
+                } else if (fMulti || oVal instanceof List) {
                     sb.append(":\n");
                     List list = (List) oVal;
                     int i = 0;
-                    for (Object oEach : list)
-                        {
+                    for (Object oEach : list) {
                         sb.append(sIndent)
                           .append("   [")
                           .append(i++)
                           .append("]=")
                           .append(stringFor(oEach, form == Form.Repo ? Form.File : form))
                           .append('\n');
-                        }
                     }
-                else if (form == Form.Name)
-                    {
+                } else if (form == Form.Name) {
                     sb.append('\n');
-                    }
-                else
-                    {
+                } else {
                     sb.append('=')
                       .append(stringFor(oVal, form))
                       .append('\n');
-                    }
                 }
-            return sb.append("    }").toString();
             }
+            return sb.append("}").toString();
+        }
 
         /**
          * For options that are allowed to have multiple values, this will accumulate multiple
@@ -1212,50 +1014,38 @@ public abstract class Launcher
          * @param fMulti  true if the option can have multiple value
          * @param value   the value to store, or append to the ArrayList for that option name
          */
-        protected void store(String sName, boolean fMulti, Object value)
-            {
-            if (value instanceof List)
-                {
-                values().compute(sName, (k, v) ->
-                    {
+        protected void store(String sName, boolean fMulti, Object value) {
+            if (value instanceof List) {
+                values().compute(sName, (k, v) -> {
                     ArrayList list = v == null ? new ArrayList() : (ArrayList) v;
                     list.addAll((List) value);
                     return list;
-                    });
-                }
-            else if (value instanceof Map)
-                {
-                values().compute(sName, (k, v) ->
-                    {
+                });
+            } else if (value instanceof Map) {
+                values().compute(sName, (k, v) -> {
                     Map map = v == null ? new ListMap() : (ListMap) v;
                     map.putAll((Map) value);
                     return map;
-                    });
-                }
-            else if (fMulti)
-                {
-                values().compute(sName, (k, v) ->
-                    {
+                });
+            } else if (fMulti) {
+                values().compute(sName, (k, v) -> {
                     ArrayList list = v == null ? new ArrayList() : (ArrayList) v;
                     list.add(value);
                     return list;
-                    });
-                }
-            else
-                {
+                });
+            } else {
                 values().putIfAbsent(sName, value);
-                }
             }
+        }
 
         // ----- error handling ----------------------------------------------------------------
 
         /**
          * @return true if a verbose option has been specified
          */
-        boolean isVerbose()
-            {
+        boolean isVerbose() {
             return specified("v") || specified("verbose");
-            }
+        }
 
         /**
          * Determine if a message or error of a particular severity should be displayed.
@@ -1264,10 +1054,9 @@ public abstract class Launcher
          *
          * @return true if an error of that severity should be displayed
          */
-        boolean isBadEnoughToPrint(Severity sev)
-            {
+        boolean isBadEnoughToPrint(Severity sev) {
             return isVerbose() || sev.compareTo(Severity.WARNING) >= 0;
-            }
+        }
 
         /**
          * Determine if a message or error of a particular severity should cause the program to
@@ -1277,10 +1066,9 @@ public abstract class Launcher
          *
          * @return true if an error of that severity should exit the program
          */
-        boolean isBadEnoughToAbort(Severity sev)
-            {
+        boolean isBadEnoughToAbort(Severity sev) {
             return sev.compareTo(Severity.ERROR) >= 0;
-            }
+        }
 
         // ----- fields ------------------------------------------------------------------------
 
@@ -1298,7 +1086,7 @@ public abstract class Launcher
          * Set to true if an "AsIs" option is present.
          */
         private boolean m_fArgV;
-        }
+    }
 
 
     // ----- repository management -----------------------------------------------------------------
@@ -1313,35 +1101,31 @@ public abstract class Launcher
      *
      * @return the library repository, including a build repository at the head of the repo
      */
-    protected ModuleRepository configureLibraryRepo(List<File> path)
-        {
-        if (path == null || path.isEmpty())
-            {
+    protected ModuleRepository configureLibraryRepo(List<File> path) {
+        if (path == null || path.isEmpty()) {
             // this is the easiest way to deliver an empty repository
             return makeBuildRepo();
-            }
+        }
 
         ModuleRepository[] repos = new ModuleRepository[path.size() + 1];
         repos[0] = makeBuildRepo();
-        for (int i = 0, c = path.size(); i < c; ++i)
-            {
+        for (int i = 0, c = path.size(); i < c; ++i) {
             File file = path.get(i);
             repos[i + 1] = file.isDirectory()
                 ? new DirRepository(file, true)
                 : new FileRepository(file, true);
-            }
-        return new LinkedRepository(true, repos);
         }
+        return new LinkedRepository(true, repos);
+    }
 
     /**
      * Factory method for a BuildRepository.
      *
      * @return a new BuildRepository
      */
-    protected BuildRepository makeBuildRepo()
-        {
+    protected BuildRepository makeBuildRepo() {
         return new BuildRepository();
-        }
+    }
 
     /**
      * Obtain the BuildRepository from the library repository.
@@ -1350,16 +1134,14 @@ public abstract class Launcher
      *
      * @return the BuildRepository
      */
-    protected BuildRepository extractBuildRepo(ModuleRepository repoLib)
-        {
-        if (repoLib instanceof BuildRepository repoBuild)
-            {
+    protected BuildRepository extractBuildRepo(ModuleRepository repoLib) {
+        if (repoLib instanceof BuildRepository repoBuild) {
             return repoBuild;
-            }
+        }
 
         LinkedRepository repoLinked = (LinkedRepository) repoLib;
         return (BuildRepository) repoLinked.asList().get(0);
-        }
+    }
 
     /**
      * Configure the repository that is used to store modules  dependencies without compiling
@@ -1372,13 +1154,12 @@ public abstract class Launcher
      *
      * @return a module repository that will store to the specified destination
      */
-    protected ModuleRepository configureResultRepo(File fileDest)
-        {
+    protected ModuleRepository configureResultRepo(File fileDest) {
         fileDest = resolveFile(fileDest);
         return fileDest.isDirectory()
                 ? new DirRepository (fileDest, false)
                 : new FileRepository(fileDest, false);
-        }
+    }
 
     /**
      * Force load and link whatever modules are required by the compiler.
@@ -1389,83 +1170,70 @@ public abstract class Launcher
      * @param reposLib  the repository to use, as it would be returned from
      *                  {@link #configureLibraryRepo}
      */
-    protected void prelinkSystemLibraries(ModuleRepository reposLib)
-        {
+    protected void prelinkSystemLibraries(ModuleRepository reposLib) {
         ModuleStructure moduleEcstasy = reposLib.loadModule(Constants.ECSTASY_MODULE);
-        if (moduleEcstasy == null)
-            {
+        if (moduleEcstasy == null) {
             log(Severity.FATAL, "Unable to load module: " + Constants.ECSTASY_MODULE);
-            }
+        }
 
         FileStructure structEcstasy = moduleEcstasy.getFileStructure();
-        if (structEcstasy != null)
-            {
+        if (structEcstasy != null) {
             ModuleConstant idMissing = structEcstasy.linkModules(reposLib, false);
-            if (idMissing != null)
-                {
+            if (idMissing != null) {
                 log(Severity.FATAL, "Unable to link module " + Constants.ECSTASY_MODULE
                     + " due to missing module:" + idMissing.getName());
-                }
-            }
-
-        ModuleStructure moduleTurtle = reposLib.loadModule(Constants.TURTLE_MODULE);
-        if (moduleTurtle == null)
-            {
-            log(Severity.FATAL, "Unable to load module: " + Constants.TURTLE_MODULE);
-            }
-
-        FileStructure structTurtle = moduleTurtle.getFileStructure();
-        if (structTurtle != null)
-            {
-            ModuleConstant idMissing = structTurtle.linkModules(reposLib, false);
-            if (idMissing != null)
-                {
-                log(Severity.FATAL, "Unable to link module " + Constants.TURTLE_MODULE
-                    + " due to missing module:" + idMissing.getName());
-                }
             }
         }
+
+        ModuleStructure moduleTurtle = reposLib.loadModule(Constants.TURTLE_MODULE);
+        if (moduleTurtle == null) {
+            log(Severity.FATAL, "Unable to load module: " + Constants.TURTLE_MODULE);
+        }
+
+        FileStructure structTurtle = moduleTurtle.getFileStructure();
+        if (structTurtle != null) {
+            ModuleConstant idMissing = structTurtle.linkModules(reposLib, false);
+            if (idMissing != null) {
+                log(Severity.FATAL, "Unable to link module " + Constants.TURTLE_MODULE
+                    + " due to missing module:" + idMissing.getName());
+            }
+        }
+    }
 
     /**
      * Display "xdk version" string.
      *
      * @param reposLib  the repository that contains the Ecstasy library
      */
-    protected void showSystemVersion(ModuleRepository reposLib)
-        {
+    protected void showSystemVersion(ModuleRepository reposLib) {
         String sVer = null;
-        try
-            {
+        try {
             sVer = reposLib.loadModule(Constants.ECSTASY_MODULE).getVersionString();
-            }
-        catch (Exception ignore) {}
-        
+        } catch (Exception ignore) {}
+
         // Use version from single source of truth if module version is not available
-        if (sVer == null)
-            {
+        if (sVer == null) {
             sVer = org.xvm.asm.BuildInfo.getXdkVersion();
-            }
-        
+        }
+
         // Build version string with optional git information
         StringBuilder version = new StringBuilder();
         version.append("xdk version ").append(sVer)
                .append(" (").append(Constants.VERSION_MAJOR_CUR).append(".").append(Constants.VERSION_MINOR_CUR).append(")");
-        
+
         // Add git info if available
         String gitCommit = org.xvm.asm.BuildInfo.getGitCommit();
         String gitStatus = org.xvm.asm.BuildInfo.getGitStatus();
-        if (!gitCommit.isEmpty())
-            {
+        if (!gitCommit.isEmpty()) {
             // Use full commit ID for better traceability
             version.append(" [").append(gitCommit).append("]");
-            }
-        if (!gitStatus.isEmpty())
-            {
-            version.append(" (").append(gitStatus).append(")");
-            }
-        
-        out(version.toString());
         }
+        if (!gitStatus.isEmpty()) {
+            version.append(" (").append(gitStatus).append(")");
+        }
+
+        out(version.toString());
+    }
 
 
     // ----- file management -----------------------------------------------------------------------
@@ -1482,65 +1250,50 @@ public abstract class Launcher
      * @param binarySpec     (optional) the file or directory which represents the target of the
      *                       binary; as provided to the compiler using the "-o" command line switch
      */
-    public ModuleInfo ensureModuleInfo(File fileSpec, File[] resourceSpecs, File binarySpec)
-        {
+    public ModuleInfo ensureModuleInfo(File fileSpec, File[] resourceSpecs, File binarySpec) {
         boolean fCache = (resourceSpecs == null || resourceSpecs.length == 0) && binarySpec == null;
-        if (fCache && moduleCache != null)
-            {
+        if (fCache && moduleCache != null) {
             ModuleInfo info = moduleCache.get(fileSpec);
-            if (info != null)
-                {
+            if (info != null) {
                 return info;
-                }
             }
+        }
 
         ModuleInfo info = new ModuleInfo(fileSpec, resourceSpecs, binarySpec);
 
-        if (fCache)
-            {
-            if (moduleCache == null)
-                {
+        if (fCache) {
+            if (moduleCache == null) {
                 moduleCache = new HashMap<>();
-                }
-            moduleCache.put(fileSpec, info);
             }
+            moduleCache.put(fileSpec, info);
+        }
 
         return info;
-        }
+    }
 
     /**
      * Validate that the contents of the path are existent directories and/or .xtc files.
      *
      * @param listPath
      */
-    public void validateModulePath(List<File> listPath) throws LauncherException
-        {
-        for (File file : listPath)
-            {
+    public void validateModulePath(List<File> listPath) throws LauncherException {
+        for (File file : listPath) {
             String sMsg = "File or directory";
-            if (file.isDirectory())
-                {
+            if (file.isDirectory()) {
                 sMsg = "Directory";
-                }
-            else if (file.isFile())
-                {
+            } else if (file.isFile()) {
                 sMsg = "File";
-                }
+            }
 
-            if (!file.exists())
-                {
+            if (!file.exists()) {
                 log(Severity.ERROR, "File or directory \"" + file + "\" does not exist");
-                }
-            else if (!file.canRead())
-                {
+            } else if (!file.canRead()) {
                 log(Severity.ERROR, sMsg + " \"" + file + "\" does not exist");
-                }
-            else if (file.isFile() && !file.getName().endsWith(".xtc"))
-                {
+            } else if (file.isFile() && !file.getName().endsWith(".xtc")) {
                 log(Severity.WARNING, "File \"" + file + "\" does not have the \".xtc\" extension");
-                }
             }
         }
+    }
 
     /**
      * Validate that the specified file can be used as a source file or directory for .x file(s).
@@ -1549,35 +1302,25 @@ public abstract class Launcher
      *
      * @return the validated file or directory to read source code from
      */
-    public File validateSourceInput(File file)
-        {
+    public File validateSourceInput(File file) {
         // this is expected to be the name of a file to compile
-        if (!file.exists() || file.isDirectory())
-            {
-            try
-                {
+        if (!file.exists() || file.isDirectory()) {
+            try {
                 ModuleInfo info = ensureModuleInfo(file, null, null);
                 File srcFile = info == null ? null : info.getSourceFile();
-                if (srcFile == null || !srcFile.exists())
-                    {
+                if (srcFile == null || !srcFile.exists()) {
                     log(Severity.ERROR, "Failed to locate the module source code for: " + file);
-                    }
                 }
-            catch (RuntimeException e)
-                {
+            } catch (RuntimeException e) {
                 log(Severity.ERROR, "Failed to identify the module for: " + file + " (" + e + ")");
-                }
             }
-        else if (!file.canRead())
-            {
+        } else if (!file.canRead()) {
             log(Severity.ERROR, "File not readable: " + file);
-            }
-        else if (!file.getName().endsWith(".x"))
-            {
+        } else if (!file.getName().endsWith(".x")) {
             log(Severity.WARNING, "Source file does not have a \".x\" extension: " + file);
-            }
-        return file;
         }
+        return file;
+    }
 
     /**
      * Validate that the specified file can be used as a destination file or directory for
@@ -1587,55 +1330,44 @@ public abstract class Launcher
      *                default)
      * @param fMulti  true indicates that multiple modules will be written
      */
-    public void validateModuleOutput(File file, boolean fMulti)
-        {
-        if (file == null)
-            {
+    public void validateModuleOutput(File file, boolean fMulti) {
+        if (file == null) {
             return;
-            }
+        }
 
         boolean fSingle = isExplicitCompiledFile(file.getName());
-        if (fSingle && fMulti)
-            {
+        if (fSingle && fMulti) {
             log(Severity.ERROR, "The single file " + file
                     + " is specified, but multiple modules are expected");
             return;
-            }
+        }
 
         File dir = fSingle ? file.getParentFile() : file;
-        if (dir != null && !dir.exists())
-            {
+        if (dir != null && !dir.exists()) {
             log(Severity.INFO, "Creating directory " + dir);
             // ignore any errors here; errors would end up being reported further down
             dir.mkdirs();
-            }
+        }
 
-        if (file.exists())
-            {
-            if (!file.isDirectory())
-                {
-                if (!fSingle)
-                    {
+        if (file.exists()) {
+            if (!file.isDirectory()) {
+                if (!fSingle) {
                     log(Severity.WARNING, "File " + file + " does not have the \".xtc\" extension");
-                    }
+                }
 
-                if (fMulti)
-                    {
+                if (fMulti) {
                     log(Severity.ERROR, "The single file " + file
                             + " is specified, but multiple modules are expected");
-                    }
+                }
 
-                if (!file.canWrite())
-                    {
+                if (!file.canWrite()) {
                     log(Severity.ERROR, "File " + file + " can not be written to");
-                    }
                 }
             }
-        else if (dir != null && !dir.exists())
-            {
+        } else if (dir != null && !dir.exists()) {
             log(Severity.ERROR, "Directory " + dir + " is missing");
-            }
         }
+    }
 
     /**
      * Resolve the specified "path string" into a list of files.
@@ -1648,31 +1380,25 @@ public abstract class Launcher
      * @throws IOException
      */
     protected static List<File> resolvePath(String sPath)
-            throws IOException
-        {
+            throws IOException {
         List<File> files = new ArrayList<>();
 
         if (sPath.length() >= 2 && sPath.charAt(0) == '~'
-                && (sPath.charAt(1) == '/' || sPath.charAt(1) == File.separatorChar))
-            {
+                && (sPath.charAt(1) == '/' || sPath.charAt(1) == File.separatorChar)) {
             sPath = System.getProperty("user.home") + File.separatorChar + sPath.substring(2);
-            }
+        }
 
-        if (sPath.indexOf('*') >= 0 || sPath.indexOf('?') >= 0)
-            {
+        if (sPath.indexOf('*') >= 0 || sPath.indexOf('?') >= 0) {
             // wildcard file names
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get("."), sPath))
-                {
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get("."), sPath)) {
                 stream.forEach(path -> files.add(path.toFile()));
-                }
             }
-        else
-            {
+        } else {
             files.add(new File(sPath));
-            }
+        }
 
         return files;
-        }
+    }
 
     /**
      * Select modules to target for source code processing.
@@ -1683,83 +1409,65 @@ public abstract class Launcher
      *
      * @return a list of "module files", each representing a module's source code
      */
-    protected List<ModuleInfo> selectTargets(List<File> listSources, File[] resourceSpecs, File outputSpec)
-        {
+    protected List<ModuleInfo> selectTargets(List<File> listSources, File[] resourceSpecs, File outputSpec) {
         ListMap<File, ModuleInfo> mapResults = new ListMap<>();
 
         Set<File> setDups = null;
-        for (File file : listSources)
-            {
+        for (File file : listSources) {
             ModuleInfo info    = null;
             File       srcFile = null;
-            try
-                {
+            try {
                 info = ensureModuleInfo(file, resourceSpecs, outputSpec);
-                if (info != null)
-                    {
+                if (info != null) {
                     srcFile = info.getSourceFile();
-                    }
                 }
-            catch (IllegalStateException | IllegalArgumentException e)
-                {
+            } catch (IllegalStateException | IllegalArgumentException e) {
                 String msg = e.getMessage();
                 log(Severity.ERROR, "Could not find module information for " + toPathString(file)
                         + " (" + (msg == null ? "Reason unknown" : msg) + ")");
-                }
-            if (srcFile == null)
-                {
+            }
+            if (srcFile == null) {
                 log(Severity.ERROR, "Unable to find module source for file: " + file);
-                }
-            else if (mapResults.containsKey(srcFile))
-                {
-                if (setDups == null)
-                    {
+            } else if (mapResults.containsKey(srcFile)) {
+                if (setDups == null) {
                     setDups = new HashSet<>();
-                    }
-                if (!setDups.contains(srcFile))
-                    {
+                }
+                if (!setDups.contains(srcFile)) {
                     log(Severity.WARNING, "Module source was specified multiple times: " + srcFile);
                     setDups.add(srcFile);
-                    }
                 }
-            else
-                {
+            } else {
                 mapResults.put(srcFile, info);
-                }
             }
+        }
 
         return new ArrayList<>(mapResults.values());
-        }
+    }
 
     /**
      * Flush errors from the specified nodes, and then check for errors globally.
      *
      * @param nodes  the nodes to flush
      */
-    protected void flushAndCheckErrors(Node[] nodes)
-        {
-        if (nodes != null)
-            {
-            for (Node node : nodes)
-                {
-                if (node != null)
-                    {
+    protected void flushAndCheckErrors(Node[] nodes) {
+        if (nodes != null) {
+            for (Node node : nodes) {
+                if (node != null) {
                     node.logErrors(this);
-                    }
                 }
             }
-        checkErrors();
         }
+        checkErrors();
+    }
 
     /**
      * Clean up any transient state
      */
-    protected void reset()
-        {
+    protected void reset() {
         m_sevWorst   = Severity.NONE;
         m_cSuspended = 0;
         moduleCache  = null;
-        }
+    }
 
 
     // ----- Console -------------------------------------------------------------------------------
@@ -1767,39 +1475,34 @@ public abstract class Launcher
     /**
      * An interface representing this tool's interaction with the terminal.
      */
-    public interface Console
-        {
+    public interface Console {
         /**
          * Print a blank line to the terminal.
          */
-        default void out()
-            {
+        default void out() {
             out("");
-            }
+        }
 
         /**
          * Print the String value of some object to the terminal.
          */
-        default void out(Object o)
-            {
+        default void out(Object o) {
             System.out.println(o);
-            }
+        }
 
         /**
          * Print a blank line to the terminal.
          */
-        default void err()
-            {
+        default void err() {
             err("");
-            }
+        }
 
         /**
          * Print the String value of some object to the terminal.
          */
-        default void err(Object o)
-            {
+        default void err(Object o) {
             System.err.println(o);
-            }
+        }
 
         /**
          * Log a message of a specified severity.
@@ -1807,40 +1510,35 @@ public abstract class Launcher
          * @param sev   the severity (may indicate an error)
          * @param sMsg  the message or error to display
          */
-        default void log(Severity sev, String sMsg)
-            {
+        default void log(Severity sev, String sMsg) {
             out(sev.desc() + ": " + sMsg);
-            }
         }
+    }
 
     /**
      * RuntimeException thrown upon a launcher failure.
      */
     static public class LauncherException
-            extends RuntimeException
-        {
+            extends RuntimeException {
         /**
          * @param error  true to abort with an error status
          */
-        public LauncherException(final boolean error)
-            {
+        public LauncherException(final boolean error) {
             this(error, null);
-            }
+        }
 
-        public LauncherException(final boolean error, final String msg)
-           {
+        public LauncherException(final boolean error, final String msg) {
             super(msg);
             this.error = error;
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return '[' + getClass().getSimpleName() + ": isError=" + error + ", msg=" + getMessage() + ']';
-            }
+        }
 
         public final boolean error;
-        }
+    }
 
     // ----- constants -----------------------------------------------------------------------------
 
@@ -1875,8 +1573,7 @@ public abstract class Launcher
      *                              e.g. "{@code xec MyApp.xtc -o=7 -X="q"} -> {@code -o=7 -X="q"}"
      * </li></ul>
      */
-    public enum Form
-        {
+    public enum Form {
         Name("Switch"),
         Boolean,
         Int,
@@ -1886,23 +1583,20 @@ public abstract class Launcher
         Pair("\"key=value\" Pair"),
         AsIs;
 
-        Form()
-            {
+        Form() {
             this(null);
-            }
+        }
 
-        Form(String desc)
-            {
+        Form(String desc) {
             DESC = desc;
-            }
+        }
 
-        public String desc()
-            {
+        public String desc() {
             return DESC == null ? name() : DESC;
-            }
+        }
 
         private final String DESC;
-        }
+    }
 
     /**
      * This is the name used for an option that does not have a name. It is called "trailing"
@@ -1926,10 +1620,8 @@ public abstract class Launcher
     /**
      * Represents a single available command line option.
      */
-    public static class Option
-        {
-        public Option(String sPosix, String sLinux, Form form, boolean fMulti, String sDesc)
-            {
+    public static class Option {
+        public Option(String sPosix, String sLinux, Form form, boolean fMulti, String sDesc) {
             assert sPosix != null || sLinux != null;
             assert (sPosix == null || !sPosix.isEmpty()) && (sLinux == null || !sLinux.isEmpty());
             assert form != null;
@@ -1939,60 +1631,48 @@ public abstract class Launcher
             m_form   = form;
             m_fMulti = fMulti;
             m_sDesc  = sDesc;
-            }
+        }
 
-        public String posixName()
-            {
+        public String posixName() {
             return m_sPosix;
-            }
+        }
 
-        public String linuxName()
-            {
+        public String linuxName() {
             return m_sLinux;
-            }
+        }
 
-        public String simplestName()
-            {
+        public String simplestName() {
             return m_sPosix == null ? m_sLinux : m_sPosix;
-            }
+        }
 
-        public Form form()
-            {
+        public Form form() {
             return m_form;
-            }
+        }
 
-        public boolean isMulti()
-            {
+        public boolean isMulti() {
             return m_fMulti;
-            }
+        }
 
-        public String desc()
-            {
+        public String desc() {
             return m_sDesc;
-            }
+        }
 
-        public String syntax()
-            {
-            if (m_sSyntax == null)
-                {
-                if(Trailing.equals(m_sPosix) || ArgV.equals(m_sPosix))
-                    {
+        public String syntax() {
+            if (m_sSyntax == null) {
+                if(Trailing.equals(m_sPosix) || ArgV.equals(m_sPosix)) {
                     m_sSyntax = m_sPosix;
-                    }
-                else
-                    {
+                } else {
                     m_sSyntax = (m_sPosix == null ? "" : "-" + m_sPosix)
                             +   (m_sPosix == null || m_sLinux == null ? "" : " | ")
                             +   (m_sLinux == null ? "" : "--" + m_sLinux);
-                    }
                 }
+            }
             return m_sSyntax;
-            }
+        }
 
-        @Override public String toString()
-            {
+        @Override public String toString() {
             return syntax() + " : " + m_form + (m_fMulti ? "*" : "");
-            }
+        }
 
         private final     String  m_sPosix;
         private final     String  m_sLinux;
@@ -2000,7 +1680,7 @@ public abstract class Launcher
         private final     Form    m_form;
         private final     boolean m_fMulti;
         private final     String  m_sDesc;
-        }
+    }
 
     protected enum Stage {Init, Parsed, Named, Linked}
 
@@ -2050,4 +1730,4 @@ public abstract class Launcher
     protected int m_cSuspended;
 
     protected Map<File, ModuleInfo> moduleCache;
-    }
+}

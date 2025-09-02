@@ -16,29 +16,26 @@ import org.xvm.asm.constants.UnionTypeConstant;
  * Used for parenthesized expressions.
  */
 public class ParenthesizedExpression
-        extends DelegatingExpression
-    {
+        extends DelegatingExpression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ParenthesizedExpression(Expression expr, long lStartPos, long lEndPos)
-        {
+    public ParenthesizedExpression(Expression expr, long lStartPos, long lEndPos) {
         super(expr);
 
         m_lStartPos = lStartPos;
         m_lEndPos   = lEndPos;
-        }
+    }
 
 
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive,
-                           ErrorListener errs)
-        {
+                           ErrorListener errs) {
         TypeFit fitTuple = testTupleFit(ctx, typeRequired, fExhaustive, null);
         TypeFit fitValue = super.testFit(ctx, typeRequired, fExhaustive, null);
         return fitValue.betterOf(fitTuple);
-        }
+    }
 
     /**
      * Given a required type, determine the fit of this expression if it were a tuple literal.
@@ -48,28 +45,23 @@ public class ParenthesizedExpression
      * @return the fit of this expression assuming it were a tuple literal
      */
     private TypeFit testTupleFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive,
-                                 ErrorListener errs)
-        {
+                                 ErrorListener errs) {
         TypeConstant typeTuple = mightBeTuple(typeRequired);
-        if (typeTuple != null)
-            {
+        if (typeTuple != null) {
             // if the use of this expression needs a Tuple, then the parentheses can be assumed to
             // define a Tuple literal of a single element
             List<TypeConstant> listElements = typeTuple.getTupleParamTypes();
-            if (listElements == null || listElements.isEmpty())
-                {
+            if (listElements == null || listElements.isEmpty()) {
                 // the required type is `Tuple` or `Tuple<>`, which any Tuple will satisfy
                 return TypeFit.Fit;
-                }
-            else if (listElements.size() == 1)
-                {
+            } else if (listElements.size() == 1) {
                 // the parenthesized expression `expr` would be the single element of the tuple
                 TypeConstant typeElement = listElements.getFirst();
                 return expr.testFit(ctx, typeElement, fExhaustive, errs);
-                }
             }
-        return TypeFit.NoFit;
         }
+        return TypeFit.NoFit;
+    }
 
     /**
      * Given a required type, determine if a tuple could fit the required type.
@@ -78,52 +70,41 @@ public class ParenthesizedExpression
      *
      * @return the tuple type, or null
      */
-    private static TypeConstant mightBeTuple(TypeConstant typeRequired)
-        {
-        if (typeRequired == null)
-            {
+    private static TypeConstant mightBeTuple(TypeConstant typeRequired) {
+        if (typeRequired == null) {
             return null;
-            }
+        }
 
         // this logic mirrors the logic in TupleExpression
         TypeConstant typeTuple = null;
-        if (typeRequired.isTuple())
-            {
+        if (typeRequired.isTuple()) {
             typeTuple = typeRequired;
-            }
-        else if (typeRequired instanceof UnionTypeConstant typeUnion)
-            {
+        } else if (typeRequired instanceof UnionTypeConstant typeUnion) {
             typeTuple = typeUnion.extractTuple();
-            }
-
-        if (typeTuple != null)
-            {
-            List<TypeConstant> elementTypes = typeTuple.getTupleParamTypes();
-            if (elementTypes == null || elementTypes.size() <= 1)
-                {
-                return typeTuple;
-                }
-            }
-        return null;
         }
+
+        if (typeTuple != null) {
+            List<TypeConstant> elementTypes = typeTuple.getTupleParamTypes();
+            if (elementTypes == null || elementTypes.size() <= 1) {
+                return typeTuple;
+            }
+        }
+        return null;
+    }
 
     @Override
     public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive,
-                                ErrorListener errs)
-        {
+                                ErrorListener errs) {
         return atypeRequired.length == 1
                 ? testFit(ctx, atypeRequired[0], fExhaustive, errs)
                 : super.testFitMulti(ctx, atypeRequired, fExhaustive, errs);
-        }
+    }
 
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
-        {
-        if (typeRequired != null)
-            {
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
+        if (typeRequired != null) {
             TypeFit fitTuple = testTupleFit(ctx, typeRequired, true, null);
             TypeFit fitValue = super.testFit(ctx, typeRequired, true, null);
-            if (fitTuple.betterThan(fitValue))
-                {
+            if (fitTuple.betterThan(fitValue)) {
                 // replace this parenthesized expression with an actual tuple expression containing
                 // the one element `(expr)`
                 TupleExpression exprTuple = new TupleExpression(null, new ArrayList<>(List.of(expr)),
@@ -131,64 +112,56 @@ public class ParenthesizedExpression
                 exprTuple.adopt(expr);
                 replaceThisWith(exprTuple);
                 return exprTuple.validate(ctx, typeRequired, errs);
-                }
             }
+        }
 
         return super.validate(ctx, typeRequired, errs);
-        }
+    }
 
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
-        {
-        if (atypeRequired != null && atypeRequired.length == 1)
-            {
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs) {
+        if (atypeRequired != null && atypeRequired.length == 1) {
             // handle the possible tuple
             return validate(ctx, atypeRequired[0], errs);
-            }
+        }
 
         return super.validateMulti(ctx, atypeRequired, errs);
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return m_lStartPos;
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return m_lEndPos;
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
     @Override
-    public TypeExpression toTypeExpression()
-        {
+    public TypeExpression toTypeExpression() {
         return expr.toTypeExpression();
-        }
+    }
 
     @Override
-    public boolean isStandalone()
-        {
+    public boolean isStandalone() {
         return expr.isStandalone();
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return "(" + expr + ")";
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -200,4 +173,4 @@ public class ParenthesizedExpression
     private final long m_lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ParenthesizedExpression.class, "expr");
-    }
+}

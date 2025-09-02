@@ -43,8 +43,7 @@ import org.xvm.util.ListMap;
  * {@code @Interval Range<Date>}).
  */
 public class ClassComposition
-        implements TypeComposition
-    {
+        implements TypeComposition {
     /**
      * Construct the ClassComposition for a given "inception" type.
      *
@@ -54,8 +53,7 @@ public class ClassComposition
      *  - the only modifying types that are allowed are AnnotatedTypeConstant(s) and
      *    ParameterizedTypeConstant(s)
      */
-    public ClassComposition(Container container, ClassTemplate template, TypeConstant typeInception)
-        {
+    public ClassComposition(Container container, ClassTemplate template, TypeConstant typeInception) {
         assert typeInception.isSingleDefiningConstant();
         assert typeInception.getAccess() == Access.PUBLIC;
 
@@ -74,13 +72,12 @@ public class ClassComposition
         f_mapMethods      = new ConcurrentHashMap<>();
         f_mapGetters      = new ConcurrentHashMap<>();
         f_mapSetters      = new ConcurrentHashMap<>();
-        }
+    }
 
     /**
      * Construct a ClassComposition clone for the specified revealed type.
      */
-    private ClassComposition(ClassComposition clzInception, TypeConstant typeRevealed)
-        {
+    private ClassComposition(ClassComposition clzInception, TypeConstant typeRevealed) {
         f_clzInception    = clzInception;
         f_container       = clzInception.f_container;
         f_template        = clzInception.f_template;
@@ -100,215 +97,190 @@ public class ClassComposition
         m_fHasOuter       = f_clzInception.m_fHasOuter;
         m_fHasSpecial     = f_clzInception.m_fHasSpecial;
         m_methodInit      = f_clzInception.m_methodInit;
-        }
+    }
 
     /**
      * @return a ProxyComposition for the specified proxying type
      */
-    public ProxyComposition ensureProxyComposition(TypeConstant typeProxy)
-        {
+    public ProxyComposition ensureProxyComposition(TypeConstant typeProxy) {
         return f_mapProxies.computeIfAbsent(typeProxy,
                 (type) -> new ProxyComposition(this, register(type)));
-        }
+    }
 
     /**
      * @return a CanonicalizedTypeComposition for the specified type
      */
-    public CanonicalizedTypeComposition ensureCanonicalizedComposition(TypeConstant typeActual)
-        {
+    public CanonicalizedTypeComposition ensureCanonicalizedComposition(TypeConstant typeActual) {
         assert typeActual.isShared(getContainer().getConstantPool());
         return (CanonicalizedTypeComposition) f_mapCompositions.computeIfAbsent(typeActual,
                 (type) -> new CanonicalizedTypeComposition(this, register(type)));
-        }
+    }
 
     /**
      * @return a PropertyComposition for the specified property
      */
-    public PropertyComposition ensurePropertyComposition(PropertyInfo infoProp)
-        {
+    public PropertyComposition ensurePropertyComposition(PropertyInfo infoProp) {
         return f_mapProperties.computeIfAbsent(infoProp.getIdentity(),
                 (idProp) -> new PropertyComposition(f_clzInception, infoProp));
-        }
+    }
 
 
     // ----- TypeComposition interface -------------------------------------------------------------
 
 
     @Override
-    public Container getContainer()
-        {
+    public Container getContainer() {
         return f_container;
-        }
+    }
 
     @Override
-    public OpSupport getSupport()
-        {
+    public OpSupport getSupport() {
         return f_template;
-        }
+    }
 
     @Override
-    public ClassTemplate getTemplate()
-        {
+    public ClassTemplate getTemplate() {
         return f_template;
-        }
+    }
 
     @Override
-    public TypeConstant getType()
-        {
+    public TypeConstant getType() {
         return f_typeRevealed;
-        }
+    }
 
     @Override
-    public TypeConstant getInceptionType()
-        {
+    public TypeConstant getInceptionType() {
         return f_typeInception;
-        }
+    }
 
     @Override
-    public TypeConstant getBaseType()
-        {
+    public TypeConstant getBaseType() {
         return getType().removeAccess();
-        }
+    }
 
     @Override
-    public TypeComposition maskAs(TypeConstant type)
-        {
+    public TypeComposition maskAs(TypeConstant type) {
         return type.equals(f_typeRevealed) ? this :
                f_typeRevealed.isA(type)
                    ? f_mapCompositions.computeIfAbsent(type,
                         typeR -> new ClassComposition(this, register(typeR)))
                    : null;
-        }
+    }
 
     @Override
-    public TypeComposition revealAs(TypeConstant type)
-        {
+    public TypeComposition revealAs(TypeConstant type) {
         return type.equals(f_typeRevealed) ? this :
                f_typeStructure.isA(type)   ? ensureAccess(Access.STRUCT) :
                f_typeInception.isA(type)
                    ? f_mapCompositions.computeIfAbsent(type,
                             typeR -> new ClassComposition(f_clzInception, register(typeR)))
                    : null;
-        }
+    }
 
     @Override
-    public ObjectHandle ensureOrigin(ObjectHandle handle)
-        {
+    public ObjectHandle ensureOrigin(ObjectHandle handle) {
         assert handle.getComposition() == this;
 
         // retain the access modifier of the revealed type on the origin
         return isInception()
             ? handle
             : handle.cloneAs(f_clzInception).ensureAccess(handle.getType().getAccess());
-        }
+    }
 
     @Override
-    public ObjectHandle ensureAccess(ObjectHandle handle, Access access)
-        {
+    public ObjectHandle ensureAccess(ObjectHandle handle, Access access) {
         assert handle.getComposition() == this;
 
         return access == f_typeRevealed.getAccess()
             ? handle
             : handle.cloneAs(ensureAccess(access));
-        }
+    }
 
     @Override
-    public TypeComposition ensureAccess(Access access)
-        {
+    public TypeComposition ensureAccess(Access access) {
         TypeConstant typeCurrent = f_typeRevealed;
 
         Access accessCurrent = typeCurrent.getAccess();
-        if (accessCurrent == access)
-            {
+        if (accessCurrent == access) {
             return this;
-            }
+        }
 
-        if (typeCurrent instanceof AccessTypeConstant)
-            {
+        if (typeCurrent instanceof AccessTypeConstant) {
             // strip the access
             typeCurrent = typeCurrent.getUnderlyingType();
-            }
+        }
 
         ConstantPool pool = getContainer().getConstantPool();
         TypeConstant typeTarget;
-        switch (access)
-            {
-            case PUBLIC:
-                typeTarget = typeCurrent;
-                if (typeTarget.equals(f_clzInception.f_typeRevealed))
-                    {
-                    return f_clzInception;
-                    }
-                break;
-
-            case PROTECTED:
-                typeTarget = pool.ensureAccessTypeConstant(typeCurrent, Access.PROTECTED);
-                break;
-
-            case PRIVATE:
-                typeTarget = pool.ensureAccessTypeConstant(typeCurrent, Access.PRIVATE);
-                break;
-
-            case STRUCT:
-                typeTarget = pool.ensureAccessTypeConstant(typeCurrent, Access.STRUCT);
-                break;
-
-            default:
-                throw new IllegalStateException();
+        switch (access) {
+        case PUBLIC:
+            typeTarget = typeCurrent;
+            if (typeTarget.equals(f_clzInception.f_typeRevealed)) {
+                return f_clzInception;
             }
+            break;
+
+        case PROTECTED:
+            typeTarget = pool.ensureAccessTypeConstant(typeCurrent, Access.PROTECTED);
+            break;
+
+        case PRIVATE:
+            typeTarget = pool.ensureAccessTypeConstant(typeCurrent, Access.PRIVATE);
+            break;
+
+        case STRUCT:
+            typeTarget = pool.ensureAccessTypeConstant(typeCurrent, Access.STRUCT);
+            break;
+
+        default:
+            throw new IllegalStateException();
+        }
 
         return f_mapCompositions.computeIfAbsent(
             typeTarget, typeR -> new ClassComposition(f_clzInception, register(typeR)));
-        }
+    }
 
     @Override
-    public boolean isStruct()
-        {
+    public boolean isStruct() {
         return f_fStruct;
-        }
+    }
 
     @Override
-    public MethodStructure ensureAutoInitializer()
-        {
-        if (m_mapFields.isEmpty())
-            {
+    public MethodStructure ensureAutoInitializer() {
+        if (m_mapFields.isEmpty()) {
             return null;
-            }
+        }
 
         MethodStructure method = m_methodInit;
-        if (method == null)
-            {
+        if (method == null) {
             ConstantPool pool = getContainer().getConstantPool();
             m_methodInit = method =
                 f_template.getStructure().createInitializer(pool, f_typeStructure, m_mapFields);
-            }
-        return method.isAbstract() ? null : method;
         }
+        return method.isAbstract() ? null : method;
+    }
 
     @Override
-    public boolean isInjected(PropertyConstant idProp)
-        {
+    public boolean isInjected(PropertyConstant idProp) {
         PropertyInfo infoProp = f_typeInception.ensureTypeInfo().findProperty(idProp, true);
         return infoProp != null && infoProp.isInjected();
-        }
+    }
 
     @Override
-    public boolean isAtomic(PropertyConstant idProp)
-        {
+    public boolean isAtomic(PropertyConstant idProp) {
         // we assume that all native properties are atomic by default; it's up to the native
         // property implementation to re-route it to the corresponding context if necessary
         PropertyInfo infoProp = f_typeInception.ensureTypeInfo().findProperty(idProp, true);
         return infoProp != null && (infoProp.isAtomic() || infoProp.isNative());
-        }
+    }
 
     @Override
-    public CallChain getMethodCallChain(Object nidMethod)
-        {
+    public CallChain getMethodCallChain(Object nidMethod) {
         CallChain chain = f_mapMethods.get(nidMethod);
         return chain == null
                 ? ensureMethodChain(nidMethod)
                 : chain;
-        }
+    }
 
     /**
      * Compute the invocation {@link CallChain} for a given method.
@@ -317,66 +289,52 @@ public class ClassComposition
      *
      * @return the {@link CallChain}
      */
-    private CallChain ensureMethodChain(Object nidMethod)
-        {
+    private CallChain ensureMethodChain(Object nidMethod) {
         ConstantPool pool   = getConstantPool();
         boolean      fCache = true;
-        if (nidMethod instanceof SignatureConstant sig)
-            {
-            if (sig.getConstantPool() != pool)
-                {
-                if (sig.isShared(pool))
-                    {
+        if (nidMethod instanceof SignatureConstant sig) {
+            if (sig.getConstantPool() != pool) {
+                if (sig.isShared(pool)) {
                     nidMethod = pool.register(sig);
-                    }
-                else
-                    {
+                } else {
                     // what else can we do here?
                     fCache = false;
                     System.err.println("WARNING: Foreign method chain for " + sig); // TODO: remove
-                    }
                 }
             }
-        else
-            {
+        } else {
             NestedIdentity   idNested = (NestedIdentity) nidMethod;
             IdentityConstant idParent = idNested.getIdentityConstant();
-            if (idParent.getConstantPool() != pool)
-                {
-                if (idParent.isShared(pool))
-                    {
+            if (idParent.getConstantPool() != pool) {
+                if (idParent.isShared(pool)) {
                     idParent  = (IdentityConstant) pool.register(idParent);
                     nidMethod = idParent.appendNestedIdentity(pool, idNested);
-                    }
-                else
-                    {
+                } else {
                     fCache = false;
                     System.err.println("WARNING: Foreign nested method " + idNested +
                                        " for " + idParent); // TODO: remove
-                    }
                 }
             }
+        }
         return fCache
                 ? f_mapMethods.computeIfAbsent(nidMethod, this::computeMethodChain)
                 : computeMethodChain(nidMethod);
-        }
+    }
 
-    private CallChain computeMethodChain(Object nidMethod)
-        {
+    private CallChain computeMethodChain(Object nidMethod) {
         TypeInfo info = isStruct()
                 ? f_typeStructure.ensureTypeInfo()
                 : f_typeInception.ensureTypeInfo();
         return new CallChain(info.getOptimizedMethodChain(nidMethod));
-        }
+    }
 
     @Override
-    public CallChain getPropertyGetterChain(PropertyConstant idProp)
-        {
+    public CallChain getPropertyGetterChain(PropertyConstant idProp) {
         CallChain chain = f_mapGetters.get(idProp);
         return chain == null
                 ? ensureGetterChain(idProp)
                 : chain == NIL_CHAIN ? null : chain;
-        }
+    }
 
     /**
      * Compute the "getter" {@link CallChain} for a given property.
@@ -385,49 +343,41 @@ public class ClassComposition
      *
      * @return the {@link CallChain}
      */
-    private CallChain ensureGetterChain(PropertyConstant idProp)
-        {
+    private CallChain ensureGetterChain(PropertyConstant idProp) {
         ConstantPool pool    = getConstantPool();
         boolean      fShared = true;
-        if (idProp.getConstantPool() != pool)
-            {
-            if (idProp.getConstantPool() != pool)
-                {
-                if (idProp.isShared(pool))
-                    {
+        if (idProp.getConstantPool() != pool) {
+            if (idProp.getConstantPool() != pool) {
+                if (idProp.isShared(pool)) {
                     idProp = (PropertyConstant) pool.register(idProp);
-                    }
-                else
-                    {
+                } else {
                     // most likely this happens due to duck-typed properties; we may consider
                     // caching chains by name (the PropertyInfo is most likely cached already)
                     fShared = false;
-                    }
                 }
             }
+        }
 
         CallChain chain = fShared
                 ? f_mapGetters.computeIfAbsent(idProp, this::computeGetterChain)
                 : computeGetterChain(idProp);
         return chain == NIL_CHAIN ? null : chain;
-        }
+    }
 
-    private CallChain computeGetterChain(PropertyConstant id)
-        {
+    private CallChain computeGetterChain(PropertyConstant id) {
         MethodBody[] aBody = f_typeInception.ensureTypeInfo().getOptimizedGetChain(id);
         return aBody == null
                 ? NIL_CHAIN
                 : CallChain.createPropertyCallChain(aBody);
-        }
+    }
 
     @Override
-    public CallChain getPropertySetterChain(PropertyConstant idProp)
-        {
+    public CallChain getPropertySetterChain(PropertyConstant idProp) {
         CallChain chain = f_mapSetters.get(idProp);
         return chain == null
                 ? ensurePropertySetterChain(idProp)
                 : chain == NIL_CHAIN ? null : chain;
-        }
+    }
 
     /**
      * Compute the "setter" {@link CallChain} for a given property.
@@ -436,157 +386,129 @@ public class ClassComposition
      *
      * @return the {@link CallChain}
      */
-    private CallChain ensurePropertySetterChain(PropertyConstant idProp)
-        {
+    private CallChain ensurePropertySetterChain(PropertyConstant idProp) {
         ConstantPool pool    = getConstantPool();
         boolean      fShared = true;
-        if (idProp.getConstantPool() != pool)
-            {
-            if (idProp.isShared(pool))
-                {
+        if (idProp.getConstantPool() != pool) {
+            if (idProp.isShared(pool)) {
                 idProp = (PropertyConstant) pool.register(idProp);
-                }
-            else
-                {
+            } else {
                 // see the comment in ensureGetterChain()
                 fShared = false;
-                }
             }
+        }
         CallChain chain = fShared
                 ? f_mapSetters.computeIfAbsent(idProp, this::computeSetterChain)
                 : computeSetterChain(idProp);
         return chain == NIL_CHAIN ? null : chain;
-        }
+    }
 
-    private CallChain computeSetterChain(PropertyConstant id)
-        {
+    private CallChain computeSetterChain(PropertyConstant id) {
         MethodBody[] aBody = f_typeInception.ensureTypeInfo().getOptimizedSetChain(id);
         return aBody == null
                 ? NIL_CHAIN
                 : CallChain.createPropertyCallChain(aBody);
-        }
+    }
 
     @Override
-    public Map<Object, FieldInfo> getFieldLayout()
-        {
+    public Map<Object, FieldInfo> getFieldLayout() {
         return m_mapFields;
-        }
+    }
 
     @Override
-    public StringHandle[] getFieldNameArray()
-        {
+    public StringHandle[] getFieldNameArray() {
         StringHandle[] ashNames = m_ashFieldNames;
-        if (ashNames == null)
-            {
+        if (ashNames == null) {
             ashNames = new StringHandle[m_cRegularFields];
 
             int i = 0;
-            for (Map.Entry<Object, FieldInfo> entry : getFieldLayout().entrySet())
-                {
+            for (Map.Entry<Object, FieldInfo> entry : getFieldLayout().entrySet()) {
                 Object    enid  = entry.getKey();
                 FieldInfo field = entry.getValue();
 
-                if (!(enid instanceof NestedIdentity) && field.isRegular())
-                    {
+                if (!(enid instanceof NestedIdentity) && field.isRegular()) {
                     ashNames[i++] = xString.makeHandle(field.getName());
-                    }
                 }
+            }
             assert i == m_cRegularFields;
 
             m_ashFieldNames = ashNames;
-            }
-        return ashNames;
         }
+        return ashNames;
+    }
 
     @Override
-    public ObjectHandle[] getFieldValueArray(Frame frame, GenericHandle hValue)
-        {
+    public ObjectHandle[] getFieldValueArray(Frame frame, GenericHandle hValue) {
         Map<Object, FieldInfo> mapLayout = getFieldLayout();
-        if (mapLayout.isEmpty())
-            {
+        if (mapLayout.isEmpty()) {
             return Utils.OBJECTS_NONE;
-            }
+        }
 
         ObjectHandle[] ahFields = new ObjectHandle[m_cRegularFields];
 
         int i = 0;
-        for (Map.Entry<Object, FieldInfo> entry : mapLayout.entrySet())
-            {
+        for (Map.Entry<Object, FieldInfo> entry : mapLayout.entrySet()) {
             Object    enid  = entry.getKey();
             FieldInfo field = entry.getValue();
 
-            if (!(enid instanceof NestedIdentity) && field.isRegular())
-                {
+            if (!(enid instanceof NestedIdentity) && field.isRegular()) {
                 ahFields[i++] = hValue.getField(frame, field);
-                }
             }
+        }
         assert i == m_cRegularFields;
         return ahFields;
-        }
+    }
 
     @Override
-    public ObjectHandle[] initializeStructure()
-        {
+    public ObjectHandle[] initializeStructure() {
         Map<Object, FieldInfo> mapFields = m_mapFields;
         int                    cSize     = mapFields.size();
 
-        if (cSize == 0)
-            {
+        if (cSize == 0) {
             return Utils.OBJECTS_NONE;
-            }
+        }
 
         ObjectHandle[] aFields = new ObjectHandle[cSize];
-        if (m_fHasSpecial)
-            {
-            for (FieldInfo field : mapFields.values())
-                {
-                if (field.isTransient())
-                    {
+        if (m_fHasSpecial) {
+            for (FieldInfo field : mapFields.values()) {
+                if (field.isTransient()) {
                     aFields[field.getIndex()] = new TransientId();
-                    }
-                else if (field.isInflated())
-                    {
+                } else if (field.isInflated()) {
                     aFields[field.getIndex()] = field.createRefHandle(null);
-                    }
                 }
             }
+        }
 
         return aFields;
-        }
+    }
 
     @Override
-    public FieldInfo getFieldInfo(Object id)
-        {
+    public FieldInfo getFieldInfo(Object id) {
         if (id instanceof PropertyConstant idProp &&
-                idProp.getComponent().getAccess() != Access.PRIVATE)
-            {
+                idProp.getComponent().getAccess() != Access.PRIVATE) {
             id = idProp.getNestedIdentity();
-            }
+        }
         return m_mapFields.get(id);
-        }
+    }
 
     @Override
-    public boolean hasOuter()
-        {
+    public boolean hasOuter() {
         return m_fHasOuter;
-        }
+    }
 
     @Override
-    public boolean makeStructureImmutable(ObjectHandle[] ahField)
-        {
-        for (FieldInfo field : m_mapFields.values())
-            {
+    public boolean makeStructureImmutable(ObjectHandle[] ahField) {
+        for (FieldInfo field : m_mapFields.values()) {
             ObjectHandle hValue = ahField[field.getIndex()];
 
             if (hValue != null && hValue.isMutable() && !hValue.isService() && !field.isLazy() &&
-                    !hValue.makeImmutable())
-                {
+                    !hValue.makeImmutable()) {
                 return false;
-                }
             }
+        }
 
         return true;
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -595,70 +517,56 @@ public class ClassComposition
      * Ensure the constant we use as a key to any of the caches belongs to this Container's
      * ConstantPool or any of its ancestors.
      */
-    private <T extends Constant> T register(T type)
-        {
+    private <T extends Constant> T register(T type) {
         Container    container = getContainer();
         ConstantPool poolThis  = container.getConstantPool();
         ConstantPool poolThat  = type.getConstantPool();
 
-        if (poolThat == poolThis)
-            {
+        if (poolThat == poolThis) {
             return type;
-            }
-
-        while (true)
-            {
+        } while (true) {
             container = container.f_parent;
-            if (container == null)
-                {
+            if (container == null) {
                 break;
-                }
-            if (poolThat == container.getConstantPool())
-                {
-                return type;
-                }
             }
-        return (T) poolThis.register(type);
+            if (poolThat == container.getConstantPool()) {
+                return type;
+            }
         }
+        return (T) poolThis.register(type);
+    }
 
     /**
      * @return true iff this TypeComposition represents an inception class
      */
-    public boolean isInception()
-        {
+    public boolean isInception() {
         return this == f_clzInception;
-        }
+    }
 
     /**
      * Create a map of fields that serves as a prototype for all instances of this class.
      */
-    public void ensureFieldLayout(Container container)
-        {
-        if (m_mapFields == null)
-            {
+    public void ensureFieldLayout(Container container) {
+        if (m_mapFields == null) {
             ensureFieldLayoutImpl(container);
-            }
+        }
+    }
+
+    private synchronized void ensureFieldLayoutImpl(Container container) {
+        if (m_mapFields != null) {
+            return;
         }
 
-    private synchronized void ensureFieldLayoutImpl(Container container)
-        {
-        if (m_mapFields != null)
-            {
-            return;
-            }
-
-        if (!f_template.isGenericHandle())
-            {
+        if (!f_template.isGenericHandle()) {
             m_mapFields = Collections.emptyMap();
             return;
-            }
+        }
 
         TypeConstant typePublic = f_typeInception.getUnderlyingType();
-        if (typePublic instanceof PropertyClassTypeConstant)
-            {
+        if (typePublic instanceof PropertyClassTypeConstant) {
             m_mapFields = Collections.emptyMap();
             return;
-            }
+        }
 
         ConstantPool pool       = getContainer().getConstantPool();
         TypeConstant typeStruct = pool.ensureAccessTypeConstant(typePublic, Access.STRUCT);
@@ -669,79 +577,67 @@ public class ClassComposition
         int nIndex   = 0;
 
         // create storage for implicit fields
-        for (String sField : f_template.getImplicitFields())
-            {
-            if (sField.equals(GenericHandle.OUTER))
-                {
+        for (String sField : f_template.getImplicitFields()) {
+            if (sField.equals(GenericHandle.OUTER)) {
                 m_fHasOuter = true;
-                }
+            }
             mapFields.put(sField,
                     new FieldInfo(sField, nIndex++, pool.typeObject(), null,
                         /*synthetic*/ true, false, false, false));
-            }
+        }
 
-        for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoStruct.sortedProperties())
-            {
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoStruct.sortedProperties()) {
             PropertyConstant idProp   = entry.getKey();
             PropertyInfo     infoProp = entry.getValue();
             boolean          fField   = infoProp.hasField();
 
-            if (fField && !idProp.isTopLevel())
-                {
+            if (fField && !idProp.isTopLevel()) {
                 IdentityConstant idParent = idProp.getParentConstant();
-                switch (idParent.getFormat())
-                    {
-                    case Property:
-                        if (!infoStruct.getClassChain().
-                                containsKey(infoProp.getIdentity().getClassIdentity()))
-                            {
-                            // the property is defined by the underlying type; currently those
-                            // nested properties are stored in the corresponding Ref "box"
-                            continue;
-                            }
-                        break;
-
-                    case Method:
-                        break;
+                switch (idParent.getFormat()) {
+                case Property:
+                    if (!infoStruct.getClassChain().
+                            containsKey(infoProp.getIdentity().getClassIdentity())) {
+                        // the property is defined by the underlying type; currently those
+                        // nested properties are stored in the corresponding Ref "box"
+                        continue;
                     }
+                    break;
+
+                case Method:
+                    break;
                 }
+            }
 
             TypeComposition clzRef = null;
-            if (infoProp.isRefAnnotated()) // this doesn't include injected properties
-                {
+            if (infoProp.isRefAnnotated()) { // this doesn't include injected properties
                 clzRef = infoProp.isCustomLogic()
                         ? ensurePropertyComposition(infoProp)
                         : container.resolveClass(infoProp.getBaseRefType());
 
-                if (clzRef != null && !infoProp.isNative())
-                    {
+                if (clzRef != null && !infoProp.isNative()) {
                     AnyConstructor:
-                    for (Annotation anno : infoProp.getRefAnnotations())
-                        {
+                    for (Annotation anno : infoProp.getRefAnnotations()) {
                         TypeInfo infoAnno = anno.getAnnotationType().ensureTypeInfo();
                         int      cArgs    = anno.getParams().length;
 
                         Set<MethodConstant> setConstrId = infoAnno.findMethods("construct", cArgs,
                                 TypeInfo.MethodKind.Constructor);
-                        for (MethodConstant idConstruct : setConstrId)
-                            {
+                        for (MethodConstant idConstruct : setConstrId) {
                             MethodStructure method = infoAnno.getMethodById(idConstruct, true).
                                 getTopmostMethodStructure(infoAnno);
 
-                            if (!method.isSynthetic() || !method.isNoOp())
-                                {
+                            if (!method.isSynthetic() || !method.isNoOp()) {
                                 // this will serve as a flag to call annotation constructors
                                 // (see ClassTemplate.createPropertyRef() method)
                                 clzRef = clzRef.ensureAccess(Access.STRUCT);
                                 break AnyConstructor;
-                                }
                             }
                         }
                     }
                 }
+            }
 
-            if (fField)
-                {
+            if (fField) {
                 boolean fTransient = infoProp.isTransient();
                 boolean fPrivate   = infoProp.getRefAccess() == Access.PRIVATE;
 
@@ -753,10 +649,9 @@ public class ClassComposition
                 assert !mapFields.containsKey(enid);
 
                 TypeConstant type = infoProp.getType();
-                if (type.containsFormalType(true))
-                    {
+                if (type.containsFormalType(true)) {
                     type = type.resolveConstraints();
-                    }
+                }
 
                 FieldInfo field = new FieldInfo(enid, nIndex++, type,
                         clzRef, infoProp.isInjected(), fTransient,
@@ -766,16 +661,13 @@ public class ClassComposition
 
                 m_fHasSpecial |= fTransient | clzRef != null;
 
-                if (!(enid instanceof NestedIdentity) && field.isRegular())
-                    {
+                if (!(enid instanceof NestedIdentity) && field.isRegular()) {
                     cRegular++;
-                    }
                 }
-            else
-                {
+            } else {
                 assert clzRef == null;
-                }
             }
+        }
 
         m_cRegularFields = cRegular;
         m_mapFields      = mapFields.isEmpty()
@@ -783,53 +675,47 @@ public class ClassComposition
                 : mapFields.size() > 8
                     ? new LinkedHashMap<>(mapFields)
                     : mapFields;
-        }
+    }
 
     /**
      * @return the compile-time type for a given property name or identity (never nested identity)
      */
-    public TypeConstant getFieldType(Object nid)
-        {
+    public TypeConstant getFieldType(Object nid) {
         TypeConstant type     = getInceptionType();
         TypeInfo     infoType = type.ensureTypeInfo();
         PropertyInfo infoProp = nid instanceof PropertyConstant idProp
                 ? infoType.findProperty(idProp, true)
                 : infoType.findProperty((String) nid);
         return infoProp == null ? null : infoProp.inferImmutable(type);
-        }
+    }
 
     /**
      * @return the compile-time PropertyInfo for a given property
      */
-    public PropertyInfo getPropertyInfo(PropertyConstant idProp)
-        {
+    public PropertyInfo getPropertyInfo(PropertyConstant idProp) {
         return getInceptionType().ensureTypeInfo().findProperty(idProp, true);
-        }
+    }
 
     @Override
-    public int hashCode()
-        {
+    public int hashCode() {
         return f_typeRevealed.hashCode();
-        }
+    }
 
     @Override
-    public boolean equals(Object obj)
-        {
+    public boolean equals(Object obj) {
         // type compositions are singletons
         return this == obj;
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return f_typeRevealed.getValueString();
-        }
+    }
 
     /**
      * Information regarding a field of this {@link ClassComposition}.
      */
-    public static class FieldInfo
-        {
+    public static class FieldInfo {
         /**
          * Construct a {@link FieldInfo}.
          *
@@ -840,8 +726,7 @@ public class ClassComposition
          * @param fSynthetic  true iff the field is synthetic (e.g. implicit or injected)
          */
         protected FieldInfo(Object enid, int nIndex, TypeConstant type, TypeComposition clzRef,
-                            boolean fSynthetic, boolean fTransient, boolean fUnassigned, boolean fLazy)
-            {
+                            boolean fSynthetic, boolean fTransient, boolean fUnassigned, boolean fLazy) {
             f_enid        = enid;
             f_nIndex      = nIndex;
             f_type        = type;
@@ -850,122 +735,107 @@ public class ClassComposition
             f_fTransient  = fTransient;
             f_fUnassigned = fUnassigned;
             f_fLazy       = fLazy;
-            }
+        }
 
         /**
          * @return the field's name
          */
-        public String getName()
-            {
+        public String getName() {
             return f_enid instanceof PropertyConstant idProp
                     ? idProp.getPathString()
                     : f_enid.toString();
-            }
+        }
 
         /**
          * @return the field's index
          */
-        public int getIndex()
-            {
+        public int getIndex() {
             return f_nIndex;
-            }
+        }
 
         /**
          * @return the field's type
          */
-        public TypeConstant getType()
-           {
+        public TypeConstant getType() {
            return f_type;
-           }
+       }
 
         /**
          * @return true iff the field is inflated
          */
-        public boolean isInflated()
-            {
+        public boolean isInflated() {
             return f_clzRef != null;
-            }
+        }
 
         /**
          * @return true iff the field is synthetic
          */
-        public boolean isSynthetic()
-            {
+        public boolean isSynthetic() {
             return f_fSynthetic;
-            }
+        }
 
         /**
          * @return true iff the field is transient
          */
-        public boolean isTransient()
-            {
+        public boolean isTransient() {
             return f_fTransient;
-            }
+        }
 
         /**
          * @return true iff the field is allowed to be unassigned
          */
-        public boolean isUnassigned()
-            {
+        public boolean isUnassigned() {
             return f_fUnassigned;
-            }
+        }
 
         /**
          * @return true iff the field is LazyVar annotated
          */
-        public boolean isLazy()
-            {
+        public boolean isLazy() {
             return f_fLazy;
-            }
+        }
 
         /**
          * @return true if this field is allowed to stay unassigned
          */
-        public boolean isAllowedUnassigned()
-            {
+        public boolean isAllowedUnassigned() {
             return isSynthetic() || isTransient() || isUnassigned();
-            }
+        }
 
         /**
          * @return true if this field is regular field (used by Const auto-generated methods)
          */
-        public boolean isRegular()
-            {
+        public boolean isRegular() {
             return !isSynthetic() && !isTransient() && !isUnassigned() && !isLazy();
-            }
+        }
 
         /**
          * @return a new RefHandle for this field
          */
-        public RefHandle createRefHandle(Frame frame)
-            {
+        public RefHandle createRefHandle(Frame frame) {
             return ((VarSupport) f_clzRef.getSupport()).createRefHandle(frame, f_clzRef, getName());
-            }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             StringBuilder sb = new StringBuilder();
 
             sb.append(getName())
               .append('@')
               .append(getIndex());
 
-            if (isSynthetic())
-                {
+            if (isSynthetic()) {
                 sb.append(" synthetic");
-                }
-            if (isTransient())
-                {
+            }
+            if (isTransient()) {
                 sb.append(" transient");
-                }
-            if (isInflated())
-                {
+            }
+            if (isInflated()) {
                 sb.append(" inflated");
-                }
+            }
 
             return sb.toString();
-            }
+        }
 
         // ----- fields ----------------------------------------------------------------------------
 
@@ -979,7 +849,7 @@ public class ClassComposition
         private final boolean         f_fLazy;
 
         public Constant constInit;
-        }
+    }
 
 
     // ----- data fields ---------------------------------------------------------------------------
@@ -1082,4 +952,4 @@ public class ClassComposition
      * Marker for a cached null {@link CallChain}.
      */
     private static final CallChain NIL_CHAIN = new CallChain(MethodBody.NO_BODIES);
-    }
+}

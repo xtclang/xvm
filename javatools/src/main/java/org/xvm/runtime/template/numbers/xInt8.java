@@ -13,34 +13,28 @@ import org.xvm.runtime.Frame;
  * Native Int8 support.
  */
 public class xInt8
-        extends xConstrainedInteger
-    {
+        extends xConstrainedInteger {
     public static xInt8 INSTANCE;
 
-    public xInt8(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xInt8(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, Byte.MIN_VALUE, Byte.MAX_VALUE, 8, false, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
-        }
-
-    @Override
-    protected xConstrainedInteger getComplimentaryTemplate()
-        {
-        return xUInt8.INSTANCE;
-        }
-
-    @Override
-    public int createConstHandle(Frame frame, Constant constant)
-        {
-        if (constant instanceof ByteConstant constByte)
-            {
-            return frame.pushStack(makeJavaLong(constByte.getValue().longValue()));
-            }
-
-        return super.createConstHandle(frame, constant);
         }
     }
+
+    @Override
+    protected xConstrainedInteger getComplimentaryTemplate() {
+        return xUInt8.INSTANCE;
+    }
+
+    @Override
+    public int createConstHandle(Frame frame, Constant constant) {
+        if (constant instanceof ByteConstant constByte) {
+            return frame.pushStack(makeJavaLong(constByte.getValue().longValue()));
+        }
+
+        return super.createConstHandle(frame, constant);
+    }
+}

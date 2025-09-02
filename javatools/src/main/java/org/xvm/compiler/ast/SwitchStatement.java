@@ -39,32 +39,27 @@ import static org.xvm.util.Handy.indentLines;
  * A "switch" statement.
  */
 public class SwitchStatement
-        extends ConditionalStatement
-    {
+        extends ConditionalStatement {
     // ----- constructors --------------------------------------------------------------------------
 
-    public SwitchStatement(Token keyword, List<AstNode> conds, StatementBlock block)
-        {
+    public SwitchStatement(Token keyword, List<AstNode> conds, StatementBlock block) {
         super(keyword, conds);
         this.block   = block;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public boolean isNaturalGotoStatementTarget()
-        {
+    public boolean isNaturalGotoStatementTarget() {
         return true;
-        }
+    }
 
     @Override
-    public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin)
-        {
+    public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin) {
         Context ctxDest = ensureValidationContext();
 
-        if (m_labelContinue == null)
-            {
+        if (m_labelContinue == null) {
             assert m_listContinues == null;
 
             int iGroup = m_casemgr.getCaseGroupCount() - 1;
@@ -72,10 +67,9 @@ public class SwitchStatement
 
             m_labelContinue = new Label("fall_through_from_case_group_" + iGroup);
             m_listContinues = new ArrayList<>();
-            }
+        }
 
-        if (ctxOrigin.isReachable())
-            {
+        if (ctxOrigin.isReachable()) {
             // record the jump that will either fall-through to the next case group or (if this is
             // the last case group) break out of this switch statement by recording its assignment
             // impact (a delta of assignment information)
@@ -85,38 +79,34 @@ public class SwitchStatement
             ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
 
             m_listContinues.add(new Break(nodeOrigin, mapAsn, mapArg, m_labelContinue));
-            }
+        }
 
         return m_labelContinue;
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return block.getEndPosition();
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validateImpl(Context ctx, ErrorListener errs)
-        {
+    protected Statement validateImpl(Context ctx, ErrorListener errs) {
         boolean                fValid    = true;
         CaseManager<CaseGroup> mgr       = new CaseManager<>(this);
         List<Statement>        listStmts = block.stmts;
         int                    nArity    = mgr.computeArity(listStmts, errs);
 
-        if (nArity == 0)
-            {
+        if (nArity == 0) {
             return null; // an error must've been reported
-            }
+        }
 
         m_listGroups = new ArrayList<>();
         m_casemgr    = mgr;
@@ -124,10 +114,9 @@ public class SwitchStatement
         // create a new context in case there are short-circuiting conditions that result in
         // narrowing inferences; for example:
         //   Int[]? args = ...;
-        //   switch (args?.size > 0)
-        //       {
+        //   switch (args?.size > 0) {
         //       case 1: // "args" is know to be an array of one Int value
-        //       }
+        //   }
         // this context will also be used to keep variables declared by the switch condition and
         // compute inferences if the switch statement doesn't complete (all possible branches are
         // covered or there is a default)
@@ -139,21 +128,17 @@ public class SwitchStatement
         boolean          fInCase   = false;
         CaseBlockContext ctxBlock  = null;
         CaseGroup        group     = null;
-        for (int i = 0; i < cStmts; ++i)
-            {
+        for (int i = 0; i < cStmts; ++i) {
             Statement stmt = listStmts.get(i);
-            if (stmt instanceof CaseStatement stmtCase)
-                {
-                if (ctxBlock != null)
-                    {
+            if (stmt instanceof CaseStatement stmtCase) {
+                if (ctxBlock != null) {
                     assert group != null;
 
-                    if (m_labelContinue == null && ctxBlock.isReachable())
-                        {
+                    if (m_labelContinue == null && ctxBlock.isReachable()) {
                         listStmts.get(group.iFirstCase).
                             log(errs, Severity.ERROR, Compiler.SWITCH_BREAK_OR_CONTINUE_EXPECTED);
                         fValid = false;
-                        }
+                    }
 
                     group.fScope          = ctxBlock.isAnyVarDeclaredInThisScope();
                     group.labelContinueTo = m_labelContinue;
@@ -161,10 +146,9 @@ public class SwitchStatement
 
                     ctxBlock.exit();
                     ctxBlock = null;
-                    }
+                }
 
-                if (!fInCase)
-                    {
+                if (!fInCase) {
                     fInCase = true;
 
                     assert group == null;
@@ -172,14 +156,11 @@ public class SwitchStatement
                     group.iGroup     = m_listGroups.size();
                     group.iFirstCase = i;
                     m_listGroups.add(group);
-                    }
+                }
 
                 fValid &= mgr.validateCase(ctxSwitch, stmtCase, errs);
-                }
-            else
-                {
-                if (fInCase)
-                    {
+            } else {
+                if (fInCase) {
                     assert group != null && group.iFirstStmt < 0;
                     group.iFirstStmt = i;
                     mgr.endCaseGroup(group);
@@ -188,131 +169,108 @@ public class SwitchStatement
                     assert ctxBlock == null;
 
                     ctxBlock = ctxSwitch.enterBlock();
-                    if (fValid && mgr.hasTypeConditions())
-                        {
+                    if (fValid && mgr.hasTypeConditions()) {
                         // for now, we only infer a type from a single-case blocks
                         int           cCases   = 0;
                         CaseStatement stmtCase = null;
-                        for (int iCase = group.iFirstCase; iCase < group.iFirstStmt; iCase++)
-                            {
+                        for (int iCase = group.iFirstCase; iCase < group.iFirstStmt; iCase++) {
                             stmtCase = (CaseStatement) listStmts.get(iCase);
                             cCases  += stmtCase.getExpressionCount();
-                            }
-                        if (cCases == 1)
-                            {
-                            mgr.addTypeInference(ctxBlock, stmtCase, errs);
-                            }
                         }
-
-                    // associate any previous "fall through" with this pseudo statement block
-                    if (m_labelContinue != null)
-                        {
-                        boolean fContinues = false;
-                        for (Break continueInfo : m_listContinues)
-                            {
-                            if (!continueInfo.node().isDiscarded())
-                                {
-                                ctxBlock.merge(continueInfo.mapAssign(), continueInfo.mapNarrow());
-                                fContinues = true;
-                                }
-                            }
-
-                        if (fContinues)
-                            {
-                            ctx.setReachable(true);
-                            }
-                        m_labelContinue = null;
-                        m_listContinues = null;
+                        if (cCases == 1) {
+                            mgr.addTypeInference(ctxBlock, stmtCase, errs);
                         }
                     }
 
-                Statement stmtNew = stmt.validate(ctxBlock, errs);
-                if (stmtNew != stmt)
-                    {
-                    if (stmtNew == null)
-                        {
-                        fValid = false;
+                    // associate any previous "fall through" with this pseudo statement block
+                    if (m_labelContinue != null) {
+                        boolean fContinues = false;
+                        for (Break continueInfo : m_listContinues) {
+                            if (!continueInfo.node().isDiscarded()) {
+                                ctxBlock.merge(continueInfo.mapAssign(), continueInfo.mapNarrow());
+                                fContinues = true;
+                            }
                         }
-                    else
-                        {
-                        block.stmts = listStmts = ensureArrayList(listStmts);
-                        listStmts.set(i, stmtNew);
+
+                        if (fContinues) {
+                            ctx.setReachable(true);
                         }
+                        m_labelContinue = null;
+                        m_listContinues = null;
                     }
                 }
 
-            if (errs.isAbortDesired())
-                {
-                break;
+                Statement stmtNew = stmt.validate(ctxBlock, errs);
+                if (stmtNew != stmt) {
+                    if (stmtNew == null) {
+                        fValid = false;
+                    } else {
+                        block.stmts = listStmts = ensureArrayList(listStmts);
+                        listStmts.set(i, stmtNew);
+                    }
                 }
             }
 
+            if (errs.isAbortDesired()) {
+                break;
+            }
+        }
+
         // close any last block
-        if (ctxBlock != null)
-            {
-            if (m_labelContinue == null)
-                {
+        if (ctxBlock != null) {
+            if (m_labelContinue == null) {
                 assert group != null;
                 group.fScope          = ctxBlock.isAnyVarDeclaredInThisScope();
                 group.labelContinueTo = null;
 
-                if (ctxBlock.isReachable())
-                    {
+                if (ctxBlock.isReachable()) {
                     listStmts.get(group.iFirstCase).
                         log(errs, Severity.ERROR, Compiler.SWITCH_BREAK_OR_CONTINUE_EXPECTED);
                     fValid = false;
-                    }
                 }
-            else
-                {
+            } else {
                 listStmts.getLast().
                     log(errs, Severity.ERROR, Compiler.SWITCH_CONTINUE_NOT_EXPECTED);
                 fValid = false;
-                }
+            }
 
             ctxBlock.exit();
-            }
+        }
 
         // notify the case manager that we're finished collecting everything
         fValid &= mgr.validateEnd(ctxSwitch, errs);
 
-        if (m_listContinues != null)
-            {
+        if (m_listContinues != null) {
             // the last "continue" is translated as a "break"
-            for (Break continueInfo : m_listContinues)
-                {
-                if (!continueInfo.node().isDiscarded())
-                    {
+            for (Break continueInfo : m_listContinues) {
+                if (!continueInfo.node().isDiscarded()) {
                     addBreak(continueInfo);
-                    }
                 }
-            m_listContinues = null;
             }
+            m_listContinues = null;
+        }
 
-        if (!m_listBreaks.isEmpty())
-            {
+        if (!m_listBreaks.isEmpty()) {
             ctxSwitch.mergeBreaks(m_listBreaks);
             m_listBreaks.clear();
-            }
+        }
 
         ctx = ctxSwitch.exit();
 
         return fValid ? this : null;
-        }
+    }
 
     @Override
-    protected void addBreak(Break breakInfo)
-        {
+    protected void addBreak(Break breakInfo) {
         // we will process the assignments ourselves; see SwitchContext.mergeBreaks()
         m_listBreaks.add(breakInfo.mapAssign());
 
         super.addBreak(new Break(breakInfo.node(), Collections.emptyMap(),
                                  breakInfo.mapNarrow(), breakInfo.label()));
-        }
+    }
 
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
-        {
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         CaseManager<CaseGroup> mgr = m_casemgr;
 
         int             cCases     = mgr.getCaseCount();
@@ -321,83 +279,69 @@ public class SwitchStatement
 
         // check for the extremely rare possibility that the switch condition is a constant, and we
         // can tell which branch to use (discarding the rest of the possible case branches)
-        if (mgr.isSwitchConstant())
-            {
+        if (mgr.isSwitchConstant()) {
             // skip the condition and just spit out the reachable code inside the case group(s)
             CaseGroup groupStart = mgr.getCookie(mgr.getSwitchConstantLabel());
             for (int iGroup = groupStart.iGroup, cGroups = m_listGroups.size(), iCase = -1;
-                    iGroup < cGroups; ++iGroup)
-                {
+                    iGroup < cGroups; ++iGroup) {
                 iCase = emitCaseGroup(ctx, fReachable, code, iGroup, aconstCase, listBodies, iCase, errs);
-                if (m_listGroups.get(iGroup).labelContinueTo == null)
-                    {
+                if (m_listGroups.get(iGroup).labelContinueTo == null) {
                     // if there was no "continue", then we're done
                     break;
-                    }
                 }
+            }
 
-            if (!errs.hasSeriousErrors())
-                {
+            if (!errs.hasSeriousErrors()) {
                 ctx.getHolder().setAst(this,
                         new StmtBlockAST(listBodies.toArray(BinaryAST.NO_ASTS), true));
-                }
+            }
             // switch never completes normally
             return false;
-            }
+        }
 
-        if (mgr.hasDeclarations())
-            {
+        if (mgr.hasDeclarations()) {
             code.add(new Enter());
-            }
+        }
 
-        if (mgr.usesIfLadder())
-            {
+        if (mgr.usesIfLadder()) {
             mgr.generateIfLadder(ctx, code, block.stmts, errs);
-            }
-        else
-            {
+        } else {
             mgr.generateJumpTable(ctx, code, errs);
-            }
+        }
 
-        for (int iGroup = 0, cGroups = m_listGroups.size(), iCase = -1; iGroup < cGroups; ++iGroup)
-            {
+        for (int iGroup = 0, cGroups = m_listGroups.size(), iCase = -1; iGroup < cGroups; ++iGroup) {
             iCase = emitCaseGroup(ctx, fReachable, code, iGroup, aconstCase, listBodies, iCase, errs);
-            }
+        }
 
-        if (mgr.hasDeclarations())
-            {
+        if (mgr.hasDeclarations()) {
             code.add(new Exit());
-            }
+        }
 
         // if the last case group block has a "continue", then it "continues" to the same place that
         // a "break" would "break", i.e. the end
-        if (m_labelContinue != null)
-            {
+        if (m_labelContinue != null) {
             code.add(m_labelContinue);
-            }
+        }
 
         ctx.getHolder().setAst(this, new SwitchAST(mgr.getConditionBAST(), mgr.getConditionIsA(),
                 aconstCase, listBodies.toArray(BinaryAST.NO_ASTS)));
 
         return mgr.isCompletable();
-        }
+    }
 
     private int emitCaseGroup(Context ctx, boolean fReachable, Code code, int iGroup,
                               Constant[] aconstCase, List<BinaryAST> listBodies, int iCase,
-                              ErrorListener errs)
-        {
+                              ErrorListener errs) {
         boolean   fCompletes = fReachable;
         CaseGroup group      = m_listGroups.get(iGroup);
 
         // the label for any "continue" from the last group
-        if (iGroup > 0)
-            {
+        if (iGroup > 0) {
             Label labelContinueFrom = m_listGroups.get(iGroup - 1).labelContinueTo;
-            if (labelContinueFrom != null)
-                {
+            if (labelContinueFrom != null) {
                 code.add(labelContinueFrom);
-                }
             }
+        }
 
         List<Statement> listStmts  = block.stmts;
         int             iFirstCase = group.iFirstCase;
@@ -406,89 +350,76 @@ public class SwitchStatement
         // the label assigned to the case group
         code.add(((CaseStatement) listStmts.get(iFirstCase)).getLabel());
 
-        for (int iStmt = iFirstCase; iStmt < iFirstStmt; ++iStmt)
-            {
+        for (int iStmt = iFirstCase; iStmt < iFirstStmt; ++iStmt) {
             CaseStatement stmtCase = (CaseStatement) listStmts.get(iStmt);
 
             iCase = stmtCase.collectConstants(iCase, aconstCase);
-            }
+        }
 
-        if (group.fScope)
-            {
+        if (group.fScope) {
             code.add(new Enter());
-            }
+        }
 
         List<BinaryAST> listAst = new ArrayList<>();
-        for (int iStmt = group.iFirstStmt, cStmts = listStmts.size(); iStmt < cStmts; ++iStmt)
-            {
+        for (int iStmt = group.iFirstStmt, cStmts = listStmts.size(); iStmt < cStmts; ++iStmt) {
             Statement stmt = listStmts.get(iStmt);
 
-            if (stmt instanceof CaseStatement)
-                {
-                if (fReachable && fCompletes)
-                    {
+            if (stmt instanceof CaseStatement) {
+                if (fReachable && fCompletes) {
                     stmt.log(errs, Severity.ERROR, Compiler.SWITCH_BREAK_OR_CONTINUE_EXPECTED);
-                    }
-                break;
                 }
+                break;
+            }
 
-            if (fReachable && !fCompletes)
-                {
+            if (fReachable && !fCompletes) {
                 // this statement is the first statement that cannot be reached;
                 // the only thing that is allowed is an inner class definition
                 fReachable = false;
-                if (!(stmt instanceof TypeCompositionStatement))
-                    {
+                if (!(stmt instanceof TypeCompositionStatement)) {
                     stmt.log(errs, Severity.ERROR, Compiler.NOT_REACHABLE);
                     break;
-                    }
                 }
+            }
 
             fCompletes = stmt.completes(ctx, fCompletes, code, errs);
-            if (!(stmt instanceof ComponentStatement))
-                {
+            if (!(stmt instanceof ComponentStatement)) {
                 BinaryAST ast = ctx.getHolder().getAst(stmt);
-                if (ast != null)
-                    {
+                if (ast != null) {
                     listAst.add(ast);
-                    }
                 }
             }
+        }
 
-        if (group.fScope)
-            {
+        if (group.fScope) {
             code.add(new Exit());
-            }
+        }
 
         listBodies.add(new StmtBlockAST(listAst.toArray(BinaryAST.NO_ASTS), true));
 
         return iCase;
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("switch (");
 
-        if (conds != null)
-            {
+        if (conds != null) {
             sb.append(conds.get(0));
-            for (int i = 1, c = conds.size(); i < c; ++i)
-                {
+            for (int i = 1, c = conds.size(); i < c; ++i) {
                 sb.append(", ")
                   .append(conds.get(i));
-                }
             }
+        }
 
         sb.append(")\n")
           .append(indentLines(block.toString(), "    "));
 
         return sb.toString();
-        }
+    }
 
 
     // ----- inner classes -------------------------------------------------------------------------
@@ -498,28 +429,24 @@ public class SwitchStatement
      * {@link CaseManager#isCompletable() doesn't complete}.
      */
     protected static class SwitchContext
-            extends Context
-        {
-        protected SwitchContext(Context ctxOuter, CaseManager mgr)
-            {
+            extends Context {
+        protected SwitchContext(Context ctxOuter, CaseManager mgr) {
             super(ctxOuter, true);
 
             f_mgr = mgr;
-            }
+        }
 
         /**
          * @return a nested "case block" of this context.
          */
-        protected CaseBlockContext enterBlock()
-            {
+        protected CaseBlockContext enterBlock() {
             CaseBlockContext ctxBlock = new CaseBlockContext(this);
             f_listBlocks.add(ctxBlock);
             return ctxBlock;
-            }
+        }
 
         @Override
-        public Context exit()
-            {
+        public Context exit() {
             Context ctxOuter = getOuterContext();
 
             boolean fCompletes = f_mgr.isCompletable();
@@ -529,17 +456,15 @@ public class SwitchStatement
             // if a switch statement covers all of the possible values, or has a default label,
             // then the switch statement does not complete normally and may be able to promote
             // narrowed types to the outer context
-            if (!fCompletes)
-                {
+            if (!fCompletes) {
                 promoteNarrowedTypes();
                 ctxOuter.setReachable(false);
-                }
-            return ctxOuter;
             }
+            return ctxOuter;
+        }
 
         @Override
-        protected void promoteNarrowedTypes()
-            {
+        protected void promoteNarrowedTypes() {
             // to be able to promote a narrowed type, that type should satisfy *all* blocks;
             // any block that doesn't explicitly do it causes any narrowing type to be discarded
             // TODO: this logic may cause a false positive (error) for blocks ending with "continue";
@@ -547,82 +472,67 @@ public class SwitchStatement
             List<CaseBlockContext> listBlocks = f_listBlocks;
             int                    cBlocks    = listBlocks.size();
 
-            if (cBlocks == 0)
-                {
+            if (cBlocks == 0) {
                 // there's already been an error logged to get to this point
                 return;
-                }
+            }
 
-            if (cBlocks == 1)
-                {
+            if (cBlocks == 1) {
                 // degenerated case - just take all the only block has
                 listBlocks.get(0).promoteNarrowedTypes();
                 return;
-                }
+            }
 
             // collect all narrowed names, counting the occurrences
             Map<String, Integer> mapAllNames = new HashMap<>();
-            for (CaseBlockContext ctxBlock : listBlocks)
-                {
-                for (String sName : ctxBlock.getNameMap().keySet())
-                    {
-                    if (!ctxBlock.isVarDeclaredInThisScope(sName))
-                        {
+            for (CaseBlockContext ctxBlock : listBlocks) {
+                for (String sName : ctxBlock.getNameMap().keySet()) {
+                    if (!ctxBlock.isVarDeclaredInThisScope(sName)) {
                         mapAllNames.compute(sName, (k, v) -> v == null ? 1 : v + 1);
-                        }
                     }
                 }
+            }
 
             // now only process arguments that were narrowed by *every* block
             Map<String, Argument> mapThis = ensureNameMap();
             CaseBlockContext      ctx0    = listBlocks.get(0);
-            for (Entry<String, Integer> entry : mapAllNames.entrySet())
-                {
+            for (Entry<String, Integer> entry : mapAllNames.entrySet()) {
                 String sName = entry.getKey();
-                if (entry.getValue() != cBlocks)
-                    {
+                if (entry.getValue() != cBlocks) {
                     // there is no consensus across the case blocks - restore the original type
                     Argument argOrig = getVar(sName);
-                    if (argOrig instanceof Register reg && !reg.isInPlace())
-                        {
+                    if (argOrig instanceof Register reg && !reg.isInPlace()) {
                         mapThis.put(sName, reg.restoreType());
-                        }
-                    continue;
                     }
+                    continue;
+                }
 
                 Argument argPrev = ctx0.getNameMap().get(sName);
-                for (int i = 1; i < cBlocks; i++)
-                    {
+                for (int i = 1; i < cBlocks; i++) {
                     Argument argNext = listBlocks.get(i).getNameMap().get(sName);
 
                     TypeConstant typePrev = argPrev.getType();
                     TypeConstant typeNext = argNext.getType();
 
-                    if (typePrev.isA(typeNext))
-                        {
+                    if (typePrev.isA(typeNext)) {
                         mapThis.put(sName, argNext);
                         argPrev = argNext;
-                        }
-                    else if (typeNext.isA(typePrev))
-                        {
+                    } else if (typeNext.isA(typePrev)) {
                         mapThis.put(sName, argPrev);
-                        }
-                    else
-                        {
+                    } else {
                         // no consensus; don't promote anything (though, theoretically speaking we
                         // could find an intermediate type "in between" the original and the widest
                         // of all case blocks)
                         mapThis.remove(sName);
                         break;
-                        }
                     }
                 }
-
-            if (!mapThis.isEmpty())
-                {
-                super.promoteNarrowedTypes();
-                }
             }
+
+            if (!mapThis.isEmpty()) {
+                super.promoteNarrowedTypes();
+            }
+        }
 
         /**
          * Merge a list of previously prepared set of variable assignment information into this
@@ -631,74 +541,59 @@ public class SwitchStatement
          * @param listAdd  a list of maps of assignments from a previous calls to
          *                 {@link Statement#addBreak)}
          */
-        protected void mergeBreaks(List<Map<String, Assignment>> listAdd)
-            {
+        protected void mergeBreaks(List<Map<String, Assignment>> listAdd) {
             // collect all assigned names, counting the occurrences and collect the current assignments
             Map<String, Integer>    mapAllNames = new HashMap<>();
             Map<String, Assignment> mapThis     = new HashMap<>();
-            for (Map<String, Assignment> mapAdd : listAdd)
-                {
-                for (String sName : mapAdd.keySet())
-                    {
+            for (Map<String, Assignment> mapAdd : listAdd) {
+                for (String sName : mapAdd.keySet()) {
                     mapThis.computeIfAbsent(sName, this::getVarAssignment);
                     mapAllNames.compute(sName, (k, v) -> v == null ? 1 : v + 1);
-                    }
                 }
+            }
 
             boolean fCompletes = f_mgr.isCompletable();
             int     cBlocks    = listAdd.size();
-            for (Map<String, Assignment> mapAdd : listAdd)
-                {
-                for (Entry<String, Assignment> entry : mapAdd.entrySet())
-                    {
+            for (Map<String, Assignment> mapAdd : listAdd) {
+                for (Entry<String, Assignment> entry : mapAdd.entrySet()) {
                     String     sName   = entry.getKey();
                     Assignment asnThat = entry.getValue();
                     Assignment asnThis = mapThis.get(sName);
 
-                    if (mapAllNames.get(sName) == cBlocks && !fCompletes)
-                        {
+                    if (mapAllNames.get(sName) == cBlocks && !fCompletes) {
                         // every block assigns this var and the entire value domain is covered -
                         //
-                        if (asnThis.isDefinitelyAssigned())
-                            {
+                        if (asnThis.isDefinitelyAssigned()) {
                             mapThis.put(sName, asnThis.join(asnThat));
-                            }
-                        else
-                            {
+                        } else {
                             mapThis.put(sName, asnThat);
-                            }
                         }
-                    else
-                        {
+                    } else {
                         // not all blocks assign this var or there is no "default" -
                         // unassigned should stay unassigned, otherwise - simply join
-                        if (!asnThis.isDefinitelyUnassigned())
-                            {
+                        if (!asnThis.isDefinitelyUnassigned()) {
                             mapThis.put(sName, asnThis.join(asnThat));
-                            }
                         }
                     }
                 }
+            }
 
             ensureDefiniteAssignments().putAll(mapThis);
-            }
+        }
 
         @Override
-        protected void unlink(Context ctxDiscarded)
-            {
+        protected void unlink(Context ctxDiscarded) {
             List<CaseBlockContext> list = f_listBlocks;
-            for (int i = list.size() - 1; i >= 0; i--)
-                {
-                if (list.get(i) == ctxDiscarded)
-                    {
+            for (int i = list.size() - 1; i >= 0; i--) {
+                if (list.get(i) == ctxDiscarded) {
                     list.remove(i);
-                    }
                 }
             }
+        }
 
         private final CaseManager            f_mgr;
         private final List<CaseBlockContext> f_listBlocks = new ArrayList<>();
-        }
+    }
 
     /**
      * While not immediately apparent, a case block never completes normally; it must break,
@@ -708,16 +603,13 @@ public class SwitchStatement
      * other data.
      */
     protected static class CaseBlockContext
-            extends Context
-        {
-        protected CaseBlockContext(SwitchContext ctxOuter)
-            {
+            extends Context {
+        protected CaseBlockContext(SwitchContext ctxOuter) {
             super(ctxOuter, true);
-            }
+        }
 
         @Override
-        public Context exit()
-            {
+        public Context exit() {
             Context ctxOuter = getOuterContext();
 
             // promote the assignments, but not narrowed types; the break statement has already
@@ -726,14 +618,13 @@ public class SwitchStatement
             promoteAssignments(ctxOuter);
 
             return ctxOuter;
-            }
         }
+    }
 
     /**
      * Holds information about a case group.
      */
-    protected static class CaseGroup
-        {
+    protected static class CaseGroup {
         /**
          * What group number is this? Zero-based.
          */
@@ -754,7 +645,7 @@ public class SwitchStatement
          * Does this group ever "continue"? If so, this is the label that it continues to.
          */
         Label   labelContinueTo;
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -791,4 +682,4 @@ public class SwitchStatement
     private final transient List<Map<String, Assignment>> m_listBreaks = new ArrayList<>();
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchStatement.class, "conds", "block");
-    }
+}

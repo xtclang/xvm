@@ -13,30 +13,25 @@ import org.xvm.runtime.Container;
  * The native RTViewToBit<Byte> implementation.
  */
 public class xRTViewToBitFromUInt8
-        extends ByteBasedBitView
-    {
+        extends ByteBasedBitView {
     public static xRTViewToBitFromUInt8 INSTANCE;
 
-    public xRTViewToBitFromUInt8(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTViewToBitFromUInt8(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
-        }
+    public void initNative() {
+    }
 
     @Override
-    public TypeConstant getCanonicalType()
-        {
+    public TypeConstant getCanonicalType() {
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(), pool.typeByte());
-        }
     }
+}

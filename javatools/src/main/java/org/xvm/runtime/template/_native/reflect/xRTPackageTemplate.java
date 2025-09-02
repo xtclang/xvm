@@ -17,33 +17,28 @@ import org.xvm.runtime.TypeComposition;
  * Native PackageTemplate implementation.
  */
 public class xRTPackageTemplate
-        extends xRTClassTemplate
-    {
+        extends xRTClassTemplate {
     public static xRTPackageTemplate INSTANCE;
 
-    public xRTPackageTemplate(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xRTPackageTemplate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         ConstantPool pool = f_container.getConstantPool();
 
         PACKAGE_TEMPLATE_TYPE = pool.ensureEcstasyTypeConstant("reflect.PackageTemplate");
-        }
+    }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
+    }
 
 
     // ----- ObjectHandle support ------------------------------------------------------------------
@@ -55,16 +50,15 @@ public class xRTPackageTemplate
      *
      * @return the resulting {@link ComponentTemplateHandle}
      */
-    public static ComponentTemplateHandle makeHandle(Container container, PackageStructure pkg)
-        {
+    public static ComponentTemplateHandle makeHandle(Container container, PackageStructure pkg) {
         // note: no need to initialize the struct because there are no natural fields
         TypeComposition clz = INSTANCE.ensureClass(container,
                                 INSTANCE.getCanonicalType(), PACKAGE_TEMPLATE_TYPE);
         return new ComponentTemplateHandle(clz, pkg);
-        }
+    }
 
 
     // ----- constants -----------------------------------------------------------------------------
 
     private static TypeConstant PACKAGE_TEMPLATE_TYPE;
-    }
+}

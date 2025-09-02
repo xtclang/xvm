@@ -55,13 +55,11 @@ import static org.xvm.util.Handy.indentLines;
  */
 public class TryStatement
         extends Statement
-        implements LabelAble
-    {
+        implements LabelAble {
     // ----- constructors --------------------------------------------------------------------------
 
     public TryStatement(Token keyword, List<AssignmentStatement> resources, StatementBlock block,
-                        List<CatchStatement> catches, StatementBlock catchall)
-        {
+                        List<CatchStatement> catches, StatementBlock catchall) {
         assert block != null;
 
         this.keyword   = keyword;
@@ -69,51 +67,45 @@ public class TryStatement
         this.block     = block;
         this.catches   = catches == null || catches.isEmpty() ? null : catches;
         this.catchall  = catchall;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return keyword.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return catchall == null
                 ? catches == null
                         ? block.getEndPosition()
                         : catches.get(catches.size()-1).getEndPosition()
                 : catchall.getEndPosition();
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- LabelAble methods ---------------------------------------------------------------------
 
     @Override
-    public boolean hasLabelVar(String sName)
-        {
+    public boolean hasLabelVar(String sName) {
         return "exception".equals(sName) &&
                 (m_ctxValidatingFinally != null || m_regFinallyException != null);
-        }
+    }
 
     @Override
-    public Register getLabelVar(Context ctx, String sName)
-        {
+    public Register getLabelVar(Context ctx, String sName) {
         assert hasLabelVar(sName);
 
         Register reg = m_regFinallyException;
-        if (reg == null)
-            {
+        if (reg == null) {
             String sLabel   = ((LabeledStatement) getParent()).getName();
             String sRegName = sLabel + '.' + sName;
             Token  tok      = new Token(keyword.getStartPosition(), keyword.getEndPosition(),
@@ -121,50 +113,41 @@ public class TryStatement
 
             m_regFinallyException = reg = ctx.createRegister(pool().typeException१(), sRegName);
             m_ctxValidatingFinally.registerVar(tok, reg, m_errsValidatingFinally);
-            }
+        }
 
         return reg;
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validateImpl(Context ctx, ErrorListener errs)
-        {
+    protected Statement validateImpl(Context ctx, ErrorListener errs) {
         boolean fValid = true;
 
-        if (resources == null)
-            {
-            if (catches == null && catchall == null)
-                {
+        if (resources == null) {
+            if (catches == null && catchall == null) {
                 log(errs, Severity.ERROR, Compiler.TRY_WITHOUT_CATCH);
                 fValid = false;
-                }
             }
-        else
-            {
+        } else {
             // the using/try-with-resources section provides a context to the rest of the
             // statement (it is the outermost layer of the "onion")
             ctx = ctx.enter();
 
-            for (int i = 0, c = resources.size(); i < c; ++i)
-                {
+            for (int i = 0, c = resources.size(); i < c; ++i) {
                 AssignmentStatement useOld = resources.get(i);
                 AssignmentStatement useNew = (AssignmentStatement) useOld.validate(ctx, errs);
-                if (useNew == null)
-                    {
+                if (useNew == null) {
                     fValid = false;
-                    }
-                else if (useNew != useOld)
-                    {
+                } else if (useNew != useOld) {
                     resources.set(i, useNew);
-                    }
+                }
 
                 // each using/try-with-resources is a nested try-finally
                 ctx = ctx.enter();
-                }
             }
+        }
 
         Context ctxOrig     = ctx;
         Context ctxCatchAll = null;
@@ -175,15 +158,13 @@ public class TryStatement
         block.validate(ctxTryBlock, errs);
 
         Map<String, Assignment> mapTryAsn = ctxTryBlock.prepareJump(ctxOrig);
-        if (catchall != null)
-            {
+        if (catchall != null) {
             ctxCatchAll = ctxOrig.enter();
             ctxCatchAll.merge(mapTryAsn);
             ctxCatchAll.setReachable(true);
-            }
+        }
 
-        if (cCatches > 0)
-            {
+        if (cCatches > 0) {
             // now we combine the impact from the end of the "try" block with the impacts from
             // the end of each "catch" block, which is semantically the same as the following "if"
             // ladder:
@@ -191,51 +172,45 @@ public class TryStatement
             //    catch (e1)          if (e1())
             //        {                   {
             //        ...                 ...
-            //        }                   }
+            //    }               }
             //    catch (e2)          else if (e2())
             //        {                   {
             //        ...                 ...
-            //        }                   }
+            //    }               }
             //                        else
             //                            {
             //                            // unreachable else clause
             //                            throw ...
-            //                            }
+            //                        }
             // the only difference is that the top context is an extension of the IfContext that
             // prevents any narrowing assumptions from "catch" scopes percolating up to the original
             // context
 
             boolean fReachable = ctxTryBlock.isReachable();
             Context ctxNext    = fReachable
-                ? new Context.IfContext(ctxOrig)
-                    {
+                ? new Context.IfContext(ctxOrig) {
                     @Override
-                    protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
-                        {
+                    protected void promoteNarrowedType(String sName, Argument arg, Branch branch) {
                         // this is only called when the "try" context is reachable; since the
                         // exception may or may not happen, we need to restore the original type
-                        if (!isVarDeclaredInThisScope(sName))
-                            {
+                        if (!isVarDeclaredInThisScope(sName)) {
                             getOuterContext().restoreOriginalType(sName);
-                            }
                         }
+                    }
 
                     @Override
                     protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant type,
-                                                              Branch branch)
-                        {
-                        }
+                                                              Branch branch) {
                     }
+                }
                 : new Context.IfContext(ctxOrig);
 
-            if (fReachable)
-                {
+            if (fReachable) {
                 ctxNext.merge(mapTryAsn);
                 ctxNext.setReachable(true);
-                }
+            }
 
-            for (int i = 0; i < cCatches; ++i)
-                {
+            for (int i = 0; i < cCatches; ++i) {
                 Context ctxCatch = ctxNext.enterFork(true);
 
                 CatchStatement catchOld = catches.get(i);
@@ -244,23 +219,17 @@ public class TryStatement
                 fReachable |= ctxCatch.isReachable();
                 ctxNext     = ctxCatch.exit();
 
-                if (catchNew == null)
-                    {
+                if (catchNew == null) {
                     fValid = false;
-                    }
-                else
-                    {
-                    if (catchNew != catchOld)
-                        {
+                } else {
+                    if (catchNew != catchOld) {
                         catches.set(i, catchNew);
-                        }
+                    }
 
                     TypeConstant typeE = catchNew.getCatchType();
-                    for (int iPrev = 0; iPrev < i; ++iPrev)
-                        {
+                    for (int iPrev = 0; iPrev < i; ++iPrev) {
                         TypeConstant typeEPrev = catches.get(iPrev).target.getType();
-                        if (typeE.isA(typeEPrev))
-                            {
+                        if (typeE.isA(typeEPrev)) {
                             catchNew.target.log(errs, Severity.ERROR, Compiler.CATCH_TYPE_ALREADY_CAUGHT,
                                     typeE.getValueString(), typeEPrev.getValueString());
 
@@ -268,48 +237,38 @@ public class TryStatement
                             // because this isn't an error bad enough to stop compilation at this
                             // point)
                             break;
-                            }
                         }
                     }
+                }
 
                 ctxNext = ctxNext.enterFork(false);
-                if (i == cCatches - 1)
-                    {
+                if (i == cCatches - 1) {
                     // the last one - mark unreachable and exit all the way up
                     ctxNext.setReachable(false);
-                    while (i-- >= 0)
-                        {
+                    while (i-- >= 0) {
                         // exit enterFork(false); exit enterIf();
                         ctxNext = ctxNext.exit().exit();
-                        }
+                    }
                     break;
-                    }
-                else
-                    {
+                } else {
                     ctxNext = ctxNext.enterIf();
-                    }
                 }
+            }
 
             assert ctxNext == ctxOrig;
-            if (ctxTryBlock.isReachable())
-                {
+            if (ctxTryBlock.isReachable()) {
                 ctxTryBlock.exitReachable();
-                }
-            else
-                {
+            } else {
                 ctxTryBlock.discard();
-                }
+            }
 
             ctxOrig.setReachable(fReachable);
-            }
-        else
-            {
+        } else {
             ctx = ctxTryBlock.exit();
             assert ctx == ctxOrig;
-            }
+        }
 
-        if (catchall != null)
-            {
+        if (catchall != null) {
             // the context for finally clause is a continuation of the context prior to "try"
             // plus the "worst case scenario" of the try-catch block, but we only need to
             // promote the information gathered by the finally block
@@ -323,31 +282,25 @@ public class TryStatement
 
             ctxFinally.promoteAssignments(ctxOrig);
 
-            if (catchallNew == null)
-                {
+            if (catchallNew == null) {
                 fValid = false;
-                }
-            else
-                {
+            } else {
                 catchall = catchallNew;
-                }
             }
-
-        if (resources != null)
-            {
-            for (int i = 0, c = resources.size(); i < c; ++i)
-                {
-                ctx = ctx.exit();
-                }
-            ctx = ctx.exit();
-            }
-
-        return fValid ? this : null;
         }
 
+        if (resources != null) {
+            for (int i = 0, c = resources.size(); i < c; ++i) {
+                ctx = ctx.exit();
+            }
+            ctx = ctx.exit();
+        }
+
+        return fValid ? this : null;
+    }
+
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
-        {
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         boolean      fCompletes = fReachable;
         ConstantPool pool       = pool();
         AstHolder    holder     = ctx.getHolder();
@@ -359,8 +312,7 @@ public class TryStatement
 
         // using() or try()-with-resources
         FinallyStart[] aFinallyStart = null;
-        if (resources != null)
-            {
+        if (resources != null) {
             // the first resource is declared outside of any try/finally block, but it is not
             // visible beyond this statement
             code.add(new Enter());
@@ -368,8 +320,7 @@ public class TryStatement
             int c = resources.size();
             aFinallyStart = new FinallyStart[c];
             aAstResources = new ExprAST[c];
-            for (int i = 0; i < c; ++i)
-                {
+            for (int i = 0; i < c; ++i) {
                 Statement stmt = resources.get(i);
                 fCompletes = stmt.completes(ctx, fCompletes, code, errs);
                 aAstResources[i] = (ExprAST) holder.getAst(stmt);
@@ -377,45 +328,40 @@ public class TryStatement
                 FinallyStart opFinally = new FinallyStart(code.createRegister(pool.typeException१()));
                 aFinallyStart[i] = opFinally;
                 code.add(new GuardAll(opFinally));
-                }
             }
+        }
 
         // try..finally
         FinallyStart opFinallyBlock = null;
         Label        labelCatchEnd  = getEndLabel();
-        if (catchall != null)
-            {
+        if (catchall != null) {
             Register regFinallyException = m_regFinallyException == null
                     ? code.createRegister(pool.typeException१())
                     : m_regFinallyException;
             opFinallyBlock = new FinallyStart(regFinallyException);
             labelCatchEnd  = new Label(getCodeContainerCounter());
             code.add(new GuardAll(opFinallyBlock));
-            }
-        else if (resources != null)
-            {
+        } else if (resources != null) {
             // resources without "finally" add their own "FinallyStart" ops
             labelCatchEnd = new Label(getCodeContainerCounter());
-            }
+        }
 
         // try..catch
         RegAllocAST[] aAllocCatch = null;
-        if (catches != null)
-            {
+        if (catches != null) {
             int          cCatches    = catches.size();
             CatchStart[] aCatchStart = new CatchStart[cCatches];
 
             aAllocCatch = new RegAllocAST[cCatches];
-            for (int i = 0; i < cCatches; ++i)
-                {
+            for (int i = 0; i < cCatches; ++i) {
                 CatchStatement stmt = catches.get(i);
                 aCatchStart[i] = stmt.ensureCatchStart();
                 aAllocCatch[i] = stmt.getCatchRegister().getRegAllocAST();
-                }
+            }
 
             // single "try" for all of the catches
             code.add(new GuardStart(aCatchStart));
-            }
+        }
 
         // the "guarded" body of the using/try statement
         block.suppressScope();
@@ -425,27 +371,24 @@ public class TryStatement
 
         // the "catch" blocks
         boolean fAnyCatchCompletes = false;
-        if (catches != null)
-            {
+        if (catches != null) {
             code.add(new GuardEnd(labelCatchEnd));
 
             int c = catches.size();
             aAstCatches = new BinaryAST[c];
-            for (int i = 0; i < c; ++i)
-                {
+            for (int i = 0; i < c; ++i) {
                 CatchStatement stmtCatch = catches.get(i);
                 stmtCatch.setCatchLabel(labelCatchEnd);
                 fAnyCatchCompletes |= stmtCatch.completes(ctx, fCompletes, code, errs);
 
                 aAstCatches[i] = new StmtBlockAST(
                         new BinaryAST[] {aAllocCatch[i], holder.getAst(stmtCatch)}, true);
-                }
             }
+        }
 
         // the "finally" block
         boolean fTryCompletes = fBlockCompletes | fAnyCatchCompletes;
-        if (catchall != null)
-            {
+        if (catchall != null) {
             // the finally clause gets wrapped in FINALLY / FINALLY_E ops, which imply an enter/exit
             catchall.suppressScope();
 
@@ -460,10 +403,9 @@ public class TryStatement
             FinallyEnd opFinallyEnd = new FinallyEnd();
             opFinallyEnd.setCompletes(fTryCompletes);
             code.add(opFinallyEnd);
-            }
+        }
 
-        if (resources != null)
-            {
+        if (resources != null) {
             // ...
             // FINALLY (e)
             // GUARD
@@ -478,16 +420,14 @@ public class TryStatement
             // skip_throw: CATCH_E
             // FINALLY_E
             // EXIT
-            if (catchall == null)
-                {
+            if (catchall == null) {
                 code.add(labelCatchEnd);
-                }
+            }
 
             TypeConstant   typeCloseable = pool.typeCloseable();
             MethodConstant methodClose   = typeCloseable.ensureTypeInfo(errs)
                     .findMethods("close", 1, MethodKind.Method).iterator().next();
-            for (int i = resources.size() - 1; i >= 0; --i)
-                {
+            for (int i = resources.size() - 1; i >= 0; --i) {
                 code.add(aFinallyStart[i]);
                 Register regException = code.lastRegister();
 
@@ -500,10 +440,9 @@ public class TryStatement
                                           .generateArgument(ctx, code, false, false, errs);
                 Label    labelSkipClose   = new Label("skip_close");
                 Label    labelFallThrough = new Label(getCodeContainerCounter());
-                if (!argResource.getType().isA(typeCloseable))
-                    {
+                if (!argResource.getType().isA(typeCloseable)) {
                     code.add(new JumpNType(argResource, typeCloseable, labelSkipClose));
-                    }
+                }
                 code.add(new Invoke_10(argResource, methodClose, regException));
                 code.add(labelSkipClose);
                 code.add(new GuardEnd(labelFallThrough));
@@ -519,11 +458,11 @@ public class TryStatement
                 FinallyEnd opFinallyEnd = new FinallyEnd();
                 opFinallyEnd.setCompletes(fTryCompletes);
                 code.add(opFinallyEnd);
-                }
+            }
 
             // no resources remain in scope after the try/using statement
             code.add(new Exit());
-            }
+        }
 
         holder.setAst(this, astCatchAll == null
                 ? new TryCatchStmtAST(aAstResources, astBlock, aAstCatches)
@@ -531,63 +470,53 @@ public class TryStatement
                         m_regFinallyException == null ? null : m_regFinallyException.getRegAllocAST(),
                         astCatchAll));
         return fTryCompletes;
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
         sb.append(keyword.getId().TEXT);
 
-        if (resources != null)
-            {
+        if (resources != null) {
             sb.append(" (");
             boolean first = true;
-            for (Statement resource : resources)
-                {
-                if (first)
-                    {
+            for (Statement resource : resources) {
+                if (first) {
                     first = false;
-                    }
-                else
-                    {
+                } else {
                     sb.append(", ");
-                    }
-                sb.append(resource);
                 }
-            sb.append(')');
+                sb.append(resource);
             }
+            sb.append(')');
+        }
 
         sb.append('\n')
           .append(indentLines(block.toString(), "    "));
 
-        if (catches != null)
-            {
-            for (CatchStatement catchOne : catches)
-                {
+        if (catches != null) {
+            for (CatchStatement catchOne : catches) {
                 sb.append('\n')
                   .append(catchOne);
-                }
             }
+        }
 
-        if (catchall != null)
-            {
+        if (catchall != null) {
             sb.append("\nfinally\n")
               .append(indentLines(catchall.toString(), "    "));
-            }
+        }
 
         return sb.toString();
-        }
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return keyword.getId().TEXT;
-        }
+    }
 
 
     // ----- inner classes -------------------------------------------------------------------------
@@ -596,46 +525,40 @@ public class TryStatement
      * A custom "try" block context.
      */
     protected static class TryContext
-            extends Context
-        {
-        protected TryContext(Context ctxOuter)
-            {
+            extends Context {
+        protected TryContext(Context ctxOuter) {
             super(ctxOuter, true);
-            }
+        }
 
         /**
          * Merge the information from this context into the outer when it's reachable.
          */
-        protected void exitReachable()
-            {
+        protected void exitReachable() {
             Context ctxOuter = getOuterContext();
             ctxOuter.merge(getDefiniteAssignments());
             ctxOuter.setReachable(true);
 
             promoteNarrowedTypes();
-            }
+        }
 
         @Override
-        protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
-            {
-            if (branch == Branch.Always && !isVarDeclaredInThisScope(sName))
-                {
+        protected void promoteNarrowedType(String sName, Argument arg, Branch branch) {
+            if (branch == Branch.Always && !isVarDeclaredInThisScope(sName)) {
                 Context  ctxOuter = getOuterContext();
                 Argument argOrig  = ctxOuter.getVar(sName);
                 assert argOrig != null;
 
                 TypeConstant typeArg  = arg.getType();
                 TypeConstant typeOrig = argOrig.getType();
-                if (!typeArg.isA(typeOrig))
-                    {
+                if (!typeArg.isA(typeOrig)) {
                     // this can only happen if the original type was already a shadow
                     assert argOrig instanceof Register;
 
                     ctxOuter.replaceArgument(sName, branch, ((Register) argOrig).restoreType());
-                    }
                 }
             }
         }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -652,4 +575,4 @@ public class TryStatement
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TryStatement.class,
             "resources", "block", "catches", "catchall");
-    }
+}

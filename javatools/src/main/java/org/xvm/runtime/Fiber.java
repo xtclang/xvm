@@ -35,10 +35,8 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
  * It implements Comparable to allow a registry of Fiber objects in a concurrent set.
  */
 public class Fiber
-        implements Comparable<Fiber>
-    {
-    public Fiber(ServiceContext context, Message msgCall)
-        {
+        implements Comparable<Fiber> {
+    public Fiber(ServiceContext context, Message msgCall) {
         f_lId        = s_counter.getAndIncrement();
         f_context    = context;
         f_iCallerId  = msgCall.f_iCallerId;
@@ -46,17 +44,14 @@ public class Fiber
         m_status     = FiberStatus.Initial;
 
         Fiber fiberCaller = msgCall.f_fiberCaller;
-        if (fiberCaller == null)
-            {
+        if (fiberCaller == null) {
             f_nDepth     = 0;
             f_refCaller  = null;
             m_ldtTimeout = 0L;
             m_hTimeout   = xNullable.NULL;
             m_mapTokens  = null;
             m_fCloneMap  = false;
-            }
-        else
-            {
+        } else {
             f_nDepth     = msgCall.getCallDepth() + 1;
             f_refCaller  = new WeakReference<>(fiberCaller);
             m_ldtTimeout = msgCall.getTimeoutStamp();
@@ -64,142 +59,121 @@ public class Fiber
 
             // if the call is async, we must clone context tokens on the spot
             Map<ObjectHandle, ObjectHandle> mapTokens = msgCall.f_mapTokens;
-            if (mapTokens != null && msgCall.isAsync())
-                {
+            if (mapTokens != null && msgCall.isAsync()) {
                 m_mapTokens = new HashMap<>(mapTokens);
                 m_fCloneMap = false;
-                }
-            else
-                {
+            } else {
                 m_mapTokens = mapTokens;
                 m_fCloneMap = true;
-                }
             }
         }
+    }
 
     /**
      * @retutn the caller's fiber
      */
-    protected Fiber getCaller()
-        {
+    protected Fiber getCaller() {
         return f_refCaller == null ? null : f_refCaller.get();
-        }
+    }
 
     /**
      * @return the Timeout? handle
      */
-    public ObjectHandle getTimeoutHandle()
-        {
+    public ObjectHandle getTimeoutHandle() {
         return m_hTimeout;
-        }
+    }
 
     /**
      * Set the fiber's timeout based on the specified Timeout? handle and the timeout timestamp.
      */
-    public void setTimeoutHandle(ObjectHandle hTimeout, long ldtTimeout)
-        {
+    public void setTimeoutHandle(ObjectHandle hTimeout, long ldtTimeout) {
         assert hTimeout != null;
 
         m_hTimeout   = hTimeout;
         m_ldtTimeout = ldtTimeout;
-        }
+    }
 
     /**
      * @return the current timeout timestamp in milliseconds (using Container.currentTimeMillis());
      *         zero if there is no timeout
      */
-    public long getTimeoutStamp()
-        {
+    public long getTimeoutStamp() {
         return m_ldtTimeout;
-        }
+    }
 
     /**
      * Clear the timeout stamp. This must be called when a TimedOut exception is thrown or re-thrown.
      */
-    public void clearTimeout()
-        {
+    public void clearTimeout() {
         m_ldtTimeout = 0L;
         m_hTimeout   = xNullable.NULL;
-        }
+    }
 
     /**
      * Get the map of SharedContext.Token objects for read-only access.
      */
-    public Map<ObjectHandle, ObjectHandle> getTokens()
-        {
+    public Map<ObjectHandle, ObjectHandle> getTokens() {
         return m_mapTokens;
-        }
+    }
 
     /**
      * Get the map of SharedContext.Token objects for write access.
      */
-    public Map<ObjectHandle, ObjectHandle> ensureTokens()
-        {
+    public Map<ObjectHandle, ObjectHandle> ensureTokens() {
         Map<ObjectHandle, ObjectHandle> map = m_mapTokens;
-        if (map == null)
-            {
+        if (map == null) {
             m_mapTokens = map = new HashMap<>();
             m_fCloneMap = false;
-            }
-        else if (m_fCloneMap)
-            {
+        } else if (m_fCloneMap) {
             m_mapTokens = map = new HashMap<>(map);
             m_fCloneMap = false;
-            }
-        return map;
         }
+        return map;
+    }
 
     /**
      * @return true iff this fiber points back (as a logical thread of execution) to a fiber on the
      *         specified service
      */
-    public boolean isContinuationOf(Fiber fiberOrig)
-        {
-        if (f_context == fiberOrig.f_context)
-            {
+    public boolean isContinuationOf(Fiber fiberOrig) {
+        if (f_context == fiberOrig.f_context) {
             return true;
-            }
+        }
 
         Fiber fiberCaller = getCaller();
         return fiberCaller != null && fiberCaller.isContinuationOf(fiberOrig);
-        }
+    }
 
     /**
      * @return true iff this fiber chain has a common origin with the specified fiber
      */
-    public boolean isAssociated(Fiber that)
-        {
-        if (this.f_context == that.f_context)
-            {
+    public boolean isAssociated(Fiber that) {
+        if (this.f_context == that.f_context) {
             return this == that;
-            }
+        }
 
         Fiber fiberCaller = this.getCaller();
-        if (fiberCaller == null)
-            {
+        if (fiberCaller == null) {
             fiberCaller = that.getCaller();
             return fiberCaller != null && this.isAssociated(fiberCaller);
-            }
+        }
 
         // by switching the target to "that" we alternate the descending checks:
         // (f1 ~ f2) --> (f2.prev ~ f1) --> (f1.prev ~ f2.prev) --> ...
         return that.isAssociated(fiberCaller);
-        }
+    }
 
-    public long getId()
-        {
+    public long getId() {
         return f_lId;
-        }
+    }
 
-    public FiberStatus getStatus()
-        {
+    public FiberStatus getStatus() {
         return m_status;
-        }
+    }
 
-    public ObjectHandle getAsyncSection()
-        {
+    public ObjectHandle getAsyncSection() {
         return m_hAsyncSection;
-        }
+    }
 
     /**
      * Set the fiber's status; called only from this fiber's service thread.
@@ -207,274 +181,230 @@ public class Fiber
      * @param status  the status
      * @param cOps    the number of ops this fiber has processed since the last status update
      */
-    public void setStatus(FiberStatus status, long cOps)
-        {
-        switch (m_status = status)
-            {
-            default:
-            case Initial:
-                throw new IllegalArgumentException();
+    public void setStatus(FiberStatus status, long cOps) {
+        switch (m_status = status) {
+        default:
+        case Initial:
+            throw new IllegalArgumentException();
 
-            case Running:
-                m_nanoStarted = f_context.f_container.nanoTime();
-                m_frame = null;
-                break;
+        case Running:
+            m_nanoStarted = f_context.f_container.nanoTime();
+            m_frame = null;
+            break;
 
-            case Waiting:
-            case Paused:
-                long cNanos = f_context.f_container.nanoTime() - m_nanoStarted;
-                m_nanoStarted = 0;
-                f_context.m_cRuntimeNanos += cNanos;
-                m_frame = f_context.getCurrentFrame();
-                m_cOps += cOps;
-                break;
+        case Waiting:
+        case Paused:
+            long cNanos = f_context.f_container.nanoTime() - m_nanoStarted;
+            m_nanoStarted = 0;
+            f_context.m_cRuntimeNanos += cNanos;
+            m_frame = f_context.getCurrentFrame();
+            m_cOps += cOps;
+            break;
 
-            case Terminating:
-                m_frame = null;
-                break;
-            }
+        case Terminating:
+            m_frame = null;
+            break;
         }
+    }
 
     /**
      * Obtain the current frame for this Fiber.
      */
-    public Frame getFrame()
-        {
-        return switch (m_status)
-            {
+    public Frame getFrame() {
+        return switch (m_status) {
             case Initial     -> null;
             case Running     -> f_context.getCurrentFrame();
             case Waiting,
                  Paused,
                  Terminating -> m_frame;
-            };
-        }
+        };
+    }
 
     /*
      * @return true iff the fiber is ready for execution (e.g. not waiting, responded or timed-out)
      */
-    public boolean isReady()
-        {
+    public boolean isReady() {
         return m_status != FiberStatus.Waiting || m_fResponded || isTimedOut();
-        }
+    }
 
     /*
      * @return true iff the fiber is waiting
      */
-    public boolean isWaiting()
-        {
+    public boolean isWaiting() {
         return m_status == FiberStatus.Waiting;
-        }
+    }
 
     /**
      * @return true iff the fiber has timed out
      */
-    public boolean isTimedOut()
-        {
+    public boolean isTimedOut() {
         return m_ldtTimeout > 0 && f_context.f_container.currentTimeMillis() > m_ldtTimeout;
-        }
+    }
 
     /**
      * @return the caller fiber if it exists and is traceable from this fiber's context
      */
-    public Fiber traceCaller()
-        {
+    public Fiber traceCaller() {
         Fiber fiberCaller = getCaller();
 
         if (fiberCaller != null &&
-            fiberCaller.f_context.f_container != f_context.f_container)
-            {
+            fiberCaller.f_context.f_container != f_context.f_container) {
             // TODO check the container relationship?
-            }
+        }
 
         return fiberCaller;
-        }
+    }
 
     /**
      * @return the calling container
      */
-    public Container getCallingContainer()
-        {
+    public Container getCallingContainer() {
         Fiber fiberCaller = getCaller();
         return fiberCaller == null ? null : fiberCaller.f_context.f_container;
-        }
+    }
     /**
      * Check whether we can proceed with the frame execution.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION} or
      *         {@link Op#R_BLOCK} values
      */
-    public int prepareRun(Frame frame)
-        {
+    public int prepareRun(Frame frame) {
         int iResult;
-        if (isTimedOut())
-            {
+        if (isTimedOut()) {
             iResult = frame.raiseException(
                         xException.timedOut(frame, "The service has timed-out", getTimeoutHandle()));
             clearTimeout();
-            }
-        else
-            {
+        } else {
             iResult = Op.R_NEXT;
-            switch (getStatus())
-                {
-                case Waiting:
-                    assert frame == m_frame;
+            switch (getStatus()) {
+            case Waiting:
+                assert frame == m_frame;
 
-                    if (m_resume != null)
-                        {
-                        iResult = m_resume.proceed(frame);
-                        if (iResult == Op.R_BLOCK)
-                            {
-                            // we still cannot resume
-                            m_fResponded = false;
-                            return Op.R_BLOCK;
-                            }
-                        m_resume = null;
-                        }
-
-                    if (frame.m_hException != null)
-                        {
-                        iResult = Op.R_EXCEPTION;
-                        }
-                    break;
-
-                case Terminating:
-                    return frame.raiseException(xException.serviceTerminated(frame, f_context.f_sName));
+                if (m_resume != null) {
+                    iResult = m_resume.proceed(frame);
+                    if (iResult == Op.R_BLOCK) {
+                        // we still cannot resume
+                        m_fResponded = false;
+                        return Op.R_BLOCK;
+                    }
+                    m_resume = null;
                 }
+
+                if (frame.m_hException != null) {
+                    iResult = Op.R_EXCEPTION;
+                }
+                break;
+
+            case Terminating:
+                return frame.raiseException(xException.serviceTerminated(frame, f_context.f_sName));
             }
+        }
 
         setStatus(FiberStatus.Running, 0);
         m_fResponded = false;
         return iResult;
-        }
+    }
 
     /**
      * Register an invoke/call request to another service.
      *
      * @param request  the request
      */
-    public void registerRequest(Message request)
-        {
+    public void registerRequest(Message request) {
         addDependee(request);
 
         m_cPending++;
 
-        request.f_future.whenComplete((_void, ex) ->
-            {
+        request.f_future.whenComplete((_void, ex) -> {
             removeDependee(request);
 
-            if (--m_cPending == 0 && m_status == FiberStatus.Terminating)
-                {
+            if (--m_cPending == 0 && m_status == FiberStatus.Terminating) {
                 f_context.terminateFiber(this, 0);
-                }
-            });
+            }
+        });
+    }
+
+    protected void addDependee(Message request) {
+        if (request.m_fiber == this) {
+            return;
         }
 
-    protected void addDependee(Message request)
-        {
-        if (request.m_fiber == this)
-            {
-            return;
-            }
-
         Object oPending = m_oPendingRequests;
-        if (oPending == null)
-            {
+        if (oPending == null) {
             m_oPendingRequests = request;
-            }
-        else if (oPending instanceof Message requestPrev)
-            {
+        } else if (oPending instanceof Message requestPrev) {
             Map<CompletableFuture, Message> mapPending = new HashMap<>();
             mapPending.put(requestPrev.f_future, requestPrev);
             mapPending.put(request.f_future, request);
             m_oPendingRequests = mapPending;
-            }
-        else
-            {
+        } else {
             Map<CompletableFuture, Message> mapPending = (Map<CompletableFuture, Message>) oPending;
             mapPending.put(request.f_future, request);
-            }
         }
+    }
 
-    protected void removeDependee(Message request)
-        {
-        if (request.m_fiber == this)
-            {
+    protected void removeDependee(Message request) {
+        if (request.m_fiber == this) {
             return;
-            }
+        }
 
         Object oPending = m_oPendingRequests;
-        if (oPending instanceof Message)
-            {
+        if (oPending instanceof Message) {
             m_oPendingRequests = null;
-            }
-        else
-            {
+        } else {
             ((Map<CompletableFuture, Message>) oPending).remove(request.f_future);
-            }
         }
+    }
 
     /**
      * A notification indicating that a request sent by this fiber to another service has been
      * processed.
      */
-    public void onResponse()
-        {
+    public void onResponse() {
         m_fResponded = true;
-        }
+    }
 
     /**
      * Uncaptured request is a "fire and forget" call that needs to be tracked and reported
      * to an UnhandledExceptionHandler if such a handle was registered naturally.
      */
-    public void registerUncapturedRequest(Message request)
-        {
+    public void registerUncapturedRequest(Message request) {
         Map<CompletableFuture, ObjectHandle> mapPending = m_mapPendingUncaptured;
-        if (mapPending == null)
-            {
+        if (mapPending == null) {
             m_mapPendingUncaptured = mapPending = new HashMap<>();
-            }
+        }
 
         m_cPending++;
 
         CompletableFuture future = request.f_future;
         mapPending.put(future, m_hAsyncSection);
 
-        future.whenComplete((_void, ex) ->
-            {
-            if (ex != null)
-                {
+        future.whenComplete((_void, ex) -> {
+            if (ex != null) {
                 processUnhandledException(
                     ((ExceptionHandle.WrapperException) ex).getExceptionHandle());
-                }
+            }
 
             m_mapPendingUncaptured.remove(future);
-            if (--m_cPending == 0 && getStatus() == FiberStatus.Terminating)
-                {
+            if (--m_cPending == 0 && getStatus() == FiberStatus.Terminating) {
                 f_context.terminateFiber(this, 0);
-                }
-            });
-        }
-
-    protected void processUnhandledException(ExceptionHandle hException)
-        {
-        ObjectHandle hAsyncSection = m_hAsyncSection;
-        if (hAsyncSection == xNullable.NULL)
-            {
-            f_context.callUnhandledExceptionHandler(hException);
             }
-        else
-            {
+        });
+    }
+
+    protected void processUnhandledException(ExceptionHandle hException) {
+        ObjectHandle hAsyncSection = m_hAsyncSection;
+        if (hAsyncSection == xNullable.NULL) {
+            f_context.callUnhandledExceptionHandler(hException);
+        } else {
             // there is an active AsyncSection - defer the exception handling
             List<ExceptionHandle> listEx = m_listUnhandledEx;
-            if (listEx == null)
-                {
+            if (listEx == null) {
                 m_listUnhandledEx = listEx = new ArrayList<>();
-                }
-            listEx.add(hException);
             }
+            listEx.add(hException);
         }
+    }
 
     /**
      * Note: this API is the sole reason that {@link ClassTemplate#invokeNative1} is allowed to
@@ -483,70 +413,60 @@ public class Fiber
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION} or
      *         {@link Op#R_BLOCK} values
      */
-    public int registerAsyncSection(Frame frame, ObjectHandle hSectionNew)
-        {
+    public int registerAsyncSection(Frame frame, ObjectHandle hSectionNew) {
         ObjectHandle hSectionOld = m_hAsyncSection;
-        if (hSectionOld != xNullable.NULL)
-            {
+        if (hSectionOld != xNullable.NULL) {
             // check if all the unguarded calls have completed
-            if (isSectionPending(hSectionOld))
-                {
-                m_resume = frameCaller ->
-                    {
-                    if (isSectionPending(hSectionOld))
-                        {
+            if (isSectionPending(hSectionOld)) {
+                m_resume = frameCaller -> {
+                    if (isSectionPending(hSectionOld)) {
                         return Op.R_BLOCK;
-                        }
+                    }
 
                     List<ExceptionHandle> listEx = m_listUnhandledEx;
-                    if (listEx != null && !listEx.isEmpty())
-                        {
+                    if (listEx != null && !listEx.isEmpty()) {
                         GenericHandle  hAsyncSection = (GenericHandle) hSectionOld;
                         FunctionHandle hNotify       = (FunctionHandle) hAsyncSection.
                                                             getField(frameCaller, "notify");
                         return new CallNotify(listEx, hNotify).proceed(frameCaller);
-                        }
+                    }
                     return Op.R_NEXT;
-                    };
+                };
                 return Op.R_BLOCK;
-                }
             }
+        }
 
         m_hAsyncSection = hSectionNew;
         return Op.R_NEXT;
-        }
+    }
 
     /**
      * Check if there are any pending futures associated with this fiber.
      */
-    protected boolean hasPendingRequests()
-        {
+    protected boolean hasPendingRequests() {
         return m_status == FiberStatus.Waiting || m_cPending > 0;
-        }
+    }
 
     /**
      * Check if there are any pending futures associated with the specified AsyncSection.
      */
-    private boolean isSectionPending(ObjectHandle hSection)
-        {
+    private boolean isSectionPending(ObjectHandle hSection) {
         return m_mapPendingUncaptured != null && m_mapPendingUncaptured.containsValue(hSection);
-        }
+    }
 
     /**
      * @return the blocking frame
      */
-    public Frame getBlocker()
-        {
+    public Frame getBlocker() {
         return m_frameBlocker;
-        }
+    }
 
     /**
      * Set or clear the frame that blocks this fiber's execution.
      */
-    protected void setBlocker(Frame frameBlocker)
-        {
+    protected void setBlocker(Frame frameBlocker) {
         m_frameBlocker = frameBlocker;
-        }
+    }
 
 
     // ----- Debugging support ---------------------------------------------------------------------
@@ -554,69 +474,58 @@ public class Fiber
     /**
      * @return human-readable status of a waiting fiber
      */
-    public String reportWaiting()
-        {
+    public String reportWaiting() {
         assert m_status == FiberStatus.Waiting
             || m_status == FiberStatus.Terminating;
 
         Object oPending = m_oPendingRequests;
-        if (oPending == null)
-            {
+        if (oPending == null) {
             return " for closure";
-            }
+        }
 
         // TODO: check for the deadlock
-        if (oPending instanceof Message msg)
-            {
+        if (oPending instanceof Message msg) {
             Fiber fiber = msg.m_fiber;
             return " for " + (fiber == null ? "initial" : fiber);
-            }
+        }
 
         StringBuilder sb     = new StringBuilder(" for [");
         boolean       fFirst = true;
-        for (Message request : ((Map<CompletableFuture, Message>) oPending).values())
-            {
-            if (fFirst)
-                {
+        for (Message request : ((Map<CompletableFuture, Message>) oPending).values()) {
+            if (fFirst) {
                 fFirst = false;
-                }
-            else
-                {
+            } else {
                 sb.append(", ");
-                }
+            }
             Fiber fiber = request.m_fiber;
             sb.append(fiber);
-            }
+        }
         sb.append(']');
         return sb.toString();
-        }
+    }
 
 
     // ----- Comparable & Object methods -----------------------------------------------------------
 
     @Override
-    public int compareTo(Fiber that)
-        {
+    public int compareTo(Fiber that) {
         return Long.compare(this.f_lId, that.f_lId);
-        }
+    }
 
     @Override
-    public int hashCode()
-        {
+    public int hashCode() {
         return Long.hashCode(f_lId);
-        }
+    }
 
     @Override
-    public boolean equals(Object obj)
-        {
+    public boolean equals(Object obj) {
         return obj instanceof Fiber fiber && f_lId == fiber.f_lId;
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return "Fiber " + f_lId + " (" + m_status.name() + ')';
-        }
+    }
 
 
     // ----- inner classes -------------------------------------------------------------------------
@@ -625,43 +534,36 @@ public class Fiber
      * Support for "notify" call.
      */
     protected static class CallNotify
-            implements Frame.Continuation
-        {
+            implements Frame.Continuation {
         private final List<ExceptionHandle> listEx;
         private final FunctionHandle hNotify;
 
-        public CallNotify(List<ExceptionHandle> listEx, FunctionHandle hNotify)
-            {
+        public CallNotify(List<ExceptionHandle> listEx, FunctionHandle hNotify) {
             this.listEx = listEx;
             this.hNotify = hNotify;
-            }
-
-        public int proceed(Frame frameCaller)
-            {
-            while (!listEx.isEmpty())
-                {
-                switch (hNotify.call1(frameCaller, null,
-                        new ObjectHandle[] {listEx.remove(0)}, Op.A_IGNORE))
-                    {
-                    case Op.R_NEXT:
-                        continue;
-
-                    case Op.R_CALL:
-                        frameCaller.m_frameNext.addContinuation(this);
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        // ignore - according to the AsyncContext contract
-                        continue;
-
-                    default:
-                        throw new IllegalStateException();
-                        }
-                    }
-
-            return Op.R_NEXT;
-            }
         }
+
+        public int proceed(Frame frameCaller) {
+            while (!listEx.isEmpty()) {
+                switch (hNotify.call1(frameCaller, null, new ObjectHandle[] {listEx.remove(0)}, Op.A_IGNORE)) {
+                case Op.R_NEXT:
+                    continue;
+
+                case Op.R_CALL:
+                    frameCaller.m_frameNext.addContinuation(this);
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    // ignore - according to the AsyncContext contract
+                    continue;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+            return Op.R_NEXT;
+        }
+    }
 
 
     // ----- data fields ---------------------------------------------------------------------------
@@ -791,8 +693,7 @@ public class Fiber
      */
     private static final AtomicLong s_counter = new AtomicLong();
 
-    public enum FiberStatus
-        {
+    public enum FiberStatus {
         Initial           (3), // a new fiber has not been scheduled for execution yet
         Running           (4), // normal execution
         Paused            (2), // the execution was paused by the scheduler
@@ -802,21 +703,19 @@ public class Fiber
         /**
          * @param nActivity  the activity index
          */
-        FiberStatus(int nActivity)
-            {
+        FiberStatus(int nActivity) {
             this.nActivity = nActivity;
-            }
+        }
 
-        FiberStatus moreActive(FiberStatus that)
-            {
+        FiberStatus moreActive(FiberStatus that) {
             return that == null || this.nActivity >= that.nActivity
                     ? this
                     : that;
-            }
+        }
 
         /**
          * The activity index; the higher the index, the more active the status
          */
         private final int nActivity;
-        }
     }
+}

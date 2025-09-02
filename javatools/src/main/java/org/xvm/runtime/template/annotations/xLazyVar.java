@@ -25,105 +25,85 @@ import org.xvm.runtime.template.xException;
  * Native implementation of LazyVar.
  */
 public class xLazyVar
-        extends xVar
-    {
-    public xLazyVar(Container container, ClassStructure structure, boolean fInstance)
-        {
+        extends xVar {
+    public xLazyVar(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-        }
+    }
 
     @Override
-    public void initNative()
-        {
-        }
+    public void initNative() {
+    }
 
     @Override
-    public RefHandle createRefHandle(Frame frame, TypeComposition clazz, String sName)
-        {
+    public RefHandle createRefHandle(Frame frame, TypeComposition clazz, String sName) {
         return new LazyVarHandle(clazz, sName);
-        }
+    }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         LazyVarHandle hThis = (LazyVarHandle) hTarget;
 
-        switch (sPropName)
-            {
-            case "assigned":
-                if (!hThis.isAssigned() && hThis.isPropertyOnImmutable())
-                    {
-                    hThis.registerAssign(frame.f_fiber);
-                    }
-                break;
+        switch (sPropName) {
+        case "assigned":
+            if (!hThis.isAssigned() && hThis.isPropertyOnImmutable()) {
+                hThis.registerAssign(frame.f_fiber);
             }
+            break;
+        }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
+    }
 
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle hArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "set":
-                {
-                LazyVarHandle hLazy = (LazyVarHandle) hTarget;
-                if (hLazy.isPropertyOnImmutable())
-                    {
-                    return invokeImmutableSet(frame, hLazy, hArg);
-                    }
-                break;
-                }
+                             ObjectHandle hArg, int iReturn) {
+        switch (method.getName()) {
+        case "set": {
+            LazyVarHandle hLazy = (LazyVarHandle) hTarget;
+            if (hLazy.isPropertyOnImmutable()) {
+                return invokeImmutableSet(frame, hLazy, hArg);
             }
-
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+            break;
+        }
         }
 
-    protected int invokeImmutableSet(Frame frame, LazyVarHandle hLazy, ObjectHandle hValue)
-        {
-        if (!hValue.isPassThrough())
-            {
-            if (hValue.getType().isA(frame.poolContext().typeFreezable()))
-                {
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+    }
+
+    protected int invokeImmutableSet(Frame frame, LazyVarHandle hLazy, ObjectHandle hValue) {
+        if (!hValue.isPassThrough()) {
+            if (hValue.getType().isA(frame.poolContext().typeFreezable())) {
                 return Utils.callFreeze(frame, hValue, null, frameCaller ->
                     completeInvokeSet(frameCaller, hLazy, frameCaller.popStack()));
-                }
+            }
 
             ObjectHandle hOuter = hLazy.getField(frame, GenericHandle.OUTER);
             return frame.raiseException(
                 xException.notFreezableProperty(frame, hLazy.getName(), hOuter.getType()));
-            }
-        return completeInvokeSet(frame, hLazy, hValue);
         }
+        return completeInvokeSet(frame, hLazy, hValue);
+    }
 
-    protected int completeInvokeSet(Frame frame, LazyVarHandle hLazy, ObjectHandle hValue)
-        {
-        synchronized (hLazy)
-            {
+    protected int completeInvokeSet(Frame frame, LazyVarHandle hLazy, ObjectHandle hValue) {
+        synchronized (hLazy) {
             boolean fAllowDupe = hLazy.unregisterAssign(frame.f_fiber);
-            if (hLazy.isAssigned())
-                {
+            if (hLazy.isAssigned()) {
                 return fAllowDupe
                     ? Op.R_NEXT
                     : frame.raiseException(xException.immutableObjectProperty(
                         frame, hLazy.getName(), hLazy.getField(frame, GenericHandle.OUTER).getType()));
-                }
-            else
-                {
+            } else {
                 hLazy.setReferent(hValue); // this is exactly what the super.invokeNative1() call does
                 return Op.R_NEXT;
-                }
             }
         }
+    }
 
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     protected static class LazyVarHandle
-            extends RefHandle
-        {
+            extends RefHandle {
         /**
          * A set of services that have seen this LazyVar unassigned. Only used by lazy properties
          * on immutable objects that could be shared across services.
@@ -134,32 +114,28 @@ public class xLazyVar
          */
         protected Set<Fiber> m_setInitFiber;
 
-        protected LazyVarHandle(TypeComposition clazz, String sName)
-            {
+        protected LazyVarHandle(TypeComposition clazz, String sName) {
             super(clazz, sName);
-            }
+        }
 
         /**
          * @return true iff this handle represents a lazy property on an immutable object
          */
-        public boolean isPropertyOnImmutable()
-            {
+        public boolean isPropertyOnImmutable() {
             ObjectHandle hOuter = getField(null, GenericHandle.OUTER);
             return hOuter != null && !hOuter.isMutable();
-            }
+        }
 
         /**
          * Register the specified fiber as "allowed to assign".
          */
-        protected synchronized void registerAssign(Fiber fiber)
-            {
+        protected synchronized void registerAssign(Fiber fiber) {
             Set<Fiber> setInit = m_setInitFiber;
-            if (setInit == null)
-                {
+            if (setInit == null) {
                 m_setInitFiber = setInit = new HashSet<>();
-                }
-            setInit.add(fiber);
             }
+            setInit.add(fiber);
+        }
 
         /**
          * Unregister the specified fiber from "allowed to assign" set.
@@ -169,20 +145,17 @@ public class xLazyVar
          * @return true iff the specified service has been told that this var is unassigned and
          *              therefore is allowed to set it
          */
-        protected boolean unregisterAssign(Fiber fiber)
-            {
+        protected boolean unregisterAssign(Fiber fiber) {
             boolean    fAllow  = false;
             Set<Fiber> setInit = m_setInitFiber;
-            if (setInit != null)
-                {
+            if (setInit != null) {
                 fAllow = setInit.remove(fiber);
 
-                if (setInit.isEmpty())
-                    {
+                if (setInit.isEmpty()) {
                     m_setInitFiber = null;
-                    }
                 }
-            return fAllow;
             }
+            return fAllow;
         }
     }
+}

@@ -55,38 +55,31 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
  * by itself.
  */
 public class xConst
-        extends ClassTemplate
-    {
+        extends ClassTemplate {
     public static xConst INSTANCE;
 
-    public xConst(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xConst(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    protected Set<String> registerImplicitFields(Set<String> setFields)
-        {
-        if (setFields == null)
-            {
+    protected Set<String> registerImplicitFields(Set<String> setFields) {
+        if (setFields == null) {
             setFields = new HashSet<>();
-            }
+        }
 
         setFields.add(PROP_HASH);
 
         return super.registerImplicitFields(setFields);
-        }
+    }
 
     @Override
-    public void initNative()
-        {
-        if (this == INSTANCE)
-            {
+    public void initNative() {
+        if (this == INSTANCE) {
             // equals and Comparable support
             getStructure().findMethod("equals",   3).markNative();
             getStructure().findMethod("compare",  3).markNative();
@@ -125,14 +118,12 @@ public class xConst
 
             HASH_SIG = f_container.getClassStructure("collections.Hashable").
                 findMethod("hashCode", 2).getIdentityConstant().getSignature();
-            }
         }
+    }
 
     @Override
-    public int createConstHandle(Frame frame, Constant constant)
-        {
-        if (constant instanceof RangeConstant constRange)
-            {
+    public int createConstHandle(Frame frame, Constant constant) {
+        if (constant instanceof RangeConstant constRange) {
             ObjectHandle  h1 = frame.getConstHandle(constRange.getFirst());
             ObjectHandle  h2 = frame.getConstHandle(constRange.getLast());
             BooleanHandle f1 = xBoolean.makeHandle(constRange.isFirstExcluded());
@@ -148,68 +139,64 @@ public class xConst
             ahArg[2] = f1;
             ahArg[3] = f2;
 
-            if (Op.anyDeferred(ahArg))
-                {
+            if (Op.anyDeferred(ahArg)) {
                 Frame.Continuation stepNext = frameCaller ->
                     clzRange.getTemplate().construct(
                         frameCaller, constructor, clzRange, null, ahArg, Op.A_STACK);
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                }
+            }
             return clzRange.getTemplate().construct(
                 frame, constructor, clzRange, null, ahArg, Op.A_STACK);
-            }
+        }
 
         Literal:
-        if (constant instanceof LiteralConstant constLiteral)
-            {
+        if (constant instanceof LiteralConstant constLiteral) {
             ConstantPool    pool      = frame.poolContext();
             Container       container = f_container;
             TypeComposition clz;
             MethodStructure constructor;
-            switch (constant.getFormat())
-                {
-                case Time:
-                    clz         = ensureClass(container, pool.typeTime());
-                    constructor = TIME_CONSTRUCT;
-                    break;
+            switch (constant.getFormat()) {
+            case Time:
+                clz         = ensureClass(container, pool.typeTime());
+                constructor = TIME_CONSTRUCT;
+                break;
 
-                case Date:
-                    clz         = ensureClass(container, pool.typeDate());
-                    constructor = DATE_CONSTRUCT;
-                    break;
+            case Date:
+                clz         = ensureClass(container, pool.typeDate());
+                constructor = DATE_CONSTRUCT;
+                break;
 
-                case TimeOfDay:
-                    clz         = ensureClass(container, pool.typeTimeOfDay());
-                    constructor = TIMEOFDAY_CONSTRUCT;
-                    break;
+            case TimeOfDay:
+                clz         = ensureClass(container, pool.typeTimeOfDay());
+                constructor = TIMEOFDAY_CONSTRUCT;
+                break;
 
-                case Duration:
-                    clz         = ensureClass(container, pool.typeDuration());
-                    constructor = DURATION_CONSTRUCT;
-                    break;
+            case Duration:
+                clz         = ensureClass(container, pool.typeDuration());
+                constructor = DURATION_CONSTRUCT;
+                break;
 
-                case Version:
-                    clz         = ensureClass(container, pool.typeVersion());
-                    constructor = VERSION_CONSTRUCT;
-                    break;
+            case Version:
+                clz         = ensureClass(container, pool.typeVersion());
+                constructor = VERSION_CONSTRUCT;
+                break;
 
-                case Path:
-                    clz         = ensureClass(container, pool.typePath());
-                    constructor = PATH_CONSTRUCT;
-                    break;
+            case Path:
+                clz         = ensureClass(container, pool.typePath());
+                constructor = PATH_CONSTRUCT;
+                break;
 
-                default:
-                    break Literal;
-                }
+            default:
+                break Literal;
+            }
 
             ObjectHandle[] ahArg = new ObjectHandle[constructor.getMaxVars()];
             ahArg[0] = xString.makeHandle(constLiteral.getValue());
 
             return construct(frame, constructor, clz, null, ahArg, Op.A_STACK);
-            }
+        }
 
-        if (constant.getFormat() == Format.Nibble)
-            {
+        if (constant.getFormat() == Format.Nibble) {
             byte[] abValue = new byte[] {(byte) (((ByteConstant) constant).getValue().byteValue() << 4)};
 
             ObjectHandle[] ahArg = new ObjectHandle[NIBBLE_CONSTRUCT.getMaxVars()];
@@ -218,19 +205,16 @@ public class xConst
             return construct(frame, NIBBLE_CONSTRUCT,
                     ensureClass(frame.f_context.f_container, constant.getType()),
                     null, ahArg, Op.A_STACK);
-            }
-
-        return super.createConstHandle(frame, constant);
         }
 
+        return super.createConstHandle(frame, constant);
+    }
+
     @Override
-    protected int postValidate(Frame frame, ObjectHandle hStruct)
-        {
-        if (hStruct.isMutable())
-            {
+    protected int postValidate(Frame frame, ObjectHandle hStruct) {
+        if (hStruct.isMutable()) {
             GenericHandle hConst = (GenericHandle) hStruct;
-            if (hConst.containsMutableFields())
-                {
+            if (hConst.containsMutableFields()) {
                 TypeComposition clz = hStruct.getComposition();
 
                 // remove all immutable and proxied (services and services' children);
@@ -239,43 +223,35 @@ public class xConst
                 List<FieldInfo>    listInfo      = null;
                 List<TypeConstant> listTypes     = null;
 
-                for (FieldInfo field : clz.getFieldLayout().values())
-                    {
-                    if (field.isTransient() || field.isSynthetic() || field.isLazy())
-                        {
+                for (FieldInfo field : clz.getFieldLayout().values()) {
+                    if (field.isTransient() || field.isSynthetic() || field.isLazy()) {
                         continue;
-                        }
+                    }
 
                     ObjectHandle hField = hConst.getField(field.getIndex());
-                    if (hField == null || hField.isPassThrough())
-                        {
+                    if (hField == null || hField.isPassThrough()) {
                         // we already checked that it's allowed to be unassigned in
                         // GenericHandle.validateFields()
                         continue;
-                        }
+                    }
 
                     String sName = field.getName();
-                    if (hField.getType().isA(frame.poolContext().typeFreezable()))
-                        {
-                        if (listFreezable == null)
-                            {
+                    if (hField.getType().isA(frame.poolContext().typeFreezable())) {
+                        if (listFreezable == null) {
                             listFreezable = new ArrayList<>();
                             listInfo      = new ArrayList<>();
                             listTypes     = new ArrayList<>();
-                            }
+                        }
                         listFreezable.add(hField);
                         listInfo.add(field);
                         listTypes.add(hField.getType());
-                        }
-                    else
-                        {
+                    } else {
                         return frame.raiseException(xException.notFreezableProperty(frame,
                                 sName, hConst.getType()));
-                        }
                     }
+                }
 
-                if (listFreezable != null)
-                    {
+                if (listFreezable != null) {
                     ObjectHandle[] ahFreezable = listFreezable.toArray(Utils.OBJECTS_NONE);
                     FieldInfo[]    aFieldInfo  = listInfo.toArray(NO_FIELDS);
                     TypeConstant[] atype       = listTypes.toArray(TypeConstant.NO_TYPES);
@@ -286,138 +262,116 @@ public class xConst
                     ahVars[0] = haValues;
 
                     Frame frameFreeze = frame.createFrame1(FN_FREEZE, null, ahVars, Op.A_IGNORE);
-                    frameFreeze.addContinuation(frameCaller ->
-                        {
+                    frameFreeze.addContinuation(frameCaller -> {
                         ObjectHandle[] ahValueNew;
-                        try
-                            {
+                        try {
                             ahValueNew = haValues.getTemplate().toArray(frameCaller, haValues);
-                            }
-                        catch (ExceptionHandle.WrapperException e)
-                            {
+                        } catch (ExceptionHandle.WrapperException e) {
                             return frameCaller.raiseException(e);
-                            }
+                        }
 
-                        for (int i = 0, c = aFieldInfo.length; i < c; i++)
-                            {
+                        for (int i = 0, c = aFieldInfo.length; i < c; i++) {
                             // verify that "freeze" didn't widen the type
                             FieldInfo    field   = aFieldInfo[i];
                             ObjectHandle hNew    = ahValueNew[i];
                             TypeConstant typeOld = field.getType();
                             TypeConstant typeNew = hNew.getType();
-                            if (typeNew.isA(typeOld))
-                                {
+                            if (typeNew.isA(typeOld)) {
                                 hConst.setField(field.getIndex(), hNew);
-                                }
-                            else
-                                {
+                            } else {
                                 return frameCaller.raiseException(
                                     "The freeze() result type for the \"" + field.getName() +
                                     "\" field was illegally changed; \"" +
                                     typeOld.freeze().getValueString() + "\" expected, \"" +
                                     typeNew.getValueString() + "\" returned");
-                                }
                             }
+                        }
 
                         hConst.makeImmutable();
                         return Op.R_NEXT;
-                        });
+                    });
 
                     return frame.callInitialized(frameFreeze);
-                    }
                 }
-            hConst.makeImmutable();
             }
-        return Op.R_NEXT;
+            hConst.makeImmutable();
         }
+        return Op.R_NEXT;
+    }
 
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle hArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "appendTo":
-                {
-                return callAppendTo(frame, hTarget, hArg, iReturn);
-                }
-            }
+                             ObjectHandle hArg, int iReturn) {
+        if (method.getName().equals("appendTo")) {
+            return callAppendTo(frame, hTarget, hArg, iReturn);
+        }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
-        }
+    }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "compare":
-                {
-                Container     container = frame.f_context.f_container;
-                TypeHandle    hType     = (TypeHandle) ahArg[0];
-                ClassTemplate template  = this;
+                             ObjectHandle[] ahArg, int iReturn) {
+        switch (method.getName()) {
+        case "compare": {
+            Container     container = frame.f_context.f_container;
+            TypeHandle    hType     = (TypeHandle) ahArg[0];
+            ClassTemplate template  = this;
 
-                // allow for narrower native implementations
-                if (container.getTemplate(hType.getDataType()) instanceof xConst templateConst)
-                    {
-                    template = templateConst;
-                    }
-
-                return template.callCompare(frame,
-                        getCanonicalClass(container), ahArg[1], ahArg[2], iReturn);
-                }
-
-            case "estimateStringLength":
-                return callEstimateLength(frame, hTarget, iReturn);
-
-            case "equals":
-                {
-                Container     container = frame.f_context.f_container;
-                TypeHandle    hType     = (TypeHandle) ahArg[0];
-                ClassTemplate template  = this;
-
-                // allow for narrower native implementations
-                if (container.getTemplate(hType.getDataType()) instanceof xConst templateConst)
-                    {
-                    template = templateConst;
-                    }
-
-                return template.callEquals(frame,
-                        getCanonicalClass(container), ahArg[1], ahArg[2], iReturn);
-                }
-
-            case "hashCode":
-                {
-                TypeHandle hType = (TypeHandle) ahArg[0];
-                return callHashCode(frame, hType.getDataType(), ahArg[1], iReturn);
-                }
+            // allow for narrower native implementations
+            if (container.getTemplate(hType.getDataType()) instanceof xConst templateConst) {
+                template = templateConst;
             }
 
-        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+            return template.callCompare(frame,
+                    getCanonicalClass(container), ahArg[1], ahArg[2], iReturn);
         }
+
+        case "estimateStringLength":
+            return callEstimateLength(frame, hTarget, iReturn);
+
+        case "equals": {
+            Container     container = frame.f_context.f_container;
+            TypeHandle    hType     = (TypeHandle) ahArg[0];
+            ClassTemplate template  = this;
+
+            // allow for narrower native implementations
+            if (container.getTemplate(hType.getDataType()) instanceof xConst templateConst) {
+                template = templateConst;
+            }
+
+            return template.callEquals(frame,
+                    getCanonicalClass(container), ahArg[1], ahArg[2], iReturn);
+        }
+
+        case "hashCode": {
+            TypeHandle hType = (TypeHandle) ahArg[0];
+            return callHashCode(frame, hType.getDataType(), ahArg[1], iReturn);
+        }
+        }
+
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+    }
 
     @Override
     protected int callEqualsImpl(Frame frame, TypeComposition clazz,
-                                 ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+                                 ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         // Note: the actual types could be subclasses of the specified class
         return this == INSTANCE
                 ? frame.raiseException(xException.abstractMethod(frame, "Const.compare()"))
                 : new Equals((GenericHandle) hValue1, (GenericHandle) hValue2,
                     (ClassComposition) clazz, iReturn).doNext(frame);
-        }
+    }
 
     @Override
     protected int callCompareImpl(Frame frame, TypeComposition clazz,
-                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         // Note: the actual types could be subclasses of the specified class
         return this == INSTANCE
                 ? frame.raiseException(xException.abstractMethod(frame, "Const.compare()"))
                 : new Compare((GenericHandle) hValue1, (GenericHandle) hValue2,
                         (ClassComposition) clazz, iReturn).doNext(frame);
-        }
+    }
 
     /**
      * Compute the hash code of the specified object handle that belongs to the specified type.
@@ -429,35 +383,31 @@ public class xConst
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int callHashCode(Frame frame, TypeConstant type, ObjectHandle hValue, int iReturn)
-        {
+    public int callHashCode(Frame frame, TypeConstant type, ObjectHandle hValue, int iReturn) {
         return this == INSTANCE
                 ? frame.raiseException(xException.abstractMethod(frame, "Const.hashCode()"))
                 : buildHashCode(frame, getCanonicalClass(frame.f_context.f_container), hValue, iReturn);
-        }
+    }
 
     /**
      * Build the hash value for the specified const handle and assign it to the specified register.
      *
      * @return R_NEXT, R_CALL or R_EXCEPTION
      */
-    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
-        {
+    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         GenericHandle hConst = (GenericHandle) hTarget;
 
         // allow caching the hash only if the targeting class is the actual object's class
         boolean fCache = hConst.getComposition().equals(clazz);
-        if (fCache)
-            {
+        if (fCache) {
             JavaLong hHash = (JavaLong) hConst.getField(frame, PROP_HASH);
-            if (hHash != null)
-                {
+            if (hHash != null) {
                 return frame.assignValue(iReturn, hHash);
-                }
             }
+        }
 
         return new HashCode(hConst, (ClassComposition) clazz, fCache, iReturn).doNext(frame);
-        }
+    }
 
     /**
      * Native implementation of the "estimateStringLength" method.
@@ -468,15 +418,13 @@ public class xConst
      *
      * @return one of R_NEXT, R_CALL or R_EXCEPTION
      */
-    protected int callEstimateLength(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
+    protected int callEstimateLength(Frame frame, ObjectHandle hTarget, int iReturn) {
         GenericHandle   hConst = (GenericHandle) hTarget;
         TypeComposition clz    = hConst.getComposition();
 
         StringHandle[] ahNames  = clz.getFieldNameArray();
         ObjectHandle[] ahFields = clz.getFieldValueArray(frame, hConst);
-        if (ahNames.length > 0)
-            {
+        if (ahNames.length > 0) {
             ObjectHandle hNames  = xArray.makeStringArrayHandle(ahNames);
             ObjectHandle hValues = xArray.makeObjectArrayHandle(ahFields, Mutability.Constant);
 
@@ -486,12 +434,10 @@ public class xConst
             ahVars[1] = hValues;
 
             return frame.call1(FN_ESTIMATE_LENGTH, null, ahVars, iReturn);
-            }
-        else
-            {
+        } else {
             return frame.assignValue(iReturn, xInt64.makeHandle(0));
-            }
         }
+    }
 
     /**
      * Native implementation of the "appendTo" method.
@@ -503,8 +449,7 @@ public class xConst
      *
      * @return one of R_NEXT, R_CALL or R_EXCEPTION
      */
-    protected int callAppendTo(Frame frame, ObjectHandle hTarget, ObjectHandle hAppender, int iReturn)
-        {
+    protected int callAppendTo(Frame frame, ObjectHandle hTarget, ObjectHandle hAppender, int iReturn) {
         GenericHandle   hConst = (GenericHandle) hTarget;
         TypeComposition clz    = hConst.getComposition();
 
@@ -521,7 +466,7 @@ public class xConst
         ahVars[2] = hValues;
 
         return frame.call1(FN_APPEND_TO, null, ahVars, iReturn);
-        }
+    }
 
 
     // ----- helper classes ------------------------------------------------------------------------
@@ -530,8 +475,7 @@ public class xConst
      * Helper class for equals() implementation.
      */
     protected static class Equals
-            implements Frame.Continuation
-        {
+            implements Frame.Continuation {
         private final GenericHandle    hValue1;
         private final GenericHandle    hValue2;
         private final ClassComposition clzBase;
@@ -539,44 +483,38 @@ public class xConst
         private final Iterator<Map.Entry<Object, FieldInfo>> iterFields;
 
         public Equals(GenericHandle hValue1, GenericHandle hValue2,
-                      ClassComposition clzBase, int iReturn)
-            {
+                      ClassComposition clzBase, int iReturn) {
             this.hValue1 = hValue1;
             this.hValue2 = hValue2;
             this.clzBase = clzBase;
             this.iReturn = iReturn;
 
             iterFields = clzBase.getFieldLayout().entrySet().iterator();
-            }
+        }
 
         @Override
-        public int proceed(Frame frameCaller)
-            {
+        public int proceed(Frame frameCaller) {
             ObjectHandle hResult = frameCaller.popStack();
-            if (hResult == xBoolean.FALSE)
-                {
+            if (hResult == xBoolean.FALSE) {
                 return frameCaller.assignValue(iReturn, hResult);
-                }
-            return doNext(frameCaller);
             }
+            return doNext(frameCaller);
+        }
 
-        public int doNext(Frame frameCaller)
-            {
+        public int doNext(Frame frameCaller) {
             ConstantPool    pool = frameCaller.poolContext();
             TypeComposition clz1 = hValue1.getComposition();
             TypeComposition clz2 = hValue2.getComposition();
 
-            while (iterFields.hasNext())
-                {
+            while (iterFields.hasNext()) {
                 Map.Entry<Object, FieldInfo> entry = iterFields.next();
 
                 Object    enid  = entry.getKey();
                 FieldInfo field = entry.getValue();
 
-                if (enid instanceof NestedIdentity || !field.isRegular())
-                    {
+                if (enid instanceof NestedIdentity || !field.isRegular()) {
                     continue;
-                    }
+                }
 
                 ObjectHandle h1 = clz1 == clzBase
                         ? hValue1.getField(field.getIndex())
@@ -589,47 +527,43 @@ public class xConst
                             ? hValue2.getField(frameCaller, idProp)
                             : hValue2.getField(frameCaller, enid.toString());
 
-                if (h1 == null || h2 == null)
-                    {
+                if (h1 == null || h2 == null) {
                     return frameCaller.raiseException("Unassigned property \"" + field.getName() +'"');
-                    }
+                }
 
                 TypeConstant typeProp = (TypeConstant) pool.register(clzBase.getFieldType(enid));
 
                 typeProp = typeProp.resolveGenerics(pool,
                             frameCaller.getGenericsResolver(typeProp.containsDynamicType()));
 
-                switch (typeProp.callEquals(frameCaller, h1, h2, Op.A_STACK))
-                    {
-                    case Op.R_NEXT:
-                        ObjectHandle hResult = frameCaller.popStack();
-                        if (hResult == xBoolean.FALSE)
-                            {
-                            return frameCaller.assignValue(iReturn, hResult);
-                            }
-                        break;
-
-                    case Op.R_CALL:
-                        frameCaller.m_frameNext.addContinuation(this);
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
+                switch (typeProp.callEquals(frameCaller, h1, h2, Op.A_STACK)) {
+                case Op.R_NEXT:
+                    ObjectHandle hResult = frameCaller.popStack();
+                    if (hResult == xBoolean.FALSE) {
+                        return frameCaller.assignValue(iReturn, hResult);
                     }
+                    break;
+
+                case Op.R_CALL:
+                    frameCaller.m_frameNext.addContinuation(this);
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
                 }
-            return frameCaller.assignValue(iReturn, xBoolean.TRUE);
             }
+            return frameCaller.assignValue(iReturn, xBoolean.TRUE);
         }
+    }
 
     /**
      * Helper class for compare() implementation.
      */
     protected static class Compare
-            implements Frame.Continuation
-        {
+            implements Frame.Continuation {
         private final GenericHandle    hValue1;
         private final GenericHandle    hValue2;
         private final ClassComposition clzBase;
@@ -637,44 +571,38 @@ public class xConst
         private final Iterator<Map.Entry<Object, FieldInfo>> iterFields;
 
         public Compare(GenericHandle hValue1, GenericHandle hValue2,
-                       ClassComposition clzBase, int iReturn)
-            {
+                       ClassComposition clzBase, int iReturn) {
             this.hValue1 = hValue1;
             this.hValue2 = hValue2;
             this.clzBase = clzBase;
             this.iReturn = iReturn;
 
             iterFields = clzBase.getFieldLayout().entrySet().iterator();
-            }
+        }
 
         @Override
-        public int proceed(Frame frameCaller)
-            {
+        public int proceed(Frame frameCaller) {
             EnumHandle hResult = (EnumHandle) frameCaller.popStack();
-            if (hResult != xOrdered.EQUAL)
-                {
+            if (hResult != xOrdered.EQUAL) {
                 return frameCaller.assignValue(iReturn, hResult);
-                }
-            return doNext(frameCaller);
             }
+            return doNext(frameCaller);
+        }
 
-        public int doNext(Frame frameCaller)
-            {
+        public int doNext(Frame frameCaller) {
             ConstantPool    pool = frameCaller.poolContext();
             TypeComposition clz1 = hValue1.getComposition();
             TypeComposition clz2 = hValue2.getComposition();
 
-            while (iterFields.hasNext())
-                {
+            while (iterFields.hasNext()) {
                 Map.Entry<Object, FieldInfo> entry = iterFields.next();
 
                 Object    enid  = entry.getKey();
                 FieldInfo field = entry.getValue();
 
-                if (enid instanceof NestedIdentity || !field.isRegular())
-                    {
+                if (enid instanceof NestedIdentity || !field.isRegular()) {
                     continue;
-                    }
+                }
 
                 ObjectHandle h1 = clz1 == clzBase
                         ? hValue1.getField(field.getIndex())
@@ -687,51 +615,46 @@ public class xConst
                             ? hValue2.getField(frameCaller, idProp)
                             : hValue2.getField(frameCaller, enid.toString());
 
-                if (h1 == null || h2 == null)
-                    {
+                if (h1 == null || h2 == null) {
                     return frameCaller.raiseException("Unassigned property \"" + field.getName() +'"');
-                    }
+                }
 
                 TypeConstant typeProp = (TypeConstant) pool.register(clzBase.getFieldType(enid));
 
                 // this check is only to provide a better exception description
-                if (typeProp.findCallable(pool.sigCompare()) == null)
-                    {
+                if (typeProp.findCallable(pool.sigCompare()) == null) {
                     return frameCaller.raiseException("Property \"" + field.getName() +
                             "\" is not Orderable");
-                    }
-
-                switch (typeProp.callCompare(frameCaller, h1, h2, Op.A_STACK))
-                    {
-                    case Op.R_NEXT:
-                        EnumHandle hResult = (EnumHandle) frameCaller.popStack();
-                        if (hResult != xOrdered.EQUAL)
-                            {
-                            return frameCaller.assignValue(iReturn, hResult);
-                            }
-                        break;
-
-                    case Op.R_CALL:
-                        frameCaller.m_frameNext.addContinuation(this);
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
                 }
-            return frameCaller.assignValue(iReturn, xOrdered.EQUAL);
+
+                switch (typeProp.callCompare(frameCaller, h1, h2, Op.A_STACK)) {
+                case Op.R_NEXT:
+                    EnumHandle hResult = (EnumHandle) frameCaller.popStack();
+                    if (hResult != xOrdered.EQUAL) {
+                        return frameCaller.assignValue(iReturn, hResult);
+                    }
+                    break;
+
+                case Op.R_CALL:
+                    frameCaller.m_frameNext.addContinuation(this);
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
+            return frameCaller.assignValue(iReturn, xOrdered.EQUAL);
         }
+    }
 
     /**
      * Helper class for buildHashCode() implementation.
      */
     protected static class HashCode
-            implements Frame.Continuation
-        {
+            implements Frame.Continuation {
         private final GenericHandle    hConst;
         private final ClassComposition clzBase;
         private final boolean          fCache;
@@ -739,46 +662,40 @@ public class xConst
         private       long             lResult;
         private final Iterator<Map.Entry<Object, FieldInfo>> iterFields;
 
-        public HashCode(GenericHandle hConst, ClassComposition clzBase, boolean fCache, int iReturn)
-            {
+        public HashCode(GenericHandle hConst, ClassComposition clzBase, boolean fCache, int iReturn) {
             this.hConst  = hConst;
             this.clzBase = clzBase;
             this.fCache  = fCache;
             this.iReturn = iReturn;
 
             iterFields = clzBase.getFieldLayout().entrySet().iterator();
-            }
+        }
 
         @Override
-        public int proceed(Frame frameCaller)
-            {
+        public int proceed(Frame frameCaller) {
             updateResult(frameCaller);
 
             return doNext(frameCaller);
-            }
+        }
 
-        protected void updateResult(Frame frameCaller)
-            {
+        protected void updateResult(Frame frameCaller) {
             lResult = 37 * lResult + ((JavaLong) frameCaller.popStack()).getValue();
-            }
+        }
 
-        protected int doNext(Frame frameCaller)
-            {
+        protected int doNext(Frame frameCaller) {
             Container       container = frameCaller.f_context.f_container;
             ConstantPool    pool      = frameCaller.poolContext();
             TypeComposition clz       = hConst.getComposition();
 
-            while (iterFields.hasNext())
-                {
+            while (iterFields.hasNext()) {
                 Map.Entry<Object, FieldInfo> entry = iterFields.next();
 
                 Object    enid  = entry.getKey();
                 FieldInfo field = entry.getValue();
 
-                if (enid instanceof NestedIdentity || !field.isRegular())
-                    {
+                if (enid instanceof NestedIdentity || !field.isRegular()) {
                     continue;
-                    }
+                }
 
                 ObjectHandle hProp = clz == clzBase
                         ? hConst.getField(field.getIndex())
@@ -786,10 +703,9 @@ public class xConst
                             ? hConst.getField(frameCaller, idProp)
                             : hConst.getField(frameCaller, enid.toString());
 
-                if (hProp == null)
-                    {
+                if (hProp == null) {
                     return frameCaller.raiseException("Unassigned property: \"" + field.getName() + '"');
-                    }
+                }
 
                 TypeConstant typeProp = (TypeConstant) pool.register(clzBase.getFieldType(enid));
 
@@ -797,53 +713,47 @@ public class xConst
                             frameCaller.getGenericsResolver(typeProp.containsDynamicType()));
 
                 MethodStructure methodHash = typeProp.findCallable(HASH_SIG);
-                if (methodHash == null)
-                    {
+                if (methodHash == null) {
                     // ignore this field
                     continue;
-                    }
+                }
 
                 int iResult;
-                if (methodHash.isNative())
-                    {
+                if (methodHash.isNative()) {
                     iResult = hProp.getTemplate().invokeNativeN(frameCaller, methodHash, null,
                         new ObjectHandle[] {typeProp.ensureTypeHandle(container), hProp}, Op.A_STACK);
-                    }
-                else
-                    {
+                } else {
                     ObjectHandle[] ahVar = new ObjectHandle[methodHash.getMaxVars()];
                     ahVar[0] = typeProp.ensureTypeHandle(container);
                     ahVar[1] = hProp;
                     iResult = frameCaller.call1(methodHash, null, ahVar, Op.A_STACK);
-                    }
-
-                switch (iResult)
-                    {
-                    case Op.R_NEXT:
-                        updateResult(frameCaller);
-                        continue;
-
-                    case Op.R_CALL:
-                        frameCaller.m_frameNext.addContinuation(this);
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
                 }
+
+                switch (iResult) {
+                case Op.R_NEXT:
+                    updateResult(frameCaller);
+                    continue;
+
+                case Op.R_CALL:
+                    frameCaller.m_frameNext.addContinuation(this);
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
 
             JavaLong hHash = xInt64.makeHandle(lResult);
-            if (fCache)
-                {
+            if (fCache) {
                 hConst.setField(frameCaller, PROP_HASH, hHash);
-                }
+            }
 
             return frameCaller.assignValue(iReturn, hHash);
-            }
         }
+    }
 
     // ----- constants -----------------------------------------------------------------------------
 
@@ -864,4 +774,4 @@ public class xConst
     private static MethodStructure PATH_CONSTRUCT;
 
     private static SignatureConstant HASH_SIG;
-    }
+}

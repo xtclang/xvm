@@ -49,23 +49,19 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
  * Native Container functionality.
  */
 public class xContainerLinker
-        extends xService
-    {
+        extends xService {
     public static xContainerLinker INSTANCE;
 
-    public xContainerLinker(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xContainerLinker(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         ClassStructure clz = (ClassStructure)
                 pool().ensureEcstasyClassConstant("mgmt.ResourceProvider").getComponent();
         GET_RESOURCE = clz.findMethod("getResource", 2).getIdentityConstant().getSignature();
@@ -75,80 +71,66 @@ public class xContainerLinker
         markNativeMethod("resolveAndLink", null, null);
 
         invalidateTypeInfo();
-        }
+    }
 
     @Override
-    public TypeConstant getCanonicalType()
-        {
+    public TypeConstant getCanonicalType() {
         return pool().ensureEcstasyTypeConstant("mgmt.Container.Linker");
-        }
+    }
 
     /**
      * Injection support.
      */
-    public ObjectHandle ensureLinker(Frame frame, ObjectHandle hOpts)
-        {
+    public ObjectHandle ensureLinker(Frame frame, ObjectHandle hOpts) {
         ObjectHandle hLinker = m_hLinker;
-        if (hLinker == null)
-            {
+        if (hLinker == null) {
             m_hLinker = hLinker = createServiceHandle(
                     f_container.createServiceContext("Linker"),
                         getCanonicalClass(), getCanonicalType());
-            }
+        }
 
         return hLinker;
-        }
+    }
 
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle hArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "loadFileTemplate":
-                {
-                try
-                    {
-                    ArrayHandle   hContents  = (ArrayHandle) hArg;
-                    byte[]        abContents = xRTUInt8Delegate.getBytes((ByteArrayHandle) hContents.m_hDelegate);
-                    FileStructure struct = new FileStructure(new ByteArrayInputStream(abContents));
+                             ObjectHandle hArg, int iReturn) {
+        switch (method.getName()) {
+        case "loadFileTemplate":
+            try {
+                ArrayHandle   hContents  = (ArrayHandle) hArg;
+                byte[]        abContents = xRTUInt8Delegate.getBytes((ByteArrayHandle) hContents.m_hDelegate);
+                FileStructure struct = new FileStructure(new ByteArrayInputStream(abContents));
 
-                    return frame.assignValue(iReturn, xRTFileTemplate.makeHandle(frame.f_context.f_container, struct));
-                    }
-                catch (IOException e)
-                    {
-                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
-                    }
-                }
+                return frame.assignValue(iReturn, xRTFileTemplate.makeHandle(frame.f_context.f_container, struct));
+            } catch (IOException e) {
+                return frame.raiseException(xException.ioException(frame, e.getMessage()));
             }
+        }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
-        }
+    }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "resolveAndLink":
-                return invokeResolveAndLink(frame, ahArg, iReturn);
-            }
+                             ObjectHandle[] ahArg, int iReturn) {
+        switch (method.getName()) {
+        case "resolveAndLink":
+            return invokeResolveAndLink(frame, ahArg, iReturn);
+        }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
-        }
+    }
 
     @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                              ObjectHandle[] ahArg, int[] aiReturn)
-        {
-        switch (method.getName())
-            {
-            case "collectInjectionsImpl":
-                return invokeCollectInjections(frame, ahArg, aiReturn);
-            }
-        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
+                              ObjectHandle[] ahArg, int[] aiReturn) {
+        switch (method.getName()) {
+        case "collectInjectionsImpl":
+            return invokeCollectInjections(frame, ahArg, aiReturn);
         }
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
+    }
 
     /**
      * Native implementation of <code><pre>
@@ -157,16 +139,14 @@ public class xContainerLinker
      *      String[]       definedNames = [])
      * </pre></code>
      */
-    private int invokeCollectInjections(Frame frame, ObjectHandle[] ahArg, int[] aiReturn)
-        {
+    private int invokeCollectInjections(Frame frame, ObjectHandle[] ahArg, int[] aiReturn) {
         ComponentTemplateHandle hModule     = (ComponentTemplateHandle) ahArg[0];
         ArrayHandle             haCondNames = (ArrayHandle) ahArg[1];
 
-        if (haCondNames.m_hDelegate.m_cSize > 0)
-            {
+        if (haCondNames.m_hDelegate.m_cSize > 0) {
             return frame.raiseException(
                 xException.unsupported(frame, "Condition names are not currently supported"));
-            }
+        }
 
         ModuleStructure   module        = (ModuleStructure) hModule.getComponent();
         Set<InjectionKey> setInjections = new HashSet<>();
@@ -178,16 +158,15 @@ public class xContainerLinker
         StringHandle[] ahName    = new StringHandle[cInjects];
         TypeHandle[]   ahType    = new TypeHandle[cInjects];
         int            ix        = 0;
-        for (InjectionKey key : setInjections)
-            {
+        for (InjectionKey key : setInjections) {
             ahName[ix  ] = xString.makeHandle(key.f_sName);
             ahType[ix++] = key.f_type.ensureTypeHandle(container);
-            }
+        }
         ArrayHandle haNames = xArray.makeStringArrayHandle(ahName);
         ArrayHandle haTypes = xArray.makeArrayHandle(xRTType.ensureTypeArrayComposition(container),
                                     cInjects, ahType, xArray.Mutability.Constant);
         return frame.assignValues(aiReturn, haNames, haTypes);
-        }
+    }
 
     /**
      * Native implementation of <code><pre>
@@ -198,8 +177,7 @@ public class xContainerLinker
      *      String[]          definedNames)
      * </pre></code>
      */
-    private int invokeResolveAndLink(Frame frame, ObjectHandle[] ahArg, int iReturn)
-        {
+    private int invokeResolveAndLink(Frame frame, ObjectHandle[] ahArg, int iReturn) {
         ComponentTemplateHandle hModule      = (ComponentTemplateHandle) ahArg[0];
         ObjectHandle            hModel       = ahArg[1]; // mgmt.Container.Model
         ObjectHandle            hRepo        = ahArg[2]; // mgmt.ModuleRepository
@@ -208,111 +186,96 @@ public class xContainerLinker
         ArrayHandle             haAdditional = (ArrayHandle) ahArg[5];
         ArrayHandle haCondNames = (ArrayHandle) ahArg[6];
 
-        if (((EnumHandle) hModel).getOrdinal() != 0)
-            {
+        if (((EnumHandle) hModel).getOrdinal() != 0) {
             return frame.raiseException(
                 xException.unsupported(frame, "Only Lightweight model is currently supported"));
-            }
-        if (!hProvider.isService())
-            {
+        }
+        if (!hProvider.isService()) {
             return frame.raiseException(
                 xException.illegalArgument(frame, "ResourceProvider must be a service"));
-            }
-        if (haCondNames.m_hDelegate.m_cSize > 0)
-            {
+        }
+        if (haCondNames.m_hDelegate.m_cSize > 0) {
             return frame.raiseException(
                 xException.unsupported(frame, "Condition names are not currently supported"));
-            }
+        }
 
         Container      container = frame.f_fiber.getCallingContainer();
         FileStructure  file      = hModule.getComponent().getFileStructure();
         ObjectHandle[] ahShared;
         ObjectHandle[] ahAdditional;
-        try
-            {
+        try {
             ahShared = haShared.m_hDelegate.m_cSize == 0
                                 ? Utils.OBJECTS_NONE
                                 : haShared.getTemplate().toArray(frame, haShared);
             ahAdditional = haAdditional.m_hDelegate.m_cSize == 0
                                 ? Utils.OBJECTS_NONE
                                 : haAdditional.getTemplate().toArray(frame, haAdditional);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
+        }
 
         switch (xRTFileTemplate.INSTANCE.invokeResolve(frame, file, hRepo,
-                    ahShared, ahAdditional, Op.A_STACK))
-            {
-            case Op.R_NEXT:
-                return completeResolveAndLink(frame, container, popModule(frame),
-                        hProvider, iReturn);
+                    ahShared, ahAdditional, Op.A_STACK)) {
+        case Op.R_NEXT:
+            return completeResolveAndLink(frame, container, popModule(frame),
+                    hProvider, iReturn);
 
-            case Op.R_CALL:
-                Frame.Continuation stepNext = frameCaller ->
-                    completeResolveAndLink(frameCaller, container, popModule(frameCaller),
-                        hProvider, iReturn);
-                frame.m_frameNext.addContinuation(stepNext);
-                return Op.R_CALL;
+        case Op.R_CALL:
+            Frame.Continuation stepNext = frameCaller ->
+                completeResolveAndLink(frameCaller, container, popModule(frameCaller),
+                    hProvider, iReturn);
+            frame.m_frameNext.addContinuation(stepNext);
+            return Op.R_CALL;
 
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
+        case Op.R_EXCEPTION:
+            return Op.R_EXCEPTION;
 
-            default:
-                throw new IllegalStateException();
-            }
+        default:
+            throw new IllegalStateException();
         }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
 
-    private ModuleStructure popModule(Frame frame)
-        {
+    private ModuleStructure popModule(Frame frame) {
         ComponentTemplateHandle hFile = (ComponentTemplateHandle) frame.popStack();
         return ((FileStructure) hFile.getComponent()).getModule();
-        }
+    }
 
     private int completeResolveAndLink(Frame frame, Container container,
-                                       ModuleStructure moduleApp, ObjectHandle hProvider, int iReturn)
-        {
+                                       ModuleStructure moduleApp, ObjectHandle hProvider, int iReturn) {
         NestedContainer containerNested = new NestedContainer(container,
                 moduleApp.getIdentityConstant(), hProvider, Collections.emptyList());
         return new CollectResources(containerNested, iReturn).doNext(frame);
-        }
+    }
 
     public static class CollectResources
-                implements Frame.Continuation
-        {
-        public CollectResources(NestedContainer container, int iReturn)
-            {
+                implements Frame.Continuation {
+        public CollectResources(NestedContainer container, int iReturn) {
             this.container = container;
             this.aKeys     = container.collectInjections().toArray(InjectionKey.NO_INJECTIONS);
             this.hProvider = container.f_hProvider;
             this.iReturn   = iReturn;
-            }
+        }
 
         @Override
-        public int proceed(Frame frameCaller)
-            {
+        public int proceed(Frame frameCaller) {
             updateResult(frameCaller);
 
             return doNext(frameCaller);
-            }
+        }
 
-        protected void updateResult(Frame frameCaller)
-            {
+        protected void updateResult(Frame frameCaller) {
             // the resource supplier for the current key is on the frame's stack
             ServiceHandle hService  = hProvider.getService();
             ObjectHandle  hSupplier = frameCaller.popStack();
 
             container.addResourceSupplier(aKeys[index], hService, hSupplier);
-            }
+        }
 
-        public int doNext(Frame frameCaller)
-            {
-            while (++index < aKeys.length)
-                {
+        public int doNext(Frame frameCaller) {
+            while (++index < aKeys.length) {
                 InjectionKey key   = aKeys[index];
                 TypeHandle   hType = key.f_type.ensureTypeHandle(container);
                 StringHandle hName = xString.makeHandle(key.f_sName);
@@ -323,27 +286,26 @@ public class xContainerLinker
                 ahArg[1] = hName;
 
                 switch (hProvider.getTemplate().
-                            invoke1(frameCaller, chain, hProvider, ahArg, Op.A_STACK))
-                    {
-                    case Op.R_NEXT:
-                        updateResult(frameCaller);
-                        break;
+                            invoke1(frameCaller, chain, hProvider, ahArg, Op.A_STACK)) {
+                case Op.R_NEXT:
+                    updateResult(frameCaller);
+                    break;
 
-                    case Op.R_CALL:
-                        frameCaller.m_frameNext.addContinuation(this);
-                        return Op.R_CALL;
+                case Op.R_CALL:
+                    frameCaller.m_frameNext.addContinuation(this);
+                    return Op.R_CALL;
 
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
 
-                    default:
-                        throw new IllegalStateException();
-                    }
+                default:
+                    throw new IllegalStateException();
                 }
+            }
 
             return frameCaller.assignValue(iReturn,
                 xContainerControl.INSTANCE.makeHandle(container));
-            }
+        }
 
         private final NestedContainer container;
         private final InjectionKey[]  aKeys;
@@ -351,7 +313,7 @@ public class xContainerLinker
         private final int             iReturn;
 
         private int index = -1;
-        }
+    }
 
     static SignatureConstant GET_RESOURCE;
 
@@ -359,4 +321,4 @@ public class xContainerLinker
      * Cached Linker handle.
      */
     private ObjectHandle m_hLinker;
-    }
+}

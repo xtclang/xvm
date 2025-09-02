@@ -10,23 +10,19 @@ import org.xvm.runtime.Container;
  * Native UInt16 support.
  */
 public class xUInt16
-        extends xUnsignedConstrainedInt
-    {
+        extends xUnsignedConstrainedInt {
     public static xUInt16 INSTANCE;
 
-    public xUInt16(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xUInt16(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, 0, 2L * (long) Short.MAX_VALUE + 1, 16, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
-        }
-
-    @Override
-    protected xConstrainedInteger getComplimentaryTemplate()
-        {
-        return xInt16.INSTANCE;
         }
     }
+
+    @Override
+    protected xConstrainedInteger getComplimentaryTemplate() {
+        return xInt16.INSTANCE;
+    }
+}

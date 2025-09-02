@@ -23,8 +23,7 @@ import org.xvm.util.Severity;
 /**
  * A Stage Manager is used to shepherd the AST nodes through their various stages.
  */
-public class StageMgr
-    {
+public class StageMgr {
     /**
      * Construct a Stage Manager that will progress the specified node (and any under it) to the
      * specified target stage.
@@ -33,15 +32,14 @@ public class StageMgr
      * @param stageTarget  the target stage
      * @param errs         the optional error list to log to
      */
-    public StageMgr(AstNode node, Stage stageTarget, ErrorListener errs)
-        {
+    public StageMgr(AstNode node, Stage stageTarget, ErrorListener errs) {
         assert node != null;
         assert stageTarget != null && stageTarget.isTargetable();
 
         m_listRevisit = Collections.singletonList(node);
         m_target      = stageTarget;
         m_errs        = errs == null ? ErrorListener.BLACKHOLE : errs;
-        }
+    }
 
     /**
      * Construct a Stage Manager that will progress the specified nodes (and any under them) to the
@@ -51,25 +49,23 @@ public class StageMgr
      * @param stageTarget  the target stage
      * @param errs         the optional error list to log to
      */
-    public StageMgr(List<AstNode> list, Stage stageTarget, ErrorListener errs)
-        {
+    public StageMgr(List<AstNode> list, Stage stageTarget, ErrorListener errs) {
         assert list != null && !list.isEmpty();
         assert stageTarget != null && stageTarget.isTargetable();
 
         m_listRevisit = list;
         m_target      = stageTarget;
         m_errs        = errs == null ? ErrorListener.BLACKHOLE : errs;
-        }
+    }
 
     /**
      * @return true iff the stage manager has completed the processing of the nodes to achieve the
      *         target stage
      */
-    public boolean isComplete()
-        {
+    public boolean isComplete() {
         // complete if it isn't currently processing and there's nothing queued to process
         return getErrorListener().isAbortDesired() || m_cur == null && m_listRevisit == null;
-        }
+    }
 
     /**
      * Process all of the nodes that can be processed at this point.
@@ -77,27 +73,22 @@ public class StageMgr
      * @return true iff the stage manager has completed the processing of the nodes to achieve the
      *         target stage
      */
-    public boolean processComplete()
-        {
-        if (getErrorListener().isAbortDesired())
-            {
+    public boolean processComplete() {
+        if (getErrorListener().isAbortDesired()) {
             return false;
-            }
+        }
 
-        if (m_listRevisit != null)
-            {
-            for (AstNode node : takeRevisitList())
-                {
+        if (m_listRevisit != null) {
+            for (AstNode node : takeRevisitList()) {
                 processInternal(node);
-                if (getErrorListener().isAbortDesired())
-                    {
+                if (getErrorListener().isAbortDesired()) {
                     return false;
-                    }
                 }
             }
+        }
 
         return m_listRevisit == null;
-        }
+    }
 
     /**
      * From whatever stage the one node is at, iterate through the stages to the target stage.
@@ -106,92 +97,75 @@ public class StageMgr
      *
      * @return true iff the fast-forward was successful
      */
-    public boolean fastForward(int cMaxIters)
-        {
+    public boolean fastForward(int cMaxIters) {
         boolean       fDone      = false;
         Stage         stageGoal  = m_target;
         List<AstNode> listSingle = m_listRevisit;
         assert listSingle.size() == 1;
-        try
-            {
+        try {
             int cIters = 0;
             m_target = Stage.Registered;
-            while (!fDone && cIters <= cMaxIters)
-                {
+            while (!fDone && cIters <= cMaxIters) {
                 m_listRevisit = listSingle;
-                while (!processComplete())
-                    {
-                    if (++cIters == cMaxIters)
-                        {
+                while (!processComplete()) {
+                    if (++cIters == cMaxIters) {
                         markLastAttempt();
-                        }
-                    else if (cIters > cMaxIters)
-                        {
+                    } else if (cIters > cMaxIters) {
                         break;
-                        }
                     }
+                }
 
-                if (isComplete())
-                    {
-                    if (m_target == stageGoal)
-                        {
+                if (isComplete()) {
+                    if (m_target == stageGoal) {
                         fDone = true;
                         break;
-                        }
+                    }
 
                     // advance to next target
                     m_target = Stage.valueOf(m_target.ordinal() + 2);
-                    }
                 }
             }
-        finally
-            {
+        } finally {
             m_target = stageGoal;
-            }
-        return fDone;
         }
+        return fDone;
+    }
 
     /**
      * @return true iff the manager is on its last attempt to perform the required action; any
      *         deferral will be reported as an error
      */
-    public boolean isLastAttempt()
-        {
+    public boolean isLastAttempt() {
         return m_fLastAttempt;
-        }
+    }
 
     /**
      * Indicate that the manager is on its last attempt to perform the required action; any deferral
      * will be reported as an error.
      */
-    public void markLastAttempt()
-        {
+    public void markLastAttempt() {
         m_fLastAttempt = true;
-        }
+    }
 
     /**
      * @return this Stage Manager's error list
      */
-    public ErrorListener getErrorListener()
-        {
+    public ErrorListener getErrorListener() {
         return m_errs;
-        }
+    }
 
     /**
      * @param node  the node to attempt to advance to the target stage
      */
-    protected boolean processInternal(AstNode node)
-        {
-        if (getErrorListener().isAbortDesired())
-            {
+    protected boolean processInternal(AstNode node) {
+        if (getErrorListener().isAbortDesired()) {
             return true;
-            }
+        }
 
         boolean fDone      = true;
         AstNode nodePrev   = m_cur;
         byte    nFlagsPrev = m_nFlags;
-        try
-            {
+        try {
             m_cur    = node;
             m_nFlags = 0;
 
@@ -199,144 +173,122 @@ public class StageMgr
             stageCur.ensureValid();
 
             Stage stageTarget = m_target;
-            if (stageCur.compareTo(stageTarget) < 0)
-                {
+            if (stageCur.compareTo(stageTarget) < 0) {
                 Stage stageRequired = requiredStage(stageTarget);
-                if (stageCur.compareTo(stageRequired) < 0)
-                    {
+                if (stageCur.compareTo(stageRequired) < 0) {
                     throw new IllegalStateException("current stage=" + stageCur
                             + ", target stage=" + stageTarget
                             + ", required stage=" + stageRequired
                             + ", node=" + node.getDumpDesc());
-                    }
+                }
 
                 node.setStage(stageTarget.getTransitionStage());
-                switch (stageTarget)
-                    {
-                    case Registered:
-                        node.registerStructures(this, m_errs);
-                        break;
+                switch (stageTarget) {
+                case Registered:
+                    node.registerStructures(this, m_errs);
+                    break;
 
-                    case Loaded:
-                        // nothing to do; this stage does not apply to most AstNodes
-                        markComplete();
-                        return true;
-
-                    case Resolved:
-                        node.resolveNames(this, m_errs);
-                        break;
-
-                    case Validated:
-                        node.validateContent(this, m_errs);
-                        break;
-
-                    case Emitted:
-                        node.generateCode(this, m_errs);
-                        break;
-
-                    default:
-                        throw new IllegalStateException("unsupported target: " + stageTarget);
-                    }
-
-                if (!isChildrenProcessed() && !isChildrenDeferred())
-                    {
-                    fDone &= processChildren();
-                    }
-
-                if (isRevisitRequested())
-                    {
-                    fDone = false;
-                    }
-                else
-                    {
+                case Loaded:
+                    // nothing to do; this stage does not apply to most AstNodes
                     markComplete();
-                    }
+                    return true;
+
+                case Resolved:
+                    node.resolveNames(this, m_errs);
+                    break;
+
+                case Validated:
+                    node.validateContent(this, m_errs);
+                    break;
+
+                case Emitted:
+                    node.generateCode(this, m_errs);
+                    break;
+
+                default:
+                    throw new IllegalStateException("unsupported target: " + stageTarget);
+                }
+
+                if (!isChildrenProcessed() && !isChildrenDeferred()) {
+                    fDone &= processChildren();
+                }
+
+                if (isRevisitRequested()) {
+                    fDone = false;
+                } else {
+                    markComplete();
                 }
             }
-        finally
-            {
+        } finally {
             m_cur    = nodePrev;
             m_nFlags = nFlagsPrev;
-            }
-
-        return fDone;
         }
 
-    private Stage requiredStage(Stage target)
-        {
-        return switch (target)
-            {
+        return fDone;
+    }
+
+    private Stage requiredStage(Stage target) {
+        return switch (target) {
             case Registered       -> Stage.Initial;
             case Loaded, Resolved -> Stage.Registered;
             case Validated        -> Stage.Resolved;
             case Emitted          -> Stage.Validated;
             default               -> throw new IllegalStateException("unsupported target: " + target);
-            };
-        }
+        };
+    }
 
     /**
      * @return the node currently being processed
      */
-    public AstNode ensureCurrentNode()
-        {
+    public AstNode ensureCurrentNode() {
         AstNode node = m_cur;
-        if (node == null)
-            {
+        if (node == null) {
             throw new IllegalStateException();
-            }
-        return node;
         }
+        return node;
+    }
 
     /**
      * Replace the currently-being-processed node with another node.
      */
-    public void replaceSelf(AstNode node)
-        {
+    public void replaceSelf(AstNode node) {
         AstNode       nodePrev = ensureCurrentNode();
         ChildIterator iterKids = m_iterKids;
-        if (iterKids == null)
-            {
+        if (iterKids == null) {
             AstNode nodeParent = nodePrev.getParent();
-            if (nodeParent == null)
-                {
+            if (nodeParent == null) {
                 throw new IllegalStateException("not a replaceable child: "
                         + nodePrev.getDumpDesc());
-                }
+            }
             nodeParent.replaceChild(nodePrev, node);
-            }
-        else
-            {
+        } else {
             iterKids.replaceWith(node);
-            }
         }
+    }
 
     /**
      * Mark the current node as needing to be revisited.
      */
-    public void requestRevisit()
-        {
+    public void requestRevisit() {
         AstNode node = ensureCurrentNode();
-        if (!isRevisitRequested())
-            {
+        if (!isRevisitRequested()) {
             List<AstNode> list = m_listRevisit;
-            if (list == null)
-                {
+            if (list == null) {
                 list = new ArrayList<>();
                 m_listRevisit = list;
-                }
+            }
 
             list.add(node);
             m_nFlags = (byte) (m_nFlags | QUEUED_SELF);
-            }
         }
+    }
 
     /**
      * @return true iff this node has invoked requestRevisit()
      */
-    public boolean isRevisitRequested()
-        {
+    public boolean isRevisitRequested() {
         return (m_nFlags & QUEUED_SELF) != 0;
-        }
+    }
 
     /**
      * Suspend the processing of the current node and process each of its children, only returning
@@ -345,10 +297,9 @@ public class StageMgr
      * @return true iff the processing of the children completed without an explicit indication of
      *         incompleteness
      */
-    public boolean processChildren()
-        {
+    public boolean processChildren() {
         return processChildrenExcept(null);
-        }
+    }
 
     /**
      * Suspend the processing of the current node and process each of its children, only returning
@@ -357,12 +308,10 @@ public class StageMgr
      * @return true iff the processing of the children completed without an explicit indication of
      *         incompleteness
      */
-    public boolean processChildrenExcept(Predicate<AstNode> exclude)
-        {
+    public boolean processChildrenExcept(Predicate<AstNode> exclude) {
         boolean fDone = true;
         ChildIterator iterPrev = m_iterKids;
-        try
-            {
+        try {
             AstNode node = ensureCurrentNode();
 
             // create a child iterator
@@ -372,71 +321,60 @@ public class StageMgr
             // mark this as having visited its children
             m_nFlags = (byte) (m_nFlags | VISITED_KIDS);
 
-            while (iter.hasNext())
-                {
+            while (iter.hasNext()) {
                 AstNode nodeChild = iter.next();
-                if (exclude == null || !exclude.test(nodeChild))
-                    {
+                if (exclude == null || !exclude.test(nodeChild)) {
                     fDone &= processInternal(nodeChild);
-                    }
                 }
             }
-        finally
-            {
+        } finally {
             m_iterKids = iterPrev;
-            }
-        return fDone;
         }
+        return fDone;
+    }
 
     /**
      * @return true once processChildren() has been invoked
      */
-    public boolean isChildrenProcessed()
-        {
+    public boolean isChildrenProcessed() {
         return (m_nFlags & VISITED_KIDS) != 0;
-        }
+    }
 
     /**
      * Specify that the children should <b>not</b> be processed by this stage.
      */
-    public void deferChildren()
-        {
+    public void deferChildren() {
         m_nFlags = (byte) (m_nFlags | DEFER_KIDS);
-        }
+    }
 
     /**
      * @return true iff it has been specified that the processing of the children for this stage
      *         will be deferred
      */
-    public boolean isChildrenDeferred()
-        {
+    public boolean isChildrenDeferred() {
         return (m_nFlags & DEFER_KIDS) != 0;
-        }
+    }
 
     /**
      * Mark the current node as completing.
      */
-    public void markComplete()
-        {
+    public void markComplete() {
         ensureCurrentNode().setStage(m_target);
-        }
+    }
 
     /**
      * Log the remaining unresolved nodes as errors.
      *
      * @param errs  the error listener to log errors into
      */
-    public void logDeferredAsErrors(ErrorListener errs)
-        {
+    public void logDeferredAsErrors(ErrorListener errs) {
         List<AstNode> listUnresolved   = takeRevisitList();
         boolean       fUnresolvedNames = false;
 
         // first, see if there are any unresolved names and log corresponding errors
-        for (AstNode node : listUnresolved)
-            {
+        for (AstNode node : listUnresolved) {
             if (node instanceof NameExpression ||
-                node instanceof NamedTypeExpression)
-                {
+                node instanceof NamedTypeExpression) {
                 fUnresolvedNames = true;
 
                 Component        component = node.getComponent();
@@ -445,18 +383,16 @@ public class StageMgr
                 node.log(errs, Severity.FATAL, Compiler.INFINITE_RESOLVE_LOOP, id == null
                     ? node.getSource().toString(node.getStartPosition(), node.getEndPosition())
                     : id.toString());
-                }
-            }
-
-        if (!fUnresolvedNames)
-            {
-            // report as is (could be quite undecipherable)
-            for (AstNode node : listUnresolved)
-                {
-                node.log(errs, Severity.FATAL, Compiler.INFINITE_RESOLVE_LOOP, node.toString());
-                }
             }
         }
+
+        if (!fUnresolvedNames) {
+            // report as is (could be quite undecipherable)
+            for (AstNode node : listUnresolved) {
+                node.log(errs, Severity.FATAL, Compiler.INFINITE_RESOLVE_LOOP, node.toString());
+            }
+        }
+    }
 
     /**
      * Obtain the list of nodes that still require processing.
@@ -467,14 +403,13 @@ public class StageMgr
      *
      * @return a list of nodes to revisit
      */
-    private List<AstNode> takeRevisitList()
-        {
+    private List<AstNode> takeRevisitList() {
         List<AstNode> listPrevious = m_listRevisit;
         m_listRevisit = null;
         return listPrevious == null
                 ? Collections.emptyList()
                 : listPrevious;
-        }
+    }
 
 
     // ------ data members -------------------------------------------------------------------------
@@ -518,4 +453,4 @@ public class StageMgr
     private static final int QUEUED_SELF  = 0x1;
     private static final int VISITED_KIDS = 0x2;
     private static final int DEFER_KIDS   = 0x4;
-    }
+}

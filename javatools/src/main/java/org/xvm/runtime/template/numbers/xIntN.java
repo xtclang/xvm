@@ -17,41 +17,34 @@ import org.xvm.util.PackedInteger;
  * Native IntN support.
  */
 public class xIntN
-        extends xUnconstrainedInteger
-    {
+        extends xUnconstrainedInteger {
     public static xIntN INSTANCE;
 
-    public xIntN(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xIntN(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, true);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         markNativeMethod("abs", VOID, THIS);
 
         super.initNative();
-        }
+    }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "abs":
-                {
-                PackedInteger pi = ((IntNHandle) hTarget).getValue();
-                return frame.assignValue(iReturn, pi.isNegative() ? makeInt(pi.negate()) : hTarget);
-                }
-            }
+                             ObjectHandle[] ahArg, int iReturn) {
+        switch (method.getName()) {
+        case "abs": {
+            PackedInteger pi = ((IntNHandle) hTarget).getValue();
+            return frame.assignValue(iReturn, pi.isNegative() ? makeInt(pi.negate()) : hTarget);
+        }
+        }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
-        }
     }
+}

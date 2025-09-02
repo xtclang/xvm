@@ -14,8 +14,7 @@ import java.math.MathContext;
  * A representation of an IEEE-754-2008 64-bit decimal.
  */
 public class Decimal64
-        extends Decimal
-    {
+        extends Decimal {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -26,10 +25,9 @@ public class Decimal64
      * @throws IOException  if an issue occurs reading from the DataInput
      */
     public Decimal64(DataInput in)
-            throws IOException
-        {
+            throws IOException {
         m_nBits = in.readLong();
-        }
+    }
 
     /**
      * Construct a decimal value from a Java <tt>long</tt> whose format is that of an IEEE-754-2008
@@ -37,27 +35,23 @@ public class Decimal64
      *
      * @param nBits  a 64-bit Java <tt>long</tt> containing the bits of an IEEE-754-2008 decimal
      */
-    public Decimal64(long nBits)
-        {
+    public Decimal64(long nBits) {
         m_nBits = nBits;
-        }
+    }
 
     /**
      * Construct a decimal value from a byte array.
      *
      * @param abValue  a byte array containing a 64-bit Decimal
      */
-    public Decimal64(byte[] abValue)
-        {
-        if (abValue == null)
-            {
+    public Decimal64(byte[] abValue) {
+        if (abValue == null) {
             throw new IllegalArgumentException("value required");
-            }
+        }
 
-        if (abValue.length != 8)
-            {
+        if (abValue.length != 8) {
             throw new IllegalArgumentException("byte count != 8 (actual=" + abValue.length + ")");
-            }
+        }
 
         int MSB = (abValue[0] & 0xFF) << 24
                 | (abValue[1] & 0xFF) << 16
@@ -68,7 +62,7 @@ public class Decimal64
                 | (abValue[6] & 0xFF) <<  8
                 | (abValue[7] & 0xFF);
         m_nBits = ((long) MSB) << 32 | LSB & 0xFFFFFFFFL;
-        }
+    }
 
     /**
      * Construct a 64-bit IEEE-754-2008 decimal value from a BigDecimal.
@@ -77,67 +71,57 @@ public class Decimal64
      *
      * @throws RangeException if the BigDecimal is out of range
      */
-    public Decimal64(BigDecimal dec)
-        {
-        if (dec == null)
-            {
+    public Decimal64(BigDecimal dec) {
+        if (dec == null) {
             throw new IllegalArgumentException("value required");
-            }
+        }
 
         m_nBits = toLongBits(dec);
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public int getByteLength()
-        {
+    public int getByteLength() {
         return 8;
-        }
+    }
 
     @Override
-    public MathContext getMathContext()
-        {
+    public MathContext getMathContext() {
         return MathContext.DECIMAL64;
-        }
+    }
 
     @Override
-    public int getByte(int i)
-        {
-        if ((i & ~0x7) != 0)
-            {
+    public int getByte(int i) {
+        if ((i & ~0x7) != 0) {
             throw new IllegalArgumentException("index out of range: " + i);
-            }
+        }
 
         return ((int) (m_nBits >>> (i*8))) & 0xFF;
-        }
+    }
 
     @Override
-    protected int leftmost7Bits()
-        {
+    protected int leftmost7Bits() {
         return (int) (m_nBits >>> 57);
-        }
+    }
 
     @Override
-    public boolean isZero()
-        {
+    public boolean isZero() {
         // G0 and G1 must not both be 1, and G2-G4 must be 0, and T (rightmost 50 bits) must be 0
         return (leftmost7Bits() & 0b0110000) != 0b0110000 && (m_nBits & 0x1C03FFFFFFFFFFFFL) == 0;
-        }
+    }
 
     @Override
     public void writeBytes(DataOutput out)
-            throws IOException
-        {
+            throws IOException {
         out.writeLong(m_nBits);
-        }
+    }
 
     /**
      * @return the significand of the decimal as a Java <tt>long</tt>
      */
-    public long getSignificand()
-        {
+    public long getSignificand() {
         long nBits = ensureFiniteBits(m_nBits);
         int  nToG4 = (int) (nBits >>> G4_SHIFT);
         long nSig  = (nToG4 & 0b011000) == 0b011000
@@ -145,18 +129,16 @@ public class Decimal64
                 : (nToG4 & 0b000111);
 
         // unpack the digits from most significant declet to least significant declet
-        for (int cShift = 40; cShift >= 0; cShift -= 10)
-            {
+        for (int cShift = 40; cShift >= 0; cShift -= 10) {
             nSig = nSig * 1000 + decletToInt((int) (nBits >>> cShift));
-            }
-        return nSig;
         }
+        return nSig;
+    }
 
     /**
      * @return the exponent of the decimal as a Java <tt>int</tt>
      */
-    public int getExponent()
-        {
+    public int getExponent() {
         // combination field is 13 bits (from bit 50 to bit 62), including 8 "pure" exponent bits
         int nCombo = (int) (ensureFiniteBits(m_nBits) >>> 50);
         int nExp   = (nCombo & 0b01100000000000) == 0b01100000000000
@@ -166,7 +148,7 @@ public class Decimal64
         // pull the rest of the exponent bits out of "pure" exponent section of the combo bits
         // section, and unbias the exponent
         return (nExp | nCombo & 0xFF) - 398;
-        }
+    }
 
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -177,56 +159,45 @@ public class Decimal64
      *
      * @return a 64-bit Java <tt>long</tt> containing the bits of an IEEE-754-2008 decimal
      */
-    public long toLongBits()
-        {
+    public long toLongBits() {
         return m_nBits;
-        }
+    }
 
     @Override
-    public BigDecimal toBigDecimal()
-        {
+    public BigDecimal toBigDecimal() {
         BigDecimal dec = m_dec;
-        if (dec == null && isFinite())
-            {
+        if (dec == null && isFinite()) {
             m_dec = dec = toBigDecimal(m_nBits);
-            }
+        }
         return dec;
-        }
+    }
 
     @Override
-    public Decimal fromBigDecimal(BigDecimal big)
-        {
-        try
-            {
+    public Decimal fromBigDecimal(BigDecimal big) {
+        try {
             return new Decimal64(big);
-            }
-        catch (RangeException e)
-            {
+        } catch (RangeException e) {
             return e.getDecimal();
-            }
         }
+    }
 
     @Override
-    public Decimal infinity(boolean fSigned)
-        {
+    public Decimal infinity(boolean fSigned) {
         return fSigned ? NEG_INFINITY : POS_INFINITY;
-        }
+    }
 
     @Override
-    public Decimal zero(boolean fSigned)
-        {
+    public Decimal zero(boolean fSigned) {
         return fSigned ? NEG_ZERO : POS_ZERO;
-        }
+    }
 
     @Override
-    public Decimal nan()
-        {
+    public Decimal nan() {
         return NaN;
-        }
+    }
 
     @Override
-    public byte[] toByteArray()
-        {
+    public byte[] toByteArray() {
         long   nBits = m_nBits;
         int    MSB   = (int) (nBits >>> 32);
         int    LSB   = (int) nBits;
@@ -242,22 +213,20 @@ public class Decimal64
         ab[7] = (byte) (LSB       );
 
         return ab;
-        }
+    }
 
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
-        {
+    public int hashCode() {
         return ((int) (m_nBits >>> 32)) ^ (int) m_nBits;
-        }
+    }
 
     @Override
-    public boolean equals(Object obj)
-        {
+    public boolean equals(Object obj) {
         return obj instanceof Decimal64 that && this.m_nBits == that.m_nBits;
-        }
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -271,14 +240,12 @@ public class Decimal64
      *
      * @throws NumberFormatException if the decimal is either a NaN or an Infinity value
      */
-    public static long ensureFiniteBits(long nBits)
-        {
-        if ((nBits & G0_G3_MASK) == G0_G3_MASK)
-            {
+    public static long ensureFiniteBits(long nBits) {
+        if ((nBits & G0_G3_MASK) == G0_G3_MASK) {
             throw new NumberFormatException("Not a finite value");
-            }
-        return nBits;
         }
+        return nBits;
+    }
 
     /**
      * Convert a Java BigDecimal to an IEEE 754 64-bit decimal.
@@ -289,22 +256,19 @@ public class Decimal64
      *
      * @throws RangeException if the value is out of range
      */
-    public static long toLongBits(BigDecimal dec)
-        {
+    public static long toLongBits(BigDecimal dec) {
         dec = dec.round(MathContext.DECIMAL64);
 
         // obtain the significand
         long nSig = dec.unscaledValue().longValueExact();
-        if (nSig < -9999999999999999L || nSig > 9999999999999999L)
-            {
+        if (nSig < -9999999999999999L || nSig > 9999999999999999L) {
             throw new RangeException("significand is >16 digits: " + nSig,
                     nSig > 0 ? POS_INFINITY : NEG_INFINITY);
-            }
+        }
 
         // bias the exponent (the scale is basically a negative exponent)
         int nExp = 398 - dec.scale();
-        if (nExp < 0 || nExp >= 768)
-            {
+        if (nExp < 0 || nExp >= 768) {
             throw new RangeException("biased exponent is out of range [0,768): " + nExp,
                     nSig > 0
                         ? nExp > 0
@@ -313,14 +277,13 @@ public class Decimal64
                         : nExp > 0
                             ? NEG_INFINITY
                             : NEG_ZERO);
-            }
+        }
 
         long nBits = 0;
-        if (nSig < 0)
-            {
+        if (nSig < 0) {
             nBits = SIGN_BIT;
             nSig  = -nSig;
-            }
+        }
 
         // store the least significant 8 bits of the exponent into the combo field starting at G5
         // store the least significant 15 decimal digits of the significand in 5 10-bit declets in T
@@ -342,7 +305,7 @@ public class Decimal64
                 : (          (nSigRem & 0b00111) | ((nExp & 0b11000_00000) >>> 5));
 
         return nBits | ((long) nGBits) << G4_SHIFT;
-        }
+    }
 
     /**
      * Convert the bits of an IEEE 754 decimal to a Java BigDecimal.
@@ -351,8 +314,7 @@ public class Decimal64
      *
      * @return a Java BigDecimal
      */
-    public static BigDecimal toBigDecimal(long nBits)
-        {
+    public static BigDecimal toBigDecimal(long nBits) {
         ensureFiniteBits(nBits);
 
         // combination field is 13 bits (from bit 50 to bit 62), including 8 "pure" exponent bits
@@ -361,16 +323,13 @@ public class Decimal64
         long nSig;
 
         // test G0 and G1
-        if ((nCombo & 0b0_11000_00000000) == 0b0_11000_00000000)
-            {
+        if ((nCombo & 0b0_11000_00000000) == 0b0_11000_00000000) {
             // when the most significant five bits of G are 110xx or 1110x, the leading significand
             // digit d0 is 8+G4, a value 8 or 9, and the leading biased exponent bits are 2*G2 + G3,
             // a value of 0, 1, or 2
             nExp |= ((nCombo & 0b0_00110_00000000) >>> 1);   // shift right 9, but then shift left 8
             nSig  = ((nCombo & 0b0_00001_00000000) >>> 8) + 8;
-            }
-        else
-            {
+        } else {
             // when the most significant five bits of G are 0xxxx or 10xxx, the leading significand
             // digit d0 is 4*G2 + 2*G3 + G4, a value in the range 0 through 7, and the leading
             // biased exponent bits are 2*G0 + G1, a value 0, 1, or 2; consequently if T is 0 and
@@ -378,7 +337,7 @@ public class Decimal64
             //      v = (−1) S * (+0)
             nExp |= (nCombo & 0b0_11000_00000000) >>> 3;    // shift right 11, but then shift left 8
             nSig  = (nCombo & 0b0_00111_00000000) >>> 8;
-            }
+        }
 
         // unbias the exponent
         nExp -= 398;
@@ -392,7 +351,7 @@ public class Decimal64
                          * (((nBits & SIGN_BIT) >> 63) | 1);            // apply sign
 
         return new BigDecimal(BigInteger.valueOf(nSig), -nExp, MathContext.DECIMAL64);
-        }
+    }
 
 
     // ----- constants -----------------------------------------------------------------------------
@@ -492,4 +451,4 @@ public class Decimal64
      * A cached BigDecimal value.
      */
     private transient BigDecimal m_dec;
-    }
+}

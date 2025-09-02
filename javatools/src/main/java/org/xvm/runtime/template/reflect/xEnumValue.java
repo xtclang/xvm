@@ -19,49 +19,42 @@ import org.xvm.runtime.template.xEnum;
  * Native EnumValue implementation.
  */
 public class xEnumValue
-        extends xClass
-    {
+        extends xClass {
     public static xEnumValue INSTANCE;
 
-    public xEnumValue(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xEnumValue(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
+    public void initNative() {
         markNativeProperty("enumeration");
         markNativeProperty("value");
 
         invalidateTypeInfo();
-        }
+    }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
-        switch (sPropName)
-            {
-            case "enumeration":
-                return getPropertyEnumeration(frame, (ClassHandle) hTarget, iReturn);
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
+        switch (sPropName) {
+        case "enumeration":
+            return getPropertyEnumeration(frame, (ClassHandle) hTarget, iReturn);
 
-            case "value":
-                return getPropertyValue(frame, (ClassHandle) hTarget, iReturn);
-            }
+        case "value":
+            return getPropertyValue(frame, (ClassHandle) hTarget, iReturn);
+        }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
+    }
 
     /**
      * Implements property: Enumeration<BaseType> enumeration
      */
-    protected int getPropertyEnumeration(Frame frame, ClassHandle hClass, int iReturn)
-        {
+    protected int getPropertyEnumeration(Frame frame, ClassHandle hClass, int iReturn) {
         TypeConstant   typeEnumValue  = getClassType(hClass);
         ClassConstant  idEnumValue    = (ClassConstant) typeEnumValue.getDefiningConstant();
         ClassStructure clzEnumValue   = (ClassStructure) idEnumValue.getComponent();
@@ -69,13 +62,12 @@ public class xEnumValue
 
         return frame.assignDeferredValue(iReturn,
                 frame.getConstHandle(clzEnumeration.getIdentityConstant()));
-        }
+    }
 
     /**
      * Implements property: BaseType value
      */
-    protected int getPropertyValue(Frame frame, ClassHandle hClass, int iReturn)
-        {
+    protected int getPropertyValue(Frame frame, ClassHandle hClass, int iReturn) {
         TypeConstant   typeEnumValue  = getClassType(hClass);
         ClassConstant  idEnumValue    = (ClassConstant) typeEnumValue.getDefiningConstant();
         ClassStructure clzEnumValue   = (ClassStructure) idEnumValue.getComponent();
@@ -87,5 +79,5 @@ public class xEnumValue
                 template.getEnumByName(idEnumValue.getName()));
 
         return frame.assignDeferredValue(iReturn, hValue);
-        }
     }
+}

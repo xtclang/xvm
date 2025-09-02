@@ -45,97 +45,83 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * Native implementation of Package interface.
  */
 public class xPackage
-        extends xConst
-    {
+        extends xConst {
     public static xPackage INSTANCE;
 
-    public xPackage(Container container, ClassStructure structure, boolean fInstance)
-        {
+    public xPackage(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance)
-            {
+        if (fInstance) {
             INSTANCE = this;
-            }
         }
+    }
 
     @Override
-    public void initNative()
-        {
-        if (this == INSTANCE)
-            {
+    public void initNative() {
+        if (this == INSTANCE) {
             ConstantPool pool = f_container.getConstantPool();
             LIST_MAP_TYPE = pool.ensureParameterizedTypeConstant(
                     pool.ensureEcstasyTypeConstant("maps.ListMap"),
                     pool.typeString(), pool.typeClass());
             LIST_MAP_TEMPLATE = f_container.getTemplate(LIST_MAP_TYPE);
-            }
         }
+    }
 
     @Override
-    public int createConstHandle(Frame frame, Constant constant)
-        {
-        if (constant instanceof PackageConstant idPackage)
-            {
+    public int createConstHandle(Frame frame, Constant constant) {
+        if (constant instanceof PackageConstant idPackage) {
             PackageStructure pkg     = (PackageStructure) idPackage.getComponent();
             TypeConstant     typePkg = pkg.isModuleImport()
                     ? pkg.getImportedModule().getIdentityConstant().getType()
                     : idPackage.getType();
 
             return ensureConstHandle(frame, idPackage, typePkg);
-            }
+        }
 
         return super.createConstHandle(frame, constant);
-        }
+    }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         PackageHandle hModule = (PackageHandle) hTarget;
-        switch (sPropName)
-            {
-            case "classByName":
-                return getPropertyClassByName(frame, hModule, iReturn);
-            }
+        switch (sPropName) {
+        case "classByName":
+            return getPropertyClassByName(frame, hModule, iReturn);
+        }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
+    }
 
     @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                              ObjectHandle[] ahArg, int[] aiReturn)
-        {
-        switch (method.getName())
-            {
-            case "isModuleImport":
-                return invokeIsModuleImport(frame, (PackageHandle) hTarget, aiReturn);
-            }
+                              ObjectHandle[] ahArg, int[] aiReturn) {
+        switch (method.getName()) {
+        case "isModuleImport":
+            return invokeIsModuleImport(frame, (PackageHandle) hTarget, aiReturn);
+        }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
-        }
+    }
 
     @Override
     protected int callEqualsImpl(Frame frame, TypeComposition clazz,
-                                 ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+                                 ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         return frame.assignValue(iReturn, xBoolean.makeHandle(
             (((PackageHandle) hValue1).getId().equals(((PackageHandle) hValue2).getId()))));
-        }
+    }
 
     @Override
     protected int callCompareImpl(Frame frame, TypeComposition clazz,
-                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
+                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         return frame.assignValue(iReturn, xOrdered.makeHandle(
             (((PackageHandle) hValue1).getId().compareTo(((PackageHandle) hValue2).getId()))));
-        }
+    }
 
     @Override
-    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
-        {
+    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         return frame.assignValue(iReturn,
             xInt64.makeHandle(((PackageHandle) hTarget).getId().hashCode()));
-        }
+    }
 
 
     // ----- property implementations --------------------------------------------------------------
@@ -143,15 +129,13 @@ public class xPackage
     /**
      * Implements property: classByName.get()
      */
-    public int getPropertyClassByName(Frame frame, PackageHandle hTarget, int iReturn)
-        {
+    public int getPropertyClassByName(Frame frame, PackageHandle hTarget, int iReturn) {
         ConstantPool   pool = frame.poolContext();
         ClassStructure pkg  = hTarget.getStructure();
 
-        if (!pkg.getIdentityConstant().isShared(pool))
-            {
+        if (!pkg.getIdentityConstant().isShared(pool)) {
             return frame.raiseException("Foreign package");
-            }
+        }
 
         Container       container = frame.f_context.f_container;
         TypeComposition clzMap    = ensureListMapComposition(container);
@@ -160,41 +144,37 @@ public class xPackage
         ArrayList<StringHandle> listNames   = new ArrayList<>(mapChildren.size());
         ArrayList<ObjectHandle> listClasses = new ArrayList<>(mapChildren.size());
         boolean                 fDeferred   = false;
-        for (Map.Entry<String, Component> entry : mapChildren.entrySet())
-            {
+        for (Map.Entry<String, Component> entry : mapChildren.entrySet()) {
             Component component = entry.getValue();
-            if (component instanceof ClassStructure && !component.isSynthetic())
-                {
+            if (component instanceof ClassStructure && !component.isSynthetic()) {
                 IdentityConstant id     = component.getIdentityConstant();
                 ObjectHandle     hClass = frame.getConstHandle(pool.ensureClassConstant(id.getType()));
 
                 listNames  .add(xString.makeHandle(entry.getKey()));
                 listClasses.add(hClass);
                 fDeferred |= Op.isDeferred(hClass);
-                }
             }
+        }
 
         StringHandle[] ahNames   = listNames  .toArray(Utils.STRINGS_NONE);
         ObjectHandle[] ahClasses = listClasses.toArray(Utils.OBJECTS_NONE);
 
         ObjectHandle hNames = xArray.makeStringArrayHandle(ahNames);
 
-        if (fDeferred)
-            {
-            Frame.Continuation stepNext = frameCaller ->
-                {
+        if (fDeferred) {
+            Frame.Continuation stepNext = frameCaller -> {
                 ObjectHandle hClasses = xArray.createImmutableArray(
                     xClass.ensureArrayComposition(container), ahClasses);
                 return Utils.constructListMap(frame, clzMap, hNames, hClasses, iReturn);
-                };
+            };
 
             return new Utils.GetArguments(ahClasses, stepNext).doNext(frame);
-            }
+        }
 
         ObjectHandle hClasses = xArray.createImmutableArray(
             xClass.ensureArrayComposition(container), ahClasses);
         return Utils.constructListMap(frame, clzMap, hNames, hClasses, iReturn);
-        }
+    }
 
 
     // ----- method implementations ----------------------------------------------------------------
@@ -202,16 +182,13 @@ public class xPackage
     /**
      * Implementation for: {@code conditional Module isModuleImport()}.
      */
-    public int invokeIsModuleImport(Frame frame, PackageHandle hTarget, int[] aiReturn)
-        {
+    public int invokeIsModuleImport(Frame frame, PackageHandle hTarget, int[] aiReturn) {
         ClassStructure struct = hTarget.getStructure();
-        if (struct instanceof ModuleStructure module && !module.isMainModule())
-            {
+        if (struct instanceof ModuleStructure module && !module.isMainModule()) {
             return frame.assignValues(aiReturn, xBoolean.TRUE, hTarget);
-            }
+        }
 
-        if (struct instanceof PackageStructure pkg && pkg.isModuleImport())
-            {
+        if (struct instanceof PackageStructure pkg && pkg.isModuleImport()) {
             ModuleStructure module        = pkg.getImportedModule();
             ModuleConstant  idModule      = module.getIdentityConstant();
             ConstantPool    pool          = frame.poolContext();
@@ -219,9 +196,9 @@ public class xPackage
 
             return frame.assignConditionalDeferredValue(aiReturn,
                     frame.getConstHandle(constInstance));
-            }
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+    }
 
 
     // ----- Helpers -------------------------------------------------------------------------------
@@ -230,52 +207,47 @@ public class xPackage
      * Ensure there is a singleton handle for the specified package or module and push it on the
      * frame's stack.
      */
-    protected int ensureConstHandle(Frame frame, IdentityConstant idPkg, TypeConstant typePkg)
-        {
+    protected int ensureConstHandle(Frame frame, IdentityConstant idPkg, TypeConstant typePkg) {
         Container         container = frame.f_context.f_container;
         SingletonConstant constPkg  = container.getConstantPool().ensureSingletonConstConstant(idPkg);
 
         ObjectHandle hPkg = constPkg.getHandle();
-        if (hPkg != null)
-            {
+        if (hPkg != null) {
             return frame.pushStack(hPkg);
-            }
+        }
 
         TypeComposition clazz = container.getTemplate(typePkg).ensureClass(container, typePkg, typePkg);
 
         // make sure we store the constructed ModuleHandle at the corresponding singleton
-        switch (createPackageHandle(frame, clazz))
-            {
-            case Op.R_NEXT:
-                constPkg.setHandle(hPkg = frame.popStack());
-                container.f_heap.saveConstHandle(constPkg, hPkg);
-                return frame.pushStack(hPkg);
+        switch (createPackageHandle(frame, clazz)) {
+        case Op.R_NEXT:
+            constPkg.setHandle(hPkg = frame.popStack());
+            container.f_heap.saveConstHandle(constPkg, hPkg);
+            return frame.pushStack(hPkg);
 
-            case Op.R_CALL:
-                frame.m_frameNext.addContinuation(frameCaller ->
-                    {
-                    ObjectHandle hP = frameCaller.popStack();
-                    constPkg.setHandle(hP);
-                    container.f_heap.saveConstHandle(constPkg, hP);
-                    return frameCaller.pushStack(hP);
-                    });
-                return Op.R_CALL;
+        case Op.R_CALL:
+            frame.m_frameNext.addContinuation(frameCaller -> {
+                ObjectHandle hP = frameCaller.popStack();
+                constPkg.setHandle(hP);
+                container.f_heap.saveConstHandle(constPkg, hP);
+                return frameCaller.pushStack(hP);
+            });
+            return Op.R_CALL;
 
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
+        case Op.R_EXCEPTION:
+            return Op.R_EXCEPTION;
 
-            default:
-                throw new IllegalStateException();
-            }
+        default:
+            throw new IllegalStateException();
         }
+    }
 
     /**
      * @return the TypeComposition for {@code ListMap<String, Class>}
      */
-    public static TypeComposition ensureListMapComposition(Container container)
-        {
+    public static TypeComposition ensureListMapComposition(Container container) {
         return container.ensureClassComposition(LIST_MAP_TYPE, LIST_MAP_TEMPLATE);
-        }
+    }
 
 
     // ----- ObjectHandle --------------------------------------------------------------------------
@@ -285,74 +257,63 @@ public class xPackage
      *
      * @return one of R_NEXT, R_CALL or R_EXCEPTION
      */
-    protected int createPackageHandle(Frame frame, TypeComposition clazz)
-        {
+    protected int createPackageHandle(Frame frame, TypeComposition clazz) {
         PackageHandle   hStruct     = new PackageHandle(clazz.ensureAccess(Access.STRUCT));
         MethodStructure constructor = clazz.getTemplate().getStructure().findMethod("construct", 0);
         ObjectHandle[] ahVar        = Utils.ensureSize(Utils.OBJECTS_NONE, constructor.getMaxVars());
 
         return proceedConstruction(frame, constructor, true, hStruct, ahVar, Op.A_STACK);
-        }
+    }
 
     public static class PackageHandle
-            extends GenericHandle
-        {
-        public PackageHandle(TypeComposition clazz)
-            {
+            extends GenericHandle {
+        public PackageHandle(TypeComposition clazz) {
             super(clazz);
-            }
+        }
 
-        public IdentityConstant getId()
-            {
+        public IdentityConstant getId() {
             return (IdentityConstant) getType().getDefiningConstant();
-            }
+        }
 
-        public boolean isModule()
-            {
+        public boolean isModule() {
             return getId() instanceof ModuleConstant;
-            }
+        }
 
-        public ClassStructure getStructure()
-            {
+        public ClassStructure getStructure() {
             return (ClassStructure) getId().getComponent();
-            }
+        }
 
         @Override
-        public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited)
-            {
+        public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited) {
             // this is a bit of a hack, but the native container should definitely be able to
             // handle any module in the system
             return isModule() && container instanceof NativeContainer ||
                     super.isShared(container, mapVisited);
-            }
-
-        @Override
-        public boolean isNativeEqual()
-            {
-            return true;
-            }
-
-        @Override
-        public int compareTo(ObjectHandle that)
-            {
-            return getId().compareTo(((PackageHandle) that).getId());
-            }
-
-        @Override
-        public int hashCode()
-            {
-            return getId().hashCode();
-            }
-
-        @Override
-        public boolean equals(Object obj)
-            {
-            return obj instanceof PackageHandle that && this.getId().equals(that.getId());
-            }
         }
+
+        @Override
+        public boolean isNativeEqual() {
+            return true;
+        }
+
+        @Override
+        public int compareTo(ObjectHandle that) {
+            return getId().compareTo(((PackageHandle) that).getId());
+        }
+
+        @Override
+        public int hashCode() {
+            return getId().hashCode();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof PackageHandle that && this.getId().equals(that.getId());
+        }
+    }
 
     // ----- constants -----------------------------------------------------------------------------
 
     private static TypeConstant  LIST_MAP_TYPE;
     private static ClassTemplate LIST_MAP_TEMPLATE;
-    }
+}

@@ -42,25 +42,21 @@ import org.xvm.util.Severity;
  * A return statement specifies a return with optional values.
  */
 public class ReturnStatement
-        extends Statement
-    {
+        extends Statement {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ReturnStatement(Token keyword)
-        {
+    public ReturnStatement(Token keyword) {
         this(keyword, (List) null);
-        }
+    }
 
-    public ReturnStatement(Token keyword, Expression expr)
-        {
+    public ReturnStatement(Token keyword, Expression expr) {
         this(keyword, Arrays.asList(expr)); // mutable list
-        }
+    }
 
-    public ReturnStatement(Token keyword, List<Expression> exprs)
-        {
+    public ReturnStatement(Token keyword, List<Expression> exprs) {
         this.keyword = keyword;
         this.exprs   = exprs;
-        }
+    }
 
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -69,67 +65,57 @@ public class ReturnStatement
      * @return the expression(s) that the return statement returns, or null if there are no
      *         expressions
      */
-    public List<Expression> getExpressions()
-        {
+    public List<Expression> getExpressions() {
         return exprs;
-        }
+    }
 
     @Override
-    public long getStartPosition()
-        {
+    public long getStartPosition() {
         return keyword.getStartPosition();
-        }
+    }
 
     @Override
-    public long getEndPosition()
-        {
+    public long getEndPosition() {
         return exprs == null ? keyword.getEndPosition() : exprs.get(exprs.size()-1).getEndPosition();
-        }
+    }
 
     @Override
-    protected Field[] getChildFields()
-        {
+    protected Field[] getChildFields() {
         return CHILD_FIELDS;
-        }
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean allowsConditional(Expression exprChild)
-        {
-        if (exprs.size() > 1)
-            {
+    protected boolean allowsConditional(Expression exprChild) {
+        if (exprs.size() > 1) {
             // for now, we don't allow any conditional parts of a multi-return statement
             return false;
-            }
+        }
 
         AstNode container = getCodeContainer();
-        if (container.isReturnConditional())
-            {
+        if (container.isReturnConditional()) {
             return true;
-            }
+        }
 
         TypeConstant[] atypeRet = container.getReturnTypes();
         int            cRets    = atypeRet == null ? 0 : atypeRet.length;
 
-        return switch (cRets)
-            {
+        return switch (cRets) {
             case 0  -> true;
             case 1  -> atypeRet[0].equals(pool().typeBoolean());
             default -> false;
-            };
-        }
+        };
+    }
 
     @Override
-    protected boolean allowsShortCircuit(AstNode nodeChild)
-        {
+    protected boolean allowsShortCircuit(AstNode nodeChild) {
         return true;
-        }
+    }
 
     @Override
-    protected Statement validateImpl(Context ctx, ErrorListener errs)
-        {
+    protected Statement validateImpl(Context ctx, ErrorListener errs) {
         ConstantPool     pool         = pool();
         boolean          fValid       = true;
         AstNode          container    = getCodeContainer();
@@ -142,199 +128,158 @@ public class ReturnStatement
 
         // resolve auto-narrowing; don't mutate aRetTypes!
         boolean fClone = true;
-        for (int i = 0; i < cRets; i++)
-            {
+        for (int i = 0; i < cRets; i++) {
             TypeConstant typeRet = aRetTypes[i];
-            if (typeRet.containsAutoNarrowing(false))
-                {
-                if (fClone)
-                    {
+            if (typeRet.containsAutoNarrowing(false)) {
+                if (fClone) {
                     aRetTypes = aRetTypes.clone();
                     fClone    = false;
-                    }
-                aRetTypes[i] = typeRet.resolveAutoNarrowing(pool, false, ctx.getThisType(), null);
                 }
+                aRetTypes[i] = typeRet.resolveAutoNarrowing(pool, false, ctx.getThisType(), null);
             }
+        }
 
         // void methods are the simplest
-        if (cExprs == 0 || cRets == 0)
-            {
+        if (cExprs == 0 || cRets == 0) {
             atypeActual = TypeConstant.NO_TYPES;
 
-            if (cExprs > 0)
-                {
+            if (cExprs > 0) {
                 // check the expressions anyhow (even though they can't be used)
                 atypeActual = validateExpressions(ctx, listExprs, null, errs);
                 fValid      = atypeActual != null;
 
-                if (fValid)
-                    {
-                    if (cExprs == 1)
-                        {
+                if (fValid) {
+                    if (cExprs == 1) {
                         // allow the (strange) use of T0D0, the return of a void expression
                         // or an invocation that is not void
                         Expression expr = listExprs.get(0);
                         if (expr.isCompletable() && !expr.isVoid() &&
-                                !(expr instanceof InvocationExpression))
-                            {
+                                !(expr instanceof InvocationExpression)) {
                             // it is supposed to be a void return; allow a Future<Tuple>
                             if (expr instanceof NameExpression exprName &&
-                                    exprName.isDynamicVar() && expr.getType().isTuple())
-                                {
+                                    exprName.isDynamicVar() && expr.getType().isTuple()) {
                                 m_fFutureReturn = true;
-                                }
-                            else if (expr instanceof TupleExpression exprTuple &&
+                            } else if (expr instanceof TupleExpression exprTuple &&
                                     exprTuple.getExpressions().isEmpty() &&
-                                    exprTuple.getType().isImmutable())
-                                {
+                                    exprTuple.getType().isImmutable()) {
                                 // allow Tuple:()
                                 m_fTupleReturn = true;
-                                }
-                            else
-                                {
+                            } else {
                                 log(errs, Severity.ERROR, Compiler.RETURN_VOID);
                                 fValid = false;
-                                }
                             }
                         }
-                    else
-                        {
+                    } else {
                         log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cRets, cExprs);
                         fValid = false;
-                        }
                     }
                 }
-            else if (cRets > 0) // cExprs == 0
-                {
+            } else if (cRets > 0) { // cExprs == 0
                 // the expressions are missing; it was NOT supposed to be a void return
                 log(errs, Severity.ERROR, Compiler.RETURN_EXPECTED);
                 fValid = false;
-                }
             }
-        else if (cExprs > 1)
-            {
+        } else if (cExprs > 1) {
             // validate each expression, telling it what return type is expected
             atypeActual = validateExpressions(ctx, listExprs, aRetTypes, errs);
             fValid      = atypeActual != null;
 
             // make sure the arity is correct (the number of exprs has to match the number of returns)
-            if (cRets >= 0 && cExprs != cRets)
-                {
+            if (cRets >= 0 && cExprs != cRets) {
                 log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cRets, cExprs);
-                }
             }
-        else // cExprs == 1
-            {
+        } else { // cExprs == 1
             Expression exprOld = listExprs.get(0);
             Expression exprNew;
 
             TypeConstant typeRequired = cRets >= 1 ? aRetTypes[0] : null;
-            if (fConditional && exprOld instanceof TernaryExpression)
-                {
+            if (fConditional && exprOld instanceof TernaryExpression) {
                 // ternary expression needs to know the fact that it returns a conditional type
                 m_fConditionalTernary = true;
                 exprOld.markConditional();
                 typeRequired = cRets == 2 ? aRetTypes[1] : null;
-                }
+            }
 
-            if (typeRequired != null)
-                {
+            if (typeRequired != null) {
                 ctx = ctx.enterInferring(typeRequired);
-                }
+            }
 
             // let's test several possibilities:
-            do
-                {
+            do {
                 // - most likely the expression matches the return types for the method
-                if (cRets < 0 || exprOld.testFitMulti(ctx, aRetTypes, false, null).isFit())
-                    {
+                if (cRets < 0 || exprOld.testFitMulti(ctx, aRetTypes, false, null).isFit()) {
                     exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
                     break;
-                    }
+                }
 
                 // - it could be a conditional false
-                if (fConditional && exprOld.testFit(ctx, pool.typeFalse(), false, null).isFit())
-                    {
+                if (fConditional && exprOld.testFit(ctx, pool.typeFalse(), false, null).isFit()) {
                     exprNew = exprOld.validate(ctx, pool.typeFalse(), errs);
-                    if (exprNew != null && (!exprNew.isConstant() || !exprNew.toConstant().equals(pool.valFalse())))
-                        {
+                    if (exprNew != null && (!exprNew.isConstant() || !exprNew.toConstant().equals(pool.valFalse()))) {
                         // it's not clear how this could happen; it's more like an assertion
                         log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
                         fValid = false;
-                        }
-                    break;
                     }
+                    break;
+                }
 
                 // - it could be a Future return
-                if (cRets == 1)
-                    {
+                if (cRets == 1) {
                     TypeConstant typeFuture = pool.ensureFutureVar(aRetTypes[0]);
-                    if (exprOld.testFit(ctx, typeFuture, false, null).isFit())
-                        {
+                    if (exprOld.testFit(ctx, typeFuture, false, null).isFit()) {
                         exprNew = exprOld.validate(ctx, typeFuture, errs);
                         m_fFutureReturn = true;
                         break;
-                        }
                     }
+                }
 
                 // - it could be a tuple return
                 TypeConstant typeTuple = pool.ensureTupleType(aRetTypes);
-                if (exprOld.testFit(ctx, typeTuple, false, null).isFit())
-                    {
+                if (exprOld.testFit(ctx, typeTuple, false, null).isFit()) {
                     exprNew = exprOld.validate(ctx, typeTuple, errs);
                     m_fTupleReturn = true;
                     break;
-                    }
+                }
 
                 // - otherwise it's most probably an error and the validation will log it
                 //   (except cases when testFit() implementation doesn't fully match the "validate"
                 //    logic or somehow has more information to operate on, such as type inference)
                 exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
-                }
-            while (false);
+            } while (false);
 
-            if (typeRequired != null)
-                {
+            if (typeRequired != null) {
                 ctx = ctx.exit();
-                }
+            }
 
-            if (exprNew != exprOld)
-                {
+            if (exprNew != exprOld) {
                 fValid &= exprNew != null;
-                if (exprNew != null)
-                    {
+                if (exprNew != null) {
                     listExprs.set(0, exprNew);
-                    }
                 }
+            }
 
-            if (fValid)
-                {
+            if (fValid) {
                 atypeActual = m_fTupleReturn
                         ? exprNew.getType().getParamTypesArray()
                         : exprNew.getTypes();
-                }
-            }
-
-        ctx.setReachable(false);
-        if (fValid)
-            {
-            container.collectReturnTypes(atypeActual);
-            return this;
-            }
-        else
-            {
-            return null;
             }
         }
 
+        ctx.setReachable(false);
+        if (fValid) {
+            container.collectReturnTypes(atypeActual);
+            return this;
+        } else {
+            return null;
+        }
+    }
+
     @Override
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
-        {
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         AstNode container    = getCodeContainer();
         boolean fConditional = container.isReturnConditional();
 
-        if (container instanceof StatementExpression exprStmt)
-            {
+        if (container instanceof StatementExpression exprStmt) {
             assert !fConditional;
 
             // emit() for a return inside a StatementExpression produces an assignment from the
@@ -343,26 +288,22 @@ public class ReturnStatement
             Assignable[] aLVal  = exprStmt.getAssignables();
             int          cLVals = aLVal.length;
             ExprAST[]    aAst   = new ExprAST[cLVals];
-            for (int i = 0, cExprs = exprs == null ? 0 : exprs.size(); i < cExprs; ++i)
-                {
+            for (int i = 0, cExprs = exprs == null ? 0 : exprs.size(); i < cExprs; ++i) {
                 Expression expr = exprs.get(i);
-                if (i < cLVals)
-                    {
+                if (i < cLVals) {
                     expr.generateAssignment(ctx, code, aLVal[i], errs);
-                    }
-                else
-                    {
+                } else {
                     expr.generateVoid(ctx, code, errs);
-                    }
-                aAst[i] = expr.getExprAST(ctx);
                 }
+                aAst[i] = expr.getExprAST(ctx);
+            }
             code.add(new Jump(exprStmt.body.getEndLabel()));
 
             ctx.getHolder().setAst(this, new ReturnStmtAST(aAst));
 
             // "return" does not complete
             return false;
-            }
+        }
 
         // first determine what the method declaration indicates the return value is (none, one,
         // or multi)
@@ -373,8 +314,7 @@ public class ReturnStatement
         int              cExprs    = listExprs == null ? 0 : listExprs.size();
         BinaryAST        astResult;
 
-        if (m_fTupleReturn)
-            {
+        if (m_fTupleReturn) {
             assert cExprs == 1;
 
             // the return statement has a single expression returning a tuple; the caller expects
@@ -386,204 +326,166 @@ public class ReturnStatement
             astResult = new ReturnStmtAST(new ExprAST[]{
                             new UnpackExprAST(expr.getExprAST(ctx),
                                 atypeRets == null ? TypeConstant.NO_TYPES : atypeRets)});
-            }
-        else if (m_fConditionalTernary)
-            {
+        } else if (m_fConditionalTernary) {
             TernaryExpression exprTernary = (TernaryExpression) listExprs.get(0);
             exprTernary.generateConditionalReturn(ctx, code, errs);
 
             astResult = new ReturnStmtAST(exprTernary.getExprAST(ctx));
-            }
-        else
-            {
+        } else {
             // Note: it's a responsibility of the conditional return to *not* return anything else
             //       if the value at index 0 is "False"
-            switch (cExprs)
-                {
+            switch (cExprs) {
+            case 0:
+                code.add(new Return_0());
+                astResult = new ReturnStmtAST(ExprAST.NO_EXPRS);
+                break;
+
+            case 1: {
+                // we need to get all the arguments the expression can provide, but
+                // return only as many as the caller expects
+                Expression expr   = listExprs.get(0);
+                boolean    fCheck = fConditional && !expr.isConditionalResult();
+                Argument[] aArgs  = expr.generateArguments(ctx, code, true, !fCheck, errs);
+                int        cArgs  = aArgs.length;
+
+                switch (cRets) {
                 case 0:
-                    code.add(new Return_0());
-                    astResult = new ReturnStmtAST(ExprAST.NO_EXPRS);
-                    break;
-
-                case 1:
-                    {
-                    // we need to get all the arguments the expression can provide, but
-                    // return only as many as the caller expects
-                    Expression expr   = listExprs.get(0);
-                    boolean    fCheck = fConditional && !expr.isConditionalResult();
-                    Argument[] aArgs  = expr.generateArguments(ctx, code, true, !fCheck, errs);
-                    int        cArgs  = aArgs.length;
-
-                    switch (cRets)
-                        {
-                        case 0:
-                            if (m_fFutureReturn)
-                                {
-                                code.add(new Return_1(aArgs[0]));
-                                }
-                            else
-                                {
-                                code.add(new Return_0());
-                                }
-                            break;
-
-                        case 1:
-                            {
-                            Argument argRet = aArgs[0];
-                            if (m_fFutureReturn)
-                                {
-                                // create an intermediate dynamic var
-                                Register regFuture = code.createRegister(
-                                        pool.ensureFutureVar(argRet.getType().getParamType(0)));
-                                code.add(new Var_D(regFuture));
-                                code.add(new Move(argRet, regFuture));
-                                code.add(new Return_1(regFuture));
-                                }
-                            else
-                                {
-                                code.add(new Return_1(argRet));
-                                }
-                            break;
-                            }
-
-                        default:
-                            if (cArgs > 1)
-                                {
-                                Label labelFalse = fCheck ? new Label("false") : null;
-
-                                if (fCheck)
-                                    {
-                                    code.add(new JumpFalse(aArgs[0], labelFalse));
-                                    }
-
-                                if (cArgs == cRets)
-                                    {
-                                    code.add(new Return_N(aArgs));
-                                    }
-                                else
-                                    {
-                                    code.add(new Return_N(Arrays.copyOfRange(aArgs, 0, cRets)));
-                                    }
-
-                                if (fCheck)
-                                    {
-                                    code.add(labelFalse);
-                                    code.add(new Return_1(pool.valFalse()));
-                                    }
-                                }
-                            else
-                                {
-                                assert fConditional;
-
-                                Constant valFalse = pool().valFalse();
-                                if (expr.isConstant() && expr.toConstant().equals(valFalse))
-                                    {
-                                    code.add(new Return_1(valFalse));
-                                    }
-                                else
-                                    {
-                                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                                        valFalse.getValueString(), expr.getType().getValueString());
-                                    }
-                                }
-                        }
-                    astResult = new ReturnStmtAST(new ExprAST[]{expr.getExprAST(ctx)});
-                    break;
+                    if (m_fFutureReturn) {
+                        code.add(new Return_1(aArgs[0]));
+                    } else {
+                        code.add(new Return_0());
                     }
+                    break;
+
+                case 1: {
+                    Argument argRet = aArgs[0];
+                    if (m_fFutureReturn) {
+                        // create an intermediate dynamic var
+                        Register regFuture = code.createRegister(
+                                pool.ensureFutureVar(argRet.getType().getParamType(0)));
+                        code.add(new Var_D(regFuture));
+                        code.add(new Move(argRet, regFuture));
+                        code.add(new Return_1(regFuture));
+                    } else {
+                        code.add(new Return_1(argRet));
+                    }
+                    break;
+                }
 
                 default:
-                    {
-                    assert cRets == cExprs;
+                    if (cArgs > 1) {
+                        Label labelFalse = fCheck ? new Label("false") : null;
 
-                    Argument[] aArgs = new Argument[cRets];
-                    ExprAST[]  aASTs = new ExprAST[cRets];
-                    for (int i = 0; i < cRets; ++i)
-                        {
-                        Expression expr = listExprs.get(i);
-                        Argument   arg  = expr.generateArgument(ctx, code, true, !fConditional || i > 0, errs);
-                        aArgs[i] = expr.ensurePointInTime(code, arg, listExprs, i);
-                        aASTs[i] = expr.getExprAST(ctx);
+                        if (fCheck) {
+                            code.add(new JumpFalse(aArgs[0], labelFalse));
                         }
 
-                    Label labelFalse = fConditional ? new Label("false") : null;
-                    if (fConditional)
-                        {
-                        code.add(new JumpFalse(aArgs[0], labelFalse));
+                        if (cArgs == cRets) {
+                            code.add(new Return_N(aArgs));
+                        } else {
+                            code.add(new Return_N(Arrays.copyOfRange(aArgs, 0, cRets)));
                         }
 
-                    code.add(new Return_N(aArgs));
-
-                    if (fConditional)
-                        {
-                        code.add(labelFalse);
-                        code.add(new Return_1(pool.valFalse()));
+                        if (fCheck) {
+                            code.add(labelFalse);
+                            code.add(new Return_1(pool.valFalse()));
                         }
-                    astResult = new ReturnStmtAST(aASTs);
-                    break;
+                    } else {
+                        assert fConditional;
+
+                        Constant valFalse = pool().valFalse();
+                        if (expr.isConstant() && expr.toConstant().equals(valFalse)) {
+                            code.add(new Return_1(valFalse));
+                        } else {
+                            log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                                valFalse.getValueString(), expr.getType().getValueString());
+                        }
                     }
                 }
+                astResult = new ReturnStmtAST(new ExprAST[]{expr.getExprAST(ctx)});
+                break;
             }
+
+            default: {
+                assert cRets == cExprs;
+
+                Argument[] aArgs = new Argument[cRets];
+                ExprAST[]  aASTs = new ExprAST[cRets];
+                for (int i = 0; i < cRets; ++i) {
+                    Expression expr = listExprs.get(i);
+                    Argument   arg  = expr.generateArgument(ctx, code, true, !fConditional || i > 0, errs);
+                    aArgs[i] = expr.ensurePointInTime(code, arg, listExprs, i);
+                    aASTs[i] = expr.getExprAST(ctx);
+                }
+
+                Label labelFalse = fConditional ? new Label("false") : null;
+                if (fConditional) {
+                    code.add(new JumpFalse(aArgs[0], labelFalse));
+                }
+
+                code.add(new Return_N(aArgs));
+
+                if (fConditional) {
+                    code.add(labelFalse);
+                    code.add(new Return_1(pool.valFalse()));
+                }
+                astResult = new ReturnStmtAST(aASTs);
+                break;
+            }
+            }
+        }
 
         ctx.getHolder().setAst(this, astResult);
 
         // return never completes
         return false;
-        }
+    }
 
     @Override
-    public boolean isCompletable()
-        {
+    public boolean isCompletable() {
         // example to consider: "return result?;"
         return exprs != null && exprs.stream().anyMatch(Expression::isShortCircuiting);
-        }
+    }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("return");
-        if(exprs != null)
-            {
-            switch (exprs.size())
-                {
-                case 0:
-                    break;
+        if(exprs != null) {
+            switch (exprs.size()) {
+            case 0:
+                break;
 
-                case 1:
-                    sb.append(' ')
-                      .append(exprs.get(0));
-                    break;
+            case 1:
+                sb.append(' ')
+                  .append(exprs.get(0));
+                break;
 
-                default:
-                    boolean first = true;
-                    for (Expression expr : exprs)
-                        {
-                        if (first)
-                            {
-                            first = false;
-                            sb.append(" ");
-                            }
-                        else
-                            {
-                            sb.append(", ");
-                            }
-                        sb.append(expr);
-                        }
-                    break;
+            default:
+                boolean first = true;
+                for (Expression expr : exprs) {
+                    if (first) {
+                        first = false;
+                        sb.append(" ");
+                    } else {
+                        sb.append(", ");
+                    }
+                    sb.append(expr);
                 }
+                break;
             }
+        }
         sb.append(';');
         return sb.toString();
-        }
+    }
 
     @Override
-    public String getDumpDesc()
-        {
+    public String getDumpDesc() {
         return toString();
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -596,4 +498,4 @@ public class ReturnStatement
     protected transient boolean m_fFutureReturn;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ReturnStatement.class, "exprs");
-    }
+}
