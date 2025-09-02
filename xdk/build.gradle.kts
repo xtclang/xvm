@@ -113,11 +113,14 @@ fun createLauncherScriptTask(scriptName: String, mainClassName: String) = tasks.
     val enableNativeAccess = getXdkPropertyBoolean("org.xtclang.java.enableNativeAccess", false)
     defaultJvmOpts = buildList {
         add("-ea")
+        add("-DXDK_HOME=\$APP_HOME")
         if (enablePreview) {
             add("--enable-preview")
+            logger.warn("[xdk] You have enabled preview features for XTC launchers")
         }
         if (enableNativeAccess) {
             add("--enable-native-access=ALL-UNNAMED")
+            logger.warn("[xdk] You have enabled native access for XTC launchers")
         }
     }
     logger.info("[xdk] Default JVM args for $scriptName: $defaultJvmOpts")
@@ -126,11 +129,13 @@ fun createLauncherScriptTask(scriptName: String, mainClassName: String) = tasks.
     outputs.files(File(outputDir, scriptName), File(outputDir, "$scriptName.bat"))
     
     doLast {
-        // Fix the generated scripts to use renamed jar paths and add XTC module paths
+        // Process both Unix shell script and Windows batch file
+        // Unix script: Works on Linux, macOS, and all other Unix/POSIX systems 
+        // Windows script: Works on Windows only
         listOf(
-            File(outputDir, scriptName),
-            File(outputDir, "$scriptName.bat")
-        ).forEach { scriptFile ->
+            File(outputDir, scriptName) to false,     // Unix shell script (works everywhere except Windows)
+            File(outputDir, "$scriptName.bat") to true   // Windows batch file (Windows only)
+        ).forEach { (scriptFile, isWindows) ->
             if (scriptFile.exists()) {
                 var content = scriptFile.readText()
                 
@@ -142,10 +147,14 @@ fun createLauncherScriptTask(scriptName: String, mainClassName: String) = tasks.
                     content = XdkDistribution.replaceJarPaths(content, originalName, strippedName)
                 }
                 
-                // Add XTC module paths using utility from XdkDistribution
-                content = XdkDistribution.injectXtcModulePaths(
-                    content, mainClassName, scriptFile.name.endsWith(".bat")
-                )
+                // Add XTC module paths using utility from XdkDistribution  
+                content = XdkDistribution.injectXtcModulePaths(content, mainClassName, isWindows)
+                
+                // Add XDK_HOME delegation logic
+                content = XdkDistribution.injectXdkHomeDelegation(content, isWindows)
+                
+                // Fix path resolution to use APP_HOME consistently after delegation
+                content = XdkDistribution.fixPathResolution(content, isWindows)
                 
                 scriptFile.writeText(content)
             }
