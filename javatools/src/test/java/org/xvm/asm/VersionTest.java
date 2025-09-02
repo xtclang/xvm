@@ -13,11 +13,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Tests for Version and related functionality.
  */
-public class VersionTest
-    {
+public class VersionTest {
     @Test
-    public void testSubstitutables()
-        {
+    public void testSubstitutables() {
         assertTrue(new Version("0"        ).isSubstitutableFor(new Version("beta"     )));
         assertTrue(new Version("1"        ).isSubstitutableFor(new Version("beta"     )));
         assertTrue(new Version("0"        ).isSubstitutableFor(new Version("0"        )));
@@ -62,28 +60,25 @@ public class VersionTest
         assertFalse(new Version("1.2.beta1").isSubstitutableFor(new Version("1.2.beta2")));
         assertFalse(new Version("1.2.alpha").isSubstitutableFor(new Version("1.2.beta")));
         assertFalse(new Version("alpha").isSubstitutableFor(new Version("beta")));
-        }
+    }
 
     @Test
-    public void testEmptyTree()
-        {
+    public void testEmptyTree() {
         VersionTree<String> tree = new VersionTree<>();
         assertTrue(tree.isEmpty());
         assertEquals(0, tree.size());
         assertFalse(tree.iterator().hasNext());
-        }
+    }
 
     @Test
-    public void testDefaultTree()
-        {
+    public void testDefaultTree() {
         VersionTree<String> tree = genTree();
         assertFalse(tree.isEmpty());
         assertEquals(6, tree.size());
-        }
+    }
 
     @Test
-    public void testDefaultTreeIterator()
-        {
+    public void testDefaultTreeIterator() {
         VersionTree<String> tree = genTree();
         Iterator<Version> iter = tree.iterator();
         assertTrue(iter.hasNext());
@@ -99,11 +94,10 @@ public class VersionTest
         assertTrue(iter.hasNext());
         assertEquals(new Version("3.0"), iter.next());
         assertFalse(iter.hasNext());
-        }
+    }
 
     @Test
-    public void testDefaultTreeSnipe()
-        {
+    public void testDefaultTreeSnipe() {
         VersionTree<String> tree = genTree();
         tree.remove(new Version("2.2"));
 
@@ -122,11 +116,10 @@ public class VersionTest
         assertTrue(iter.hasNext());
         assertEquals(new Version("3.0"), iter.next());
         assertFalse(iter.hasNext());
-        }
+    }
 
     @Test
-    public void testDefaultTreePrune()
-        {
+    public void testDefaultTreePrune() {
         VersionTree<String> tree = genTree();
         tree.remove(new Version("2.2.0.1"));
 
@@ -145,11 +138,10 @@ public class VersionTest
         assertTrue(iter.hasNext());
         assertEquals(new Version("3.0"), iter.next());
         assertFalse(iter.hasNext());
-        }
+    }
 
     @Test
-    public void testDefaultTreeClear()
-        {
+    public void testDefaultTreeClear() {
         VersionTree<String> tree = genTree();
 
         tree.remove(new Version("1.0"));
@@ -162,11 +154,10 @@ public class VersionTest
         assertTrue(tree.isEmpty());
         assertEquals(0, tree.size());
         assertFalse(tree.iterator().hasNext());
-        }
+    }
 
     @Test
-    public void testDefaultTreePlus()
-        {
+    public void testDefaultTreePlus() {
         VersionTree<String> tree = genTree();
         tree.put(new Version("2.0"), "overwrite 2.0");
         tree.put(new Version("3.1"), "three-one");
@@ -190,11 +181,10 @@ public class VersionTest
         assertTrue(iter.hasNext());
         assertEquals(new Version("3.1"), iter.next());
         assertFalse(iter.hasNext());
-        }
+    }
 
     @Test
-    public void testDefaultSubTree()
-        {
+    public void testDefaultSubTree() {
         VersionTree<String> tree = genTree().subTree(new Version("2"));
         assertFalse(tree.isEmpty());
         assertEquals(4, tree.size());
@@ -208,20 +198,18 @@ public class VersionTest
         assertTrue(iter.hasNext());
         assertEquals(new Version("2.2.0.1"), iter.next());
         assertFalse(iter.hasNext());
-        }
+    }
 
     @Test
-    public void testDefaultSubTreeEmpty()
-        {
+    public void testDefaultSubTreeEmpty() {
         VersionTree<String> tree = genTree().subTree(new Version("2.3"));
         assertTrue(tree.isEmpty());
         assertEquals(0, tree.size());
         assertFalse(tree.iterator().hasNext());
-        }
+    }
 
     @Test
-    public void testClosestVersion()
-        {
+    public void testClosestVersion() {
         VersionTree<String> tree = new VersionTree<>();
         tree.put(new Version("1"          ), "1"          );
         tree.put(new Version("2"          ), "2"          );
@@ -253,27 +241,24 @@ public class VersionTest
         assertEquals(new Version("2.1.0.1.0"  ), tree.findClosestVersion(new Version("2.1.0.1.1")));
         assertEquals(new Version("2.1.0.1"    ), tree.findClosestVersion(new Version("2.1.0.2")));
         assertEquals(new Version("2.2"        ), tree.findClosestVersion(new Version("2.5.1.3")));
-        }
+    }
 
     @Test
-    public void testHighestVersion()
-        {
+    public void testHighestVersion() {
         VersionTree<String> tree = genTree();
         assertEquals(new Version("3.0"), tree.findHighestVersion());
         assertEquals(new Version("3.0"), tree.findHighestVersion(new Version("3.0.0.0")));
         assertEquals(new Version("2.1"), tree.findHighestVersion(new Version("2.1.0")));
         assertEquals(new Version("2.2.0.1"), tree.findHighestVersion(new Version("2.1")));
-        }
+    }
 
     @Test
-    public void testBuildString()
-        {
+    public void testBuildString() {
         assertTrue(new Version("1.2.3").isSameAs(new Version("1.2.3+this-is.a-Build.string-4.5.6")));
-        }
+    }
 
     @Test
-    public void testMnemonics()
-        {
+    public void testMnemonics() {
         assertTrue(new Version("1.2.3.alpha").isSameAs(new Version("1.2.3.Alpha")));
         assertTrue(new Version("1.2.3.alpha").isSameAs(new Version("1.2.3.A")));
         assertTrue(new Version("1.2.3.alpha").isSameAs(new Version("1.2.3.a")));
@@ -291,11 +276,10 @@ public class VersionTest
         assertTrue(new Version("1.2.3rc").isSameAs(new Version("1.2.3R")));
         assertTrue(new Version("ci").isSameAs(new Version("C")));
         assertTrue(new Version("1.2.qa3").isSameAs(new Version("1.2.Q-3")));
-        }
+    }
 
     @Test
-    public void testBadVersions()
-        {
+    public void testBadVersions() {
         assertThrows(IllegalStateException.class, () -> { new Version(""); });
         assertThrows(IllegalStateException.class, () -> { new Version("1."); });
         assertThrows(IllegalStateException.class, () -> { new Version(".1"); });
@@ -304,10 +288,9 @@ public class VersionTest
         assertThrows(IllegalStateException.class, () -> { new Version("1.0be"); });
         assertThrows(IllegalStateException.class, () -> { new Version("1.0+^"); });
         assertThrows(IllegalStateException.class, () -> { new Version("1.2.3B4+build!12345"); });
-        }
+    }
 
-    static VersionTree<String> genTree()
-        {
+    static VersionTree<String> genTree() {
         VersionTree<String> tree = new VersionTree<>();
         tree.put(new Version("1.0"), "one-oh");
         tree.put(new Version("2.0"), "two-oh");
@@ -316,15 +299,13 @@ public class VersionTest
         tree.put(new Version("2.2.0.1"), "two-two-oh-one");
         tree.put(new Version("3.0"), "three-oh");
         return tree;
-        }
-
-    static void out()
-        {
-        out("");
-        }
-
-    static void out(Object o)
-        {
-        System.out.println(o);
-        }
     }
+
+    static void out() {
+        out("");
+    }
+
+    static void out(Object o) {
+        System.out.println(o);
+    }
+}

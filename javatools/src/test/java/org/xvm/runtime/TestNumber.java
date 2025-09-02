@@ -11,8 +11,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 /**
  * Unit tests for various native number implementations.
  */
-public class TestNumber
-    {
+public class TestNumber {
     // ---- add ------------------------------------------------------------------------------------
 
     static final long MAX64 = Long.MAX_VALUE;
@@ -35,8 +34,7 @@ public class TestNumber
     static final long MAX31U = 0x7FFF_FFFFL;
 
     @Test
-    public void test128Signed()
-        {
+    public void test128Signed() {
         // add
         assertEquals(new LongLong(1+2), new LongLong(1).add(new LongLong(2)), "1+2");
         assertEquals(new LongLong(-1+2), new LongLong(-1).add(new LongLong(2)), "-1+2");
@@ -61,17 +59,15 @@ public class TestNumber
 
         assertEquals(LongLong.OVERFLOW, MAX128.sub(new LongLong(-1)), "MAX+1");
         assertEquals(LongLong.OVERFLOW, MIN128.sub(new LongLong(1)), "MIN-1");
-        }
+    }
 
     @Test
-    public void test128Unsigned()
-        {
+    public void test128Unsigned() {
         // TODO
-        }
+    }
 
     @Test
-    public void test64Signed()
-        {
+    public void test64Signed() {
         final int SHIFT = 0;
 
         // add
@@ -80,18 +76,14 @@ public class TestNumber
         assertEquals(-1L, longAdd(MAX64, MIN64, SHIFT), "MAX+MIN");
         assertEquals(MAX64 - 1, longAdd(MAX64, -1L, SHIFT), "MAX-1");
         assertEquals(MIN64 + 1, longAdd(MIN64, +1L, SHIFT), "MIN+1");
-        try
-            {
+        try {
             longAdd(MAX64, 1, SHIFT);
             fail();
-            }
-        catch (ArithmeticException ignore) {}
-        try
-            {
+        } catch (ArithmeticException ignore) {}
+        try {
             longAdd(MIN64, -1, SHIFT);
             fail();
-            }
-        catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException ignore) {}
 
         // sub
         assertEquals(2L - 1L, longSub(2L, 1L, SHIFT), "2-1");
@@ -100,63 +92,49 @@ public class TestNumber
         assertEquals(0L, longSub(MAX64, MAX64, SHIFT), "MAX-MAX");
         assertEquals(MAX64 - 1, longSub(MAX64, 1L, SHIFT), "MAX-1");
         assertEquals(MIN64 + 1, longSub(MIN64, -1L, SHIFT), "MIN+1");
-        try
-            {
+        try {
             longSub(MIN64, 1, SHIFT);
             fail();
-            }
-        catch (ArithmeticException ignore) {}
-        try
-            {
+        } catch (ArithmeticException ignore) {}
+        try {
             longSub(MAX64, -1, SHIFT);
             fail();
-            }
-        catch (ArithmeticException ignore) {}
-        }
+        } catch (ArithmeticException ignore) {}
+    }
 
     @Test
-    public void test64Unsigned()
-        {
+    public void test64Unsigned() {
         final int SHIFT = 0;
 
         // add
         assertEquals(1L-2L, longUnsignedAdd(1L, -2L, SHIFT), "1-2");
         assertEquals(MIN64H, longUnsignedAdd(MAX63U, 1L, SHIFT), "MAX63+1");
         assertEquals(MAX64U, longUnsignedAdd(MAX63U, MIN64H, SHIFT), "MAX");
-        try
-            {
+        try {
             longUnsignedAdd(MAX64U, 1, SHIFT);
             fail();
-            }
-        catch (ArithmeticException ignore) {}
-        try
-            {
+        } catch (ArithmeticException ignore) {}
+        try {
             longUnsignedAdd(MAX64U, MAX64U, SHIFT);
             fail();
-            }
-        catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException ignore) {}
 
         // sub
         assertEquals(2L - 1L, longUnsignedSub(2L, 1L, SHIFT), "2-1");
         assertEquals(MAX63U, longUnsignedSub(MIN64H, 1L, SHIFT), "MIN64H-1");
         assertEquals(MAX63U, longUnsignedSub(MAX64U, MIN64H, SHIFT), "MAX-MIN");
-        try
-            {
+        try {
             longUnsignedSub(1L, 2L, SHIFT);
             fail();
-            }
-        catch (ArithmeticException ignore) {}
-        try
-            {
+        } catch (ArithmeticException ignore) {}
+        try {
             longUnsignedSub(1L, MAX64U, SHIFT);
             fail();
-            }
-        catch (ArithmeticException ignore) {}
-        }
+        } catch (ArithmeticException ignore) {}
+    }
 
     @Test
-    public void test32Signed()
-        {
+    public void test32Signed() {
         final int SHIFT = 32;
 
         // add
@@ -166,18 +144,14 @@ public class TestNumber
         assertEquals(-1L, longAdd(MAX32, MIN32, SHIFT), "MAX+MIN");
         assertEquals(MAX32 - 1, longAdd(MAX32, -1L, SHIFT), "MAX-1");
         assertEquals(MIN32 + 1, longAdd(MIN32, +1L, SHIFT), "MIN+1");
-        try
-            {
+        try {
             longAdd(MAX32, 1, SHIFT);
             fail();
-            }
-        catch (ArithmeticException ignore) {}
-        try
-            {
+        } catch (ArithmeticException ignore) {}
+        try {
             longAdd(MIN32, -1, SHIFT);
             fail();
-            }
-        catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException ignore) {}
 
         // sub
         assertEquals(2L - 1L, longSub(2L, 1L, SHIFT), "2-1");
@@ -186,109 +160,88 @@ public class TestNumber
         assertEquals(0L, longSub(MAX32, MAX32, SHIFT), "MAX-MAX");
         assertEquals(MAX32 - 1, longSub(MAX32, 1L, SHIFT), "MAX-1");
         assertEquals(MIN32 + 1, longSub(MIN32, -1L, SHIFT), "MIN+1");
-        try
-            {
+        try {
             longSub(MIN32, 1, SHIFT);
             fail();
-            }
-        catch (ArithmeticException ignore) {}
-        try
-            {
+        } catch (ArithmeticException ignore) {}
+        try {
             longSub(MAX32, -1, SHIFT);
             fail();
-            }
-        catch (ArithmeticException ignore) {}
-        }
+        } catch (ArithmeticException ignore) {}
+    }
 
     @Test
-    public void test32Unsigned()
-        {
+    public void test32Unsigned() {
         final int SHIFT = 32;
 
         // add
         assertEquals(1L + 2L, longUnsignedAdd(1L, 2L, SHIFT), "1+2");
         assertEquals(1L - 2L, longUnsignedAdd(1L, -2L, SHIFT), "1-2");
         assertEquals(MAX31U + 1, longUnsignedAdd(MAX31U, 1L, SHIFT), "MAX+1");
-        try
-            {
+        try {
             longUnsignedAdd(MAX32U, 1, SHIFT);
             fail();
-            }
-        catch (ArithmeticException ignore) {}
-        try
-            {
+        } catch (ArithmeticException ignore) {}
+        try {
             longUnsignedAdd(MAX32U, MAX32U, SHIFT);
             fail();
-            }
-        catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException ignore) {}
 
         // sub
         assertEquals(2L - 1L, longUnsignedSub(2L, 1L, SHIFT), "2-1");
         assertEquals(MAX31U, longUnsignedSub(MIN32H, 1L, SHIFT), "MIN32H-1");
         assertEquals(MAX31U, longUnsignedSub(MAX32U, MIN32H, SHIFT), "MAX-MIN");
-        try
-            {
+        try {
             longUnsignedSub(1L, 2L, SHIFT);
             fail();
-            }
-        catch (ArithmeticException ignore) {}
-        try
-            {
+        } catch (ArithmeticException ignore) {}
+        try {
             longUnsignedSub(1, MAX32U, SHIFT);
             fail();
-            }
-        catch (ArithmeticException ignore) {}
-        }
+        } catch (ArithmeticException ignore) {}
+    }
 
 
     // ----- the algorithms used by native code ----------------------------------------------------
 
-    private long longAdd(long l1, long l2, int nShift)
-        {
+    private long longAdd(long l1, long l2, int nShift) {
         long lr = l1 + l2;
 
-        if ((((l1 ^ lr) & (l2 ^ lr)) << nShift) < 0)
-            {
+        if ((((l1 ^ lr) & (l2 ^ lr)) << nShift) < 0) {
             throw new ArithmeticException("overflow");
-            }
-
-        return lr;
         }
 
-    private long longSub(long l1, long l2, int nShift)
-        {
-        long lr = l1 - l2;
-
-        if ((((l1 ^ l2) & (l1 ^ lr)) << nShift) < 0)
-            {
-            throw new ArithmeticException("overflow");
-            }
-
         return lr;
-        }
-
-
-    private long longUnsignedAdd(long l1, long l2, int nShift)
-        {
-        long lr = l1 + l2;
-
-        if ((((l1 & l2) | ((l1 | l2) & ~lr)) << nShift) < 0)
-            {
-            throw new ArithmeticException("overflow");
-            }
-
-        return lr;
-        }
-
-    private long longUnsignedSub(long l1, long l2, int nShift)
-        {
-        long lr = l1 - l2;
-
-        if ((((~l1 & l2) | ((~l1 | l2) & lr)) << nShift) < 0)
-            {
-            throw new ArithmeticException("overflow");
-            }
-
-        return lr;
-        }
     }
+
+    private long longSub(long l1, long l2, int nShift) {
+        long lr = l1 - l2;
+
+        if ((((l1 ^ l2) & (l1 ^ lr)) << nShift) < 0) {
+            throw new ArithmeticException("overflow");
+        }
+
+        return lr;
+    }
+
+
+    private long longUnsignedAdd(long l1, long l2, int nShift) {
+        long lr = l1 + l2;
+
+        if ((((l1 & l2) | ((l1 | l2) & ~lr)) << nShift) < 0) {
+            throw new ArithmeticException("overflow");
+        }
+
+        return lr;
+    }
+
+    private long longUnsignedSub(long l1, long l2, int nShift) {
+        long lr = l1 - l2;
+
+        if ((((~l1 & l2) | ((~l1 | l2) & lr)) << nShift) < 0) {
+            throw new ArithmeticException("overflow");
+        }
+
+        return lr;
+    }
+}

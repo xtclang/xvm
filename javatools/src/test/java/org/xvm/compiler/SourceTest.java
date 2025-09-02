@@ -12,25 +12,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * Unit tests for the Source class.
  */
-public class SourceTest
-    {
+public class SourceTest {
     @Test
-    public void testSimple()
-        {
+    public void testSimple() {
         String sCode = "hello world!";
         Source source = new Source(sCode);
         StringBuilder builder = new StringBuilder();
-        while (source.hasNext())
-            {
+        while (source.hasNext()) {
             builder.append(source.next());
-            }
-        assertEquals(sCode, builder.toString());
         }
+        assertEquals(sCode, builder.toString());
+    }
 
     @Test @Disabled
     public void testFile1()
-            throws IOException
-        {
+            throws IOException {
         Source source = new Source(
                 new File(SourceTest.class.getResource("Source_1.x").getPath()));
         assertEquals(0, source.getLine());
@@ -38,27 +34,24 @@ public class SourceTest
 
         char[] ach = "this is a test\nof Unicode\n".toCharArray();
         int of = 0;
-        while (source.hasNext())
-            {
+        while (source.hasNext()) {
             char ch = source.next();
             assertEquals(ach[of++], ch);
-            }
+        }
 
         assertEquals(2, source.getLine());
         assertEquals(0, source.getOffset());
-        }
+    }
 
     @Test @Disabled
     public void testFile1Rewind()
-            throws IOException
-        {
+            throws IOException {
         Source source = new Source(
                 new File(SourceTest.class.getResource("Source_1.x").getPath()));
         assertEquals(0, source.getLine());
         assertEquals(0, source.getOffset());
 
-        while (source.hasNext())
-            {
+        while (source.hasNext()) {
             int  iLinePre1    = source.getLine();
             int  iOffsetPre1  = source.getOffset();
             char ch1          = source.next();
@@ -78,26 +71,24 @@ public class SourceTest
             assertEquals(ch1         , ch2         );
             assertEquals(iLinePost1  , iLinePost2  );
             assertEquals(iOffsetPost1, iOffsetPost2);
-            }
+        }
 
         assertEquals(2, source.getLine());
         assertEquals(0, source.getOffset());
-        }
+    }
 
     @Test @Disabled
     public void testFile1Reset()
-            throws IOException
-        {
+            throws IOException {
         Source source = new Source(
                 new File(SourceTest.class.getResource("Source_1.x").getPath()));
 
         int iLinePre1     = source.getLine();
         int iOffsetPre1   = source.getOffset();
         StringBuilder sb1 = new StringBuilder();
-        while (source.hasNext())
-            {
+        while (source.hasNext()) {
             sb1.append(source.next());
-            }
+        }
         int iLinePost1    = source.getLine();
         int iOffsetPost1  = source.getOffset();
 
@@ -106,10 +97,9 @@ public class SourceTest
         int iLinePre2     = source.getLine();
         int iOffsetPre2   = source.getOffset();
         StringBuilder sb2 = new StringBuilder();
-        while (source.hasNext())
-            {
+        while (source.hasNext()) {
             sb2.append(source.next());
-            }
+        }
         int iLinePost2    = source.getLine();
         int iOffsetPost2  = source.getOffset();
 
@@ -118,17 +108,15 @@ public class SourceTest
         assertEquals(sb1.toString(), sb2.toString());
         assertEquals(iLinePost1    , iLinePost2    );
         assertEquals(iOffsetPost1  , iOffsetPost2  );
-        }
+    }
 
     @Test
-    public void testNewLines()
-        {
+    public void testNewLines() {
         String sScript = "0\n1\n\r3\r\n4\r5";
         Source source  = new Source(sScript);
 
         int cChars = 0;
-        while (source.hasNext())
-            {
+        while (source.hasNext()) {
             int  iLinePre  = source.getLine();
             int  ofPre     = source.getOffset();
             char ch        = source.next();
@@ -136,17 +124,14 @@ public class SourceTest
             int  ofPost    = source.getOffset();
             ++cChars;
 
-            if (Lexer.isLineTerminator(ch))
-                {
+            if (Lexer.isLineTerminator(ch)) {
                 assertEquals(iLinePre + 1, iLinePost);
                 assertEquals(0, ofPost);
-                }
-            else if (ch >= '0' && ch <= '9')
-                {
+            } else if (ch >= '0' && ch <= '9') {
                 assertEquals(ch - '0', source.getLine());
                 assertEquals(0, ofPre);
                 assertEquals(1, ofPost);
-                }
+            }
 
             source.rewind();
             assertEquals(iLinePre, source.getLine());
@@ -154,6 +139,6 @@ public class SourceTest
             assertEquals(ch, source.next());
             assertEquals(iLinePost, source.getLine());
             assertEquals(ofPost, source.getOffset());
-            }
         }
     }
+}

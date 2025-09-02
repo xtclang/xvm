@@ -13,18 +13,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * Integration test for launcher version display functionality.
  * Tests that the --version output contains expected git and API information.
  */
-public class LauncherVersionTest
-    {
+public class LauncherVersionTest {
     @Test
-    public void testVersionOutputFormat()
-        {
+    public void testVersionOutputFormat() {
         // Capture system output
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         PrintStream originalOut = System.out;
         System.setOut(new PrintStream(outputStream));
 
-        try
-            {
+        try {
             // Run xcc --version command
             String[] args = {"xcc", "--version"};
             Launcher.main(args);
@@ -50,40 +47,34 @@ public class LauncherVersionTest
             String gitCommit = BuildInfo.getGitCommit();
             String gitStatus = BuildInfo.getGitStatus();
 
-            if (!gitCommit.isEmpty())
-                {
+            if (!gitCommit.isEmpty()) {
                 // Expect full commit ID for better traceability
                 assertTrue(output.contains("[" + gitCommit + "]"),
                           "Version output should contain full git commit: [" + gitCommit + "]");
-                }
+            }
 
-            if (!gitStatus.isEmpty())
-                {
+            if (!gitStatus.isEmpty()) {
                 assertTrue(output.contains("(" + gitStatus + ")"),
                           "Version output should contain git status: (" + gitStatus + ")");
-                }
+            }
 
             // Test overall format pattern
             assertTrue(output.matches("xdk version .+ \\(\\d+\\.\\d+\\).*"),
                       "Version output should match expected pattern");
-            }
-        finally
-            {
+        } finally {
             // Restore system output
             System.setOut(originalOut);
-            }
         }
+    }
 
     @Test
-    public void testXecVersionOutput()
-        {
+    public void testXecVersionOutput() {
         // Test that xec --version also works
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         PrintStream originalOut = System.out;
         System.setOut(new PrintStream(outputStream));
 
-        try
-            {
+        try {
             // Run xec --version command
             String[] args = {"xec", "--version"};
             Launcher.main(args);
@@ -92,10 +83,8 @@ public class LauncherVersionTest
             assertNotNull(output, "XEC version output should not be null");
             assertTrue(output.startsWith("xdk version"),
                       "XEC version output should also start with 'xdk version'");
-            }
-        finally
-            {
+        } finally {
             System.setOut(originalOut);
-            }
         }
     }
+}

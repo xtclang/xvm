@@ -24,11 +24,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Tests for ConditionalConstant and related structures.
  */
-public class ConditionalTest
-    {
+public class ConditionalTest {
     @Test @Disabled
-    public void testSimple()
-        {
+    public void testSimple() {
         FileStructure       file   = new FileStructure("test");
         ConstantPool        pool   = file.getConstantPool();
         NamedCondition      condX  = pool.ensureNamedCondition("X");
@@ -69,12 +67,11 @@ public class ConditionalTest
         assertEquals(2, mapE.size());
         assertEquals(mapE.get(condX), Influence.OR);
         assertEquals(mapE.get(condY), Influence.OR);
-        }
+    }
 
     @Test @Disabled
     public void testDiamond()
-            throws IOException
-        {
+            throws IOException {
         FileStructure       file   = new FileStructure("test");
         ConstantPool        pool   = file.getConstantPool();
         VersionConstant     v1     = pool.ensureVersionConstant(new Version("1"));
@@ -107,5 +104,5 @@ public class ConditionalTest
 
         assertTrue(method.getParent() instanceof MultiMethodStructure);
         assertTrue(method.getParent().getParent() instanceof CompositeComponent);
-        }
     }
+}

@@ -22,67 +22,55 @@ import static org.junit.jupiter.api.Assertions.fail;
 /**
  * Tests of the {@link MarkAndSweepGcSpace}.
  */
-public class MarkAndSweepGcSpaceTests
-    {
-    GcSpace makeSpace()
-        {
+public class MarkAndSweepGcSpaceTests {
+    GcSpace makeSpace() {
         return makeSpace(l -> {}, Long.MAX_VALUE);
-        }
+    }
 
-    GcSpace makeSpace(LongConsumer cleared, long capacity)
-        {
+    GcSpace makeSpace(LongConsumer cleared, long capacity) {
         return new MarkAndSweepGcSpace<>(LongArrayObjectManager.INSTANCE, cleared, capacity, capacity);
-        }
+    }
 
-    static class RootSet
-        {
+    static class RootSet {
         final Set<Long> retained = new HashSet<>();
 
-        public LongMuterator retained()
-            {
-            return new LongMuterator()
-                {
+        public LongMuterator retained() {
+            return new LongMuterator() {
                 long lPrior = GcSpace.NULL;
                 PrimitiveIterator.OfLong delegate = retained.stream().mapToLong(l -> l).iterator();
 
                 @Override
-                public void set(long value)
-                    {
-                    if (lPrior == GcSpace.NULL)
-                        {
+                public void set(long value) {
+                    if (lPrior == GcSpace.NULL) {
                         throw new IllegalStateException();
-                        }
+                    }
 
                     retained.remove(lPrior);
                     retained.add(value);
-                    }
+                }
 
                 @Override
-                public long nextLong()
-                    {
+                public long nextLong() {
                     return lPrior = delegate.nextLong();
-                    }
+                }
 
                 @Override
-                public boolean hasNext()
-                    {
+                public boolean hasNext() {
                     return delegate.hasNext();
-                    }
-                };
-            }
+                }
+            };
         }
+    }
 
     @Test
-    public void shouldAllocateAndGet()
-        {
+    public void shouldAllocateAndGet() {
         GcSpace space = makeSpace();
         long p = space.allocate(0);
         assertTrue(space.isValid(p));
-        }
+    }
 
     @Test
-    public void shouldCollectUnreachables()
-        {
+    public void shouldCollectUnreachables() {
         GcSpace space = makeSpace();
         RootSet root = new RootSet();
         space.addRoot(root::retained);
@@ -106,11 +94,10 @@ public class MarkAndSweepGcSpaceTests
         space.gc();
         assertTrue(space.isValid(p1));
         assertFalse(space.isValid(p2));
-        }
+    }
 
     @Test
-    public void shouldNotCollectDeepReachables()
-        {
+    public void shouldNotCollectDeepReachables() {
         RootSet root = new RootSet();
         GcSpace space = makeSpace();
         space.addRoot(root::retained);
@@ -136,19 +123,15 @@ public class MarkAndSweepGcSpaceTests
         assertNotEquals(p1, p2);
 
         // verify that
-        try
-            {
+        try {
             space.isValid(p4);
-            }
-        catch (SegFault e)
-            {
+        } catch (SegFault e) {
             // expected
-            }
         }
+    }
 
     @Test
-    public void shouldAutoCollect()
-        {
+    public void shouldAutoCollect() {
         GcSpace space = makeSpace();
 
         RootSet root = new RootSet();
@@ -165,13 +148,11 @@ public class MarkAndSweepGcSpaceTests
         // add objects until we auto-gc
         long maxCb = cb;
         long lastCb;
-        do
-            {
+        do {
             lastCb = space.getByteCount();
             space.allocate(1);
             maxCb = Math.max(maxCb, space.getByteCount());
-            }
-        while (space.getByteCount() > lastCb);
+        } while (space.getByteCount() > lastCb);
 
         // verify we did see significant growth
         assertTrue(maxCb > cb * 4);
@@ -183,42 +164,35 @@ public class MarkAndSweepGcSpaceTests
         assertTrue(space.isValid(p1));
         assertTrue(space.isValid(p2));
         assertTrue(space.isValid(p3));
-        }
+    }
 
     @Test
-    public void shouldOOMEOnHardLimit()
-        {
+    public void shouldOOMEOnHardLimit() {
         long cbLimit = 1024 * 1024 * 128;
-        GcSpace space = makeSpace(l ->
-            {
-            }, cbLimit);
+        GcSpace space = makeSpace(l -> {
+        }, cbLimit);
         RootSet root = new RootSet();
         space.addRoot(root::retained);
         long p1 = space.allocate(3);
         root.retained.add(p1);
 
         long pLast = p1;
-        try
-            {
-            for (int i = 0; i < 2_000_000; ++i)
-                {
+        try {
+            for (int i = 0; i < 2_000_000; ++i) {
                 long p = space.allocate(512);
                 space.setField(pLast, 0, p);
                 pLast = p;
-                }
+            }
 
             fail();
-            }
-        catch (OutOfMemoryError e)
-            {
+        } catch (OutOfMemoryError e) {
             assertTrue(space.getByteCount() >= cbLimit);
             assertTrue(space.getByteCount() <= cbLimit + ShallowSizeOf.arrayOf(long.class, 512));
-            }
         }
+    }
 
     @Test
-    public void shouldClearWeakRefsToUnreachables()
-        {
+    public void shouldClearWeakRefsToUnreachables() {
         List<Long> cleared = new ArrayList<>();
         GcSpace space = makeSpace(cleared::add, Long.MAX_VALUE);
         RootSet root = new RootSet();
@@ -250,5 +224,5 @@ public class MarkAndSweepGcSpaceTests
 
         // verify that cleared was notified
         assertTrue(cleared.remove(wp1));
-        }
     }
+}
