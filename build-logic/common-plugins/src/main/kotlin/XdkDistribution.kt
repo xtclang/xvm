@@ -1,8 +1,5 @@
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.file.Directory
-import org.gradle.api.file.RegularFile
-import org.gradle.api.provider.Provider
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.internal.os.OperatingSystem
@@ -188,25 +185,27 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         // Unix/POSIX delegation logic template  
         object DelegationTemplates {
             // Simple file comparison using ls -i (inode number) - works on all Unix systems
-            const val UNIX_FILE_ID_FUNCTION = """
-# get file inode for comparison - works on all Unix/POSIX systems
-get_file_id() {
-    ls -i "${'$'}1" 2>/dev/null | cut -d' ' -f1
-}"""
+            val UNIX_FILE_ID_FUNCTION = """
+                # get file inode for comparison - works on all Unix/POSIX systems
+                get_file_id() {
+                    ls -i "${'$'}1" 2>/dev/null | cut -d' ' -f1
+                }
+            """.trimIndent()
             
-            private const val TEMPLATE = """
-{{COMMENT}} delegate to the command in XDK_HOME if there is one
-{{IF_NOT_EMPTY}}
-    set "XDK_CMD={{VAR}}XDK_HOME{{VAR_END}}{{PATH_SEP}}bin{{PATH_SEP}}{{VAR}}APP_BASE_NAME{{VAR_END}}{{SCRIPT_EXT}}"
-    {{IF_EXISTS}}
-{{COMPARISON}}
-        {{IF_NOT_EQUAL}}
-            {{EXEC}}
-        {{IF_END}}
-    {{IF_END}}
-    {{COMMENT}} switch to using the libs etc. from the XDK at XDK_HOME
-    APP_HOME={{VAR}}XDK_HOME{{VAR_END}}
-{{IF_END}}"""
+            private val TEMPLATE = """
+                {{COMMENT}} delegate to the command in XDK_HOME if there is one
+                {{IF_NOT_EMPTY}}
+                    set "XDK_CMD={{VAR}}XDK_HOME{{VAR_END}}{{PATH_SEP}}bin{{PATH_SEP}}{{VAR}}APP_BASE_NAME{{VAR_END}}{{SCRIPT_EXT}}"
+                    {{IF_EXISTS}}
+                {{COMPARISON}}
+                        {{IF_NOT_EQUAL}}
+                            {{EXEC}}
+                        {{IF_END}}
+                    {{IF_END}}
+                    {{COMMENT}} switch to using the libs etc. from the XDK at XDK_HOME
+                    APP_HOME={{VAR}}XDK_HOME{{VAR_END}}
+                {{IF_END}}
+            """.trimIndent()
 
             fun forPlatform(isWindows: Boolean): String {
                 val s = if (isWindows) PlatformSyntax.WINDOWS else PlatformSyntax.UNIX
@@ -319,21 +318,14 @@ get_file_id() {
         fun injectXtcModulePaths(scriptContent: String, mainClassName: String, isWindows: Boolean, scriptName: String = ""): String {
             val modulePathArgs = generateXtcModulePathArgs(isWindows)
             
-            // For unified Launcher approach, we need to inject the script name as the first argument
-            // so that Launcher.main() can route correctly (xcc -> Compiler, xec -> Runner)
-            return if (mainClassName == "org.xvm.tool.Launcher" && scriptName.isNotEmpty()) {
-                scriptContent.replace(
-                    "org.xvm.tool.Launcher", 
-                    "org.xvm.tool.Launcher $scriptName $modulePathArgs"
-                )
-            } else {
-                // Legacy approach: append module paths after the main class
-                val mainClass = mainClassName.substringAfterLast('.')
-                scriptContent.replace(
-                    "org.xvm.tool.$mainClass", 
-                    "org.xvm.tool.$mainClass $modulePathArgs"
-                )
+            // For unified Launcher approach, inject script name as first argument
+            if (mainClassName == "org.xvm.tool.Launcher" && scriptName.isNotEmpty()) {
+                return scriptContent.replace("org.xvm.tool.Launcher", "org.xvm.tool.Launcher $scriptName $modulePathArgs")
             }
+            
+            // Legacy approach: append module paths after the main class
+            val mainClass = mainClassName.substringAfterLast('.')
+            return scriptContent.replace("org.xvm.tool.$mainClass", "org.xvm.tool.$mainClass $modulePathArgs")
         }
         
         /**
@@ -341,23 +333,21 @@ get_file_id() {
          * @return insertion index, or -1 if not found
          */
         private fun findDelegationInsertionPoint(content: String, isWindows: Boolean): Int {
-            return if (isWindows) {
-                content.indexOf("set \"CLASSPATH=")
-            } else {
-                // Look for the APP_HOME resolution line (avoid PWD escaping issues)
-                val patterns = listOf(
-                    "APP_HOME=\$( cd -P",
-                    "CLASSPATH=\$APP_HOME"
-                )
-                patterns.firstNotNullOfOrNull { pattern ->
-                    val index = content.indexOf(pattern)
-                    if (index >= 0) {
-                        // Find end of line
-                        val lineEnd = content.indexOf('\n', index)
-                        if (lineEnd >= 0) lineEnd + 1 else index
-                    } else null
-                } ?: -1
+            if (isWindows) {
+                return content.indexOf("set \"CLASSPATH=")
             }
+            
+            // Look for the APP_HOME resolution line (avoid PWD escaping issues)
+            val patterns = listOf("APP_HOME=\$( cd -P", "CLASSPATH=\$APP_HOME")
+            
+            for (pattern in patterns) {
+                val index = content.indexOf(pattern)
+                if (index >= 0) {
+                    val lineEnd = content.indexOf('\n', index)
+                    return if (lineEnd >= 0) lineEnd + 1 else index
+                }
+            }
+            return -1
         }
         
         /**

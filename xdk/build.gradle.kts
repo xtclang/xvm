@@ -89,24 +89,19 @@ private fun stripVersionFromJarName(jarName: String): String {
     return jarName.replace(Regex("(.*)\\-${Regex.escape(semanticVersion.artifactVersion)}\\.jar"), "$1.jar")
 }
 
+// Resolve XDK properties once at script level
+val enablePreview = getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)
+val enableNativeAccess = getXdkPropertyBoolean("org.xtclang.java.enableNativeAccess", false)
+
 // Configure application plugin to create multiple scripts instead of default single script
 application {
     applicationName = "xdk"
-    mainClass.set("org.xvm.tool.Compiler") // Will be overridden by individual scripts
+    mainClass.set("org.xvm.tool.Launcher") // Unified entry point for all tools
 }
 
-// Disable default single script generation
+// Configure the application plugin to generate xec script, then create xcc twin
 tasks.startScripts {
-    enabled = false
-}
-
-/**
- * Helper function to create XDK launcher script tasks with consistent configuration
- */
-fun createLauncherScriptTask(scriptName: String, mainClassName: String) = tasks.registering(CreateStartScripts::class) {
-    applicationName = scriptName
-    mainClass.set(mainClassName)
-    outputDir = layout.buildDirectory.dir("scripts").get().asFile
+    applicationName = "xec"
     classpath = configurations.xdkJavaTools.get()
     // Configure default JVM options
     val enablePreview = getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)
@@ -123,60 +118,45 @@ fun createLauncherScriptTask(scriptName: String, mainClassName: String) = tasks.
             logger.warn("[xdk] You have enabled native access for XTC launchers")
         }
     }
-    logger.info("[xdk] Default JVM args for $scriptName: $defaultJvmOpts")
-
-    // Declare outputs explicitly  
-    outputs.files(File(outputDir, scriptName), File(outputDir, "$scriptName.bat"))
+    
+    // Declare inputs and outputs for incremental build support
+    inputs.property("enablePreview", enablePreview)
+    inputs.property("enableNativeAccess", enableNativeAccess)
+    outputs.files(listOf("xcc", "xec").flatMap { script ->
+        listOf(File(outputDir, script), File(outputDir, "$script.bat"))
+    })
     
     doLast {
-        // Process both Unix shell script and Windows batch file
-        // Unix script: Works on Linux, macOS, and all other Unix/POSIX systems 
-        // Windows script: Works on Windows only
         listOf(
-            File(outputDir, scriptName) to false,     // Unix shell script (works everywhere except Windows)
-            File(outputDir, "$scriptName.bat") to true   // Windows batch file (Windows only)
+            File(outputDir, "xec") to false,        // Unix shell script
+            File(outputDir, "xec.bat") to true      // Windows batch file
         ).forEach { (scriptFile, isWindows) ->
             if (scriptFile.exists()) {
                 var content = scriptFile.readText()
-                
                 // Replace each jar in the classpath with its version-stripped equivalent
                 configurations.xdkJavaTools.get().forEach { jar ->
                     val originalName = jar.name
                     val strippedName = stripVersionFromJarName(originalName)
-                    // Replace lib/ paths with javatools/ paths and strip version using proper cross-platform function
                     content = XdkDistribution.replaceJarPaths(content, originalName, strippedName)
                 }
-                
-                // Add XTC module paths using utility from XdkDistribution  
-                content = XdkDistribution.injectXtcModulePaths(content, mainClassName, isWindows, scriptName)
-                
-                // Add XDK_HOME delegation logic
+                content = XdkDistribution.injectXtcModulePaths(content, "org.xvm.tool.Launcher", isWindows, "xec")
                 content = XdkDistribution.injectXdkHomeDelegation(content, isWindows)
-                
-                // Fix path resolution to use APP_HOME consistently after delegation
                 content = XdkDistribution.fixPathResolution(content, isWindows)
-                
                 scriptFile.writeText(content)
+                // Create xcc twin script by copying and replacing xec -> xcc
+                val twinFile = File(outputDir, if (isWindows) "xcc.bat" else "xcc")
+                val twinContent = content.replace("Launcher xec", "Launcher xcc")
+                twinFile.writeText(twinContent)
             }
         }
     }
 }
 
-/**
- * Create individual script tasks for xcc and xec using unified Launcher main class
- * The Launcher.main() method routes commands based on the script name (xcc/xec)
- */
-val createXccScript by createLauncherScriptTask("xcc", "org.xvm.tool.Launcher")
-val createXecScript by createLauncherScriptTask("xec", "org.xvm.tool.Launcher")
-
-// Create scripts directly in distribution-ready location
+// Copy scripts to distribution location
 val prepareDistributionScripts by tasks.registering(Copy::class) {
-    dependsOn(createXccScript, createXecScript)
-    from(createXccScript.map { it.outputDir!! }) {
-        include("xcc*")
-    }
-    from(createXecScript.map { it.outputDir!! }) {
-        include("xec*")
+    dependsOn(tasks.startScripts)
+    from(tasks.startScripts.get().outputDir!!) {
+        include("xec*", "xcc*")
     }
     into(layout.buildDirectory.dir("distribution-scripts"))
 }
@@ -453,9 +433,9 @@ val ensureTags by tasks.registering {
 }
 
 val withLaunchersDistZip by tasks.existing {
-    dependsOn(createXccScript, createXecScript)
+    dependsOn(tasks.startScripts)
 }
 
 val withLaunchersDistTar by tasks.existing {
-    dependsOn(createXccScript, createXecScript)
+    dependsOn(tasks.startScripts)
 }
