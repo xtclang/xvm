@@ -148,7 +148,7 @@ fun createLauncherScriptTask(scriptName: String, mainClassName: String) = tasks.
                 }
                 
                 // Add XTC module paths using utility from XdkDistribution  
-                content = XdkDistribution.injectXtcModulePaths(content, mainClassName, isWindows)
+                content = XdkDistribution.injectXtcModulePaths(content, mainClassName, isWindows, scriptName)
                 
                 // Add XDK_HOME delegation logic
                 content = XdkDistribution.injectXdkHomeDelegation(content, isWindows)
@@ -163,10 +163,11 @@ fun createLauncherScriptTask(scriptName: String, mainClassName: String) = tasks.
 }
 
 /**
- * Create individual script tasks for xcc and xec with different main classes
+ * Create individual script tasks for xcc and xec using unified Launcher main class
+ * The Launcher.main() method routes commands based on the script name (xcc/xec)
  */
-val createXccScript by createLauncherScriptTask("xcc", "org.xvm.tool.Compiler")
-val createXecScript by createLauncherScriptTask("xec", "org.xvm.tool.Runner")
+val createXccScript by createLauncherScriptTask("xcc", "org.xvm.tool.Launcher")
+val createXecScript by createLauncherScriptTask("xec", "org.xvm.tool.Launcher")
 
 // Create scripts directly in distribution-ready location
 val prepareDistributionScripts by tasks.registering(Copy::class) {

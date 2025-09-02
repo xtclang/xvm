@@ -314,14 +314,26 @@ get_file_id() {
         }
 
         /**
-         * Add XTC module paths to launcher script.
+         * Add XTC module paths to launcher script and inject script name as first argument.
          */
-        fun injectXtcModulePaths(scriptContent: String, mainClassName: String, isWindows: Boolean): String {
+        fun injectXtcModulePaths(scriptContent: String, mainClassName: String, isWindows: Boolean, scriptName: String = ""): String {
             val modulePathArgs = generateXtcModulePathArgs(isWindows)
-            val mainClass = mainClassName.substringAfterLast('.')
             
-            // Just append module paths after the main class - works on both platforms
-            return scriptContent.replace("org.xvm.tool.$mainClass", "org.xvm.tool.$mainClass $modulePathArgs")
+            // For unified Launcher approach, we need to inject the script name as the first argument
+            // so that Launcher.main() can route correctly (xcc -> Compiler, xec -> Runner)
+            return if (mainClassName == "org.xvm.tool.Launcher" && scriptName.isNotEmpty()) {
+                scriptContent.replace(
+                    "org.xvm.tool.Launcher", 
+                    "org.xvm.tool.Launcher $scriptName $modulePathArgs"
+                )
+            } else {
+                // Legacy approach: append module paths after the main class
+                val mainClass = mainClassName.substringAfterLast('.')
+                scriptContent.replace(
+                    "org.xvm.tool.$mainClass", 
+                    "org.xvm.tool.$mainClass $modulePathArgs"
+                )
+            }
         }
         
         /**
