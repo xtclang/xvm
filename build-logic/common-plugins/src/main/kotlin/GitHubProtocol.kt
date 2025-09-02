@@ -266,29 +266,26 @@ data class GitHubProtocol(private val project: Project) {
      */
     fun getGitInfo(): Map<String, String> = project.run {
         val ghCommit = System.getenv("GH_COMMIT")
-        val ghBranch = System.getenv("GH_BRANCH") ?: "master"
+        val ghBranch = System.getenv("GH_BRANCH")
         
         val props = mutableMapOf<String, String>()
         
         try {
-            // Determine branch - use env var or current branch
-            val branch = if (!ghBranch.isNullOrEmpty()) {
-                ghBranch
-            } else {
-                git("rev-parse", "--abbrev-ref", "HEAD", logger = logger).output.trim()
-            }
+            // Always use current branch as default - safe even in CI
+            val currentBranch = git("rev-parse", "--abbrev-ref", "HEAD", logger = logger).output.trim()
+            val branch = ghBranch ?: currentBranch
             props["git.branch"] = branch
             
-            // Determine commit - use env var or latest commit for branch  
+            // Determine commit - use env var or get latest commit for the resolved branch
             val commit = if (!ghCommit.isNullOrEmpty()) {
                 ghCommit
             } else {
-                // If we have a specific branch from env var, get latest commit for that branch
-                if (!ghBranch.isNullOrEmpty() && ghBranch != git("rev-parse", "--abbrev-ref", "HEAD", logger = logger).output.trim()) {
-                    // Different branch - get remote latest commit
-                    git("ls-remote", "origin", ghBranch, logger = logger).output.lines().first().split("\\s+".toRegex())[0]
+                // If branch is different from current branch, get its latest commit
+                if (branch != currentBranch) {
+                    // Get latest commit for the specified branch from remote
+                    git("ls-remote", "origin", branch, logger = logger).output.lines().first().split("\\s+".toRegex())[0]
                 } else {
-                    // Current branch or no env branch - get current HEAD
+                    // Same as current branch - use current HEAD
                     git("rev-parse", "HEAD", logger = logger).output.trim()
                 }
             }
