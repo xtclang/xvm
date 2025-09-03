@@ -46,10 +46,8 @@ fun PublishingExtension.configureMavenPublications(project: Project) = project.r
 fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
     fun readKeyFile(): String {
         val file = File(gradle.gradleUserHomeDir, XdkDistribution.GPGKEY_FILENAME)
-        if (file.exists()) {
-            return file.readText().trim()
-        }
-        return ""
+        if (!file.exists()) return ""
+        return file.readText().trim()
     }
 
     fun resolveGpgSecret(): Boolean {
@@ -58,8 +56,10 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
             logger.info("[build-logic] Signing is disabled. Will not try to resolve any keys.")
             return false
         }
+        
         val password = (project.findProperty("signing.password") ?: System.getenv("GPG_SIGNING_PASSWORD") ?: "") as String
         val key = (project.findProperty("signing.key") ?: System.getenv("GPG_SIGNING_KEY") ?: readKeyFile()) as String
+        
         if (key.isEmpty() || password.isEmpty()) {
             logger.warn("[build-logic] WARNING: Could not resolve a GPG signing key or a passphrase.")
             if (XdkDistribution.isCiEnabled) {
@@ -67,6 +67,7 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
             }
             return false
         }
+        
         logger.info("[build-logic] Signature: In-memory GPG keys successfully configured.")
         assert(key.isNotEmpty() && password.isNotEmpty())
         useInMemoryPgpKeys(key, password)
@@ -137,8 +138,8 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         val binaryLauncherNames = listOf("xcc", "xec", "xtc")
 
         fun delegateForPlatform(isWindows: Boolean): String {
-            return if (isWindows) {
-                """
+            if (isWindows) {
+                return """
                 if defined XDK_HOME if exist "%XDK_HOME%\" (
                     rem === if a same-named script is in XDK_HOME, use it instead of this script ===
                     set "XDK_CMD=%XDK_HOME%\bin\%APP_BASE_NAME%"
@@ -154,8 +155,9 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
                     rem === use the libraries specified by XDK_HOME ===
                     set "APP_HOME=%XDK_HOME%"
                 )""".trimIndent()
-            } else {
-                """
+            }
+            
+            return """
                 # for any Linux/macOS/Unix/POSIX system, build a unique file id for comparison
                 get_file_id() {
                     inode=$(ls -di "$1" 2>/dev/null | awk '{print $1}')
@@ -182,7 +184,6 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
                     # switch to using the libs etc. from the XDK at XDK_HOME
                     APP_HOME="${'$'}XDK_HOME"
                 fi""".trimIndent()
-            }
         }
 
         fun isDistributionArchiveTask(task: Task): Boolean {
@@ -190,40 +191,33 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         }
 
         // Normalize architecture names to consistent values (Docker platform naming)
-        fun normalizeArchitecture(arch: String): String {
-            return when (arch.lowercase()) {
-                "amd64", "x86_64", "x64" -> "amd64"
-                "aarch64", "arm64" -> "arm64"
-                "arm" -> "arm"
-                else -> arch.lowercase()
-            }
+        fun normalizeArchitecture(arch: String): String = when (arch.lowercase()) {
+            "amd64", "x86_64", "x64" -> "amd64"
+            "aarch64", "arm64" -> "arm64"
+            "arm" -> "arm"
+            else -> arch.lowercase()
         }
 
         // Get OS name in consistent format
-        fun getOsName(): String {
-            return when {
-                currentOs.isMacOsX -> "macos"
-                currentOs.isLinux -> "linux"
-                currentOs.isWindows -> "windows"
-                else -> throw UnsupportedOperationException("Unsupported OS: $currentOs")
-            }
+        fun getOsName(): String = when {
+            currentOs.isMacOsX -> "macos"
+            currentOs.isLinux -> "linux"
+            currentOs.isWindows -> "windows"
+            else -> throw UnsupportedOperationException("Unsupported OS: $currentOs")
         }
 
         // Get all supported OS×Architecture combinations (Docker platform naming)
-        fun getSupportedPlatforms(): List<Pair<String, String>> {
-            return listOf(
-                "linux" to "amd64",
-                "linux" to "arm64",
-                "macos" to "arm64",   // Apple Silicon
-                "macos" to "amd64",   // Intel Mac (if needed)
-                "windows" to "amd64"
-            )
-        }
+        fun getSupportedPlatforms(): List<Pair<String, String>> = listOf(
+            "linux" to "amd64",
+            "linux" to "arm64",
+            "macos" to "arm64",   // Apple Silicon
+            "macos" to "amd64",   // Intel Mac (if needed)
+            "windows" to "amd64"
+        )
 
         // Check if a platform combination is supported
-        fun isPlatformSupported(os: String, arch: String): Boolean {
-            return getSupportedPlatforms().contains(os to arch)
-        }
+        fun isPlatformSupported(os: String, arch: String): Boolean = 
+            getSupportedPlatforms().contains(os to arch)
 
         /**
          * Required XTC modules that must be in the module path for launchers to work.
@@ -242,15 +236,19 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
          * @return formatted module path arguments string
          */
         fun generateXtcModulePathArgs(isWindows: Boolean): String {
-            val envVarFormat = if (isWindows) "%XDK_HOME:APP_HOME=%" else "\${XDK_HOME:-\$APP_HOME}"
-            val pathSeparator = if (isWindows) "\\" else "/"
-            val lineContinuation = if (isWindows) " " else " \\\n        "
-
+            val (envVarFormat, pathSeparator, lineContinuation) = getPlatformFormatting(isWindows)
             return REQUIRED_XTC_MODULES.joinToString(lineContinuation) { module ->
                 val path = module.toPath(isWindows)
                 "-L \"$envVarFormat$pathSeparator$path\""
             }
         }
+        
+        private fun getPlatformFormatting(isWindows: Boolean): Triple<String, String, String> = 
+            if (isWindows) {
+                Triple("%XDK_HOME:APP_HOME=%", "\\", " ")
+            } else {
+                Triple("\${XDK_HOME:-\$APP_HOME}", "/", " \\\n        ")
+            }
 
         /**
          * Replace jar paths in script content, handling both Unix and Windows path separators.
@@ -261,11 +259,10 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
          * @param strippedName the jar name without version
          * @return modified script content with updated jar paths
          */
-        fun replaceJarPaths(scriptContent: String, originalName: String, strippedName: String): String {
-            return scriptContent
+        fun replaceJarPaths(scriptContent: String, originalName: String, strippedName: String): String =
+            scriptContent
                 .replace("/lib/$originalName", "/javatools/$strippedName")
                 .replace("\\lib\\$originalName", "\\javatools\\$strippedName")
-        }
 
         /**
          * Add XTC module paths to launcher script and inject script name as first argument.
@@ -312,24 +309,25 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         fun injectXdkHomeDelegation(content: String, isWindows: Boolean): String {
             val delegationLogic = delegateForPlatform(isWindows)
             val insertionPoint = findDelegationInsertionPoint(content, isWindows)
-
-            return if (insertionPoint > 0) {
-                val beforeInsertion = content.take(insertionPoint)
-                val afterInsertion = content.substring(insertionPoint)
-                "$beforeInsertion\n$delegationLogic\n\n$afterInsertion"
-            } else {
-                content // If we can't find insertion point, return unchanged
-            }
+            
+            if (insertionPoint <= 0) return content
+            
+            val beforeInsertion = content.take(insertionPoint)
+            val afterInsertion = content.substring(insertionPoint)
+            return "$beforeInsertion\n$delegationLogic\n\n$afterInsertion"
         }
 
         /**
          * Fix path resolution to use APP_HOME consistently after XDK_HOME delegation.
          */
-        fun fixPathResolution(content: String, isWindows: Boolean): String =
-            content.replace(
-                if (isWindows) "%XDK_HOME:APP_HOME=%" else "\${XDK_HOME:-\$APP_HOME}",
-                if (isWindows) "%APP_HOME%" else "\$APP_HOME"
-            )
+        fun fixPathResolution(content: String, isWindows: Boolean): String {
+            val (oldPattern, newPattern) = if (isWindows) {
+                "%XDK_HOME:APP_HOME=%" to "%APP_HOME%"
+            } else {
+                "\${XDK_HOME:-\$APP_HOME}" to "\$APP_HOME"
+            }
+            return content.replace(oldPattern, newPattern)
+        }
     }
 
     init {
@@ -350,9 +348,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     val distributionName: String get() = project.name // Default: "xdk"
 
     @Suppress("MemberVisibilityCanBePrivate") // No it can't, IntelliJ
-    val distributionVersion: String get() = buildString {
-        append(project.version)
-    }
+    val distributionVersion: String get() = project.version.toString()
 
     @Suppress("MemberVisibilityCanBePrivate")
     fun launcherFileName(os: String = getOsName(), arch: String = currentArch): String {
@@ -363,13 +359,9 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     /*
      * Helper for jreleaser etc.
      */
-    fun osClassifier(os: String = getOsName(), arch: String = currentArch): String {
-        return "${os}_$arch"
-    }
+    fun osClassifier(os: String = getOsName(), arch: String = currentArch): String = "${os}_$arch"
 
-    override fun toString(): String {
-        return "$distributionName-$distributionVersion"
-    }
+    override fun toString(): String = "$distributionName-$distributionVersion"
 
     /**
      * Module path configuration for XTC launchers.
