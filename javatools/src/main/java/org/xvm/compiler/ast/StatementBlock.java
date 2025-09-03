@@ -383,7 +383,7 @@ public class StatementBlock
                             Register   regVal = param.deref(regVar, method);
 
                             ctx.ensureNameMap().put(sName, regVal); // shadow using the capture
-                            ctx.setVarAssignment(sName, asnVar);    // ... and copy its assignment                }
+                            ctx.setVarAssignment(sName, asnVar);    // ... and copy its assignment
                         }
                     }
                 }
@@ -902,9 +902,13 @@ public class StatementBlock
             TypeInfo         infoPrev  = null;
             ErrorListener    errsTemp  = errs.branch(null);
             IdentityConstant idOuter   = getEnclosingClass().getIdentityConstant();
+
             if (idOuter instanceof ClassConstant idClz) {
                 idOuter = idClz.getOutermost();
-            } while (node != null) {
+            }
+            IdentityConstant idOuterParent = idOuter.getNamespace();
+
+            while (node != null) {
                 // otherwise, if the node has a component associated with it that is
                 // prepared to resolve names, then ask it to resolve the name
                 if (node.isComponentNode()) {
@@ -1063,11 +1067,11 @@ public class StatementBlock
                     }
 
                     // see if this was the last step on the "WalkUpToTheRoot" that had
-                    // private access to all members
-                    if (id == idOuter) {
-                        // in the top-most-class down, there is private access
+                    // private access to all members; classes inside of methods/properties still do
+                    if (id == idOuter && (idOuterParent == null || idOuterParent.isClass())) {
+                        // in the top-most-class down, there is private access;
                         // above the top-most-class, there is public access
-                        access = Access.PUBLIC;
+                        access   = Access.PUBLIC;
                         fHasThis = false;
                     } else {
                         switch (component.getFormat()) {

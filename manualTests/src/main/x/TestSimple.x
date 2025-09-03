@@ -1,6 +1,6 @@
 module TestSimple {
 
-    @Lazy function void() log.calc() = () -> {
+    protected @Lazy function void() log.calc() = () -> {
         @Inject Console console;
         console.print("run");
     };
@@ -9,7 +9,7 @@ module TestSimple {
         new Runner() {
             @Override
             void run() {
-                log(); // this used to fail to compile
+                log(); // this used to fail to compile with non-public access
             }
         }.run();
     }
