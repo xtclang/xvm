@@ -36,8 +36,9 @@ public class MarkAndSweepGcSpaceTests {
 
         public LongMuterator retained() {
             return new LongMuterator() {
-                long lPrior = GcSpace.NULL;
-                PrimitiveIterator.OfLong delegate = retained.stream().mapToLong(l -> l).iterator();
+                long  lPrior = GcSpace.NULL;
+                final PrimitiveIterator.OfLong delegate =
+                    retained.stream().mapToLong(l -> l).iterator();
 
                 @Override
                 public void set(long value) {

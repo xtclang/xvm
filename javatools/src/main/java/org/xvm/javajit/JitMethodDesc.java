@@ -5,6 +5,8 @@ import java.lang.constant.MethodTypeDesc;
 
 import static java.lang.constant.ConstantDescs.CD_void;
 
+import static org.xvm.javajit.Builder.CD_Ctx;
+
 /**
  * JIT specific information for a method.
  */
@@ -16,10 +18,11 @@ public class JitMethodDesc {
         this.optimizedReturns = optimizedReturns;
         this.optimizedParams  = optimizedParams;
 
+        isOptimized = optimizedParams != null && optimizedReturns != null;
         standardMD  = computeMethodDesc(standardReturns, standardParams);
-        optimizedMD = optimizedParams == null || optimizedReturns == null
-            ? null
-            : computeMethodDesc(optimizedReturns, optimizedParams);
+        optimizedMD = isOptimized
+            ? computeMethodDesc(optimizedReturns, optimizedParams)
+            : null;
     }
 
     /**
@@ -60,25 +63,40 @@ public class JitMethodDesc {
         throw new IllegalArgumentException("Invalid return index");
     }
 
-    public static MethodTypeDesc computeMethodDesc(JitParamDesc[] returns, JitParamDesc[] params) {
+    protected MethodTypeDesc computeMethodDesc(JitParamDesc[] returns, JitParamDesc[] params) {
+        int         extraCount = getImplicitParamCount();
         int         paramCount = params.length;
-        ClassDesc[] paramCDs   = new ClassDesc[paramCount + 1];
+        ClassDesc[] paramCDs   = new ClassDesc[paramCount + extraCount];
 
-        // the argument zero is **always** the Ctx
-        paramCDs[0] = ClassDesc.of(Ctx.class.getName());
+        fillExtraClassDesc(paramCDs);
 
         for (int i = 0; i < paramCount; i++)
             {
-            paramCDs[i+1] = params[i].cd;
+            paramCDs[extraCount + i] = params[i].cd;
             }
         return MethodTypeDesc.of(returns.length == 0 ? CD_void : returns[0].cd, paramCDs);
         }
+
+    /**
+     * @return the number of extra parameters
+     */
+    public int getImplicitParamCount() {
+        return 1;
+    }
+
+    protected void fillExtraClassDesc(ClassDesc[] paramCDs) {
+        // the argument zero is **always** the Ctx
+        paramCDs[0] = CD_Ctx;
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     public final JitParamDesc[] standardReturns;
     public final JitParamDesc[] standardParams;
     public final JitParamDesc[] optimizedReturns;
     public final JitParamDesc[] optimizedParams;
 
+    public final boolean isOptimized;
     public final MethodTypeDesc standardMD;  // the generic "xObj" flavor
     public final MethodTypeDesc optimizedMD; // (optional) optimized primitive
 

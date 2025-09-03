@@ -40,7 +40,6 @@ import static org.xvm.javajit.Builder.CD_JavaString;
 import static org.xvm.javajit.Builder.CD_Nullable;
 import static org.xvm.javajit.Builder.CD_String;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
-import static org.xvm.javajit.Builder.CD_xObj;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.Instance;
 import static org.xvm.javajit.Builder.toTypeKind;
@@ -403,7 +402,7 @@ public class BuildContext {
             return loadThis(code);
 
         default:
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("id=" + argId);
         }
     }
 
@@ -497,7 +496,7 @@ public class BuildContext {
      * @param name      the variable name
      */
     public Slot introduceVar(CodeBuilder code, int varIndex, TypeConstant type, String name) {
-        if (name.isEmpty()) {
+        if (name.isEmpty() && varIndex >= 0) {
             name = "v$" + varIndex;
         }
 
@@ -521,11 +520,7 @@ public class BuildContext {
             }
 
         } else {
-            cd = type.isPrimitive()
-                ? JitParamDesc.getPrimitiveClass(type)
-                : type.isSingleUnderlyingClass(true)
-                    ? type.ensureClassDesc(typeSystem)
-                    : CD_xObj;
+            cd = JitParamDesc.getJitClass(typeSystem, type);
 
             Label varStartScope = code.newLabel();
             code.labelBinding(varStartScope);
@@ -593,13 +588,52 @@ public class BuildContext {
     }
 
     /**
+     * Load arguments for a method invocation.
+     */
+    public void loadArguments(CodeBuilder code, JitMethodDesc jmd, int[] anArgValue) {
+        boolean isOptimized = jmd.isOptimized;
+
+        for (int i = 0, c = anArgValue == null ? 0 : anArgValue.length; i < c; i++ ) {
+            int          iArg = anArgValue[i];
+            JitParamDesc pd   = isOptimized ? jmd.getOptimizedParam(i) : jmd.standardParams[i];
+            switch (pd.flavor) {
+            case SpecificWithDefault:
+                if (iArg == Op.A_DEFAULT) {
+                    code.aconst_null();
+                    continue;
+                }
+                break;
+
+            case PrimitiveWithDefault:
+                if (iArg == Op.A_DEFAULT) {
+                    assert isOptimized;
+                    // default primitive with an additional `true`
+                    Builder.defaultLoad(code, pd.cd);
+                    code.iconst_1();
+                } else {
+                    // actual primitive with an additional `false`
+                    loadArgument(code, iArg);
+                    code.iconst_0();
+                }
+                continue;
+
+            default:
+                assert iArg != Op.A_DEFAULT;
+                break;
+            }
+            loadArgument(code, iArg, pd);
+        }
+    }
+
+    /**
      * Assign return values from a method invocation.
      */
-    public void assignReturns(CodeBuilder code, JitMethodDesc jmd,
-                              int cReturns, int[] anVar, boolean fOptimized) {
+    public void assignReturns(CodeBuilder code, JitMethodDesc jmd, int cReturns, int[] anVar) {
+        boolean isOptimized = jmd.isOptimized;
+
         for (int i = 0; i < cReturns; i++) {
-            int          iOpt    = fOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
-            JitParamDesc pdRet   = fOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
+            int          iOpt    = isOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
+            JitParamDesc pdRet   = isOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
             int          nVar    = anVar[i];
             TypeConstant typeRet = pdRet.type;
             ClassDesc    cdRet   = pdRet.cd;
@@ -608,7 +642,7 @@ public class BuildContext {
             if (i == 0) {
                 switch (pdRet.flavor) {
                 case MultiSlotPrimitive:
-                    assert fOptimized;
+                    assert isOptimized;
                     JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
 
                     // if the value is `True`, then the return value is Ecstasy `Null`
@@ -637,7 +671,7 @@ public class BuildContext {
             } else {
                 switch (pdRet.flavor) {
                 case MultiSlotPrimitive:
-                    assert fOptimized;
+                    assert isOptimized;
                     JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
 
                     // if the value is `True`, then the return value is Ecstasy `Null`
@@ -675,16 +709,23 @@ public class BuildContext {
     }
 
     /**
+     * Ensure a Slot the specified var index and an optimized ClassDesc for the specified type.
+     */
+    public Slot ensureSlot(int varIndex, TypeConstant type, String name) {
+        return ensureSlot(varIndex, type, JitTypeDesc.getJitClass(typeSystem, type), name);
+    }
+
+    /**
      * Ensure a Slot the specified var index.
      */
     public Slot ensureSlot(int varIndex, TypeConstant type, ClassDesc cd, String name) {
-        Slot slot = varIndex == Op.A_STACK
-            ? tailStack.peek()
-            : getSlot(varIndex);
+        if (varIndex == Op.A_STACK) {
+            return pushSlot(type, cd, name);
+        }
+        Slot slot = getSlot(varIndex);
         assert slot.cd().equals(cd);
         return slot;
     }
-
     /**
      * Push a Slot onto the tail stack.
      */
@@ -694,6 +735,7 @@ public class BuildContext {
         tailStack.push(slot);
         return slot;
     }
+
     /**
      * Push an extended Slot onto the tail stack.
      */

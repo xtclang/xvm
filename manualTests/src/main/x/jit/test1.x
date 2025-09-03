@@ -10,16 +10,17 @@ module test1.examples.org {
         console.print(prop1);
         console.print(prop2);
         console.print(prop3);
+
+//        TestBase t0 = new TestBase(5);
     }
 
-    void test(TestDerived t) {
-        @Inject Console console;
-
-        console.print(t.x);
-    }
-
+//    void test(TestDerived t) {
+//        @Inject Console console;
+//
+//        console.print(t.x);
+//    }
+//
     class TestBase(Int x);
-
-    class TestDerived(Int x) extends TestBase(x) {
-    }
+//
+//    class TestDerived(Int x) extends TestBase(x) {}
 }

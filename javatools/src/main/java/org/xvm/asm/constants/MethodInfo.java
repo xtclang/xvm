@@ -22,6 +22,7 @@ import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodBody.Implementation;
 
+import org.xvm.javajit.JitCtorDesc;
 import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
@@ -1281,11 +1282,12 @@ public class MethodInfo
                     ? listParamsOpt.toArray(JitParamDesc.NONE)
                     : null;
 
-            m_jmd = jmd = new JitMethodDesc(apdStdReturn, apdStdParam, apdOptReturn, apdOptParam);
+            m_jmd = jmd = isConstructor()
+                ? new JitCtorDesc(ts, this, apdStdReturn, apdStdParam, apdOptReturn, apdOptParam)
+                : new JitMethodDesc(apdStdReturn, apdStdParam, apdOptReturn, apdOptParam);
         }
         return jmd;
     }
-
 
     // ----- Object methods ------------------------------------------------------------------------
 
@@ -1319,7 +1321,6 @@ public class MethodInfo
               .append("] ")
               .append(body);
         }
-
         return sb.toString();
     }
 
@@ -1327,7 +1328,7 @@ public class MethodInfo
     // ----- constants and fields ------------------------------------------------------------------
 
     /**
-     * Rank comparator for Map.Entry<MethodConstant, MethodInfo> objects.
+     * Rank comparator for {@code Map.Entry<MethodConstant, MethodInfo>} objects.
      */
     public static final Comparator<Map.Entry<MethodConstant, MethodInfo>> RANKER =
             Comparator.comparingInt(e -> e.getValue().getRank());

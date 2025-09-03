@@ -12,6 +12,7 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -23,7 +24,9 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodBody.Implementation;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -38,9 +41,14 @@ import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.TypeSystem;
 
+import org.xvm.util.ShallowSizeOf;
+
 import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
+
+import static org.xvm.javajit.JitFlavor.Specific;
 
 /**
  * Generic Java class builder.
@@ -65,8 +73,11 @@ public class CommonBuilder
     protected final ClassStructure   classStruct;
     protected final IdentityConstant thisId;
 
+    protected long implSize;
+
     @Override
     public void assembleImpl(String className, ClassBuilder classBuilder) {
+        implSize = ShallowSizeOf.align(computeInstanceSize());
         assembleImplClass(className, classBuilder);
         assembleImplProperties(className, classBuilder);
         assembleImplMethods(className, classBuilder);
@@ -77,6 +88,61 @@ public class CommonBuilder
         // assemblePureClass(className, classBuilder);
         // assemblePureProperties(className, classBuilder);
         // assemblePureMethods(className, classBuilder);
+    }
+
+    /**
+     * Compute the instance size of the generated class(es). If more than one class gets generated,
+     * the return value reflects the total size of all instantiated objects. Specialized builders
+     * should override this method augmenting the memory requirement accordingly.
+     */
+    protected int computeInstanceSize() {
+        int size = 0;
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry :
+                    structInfo.getProperties().entrySet()) {
+            PropertyInfo infoProp = entry.getValue();
+
+            // see ClassComposition.ensureFieldLayoutImpl()
+            if (infoProp.hasField()) {
+                PropertyConstant idProp = entry.getKey();
+                if (!idProp.isTopLevel()) {
+                    IdentityConstant idParent = idProp.getParentConstant();
+                    switch (idParent.getFormat()) {
+                    case Property:
+                        if (!structInfo.getClassChain().
+                                containsKey(infoProp.getIdentity().getClassIdentity())) {
+                            // the property is defined by the underlying type; currently those
+                            // nested properties are stored in the corresponding Ref "box"
+                            continue;
+                        }
+                        break;
+
+                    case Method:
+                        break;
+                    }
+                }
+               size += computePropertySize(infoProp);
+            }
+        }
+        return size;
+    }
+
+    /**
+     * Compute the size of the property field.
+     */
+    protected int computePropertySize(PropertyInfo prop) {
+        if (prop.isRefAnnotated()) {
+            // TODO
+            return ShallowSizeOf.fieldOf(Object.class);
+        }
+        TypeConstant type = prop.getType();
+        ClassDesc    cd   = type.isPrimitive()
+                ? JitTypeDesc.getPrimitiveClass(type)
+                : null;
+
+        return cd == null
+            ? ShallowSizeOf.fieldOf(Object.class)
+            : ShallowSizeOf.fieldOf(cd);
+
     }
 
     /**
@@ -256,9 +322,22 @@ public class CommonBuilder
                 }
 
                 if (classStruct.isSingleton()) {
-                    // $INSTANCE = Singleton.$new($ctx);
+                    // $INSTANCE = new Singleton($ctx);
+                    // $ctx.allocated(implSize);
+                    // $INSTANCE.$init($ctx);
+                    MethodConstant ctorId  = typeInfo.findConstructor(TypeConstant.NO_TYPES);
+                    String         jitName = ctorId.ensureJitMethodName(ts).replace("construct", INIT);
                     invokeDefaultConstructor(className, code);
-                    code.putstatic(CD_this, Instance, CD_this);
+                    code.dup()
+                        .putstatic(CD_this, Instance, CD_this)
+                        .aload(ctxSlot)
+                        .ldc(implSize)
+                        .invokevirtual(CD_Ctx, "allocated", MethodTypeDesc.of(CD_void, CD_long))
+                        .aload(ctxSlot)
+                        .invokevirtual(CD_this, jitName, MethodTypeDesc.of(CD_this, CD_Ctx))
+                        .pop()
+                    ;
+
                 }
                 code.labelBinding(endScope)
                     .return_();
@@ -352,7 +431,7 @@ public class CommonBuilder
             case Explicit:
                 String         jitName = prop.getGetterId().ensureJitMethodName(typeSystem);
                 JitMethodDesc  jmDesc  = prop.getGetterJitDesc(typeSystem);
-                boolean        isOpt   = jmDesc.optimizedMD != null;
+                boolean        isOpt   = jmDesc.isOptimized;
                 MethodTypeDesc md      = isOpt ? jmDesc.optimizedMD : jmDesc.standardMD;
                 if (isOpt) {
                     jitName += OPT;
@@ -376,7 +455,7 @@ public class CommonBuilder
             case Explicit:
                 String         jitName = prop.getSetterId().ensureJitMethodName(typeSystem);
                 JitMethodDesc  jmDesc  = prop.getSetterJitDesc(typeSystem);
-                boolean        isOpt   = jmDesc.optimizedMD != null;
+                boolean        isOpt   = jmDesc.isOptimized;
                 MethodTypeDesc md      = isOpt ? jmDesc.optimizedMD : jmDesc.standardMD;
                 if (isOpt) {
                     jitName += OPT;
@@ -397,12 +476,12 @@ public class CommonBuilder
             flags |= ClassFile.ACC_STATIC;
         }
         JitMethodDesc  jmd     = prop.getGetterJitDesc(typeSystem);
-        boolean        opt     = jmd.optimizedMD != null;
-        MethodTypeDesc md      = opt ? jmd.optimizedMD : jmd.standardMD;
-        String         jitName = opt ? jitGetterName+OPT : jitGetterName;
+        boolean        isOpt   = jmd.isOptimized;
+        MethodTypeDesc md      = isOpt ? jmd.optimizedMD : jmd.standardMD;
+        String         jitName = isOpt ? jitGetterName+OPT : jitGetterName;
 
         classBuilder.withMethodBody(jitName, md, flags, code -> {
-            if (opt) {
+            if (isOpt) {
                 JitParamDesc pdOpt = jmd.optimizedReturns[0];
                 ClassDesc    cdOpt = pdOpt.cd;
                 switch (pdOpt.flavor) {
@@ -444,9 +523,10 @@ public class CommonBuilder
             }
         });
 
-        if (opt) {
+        if (isOpt) {
             // generate a wrapper
-            assembleMethodWrapper(className, classBuilder, jitGetterName, jmd, prop.isConstant());
+            assembleMethodWrapper(className, classBuilder, jitGetterName, jmd,
+                    prop.isConstant(), false);
         }
     }
 
@@ -497,22 +577,39 @@ public class CommonBuilder
             assembleRoutingMethod(className, classBuilder, method, targetMethod);
         } else {
             JitMethodDesc jmDesc = method.getJitDesc(typeSystem);
-            if (method.isConstructor()){
-                if (jmDesc.optimizedMD == null) {
-                    assembleConstructor(className, classBuilder, method, jitName, jmDesc.standardMD, false);
-                } else {
-                    assembleConstructor(className, classBuilder, method, jitName + OPT, jmDesc.standardMD, true);
-                    assembleMethodWrapper(className, classBuilder, jitName, jmDesc, method.isFunction());
-                }
+            if (jmDesc.isOptimized) {
+                assembleMethod(className, classBuilder, method, jitName+OPT, jmDesc.optimizedMD, true);
+                assembleMethodWrapper(className, classBuilder, jitName, jmDesc,
+                    method.isFunction(), method.isConstructor());
             } else {
-                if (jmDesc.optimizedMD == null) {
-                    assembleMethod(className, classBuilder, method, jitName, jmDesc.standardMD, false);
-                } else {
-                    assembleMethod(className, classBuilder, method, jitName + OPT, jmDesc.optimizedMD, true);
-                    assembleMethodWrapper(className, classBuilder, jitName, jmDesc, method.isFunction());
+                assembleMethod(className, classBuilder, method, jitName, jmDesc.standardMD, false);
+            }
+
+            if (method.isConstructor()) {
+                String newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
+                JitMethodDesc newDesc = convertConstructToNew(className, jmDesc);
+                if (newDesc.isOptimized) {
+                    assembleNew(className, classBuilder, method, newName+OPT, newDesc.standardMD, true);
+                    assembleMethodWrapper(className, classBuilder, newName, newDesc, true, false);
+                }
+                else {
+                    assembleNew(className, classBuilder, method, newName, newDesc.standardMD, false);
                 }
             }
         }
+    }
+
+    /**
+     * Convert the "void construct$0(...)" to "This new$0(...)"
+     */
+    private JitMethodDesc convertConstructToNew(String className, JitMethodDesc jmdCtor) {
+        JitParamDesc retDesc = new JitParamDesc(typeInfo.getType(), Specific,
+                ClassDesc.of(className), 0, -1, false);
+
+        JitParamDesc[] standardReturns  = new JitParamDesc[] {retDesc};
+        JitParamDesc[] optimizedReturns = jmdCtor.isOptimized ? standardReturns : null;
+        return new JitMethodDesc(standardReturns,  jmdCtor.standardParams,
+                                 optimizedReturns, jmdCtor.optimizedParams);
     }
 
     /**
@@ -520,7 +617,7 @@ public class CommonBuilder
      */
     protected void assembleMethodWrapper(String className, ClassBuilder classBuilder,
                                          String jitName, JitMethodDesc jmDesc,
-                                         boolean isStatic) {
+                                         boolean isStatic, boolean isConstructor) {
         ClassDesc CD_this = ClassDesc.of(className);
 
         // this method is "standard" and needs to call into the optimized one
@@ -531,26 +628,20 @@ public class CommonBuilder
 
         classBuilder.withMethodBody(jitName, jmDesc.standardMD, flags, code -> {
 
-            // create a method preamble
-            Label startScope = code.newLabel();
-            Label endScope   = code.newLabel();
-
-            code.labelBinding(startScope);
-
-            int ctxSlot = code.parameterSlot(0);
-            code.localVariable(ctxSlot, "$ctx", CD_Ctx, startScope, endScope);
-
             if (!isStatic) {
                 code.aload(0); // stack: this
             }
 
-            code.aload(ctxSlot); // stack: Ctx
+            int extraCount = jmDesc.getImplicitParamCount();
+            for (int i = 0; i < extraCount; i++) {
+                code.aload(code.parameterSlot(i));
+            }
 
             JitParamDesc[] optParams = jmDesc.optimizedParams;
             for (int i = 0, c = optParams.length; i < c; i++) {
                 JitParamDesc optParamDesc = optParams[i];
                 int          stdParamIx   = optParamDesc.index;
-                int          stdParamSlot = code.parameterSlot(1 + stdParamIx);
+                int          stdParamSlot = code.parameterSlot(extraCount + stdParamIx);
                 TypeConstant stdParamType = optParamDesc.type;
 
                 switch (optParamDesc.flavor) {
@@ -627,9 +718,9 @@ public class CommonBuilder
                 }
             }
             if (isStatic) {
-                code.invokestatic(CD_this, jitName + OPT, jmDesc.optimizedMD);
+                code.invokestatic(CD_this, jitName+OPT, jmDesc.optimizedMD);
             } else {
-                code.invokevirtual(CD_this, jitName + OPT, jmDesc.optimizedMD);
+                code.invokevirtual(CD_this, jitName+OPT, jmDesc.optimizedMD);
             }
 
             JitParamDesc[] optReturns     = jmDesc.optimizedReturns;
@@ -638,7 +729,6 @@ public class CommonBuilder
             int            stdReturnCount = stdReturns.length;
             if (optReturnCount == 0) {
                 code.return_();
-                code.labelBinding(endScope);
                 return;
             }
 
@@ -723,7 +813,6 @@ public class CommonBuilder
                     throw new UnsupportedOperationException();
                 }
             }
-        code.labelBinding(endScope);
         });
     }
 
@@ -736,11 +825,175 @@ public class CommonBuilder
     }
 
     /**
-     * Assemble the constructor(s).
+     * Assemble the "new$" method.
+     *
+     * <code><pre>
+     * Ecstasy:
+     *      val o = new C(x, y, z);
+     * Java:
+     *      C o = C.new$0(ctx, x, y, z);
+     *
+     * For singletons, referencing the instance of the singleton for the first time causes it to be
+     * created using the well-known "Java singleton pattern" that leverages the Java ClassLoader
+     * and memory model guarantees to ensure that only one instance is created, and that accessing
+     * that instance (and making sure it exists) is "free" for all users of the singleton -- other
+     * than very first time it is referenced. Since the ClassLoader (invoking the static
+     * initializer) instantiates the singleton, there is no "new$()" static method; instead,
+     * singletons have a non-static "init$" method that is signature-wise identical to the
+     * "new$" method and performs everything in the following list of steps starting with step 4.
+     *
+     * public static C new$0(Ctx ctx, X x, Y y, Z z) {
+     *    // note: singletons use this signature instead:
+     *    public C init$0(Ctx ctx)
+     *
+     *    // step 1: ONLY FOR "anonymous inner classes": a "wrapper constructor" (in lieu
+     *    //   of steps 3 and 5) (TODO GG)
+     *
+     *    // step 2: get permission to use the memory
+     *    // note: singletons move this step to the Java static initializer
+     *    ctx.alloc(32); // the RAM size is calc'd by the TypeInfo or compiler
+     *
+     *    // step 3 (initializer) gets handled in the Java constructor for the class
+     *    // - the constructor needs the context for any allocations
+     *    // - this inits any fields that are not supposed to be null (reference
+     *    //   types) or not supposed to be 0 etc. (primitive types)
+     *    // note: singletons move this step to the Java static initializer
+     *    C thi$ = new C(ctx);
+     *
+     *    // step 4: a constructor context is required if a “finally” chain will exist
+     *    CtorCtx cctx = ctx.ctorCtx();
+     *
+     *    // step 5: annotation constructors are executed
+     *    // (TODO GG / to discuss)
+     *
+     *    // step 6: the constructor gets called
+     *    // - we do NOT have to save off the arguments for the `finally()` call
+     *    //   in the constructor context because we have the arguments right here
+     *    // note: cctx argument is optional
+     *    construct$0(ctx, cctx, thi$, x, y, z);
+     *
+     *    // step 7: `assert()` is called (may be one on each constituent piece -- e.g.
+     *    // base classes, mixins, annotations -- of the composition)
+     *    // - there is no assert method if this class has no assert() defined and
+     *    //   none of its supers has an assert() defined
+     *    // - each calls its super first (TODO GG verify)
+     *    // - TODO GG define mixin and annotation assert() order
+     *    //   - depending on ordering requirements this could be a method (not a
+     *    //     "static")
+     *    $assert();
+     *
+     *    // step 8: all fields not marked as @Unassigned (which includes @Lazy property
+     *    //    fields) are checked for being unassigned
+     *    // - a field is unassigned iff it is a reference with the value Java `null`
+     *    // - TODO GG can fields on B be overridden as @Unassigned on D? i.e. if a
+     *    //   field is ok to be not unassigned, is that true for all super and sub
+     *    //   classes?
+     *    $verify();
+     *
+     *    // step 9: post construction work e.g. const freezing
+     *    //    TODO GG define
+     *
+     *    // step 10: any `finally {...}` methods corresponding to constructors
+     *    // from #3 and #4 are executed, in reverse order of what the constructors
+     *    // were called in
+     *    // note: cctx argument is optional
+     *    finally$0(ctx, cctx, thi$, x, y, z);
+     * }
+     *
+     * // assuming C extends B and B has a finally that takes some (P p, Q q):
+     * public static construct$0(CtorCtx cctx, C thi$, X x, Y y, Z z) {
+     *    // user logic before the `construct B(p,q);`
+     *    P p;
+     *    Q q;
+     *    // ...
+     *
+     *    // this is the translation of the call to `construct B(p,q);`
+     *    cctx.push(p);
+     *    cctx.push(q);
+     *    B.construct$17(cctx, thi$, p, q);
+     *
+     *    // user logic after the `construct B(p,q);`
+     *    // ...
+     * }
+     *
+     * public static finally$0(CtorCtx cctx, C thi$, X x, Y y, Z z) {
+     *    // run the `finally` on B before running the `finally` on D
+     *    // (we saved off the args in the constructor .. it's basically
+     *    // a hand-rolled closure)
+     *    {
+     *    Q q = cctx.pop();
+     *    P p = cctx.pop();
+     *    B.finally$17(cctx, thi$, p, q);
+     *    }
+     *
+     *    // user logic from C.finally goes here
+     *    // ...
+     * }
+     * </pre></code>
+     *
      */
-    protected void assembleConstructor(String className, ClassBuilder classBuilder, MethodInfo constructor,
-                                       String jitName, MethodTypeDesc md, boolean optimized) {
-        // TODO
+    protected void assembleNew(String className, ClassBuilder classBuilder, MethodInfo constructor,
+                               String jitName, MethodTypeDesc md, boolean isOptimized) {
+        boolean   isSingleton = classStruct.isSingleton();
+        ClassDesc CD_this     = ClassDesc.of(className);
+
+        // Note: the "$init" is a virtual method for singletons and "new$" is static otherwise
+        //       (see assembleStaticInitializer)
+        int flags = ClassFile.ACC_PUBLIC;
+        if (!isSingleton) {
+            flags |= ClassFile.ACC_STATIC;
+        }
+
+        classBuilder.withMethodBody(jitName, md, flags, code -> {
+            Label startScope = code.newLabel();
+            Label endScope   = code.newLabel();
+
+            code.labelBinding(startScope);
+
+            int ctxSlot = code.parameterSlot(0);
+            code.localVariable(ctxSlot, "$ctx", CD_Ctx, startScope, endScope);
+
+            // for singleton classes the steps 0-2 are performed by the static initializer;
+            // see "assembleStaticInitializer()"
+            int thisSlot;
+            if (isSingleton) {
+                thisSlot = 0;
+            } else {
+                // step 0 TODO anonymous classes support
+
+                // get permission to use the memory
+                code.aload(ctxSlot)
+                    .ldc(implSize)
+                    .invokevirtual(CD_Ctx, "allocate", MethodTypeDesc.of(CD_void, CD_long));
+
+                // step 1 (initializer)
+                thisSlot = code.allocateLocal(TypeKind.REFERENCE);
+                code.localVariable(thisSlot, "thi$", CD_this, startScope, endScope);
+                invokeDefaultConstructor(className, code);
+                code.astore(thisSlot);
+
+                // TODO step 2: execute annotation constructors
+
+            }
+
+            // step 3: call the constructor;
+            // a constructor context is required if a “finally” chain will exist
+            // CtorCtx cctx = ctx.ctorCtx();
+            // construct$0(cctx, thi$, x, y, z);
+
+            int cctxSlot = code.allocateLocal(TypeKind.REFERENCE);
+            code.localVariable(cctxSlot, "cctx", CD_CtorCtx, startScope, endScope);
+            code.aload(ctxSlot)
+                .invokevirtual(CD_Ctx, "ctorCtx", MethodTypeDesc.of(CD_CtorCtx))
+                .astore(cctxSlot)
+            ;
+            String        ctorName = constructor.getIdentity().ensureJitMethodName(typeSystem);
+            JitMethodDesc ctorDesc = constructor.getJitDesc(typeSystem);
+//            code.invokestatic(CD_this, ctorName, ctorDesc.optimizedMD);
+            code.labelBinding(endScope)
+                .aload(thisSlot)
+                .areturn();
+        });
     }
 
     /**
@@ -748,7 +1001,7 @@ public class CommonBuilder
      */
     protected void assemblePropertyAccessor(String className, ClassBuilder classBuilder,
                                             PropertyInfo prop, String jitName, MethodTypeDesc md,
-                                            boolean optimized, boolean isGetter) {
+                                            boolean isOptimized, boolean isGetter) {
         int flags = ClassFile.ACC_PUBLIC;
         if (prop.isAbstract()) {
             flags |= ClassFile.ACC_ABSTRACT;
@@ -770,7 +1023,7 @@ public class CommonBuilder
      * Assemble the method (optimized if possible, standard otherwise).
      */
     protected void assembleMethod(String className, ClassBuilder classBuilder, MethodInfo method,
-                                  String jitName, MethodTypeDesc md, boolean optimized) {
+                                  String jitName, MethodTypeDesc md, boolean isOptimized) {
         int flags = ClassFile.ACC_PUBLIC;
         if (method.isAbstract()) {
             flags |= ClassFile.ACC_ABSTRACT;

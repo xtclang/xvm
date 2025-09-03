@@ -355,8 +355,10 @@ public abstract class Builder {
 
     // ----- well-known suffixes -------------------------------------------------------------------
 
-    public static final String OPT = "$p";   // method contains primitive types
-    public static final String EXT = "$ext"; // a multi-slot extension field of a primitive field
+    public static final String NEW  = "$new";  // the instance creation static method
+    public static final String INIT = "$init"; // the singleton initialization instance method
+    public static final String OPT  = "$p";    // method contains primitive types
+    public static final String EXT  = "$ext";  // a multi-slot extension field of a primitive field
 
     // ----- well-known class descriptors ----------------------------------------------------------
 
@@ -375,6 +377,7 @@ public abstract class Builder {
 
     public static final ClassDesc CD_Container     = ClassDesc.of(Container.class.getName());
     public static final ClassDesc CD_Ctx           = ClassDesc.of(Ctx.class.getName());
+    public static final ClassDesc CD_CtorCtx       = ClassDesc.of(Ctx.CtorCtx.class.getName());
     public static final ClassDesc CD_TypeConstant  = ClassDesc.of(TypeConstant.class.getName());
     public static final ClassDesc CD_TypeSystem    = ClassDesc.of(TypeSystem.class.getName());
 

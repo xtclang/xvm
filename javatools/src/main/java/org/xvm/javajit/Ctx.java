@@ -123,6 +123,19 @@ public final class Ctx {
         // TODO
     }
 
+    // ----- Constructor support -------------------------------------------------------------------
+
+    public CtorCtx ctorCtx() {
+        return new CtorCtx();
+    }
+
+    /**
+     * The constructor context is required if a “finally” chain exists.
+     */
+    public static class CtorCtx {
+        // TODO CP:
+    }
+
     // ----- Container and Service support ---------------------------------------------------------
     // TODO
 
@@ -148,6 +161,4 @@ public final class Ctx {
 
     public static MethodTypeDesc MD_inject = MethodTypeDesc.of(
         CD_JavaObject, CD_TypeConstant, CD_JavaString, CD_JavaObject);
-
-
 }

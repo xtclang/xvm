@@ -156,21 +156,19 @@ public class P_Get
         PropertyConstant idProp     = (PropertyConstant) bctx.getConstant(m_nPropId);
         PropertyInfo     infoProp   = targetSlot.type().ensureTypeInfo().getProperties().get(idProp);
         JitMethodDesc    jmd        = infoProp.getGetterJitDesc(bctx.typeSystem);
-        MethodTypeDesc   md         = jmd.optimizedMD;
         String           methodName = infoProp.getGetterId().ensureJitMethodName(bctx.typeSystem);
-        boolean          fOptimized = false;
+        MethodTypeDesc   md;
 
-        if (md == null) {
-            md = jmd.standardMD;
-        } else {
+        if (jmd.isOptimized) {
+            md         = jmd.optimizedMD;
             methodName += Builder.OPT;
-            fOptimized  = true;
+        } else {
+            md = jmd.standardMD;
         }
 
-        bctx.introduceVar(code, m_nRetValue, infoProp.getType(), "");
         bctx.loadCtx(code);
         code.invokevirtual(targetSlot.cd(), methodName, md);
-        bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue}, fOptimized);
+        bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue});
     }
 
     // ----- fields --------------------------------------------------------------------------------
