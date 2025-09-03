@@ -21,7 +21,6 @@ import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
-import org.xvm.javajit.JitParamDesc;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.CallChain.VirtualConstructorChain;
@@ -310,48 +309,20 @@ public abstract class OpInvocable extends Op {
         MethodConstant idMethod   = (MethodConstant) bctx.getConstant(m_nMethodId);
         MethodInfo     infoMethod = targetSlot.type().ensureTypeInfo().getMethodById(idMethod);
         JitMethodDesc  jmd        = infoMethod.getJitDesc(bctx.typeSystem);
-        MethodTypeDesc md         = jmd.optimizedMD;
         String         methodName = idMethod.ensureJitMethodName(bctx.typeSystem);
-        boolean        fOptimized = false;
+        boolean        fOptimized = jmd.isOptimized;
+        MethodTypeDesc md;
 
-        if (md == null) {
-            md = jmd.standardMD;
-        } else {
+        if (fOptimized) {
+            md         = jmd.optimizedMD;
             methodName += Builder.OPT;
-            fOptimized  = true;
+        }
+        else {
+            md = jmd.standardMD;
         }
 
         bctx.loadCtx(code);
-        for (int i = 0, c = anArgValue == null ? 0 : anArgValue.length; i < c; i++ ) {
-            int          iArg = anArgValue[i];
-            JitParamDesc pd   = fOptimized ? jmd.getOptimizedParam(i) : jmd.standardParams[i];
-            switch (pd.flavor) {
-            case SpecificWithDefault:
-                if (iArg == A_DEFAULT) {
-                    code.aconst_null();
-                    continue;
-                }
-                break;
-
-            case PrimitiveWithDefault:
-                if (iArg == A_DEFAULT) {
-                    assert fOptimized;
-                    // default primitive with an additional `true`
-                    Builder.defaultLoad(code, pd.cd);
-                    code.iconst_1();
-                } else {
-                    // actual primitive with an additional `false`
-                    bctx.loadArgument(code, iArg);
-                    code.iconst_0();
-                }
-                continue;
-
-            default:
-                assert iArg != A_DEFAULT;
-                break;
-            }
-            bctx.loadArgument(code, iArg, pd);
-        }
+        bctx.loadArguments(code, jmd, anArgValue);
 
         if (infoMethod.getHead().getImplementation().getExistence() == MethodBody.Existence.Interface) {
             code.invokeinterface(targetSlot.cd(), methodName, md);
@@ -362,7 +333,7 @@ public abstract class OpInvocable extends Op {
         int cReturns = infoMethod.getSignature().getReturnCount();
         if (cReturns > 0) {
             int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
-            bctx.assignReturns(code, jmd, cReturns, anVar, fOptimized);
+            bctx.assignReturns(code, jmd, cReturns, anVar);
         }
     }
 

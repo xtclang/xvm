@@ -30,6 +30,18 @@ public class JitTypeDesc {
 
     /**
      * @return the primitive ClassDesc if the specified type is optimizable to a primitive Java
+     *         class; and a corresponding non-primitive ClassDesc otherwise.
+     */
+    public static ClassDesc getJitClass(TypeSystem ts, TypeConstant type) {
+        return type.isPrimitive()
+            ? JitParamDesc.getPrimitiveClass(type)
+            : type.isSingleUnderlyingClass(true)
+                ? type.ensureClassDesc(ts)
+                : CD_xObj;
+    }
+
+    /**
+     * @return the primitive ClassDesc if the specified type is optimizable to a primitive Java
      *         class; null otherwise
      */
     public static ClassDesc getPrimitiveClass(TypeConstant type) {

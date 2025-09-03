@@ -61,8 +61,8 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     protected void assembleMethod(String className, ClassBuilder classBuilder, MethodInfo method,
-                                  String jitName, MethodTypeDesc md, boolean optimized) {
-        MethodModel mm = findMethod(jitName, md, optimized);
+                                  String jitName, MethodTypeDesc md, boolean isOptimized) {
+        MethodModel mm = findMethod(jitName, md, isOptimized);
         if (mm != null) {
             if ((mm.flags().flagsMask() & ClassFile.ACC_ABSTRACT) == 0 ||
                     method.isAbstract() || method.isNative()) {
@@ -79,7 +79,7 @@ public class AugmentingBuilder extends CommonBuilder {
             return;
         }
 
-        super.assembleMethod(className, classBuilder, method, jitName, md, optimized);
+        super.assembleMethod(className, classBuilder, method, jitName, md, isOptimized);
     }
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -99,7 +99,7 @@ public class AugmentingBuilder extends CommonBuilder {
     /**
      * Find a MethodModel for the specified method.
      */
-    protected MethodModel findMethod(String jitName, MethodTypeDesc md, boolean optimized) {
+    protected MethodModel findMethod(String jitName, MethodTypeDesc md, boolean isOptimized) {
         for (MethodModel mm : model.methods()) {
             if (mm.methodName().equalsString(jitName) &&
                     mm.methodTypeSymbol().descriptorString().equals(md.descriptorString())) {

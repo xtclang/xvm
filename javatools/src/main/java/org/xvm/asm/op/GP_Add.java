@@ -70,10 +70,9 @@ public class GP_Add
             throw new UnsupportedOperationException("Add operation on multi-slot");
         }
 
-        ClassDesc    cdTarget   = slotTarget.cd();
-        ClassDesc    cdArg      = slotArg.cd();
-        ClassDesc    cdRet      = cdTarget;
-        TypeConstant typeRet    = slotTarget.type();
+        ClassDesc    cdTarget = slotTarget.cd();
+        ClassDesc    cdArg    = slotArg.cd();
+        TypeConstant typeRet  = slotTarget.type();
 
         if (cdTarget.isPrimitive()) {
             assert cdArg.equals(cdTarget);
@@ -99,7 +98,7 @@ public class GP_Add
         } else {
             throw new UnsupportedOperationException("TODO: " + cdTarget.descriptorString());
         }
-        Slot slot = bctx.ensureSlot(m_nRetValue, typeRet, cdRet, "");
+        Slot slot = bctx.ensureSlot(m_nRetValue, typeRet, "");
         bctx.storeValue(code, slot);
     }
 }
