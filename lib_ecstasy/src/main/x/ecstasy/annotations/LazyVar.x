@@ -1,36 +1,33 @@
 /**
- * The LazyVar annotation allows a reference (such as a property) to be lazily populated with a value on
- * demand. Specifically, the first time that an attempt is made to de-reference the reference by
- * invoking `get()`, the LazyVar will invoke the deferred calculation of the value and store
- * that value in the reference for subsequent use, before returning that same value.
+ * The `@Lazy` annotation allows a reference (such as a property) to be lazily populated with a
+ * value the first time it is accessed.
  *
- * A LazyVar cannot be set, except by its own lazy calculation. A LazyVar is immutable for all
- * practical purposes, with the sole exception being that it will assign itself a value if and
- * when necessary. The lazy calculation should be idempotent.
+ * Consider the following example in which the [calc] method is explicitly implemented:
  *
- * Consider the following example of a "hash" property being calculated lazily:
+ *     const Point(Dec x, Dec y) {
+ *         @Lazy Dec distanceFromOrigin.calc() = (x * x * y * y).sqrt();
+ *     }
  *
- *   const Point(Int x, Int y) {
- *       @Lazy(() -> x ^ y) Int hash;
- *   }
+ * Alternatively, a function or lambda can be provided to the constructor of the `@Lazy` annotation:
  *
- * Alternatively, the `calc()` method can be overridden:
+ *     const Point(Dec x, Dec y) {
+ *         @Lazy(() -> (x * x * y * y).sqrt()) Dec distanceFromOrigin;
+ *     }
  *
- *   const Point(Int x, Int y) {
- *       @Lazy Int64 hash.calc() {
- *           return x ^ y;
- *       }
- *   }
- *
- * (Note that the above examples are for illustrative purposes only; it is not necessary to
- * implement the hash code calculation for a `const` class, as a default implementation is
- * provided.)
+ * When the property is accessed, the value is obtained via its [get] method. When the first access
+ * occurs, the internal value of the `@Lazy` property is still unassigned, and so the property
+ * invokes its [calc] method to calculate a value for the property. That value is then stored as the
+ * internal value of the property, and every subsequent access will use that previously calculated
+ * value.
  */
 annotation LazyVar<Referent>(function Referent ()? calculate = Null)
         extends VolatileVar<Referent> {
 
     private function Referent ()? calculate;
 
+    /**
+     * Note: Do not implement this method to provide a value; instead, implement the [calc] method.
+     */
     @Override
     @Concurrent
     Referent get() {
@@ -41,9 +38,21 @@ annotation LazyVar<Referent>(function Referent ()? calculate = Null)
         return super();
     }
 
+    /**
+     * Calculate a value for this property. All `@Lazy` properties must either override this method,
+     * or provide a [calculate] function for the property constructor.
+     *
+     * The lazy calculation should be idempotent.
+     *
+     * @return the value to store in this `@Lazy` property
+     */
     @Synchronized
     protected Referent calc() {
+        // if a `calculate` function was provided, then invoke it
         return calculate?();
+
+        // if this method was not overridden by an implementation that calculated the value, and if
+        // no `calculate` function was provided, then the developer needs to do one or the other
         TODO("construct LazyVar with a calculate function, or override the calc() method");
     }
 }
