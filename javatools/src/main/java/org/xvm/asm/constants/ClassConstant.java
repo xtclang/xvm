@@ -229,11 +229,13 @@ public class ClassConstant
             constPath = pool.ensureParentClassConstant(constPath);
             constThis = constThis.getParentConstant();
             --cThisDepth;
-        } while (cThatDepth > cThisDepth) {
+        }
+        while (cThatDepth > cThisDepth) {
             ++cReDescend;
             constThat = constThat.getParentConstant();
             --cThatDepth;
-        } while (!constThis.equals(constThat)) {
+        }
+        while (!constThis.equals(constThat)) {
             assert cThisDepth == cThatDepth && cThisDepth >= 0;
 
             ++cReDescend;

@@ -4287,7 +4287,9 @@ public class Parser {
             }
             type = parseNamedTypeExpression(tokAccess);
             break;
-        } while (true) {
+        }
+
+        while (true) {
             switch (peek().getId()) {
             case L_SQUARE:
                 // this could be either:

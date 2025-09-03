@@ -440,7 +440,9 @@ public class NamedTypeExpression
                     m_fVirtualChild = true;
                     return;
                 }
-            } while (parent != null) {
+            }
+
+            while (parent != null) {
                 if (parent instanceof TypeCompositionStatement stmt) {
                     ClassStructure clz = (ClassStructure) stmt.getComponent();
                     if (stmt.getName().equals(getName())) {

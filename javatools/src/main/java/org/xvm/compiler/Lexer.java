@@ -443,7 +443,9 @@ public class Lexer
         if ((cch & 0x1) != 0) {
             // odd number of characters means that the first nibble is a pre-pended zero
             ab[ofb++] = (byte) hexitValue(ach[ofch++]);
-        } while (ofb < cb) {
+        }
+
+        while (ofb < cb) {
             ab[ofb++] = (byte) ( (hexitValue(ach[ofch++]) << 4)
                                 + hexitValue(ach[ofch++])       );
         }

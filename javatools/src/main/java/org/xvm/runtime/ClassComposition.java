@@ -524,7 +524,9 @@ public class ClassComposition
 
         if (poolThat == poolThis) {
             return type;
-        } while (true) {
+        }
+
+        while (true) {
             container = container.f_parent;
             if (container == null) {
                 break;

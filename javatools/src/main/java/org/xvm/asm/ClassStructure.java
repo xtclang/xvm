@@ -1324,7 +1324,8 @@ public class ClassStructure
                 Iterator<IdentityConstant> iter = parent.potentialVirtualChildContributors();
                 if (iter == null) {
                     return false;
-                } while (iter.hasNext()) {
+                }
+                while (iter.hasNext()) {
                     IdentityConstant idContrib = iter.next();
                     if (idContrib.containsUnresolved()) {
                         return false;

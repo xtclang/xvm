@@ -172,7 +172,8 @@ public class ConstOrdinalList
 
         if (index < idCur) {
             return nDefault;
-        } while (true) {
+        }
+        while (true) {
             lIntVal    = unpackInt(m_ab, ofCur);
             ofCur     += (int) (lIntVal >>> 32);
             int idSkip = (int) lIntVal;

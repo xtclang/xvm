@@ -154,7 +154,9 @@ public class IfStatement
             fValid = false;
         } else {
             stmtThen = stmtThenNew;
-        } while (--cConditions > 0) {
+        }
+
+        while (--cConditions > 0) {
             ctx = ctx.exit(); // "and-if"s
         }
 
