@@ -56,15 +56,18 @@ jobs:
       with:
         dependency-graph: generate
         build-root-directory: ./xdk
+        gradle-version: 8.14.2
         
     - name: Generate dependency graph for JavaTools
       uses: gradle/actions/dependency-submission@v4
       with:
         dependency-graph: generate 
         build-root-directory: ./javatools
+        gradle-version: 8.14.2
         
     - name: Generate dependency graph for Plugin
       uses: gradle/actions/dependency-submission@v4
       with:
         dependency-graph: generate 
         build-root-directory: ./plugin
+        gradle-version: 8.14.2
