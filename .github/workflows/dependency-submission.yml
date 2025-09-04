@@ -10,6 +10,9 @@ on:
 
 permissions:
   contents: read
+  security-events: write
+  actions: read
+  id-token: write
   
 jobs:
   dependency-submission:
@@ -18,8 +21,8 @@ jobs:
     permissions:
       contents: read
       actions: read
-      # Write permission needed for dependency submission
       security-events: write
+      id-token: write
       
     steps:
     - name: Checkout repository
@@ -45,23 +48,23 @@ jobs:
     - name: Generate dependency graph for root
       uses: gradle/actions/dependency-submission@v4
       with:
-        dependency-graph: generate-and-submit
+        dependency-graph: generate-only
         
     # Generate dependency graph for each subproject
     - name: Generate dependency graph for XDK
       uses: gradle/actions/dependency-submission@v4
       with:
-        dependency-graph: generate-and-submit
+        dependency-graph: generate-only
         build-root-directory: ./xdk
         
     - name: Generate dependency graph for JavaTools
       uses: gradle/actions/dependency-submission@v4
       with:
-        dependency-graph: generate-and-submit 
+        dependency-graph: generate-only 
         build-root-directory: ./javatools
         
     - name: Generate dependency graph for Plugin
       uses: gradle/actions/dependency-submission@v4
       with:
-        dependency-graph: generate-and-submit 
+        dependency-graph: generate-only 
         build-root-directory: ./plugin
