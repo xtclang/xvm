@@ -48,23 +48,23 @@ jobs:
     - name: Generate dependency graph for root
       uses: gradle/actions/dependency-submission@v4
       with:
-        dependency-graph: generate-only
+        dependency-graph: generate
         
     # Generate dependency graph for each subproject
     - name: Generate dependency graph for XDK
       uses: gradle/actions/dependency-submission@v4
       with:
-        dependency-graph: generate-only
+        dependency-graph: generate
         build-root-directory: ./xdk
         
     - name: Generate dependency graph for JavaTools
       uses: gradle/actions/dependency-submission@v4
       with:
-        dependency-graph: generate-only 
+        dependency-graph: generate 
         build-root-directory: ./javatools
         
     - name: Generate dependency graph for Plugin
       uses: gradle/actions/dependency-submission@v4
       with:
-        dependency-graph: generate-only 
+        dependency-graph: generate 
         build-root-directory: ./plugin
