@@ -108,15 +108,18 @@ fun createLauncherScriptTask(scriptName: String, mainClassName: String) = tasks.
     mainClass.set(mainClassName)
     outputDir = layout.buildDirectory.dir("scripts").get().asFile
     classpath = configurations.xdkJavaTools.get()
-    // Configure default JVM options using a provider to defer evaluation
-    defaultJvmOpts = provider {
-        @Suppress("UNCHECKED_CAST")
-        val defaultJvmArgs = project.extra["defaultJvmArgs"] as List<String>
-        buildList {
-            addAll(defaultJvmArgs)
-            add("-DXDK_HOME=\${XDK_HOME:-\$APP_HOME}")
+    // Configure default JVM options
+    val enablePreview = getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)
+    val enableNativeAccess = getXdkPropertyBoolean("org.xtclang.java.enableNativeAccess", false)
+    defaultJvmOpts = buildList {
+        add("-ea")
+        if (enablePreview) {
+            add("--enable-preview")
         }
-    }.get()
+        if (enableNativeAccess) {
+            add("--enable-native-access=ALL-UNNAMED")
+        }
+    }
     logger.info("[xdk] Default JVM args for $scriptName: $defaultJvmOpts")
 
     // Declare outputs explicitly  

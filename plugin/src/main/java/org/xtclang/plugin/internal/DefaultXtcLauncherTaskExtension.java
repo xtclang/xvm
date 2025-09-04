@@ -55,6 +55,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
 
         // Use default JVM args from properties file generated at plugin build time
         this.defaultJvmArgs = loadDefaultJvmArgs();
+        logger.info("[plugin] Loaded default JVM args: {}", defaultJvmArgs);
         this.jvmArgs = objects.listProperty(String.class).convention(defaultJvmArgs);
         this.verbose = objects.property(Boolean.class).convention(false);
         this.fork = objects.property(Boolean.class).convention(true);
@@ -175,6 +176,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
             return DEFAULT_JVM_ARGS;
         }
     }
+
 
     public static boolean areJvmArgsModified(final List<String> jvmArgs) {
         return !loadDefaultJvmArgs().equals(jvmArgs);
