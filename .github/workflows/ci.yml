@@ -127,7 +127,7 @@ env:
   # Build environment and build workflow debug flags.
   # ACTIONS_RUNNER_DEBUG: true
   # ACTIONS_STEP_DEBUG: true
-  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: false
 
 # Concurrency settings: group by workflow and ref, cancel intermediate builds, but only if it's a pull request build.
 concurrency:
