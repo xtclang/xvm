@@ -148,12 +148,16 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
                         for %%F in ("%app_path%") do set "APP_ID=%%~fF"
                         if /I not "%XDK_ID%"=="%APP_ID%" (
                             "%XDK_ID%" %*
-                            exit /b
+                            goto end
                         )
                     )
-                
                     rem === use the libraries specified by XDK_HOME ===
                     set "APP_HOME=%XDK_HOME%"
+                )
+                
+                if not exist %APP_HOME%\javatools\javatools.jar (
+                    echo Unable to locate a valid XDK in "%APP_HOME%"; set XDK_HOME to the "xdk" directory containing "bin\", "lib\", and "javatools\"
+                    goto fail
                 )""".trimIndent()
             }
             
@@ -286,7 +290,11 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
          */
         private fun findDelegationInsertionPoint(content: String, isWindows: Boolean): Int {
             if (isWindows) {
-                return content.indexOf("set \"CLASSPATH=")
+                val quoted = content.indexOf("set \"CLASSPATH=")
+                if (quoted >= 0) {
+                    return quoted;
+                }
+                return content.indexOf("set CLASSPATH=")
             }
 
             // Look for the APP_HOME resolution line (avoid PWD escaping issues)
@@ -310,7 +318,11 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
             val delegationLogic = delegateForPlatform(isWindows)
             val insertionPoint = findDelegationInsertionPoint(content, isWindows)
             
-            if (insertionPoint <= 0) return content
+            if (insertionPoint <= 0) {
+                // TODO Marcus logger.warn("[build-logic] WARNING: ..")
+                System.out.println("*** could not find insertion point for isWindows=" + isWindows)
+                return content
+            }
             
             val beforeInsertion = content.take(insertionPoint)
             val afterInsertion = content.substring(insertionPoint)
