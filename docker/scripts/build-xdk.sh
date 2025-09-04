@@ -210,15 +210,15 @@ rmdir "$XDK_EXTRACTED" || {
 }
 echo "📁 Created clean xdk/ directory structure"
 
-# Install script launchers (xec/xcc should already be present from distZip)
+# Install script launchers (xec/xcc/xtc should already be present from distZip)
 echo "🚀 Checking script launchers for ${TARGETOS}/${TARGETARCH}"
 LAUNCHER_EXT=""
 [ "${TARGETOS}" = "windows" ] && LAUNCHER_EXT=".bat"
 
 # Script launchers should already be present from the scripts distribution
-if [ -f "xdk/bin/xec${LAUNCHER_EXT}" ] && [ -f "xdk/bin/xcc${LAUNCHER_EXT}" ]; then
-    echo "✅ Script launchers already present: xec${LAUNCHER_EXT}, xcc${LAUNCHER_EXT}"
-    chmod +x "xdk/bin/xec${LAUNCHER_EXT}" "xdk/bin/xcc${LAUNCHER_EXT}"
+if [ -f "xdk/bin/xec${LAUNCHER_EXT}" ] && [ -f "xdk/bin/xcc${LAUNCHER_EXT}" ] && [ -f "xdk/bin/xtc${LAUNCHER_EXT}" ]; then
+    echo "✅ Script launchers already present: xec${LAUNCHER_EXT}, xcc${LAUNCHER_EXT}", xtc${LAUNCHER_EXT}"
+    chmod +x "xdk/bin/xec${LAUNCHER_EXT}" "xdk/bin/xcc${LAUNCHER_EXT}" "xdk/bin/xtc${LAUNCHER_EXT}"
     
     # Verify script launchers are working and have the correct module paths
     echo "🧪 Testing script launcher functionality..."
@@ -232,7 +232,12 @@ if [ -f "xdk/bin/xec${LAUNCHER_EXT}" ] && [ -f "xdk/bin/xcc${LAUNCHER_EXT}" ]; t
         echo "❌ xec script launcher test failed"
         exit 1
     }
-    
+    echo "📋 Testing xtc --version:"
+    "./xdk/bin/xet${LAUNCHER_EXT}" --version || {
+        echo "❌ xtc script launcher test failed"
+        exit 1
+    }
+
     # Verify script launchers have the expected module paths (check script content)
     echo "🔍 Verifying script launchers contain XTC module paths..."
     if grep -q "XDK_HOME.*APP_HOME" "xdk/bin/xcc${LAUNCHER_EXT}" && \

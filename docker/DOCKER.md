@@ -115,7 +115,7 @@ Example for `lagergren/gradle-lifecycle-fixes`:
 - `JAVA_VERSION=24` - Uses Bellsoft Liberica OpenJDK 24 Alpine (consistent across build stages)
 - Platform matches host architecture (linux/amd64 on x86, linux/arm64 on ARM)
 - Compiles native launchers from C source for target platform
-- Creates architecture-specific xcc/xec executables
+- Creates architecture-specific xcc/xec/xtc executables
 
 ### Build Scripts
 The Docker build uses several helper scripts in `docker/scripts/`:

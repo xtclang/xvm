@@ -88,11 +88,12 @@ COPY test/DockerTest.x /opt/xdk/test/
 # Script launchers are already present from the distribution and should be working
 # No need to overwrite with native launchers - let's test the script launchers!
 RUN echo "✅ Using script launchers from distribution" && \
-    chmod +x /opt/xdk/bin/xcc /opt/xdk/bin/xec && \
+    chmod +x /opt/xdk/bin/xcc /opt/xdk/bin/xec /opt/xdk/bin/xtc && \
     ls -la /opt/xdk/bin/ && \
     echo "📋 Testing script launcher functionality..." && \
     /opt/xdk/bin/xcc --version && \
     /opt/xdk/bin/xec --version && \
+    /opt/xdk/bin/xtc --version && \
     echo "✅ Script launchers are working correctly!"
 
 CMD ["xec"]

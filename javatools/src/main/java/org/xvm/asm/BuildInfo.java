@@ -40,7 +40,7 @@ public final class BuildInfo {
 
     /**
      * Get the XDK version string (e.g., "0.4.4-SNAPSHOT").
-     * Used by xcc --version, xec --version, and build system.
+     * Used by xcc --version, xec --version, xtc --version, and build system.
      */
     public static String getXdkVersion() {
         return BUILD_INFO.getProperty("xdk.version", "0.0.0-unknown");

@@ -10,8 +10,8 @@ class XdkLatest < Formula
   def install
     libexec.install Dir["*"]
     
-    # Install Unix launchers (xec = Ecstasy Execution, xcc = Ecstasy Compiler)
-    %w[xec xcc].each do |cmd|
+    # Install Unix launchers (xec = Ecstasy Execution, xcc = Ecstasy Compiler, xtc = Ecstasy Terminal Command)
+    %w[xec xcc xtc].each do |cmd|
       (bin/cmd).write_env_script(libexec/"bin"/cmd, JAVA_HOME: Formula["openjdk@{{JAVA_VERSION}}"].opt_prefix)
     end
   end
@@ -24,6 +24,10 @@ class XdkLatest < Formula
     
     # Test that xcc launcher works and shows version info
     output = shell_output("#{bin}/xcc --version 2>&1")
+    assert_match "Ecstasy", output
+
+    # Test that xtc launcher works and shows version info
+    output = shell_output("#{bin}/xtc --version 2>&1")
     assert_match "Ecstasy", output
   end
 end

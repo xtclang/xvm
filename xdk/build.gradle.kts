@@ -102,7 +102,7 @@ application {
     mainClass.set("org.xvm.tool.Launcher") // Unified entry point for all tools
 }
 
-// Configure the application plugin to generate xec script, then create xcc twin
+// Configure the application plugin to generate xec script, then create xcc and xtc
 tasks.startScripts {
     applicationName = "xec"
     classpath = configurations.xdkJavaTools.get()
@@ -125,7 +125,7 @@ tasks.startScripts {
     // Declare inputs and outputs for incremental build support
     inputs.property("enablePreview", enablePreview)
     inputs.property("enableNativeAccess", enableNativeAccess)
-    outputs.files(listOf("xcc", "xec").flatMap { script ->
+    outputs.files(listOf("xcc", "xec", "xtc").flatMap { script ->
         listOf(File(outputDir, script), File(outputDir, "$script.bat"))
     })
     
@@ -146,10 +146,12 @@ tasks.startScripts {
                 content = XdkDistribution.injectXdkHomeDelegation(content, isWindows)
                 content = XdkDistribution.fixPathResolution(content, isWindows)
                 scriptFile.writeText(content)
-                // Create xcc twin script by copying and replacing xec -> xcc
-                val twinFile = File(outputDir, if (isWindows) "xcc.bat" else "xcc")
-                val twinContent = content.replace("Launcher xec", "Launcher xcc")
-                twinFile.writeText(twinContent)
+                // Create xcc script by copying and replacing xec -> xcc
+                val xccFile = File(outputDir, if (isWindows) "xcc.bat" else "xcc")
+                xccFile.writeText(content.replace("Launcher xec", "Launcher xcc"))
+                // Create xtc script by copying and replacing xec -> xtc
+                val xtcFile = File(outputDir, if (isWindows) "xtc.bat" else "xtc")
+                xtcFile.writeText(content.replace("Launcher xec", "Launcher xtc"))
             }
         }
     }
@@ -159,7 +161,7 @@ tasks.startScripts {
 val prepareDistributionScripts by tasks.registering(Copy::class) {
     dependsOn(tasks.startScripts)
     from(tasks.startScripts.get().outputDir!!) {
-        include("xec*", "xcc*")
+        include("xec*", "xcc*", "xtc*")
     }
     into(layout.buildDirectory.dir("distribution-scripts"))
 }
@@ -277,6 +279,8 @@ distributions {
                 include("xcc.bat")
                 include("xec")
                 include("xec.bat")
+                include("xtc")
+                include("xtc.bat")
                 into("bin")
             }
             

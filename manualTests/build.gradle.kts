@@ -207,11 +207,11 @@ xtcCompile {
     /*
      * Should all compilations be forced to rerun every time this build is performed? This is not
      * the same thing as touching all source, and the default is "true". Rebuild means that if the
-     * compiler is called, XTC cannot ignore the compile request. XCC may chose to ignore a compile
+     * compiler is called, XTC cannot ignore the compile request. XCC may choose to ignore a compile
      * request when .x source code is unchanged, but the javatools.jar (i.e. the Compiler internals
      * themselves) have been changed, unless the rebuild flag is set. This also means that for
      * the default value "true", rebuild means that any change to the Launcher/javatools code will
-     * cause all xtc modules in the XDK to be rebuilt. For a lot of cases, an developer modding
+     * cause all xtc modules in the XDK to be rebuilt. For a lot of cases, a developer modding
      * javatools does not need or what this, but at the moment we have no finer grained dependency
      * mechanism to detect if any changes affect the compiler or runtime alone, or if it requires
      * actually regenerating the XTC modules from unchanged source. For any one not working on the
