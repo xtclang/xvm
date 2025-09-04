@@ -34,10 +34,6 @@ tasks.processResources {
     from(layout.buildDirectory.dir("generated/resources"))
 }
 
-// Exclude generated resources from sourcesJar since they're build outputs, not sources
-tasks.withType<Jar>().matching { it.archiveClassifier.get() == "sources" }.configureEach {
-    exclude("**/generated/resources/**")
-}
 
 // Don't add generated resources to sourceSets - handle them only in processResources
 
