@@ -12,6 +12,7 @@ plugins {
     java
 }
 
+private val jdkVersion: Int by extra
 private val pprefix = "org.xtclang.java"
 private val lintProperty = "$pprefix.lint"
 
@@ -25,22 +26,12 @@ private val defaultJvmArgs = buildList {
     }
 }
 
-private val jdkVersion: Provider<Int> = provider {
-    // For build-logic and plugin projects, use the current JVM to avoid chicken-and-egg problems with toolchain provisioning
-    val isBuildLogic = project.rootDir.absolutePath.contains("build-logic")
-    val isPlugin = project.rootDir.absolutePath.endsWith("plugin")
-    val shouldUseCurrentJVM = isBuildLogic || isPlugin
-    logger.debug("[java] Project '${project.path}' at '${project.rootDir.absolutePath}' - shouldUseCurrentJVM: $shouldUseCurrentJVM")
-    if (shouldUseCurrentJVM) {
-        JavaVersion.current().majorVersion.toInt()
-    } else {
-        getXdkPropertyInt("$pprefix.jdk")
-    }
-}
+// All projects use the same JDK version from toolchain - no exceptions
+// Modern Gradle handles toolchain provisioning properly for build-logic projects
 
 java {
     toolchain {
-        val xdkJavaVersion = JavaLanguageVersion.of(jdkVersion.get())
+        val xdkJavaVersion = JavaLanguageVersion.of(jdkVersion)
         val buildProcessJavaVersion = JavaLanguageVersion.of(JavaVersion.current().majorVersion.toInt())
         if (!buildProcessJavaVersion.canCompileOrRun(xdkJavaVersion)) {
             logger.warn("NOTE: We are using a more modern Java tool chain than the build process. $buildProcessJavaVersion < $xdkJavaVersion")
@@ -143,7 +134,6 @@ tasks.withType<Test>().configureEach {
 project.extra.set("defaultJvmArgs", defaultJvmArgs)
 
 if (enablePreview) {
-    val jdkVersion = getXdkPropertyInt("$pprefix.jdk")
     logger.info("[java] WARNING: Project has Java preview features enabled (JDK $jdkVersion).")
 }
 logger.info("[java] Set default JVM args as project extra property: $defaultJvmArgs")

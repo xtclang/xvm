@@ -108,12 +108,15 @@ fun createLauncherScriptTask(scriptName: String, mainClassName: String) = tasks.
     mainClass.set(mainClassName)
     outputDir = layout.buildDirectory.dir("scripts").get().asFile
     classpath = configurations.xdkJavaTools.get()
-    defaultJvmOpts = buildList {
-        // Use defaultJvmArgs from Java convention plugin
+    // Configure default JVM options using a provider to defer evaluation
+    defaultJvmOpts = provider {
+        @Suppress("UNCHECKED_CAST")
         val defaultJvmArgs = project.extra["defaultJvmArgs"] as List<String>
-        addAll(defaultJvmArgs)
-        add("-DXDK_HOME=\${XDK_HOME:-\$APP_HOME}")
-    }
+        buildList {
+            addAll(defaultJvmArgs)
+            add("-DXDK_HOME=\${XDK_HOME:-\$APP_HOME}")
+        }
+    }.get()
     logger.info("[xdk] Default JVM args for $scriptName: $defaultJvmOpts")
 
     // Declare outputs explicitly  

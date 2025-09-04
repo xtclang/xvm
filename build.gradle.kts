@@ -1,5 +1,6 @@
 import XdkDistribution.Companion.DISTRIBUTION_TASK_GROUP
 import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
+import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 
 /*
  * Main build file for the XVM project, producing the XDK.
@@ -73,7 +74,6 @@ val publish by tasks.registering {
 private val xdk = gradle.includedBuild("xdk")
 private val plugin = gradle.includedBuild("plugin")
 private val includedBuildsWithPublications = listOf(xdk, plugin)
-private val distributionTaskNames = XdkDistribution.distributionTasks
 private val publishTaskPrefixes = listOf("list", "delete")
 private val publishTaskSuffixesRemote = listOf("RemotePublications")
 private val publishTaskSuffixesLocal = listOf("LocalPublications")
@@ -81,6 +81,7 @@ private val publishTaskSuffixesLocal = listOf("LocalPublications")
 
 /**
  * Docker tasks - forwarded to docker subproject
+ * TODO: Skip this and resolve the dist some other way.
  */
 
 private val dockerSubproject = gradle.includedBuild("docker")

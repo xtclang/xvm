@@ -11,7 +11,8 @@ val generateDefaultJvmArgs by tasks.registering {
     val outputDir = layout.buildDirectory.dir("generated/resources")
     val outputFile = outputDir.map { it.file("org/xtclang/plugin/internal/defaultJvmArgs.properties") }
     
-    // Capture defaultJvmArgs during configuration phase to avoid configuration cache issues
+    // Access extra property during configuration when it's available
+    @Suppress("UNCHECKED_CAST") 
     val defaultJvmArgs = project.extra["defaultJvmArgs"] as List<String>
     
     outputs.file(outputFile)
@@ -28,16 +29,16 @@ val generateDefaultJvmArgs by tasks.registering {
     }
 }
 
+tasks.processResources {
+    dependsOn(generateDefaultJvmArgs)
+}
+
 sourceSets {
     main {
         resources {
             srcDir(layout.buildDirectory.dir("generated/resources"))
         }
     }
-}
-
-tasks.processResources {
-    dependsOn(generateDefaultJvmArgs)
 }
 
 private val semanticVersion: SemanticVersion by extra
