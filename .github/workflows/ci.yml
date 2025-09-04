@@ -276,10 +276,10 @@ jobs:
 
   publish-maven-artifact-snapshot:
     name: Publish Maven artifacts to GitHub packages iff snapshot + non-redundant build platform + branch is master
-    # Only run if ALL build-verify matrix jobs succeed (both ubuntu-latest and windows-latest)
+    # Only run if ALL build-verify matrix jobs succeed (depends on single_platform setting)
     needs: build-verify
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_publish_maven_artifact_snapshot == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master')) }}
+    if: ${{ !cancelled() && !failure() && ((github.event.inputs.always_publish_maven_artifact_snapshot == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
       # Check out current repository
       - name: Fetch SourcesAdd
@@ -337,7 +337,7 @@ jobs:
     name: Compute Docker tags and metadata
     needs: build-verify
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_build_docker_image == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master')) }}
+    if: ${{ !cancelled() && !failure() && ((github.event.inputs.always_build_docker_image == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master')) }}
     outputs:
       version: ${{ steps.compute.outputs.version }}
       branch-tag: ${{ steps.compute.outputs.branch-tag }}
@@ -692,7 +692,7 @@ jobs:
     needs: build-verify
     runs-on: ubuntu-latest
     # IMPORTANT: Always run if snapshot release was created to prevent package skew
-    if: ${{ success() && ((github.event.inputs.always_update_homebrew_tap == 'true') || (github.event.inputs.always_build_docker_image == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master')) }}
+    if: ${{ !cancelled() && !failure() && ((github.event.inputs.always_update_homebrew_tap == 'true') || (github.event.inputs.always_build_docker_image == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
       - name: Checkout XVM repository
         uses: actions/checkout@v4
