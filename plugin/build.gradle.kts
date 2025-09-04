@@ -14,6 +14,7 @@ val generateDefaultJvmArgs by tasks.registering {
     // Compute JVM args based on properties available at plugin build time
     val enablePreview = getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)
     val enableNativeAccess = getXdkPropertyBoolean("org.xtclang.java.enableNativeAccess", false)
+    val showJavaVersion = getXdkPropertyBoolean("org.xtclang.java.showJavaVersion", false)
     val defaultJvmArgs = buildList {
         add("-ea")
         if (enablePreview) {
@@ -22,11 +23,15 @@ val generateDefaultJvmArgs by tasks.registering {
         if (enableNativeAccess) {
             add("--enable-native-access=ALL-UNNAMED")
         }
+        if (showJavaVersion) {
+            add("-showversion")
+        }
     }
     
     // Declare properties as inputs for proper invalidation
     inputs.property("enablePreview", enablePreview)
     inputs.property("enableNativeAccess", enableNativeAccess)
+    inputs.property("showJavaVersion", showJavaVersion)
     
     outputs.file(outputFile)
     

@@ -29,6 +29,7 @@ private val jdkVersion: Provider<Int> = provider {
 // Compute default JVM args early for reuse everywhere
 private val enablePreview = getXdkPropertyBoolean("$pprefix.enablePreview", false)
 private val enableNativeAccess = getXdkPropertyBoolean("$pprefix.enableNativeAccess", false)
+private val showJavaVersion = getXdkPropertyBoolean("$pprefix.showJavaVersion", false)
 private val defaultJvmArgs = buildList {
     add("-ea")
     if (enablePreview) {
@@ -36,6 +37,9 @@ private val defaultJvmArgs = buildList {
     }
     if (enableNativeAccess) {
         add("--enable-native-access=ALL-UNNAMED")
+    }
+    if (showJavaVersion) {
+        add("-showversion")
     }
 }
 
@@ -61,6 +65,9 @@ testing {
 
 tasks.withType<JavaExec>().configureEach {
     inputs.property("jdkVersion", jdkVersion)
+    inputs.property("enablePreview", enablePreview)
+    inputs.property("enableNativeAccess", enableNativeAccess)
+    inputs.property("showJavaVersion", showJavaVersion)
     logger.info("[java] Configuring JavaExec task $name from toolchain (Java version: ${java.toolchain.languageVersion})")
     javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
     jvmArgs(defaultJvmArgs)
@@ -132,6 +139,9 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 tasks.withType<Test>().configureEach {
+    inputs.property("enablePreview", enablePreview)
+    inputs.property("enableNativeAccess", enableNativeAccess)
+    inputs.property("showJavaVersion", showJavaVersion)
     jvmArgs(defaultJvmArgs)
     testLogging {
         showStandardStreams = getXdkPropertyBoolean("$pprefix.test.stdout")

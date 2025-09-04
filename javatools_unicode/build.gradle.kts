@@ -77,10 +77,11 @@ val rebuildUnicodeTables by tasks.registering {
             val unicodeJar = jar.get().archiveFile
             val localUcdZip = downloadUcdFlatZip.get().outputs.files.singleFile
             logger.lifecycle("[javatools_unicode] Downloaded unicode file: ${localUcdZip.absolutePath}")
-            javaexec {
-                mainClass.set("org.xvm.tool.BuildUnicodeTables")
-                classpath = files(configurations.runtimeClasspath, unicodeJar)
-                args = listOf(localUcdZip.absolutePath, File(processedResourcesDir, "ecstasy/text").absolutePath)
+            providers.exec {
+                commandLine("java")
+                args("-cp", files(configurations.runtimeClasspath, unicodeJar).asPath)
+                args("org.xvm.tool.BuildUnicodeTables")
+                args(localUcdZip.absolutePath, File(processedResourcesDir, "ecstasy/text").absolutePath)
             }
         }
     }

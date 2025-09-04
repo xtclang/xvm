@@ -11,7 +11,7 @@ plugins {
 private class XdkBuildAggregator(project: Project) : Runnable {
     companion object {
         private val lifeCycleTasks =
-            listOf(ASSEMBLE_TASK_NAME, BUILD_TASK_NAME, CHECK_TASK_NAME, CLEAN_TASK_NAME)
+            listOf(ASSEMBLE_TASK_NAME, BUILD_TASK_NAME, CHECK_TASK_NAME, CLEAN_TASK_NAME, "installDist")
     }
 
     override fun run() {
@@ -34,13 +34,33 @@ private class XdkBuildAggregator(project: Project) : Runnable {
 
     private fun aggregateLifeCycleTasks(ignored: Set<String>) {
         lifeCycleTasks.forEach { taskName ->
-            logger.info("[aggregator] Creating aggregated lifecycle task: ':$taskName' in project '${project.name}'")
-            tasks.named(taskName) {
+            // Only aggregate tasks that exist in the root project
+            tasks.findByName(taskName)?.let {
+                logger.info("[aggregator] Creating aggregated lifecycle task: ':$taskName' in project '${project.name}'")
+                tasks.named(taskName) {
+                    group = BUILD_GROUP
+                    description = "Aggregates and executes the '$taskName' task for all included builds."
+                    gradle.includedBuilds.filterNot { ignored.contains(it.name) }.forEach { includedBuild ->
+                        dependsOn(includedBuild.task(":$taskName"))
+                        logger.info("[aggregator]     Attaching: dependsOn(':$name' <- ':${includedBuild.name}:$name')")
+                    }
+                }
+            } ?: run {
+                logger.info("[aggregator] Skipping aggregated lifecycle task: ':$taskName' (not found in root project)")
+            }
+        }
+        
+        // Create special tasks that handle clean + other task combinations
+        val otherLifecycleTasks = lifeCycleTasks.filter { it != CLEAN_TASK_NAME }
+        otherLifecycleTasks.forEach { taskName ->
+            tasks.register("cleanAnd${taskName.replaceFirstChar(Char::titlecase)}") {
                 group = BUILD_GROUP
-                description = "Aggregates and executes the '$taskName' task for all included builds."
-                gradle.includedBuilds.filterNot { ignored.contains(it.name) }.forEach { includedBuild ->
-                    dependsOn(includedBuild.task(":$taskName"))
-                    logger.info("[aggregator]     Attaching: dependsOn(':$name' <- ':${includedBuild.name}:$name')")
+                description = "Runs clean first, then $taskName to avoid task interference."
+                dependsOn(CLEAN_TASK_NAME)
+                finalizedBy(taskName)
+                
+                doLast {
+                    logger.info("[aggregator] Completed clean, now running $taskName")
                 }
             }
         }
@@ -56,12 +76,34 @@ private class XdkBuildAggregator(project: Project) : Runnable {
         """.trimIndent()
             )
 
-            // Allow multiple tasks except for clean and other lifecycle tasks that might conflict
-            val conflictingTasks = taskNames.filter { 
-                !it.startsWith("-") && 
-                (it == "clean" || lifeCycleTasks.contains(it))
-            }
-            if (conflictingTasks.size > 1) {
+            // Check if clean is mixed with other lifecycle tasks
+            val nonFlagTasks = taskNames.filter { !it.startsWith("-") }
+            val hasClean = nonFlagTasks.contains("clean")
+            val otherLifecycleTasks = nonFlagTasks.filter { it != "clean" && lifeCycleTasks.contains(it) }
+            
+            if (hasClean && otherLifecycleTasks.isNotEmpty()) {
+                val cleanIndex = nonFlagTasks.indexOf("clean")
+                if (cleanIndex == 0) {
+                    // Clean is first - make other tasks depend on clean
+                    logger.info("[aggregator] Clean task detected first in command line with other lifecycle tasks: $otherLifecycleTasks")
+                    logger.info("[aggregator] Making other lifecycle tasks depend on clean to ensure proper execution order")
+                    
+                    // Configure dependencies after build script evaluation
+                    gradle.projectsEvaluated {
+                        otherLifecycleTasks.forEach { taskName ->
+                            tasks.findByName(taskName)?.let { task ->
+                                task.dependsOn(CLEAN_TASK_NAME)
+                                logger.info("[aggregator] Made $taskName depend on clean")
+                            }
+                        }
+                    }
+                } else {
+                    // Clean is not first - show warning but allow it
+                    logger.warn("[aggregator] Clean task detected but not first in command line. For best results, put clean first: './gradlew clean ${otherLifecycleTasks.joinToString(" ")}'")
+                }
+            } else if (nonFlagTasks.filter { lifeCycleTasks.contains(it) }.size > 1 && !hasClean) {
+                // Original logic for other conflicting tasks (excluding clean case)
+                val conflictingTasks = nonFlagTasks.filter { lifeCycleTasks.contains(it) }
                 val msg =
                     "[aggregator] Multiple conflicting lifecycle tasks detected. Please run lifecycle tasks individually: $conflictingTasks"
                 logger.error(msg)
