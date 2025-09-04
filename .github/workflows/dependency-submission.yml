@@ -50,30 +50,13 @@ jobs:
         gradle-version: ${{ env.gradle_version }}
         cache-disabled: false
         
-    # Generate and submit dependency graph for root project
-    - name: Generate dependency graph for root
+    # Clean first (standalone as per CLAUDE.md requirements)
+    - name: Clean build
+      run: ./gradlew clean
+      
+    # Generate dependency graph by running actual build tasks that resolve all dependencies  
+    - name: Generate dependency graph from full build
       uses: gradle/actions/dependency-submission@v4
       with:
         dependency-graph: generate
-        
-    # Generate dependency graph for each subproject
-    - name: Generate dependency graph for XDK
-      uses: gradle/actions/dependency-submission@v4
-      with:
-        dependency-graph: generate
-        build-root-directory: ./xdk
-        gradle-version: ${{ env.gradle_version }}
-        
-    - name: Generate dependency graph for JavaTools
-      uses: gradle/actions/dependency-submission@v4
-      with:
-        dependency-graph: generate 
-        build-root-directory: ./javatools
-        gradle-version: ${{ env.gradle_version }}
-        
-    - name: Generate dependency graph for Plugin
-      uses: gradle/actions/dependency-submission@v4
-      with:
-        dependency-graph: generate 
-        build-root-directory: ./plugin
-        gradle-version: ${{ env.gradle_version }}
+        arguments: :xdk:installDist
