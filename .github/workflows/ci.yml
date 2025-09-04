@@ -641,8 +641,17 @@ jobs:
       - name: Fetch Sources
         uses: actions/checkout@v4
 
+      - name: Get Java version from XDK properties
+        id: java_version
+        uses: ./.github/actions/get-java-version
+
       - name: Setup XVM Build Environment
         uses: ./.github/actions/setup-xvm-build
+        with:
+          java-version: ${{ steps.java_version.outputs.java_version }}
+          java-distribution: ${{ env.java_distribution }}
+          gradle-version: ${{ env.gradle_version }}
+          cache-read-only: true
 
       - name: Clean up Docker package versions with master protection
         run: |
