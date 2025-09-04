@@ -8,6 +8,8 @@ plugins {
     id("org.xtclang.build.common")
 }
 
-includeBuild("../xdk")
+// NOTE: Do NOT include ../xdk here - it creates circular dependency
+// The root project already includes both xdk and manualTests
+// And xdk includes manualTests, so xdk dependencies are available
 
 rootProject.name = "manualTests"
