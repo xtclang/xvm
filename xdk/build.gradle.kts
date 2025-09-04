@@ -13,10 +13,10 @@ import java.io.File
  */
 
 plugins {
-    alias(libs.plugins.xtc)
-    alias(libs.plugins.versions)
-    alias(libs.plugins.sonatype.publish)
+    id("org.xtclang.build.xdk.versioning")
     alias(libs.plugins.xdk.build.publish)
+    alias(libs.plugins.xtc)
+    alias(libs.plugins.sonatype.publish)
     application
     distribution
     signing
