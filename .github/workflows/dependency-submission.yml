@@ -16,6 +16,9 @@ permissions:
 
 env:
   gradle_version: 8.14.2
+  # Exclude manual tests to avoid plugin configuration issues in dependency analysis
+  ORG_GRADLE_PROJECT_includeBuildManualTests: false
+  ORG_GRADLE_PROJECT_includeBuildAttachManualTests: false
   
 jobs:
   dependency-submission:
