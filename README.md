@@ -97,43 +97,30 @@ This ensures:
 
 **Next Release Timeline**: We will publish the next non-snapshot version of XTC as soon as all build infrastructure updates are complete. This will mark the transition from active development snapshots to stable, production-ready releases with proper semantic versioning.
 
-#### CI/CD Pipeline and Homebrew Integration
+#### GitHub Workflows and Automation
 
-Our continuous integration system automatically maintains the Homebrew tap to ensure developers always have access to the latest XDK builds.
+Our project uses comprehensive GitHub workflows for continuous integration, dependency management, and automated releases.
 
-**Pipeline Overview**:
-1. **Build & Test**: On every push to `master`, CI builds and verifies the XDK across multiple platforms
-2. **Snapshot Release**: Creates/updates the `xdk-latest-snapshot` GitHub release with the XDK distribution ZIP
-3. **Homebrew Update**: Automatically updates the [xtclang/homebrew-xvm](https://github.com/xtclang/homebrew-xvm) tap with the new release
-4. **Docker Images**: Builds and pushes multi-platform Docker images to `ghcr.io/xtclang/xvm`
+**For complete documentation of our CI/CD pipeline, GitHub Actions, custom actions, manual workflow controls, Dependabot configuration, and all automation details, see:**
 
-**Homebrew Tap Automation**:
+**[📖 .github/README.md - XVM GitHub Workflows and Actions](.github/README.md)**
 
-The CI pipeline automatically maintains the Homebrew formula in the [xtclang/homebrew-xvm](https://github.com/xtclang/homebrew-xvm) repository:
+This includes:
+- **CI/CD Pipeline**: Multi-platform builds, testing, Docker images, and publishing
+- **Dependabot**: Automated dependency updates for Gradle, GitHub Actions, and Docker
+- **Manual Controls**: Workflow dispatch options and monitoring commands  
+- **Custom Actions**: Reusable automation components
+- **Future Improvements**: Planned enhancements and simplifications
 
-- **Formula Path**: `Formula/xdk-latest.rb`
-- **Auto-generated**: Version, SHA256, download URL are computed automatically
-- **Java Dependency**: Dynamically sourced from `xdk.properties` (`org.xtclang.java.jdk=24`)
-- **Branch Configuration**: Controlled by GitHub variable `HOMEBREW_TAP_BRANCH` (currently: `lagergren/brew-tap`)
+**Quick CI Overview**:
+1. **Build & Test**: Multi-platform builds (Ubuntu + Windows) with comprehensive testing
+2. **Snapshot Release**: Automated GitHub releases with XDK distribution packages
+3. **Homebrew Integration**: Automatic updates to [xtclang/homebrew-xvm](https://github.com/xtclang/homebrew-xvm) tap
+4. **Docker Images**: Multi-architecture container builds published to `ghcr.io/xtclang/xvm`
 
-**For Maintainers**:
-
-The target branch for Homebrew updates can be configured using a GitHub repository variable:
-
-```bash
-# Set the target branch (requires repo admin access)
-gh variable set HOMEBREW_TAP_BRANCH --body "master"
-
-# Or set to a development branch for testing
-gh variable set HOMEBREW_TAP_BRANCH --body "feature-branch"
-
-# View current setting  
-gh variable list
-```
-
-If `HOMEBREW_TAP_BRANCH` is not set, it defaults to `master`. The CI workflow logs the target branch: `"🍺 Using Homebrew tap branch: <branch>"`.
-
-**CI Workflow Location**: See `.github/workflows/ci.yml` and `.github/actions/update-homebrew-tap/` for the complete automation logic.
+**Homebrew Configuration**:
+- **Target Branch**: Controlled by `HOMEBREW_TAP_BRANCH` repository variable (currently: `lagergren/brew-tap`)
+- **Auto-generated Formula**: Version, SHA256, and dependencies computed automatically from build
 
 *Last updated: 2025-08-25*
 

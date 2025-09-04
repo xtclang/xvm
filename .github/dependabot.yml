@@ -1,0 +1,52 @@
+# Dependabot configuration for dependabot inspections for the repo on GitHub.
+# To disable any of the
+
+version: 2
+updates:
+  # Enable version updates for Gradle dependencies
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "06:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "xtclang/maintainers"
+    assignees:
+      - "xtclang/maintainers"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "06:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "xtclang/maintainers"
+    assignees:
+      - "xtclang/maintainers"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+
+  # Enable version updates for Docker
+  - package-ecosystem: "docker"
+    directory: "/docker"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "06:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "xtclang/maintainers"
+    assignees:
+      - "xtclang/maintainers"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
