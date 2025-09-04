@@ -52,7 +52,7 @@ public final class XtcPluginConstants {
     public static final String XDK_CONFIG_NAME_JAVATOOLS_INCOMING = "xdkJavaTools";
     public static final String XDK_CONFIG_NAME_JAVATOOLS_OUTGOING = XDK_CONFIG_NAME_JAVATOOLS_INCOMING + "Provider";
 
-    public static final String XDK_CONFIG_DEFAULT_JVM_ARGS_RESOURCE_PATH = "/org/xtclang/plugin/internal/defaultJvmArgs.properties";
+    public static final String XDK_CONFIG_DEFAULT_JVM_ARGS_RESOURCE_PATH = "/org/xtclang/build/internal/defaultJvmArgs.properties";
 
     // Config artifacts from the XDK build
     public static final String XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_JAR = "javatools-jar";

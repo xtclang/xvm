@@ -12,26 +12,36 @@ plugins {
     java
 }
 
-private val jdkVersion: Int by extra
 private val pprefix = "org.xtclang.java"
 private val lintProperty = "$pprefix.lint"
 
+private val jdkVersion: Provider<Int> = provider {
+    // For build-logic projects, use the current JVM to avoid chicken-and-egg problems with toolchain provisioning
+    val isBuildLogic = project.rootDir.absolutePath.contains("build-logic")
+    logger.debug("[java] Project '${project.path}' at '${project.rootDir.absolutePath}' - isBuildLogic: $isBuildLogic")
+    if (isBuildLogic) {
+        JavaVersion.current().majorVersion.toInt()
+    } else {
+        getXdkPropertyInt("$pprefix.jdk")
+    }
+}
+
 // Compute default JVM args early for reuse everywhere
 private val enablePreview = getXdkPropertyBoolean("$pprefix.enablePreview", false)
+private val enableNativeAccess = getXdkPropertyBoolean("$pprefix.enableNativeAccess", false)
 private val defaultJvmArgs = buildList {
     add("-ea")
     if (enablePreview) {
         add("--enable-preview")
+    }
+    if (enableNativeAccess) {
         add("--enable-native-access=ALL-UNNAMED")
     }
 }
 
-// All projects use the same JDK version from toolchain - no exceptions
-// Modern Gradle handles toolchain provisioning properly for build-logic projects
-
 java {
     toolchain {
-        val xdkJavaVersion = JavaLanguageVersion.of(jdkVersion)
+        val xdkJavaVersion = JavaLanguageVersion.of(jdkVersion.get())
         val buildProcessJavaVersion = JavaLanguageVersion.of(JavaVersion.current().majorVersion.toInt())
         if (!buildProcessJavaVersion.canCompileOrRun(xdkJavaVersion)) {
             logger.warn("NOTE: We are using a more modern Java tool chain than the build process. $buildProcessJavaVersion < $xdkJavaVersion")
@@ -74,6 +84,7 @@ tasks.withType<JavaCompile>().configureEach {
     // Declare toolchain and XDK properties as inputs for proper invalidation
     inputs.property("jdkVersion", jdkVersion)
     inputs.property("enablePreview", enablePreview)
+    inputs.property("enableNativeAccess", enableNativeAccess)
     val lint = getXdkPropertyBoolean(lintProperty, false)
     inputs.property("lint", lint)
     val maxErrors = getXdkPropertyInt("$pprefix.maxErrors", 0)
@@ -130,10 +141,11 @@ tasks.withType<Test>().configureEach {
     }
 }
 
-// Set the computed args as project extra property and log warnings  
-project.extra.set("defaultJvmArgs", defaultJvmArgs)
 
 if (enablePreview) {
-    logger.info("[java] WARNING: Project has Java preview features enabled (JDK $jdkVersion).")
+    logger.info("[java] WARNING: Project has Java preview features enabled.")
 }
-logger.info("[java] Set default JVM args as project extra property: $defaultJvmArgs")
+if (enableNativeAccess) {
+    logger.info("[java] WARNING: Project has native access enabled.")
+}
+logger.info("[java] Default JVM args will be generated: $defaultJvmArgs")

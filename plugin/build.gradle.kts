@@ -1,19 +1,32 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_JAR
 
 plugins {
-    alias(libs.plugins.xdk.build.java)
+    id("org.xtclang.build.xdk.versioning")
     alias(libs.plugins.xdk.build.publish)
     alias(libs.plugins.gradle.portal.publish)
 }
 
-// Generate resource file with default JVM args computed by Java convention plugin
+// Generate resource file with default JVM args computed at plugin build time
 val generateDefaultJvmArgs by tasks.registering {
     val outputDir = layout.buildDirectory.dir("generated/resources")
-    val outputFile = outputDir.map { it.file("org/xtclang/plugin/internal/defaultJvmArgs.properties") }
+    val outputFile = outputDir.map { it.file("org/xtclang/build/internal/defaultJvmArgs.properties") }
     
-    // Access extra property during configuration when it's available
-    @Suppress("UNCHECKED_CAST") 
-    val defaultJvmArgs = project.extra["defaultJvmArgs"] as List<String>
+    // Compute JVM args based on properties available at plugin build time
+    val enablePreview = getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)
+    val enableNativeAccess = getXdkPropertyBoolean("org.xtclang.java.enableNativeAccess", false)
+    val defaultJvmArgs = buildList {
+        add("-ea")
+        if (enablePreview) {
+            add("--enable-preview")
+        }
+        if (enableNativeAccess) {
+            add("--enable-native-access=ALL-UNNAMED")
+        }
+    }
+    
+    // Declare properties as inputs for proper invalidation
+    inputs.property("enablePreview", enablePreview)
+    inputs.property("enableNativeAccess", enableNativeAccess)
     
     outputs.file(outputFile)
     
@@ -34,8 +47,6 @@ tasks.processResources {
     from(layout.buildDirectory.dir("generated/resources"))
 }
 
-
-// Don't add generated resources to sourceSets - handle them only in processResources
 
 private val semanticVersion: SemanticVersion by extra
 
