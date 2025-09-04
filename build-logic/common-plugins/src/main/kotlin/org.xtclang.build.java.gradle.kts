@@ -12,25 +12,26 @@ plugins {
     java
 }
 
+private val jdkVersion: Int by extra
 private val pprefix = "org.xtclang.java"
 private val lintProperty = "$pprefix.lint"
 
-private val jdkVersion: Provider<Int> = provider {
-    // For build-logic and plugin projects, use the current JVM to avoid chicken-and-egg problems with toolchain provisioning
-    val isBuildLogic = project.rootDir.absolutePath.contains("build-logic")
-    val isPlugin = project.rootDir.absolutePath.endsWith("plugin")
-    val shouldUseCurrentJVM = isBuildLogic || isPlugin
-    logger.debug("[java] Project '${project.path}' at '${project.rootDir.absolutePath}' - shouldUseCurrentJVM: $shouldUseCurrentJVM")
-    if (shouldUseCurrentJVM) {
-        JavaVersion.current().majorVersion.toInt()
-    } else {
-        getXdkPropertyInt("$pprefix.jdk")
+// Compute default JVM args early for reuse everywhere
+private val enablePreview = getXdkPropertyBoolean("$pprefix.enablePreview", false)
+private val defaultJvmArgs = buildList {
+    add("-ea")
+    if (enablePreview) {
+        add("--enable-preview")
+        add("--enable-native-access=ALL-UNNAMED")
     }
 }
 
+// All projects use the same JDK version from toolchain - no exceptions
+// Modern Gradle handles toolchain provisioning properly for build-logic projects
+
 java {
     toolchain {
-        val xdkJavaVersion = JavaLanguageVersion.of(jdkVersion.get())
+        val xdkJavaVersion = JavaLanguageVersion.of(jdkVersion)
         val buildProcessJavaVersion = JavaLanguageVersion.of(JavaVersion.current().majorVersion.toInt())
         if (!buildProcessJavaVersion.canCompileOrRun(xdkJavaVersion)) {
             logger.warn("NOTE: We are using a more modern Java tool chain than the build process. $buildProcessJavaVersion < $xdkJavaVersion")
@@ -52,9 +53,7 @@ tasks.withType<JavaExec>().configureEach {
     inputs.property("jdkVersion", jdkVersion)
     logger.info("[java] Configuring JavaExec task $name from toolchain (Java version: ${java.toolchain.languageVersion})")
     javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
-    if (enablePreview()) {
-        jvmArgs("--enable-preview")
-    }
+    jvmArgs(defaultJvmArgs)
     doLast {
         logger.info("[java] JVM arguments: $jvmArgs")
     }
@@ -74,7 +73,7 @@ val assemble by tasks.existing {
 tasks.withType<JavaCompile>().configureEach {
     // Declare toolchain and XDK properties as inputs for proper invalidation
     inputs.property("jdkVersion", jdkVersion)
-    inputs.property("enablePreview", enablePreview())
+    inputs.property("enablePreview", enablePreview)
     val lint = getXdkPropertyBoolean(lintProperty, false)
     inputs.property("lint", lint)
     val maxErrors = getXdkPropertyInt("$pprefix.maxErrors", 0)
@@ -90,7 +89,7 @@ tasks.withType<JavaCompile>().configureEach {
     val args = buildList {
         add("-Xlint:${if (lint) "all" else "none"}")
 
-        if (enablePreview()) {
+        if (enablePreview) {
             add("--enable-preview")
             if (lint) {
                 add("-Xlint:preview")
@@ -122,9 +121,7 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 tasks.withType<Test>().configureEach {
-    if (enablePreview()) {
-        jvmArgs("--enable-preview")
-    }
+    jvmArgs(defaultJvmArgs)
     testLogging {
         showStandardStreams = getXdkPropertyBoolean("$pprefix.test.stdout")
         if (showStandardStreams) {
@@ -133,12 +130,10 @@ tasks.withType<Test>().configureEach {
     }
 }
 
-private fun enablePreview(): Boolean {
-    val jdkVersion = getXdkPropertyInt("$pprefix.jdk")
-    // Only enable preview features when explicitly requested
-    val enablePreview = getXdkPropertyBoolean("$pprefix.enablePreview")
-    if (enablePreview) {
-        logger.info("[java] WARNING: Project has Java preview features enabled (JDK $jdkVersion).")
-    }
-    return enablePreview
+// Set the computed args as project extra property and log warnings  
+project.extra.set("defaultJvmArgs", defaultJvmArgs)
+
+if (enablePreview) {
+    logger.info("[java] WARNING: Project has Java preview features enabled (JDK $jdkVersion).")
 }
+logger.info("[java] Set default JVM args as project extra property: $defaultJvmArgs")

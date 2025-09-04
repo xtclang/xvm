@@ -13,7 +13,7 @@ plugins {
 }
 
 private val semanticVersion: SemanticVersion by extra
-private val javaVersion = getXdkPropertyInt("org.xtclang.java.jdk")
+private val jdkVersion: Int by extra
 
 // Docker configuration
 data class DockerConfig(
@@ -29,10 +29,10 @@ data class DockerConfig(
     
     fun tagsForArch(arch: String) = (listOf("${tagPrefix}-$arch") + versionTags.map { "${it}-$arch" } + listOf("${commit}-$arch"))
     fun multiPlatformTags() = listOf(tagPrefix) + versionTags + listOf(commit)
-    fun buildArgs(distZipUrl: String? = null, javaVersion: Int) = mapOf(
+    fun buildArgs(distZipUrl: String? = null, jdkVersion: Int) = mapOf(
         "GH_BRANCH" to branch,
         "GH_COMMIT" to commit,
-        "JAVA_VERSION" to javaVersion.toString()
+        "JAVA_VERSION" to jdkVersion.toString()
     ).let { baseArgs ->
         if (distZipUrl != null) baseArgs + ("DIST_ZIP_URL" to distZipUrl) else baseArgs
     }
@@ -93,11 +93,11 @@ fun execDockerCommand(cmd: List<String>) {
     }
 }
 
-fun buildDockerImage(config: DockerConfig, platforms: List<String>, tags: List<String>, action: String, distZipUrl: String? = null, javaVersion: Int) {
+fun buildDockerImage(config: DockerConfig, platforms: List<String>, tags: List<String>, action: String, distZipUrl: String? = null) {
     val platformArg = platforms.joinToString(",")
     val cmd = listOf("docker", "buildx", "build", "--platform", platformArg) +
               listOf("--progress=${System.getenv("DOCKER_BUILDX_PROGRESS") ?: "plain"}") +
-              config.buildArgs(distZipUrl, javaVersion).flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
+              config.buildArgs(distZipUrl, jdkVersion).flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
               config.metadataLabels().flatMap { listOf("--label", "${it.key}=${it.value}") } +
               config.cacheArgs(if (platforms.size == 1) platforms[0].substringAfter("/") else null) +
               tags.flatMap { listOf("--tag", "${config.baseImage}:${it}") } +
@@ -105,7 +105,7 @@ fun buildDockerImage(config: DockerConfig, platforms: List<String>, tags: List<S
     execDockerCommand(cmd)
 }
 
-fun checkCrossPlatformBuild(targetArch: String, taskName: String): Boolean {
+fun checkCrossPlatformBuild(targetArch: String): Boolean {
     val hostArch = normalizeArchitecture(System.getProperty("os.arch"))
     val allowEmulation = getXdkPropertyBoolean("org.xtclang.docker.allowEmulation", false)
     
@@ -121,8 +121,13 @@ fun checkCrossPlatformBuild(targetArch: String, taskName: String): Boolean {
 val buildAmd64 by tasks.registering {
     group = "docker"
     description = "Build Docker image for AMD64 (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
+    
+    // Note: XDK dependency managed by root project - docker tasks forwarded with installDist dependency
+    // Declare environment variable as input for proper incremental build tracking
+    inputs.property("DIST_ZIP_URL", providers.environmentVariable("DIST_ZIP_URL").orElse(""))
+    
     doLast {
-        if (!checkCrossPlatformBuild("amd64", name)) return@doLast
+        if (!checkCrossPlatformBuild("amd64")) return@doLast
         val config = createDockerConfig()
         val distZipUrl = System.getenv("DIST_ZIP_URL")
         if (distZipUrl != null) {
@@ -130,15 +135,20 @@ val buildAmd64 by tasks.registering {
         } else {
             logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
         }
-        buildDockerImage(config, listOf("linux/amd64"), config.tagsForArch("amd64"), "load", distZipUrl, javaVersion)
+        buildDockerImage(config, listOf("linux/amd64"), config.tagsForArch("amd64"), "load", distZipUrl)
     }
 }
 
 val buildArm64 by tasks.registering {
     group = "docker"
     description = "Build Docker image for ARM64 (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
+    
+    // Note: XDK dependency managed by root project - docker tasks forwarded with installDist dependency
+    // Declare environment variable as input for proper incremental build tracking
+    inputs.property("DIST_ZIP_URL", providers.environmentVariable("DIST_ZIP_URL").orElse(""))
+    
     doLast {
-        if (!checkCrossPlatformBuild("arm64", name)) return@doLast
+        if (!checkCrossPlatformBuild("arm64")) return@doLast
         val config = createDockerConfig()
         val distZipUrl = System.getenv("DIST_ZIP_URL")
         if (distZipUrl != null) {
@@ -146,7 +156,7 @@ val buildArm64 by tasks.registering {
         } else {
             logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
         }
-        buildDockerImage(config, listOf("linux/arm64"), config.tagsForArch("arm64"), "load", distZipUrl, javaVersion)
+        buildDockerImage(config, listOf("linux/arm64"), config.tagsForArch("arm64"), "load", distZipUrl)
     }
 }
 
@@ -161,7 +171,7 @@ val buildAll by tasks.registering {
         } else {
             logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
         }
-        buildDockerImage(config, listOf("linux/amd64", "linux/arm64"), config.multiPlatformTags(), "load", distZipUrl, javaVersion)
+        buildDockerImage(config, listOf("linux/amd64", "linux/arm64"), config.multiPlatformTags(), "load", distZipUrl)
     }
 }
 
@@ -169,7 +179,7 @@ val pushAmd64 by tasks.registering {
     group = "docker"
     description = "Push AMD64 Docker image to GitHub Container Registry (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
     doLast {
-        if (!checkCrossPlatformBuild("amd64", name)) return@doLast
+        if (!checkCrossPlatformBuild("amd64")) return@doLast
         val config = createDockerConfig()
         val distZipUrl = System.getenv("DIST_ZIP_URL")
         if (distZipUrl != null) {
@@ -177,7 +187,7 @@ val pushAmd64 by tasks.registering {
         } else {
             logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
         }
-        buildDockerImage(config, listOf("linux/amd64"), config.tagsForArch("amd64"), "push", distZipUrl, javaVersion)
+        buildDockerImage(config, listOf("linux/amd64"), config.tagsForArch("amd64"), "push", distZipUrl)
     }
 }
 
@@ -185,7 +195,7 @@ val pushArm64 by tasks.registering {
     group = "docker"
     description = "Push ARM64 Docker image to GitHub Container Registry (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
     doLast {
-        if (!checkCrossPlatformBuild("arm64", name)) return@doLast
+        if (!checkCrossPlatformBuild("arm64")) return@doLast
         val config = createDockerConfig()
         val distZipUrl = System.getenv("DIST_ZIP_URL")
         if (distZipUrl != null) {
@@ -193,7 +203,7 @@ val pushArm64 by tasks.registering {
         } else {
             logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
         }
-        buildDockerImage(config, listOf("linux/arm64"), config.tagsForArch("arm64"), "push", distZipUrl, javaVersion)
+        buildDockerImage(config, listOf("linux/arm64"), config.tagsForArch("arm64"), "push", distZipUrl)
     }
 }
 
@@ -208,7 +218,7 @@ val pushAll by tasks.registering {
         } else {
             logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
         }
-        buildDockerImage(config, listOf("linux/amd64", "linux/arm64"), config.multiPlatformTags(), "push", distZipUrl, javaVersion)
+        buildDockerImage(config, listOf("linux/amd64", "linux/arm64"), config.multiPlatformTags(), "push", distZipUrl)
     }
 }
 

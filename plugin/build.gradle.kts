@@ -6,6 +6,37 @@ plugins {
     alias(libs.plugins.gradle.portal.publish)
 }
 
+// Generate resource file with default JVM args computed by Java convention plugin
+val generateDefaultJvmArgs by tasks.registering {
+    val outputDir = layout.buildDirectory.dir("generated/resources")
+    val outputFile = outputDir.map { it.file("org/xtclang/plugin/internal/defaultJvmArgs.properties") }
+    
+    // Access extra property during configuration when it's available
+    @Suppress("UNCHECKED_CAST") 
+    val defaultJvmArgs = project.extra["defaultJvmArgs"] as List<String>
+    
+    outputs.file(outputFile)
+    
+    doLast {
+        outputFile.get().asFile.apply {
+            parentFile.mkdirs()
+            writeText("""
+                # Auto-generated default JVM arguments computed at plugin build time
+                defaultJvmArgs=${defaultJvmArgs.joinToString(",")}
+                """.trimIndent())
+        }
+        logger.info("[plugin] Generated defaultJvmArgs.properties with: $defaultJvmArgs")
+    }
+}
+
+tasks.processResources {
+    dependsOn(generateDefaultJvmArgs)
+    from(layout.buildDirectory.dir("generated/resources"))
+}
+
+
+// Don't add generated resources to sourceSets - handle them only in processResources
+
 private val semanticVersion: SemanticVersion by extra
 
 private val pprefix = "org.xtclang"

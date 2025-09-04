@@ -11,3 +11,7 @@
 val semanticVersion by extra {
     xdkBuildLogic.versions().assignSemanticVersionFromCatalog()
 }
+
+val jdkVersion by extra {
+    getXdkPropertyInt("org.xtclang.java.jdk")
+}

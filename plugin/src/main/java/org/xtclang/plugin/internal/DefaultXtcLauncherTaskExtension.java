@@ -1,5 +1,7 @@
 package org.xtclang.plugin.internal;
 
+import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_DEFAULT_JVM_ARGS_RESOURCE_PATH;
+
 import java.io.InputStream;
 import java.io.OutputStream;
 
@@ -23,6 +25,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     protected final String prefix;
     protected final ObjectFactory objects;
     protected final Logger logger;
+    protected final List<String> defaultJvmArgs;
 
     protected final ListProperty<String> jvmArgs;
     protected final Property<Boolean> debug;
@@ -50,7 +53,9 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         this.debugPort = objects.property(Integer.class).convention(Integer.parseInt(env.getOrDefault("XTC_DEBUG_PORT", "4711")));
         this.debugSuspend = objects.property(Boolean.class).convention(Boolean.parseBoolean(env.getOrDefault("XTC_DEBUG_SUSPEND", "true")));
 
-        this.jvmArgs = objects.listProperty(String.class).convention(DEFAULT_JVM_ARGS);
+        // Use default JVM args from properties file generated at plugin build time
+        this.defaultJvmArgs = loadDefaultJvmArgs();
+        this.jvmArgs = objects.listProperty(String.class).convention(defaultJvmArgs);
         this.verbose = objects.property(Boolean.class).convention(false);
         this.fork = objects.property(Boolean.class).convention(true);
         this.showVersion = objects.property(Boolean.class).convention(false);
@@ -139,15 +144,39 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
 
     @Override
     public void setJvmArgs(final Iterable<? extends String> elements) {
-        jvmArgs.set(elements);
+        // Always preserve default JVM args and add user args
+        final var combinedArgs = new java.util.ArrayList<>(defaultJvmArgs);
+        elements.forEach(combinedArgs::add);
+        jvmArgs.set(combinedArgs);
     }
 
     @Override
     public void setJvmArgs(final Provider<? extends Iterable<? extends String>> provider) {
-        jvmArgs.set(provider);
+        // Always preserve default JVM args and add user args
+        jvmArgs.set(provider.map(userArgs -> {
+            final var combinedArgs = new java.util.ArrayList<>(defaultJvmArgs);
+            userArgs.forEach(combinedArgs::add);
+            return combinedArgs;
+        }));
     }
 
-    public static boolean hasModifiedJvmArgs(final List<String> jvmArgs) {
-        return !DEFAULT_JVM_ARGS.equals(jvmArgs);
+    public boolean hasModifiedJvmArgs(final List<String> jvmArgs) {
+        // Check if args contain more than just the defaults
+        return jvmArgs.size() != defaultJvmArgs.size() || !jvmArgs.equals(defaultJvmArgs);
+    }
+
+    private static List<String> loadDefaultJvmArgs() {
+        try (final var inputStream = DefaultXtcLauncherTaskExtension.class.getResourceAsStream(XDK_CONFIG_DEFAULT_JVM_ARGS_RESOURCE_PATH)) {
+            final var props = new java.util.Properties();
+            props.load(inputStream);
+            return List.of(props.getProperty("defaultJvmArgs").split(","));
+        } catch (Exception e) {
+            // Log warning and use fallback
+            return DEFAULT_JVM_ARGS;
+        }
+    }
+
+    public static boolean areJvmArgsModified(final List<String> jvmArgs) {
+        return !loadDefaultJvmArgs().equals(jvmArgs);
     }
 }

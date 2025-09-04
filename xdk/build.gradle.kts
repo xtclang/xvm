@@ -13,9 +13,9 @@ import java.io.File
  */
 
 plugins {
+    id("org.xtclang.build.xdk.versioning")
     alias(libs.plugins.xdk.build.publish)
     alias(libs.plugins.xtc)
-    alias(libs.plugins.versions)
     alias(libs.plugins.sonatype.publish)
     application
     distribution
@@ -108,16 +108,17 @@ fun createLauncherScriptTask(scriptName: String, mainClassName: String) = tasks.
     mainClass.set(mainClassName)
     outputDir = layout.buildDirectory.dir("scripts").get().asFile
     classpath = configurations.xdkJavaTools.get()
-    defaultJvmOpts = buildList {
-        add("-ea")
-        add("-DXDK_HOME=\${XDK_HOME:-\$APP_HOME}")
-        // Enable preview features when explicitly enabled
-        val enablePreview = getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)
-        if (enablePreview) {
-            add("--enable-preview")
+    // Configure default JVM options using a provider to defer evaluation
+    defaultJvmOpts = provider {
+        @Suppress("UNCHECKED_CAST")
+        val defaultJvmArgs = project.extra["defaultJvmArgs"] as List<String>
+        buildList {
+            addAll(defaultJvmArgs)
+            add("-DXDK_HOME=\${XDK_HOME:-\$APP_HOME}")
         }
-    }
-    
+    }.get()
+    logger.info("[xdk] Default JVM args for $scriptName: $defaultJvmOpts")
+
     // Declare outputs explicitly  
     outputs.files(File(outputDir, scriptName), File(outputDir, "$scriptName.bat"))
     
