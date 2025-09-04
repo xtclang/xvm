@@ -132,8 +132,8 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         val distributionTasks = listOf(
             "distTar",
             "distZip",
-            "withLaunchersDistTar",
-            "withLaunchersDistZip"
+            "withNativeLaunchersDistTar",
+            "withNativeLaunchersDistZip"
         )
         val binaryLauncherNames = listOf("xcc", "xec", "xtc")
 

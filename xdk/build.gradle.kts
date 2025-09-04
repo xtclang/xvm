@@ -284,7 +284,7 @@ distributions {
             distributionExcludes.forEach { exclude(it) }
         }
     }
-    val withLaunchers by registering {
+    val withNativeLaunchers by registering {
         distributionBaseName = xdkDist.distributionName
         version = xdkDist.distributionVersion
         distributionClassifier = "native-${xdkDist.osClassifier()}"
@@ -435,10 +435,10 @@ val ensureTags by tasks.registering {
     }
 }
 
-val withLaunchersDistZip by tasks.existing {
+val withNativeLaunchersDistZip by tasks.existing {
     dependsOn(tasks.startScripts)
 }
 
-val withLaunchersDistTar by tasks.existing {
+val withNativeLaunchersDistTar by tasks.existing {
     dependsOn(tasks.startScripts)
 }

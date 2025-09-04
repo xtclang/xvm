@@ -286,7 +286,7 @@ The project provides two main distribution variants:
     - **Contents**: Cross-platform script launchers (`xec`, `xcc`, `xec.bat`, `xcc.bat`)
     - **Ready to use**: Just add `bin/` to your PATH - no configuration needed
 
-2. **`./gradlew xdk:installWithLaunchersDist`** - Platform-specific native binary launchers
+2. **`./gradlew xdk:installWithNativeLaunchersDist`** - Platform-specific native binary launchers
     - **Output**: `xdk/build/install/xdk-native-{os}_{arch}/` (e.g., `xdk-native-linux_amd64/`)
     - **Contents**: Platform-specific native binary launchers (`xec`, `xcc`)
     - **Ready to use**: Just add `bin/` to your PATH - no configuration needed
@@ -299,7 +299,7 @@ The project provides two main distribution variants:
     - **Contents**: Cross-platform script launchers (`xec`, `xcc`, `xec.bat`, `xcc.bat`)
     - **Ready to use**: Extract and add `bin/` to PATH
 
-2. **`./gradlew xdk:withLaunchersDistZip`** / **`./gradlew xdk:withLaunchersDistTar`** - Platform-specific native binary launchers
+2. **`./gradlew xdk:withNativeLaunchersDistZip`** / **`./gradlew xdk:withNativeLaunchersDistTar`** - Platform-specific native binary launchers
     - **Output**: `xdk-{version}-native-{os}_{arch}.zip` / `xdk-{version}-native-{os}_{arch}.tar.gz`
     - **Contents**: Platform-specific native launchers (`xec`, `xcc`)
     - **Ready to use**: Extract and add `bin/` to PATH
@@ -312,7 +312,7 @@ The project provides two main distribution variants:
 - ✅ Ready to use immediately - just add `bin/` to your PATH
 - ✅ **Recommended for all users**
 
-**Native Launcher Distribution** (`withLaunchers*`):
+**Native Launcher Distribution** (`withNativeLaunchers*`):
 - ✅ Platform-specific native binary launchers (`xec`, `xcc`)
 - ✅ Ready to use immediately - just add `bin/` to your PATH
 - ℹ️ **Alternative for specific platform requirements**
