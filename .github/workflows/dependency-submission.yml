@@ -13,6 +13,9 @@ permissions:
   security-events: write
   actions: read
   id-token: write
+
+env:
+  gradle_version: 8.14.2
   
 jobs:
   dependency-submission:
@@ -41,7 +44,7 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
       with:
-        gradle-version: 8.14.2
+        gradle-version: ${{ env.gradle_version }}
         cache-disabled: false
         
     # Generate and submit dependency graph for root project
@@ -56,18 +59,18 @@ jobs:
       with:
         dependency-graph: generate
         build-root-directory: ./xdk
-        gradle-version: 8.14.2
+        gradle-version: ${{ env.gradle_version }}
         
     - name: Generate dependency graph for JavaTools
       uses: gradle/actions/dependency-submission@v4
       with:
         dependency-graph: generate 
         build-root-directory: ./javatools
-        gradle-version: 8.14.2
+        gradle-version: ${{ env.gradle_version }}
         
     - name: Generate dependency graph for Plugin
       uses: gradle/actions/dependency-submission@v4
       with:
         dependency-graph: generate 
         build-root-directory: ./plugin
-        gradle-version: 8.14.2
+        gradle-version: ${{ env.gradle_version }}
