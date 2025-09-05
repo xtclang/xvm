@@ -1,7 +1,10 @@
 # XVM GitHub Workflows and Actions
 
 > **📌 Looking for the main project documentation?**  
-> **👉 [Go to Main README.md](../README.md)** - Ecstasy language overview, quickstart, and installation  
+# **👉 [GO TO MAIN PROJECT README](../README.md)** 
+
+> **⚠️ This file contains GitHub Actions documentation only**  
+> **👉 [Main Ecstasy Project README](../README.md)** - Language overview, quickstart, and installation  
 > **👉 [Docker Documentation](../docker/README.md)** - Container development and usage  
 > 
 > This page contains GitHub Actions and CI/CD documentation only.

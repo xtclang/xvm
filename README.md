@@ -44,7 +44,7 @@ export PATH=$PWD/xdk/build/install/xdk/bin:$PATH
 - 📖 [Learn Ecstasy Language Basics](https://github.com/xtclang/xvm/wiki)
 - 🛠️ [XDK Development Kit Guide](#installation-options) (below)
 - 🐳 [Docker Development Guide](docker/README.md)
-- ⚙️ [GitHub Actions & CI Documentation](.github/README.md)
+- ⚙️ [GitHub Actions & CI Documentation](.github/GITHUB_WORKFLOWS.md)
 
 ---
 
@@ -59,7 +59,7 @@ This repository contains comprehensive documentation organized hierarchically:
 
 ### Development Documentation  
 - **[Docker Guide](docker/README.md)** - Container development, build instructions, and CI integration
-- **[GitHub Actions](/.github/README.md)** - CI/CD pipeline, workflows, and automation documentation
+- **[GitHub Actions](/.github/GITHUB_WORKFLOWS.md)** - CI/CD pipeline, workflows, and automation documentation
 - **[Build Logic](/build-logic/README.md)** - Gradle build system and custom plugins (if exists)
 
 ### Language Documentation
