@@ -134,70 +134,19 @@ Use the official XDK Docker image for development or CI:
 
 ```bash
 # Run XDK commands in container
-docker run --rm -v $(pwd):/workspace xtclang/xdk:latest xcc /workspace/MyModule.x
-docker run --rm -v $(pwd):/workspace xtclang/xdk:latest xec /workspace/MyModule
+docker run --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest xtc /workspace/MyModule.x
+docker run --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest xec /workspace/MyModule
 
-# Interactive development shell
-docker run -it --rm -v $(pwd):/workspace xtclang/xdk:latest bash
+# Interactive development shell  
+docker run -it --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest bash
 ```
 
-**Platform Support**: The XDK Docker image is a Linux-based multiplatform image supporting both `linux/amd64` and `linux/arm64` architectures. This covers all modern hardware:
+**Multi-platform Support**: The XDK Docker image supports both `linux/amd64` and `linux/arm64` architectures, running natively on macOS (Intel/Apple Silicon), Windows (via WSL2), and Linux systems.
 
-- **macOS**: Runs natively on Apple Silicon (arm64) and Intel Macs (amd64)
-- **Windows**: Runs via WSL2 on both Intel/AMD (amd64) and ARM processors
-- **Linux**: Runs natively on x86_64 and ARM64 systems
+**Development Container Support**: This project includes a devcontainer configuration at `.devcontainer/devcontainer.json` for VSCode development.
 
-Docker automatically selects the native platform matching your CPU architecture for optimal performance. In rare cases where native support isn't available, Docker will use QEMU emulation (which will be slower but functional).
-
-**Podman Compatibility**: You can use Podman as a drop-in replacement for Docker - just replace `docker` with `podman` in any of the above commands.
-
-**VSCode Devcontainer:**
-
-Create `.devcontainer/devcontainer.json` in your project:
-
-```json
-{
-  "name": "XTC Development",
-  "image": "xtclang/xdk:latest",
-  "workspaceFolder": "/workspace",
-  "mounts": [
-    "source=${localWorkspaceFolder},target=/workspace,type=bind"
-  ],
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "ms-vscode.vscode-json"
-      ]
-    }
-  },
-  "postCreateCommand": "echo 'XDK ready for development'"
-}
-```
-
-**IntelliJ IDEA Docker Integration:**
-
-IntelliJ IDEA provides Docker integration but doesn't use devcontainers directly. Instead, you can:
-
-1. **Docker Plugin**: Install the Docker plugin in IntelliJ IDEA
-2. **Docker Run Configuration**: Create a run configuration using the XDK Docker image:
-    - Image: `xtclang/xdk:latest`
-    - Bind mounts: Map your project directory to `/workspace`
-    - Working directory: `/workspace`
-3. **Docker Compose** (alternative): Create a `docker-compose.yml`:
-   ```yaml
-   version: '3.8'
-   services:
-     xdk-dev:
-       image: xtclang/xdk:latest
-       volumes:
-         - .:/workspace
-       working_dir: /workspace
-       stdin_open: true
-       tty: true
-   ```
-   Then use IntelliJ's Docker Compose integration to run and attach to the container.
-
-**Note**: IntelliJ's Docker support is more manual compared to VSCode's seamless devcontainer experience, but provides similar containerized development capabilities.
+**📖 For complete Docker documentation, build instructions, CI integration, and advanced usage, see:**
+**[docker/README.md](docker/README.md)**
 
 ### Maven Artifacts and IDE Integration
 

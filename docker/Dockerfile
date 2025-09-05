@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 #
 # XDK Docker Container - Native multi-platform support
-# See DOCKER.md for complete build and usage instructions
+# See README.md for complete build and usage instructions
 #
 
 # Build arguments (JAVA_VERSION passed from CI/Gradle build)
