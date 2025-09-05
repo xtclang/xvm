@@ -183,6 +183,75 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         )
 
         /**
+         * Script template strings for platform-specific launcher modifications
+         */
+        val SCRIPT_TEMPLATES = mapOf(
+            "windows" to mapOf(
+                "xdk_home_delegation" to """
+                        |@rem Setup the command line
+                        |
+                        |if defined XDK_HOME if exist "%XDK_HOME%\" (
+                        |    rem === if a same-named script is in XDK_HOME, use it instead of this script ===
+                        |    set "XDK_CMD=%XDK_HOME%\bin\%APP_BASE_NAME%"
+                        |    if exist "%XDK_CMD%" (
+                        |        for %%F in ("%XDK_CMD%") do set "XDK_ID=%%~fF"
+                        |        for %%F in ("%~f0") do set "APP_ID=%%~fF"
+                        |        if /I not "%XDK_ID%"=="%APP_ID%" (
+                        |            "%XDK_ID%" %*
+                        |            goto end
+                        |        )
+                        |    )
+                        |    rem === use the libraries specified by XDK_HOME ===
+                        |    set "APP_HOME=%XDK_HOME%"
+                        |)
+                        |
+                        |if not exist %APP_HOME%\javatools\javatools.jar (
+                        |    echo Unable to locate a valid XDK in "%APP_HOME%"; set XDK_HOME to the "xdk" directory containing "bin\", "lib\", and "javatools\"
+                        |    goto fail
+                        |)
+                        |
+                        |set CLASSPATH=%APP_HOME%\javatools\javatools.jar
+                        |
+                        |
+                        |@rem Execute xec
+                        |""".trimMargin(),
+                "launcher_args" to """org.xvm.tool.Launcher %APP_BASE_NAME% -L "%APP_HOME%\lib" -L "%APP_HOME%\javatools\javatools_turtle.xtc" -L "%APP_HOME%\javatools\javatools_bridge.xtc""""
+            ),
+            "unix" to mapOf(
+                "xdk_home_delegation" to """
+                        |
+                        |# for any Linux/macOS/Unix/POSIX system, build a unique file id for comparison
+                        |get_file_id() {
+                        |    inode=${'$'}(ls -di "${'$'}1" 2>/dev/null | awk '{print ${'$'}1}')
+                        |    device=${'$'}(df "${'$'}1" 2>/dev/null | awk 'NR==2 {print ${'$'}1}')
+                        |    if [ -n "${'$'}inode" ] && [ -n "${'$'}device" ]; then
+                        |        printf '%s:%s\n' "${'$'}device" "${'$'}inode"
+                        |    else
+                        |        echo "failed to get file id for ${'$'}1"
+                        |        exit 1
+                        |    fi
+                        |}
+                        |
+                        |if [ -n "${'$'}XDK_HOME" ]; then
+                        |    # delegate to the command in XDK_HOME if there is one
+                        |    XDK_CMD="${'$'}XDK_HOME/bin/${'$'}APP_BASE_NAME"
+                        |    if [ -e "${'$'}XDK_CMD" ]; then
+                        |        xdk_id=${'$'}(get_file_id "${'$'}XDK_CMD")
+                        |        app_id=${'$'}(get_file_id "${'$'}app_path")
+                        |        if [ "${'$'}xdk_id" != "${'$'}app_id" ]; then
+                        |            exec "${'$'}XDK_CMD" "${'$'}@"
+                        |        fi
+                        |    fi
+                        |
+                        |    # switch to using the libs etc. from the XDK at XDK_HOME
+                        |    APP_HOME="${'$'}XDK_HOME"
+                        |fi
+                        |""".trimMargin(),
+                "launcher_args" to """org.xvm.tool.Launcher ${'$'}APP_BASE_NAME -L "${'$'}APP_HOME/lib" -L "${'$'}APP_HOME/javatools/javatools_turtle.xtc" -L "${'$'}APP_HOME/javatools/javatools_bridge.xtc""""
+            )
+        )
+
+        /**
          * Generate module path arguments for XTC launchers (-L arguments).
          *
          * @param isWindows true for Windows batch files, false for Unix shell scripts

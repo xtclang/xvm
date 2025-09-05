@@ -142,7 +142,10 @@ tasks.startScripts {
                         .replace("\\lib\\$originalName", "\\javatools\\$strippedName")
                 }
                 
-                // Add XDK_HOME delegation and XTC module paths
+                // Add XDK_HOME delegation and XTC module paths using templates
+                val platformKey = if (isWindows) "windows" else "unix"
+                val templates = XdkDistribution.SCRIPT_TEMPLATES[platformKey]!!
+                
                 if (isWindows) {
                     // Insert XDK_HOME delegation for Windows - place it right after APP_HOME calculation
                     val insertPoint = content.indexOf(":execute")
@@ -151,42 +154,11 @@ tasks.startScripts {
                         val endOfLine = if (lineEnd >= 0) lineEnd + 1 else content.length
                         val before = content.substring(0, endOfLine)
                         val after = content.substring(endOfLine)
-                        val delegation = """
-                        |@rem Setup the command line
-                        |
-                        |if defined XDK_HOME if exist "%XDK_HOME%\" (
-                        |    rem === if a same-named script is in XDK_HOME, use it instead of this script ===
-                        |    set "XDK_CMD=%XDK_HOME%\bin\%APP_BASE_NAME%"
-                        |    if exist "%XDK_CMD%" (
-                        |        for %%F in ("%XDK_CMD%") do set "XDK_ID=%%~fF"
-                        |        for %%F in ("%~f0") do set "APP_ID=%%~fF"
-                        |        if /I not "%XDK_ID%"=="%APP_ID%" (
-                        |            "%XDK_ID%" %*
-                        |            goto end
-                        |        )
-                        |    )
-                        |    rem === use the libraries specified by XDK_HOME ===
-                        |    set "APP_HOME=%XDK_HOME%"
-                        |)
-                        |
-                        |if not exist %APP_HOME%\javatools\javatools.jar (
-                        |    echo Unable to locate a valid XDK in "%APP_HOME%"; set XDK_HOME to the "xdk" directory containing "bin\", "lib\", and "javatools\"
-                        |    goto fail
-                        |)
-                        |
-                        |set CLASSPATH=%APP_HOME%\javatools\javatools.jar
-                        |
-                        |
-                        |@rem Execute xec
-                        |""".trimMargin()
-                        content = before + delegation + after
+                        content = before + templates["xdk_home_delegation"] + after
                     }
                     
                     // Add XTC module paths to Windows script
-                    content = content.replace(
-                        "org.xvm.tool.Launcher",
-                        "org.xvm.tool.Launcher %APP_BASE_NAME% -L \"%APP_HOME%\\lib\" -L \"%APP_HOME%\\javatools\\javatools_turtle.xtc\" -L \"%APP_HOME%\\javatools\\javatools_bridge.xtc\""
-                    )
+                    content = content.replace("org.xvm.tool.Launcher", templates["launcher_args"]!!)
                 } else {
                     // Insert XDK_HOME delegation for Unix - place it right after APP_HOME calculation
                     val insertPoint = content.indexOf("APP_HOME=\$( cd -P")
@@ -195,43 +167,11 @@ tasks.startScripts {
                         val endOfLine = if (lineEnd >= 0) lineEnd + 1 else content.length
                         val before = content.substring(0, endOfLine)
                         val after = content.substring(endOfLine)
-                        val delegation = """
-                        |
-                        |# for any Linux/macOS/Unix/POSIX system, build a unique file id for comparison
-                        |get_file_id() {
-                        |    inode=${'$'}(ls -di "${'$'}1" 2>/dev/null | awk '{print ${'$'}1}')
-                        |    device=${'$'}(df "${'$'}1" 2>/dev/null | awk 'NR==2 {print ${'$'}1}')
-                        |    if [ -n "${'$'}inode" ] && [ -n "${'$'}device" ]; then
-                        |        printf '%s:%s\n' "${'$'}device" "${'$'}inode"
-                        |    else
-                        |        echo "failed to get file id for ${'$'}1"
-                        |        exit 1
-                        |    fi
-                        |}
-                        |
-                        |if [ -n "${'$'}XDK_HOME" ]; then
-                        |    # delegate to the command in XDK_HOME if there is one
-                        |    XDK_CMD="${'$'}XDK_HOME/bin/${'$'}APP_BASE_NAME"
-                        |    if [ -e "${'$'}XDK_CMD" ]; then
-                        |        xdk_id=${'$'}(get_file_id "${'$'}XDK_CMD")
-                        |        app_id=${'$'}(get_file_id "${'$'}app_path")
-                        |        if [ "${'$'}xdk_id" != "${'$'}app_id" ]; then
-                        |            exec "${'$'}XDK_CMD" "${'$'}@"
-                        |        fi
-                        |    fi
-                        |
-                        |    # switch to using the libs etc. from the XDK at XDK_HOME
-                        |    APP_HOME="${'$'}XDK_HOME"
-                        |fi
-                        |""".trimMargin()
-                        content = before + delegation + after
+                        content = before + templates["xdk_home_delegation"] + after
                     }
                     
                     // Add XTC module paths to Unix script  
-                    content = content.replace(
-                        "org.xvm.tool.Launcher",
-                        "org.xvm.tool.Launcher ${'$'}APP_BASE_NAME -L \"${'$'}APP_HOME/lib\" -L \"${'$'}APP_HOME/javatools/javatools_turtle.xtc\" -L \"${'$'}APP_HOME/javatools/javatools_bridge.xtc\""
-                    )
+                    content = content.replace("org.xvm.tool.Launcher", templates["launcher_args"]!!)
                 }
                 
                 script.writeText(content)
