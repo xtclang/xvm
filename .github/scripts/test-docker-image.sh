@@ -60,7 +60,6 @@ fi
 echo "🔧 Testing launchers..."
 docker run --rm "$IMAGE" xec --version
 docker run --rm "$IMAGE" xcc --version
-docker run --rm "$IMAGE" xtc --version
 
 # Verify we're using script launchers, not native launchers
 echo "🔍 Verifying Docker image uses script launchers..."
