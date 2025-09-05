@@ -111,14 +111,14 @@ tasks.startScripts {
     val enableNativeAccess = getXdkPropertyBoolean("org.xtclang.java.enableNativeAccess", false)
     defaultJvmOpts = buildList {
         add("-ea")
-        add("-DXDK_HOME=\$APP_HOME")
+        //add("-DXDK_HOME=\$APP_HOME")
         if (enablePreview) {
             add("--enable-preview")
-            logger.warn("[xdk] You have enabled preview features for XTC launchers")
+            logger.info("[xdk] You have enabled preview features for XTC launchers")
         }
         if (enableNativeAccess) {
             add("--enable-native-access=ALL-UNNAMED")
-            logger.warn("[xdk] You have enabled native access for XTC launchers")
+            logger.info("[xdk] You have enabled native access for XTC launchers")
         }
     }
     
