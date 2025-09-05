@@ -170,7 +170,7 @@ Our project uses comprehensive GitHub workflows for continuous integration, depe
 
 **For complete documentation of our CI/CD pipeline, GitHub Actions, custom actions, manual workflow controls, Dependabot configuration, and all automation details, see:**
 
-**[📖 .github/README.md - XVM GitHub Workflows and Actions](.github/README.md)**
+**[📖 .github/GITHUB_WORKFLOWS.md - XVM GitHub Workflows and Actions](.github/GITHUB_WORKFLOWS.md)**
 
 This includes:
 - **CI/CD Pipeline**: Multi-platform builds, testing, Docker images, and publishing
