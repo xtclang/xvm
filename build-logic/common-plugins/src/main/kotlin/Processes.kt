@@ -34,47 +34,7 @@ fun spawn(command: String, vararg args: String, env: Map<String, String> = empty
         return this.bufferedReader(charset).use { it.readText() }
     }
 
-    // note: this seems like a really bad idea -- to poorly re-implement OS functionality in a
-    //       build script. we missed the Windows file extension thing (which would have shown up
-    //       the first time anyone ever tried to build on Windows), but there are dozens of other
-    //       potential nightmare scenarios, such as if the command has file separators in it e.g.
-    //       it might already specify a path; so the question is: why are we doing this at all?
-    fun pathFor(command: String): String {
-        // on Windows, there are a dozen or so extensions that the OS will automatically
-        // add to the name when looking for it in the PATH (e.g. "git" will become "git.exe"
-        // but could also be something stupid like "git.js") so if we're running on Windows
-        // and the command doesn't already have an extension, then we have to search for the
-        // dozen or so combinations of the command and its extensions
-        val candidates = if (System.getProperty("os.name").lowercase().contains("win") && !command.contains('.')) {
-            (System.getenv("PATHEXT")
-                    ?.split(';')
-                    ?.filter { it.isNotBlank() }
-                    ?.map { it.lowercase() }
-                    ?: listOf(".exe", ".bat", ".cmd"))
-                    .map { ext -> "$command$ext" }
-        } else {
-            listOf(command)
-        }
-
-        val found = (System.getenv("PATH")?.split(File.pathSeparator) ?: emptyList())
-                .flatMap { dir -> candidates.map { File(dir, it) } }
-                .firstOrNull { it.exists() && it.canExecute() }
-
-        if (found == null) {
-            throw IllegalStateException("Cannot find executable '$command' in PATH: ${System.getenv("PATH")}")
-        }
-
-        return found.canonicalPath
-    }
-
-    val pathedCommand = try {
-        pathFor(command)
-    } catch (e : Exception) {
-        // couldn't find the command, so let the OS find it normally
-        command
-    }
-
-    val commandLine = listOf(pathedCommand, *args)
+    val commandLine = listOf(command, *args)
     val builder = ProcessBuilder(commandLine).redirectErrorStream(redirectErrorStream)
 
     // Add environment variables if provided
