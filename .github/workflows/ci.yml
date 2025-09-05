@@ -145,7 +145,7 @@ jobs:
     
     steps:
       - name: Fetch Sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           show-progress: true
 
@@ -285,7 +285,7 @@ jobs:
     steps:
       # Check out current repository
       - name: Fetch SourcesAdd
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Get Java version from XDK properties
         id: java_version
@@ -347,7 +347,7 @@ jobs:
       is-master: ${{ steps.generate.outputs.is-master }}
     steps:
       - name: Fetch Sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Compute tags and metadata
         id: compute
@@ -402,7 +402,7 @@ jobs:
             runner: ubuntu-24.04-arm
     steps:
       - name: Fetch Sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Get Java version from XDK properties
         id: java_version
@@ -563,7 +563,7 @@ jobs:
     if: ${{ success() && ((github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
       - name: Fetch Sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -629,7 +629,7 @@ jobs:
     if: ${{ success() && ((github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
       - name: Fetch Sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -658,7 +658,7 @@ jobs:
     if: ${{ success() && ((github.event.inputs.docker-image == 'true') || (github.event.inputs.docker-clean == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
       - name: Fetch Sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Get Java version from XDK properties
         id: java_version
@@ -697,7 +697,7 @@ jobs:
     if: ${{ !cancelled() && !failure() && ((github.event.inputs.homebrew == 'true') || (github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
       - name: Checkout XVM repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Get XDK version
         id: version
