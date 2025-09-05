@@ -34,22 +34,7 @@ fun spawn(command: String, vararg args: String, env: Map<String, String> = empty
         return this.bufferedReader(charset).use { it.readText() }
     }
 
-    fun pathFor(command: String): String {
-        val path = System.getenv("PATH")
-            .split(File.pathSeparator)
-            .map { File(it, command) }
-            .filter { it.exists() && it.canExecute() }
-            .map { it.canonicalFile } // follow symlinks.
-            .firstOrNull()
-
-        if (path == null) {
-            throw IllegalStateException("Cannot find executable '$command' in PATH: ${System.getenv("PATH")}")
-        }
-        return path.absolutePath
-    }
-
-    val commandPath = pathFor(command)
-    val commandLine = listOf(commandPath, *args)
+    val commandLine = listOf(command, *args)
     val builder = ProcessBuilder(commandLine).redirectErrorStream(redirectErrorStream)
 
     // Add environment variables if provided

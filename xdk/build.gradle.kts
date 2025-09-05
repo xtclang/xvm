@@ -89,84 +89,147 @@ private fun stripVersionFromJarName(jarName: String): String {
     return jarName.replace(Regex("(.*)\\-${Regex.escape(semanticVersion.artifactVersion)}\\.jar"), "$1.jar")
 }
 
+// Resolve XDK properties once at script level to avoid configuration cache issues
+val enablePreview = getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)
+val enableNativeAccess = getXdkPropertyBoolean("org.xtclang.java.enableNativeAccess", false)
+
+// Capture configuration values at configuration time for configuration cache compatibility
+val javaToolsJars = configurations.xdkJavaTools.get().files
+
 // Configure application plugin to create multiple scripts instead of default single script
 application {
     applicationName = "xdk"
-    mainClass.set("org.xvm.tool.Compiler") // Will be overridden by individual scripts
+    mainClass.set("org.xvm.tool.Launcher") // Unified entry point for all tools
 }
 
-// Disable default single script generation
+// Configure the application plugin to generate scripts using custom templates
 tasks.startScripts {
-    enabled = false
-}
-
-/**
- * Helper function to create XDK launcher script tasks with consistent configuration
- */
-fun createLauncherScriptTask(scriptName: String, mainClassName: String) = tasks.registering(CreateStartScripts::class) {
-    applicationName = scriptName
-    mainClass.set(mainClassName)
-    outputDir = layout.buildDirectory.dir("scripts").get().asFile
+    applicationName = "xec"
     classpath = configurations.xdkJavaTools.get()
     // Configure default JVM options
     val enablePreview = getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)
     val enableNativeAccess = getXdkPropertyBoolean("org.xtclang.java.enableNativeAccess", false)
     defaultJvmOpts = buildList {
         add("-ea")
+        //add("-DXDK_HOME=\$APP_HOME")
         if (enablePreview) {
             add("--enable-preview")
+            logger.info("[xdk] You have enabled preview features for XTC launchers")
         }
         if (enableNativeAccess) {
             add("--enable-native-access=ALL-UNNAMED")
+            logger.info("[xdk] You have enabled native access for XTC launchers")
         }
     }
-    logger.info("[xdk] Default JVM args for $scriptName: $defaultJvmOpts")
-
-    // Declare outputs explicitly  
-    outputs.files(File(outputDir, scriptName), File(outputDir, "$scriptName.bat"))
     
+    // Clean script modification using doLast pattern
     doLast {
-        // Fix the generated scripts to use renamed jar paths and add XTC module paths
+        // Read existing working content and apply minimal changes
+        val javaToolsJars = configurations.xdkJavaTools.get().files
+        
         listOf(
-            File(outputDir, scriptName),
-            File(outputDir, "$scriptName.bat")
-        ).forEach { scriptFile ->
-            if (scriptFile.exists()) {
-                var content = scriptFile.readText()
+            unixScript to false,    // Unix shell script
+            windowsScript to true   // Windows batch file
+        ).forEach { (script, isWindows) ->
+            if (script.exists()) {
+                var content = script.readText()
                 
-                // Replace each jar in the classpath with its version-stripped equivalent
-                configurations.xdkJavaTools.get().forEach { jar ->
+                // Replace jar paths with version-stripped equivalents
+                javaToolsJars.forEach { jar ->
                     val originalName = jar.name
                     val strippedName = stripVersionFromJarName(originalName)
-                    // Replace lib/ paths with javatools/ paths and strip version using proper cross-platform function
-                    content = XdkDistribution.replaceJarPaths(content, originalName, strippedName)
+                    content = content.replace("/lib/$originalName", "/javatools/$strippedName")
+                        .replace("\\lib\\$originalName", "\\javatools\\$strippedName")
                 }
                 
-                // Add XTC module paths using utility from XdkDistribution
-                content = XdkDistribution.injectXtcModulePaths(
-                    content, mainClassName, scriptFile.name.endsWith(".bat")
-                )
+                // Add XDK_HOME delegation and XTC module paths using templates
+                val platformKey = if (isWindows) "windows" else "unix"
+                val templates = XdkDistribution.SCRIPT_TEMPLATES[platformKey]!!
                 
-                scriptFile.writeText(content)
+                if (isWindows) {
+                    // Insert XDK_HOME delegation for Windows - place it right after APP_HOME calculation
+                    val insertPoint = content.indexOf(":execute")
+                    if (insertPoint >= 0) {
+                        val lineEnd = content.indexOf('\n', insertPoint)
+                        val endOfLine = if (lineEnd >= 0) lineEnd + 1 else content.length
+                        val before = content.substring(0, endOfLine)
+                        val after = content.substring(endOfLine)
+                        content = before + templates["xdk_home_delegation"] + after
+                    }
+                    
+                    // Add XTC module paths to Windows script
+                    content = content.replace("org.xvm.tool.Launcher", templates["launcher_args"]!!)
+                } else {
+                    // Insert XDK_HOME delegation for Unix - place it right after APP_HOME calculation
+                    val insertPoint = content.indexOf("APP_HOME=\$( cd -P")
+                    if (insertPoint >= 0) {
+                        val lineEnd = content.indexOf('\n', insertPoint)
+                        val endOfLine = if (lineEnd >= 0) lineEnd + 1 else content.length
+                        val before = content.substring(0, endOfLine)
+                        val after = content.substring(endOfLine)
+                        content = before + templates["xdk_home_delegation"] + after
+                    }
+                    
+                    // Add XTC module paths to Unix script  
+                    content = content.replace("org.xvm.tool.Launcher", templates["launcher_args"]!!)
+                }
+                
+                script.writeText(content)
+            }
+        }
+        
+        // Create additional scripts for xcc and xtc
+        listOf("xcc", "xtc").forEach { toolName ->
+            val unixOriginal = File(outputDir, "xec")
+            val windowsOriginal = File(outputDir, "xec.bat")
+            
+            if (unixOriginal.exists()) {
+                val newScript = File(outputDir, toolName)
+                newScript.writeText(unixOriginal.readText().replace("Launcher \\${'$'}APP_BASE_NAME", "Launcher $toolName"))
+                newScript.setExecutable(true)
+            }
+            
+            if (windowsOriginal.exists()) {
+                File(outputDir, "$toolName.bat").writeText(
+                    windowsOriginal.readText().replace("Launcher %APP_BASE_NAME%", "Launcher $toolName"))
+            }
+        }
+    }
+    // Declare inputs and outputs for incremental build support
+    inputs.property("enablePreview", enablePreview)
+    inputs.property("enableNativeAccess", enableNativeAccess)
+    outputs.files(listOf("xcc", "xec", "xtc").flatMap { script ->
+        listOf(File(outputDir, script), File(outputDir, "$script.bat"))
+    })
+    
+    // Create additional scripts for xcc and xtc with simple name replacement
+    doLast {
+        listOf("xcc", "xtc").forEach { toolName ->
+            val unixScript = File(outputDir, "xec")
+            val windowsScript = File(outputDir, "xec.bat")
+            
+            if (unixScript.exists()) {
+                val newScript = File(outputDir, toolName)
+                newScript.writeText(
+                    unixScript.readText().replace("\$APP_BASE_NAME", toolName)
+                )
+                newScript.setExecutable(true)
+            }
+            
+            if (windowsScript.exists()) {
+                File(outputDir, "$toolName.bat").writeText(
+                    windowsScript.readText().replace("%APP_BASE_NAME%", toolName)
+                )
             }
         }
     }
 }
 
-/**
- * Create individual script tasks for xcc and xec with different main classes
- */
-val createXccScript by createLauncherScriptTask("xcc", "org.xvm.tool.Compiler")
-val createXecScript by createLauncherScriptTask("xec", "org.xvm.tool.Runner")
-
-// Create scripts directly in distribution-ready location
+// Copy scripts to distribution location
 val prepareDistributionScripts by tasks.registering(Copy::class) {
-    dependsOn(createXccScript, createXecScript)
-    from(createXccScript.map { it.outputDir!! }) {
-        include("xcc*")
-    }
-    from(createXecScript.map { it.outputDir!! }) {
-        include("xec*")
+    dependsOn(tasks.startScripts)
+    from(tasks.startScripts.get().outputDir!!) {
+        include("xec*", "xcc*", "xtc*")
     }
     into(layout.buildDirectory.dir("distribution-scripts"))
 }
@@ -284,6 +347,8 @@ distributions {
                 include("xcc.bat")
                 include("xec")
                 include("xec.bat")
+                include("xtc")
+                include("xtc.bat")
                 into("bin")
             }
             
@@ -291,7 +356,7 @@ distributions {
             distributionExcludes.forEach { exclude(it) }
         }
     }
-    val withLaunchers by registering {
+    val withNativeLaunchers by registering {
         distributionBaseName = xdkDist.distributionName
         version = xdkDist.distributionVersion
         distributionClassifier = "native-${xdkDist.osClassifier()}"
@@ -442,10 +507,10 @@ val ensureTags by tasks.registering {
     }
 }
 
-val withLaunchersDistZip by tasks.existing {
-    dependsOn(createXccScript, createXecScript)
+val withNativeLaunchersDistZip by tasks.existing {
+    dependsOn(tasks.startScripts)
 }
 
-val withLaunchersDistTar by tasks.existing {
-    dependsOn(createXccScript, createXecScript)
+val withNativeLaunchersDistTar by tasks.existing {
+    dependsOn(tasks.startScripts)
 }

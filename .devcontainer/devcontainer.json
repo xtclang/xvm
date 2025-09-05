@@ -1,0 +1,57 @@
+{
+	"name": "XTC Language Development",
+	"image": "ghcr.io/xtclang/xvm:latest",
+	
+	// Features to add to the dev container
+	"features": {
+		"ghcr.io/devcontainers/features/git:1": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {}
+	},
+	
+	// Configure tool-specific properties
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-vscode.vscode-json",
+				"redhat.vscode-yaml",
+				"GitHub.copilot"
+			],
+			"settings": {
+				"terminal.integrated.defaultProfile.linux": "bash"
+			}
+		}
+	},
+	
+	// Use 'forwardPorts' to make a list of ports inside the container available locally
+	"forwardPorts": [],
+	
+	// Use 'postCreateCommand' to run commands after the container is created
+	"postCreateCommand": "echo 'XTC Development Environment Ready!' && xec --version && xtc --version",
+	
+	// Connect as root user for full access
+	"remoteUser": "root",
+	
+	// Set environment variables
+	"containerEnv": {
+		"XDK_HOME": "/opt/xdk",
+		"PATH": "/opt/xdk/bin:${PATH}"
+	},
+	
+	// Mount the workspace
+	"workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+	"workspaceFolder": "/workspace",
+	
+	// Run arguments for the container
+	"runArgs": [
+		"--name=xtc-devcontainer"
+	],
+	
+	// Lifecycle scripts
+	"initializeCommand": "echo 'Initializing XTC devcontainer...'",
+	"onCreateCommand": "echo 'XTC devcontainer created successfully!'",
+	
+	// Mounts for preserving data
+	"mounts": [
+		"source=xtc-devcontainer-home,target=/root,type=volume"
+	]
+}

@@ -1,6 +1,8 @@
 # Docker Build and Usage Instructions
 
-This document describes how to build and use Docker images for the XVM project. The XDK Docker Container provides native multi-platform support with architecture-specific native launchers.
+This document provides comprehensive Docker documentation for the XVM project. For basic Docker usage and installation options, see the [main README.md](../README.md#docker-container).
+
+The XDK Docker Container provides native multi-platform support with architecture-specific native launchers.
 
 ## Quick Start Guide
 

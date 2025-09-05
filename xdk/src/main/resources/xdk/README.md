@@ -35,9 +35,8 @@ the `xdk/bin` directory to your operating system's permanent path.
 
 ## Compiling
 
-The `xcc` command (pronounced "ecstasy") is used to compile `.x` source
-code files (for an entire module, or even multiple modules) into an
-`.xtc` file.
+The `xcc` command is used to compile `.x` source code files (for an entire
+module, or even multiple modules) into an `.xtc` file.
 
 After configuring, change the directory to `xdk/examples` and compile the
 "Hello World!" example, located in the HelloWorld.x source file:

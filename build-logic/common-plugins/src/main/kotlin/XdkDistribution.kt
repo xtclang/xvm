@@ -1,8 +1,5 @@
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.file.Directory
-import org.gradle.api.file.RegularFile
-import org.gradle.api.provider.Provider
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.internal.os.OperatingSystem
@@ -49,10 +46,8 @@ fun PublishingExtension.configureMavenPublications(project: Project) = project.r
 fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
     fun readKeyFile(): String {
         val file = File(gradle.gradleUserHomeDir, XdkDistribution.GPGKEY_FILENAME)
-        if (file.exists()) {
-            return file.readText().trim()
-        }
-        return ""
+        if (!file.exists()) return ""
+        return file.readText().trim()
     }
 
     fun resolveGpgSecret(): Boolean {
@@ -61,8 +56,10 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
             logger.info("[build-logic] Signing is disabled. Will not try to resolve any keys.")
             return false
         }
+        
         val password = (project.findProperty("signing.password") ?: System.getenv("GPG_SIGNING_PASSWORD") ?: "") as String
         val key = (project.findProperty("signing.key") ?: System.getenv("GPG_SIGNING_KEY") ?: readKeyFile()) as String
+        
         if (key.isEmpty() || password.isEmpty()) {
             logger.warn("[build-logic] WARNING: Could not resolve a GPG signing key or a passphrase.")
             if (XdkDistribution.isCiEnabled) {
@@ -70,6 +67,7 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
             }
             return false
         }
+        
         logger.info("[build-logic] Signature: In-memory GPG keys successfully configured.")
         assert(key.isNotEmpty() && password.isNotEmpty())
         useInMemoryPgpKeys(key, password)
@@ -124,7 +122,6 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     companion object {
         const val DISTRIBUTION_TASK_GROUP = "distribution"
         const val JAVATOOLS_PREFIX_PATTERN = "**/javatools*"
-        const val JAVATOOLS_INSTALLATION_NAME : String = "javatools.jar"
         const val GPGKEY_FILENAME = "xtclang-gpgkey.asc"
 
         private const val CI = "CI"
@@ -135,123 +132,167 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         val distributionTasks = listOf(
             "distTar",
             "distZip",
-            "withLaunchersDistTar",
-            "withLaunchersDistZip"
+            "withNativeLaunchersDistTar",
+            "withNativeLaunchersDistZip"
         )
-        val binaryLauncherNames = listOf("xcc", "xec")
+        val binaryLauncherNames = listOf("xcc", "xec", "xtc")
+
+        // Removed delegateForPlatform - now handled by templates
 
         fun isDistributionArchiveTask(task: Task): Boolean {
             return task.group == DISTRIBUTION_TASK_GROUP && task.name in distributionTasks
         }
 
         // Normalize architecture names to consistent values (Docker platform naming)
-        fun normalizeArchitecture(arch: String): String {
-            return when (arch.lowercase()) {
-                "amd64", "x86_64", "x64" -> "amd64"
-                "aarch64", "arm64" -> "arm64"
-                "arm" -> "arm"
-                else -> arch.lowercase()
-            }
+        fun normalizeArchitecture(arch: String): String = when (arch.lowercase()) {
+            "amd64", "x86_64", "x64" -> "amd64"
+            "aarch64", "arm64" -> "arm64"
+            "arm" -> "arm"
+            else -> arch.lowercase()
         }
 
         // Get OS name in consistent format
-        fun getOsName(): String {
-            return when {
-                currentOs.isMacOsX -> "macos"
-                currentOs.isLinux -> "linux"
-                currentOs.isWindows -> "windows"
-                else -> throw UnsupportedOperationException("Unsupported OS: $currentOs")
-            }
+        fun getOsName(): String = when {
+            currentOs.isMacOsX -> "macos"
+            currentOs.isLinux -> "linux"
+            currentOs.isWindows -> "windows"
+            else -> throw UnsupportedOperationException("Unsupported OS: $currentOs")
         }
 
         // Get all supported OS×Architecture combinations (Docker platform naming)
-        fun getSupportedPlatforms(): List<Pair<String, String>> {
-            return listOf(
-                "linux" to "amd64",
-                "linux" to "arm64",
-                "macos" to "arm64",   // Apple Silicon
-                "macos" to "amd64",   // Intel Mac (if needed)
-                "windows" to "amd64"
-            )
-        }
+        fun getSupportedPlatforms(): List<Pair<String, String>> = listOf(
+            "linux" to "amd64",
+            "linux" to "arm64",
+            "macos" to "arm64",   // Apple Silicon
+            "macos" to "amd64",   // Intel Mac (if needed)
+            "windows" to "amd64"
+        )
 
         // Check if a platform combination is supported
-        fun isPlatformSupported(os: String, arch: String): Boolean {
-            return getSupportedPlatforms().contains(os to arch)
-        }
-        
+        fun isPlatformSupported(os: String, arch: String): Boolean = 
+            getSupportedPlatforms().contains(os to arch)
+
         /**
          * Required XTC modules that must be in the module path for launchers to work.
          * This matches the native launcher's module path setup.
          */
         val REQUIRED_XTC_MODULES = listOf(
             XtcModulePath("lib"),                              // Main library directory
-            XtcModulePath("javatools", "javatools_turtle.xtc"), // Mack library  
+            XtcModulePath("javatools", "javatools_turtle.xtc"), // Mack library
             XtcModulePath("javatools", "javatools_bridge.xtc")  // Native bridge library
         )
-        
+
+        /**
+         * Script template strings for platform-specific launcher modifications
+         */
+        val SCRIPT_TEMPLATES = mapOf(
+            "windows" to mapOf(
+                "xdk_home_delegation" to """
+                        |@rem Setup the command line
+                        |
+                        |if defined XDK_HOME if exist "%XDK_HOME%\" (
+                        |    rem === if a same-named script is in XDK_HOME, use it instead of this script ===
+                        |    set "XDK_CMD=%XDK_HOME%\bin\%APP_BASE_NAME%"
+                        |    if exist "%XDK_CMD%" (
+                        |        for %%F in ("%XDK_CMD%") do set "XDK_ID=%%~fF"
+                        |        for %%F in ("%~f0") do set "APP_ID=%%~fF"
+                        |        if /I not "%XDK_ID%"=="%APP_ID%" (
+                        |            "%XDK_ID%" %*
+                        |            goto end
+                        |        )
+                        |    )
+                        |    rem === use the libraries specified by XDK_HOME ===
+                        |    set "APP_HOME=%XDK_HOME%"
+                        |)
+                        |
+                        |if not exist %APP_HOME%\javatools\javatools.jar (
+                        |    echo Unable to locate a valid XDK in "%APP_HOME%"; set XDK_HOME to the "xdk" directory containing "bin\", "lib\", and "javatools\"
+                        |    goto fail
+                        |)
+                        |
+                        |set CLASSPATH=%APP_HOME%\javatools\javatools.jar
+                        |
+                        |
+                        |@rem Execute xec
+                        |""".trimMargin(),
+                "launcher_args" to """org.xvm.tool.Launcher %APP_BASE_NAME% -L "%APP_HOME%\lib" -L "%APP_HOME%\javatools\javatools_turtle.xtc" -L "%APP_HOME%\javatools\javatools_bridge.xtc""""
+            ),
+            "unix" to mapOf(
+                "xdk_home_delegation" to """
+                        |
+                        |# for any Linux/macOS/Unix/POSIX system, build a unique file id for comparison
+                        |get_file_id() {
+                        |    inode=${'$'}(ls -di "${'$'}1" 2>/dev/null | awk '{print ${'$'}1}')
+                        |    device=${'$'}(df "${'$'}1" 2>/dev/null | awk 'NR==2 {print ${'$'}1}')
+                        |    if [ -n "${'$'}inode" ] && [ -n "${'$'}device" ]; then
+                        |        printf '%s:%s\n' "${'$'}device" "${'$'}inode"
+                        |    else
+                        |        echo "failed to get file id for ${'$'}1"
+                        |        exit 1
+                        |    fi
+                        |}
+                        |
+                        |if [ -n "${'$'}XDK_HOME" ]; then
+                        |    # delegate to the command in XDK_HOME if there is one
+                        |    XDK_CMD="${'$'}XDK_HOME/bin/${'$'}APP_BASE_NAME"
+                        |    if [ -e "${'$'}XDK_CMD" ]; then
+                        |        xdk_id=${'$'}(get_file_id "${'$'}XDK_CMD")
+                        |        app_id=${'$'}(get_file_id "${'$'}app_path")
+                        |        if [ "${'$'}xdk_id" != "${'$'}app_id" ]; then
+                        |            exec "${'$'}XDK_CMD" "${'$'}@"
+                        |        fi
+                        |    fi
+                        |
+                        |    # switch to using the libs etc. from the XDK at XDK_HOME
+                        |    APP_HOME="${'$'}XDK_HOME"
+                        |fi
+                        |""".trimMargin(),
+                "launcher_args" to """org.xvm.tool.Launcher ${'$'}APP_BASE_NAME -L "${'$'}APP_HOME/lib" -L "${'$'}APP_HOME/javatools/javatools_turtle.xtc" -L "${'$'}APP_HOME/javatools/javatools_bridge.xtc""""
+            )
+        )
+
         /**
          * Generate module path arguments for XTC launchers (-L arguments).
-         * 
+         *
          * @param isWindows true for Windows batch files, false for Unix shell scripts
          * @return formatted module path arguments string
          */
-        fun generateXtcModulePathArgs(isWindows: Boolean): String {
-            val envVarFormat = if (isWindows) "%XDK_HOME:APP_HOME=%" else "\${XDK_HOME:-\$APP_HOME}"
-            val pathSeparator = if (isWindows) "\\" else "/"
-            val lineContinuation = if (isWindows) " " else " \\\n        "
-            
-            return REQUIRED_XTC_MODULES.joinToString(lineContinuation) { module ->
-                val path = module.toPath(isWindows)
-                "-L \"$envVarFormat$pathSeparator$path\""
-            }
-        }
+        // Removed generateXtcModulePathArgs - XTC module paths are now handled in templates
         
+        // Removed getPlatformFormatting - now handled by templates
+
         /**
          * Replace jar paths in script content, handling both Unix and Windows path separators.
          * Replaces `/lib/originalName` with `/javatools/strippedName` and Windows equivalents.
-         * 
+         *
          * @param scriptContent the script content to modify
          * @param originalName the original jar name with version
          * @param strippedName the jar name without version
          * @return modified script content with updated jar paths
          */
-        fun replaceJarPaths(scriptContent: String, originalName: String, strippedName: String): String {
-            return scriptContent
-                .replace("/lib/$originalName", "/javatools/$strippedName")
-                .replace("\\lib\\$originalName", "\\javatools\\$strippedName")
-        }
+        // Removed replaceJarPaths - jar paths are now handled in templates
 
         /**
-         * Inject XTC module paths into a generated launcher script.
-         * 
-         * @param scriptContent the original script content
-         * @param mainClassName the main class name (e.g., org.xvm.tool.Compiler)
-         * @param isWindowsBatch true for .bat files, false for Unix shell scripts
-         * @return modified script content with module paths injected
+         * Add XTC module paths to launcher script and inject script name as first argument.
          */
-        fun injectXtcModulePaths(
-            scriptContent: String, 
-            mainClassName: String, 
-            isWindowsBatch: Boolean
-        ): String {
-            val modulePathArgs = generateXtcModulePathArgs(isWindowsBatch)
-            val mainClassSimple = mainClassName.substringAfterLast('.')
-            
-            val targetPattern = if (isWindowsBatch) {
-                "org.xvm.tool.$mainClassSimple"
-            } else {
-                "        org.xvm.tool.$mainClassSimple \\"
-            }
-            
-            val replacement = if (isWindowsBatch) {
-                "org.xvm.tool.$mainClassSimple $modulePathArgs"
-            } else {
-                "        org.xvm.tool.$mainClassSimple \\\n        $modulePathArgs \\"
-            }
-            
-            return scriptContent.replace(targetPattern, replacement)
-        }
+        // Removed injectXtcModulePaths - module paths are now handled in templates
+
+        /**
+         * Find insertion point for delegation logic in script content.
+         * @return insertion index, or -1 if not found
+         */
+        // Removed findDelegationInsertionPoint - delegation is now handled in templates
+
+        /**
+         * Cross-platform XDK_HOME delegation logic injection for launcher scripts.
+         * Implements proper delegation to XDK_HOME installations with infinite recursion prevention.
+         */
+        // Removed injectXdkHomeDelegation - XDK_HOME delegation is now handled in templates
+
+        /**
+         * Fix path resolution to use APP_HOME consistently after XDK_HOME delegation.
+         */
+        // Removed fixPathResolution - path resolution is now handled in templates
     }
 
     init {
@@ -272,9 +313,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     val distributionName: String get() = project.name // Default: "xdk"
 
     @Suppress("MemberVisibilityCanBePrivate") // No it can't, IntelliJ
-    val distributionVersion: String get() = buildString {
-        append(project.version)
-    }
+    val distributionVersion: String get() = project.version.toString()
 
     @Suppress("MemberVisibilityCanBePrivate")
     fun launcherFileName(os: String = getOsName(), arch: String = currentArch): String {
@@ -285,14 +324,10 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     /*
      * Helper for jreleaser etc.
      */
-    fun osClassifier(os: String = getOsName(), arch: String = currentArch): String {
-        return "${os}_$arch"
-    }
+    fun osClassifier(os: String = getOsName(), arch: String = currentArch): String = "${os}_$arch"
 
-    override fun toString(): String {
-        return "$distributionName-$distributionVersion"
-    }
-    
+    override fun toString(): String = "$distributionName-$distributionVersion"
+
     /**
      * Module path configuration for XTC launchers.
      * Replicates the behavior from os_unux.c lines 84-91 in the native launcher.

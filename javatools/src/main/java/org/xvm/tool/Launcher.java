@@ -84,9 +84,9 @@ public abstract class Launcher
 
         switch (cmd) {
         case "xtc":
-            System.out.println("Note: Command name \"xtc\" will be renamed to \"xcc\"");
-            // TODO JK this spot is reserved for you to build a do-it-all "go"-style command
-            // fall through (until the new xtc command is in place)
+            Ecstasy.main(argv);
+            break;
+
         case "xcc":
             Compiler.main(argv);
             break;

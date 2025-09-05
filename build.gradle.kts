@@ -25,6 +25,12 @@ val installDist by tasks.registering {
     dependsOn(xdk.task(":$name"))
 }
 
+val installWithNativeLaunchersDist by tasks.registering {
+    group = DISTRIBUTION_TASK_GROUP
+    description = "Install the XDK distribution with native launchers in the xdk/build/install directory."
+    dependsOn(xdk.task(":$name"))
+}
+
 /**
  * Register aggregated publication tasks to the top level project, to ensure we can publish both
  * the XDK and the XTC plugin (and other future artifacts) with './gradlew publish' or

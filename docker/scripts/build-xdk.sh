@@ -210,40 +210,43 @@ rmdir "$XDK_EXTRACTED" || {
 }
 echo "📁 Created clean xdk/ directory structure"
 
-# Install script launchers (xec/xcc should already be present from distZip)
-echo "🚀 Checking script launchers for ${TARGETOS}/${TARGETARCH}"
-LAUNCHER_EXT=""
-[ "${TARGETOS}" = "windows" ] && LAUNCHER_EXT=".bat"
+# Install script launchers (xec/xcc/xtc should already be present from distZip)
+echo "🚀 Checking script launchers"
 
 # Script launchers should already be present from the scripts distribution
-if [ -f "xdk/bin/xec${LAUNCHER_EXT}" ] && [ -f "xdk/bin/xcc${LAUNCHER_EXT}" ]; then
-    echo "✅ Script launchers already present: xec${LAUNCHER_EXT}, xcc${LAUNCHER_EXT}"
-    chmod +x "xdk/bin/xec${LAUNCHER_EXT}" "xdk/bin/xcc${LAUNCHER_EXT}"
+if [ -f "xdk/bin/xec" ] && [ -f "xdk/bin/xcc" ] && [ -f "xdk/bin/xtc" ]; then
+    echo "✅ Script launchers already present: xec, xcc, xtc"
+    chmod +x "xdk/bin/xec" "xdk/bin/xcc" "xdk/bin/xtc"
     
     # Verify script launchers are working and have the correct module paths
     echo "🧪 Testing script launcher functionality..."
     echo "📋 Testing xcc --version:"
-    "./xdk/bin/xcc${LAUNCHER_EXT}" --version || {
+    "./xdk/bin/xcc" --version || {
         echo "❌ xcc script launcher test failed"
         exit 1
     }
     echo "📋 Testing xec --version:"
-    "./xdk/bin/xec${LAUNCHER_EXT}" --version || {
+    "./xdk/bin/xec" --version || {
         echo "❌ xec script launcher test failed"
         exit 1
     }
-    
+    echo "📋 Testing xtc --version:"
+    "./xdk/bin/xtc" --version || {
+        echo "❌ xtc script launcher test failed"
+        exit 1
+    }
+
     # Verify script launchers have the expected module paths (check script content)
     echo "🔍 Verifying script launchers contain XTC module paths..."
-    if grep -q "XDK_HOME.*APP_HOME" "xdk/bin/xcc${LAUNCHER_EXT}" && \
-       grep -q "\-L.*lib" "xdk/bin/xcc${LAUNCHER_EXT}" && \
-       grep -q "javatools_turtle.xtc" "xdk/bin/xcc${LAUNCHER_EXT}" && \
-       grep -q "javatools_bridge.xtc" "xdk/bin/xcc${LAUNCHER_EXT}"; then
+    if grep -q "XDK_HOME.*APP_HOME" "xdk/bin/xcc" && \
+       grep -q "\-L.*lib" "xdk/bin/xcc" && \
+       grep -q "javatools_turtle.xtc" "xdk/bin/xcc" && \
+       grep -q "javatools_bridge.xtc" "xdk/bin/xcc"; then
         echo "✅ Script launchers contain expected XTC module paths"
     else
         echo "❌ Script launchers missing XTC module paths - this is a critical bug!"
         echo "📋 xcc script content preview:"
-        head -20 "xdk/bin/xcc${LAUNCHER_EXT}" || true
+        head -20 "xdk/bin/xcc" || true
         exit 1
     fi
     

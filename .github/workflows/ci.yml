@@ -1,6 +1,10 @@
 #
 # GitHub runner workflow for building, verifying and testing the XVM repo.
 #
+# IMPORTANT: If you manually enable 'snapshot-maven', you MUST also enable 
+# 'homebrew' to keep the Homebrew formula synchronized with the 
+# snapshot release. Failing to do so will result in inconsistent package versions.
+#
 name: XVM Verification and Package Updates
 
 # Grant additional permissions needed for Docker package management  
@@ -15,49 +19,49 @@ on:
   push:
   workflow_dispatch:
     inputs:
-      always_publish_snapshot:
-        description: 'Always publish snapshot regardless of branch'
+      snapshot-maven:
+        description: 'Always publish Maven artifact snapshot regardless of branch'
         type: boolean
         required: false
         default: false
-      always_build_docker_image:
+      docker-image:
         description: 'Always build Docker images regardless of branch'
         type: boolean
         required: false
         default: false
-      always_clean_docker:
+      docker-clean:
         description: 'Always run Docker cleanup regardless of branch'
         type: boolean
         required: false
         default: false
-      always_update_homebrew_tap:
+      homebrew:
         description: 'Always update Homebrew tap regardless of branch'
         type: boolean
         required: false
         default: false
-      as_master:
+      master-semantics:
         description: 'Run branch as if it were master (enables all publish/build/update flags)'
         type: boolean
         required: false
         default: false
-      single_platform:
-        description: 'Run only single platform (ubuntu-latest, windows-latest, or full matrix)'
+      platforms:
+        description: 'Run only single platform (ubuntu-latest, windows-latest, or all platforms)'
         type: choice
         required: false
-        default: 'full'
+        default: 'all'
         options:
-          - 'full'
+          - 'all'
           - 'ubuntu-latest'
           - 'windows-latest'
       extra_gradle_options:
         description: 'Extra Gradle options to pass to the build'
         required: false
-      run_manual_tests:
+      test:
         description: 'Run manual tests'
         type: boolean
         required: false
         default: true
-      run_manual_tests_parallel:
+      parallel-test:
         description: 'Run manual tests in parallel mode'
         type: boolean
         required: false
@@ -65,16 +69,13 @@ on:
 
 env:
   # TODO: Default should be disabled; we only want to be bothered by tagging and publishing for the master branch.
-  always_publish_snapshot: ${{ github.event.inputs.always_publish_snapshot == 'true' || github.event.inputs.as_master == 'true' }}
-  always_update_homebrew_tap: ${{ github.event.inputs.always_update_homebrew_tap == 'true' || github.event.inputs.as_master == 'true' }}
+  always_publish_maven_artifact_snapshot: ${{ github.event.inputs.snapshot-maven == 'true' || github.event.inputs.master-semantics == 'true' }}
+  always_update_homebrew_tap: ${{ github.event.inputs.homebrew == 'true' || github.event.inputs.master-semantics == 'true' }}
 
   # Add manual tests as an included build to the composite build configuration, and also build them.
   ORG_GRADLE_PROJECT_includeBuildManualTests: true
   ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
   ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
-
-  # Add sanity checks that the javatools fatjar contains appropriate classes and dependencies
-  ORG_XTCLANG_JAVATOOLS_SANITY_CHECK_JAR: true
 
   # Secrets (TODO: Verify plugin portal and maven central/sonatype credentials)
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -88,8 +89,8 @@ env:
   gradle_options: "-Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false -Dorg.gradle.jvmargs='-Xmx4g -XX:+UseG1GC -XX:ParallelGCThreads=2 -XX:ConcGCThreads=1 -XX:+UseStringDeduplication' --stacktrace --warning-mode=all --console=plain ${{ inputs.extra_gradle_options }}"
 
   # Optional flags to control manual tests
-  run_manual_tests: ${{ github.event.inputs.run_manual_tests != 'false' }}
-  run_manual_tests_parallel: ${{ github.event.inputs.run_manual_tests_parallel == 'true' }}
+  run_manual_tests: ${{ github.event.inputs.test != 'false' }}
+  run_manual_tests_parallel: ${{ github.event.inputs.parallel-test == 'true' }}
 
   # java_version will be set dynamically from xdk.properties in each job
   java_distribution: temurin
@@ -99,7 +100,6 @@ env:
   GH_COMMIT: ${{ github.sha }}
   GH_BRANCH: ${{ github.ref_name }}
   DOCKER_BASE_IMAGE: ghcr.io/xtclang/xvm
-  
 
   # Gradle cache inspection function
   GRADLE_CACHE_INSPECT: |
@@ -127,7 +127,7 @@ env:
   # Build environment and build workflow debug flags.
   # ACTIONS_RUNNER_DEBUG: true
   # ACTIONS_STEP_DEBUG: true
-  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: false
 
 # Concurrency settings: group by workflow and ref, cancel intermediate builds, but only if it's a pull request build.
 concurrency:
@@ -139,7 +139,7 @@ jobs:
 
     strategy:
       matrix:
-        os: ${{ github.event.inputs.single_platform == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.single_platform == 'windows-latest' && fromJSON('["windows-latest"]') || fromJSON('["ubuntu-latest", "windows-latest"]') }}
+        os: ${{ github.event.inputs.platforms == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.platforms == 'windows-latest' && fromJSON('["windows-latest"]') || fromJSON('["ubuntu-latest", "windows-latest"]') }}
 
     runs-on: ${{ matrix.os }}
     
@@ -189,17 +189,17 @@ jobs:
           echo "*** Commit (github.sha)    : ${{ github.sha }}"
           echo "*** Runner OS              : ${{ runner.os }}"
           echo "*** Workflow dispatch inputs:"
-          echo "    always_publish_snapshot: '${{ github.event.inputs.always_publish_snapshot }}'"
-          echo "    always_build_docker_image: '${{ github.event.inputs.always_build_docker_image }}'"
-          echo "    always_clean_docker: '${{ github.event.inputs.always_clean_docker }}'"
-          echo "    always_update_homebrew_tap: '${{ github.event.inputs.always_update_homebrew_tap }}'"
-          echo "    as_master: '${{ github.event.inputs.as_master }}'"
-          echo "    single_platform: '${{ github.event.inputs.single_platform }}'"
-          echo "    run_manual_tests: '${{ github.event.inputs.run_manual_tests }}'"
-          echo "    run_manual_tests_parallel: '${{ github.event.inputs.run_manual_tests_parallel }}'"
+          echo "    snapshot-maven: '${{ github.event.inputs.snapshot-maven }}'"
+          echo "    docker-image: '${{ github.event.inputs.docker-image }}'"
+          echo "    docker-clean: '${{ github.event.inputs.docker-clean }}'"
+          echo "    homebrew: '${{ github.event.inputs.homebrew }}'"
+          echo "    master-semantics: '${{ github.event.inputs.master-semantics }}'"
+          echo "    platforms: '${{ github.event.inputs.platforms }}'"
+          echo "    test: '${{ github.event.inputs.test }}'"
+          echo "    parallel-test: '${{ github.event.inputs.parallel-test }}'"
           echo "    extra_gradle_options: '${{ github.event.inputs.extra_gradle_options }}'"
           echo "*** Environment variables:"
-          echo "    always_publish_snapshot: '${{ env.always_publish_snapshot }}'"
+          echo "    always_publish_maven_artifact_snapshot: '${{ env.always_publish_maven_artifact_snapshot }}'"
           echo "    run_manual_tests: '${{ env.run_manual_tests }}'"
           echo "    run_manual_tests_parallel: '${{ env.run_manual_tests_parallel }}'"
           echo "*** Java system properties :" 
@@ -212,8 +212,9 @@ jobs:
           ${{ env.GRADLE_CACHE_INSPECT }}
           
           cwd_path=$(pwd)
-          echo "Executing Gradle 'clean' and 'installDist' tasks from path: '$cwd_path'"
+          echo "Executing Gradle 'clean', 'check', and 'distZip' tasks from path: '$cwd_path'"
           echo "Running clean to validate dependency graph integrity and catch missing dependencies"
+          echo "Running check to execute all tests before creating distribution"
           ls -la build/ 2>/dev/null && echo "Build directory exists - will be cleaned" || echo "✅ Confirmed: No previous build outputs"
           
           echo "🔧 JVM Configuration:"
@@ -223,8 +224,9 @@ jobs:
           echo "🔍 JVM Flag Information:"
           java -XX:+PrintFlagsFinal -version 2>&1 || echo "  Flag printing failed (non-fatal)"
           
-          inspect_gradle_cache "before clean and distZip"
+          inspect_gradle_cache "before clean, check and distZip"
           ./gradlew ${{ env.gradle_options }} clean
+          ./gradlew ${{ env.gradle_options }} check
           ./gradlew ${{ env.gradle_options }} :xdk:distZip
           
           # Run manual tests inline if enabled (avoids cache rebuild)
@@ -239,6 +241,7 @@ jobs:
             
             # Run parallel or sequential tests based on setting
             MANUAL_TASK=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runAllTestTasks" )
+            echo "Running manual tests with given configuration: $MANUAL_TASK"
             ./gradlew ${{ env.gradle_options }} manualTests:$MANUAL_TASK
             
             inspect_gradle_cache "after manual tests (inline)"
@@ -247,27 +250,24 @@ jobs:
             echo "⏭️ Manual tests skipped (disabled)"
           fi
 
-      - name: Get XDK version for snapshot release
-        if: ${{ success() && matrix.os == 'ubuntu-latest' && ((github.event.inputs.always_update_homebrew_tap == 'true') || (github.event.inputs.always_build_docker_image == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master')) }}
+      - name: Prepare Snapshot Release
+        if: ${{ success() && matrix.os == 'ubuntu-latest' && ((github.event.inputs.homebrew == 'true') || (github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
         id: get_version
         uses: ./.github/actions/get-xdk-version
 
-      - name: Create snapshot release directly from build
-        if: ${{ success() && matrix.os == 'ubuntu-latest' && ((github.event.inputs.always_update_homebrew_tap == 'true') || (github.event.inputs.always_build_docker_image == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master')) }}
+      - name: Create Snapshot Release (directly from build)
+        if: ${{ success() && matrix.os == 'ubuntu-latest' && ((github.event.inputs.homebrew == 'true') || (github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
         shell: bash
         run: |
           # Copy the built zip to current directory for the action to find
-          cp xdk/build/distributions/xdk-*.zip ./
-          
-          # Find the actual zip file name
+          cp xdk/build/distributions/xdk-*.zip ./          
           XDK_ZIP=$(find . -name "xdk-*.zip" | head -1)
-          XDK_ZIP=$(basename "$XDK_ZIP")
-          
+          XDK_ZIP=$(basename "$XDK_ZIP")          
           echo "Found XDK zip: $XDK_ZIP"
           
         # Now call the create-snapshot-release action
-      - name: Upload snapshot release
-        if: ${{ success() && matrix.os == 'ubuntu-latest' && ((github.event.inputs.always_update_homebrew_tap == 'true') || (github.event.inputs.always_build_docker_image == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master')) }}
+      - name: Upload Snapshot Release to GitHub
+        if: ${{ success() && matrix.os == 'ubuntu-latest' && ((github.event.inputs.homebrew == 'true') || (github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
         uses: ./.github/actions/create-snapshot-release
         with:
           xdk_version: ${{ steps.get_version.outputs.version }}
@@ -276,15 +276,15 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
 
-  publish-snapshot:
-    name: Publish to GitHub packages iff snapshot + non-redundant build platform + branch is master
-    # Only run if ALL build-verify matrix jobs succeed (both ubuntu-latest and windows-latest)
+  publish-maven-artifact-snapshot:
+    name: Publish Maven artifacts to GitHub packages iff snapshot + non-redundant build platform + branch is master
+    # Only run if ALL build-verify matrix jobs succeed (depends on platforms setting)
     needs: build-verify
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_publish_snapshot == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master')) }}
+    if: ${{ !cancelled() && !failure() && ((github.event.inputs.snapshot-maven == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
       # Check out current repository
-      - name: Fetch Sources
+      - name: Fetch SourcesAdd
         uses: actions/checkout@v4
 
       - name: Get Java version from XDK properties
@@ -303,9 +303,9 @@ jobs:
       - name: Debug publish conditions and verify all tests passed
         run: |
           echo "🐛 Debug publish job conditions:"
-          echo "  always_publish_snapshot input: '${{ github.event.inputs.always_publish_snapshot }}'"
+          echo "  snapshot-maven input: '${{ github.event.inputs.snapshot-maven }}'"
           echo "  github.ref: '${{ github.ref }}'"
-          echo "  Condition should be: always_publish_snapshot == 'true' OR github.ref == 'refs/heads/master'"
+          echo "  Condition should be: snapshot-maven == 'true' OR github.ref == 'refs/heads/master'"
           echo "  This job should NOT run on non-master branch without explicit flag!"
           echo ""
           echo "✅ All build-verify matrix jobs (Ubuntu + Windows) completed successfully"
@@ -318,13 +318,13 @@ jobs:
           echo "*** Commit (github.sha)    : ${{ github.sha }}"
           echo "*** Runner OS              : ${{ runner.os }}"
           echo "*** Workflow inputs:"
-          echo "    always_publish_snapshot (raw): '${{ github.event.inputs.always_publish_snapshot }}'"
-          echo "    always_publish_snapshot (env): '${{ env.always_publish_snapshot }}'"
+          echo "    snapshot-maven (raw): '${{ github.event.inputs.snapshot-maven }}'"
+          echo "    always_publish_maven_artifact_snapshot (env): '${{ env.always_publish_maven_artifact_snapshot }}'"
           echo "*** Java system properties :" 
           java -XshowSettings:properties --version
 
-      - name: Create or Update Snapshot (if pushed to 'master', or env.always_publish_snapshot is true)
-        if: ${{ (github.event.inputs.always_publish_snapshot == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master') }}
+      - name: Create or Update Maven Artifact Snapshot (if pushed to 'master', or env.snapshot-maven is true)
+        if: ${{ (github.event.inputs.snapshot-maven == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master') }}
         shell: bash
         run: |
           ${{ env.GRADLE_CACHE_INSPECT }}
@@ -339,7 +339,7 @@ jobs:
     name: Compute Docker tags and metadata
     needs: build-verify
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_build_docker_image == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master')) }}
+    if: ${{ !cancelled() && !failure() && ((github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
     outputs:
       version: ${{ steps.compute.outputs.version }}
       branch-tag: ${{ steps.compute.outputs.branch-tag }}
@@ -388,7 +388,7 @@ jobs:
     name: Build and push Docker images
     needs: [compute-docker-tags, build-verify]  # Depends on build-verify creating snapshot release
     runs-on: ${{ matrix.runner }}
-    if: ${{ success() && ((github.event.inputs.always_build_docker_image == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master')) }}
+    if: ${{ success() && ((github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
     strategy:
@@ -431,21 +431,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download XDK from snapshot release
+      - name: Download XDK from Snapshot Release
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "📥 Downloading XDK from snapshot release created by build-verify..."
           gh release download xdk-latest-snapshot --pattern "xdk-*.zip"
-          
-          # Verify we got the zip file
           XDK_ZIP=$(find . -name "xdk-*.zip" | head -1)
           if [ -z "$XDK_ZIP" ]; then
             echo "❌ Failed to download XDK from snapshot release"
             exit 1
           fi
-          
           echo "✅ Downloaded XDK: $(basename "$XDK_ZIP")"
 
       - name: Build and push Docker image with pre-built artifacts (${{ matrix.arch }})
@@ -514,6 +511,28 @@ jobs:
             --provenance=false \
             --output type=registry \
             .
+          
+          echo ""
+          echo "🐳 Docker images built and pushed for ${{ matrix.arch }} architecture!"
+          echo ""
+          echo "📋 Usage examples:"
+          
+          # Show primary tag usage (will be available after manifest creation)
+          PRIMARY_TAG="${{ needs.compute-docker-tags.outputs.latest-tag }}"
+          echo "# Primary tag (multi-platform, available after manifest creation):"
+          echo "docker run --rm -v \$(pwd):/workspace ${{ env.DOCKER_BASE_IMAGE }}:$PRIMARY_TAG xcc /workspace/MyModule.x"
+          echo "docker run --rm -v \$(pwd):/workspace ${{ env.DOCKER_BASE_IMAGE }}:$PRIMARY_TAG xec /workspace/MyModule"
+          echo "docker run -it --rm -v \$(pwd):/workspace ${{ env.DOCKER_BASE_IMAGE }}:$PRIMARY_TAG bash"
+          echo ""
+          
+          # Show architecture-specific tags (available immediately)
+          echo "# Architecture-specific tags (available immediately):"
+          echo "$TAGS" | while read tag; do
+            echo "docker run --rm --platform=${{ matrix.platform }} -v \$(pwd):/workspace $tag xcc /workspace/MyModule.x"
+            # TODO: Uncomment this break to limit everything to one example per architecture:
+            #break
+          done
+          echo ""
 
       - name: Verify images pushed to registry
         shell: bash
@@ -541,7 +560,7 @@ jobs:
     name: Create multi-platform manifest
     needs: [compute-docker-tags, docker-build]
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_build_docker_image == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master')) }}
+    if: ${{ success() && ((github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
       - name: Fetch Sources
         uses: actions/checkout@v4
@@ -607,7 +626,7 @@ jobs:
     name: Test Docker image functionality
     needs: [compute-docker-tags, docker-manifest]
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_build_docker_image == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master')) }}
+    if: ${{ success() && ((github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
       - name: Fetch Sources
         uses: actions/checkout@v4
@@ -636,7 +655,7 @@ jobs:
     name: Clean up old Docker package versions
     needs: docker-test
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_build_docker_image == 'true') || (github.event.inputs.always_clean_docker == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master')) }}
+    if: ${{ success() && ((github.event.inputs.docker-image == 'true') || (github.event.inputs.docker-clean == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
       - name: Fetch Sources
         uses: actions/checkout@v4
@@ -674,7 +693,8 @@ jobs:
     name: Update Homebrew tap with latest XDK
     needs: build-verify
     runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.always_update_homebrew_tap == 'true') || (github.event.inputs.as_master == 'true') || (github.ref == 'refs/heads/master')) }}
+    # IMPORTANT: Always run if snapshot release was created to prevent package skew
+    if: ${{ !cancelled() && !failure() && ((github.event.inputs.homebrew == 'true') || (github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
     steps:
       - name: Checkout XVM repository
         uses: actions/checkout@v4

@@ -64,11 +64,13 @@ gradle.taskGraph.whenReady {
  * the composite.
  */
 private fun includeManualTests(): Boolean {
-    val includeBuildManualTests: String? by settings
-    val shouldInclude = includeBuildManualTests?.toBoolean() ?: false
-    return shouldInclude.also {
-        logger.info("[xvm] Build aggregator includeBuild(\"manualTests\"): $shouldInclude")
-    }
+    val shouldInclude = providers.gradleProperty("includeBuildManualTests")
+        .orElse("true")  // Default to true as per gradle.properties
+        .get()
+        .toBoolean()
+    
+    logger.info("[xvm] Build aggregator includeBuild(\"manualTests\"): $shouldInclude")
+    return shouldInclude
 }
 
 if (includeManualTests()) {

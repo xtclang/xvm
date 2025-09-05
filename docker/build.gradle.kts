@@ -256,7 +256,8 @@ fun testDockerImage(imageTag: String, logger: Logger) {
     logger.info("🔧 Testing launchers...")
     val basicTests = listOf(
         "xec --version" to listOf("xec", "--version"),
-        "xcc --version" to listOf("xcc", "--version")
+        "xcc --version" to listOf("xcc", "--version"),
+        "xtc --version" to listOf("xtc", "--version")
     )
     
     basicTests.forEach { (testName, testCmd) ->

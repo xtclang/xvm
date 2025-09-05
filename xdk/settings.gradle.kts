@@ -4,7 +4,6 @@ pluginManagement {
     includeBuild("../plugin")
 }
 
-includeBuild("../manualTests")
 
 plugins {
     id("org.xtclang.build.common")

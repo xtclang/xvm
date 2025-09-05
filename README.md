@@ -81,7 +81,7 @@ This ensures:
 
 #### Snapshots vs. Stable Releases
 
-**Current Status**: XTC is currently in active development using snapshot versioning (e.g., `0.4.4-SNAPSHOT`).
+**Current Status**: The XDK is currently in active development using snapshot versioning (e.g., `0.4.4-SNAPSHOT`).
 
 **Snapshots in Maven Ecosystem**:
 - **Snapshots** (`*-SNAPSHOT`) are development builds that can change frequently
@@ -95,45 +95,32 @@ This ensures:
 - Cached permanently by build systems - no automatic updates
 - Suitable for production applications
 
-**Next Release Timeline**: We will publish the next non-snapshot version of XTC as soon as all build infrastructure updates are complete. This will mark the transition from active development snapshots to stable, production-ready releases with proper semantic versioning.
+**Next Release Timeline**: We will publish the next non-snapshot version of the XDK as soon as all build infrastructure updates are complete. This will mark the transition from active development snapshots to stable, production-ready releases with proper semantic versioning.
 
-#### CI/CD Pipeline and Homebrew Integration
+#### GitHub Workflows and Automation
 
-Our continuous integration system automatically maintains the Homebrew tap to ensure developers always have access to the latest XDK builds.
+Our project uses comprehensive GitHub workflows for continuous integration, dependency management, and automated releases.
 
-**Pipeline Overview**:
-1. **Build & Test**: On every push to `master`, CI builds and verifies the XDK across multiple platforms
-2. **Snapshot Release**: Creates/updates the `xdk-latest-snapshot` GitHub release with the XDK distribution ZIP
-3. **Homebrew Update**: Automatically updates the [xtclang/homebrew-xvm](https://github.com/xtclang/homebrew-xvm) tap with the new release
-4. **Docker Images**: Builds and pushes multi-platform Docker images to `ghcr.io/xtclang/xvm`
+**For complete documentation of our CI/CD pipeline, GitHub Actions, custom actions, manual workflow controls, Dependabot configuration, and all automation details, see:**
 
-**Homebrew Tap Automation**:
+**[📖 .github/README.md - XVM GitHub Workflows and Actions](.github/README.md)**
 
-The CI pipeline automatically maintains the Homebrew formula in the [xtclang/homebrew-xvm](https://github.com/xtclang/homebrew-xvm) repository:
+This includes:
+- **CI/CD Pipeline**: Multi-platform builds, testing, Docker images, and publishing
+- **Dependabot**: Automated dependency updates for Gradle, GitHub Actions, and Docker
+- **Manual Controls**: Workflow dispatch options and monitoring commands  
+- **Custom Actions**: Reusable automation components
+- **Future Improvements**: Planned enhancements and simplifications
 
-- **Formula Path**: `Formula/xdk-latest.rb`
-- **Auto-generated**: Version, SHA256, download URL are computed automatically
-- **Java Dependency**: Dynamically sourced from `xdk.properties` (`org.xtclang.java.jdk=24`)
-- **Branch Configuration**: Controlled by GitHub variable `HOMEBREW_TAP_BRANCH` (currently: `lagergren/brew-tap`)
+**Quick CI Overview**:
+1. **Build & Test**: Multi-platform builds (Ubuntu + Windows) with comprehensive testing
+2. **Snapshot Release**: Automated GitHub releases with XDK distribution packages
+3. **Homebrew Integration**: Automatic updates to [xtclang/homebrew-xvm](https://github.com/xtclang/homebrew-xvm) tap
+4. **Docker Images**: Multi-architecture container builds published to `ghcr.io/xtclang/xvm`
 
-**For Maintainers**:
-
-The target branch for Homebrew updates can be configured using a GitHub repository variable:
-
-```bash
-# Set the target branch (requires repo admin access)
-gh variable set HOMEBREW_TAP_BRANCH --body "master"
-
-# Or set to a development branch for testing
-gh variable set HOMEBREW_TAP_BRANCH --body "feature-branch"
-
-# View current setting  
-gh variable list
-```
-
-If `HOMEBREW_TAP_BRANCH` is not set, it defaults to `master`. The CI workflow logs the target branch: `"🍺 Using Homebrew tap branch: <branch>"`.
-
-**CI Workflow Location**: See `.github/workflows/ci.yml` and `.github/actions/update-homebrew-tap/` for the complete automation logic.
+**Homebrew Configuration**:
+- **Target Branch**: Controlled by `HOMEBREW_TAP_BRANCH` repository variable (currently: `lagergren/brew-tap`)
+- **Auto-generated Formula**: Version, SHA256, and dependencies computed automatically from build
 
 *Last updated: 2025-08-25*
 
@@ -147,70 +134,19 @@ Use the official XDK Docker image for development or CI:
 
 ```bash
 # Run XDK commands in container
-docker run --rm -v $(pwd):/workspace xtclang/xdk:latest xcc /workspace/MyModule.x
-docker run --rm -v $(pwd):/workspace xtclang/xdk:latest xec /workspace/MyModule
+docker run --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest xcc /workspace/MyModule.x
+docker run --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest xec /workspace/MyModule
 
-# Interactive development shell
-docker run -it --rm -v $(pwd):/workspace xtclang/xdk:latest bash
+# Interactive development shell  
+docker run -it --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest bash
 ```
 
-**Platform Support**: The XDK Docker image is a Linux-based multiplatform image supporting both `linux/amd64` and `linux/arm64` architectures. This covers all modern hardware:
+**Multi-platform Support**: The XDK Docker image supports both `linux/amd64` and `linux/arm64` architectures, running natively on macOS (Intel/Apple Silicon), Windows (via WSL2), and Linux systems.
 
-- **macOS**: Runs natively on Apple Silicon (arm64) and Intel Macs (amd64)
-- **Windows**: Runs via WSL2 on both Intel/AMD (amd64) and ARM processors
-- **Linux**: Runs natively on x86_64 and ARM64 systems
+**Development Container Support**: This project includes a devcontainer configuration at `.devcontainer/devcontainer.json` for VSCode development.
 
-Docker automatically selects the native platform matching your CPU architecture for optimal performance. In rare cases where native support isn't available, Docker will use QEMU emulation (which will be slower but functional).
-
-**Podman Compatibility**: You can use Podman as a drop-in replacement for Docker - just replace `docker` with `podman` in any of the above commands.
-
-**VSCode Devcontainer:**
-
-Create `.devcontainer/devcontainer.json` in your project:
-
-```json
-{
-  "name": "XTC Development",
-  "image": "xtclang/xdk:latest",
-  "workspaceFolder": "/workspace",
-  "mounts": [
-    "source=${localWorkspaceFolder},target=/workspace,type=bind"
-  ],
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "ms-vscode.vscode-json"
-      ]
-    }
-  },
-  "postCreateCommand": "echo 'XDK ready for development'"
-}
-```
-
-**IntelliJ IDEA Docker Integration:**
-
-IntelliJ IDEA provides Docker integration but doesn't use devcontainers directly. Instead, you can:
-
-1. **Docker Plugin**: Install the Docker plugin in IntelliJ IDEA
-2. **Docker Run Configuration**: Create a run configuration using the XDK Docker image:
-    - Image: `xtclang/xdk:latest`
-    - Bind mounts: Map your project directory to `/workspace`
-    - Working directory: `/workspace`
-3. **Docker Compose** (alternative): Create a `docker-compose.yml`:
-   ```yaml
-   version: '3.8'
-   services:
-     xdk-dev:
-       image: xtclang/xdk:latest
-       volumes:
-         - .:/workspace
-       working_dir: /workspace
-       stdin_open: true
-       tty: true
-   ```
-   Then use IntelliJ's Docker Compose integration to run and attach to the container.
-
-**Note**: IntelliJ's Docker support is more manual compared to VSCode's seamless devcontainer experience, but provides similar containerized development capabilities.
+**📖 For complete Docker documentation, build instructions, CI integration, and advanced usage, see:**
+**[docker/README.md](docker/README.md)**
 
 ### Maven Artifacts and IDE Integration
 
@@ -299,7 +235,7 @@ The project provides two main distribution variants:
     - **Contents**: Cross-platform script launchers (`xec`, `xcc`, `xec.bat`, `xcc.bat`)
     - **Ready to use**: Just add `bin/` to your PATH - no configuration needed
 
-2. **`./gradlew xdk:installWithLaunchersDist`** - Platform-specific native binary launchers
+2. **`./gradlew xdk:installWithNativeLaunchersDist`** - Platform-specific native binary launchers
     - **Output**: `xdk/build/install/xdk-native-{os}_{arch}/` (e.g., `xdk-native-linux_amd64/`)
     - **Contents**: Platform-specific native binary launchers (`xec`, `xcc`)
     - **Ready to use**: Just add `bin/` to your PATH - no configuration needed
@@ -312,7 +248,7 @@ The project provides two main distribution variants:
     - **Contents**: Cross-platform script launchers (`xec`, `xcc`, `xec.bat`, `xcc.bat`)
     - **Ready to use**: Extract and add `bin/` to PATH
 
-2. **`./gradlew xdk:withLaunchersDistZip`** / **`./gradlew xdk:withLaunchersDistTar`** - Platform-specific native binary launchers
+2. **`./gradlew xdk:withNativeLaunchersDistZip`** / **`./gradlew xdk:withNativeLaunchersDistTar`** - Platform-specific native binary launchers
     - **Output**: `xdk-{version}-native-{os}_{arch}.zip` / `xdk-{version}-native-{os}_{arch}.tar.gz`
     - **Contents**: Platform-specific native launchers (`xec`, `xcc`)
     - **Ready to use**: Extract and add `bin/` to PATH
@@ -325,7 +261,7 @@ The project provides two main distribution variants:
 - ✅ Ready to use immediately - just add `bin/` to your PATH
 - ✅ **Recommended for all users**
 
-**Native Launcher Distribution** (`withLaunchers*`):
+**Native Launcher Distribution** (`withNativeLaunchers*`):
 - ✅ Platform-specific native binary launchers (`xec`, `xcc`)
 - ✅ Ready to use immediately - just add `bin/` to your PATH
 - ℹ️ **Alternative for specific platform requirements**
@@ -398,167 +334,206 @@ The difference between `build` and `installDist` is that `build` creates all the
 
 ## Development
 
-### Recommended Git workflow
+### Git Workflow: Rebase-Only, Linear History
 
-*A note about this section: this workflow is supported by pretty much every
-common GUI in any common IDE, in one way or another. But in the interest of
-not having to document several instances with slightly different naming convention,
-or deliver a confusing tutorial, this section only describes the exact bare
-bones command line git commands that can be used to implement our workflow,
-which is also a common developer preference. All known IDEs just wrap these
-commands in one way or another.*
+**Core Principle**: We maintain a **strict linear history** in master. **NEVER merge from master to branches** - always rebase instead to avoid merge commits and keep history clean.
 
-#### Make sure "pull.rebase" is set to "true" in your git configuration
+*Note: All commands below are supported by IDE Git integrations (IntelliJ, VSCode, etc.). This section uses command-line examples for clarity, but the same operations work in any modern IDE.*
 
-In order to maintain linear git history, and at any cost avoid merges being created
-and persisted in the code base, please make sure that your git configuration will
-run "pull" with "rebase" as its default option. Preferably globally, but at least
-for the XVM repository.
+#### Initial Git Configuration
 
-```
+**Required:** Configure git to use rebase by default to prevent accidental merge commits:
+
+```bash
+# Check current setting
 git config --get pull.rebase
-```
 
-Output should be "true".
-
-If it's not, execute
-
-```
+# Set globally (recommended)
 git config --global pull.rebase true
-```
 
-or from a directory inside the repository:
-
-```
+# Or set for this repository only
 git config --local pull.rebase true
 ```
 
-The latter will only change the pull semantics for the repository itself, and
-the config may or may not be rewritten by future updates.
+The output of the first command should be `true`. If not, run one of the configuration commands above.
 
-#### Always work in a branch. Do not work directly in master
+#### Branch-Based Development Workflow
 
-XTC will very soon switch to only allowing putting code onto the master branch through
-a pull request in a sub branch.
+**Rule 1**: Always work in feature branches. Direct commits to master are prohibited.
+**Rule 2**: Always rebase your branch on top of latest master. Never merge master into your branch.
 
-In order to minimize git merges, and to keep master clean, with a minimum of complexity,
-the recommended workflow for submitting a pull request is as follows:
+##### 1. Create and Setup Your Feature Branch
 
-##### 1) Create a new branch for your change, and connect it to the upstream:
+```bash
+# Create new branch from latest master
+git checkout master
+git pull                                    # This will rebase thanks to pull.rebase=true
+git checkout -b feature/descriptive-name   # Use descriptive names
 
-```
-git checkout -B decriptive-branch-name
-git push --set-upstream origin descriptive-branch-name
-```
-
-##### 2) Perform your changes, and commit them. We currently do not have any syntax requirements
-
-on commit descriptions, but it's a good idea to describe the purpose of the commit.
-
-```
-git commit -m "Descriptive commit message, including a github issue reference, if one exists"
+# Push and set upstream tracking
+git push --set-upstream origin feature/descriptive-name
 ```
 
-##### 3) Push your changes to the upstream and create a pull request, when you are ready for review
+##### 2. Work on Your Changes
 
-```
+```bash
+# Make changes and commit frequently
+git add .
+git commit -m "Add feature X functionality"
+
+# Push your work regularly  
 git push
 ```
 
-##### Resolving conflicts, and keeping your branch up to date with master
+##### 3. Keep Your Branch Current (Critical Step)
 
-Whenever you need to, and this is encouraged, you should rebase your local branch,
-so that your changes get ripped out and re-transplanted on top of everything that has
-been pushed to master, during the time you have been working on the branch.
+**Before creating a PR**, and **anytime master moves ahead**, rebase your branch:
 
-Before you submit a pull request, you *need* to rebase it against master. We will
-gradually add build pipeline logic for helping out with this, and other things, but
-it's still strongly recommended that you understand the process.
+```bash
+# Fetch latest changes from all remotes
+git fetch origin
 
-To do a rebase, which has the effect that your branch will contain all of master,
-with your commits moved to the end of history, execute the following commands:
-
-```
-git fetch 
+# Rebase your branch on top of latest master
 git rebase origin/master
 ```
 
-The fetch command ensures that the global state of the world, whose local copy is stored
-in the ".git" directory of the repository, gets updated. Remember that git allows you to
-work completely offline, should you chose to do so, after you have cloned a repository.
-This means that, in order to get the latest changes from the rest of the world, and make
-sure you are working in an up-to-date environment, you need to fetch that state from the
-upstream.
+**If conflicts occur during rebase:**
+1. **Fix conflicts** in your editor
+2. **Test that everything still builds**: `./gradlew build`
+3. **Continue the rebase**:
+   ```bash
+   git add .
+   git rebase --continue
+   ```
+4. **If you get stuck**, abort and ask for help:
+   ```bash
+   git rebase --abort
+   ```
 
-If there are any conflicts, the rebase command above will halt and report conflict.
-Should this be the case, change your code to resolve the conflicts, and verify that it
-builds clean again. After it does, add the resolved commit and tell git to continue
-with the rebase:
-
+**After successful rebase, force-push** (this is safe and necessary):
+```bash
+git push --force-with-lease  # Safer than git push -f
 ```
-git add .
-git rebase --continue
+
+##### 4. Clean Up Your Commits (Before PR)
+
+Use interactive rebase to create clean, logical commits:
+
+```bash
+# Interactive rebase for last n commits
+git rebase -i HEAD~3  # Example: last 3 commits
+
+# In the editor, you can:
+# - squash: combine commits
+# - reword: change commit message  
+# - drop: remove commits
+# - reorder: change commit order
 ```
 
-If you get entangled, you can always restart the rebase by reverting to the state
-where you started:
+**PR Quality Standards:**
+- ✅ Each commit should build and pass tests
+- ✅ Commit messages should be descriptive
+- ✅ Related changes should be in the same commit
+- ✅ Unrelated changes should be in separate commits
+- ❌ No "fix typo", "wip", or broken commits
 
+##### 5. Create Pull Request
+
+```bash
+# Final push after cleanup
+git push --force-with-lease
+
+# Create PR using GitHub CLI (optional)
+gh pr create --title "Add feature X" --body "Description of changes"
 ```
+
+#### What NOT to Do
+
+**❌ NEVER do these things:**
+```bash
+# DON'T: Merge master into your branch
+git merge master                    # This creates merge commits!
+git pull origin master             # This might create merge commits!
+
+# DON'T: Work directly on master  
+git checkout master
+git commit -m "direct change"      # Use branches instead!
+
+# DON'T: Create merge commits
+git merge feature/my-branch        # Maintainers handle PR merging
+```
+
+**✅ ALWAYS do these instead:**
+```bash
+# DO: Rebase your branch on master
+git rebase origin/master
+
+# DO: Use pull with rebase configured  
+git pull                           # Safe with pull.rebase=true
+
+# DO: Work in branches
+git checkout -b feature/my-change
+```
+
+#### Emergency: Fixing a Broken Rebase
+
+If you get into a confusing state during rebase:
+
+```bash
+# 1. Abort the rebase to start over
 git rebase --abort
+
+# 2. Make sure you have the latest master
+git fetch origin
+
+# 3. Try again with a clean approach
+git rebase origin/master
+
+# 4. If still stuck, ask for help on the team chat
 ```
 
-After rebasing, it's a good idea to execute "git status", to see if there are heads
-from both master and your local branch. Should this be the case, you need to resolve
-the rebase commit order by force pushing the rebased version of you local branch
-before creating the pull request for review:
+#### GitHub Branch Protection Settings
 
-```
-git status
-git push -f # if needed
-```
+**For Repository Administrators**: Configure GitHub to enforce this workflow:
 
-##### Do not be afraid to mess around in your local branch
+**Settings → Branches → Add rule** for `master` branch:
+- ✅ **"Restrict pushes that create merge commits"**
+- ✅ **"Require pull request reviews before merging"** 
+- ✅ **"Require status checks to pass before merging"**
+- ✅ **"Require branches to be up to date before merging"**
+- ✅ **"Include administrators"** (enforce rules for everyone)
 
-You should feel free to commit and push as much as you want in your local branch, if
-your workflow so requires. However, before submitting the finished branch as a pull
-request, please do an interactive rebase and collapse any broken commits that don't
-build, or any small commits that just fix typos and things of a similar nature.
-
-* _It is considered bad form to submit a pull request where there are unnecessary
-  or intermediate commits, with vague descriptions._
-
-* _It is considered bad form to submit a pull request where there are commits, which
-  do not build and test cleanly._ This is important, because it enables things like
-  automating git bisection to narrow down commits that may have introduced bugs,
-  and it has various other benefits. The ideal state for master, should be that
-  you can check it out at any change in its commit history, and that it will build
-  and test clean on that head.
-
-Most pull requests are small in scope, and should contain only one commit, when
-they are put up for review. If there are distinct unrelated commits, that both contribute
-to solving the issue you are working on, it's naturally fine to not squash those together,
-as it's easier to read and shows clear separation of concerns.
-
-If you need to get rid of temporary, broken, or non-buildable commits in your branch,
-do an interactive rebase before you submit it for review. You can execute:
-
-```
-git rebase -i HEAD~n
+**GitHub CLI setup** (for administrators):
+```bash
+# Enable branch protection with merge commit prevention
+gh api repos/xtclang/xvm/branches/master/protection \
+  --method PUT \
+  --field required_status_checks='{"strict":true,"checks":[]}' \
+  --field enforce_admins=true \
+  --field required_pull_request_reviews='{"required_approving_review_count":1}' \
+  --field restrictions=null \
+  --field allow_force_pushes=false \
+  --field allow_deletions=false \
+  --field block_creations=false \
+  --field required_linear_history=true
 ```
 
-to do this, where *n* is the number of commits you are interested in modifying.
+The `required_linear_history=true` setting **blocks merge commits** and enforces the rebase-only workflow.
 
-* *According to the git philosophy, branches should be thought of as private, plentiful
-  and ephemeral. They should be created at the drop of a hat, and the branch should be
-  automatically or manually deleted after its changes have been merged to master.
-  A branch should never be reused.*
+#### Why This Workflow Matters
 
-The described approach is a good one to follow, since it moves any complicated source control
-issues completely to the author of a branch, without affecting master, and potentially
-breaking things for other developers. Having to modify the master branch, due to
-unintended merge state or changes having made their way into it, is a massively more
-complex problem than handling all conflicts and similar issues in the private local
-branches.
+**Benefits of linear history:**
+- 🔍 **Easy to follow**: `git log --oneline` shows clear chronological development
+- 🐛 **Simple debugging**: `git bisect` works reliably to find bugs
+- 📈 **Clean commits**: Each commit represents a logical change
+- 🚀 **Fast builds**: CI doesn't waste time on merge commit combinations
+- 📚 **Clear blame**: `git blame` points to actual changes, not merge commits
+
+**Problems with merge commits:**
+- 🕸️ **Complex history**: Hard to understand what actually changed
+- 🐛 **Difficult bisection**: Merge commits create confusing paths
+- ⚡ **CI overhead**: More commit combinations to test
+- 📊 **Unclear metrics**: Commit counts and author statistics get distorted
 
 ## Status
 
