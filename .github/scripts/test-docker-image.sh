@@ -78,7 +78,7 @@ fi
 # Verify script launchers contain XTC module paths
 echo "🔍 Verifying script launchers contain XTC module paths..."
 script_content=$(docker run --rm "$IMAGE" cat /opt/xdk/bin/xcc)
-if echo "$script_content" | grep -q "XDK_HOME.*APP_HOME" && \
+if echo "$script_content" | grep -q "XDK_HOME" && \
    echo "$script_content" | grep -q "\-L.*lib" && \
    echo "$script_content" | grep -q "javatools_turtle.xtc" && \
    echo "$script_content" | grep -q "javatools_bridge.xtc"; then

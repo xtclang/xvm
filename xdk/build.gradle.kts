@@ -185,7 +185,7 @@ tasks.startScripts {
             
             if (unixOriginal.exists()) {
                 val newScript = File(outputDir, toolName)
-                newScript.writeText(unixOriginal.readText().replace("Launcher \\${'$'}APP_BASE_NAME", "Launcher $toolName"))
+                newScript.writeText(unixOriginal.readText().replace("Launcher \$APP_BASE_NAME", "Launcher $toolName"))
                 newScript.setExecutable(true)
             }
             
@@ -201,28 +201,6 @@ tasks.startScripts {
     outputs.files(listOf("xcc", "xec", "xtc").flatMap { script ->
         listOf(File(outputDir, script), File(outputDir, "$script.bat"))
     })
-    
-    // Create additional scripts for xcc and xtc with simple name replacement
-    doLast {
-        listOf("xcc", "xtc").forEach { toolName ->
-            val unixScript = File(outputDir, "xec")
-            val windowsScript = File(outputDir, "xec.bat")
-            
-            if (unixScript.exists()) {
-                val newScript = File(outputDir, toolName)
-                newScript.writeText(
-                    unixScript.readText().replace("\$APP_BASE_NAME", toolName)
-                )
-                newScript.setExecutable(true)
-            }
-            
-            if (windowsScript.exists()) {
-                File(outputDir, "$toolName.bat").writeText(
-                    windowsScript.readText().replace("%APP_BASE_NAME%", toolName)
-                )
-            }
-        }
-    }
 }
 
 // Copy scripts to distribution location
