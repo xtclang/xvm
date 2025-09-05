@@ -2,6 +2,7 @@ import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_JAR
 
 plugins {
     id("org.xtclang.build.xdk.versioning")
+    alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.xdk.build.publish)
     alias(libs.plugins.gradle.portal.publish)
 }
@@ -78,6 +79,7 @@ dependencies {
     if (shouldBundleJavaTools) {
         @Suppress("UnstableApiUsage") xdkJavaToolsJarConsumer(libs.javatools)
     }
+    testImplementation(libs.junit.jupiter)
 }
 
 publishing {

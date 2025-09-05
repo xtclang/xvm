@@ -81,7 +81,7 @@ This ensures:
 
 #### Snapshots vs. Stable Releases
 
-**Current Status**: XTC is currently in active development using snapshot versioning (e.g., `0.4.4-SNAPSHOT`).
+**Current Status**: The XDK is currently in active development using snapshot versioning (e.g., `0.4.4-SNAPSHOT`).
 
 **Snapshots in Maven Ecosystem**:
 - **Snapshots** (`*-SNAPSHOT`) are development builds that can change frequently
@@ -95,7 +95,7 @@ This ensures:
 - Cached permanently by build systems - no automatic updates
 - Suitable for production applications
 
-**Next Release Timeline**: We will publish the next non-snapshot version of XTC as soon as all build infrastructure updates are complete. This will mark the transition from active development snapshots to stable, production-ready releases with proper semantic versioning.
+**Next Release Timeline**: We will publish the next non-snapshot version of the XDK as soon as all build infrastructure updates are complete. This will mark the transition from active development snapshots to stable, production-ready releases with proper semantic versioning.
 
 #### GitHub Workflows and Automation
 
@@ -134,7 +134,7 @@ Use the official XDK Docker image for development or CI:
 
 ```bash
 # Run XDK commands in container
-docker run --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest xtc /workspace/MyModule.x
+docker run --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest xcc /workspace/MyModule.x
 docker run --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest xec /workspace/MyModule
 
 # Interactive development shell  

@@ -212,8 +212,9 @@ jobs:
           ${{ env.GRADLE_CACHE_INSPECT }}
           
           cwd_path=$(pwd)
-          echo "Executing Gradle 'clean' and 'installDist' tasks from path: '$cwd_path'"
+          echo "Executing Gradle 'clean', 'check', and 'distZip' tasks from path: '$cwd_path'"
           echo "Running clean to validate dependency graph integrity and catch missing dependencies"
+          echo "Running check to execute all tests before creating distribution"
           ls -la build/ 2>/dev/null && echo "Build directory exists - will be cleaned" || echo "✅ Confirmed: No previous build outputs"
           
           echo "🔧 JVM Configuration:"
@@ -223,8 +224,9 @@ jobs:
           echo "🔍 JVM Flag Information:"
           java -XX:+PrintFlagsFinal -version 2>&1 || echo "  Flag printing failed (non-fatal)"
           
-          inspect_gradle_cache "before clean and distZip"
+          inspect_gradle_cache "before clean, check and distZip"
           ./gradlew ${{ env.gradle_options }} clean
+          ./gradlew ${{ env.gradle_options }} check
           ./gradlew ${{ env.gradle_options }} :xdk:distZip
           
           # Run manual tests inline if enabled (avoids cache rebuild)

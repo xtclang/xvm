@@ -5,7 +5,7 @@ This directory contains stable build artifacts that do not get rebuilt
 as part of the automated build. These are the "native launchers" for
 the Java-based toolchain and runtime; their purpose is to launch the
 JVM from the command line. These launchers can be installed as the
-"xec", "xcc", and "xtc" commands for specific hardware/OS combinations.
+"xec" and "xcc" commands for specific hardware/OS combinations.
 
 While they can be rebuilt, having a pre-built copy of these is
 convenient from a risk-mitigation standpoint, since these are native
