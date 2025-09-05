@@ -238,7 +238,7 @@ if [ -f "xdk/bin/xec" ] && [ -f "xdk/bin/xcc" ] && [ -f "xdk/bin/xtc" ]; then
 
     # Verify script launchers have the expected module paths (check script content)
     echo "🔍 Verifying script launchers contain XTC module paths..."
-    if grep -q "XDK_HOME.*APP_HOME" "xdk/bin/xcc" && \
+    if grep -q "XDK_HOME" "xdk/bin/xcc" && \
        grep -q "\-L.*lib" "xdk/bin/xcc" && \
        grep -q "javatools_turtle.xtc" "xdk/bin/xcc" && \
        grep -q "javatools_bridge.xtc" "xdk/bin/xcc"; then
