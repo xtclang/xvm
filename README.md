@@ -907,6 +907,26 @@ repositories {
 }
 ```
 
+## Related Repositories
+
+The xtclang organization maintains several repositories supporting the Ecstasy ecosystem:
+
+### Core Platform
+- **[platform](https://github.com/xtclang/platform)** - Ecstasy "Platform as a Service" implementation for cloud deployment
+- **[examples](https://github.com/xtclang/examples)** - Example web applications demonstrating platform capabilities
+
+### Development Tools
+- **[intellij-plugin](https://github.com/xtclang/intellij-plugin)** - IntelliJ IDEA plugin for XTC language support
+- **[language-support](https://github.com/xtclang/language-support)** - Language Server Protocol implementation for IDE integration
+- **[xtc-app-template](https://github.com/xtclang/xtc-app-template)** - Template repository for creating new XTC applications
+
+### Distribution & Packaging
+- **[xdk-release](https://github.com/xtclang/xdk-release)** - Cross-platform XDK distribution and release automation
+- **[homebrew-xvm](https://github.com/xtclang/homebrew-xvm)** - Homebrew tap for macOS/Linux XDK installations
+
+### Research & Extensions
+- **[jmixin](https://github.com/xtclang/jmixin)** - Java port of Ecstasy mixin functionality for research and comparison
+
 ## Questions?
 
 To submit a contributor agreement, sign up for very hard work, fork over a giant
