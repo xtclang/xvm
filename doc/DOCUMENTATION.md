@@ -5,7 +5,7 @@
 
 This directory contains core Ecstasy language documentation and specifications.
 
-* `x.docx` - specification; likely to be re-built in a markdown / wiki format
+* `x.md` - language and formal documentation seed file
 * `bnf.txt` - language syntax
 * `ops.txt` - virtual machine instruction set
 
