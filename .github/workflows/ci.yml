@@ -1,6 +1,11 @@
 #
 # GitHub runner workflow for building, verifying and testing the XVM repo.
 #
+# PLATFORM NOTES:
+# - Ubuntu: ubuntu-latest (currently Ubuntu 22.04)
+# - Windows: windows-2025 (Windows Server 2025) - updated from windows-latest to avoid 
+#   September 2025 migration and deprecation warnings
+#
 # IMPORTANT: If you manually enable 'snapshot-maven', you MUST also enable 
 # 'homebrew' to keep the Homebrew formula synchronized with the 
 # snapshot release. Failing to do so will result in inconsistent package versions.
@@ -45,14 +50,14 @@ on:
         required: false
         default: false
       platforms:
-        description: 'Run only single platform (ubuntu-latest, windows-latest, or all platforms)'
+        description: 'Run only single platform (ubuntu-latest, windows-2025, or all platforms)'
         type: choice
         required: false
         default: 'all'
         options:
           - 'all'
           - 'ubuntu-latest'
-          - 'windows-latest'
+          - 'windows-2025'
       extra_gradle_options:
         description: 'Extra Gradle options to pass to the build'
         required: false
@@ -136,10 +141,12 @@ concurrency:
 
 jobs:
   build-verify:
-
+    # NOTE: Updated to windows-2025 (Windows Server 2025) from windows-latest (Windows Server 2022)
+    # windows-latest will migrate to windows-2025 on September 2, 2025, but we're adopting early
+    # for better compatibility and to avoid deprecation warnings
     strategy:
       matrix:
-        os: ${{ github.event.inputs.platforms == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.platforms == 'windows-latest' && fromJSON('["windows-latest"]') || fromJSON('["ubuntu-latest", "windows-latest"]') }}
+        os: ${{ github.event.inputs.platforms == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.platforms == 'windows-2025' && fromJSON('["windows-2025"]') || fromJSON('["ubuntu-latest", "windows-2025"]') }}
 
     runs-on: ${{ matrix.os }}
     
