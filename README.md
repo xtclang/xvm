@@ -60,11 +60,13 @@ This repository contains comprehensive documentation organized hierarchically:
 ### Development Documentation  
 - **[Docker Guide](docker/README.md)** - Container development, build instructions, and CI integration
 - **[GitHub Actions](/.github/GITHUB_WORKFLOWS.md)** - CI/CD pipeline, workflows, and automation documentation
-- **[Build Logic](/build-logic/README.md)** - Gradle build system and custom plugins (if exists)
+- **[Developer Scripts](bin/DEVELOPER_SCRIPTS.md)** - Build automation and development utility scripts
+- **[Testing Guide](manualTests/TESTING_GUIDE.md)** - Manual testing procedures and test suite documentation
 
 ### Language Documentation
 - **[Ecstasy Language Wiki](https://github.com/xtclang/xvm/wiki)** - Language specification, tutorials, and examples
 - **[XTC Language Website](http://xtclang.org/)** - Official language website and resources
+- **[Core Documentation](doc/DOCUMENTATION.md)** - Language specification files, BNF grammar, and VM instruction set
 
 ---
 
