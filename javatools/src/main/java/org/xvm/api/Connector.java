@@ -10,16 +10,19 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
-import org.xvm.asm.MultiMethodStructure;
 
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.MainContainer;
 import org.xvm.runtime.NativeContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Runtime;
 import org.xvm.runtime.Utils;
+
 import org.xvm.runtime.template.text.xString;
 
 
@@ -108,12 +111,15 @@ public class Connector {
      * Find an entry points for a given name in the specified module.
      */
     protected Set<MethodStructure> findMethods(ModuleConstant idModule, String sMethodName) {
-        MultiMethodStructure mms = (MultiMethodStructure)
-                idModule.getComponent().getChildByNameMap().get(sMethodName);
-
-        return new HashSet<>(mms.getMethodByConstantMap().values());
+        TypeInfo             typeInfo    = idModule.getType().ensureTypeInfo();
+        Set<MethodConstant>  setMethodId = typeInfo.findMethods(sMethodName, -1, TypeInfo.MethodKind.Any);
+        Set<MethodStructure> setMethods  = new HashSet<>();
+        for (MethodConstant idMethod : setMethodId) {
+            MethodInfo infoMethod = typeInfo.getMethodById(idMethod);
+            setMethods.add(infoMethod.getHead().getMethodStructure());
+        }
+        return setMethods;
     }
-
 
     /**
      * Invoke an XTC method with a void return and specified arguments.
