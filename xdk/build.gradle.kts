@@ -102,7 +102,7 @@ application {
     mainClass.set("org.xvm.tool.Launcher") // Unified entry point for all tools
 }
 
-// Configure the application plugin to generate xec script, then create xcc and xtc
+// Configure the application plugin to generate scripts using custom templates
 tasks.startScripts {
     applicationName = "xec"
     classpath = configurations.xdkJavaTools.get()
@@ -122,6 +122,139 @@ tasks.startScripts {
         }
     }
     
+    // Clean script modification using doLast pattern
+    doLast {
+        // Read existing working content and apply minimal changes
+        val javaToolsJars = configurations.xdkJavaTools.get().files
+        
+        listOf(
+            unixScript to false,    // Unix shell script
+            windowsScript to true   // Windows batch file
+        ).forEach { (script, isWindows) ->
+            if (script.exists()) {
+                var content = script.readText()
+                
+                // Replace jar paths with version-stripped equivalents
+                javaToolsJars.forEach { jar ->
+                    val originalName = jar.name
+                    val strippedName = stripVersionFromJarName(originalName)
+                    content = content.replace("/lib/$originalName", "/javatools/$strippedName")
+                        .replace("\\lib\\$originalName", "\\javatools\\$strippedName")
+                }
+                
+                // Add XDK_HOME delegation and XTC module paths
+                if (isWindows) {
+                    // Insert XDK_HOME delegation for Windows - place it right after APP_HOME calculation
+                    val insertPoint = content.indexOf(":execute")
+                    if (insertPoint >= 0) {
+                        val lineEnd = content.indexOf('\n', insertPoint)
+                        val endOfLine = if (lineEnd >= 0) lineEnd + 1 else content.length
+                        val before = content.substring(0, endOfLine)
+                        val after = content.substring(endOfLine)
+                        val delegation = """
+                        |@rem Setup the command line
+                        |
+                        |if defined XDK_HOME if exist "%XDK_HOME%\" (
+                        |    rem === if a same-named script is in XDK_HOME, use it instead of this script ===
+                        |    set "XDK_CMD=%XDK_HOME%\bin\%APP_BASE_NAME%"
+                        |    if exist "%XDK_CMD%" (
+                        |        for %%F in ("%XDK_CMD%") do set "XDK_ID=%%~fF"
+                        |        for %%F in ("%~f0") do set "APP_ID=%%~fF"
+                        |        if /I not "%XDK_ID%"=="%APP_ID%" (
+                        |            "%XDK_ID%" %*
+                        |            goto end
+                        |        )
+                        |    )
+                        |    rem === use the libraries specified by XDK_HOME ===
+                        |    set "APP_HOME=%XDK_HOME%"
+                        |)
+                        |
+                        |if not exist %APP_HOME%\javatools\javatools.jar (
+                        |    echo Unable to locate a valid XDK in "%APP_HOME%"; set XDK_HOME to the "xdk" directory containing "bin\", "lib\", and "javatools\"
+                        |    goto fail
+                        |)
+                        |
+                        |set CLASSPATH=%APP_HOME%\javatools\javatools.jar
+                        |
+                        |
+                        |@rem Execute xec
+                        |""".trimMargin()
+                        content = before + delegation + after
+                    }
+                    
+                    // Add XTC module paths to Windows script
+                    content = content.replace(
+                        "org.xvm.tool.Launcher",
+                        "org.xvm.tool.Launcher %APP_BASE_NAME% -L \"%APP_HOME%\\lib\" -L \"%APP_HOME%\\javatools\\javatools_turtle.xtc\" -L \"%APP_HOME%\\javatools\\javatools_bridge.xtc\""
+                    )
+                } else {
+                    // Insert XDK_HOME delegation for Unix - place it right after APP_HOME calculation
+                    val insertPoint = content.indexOf("APP_HOME=\$( cd -P")
+                    if (insertPoint >= 0) {
+                        val lineEnd = content.indexOf('\n', insertPoint)
+                        val endOfLine = if (lineEnd >= 0) lineEnd + 1 else content.length
+                        val before = content.substring(0, endOfLine)
+                        val after = content.substring(endOfLine)
+                        val delegation = """
+                        |
+                        |# for any Linux/macOS/Unix/POSIX system, build a unique file id for comparison
+                        |get_file_id() {
+                        |    inode=${'$'}(ls -di "${'$'}1" 2>/dev/null | awk '{print ${'$'}1}')
+                        |    device=${'$'}(df "${'$'}1" 2>/dev/null | awk 'NR==2 {print ${'$'}1}')
+                        |    if [ -n "${'$'}inode" ] && [ -n "${'$'}device" ]; then
+                        |        printf '%s:%s\n' "${'$'}device" "${'$'}inode"
+                        |    else
+                        |        echo "failed to get file id for ${'$'}1"
+                        |        exit 1
+                        |    fi
+                        |}
+                        |
+                        |if [ -n "${'$'}XDK_HOME" ]; then
+                        |    # delegate to the command in XDK_HOME if there is one
+                        |    XDK_CMD="${'$'}XDK_HOME/bin/${'$'}APP_BASE_NAME"
+                        |    if [ -e "${'$'}XDK_CMD" ]; then
+                        |        xdk_id=${'$'}(get_file_id "${'$'}XDK_CMD")
+                        |        app_id=${'$'}(get_file_id "${'$'}app_path")
+                        |        if [ "${'$'}xdk_id" != "${'$'}app_id" ]; then
+                        |            exec "${'$'}XDK_CMD" "${'$'}@"
+                        |        fi
+                        |    fi
+                        |
+                        |    # switch to using the libs etc. from the XDK at XDK_HOME
+                        |    APP_HOME="${'$'}XDK_HOME"
+                        |fi
+                        |""".trimMargin()
+                        content = before + delegation + after
+                    }
+                    
+                    // Add XTC module paths to Unix script  
+                    content = content.replace(
+                        "org.xvm.tool.Launcher",
+                        "org.xvm.tool.Launcher ${'$'}APP_BASE_NAME -L \"${'$'}APP_HOME/lib\" -L \"${'$'}APP_HOME/javatools/javatools_turtle.xtc\" -L \"${'$'}APP_HOME/javatools/javatools_bridge.xtc\""
+                    )
+                }
+                
+                script.writeText(content)
+            }
+        }
+        
+        // Create additional scripts for xcc and xtc
+        listOf("xcc", "xtc").forEach { toolName ->
+            val unixOriginal = File(outputDir, "xec")
+            val windowsOriginal = File(outputDir, "xec.bat")
+            
+            if (unixOriginal.exists()) {
+                val newScript = File(outputDir, toolName)
+                newScript.writeText(unixOriginal.readText().replace("Launcher \\${'$'}APP_BASE_NAME", "Launcher $toolName"))
+                newScript.setExecutable(true)
+            }
+            
+            if (windowsOriginal.exists()) {
+                File(outputDir, "$toolName.bat").writeText(
+                    windowsOriginal.readText().replace("Launcher %APP_BASE_NAME%", "Launcher $toolName"))
+            }
+        }
+    }
     // Declare inputs and outputs for incremental build support
     inputs.property("enablePreview", enablePreview)
     inputs.property("enableNativeAccess", enableNativeAccess)
@@ -129,29 +262,24 @@ tasks.startScripts {
         listOf(File(outputDir, script), File(outputDir, "$script.bat"))
     })
     
+    // Create additional scripts for xcc and xtc with simple name replacement
     doLast {
-        listOf(
-            File(outputDir, "xec") to false,        // Unix shell script
-            File(outputDir, "xec.bat") to true      // Windows batch file
-        ).forEach { (scriptFile, isWindows) ->
-            if (scriptFile.exists()) {
-                var content = scriptFile.readText()
-                // Replace each jar in the classpath with its version-stripped equivalent
-                javaToolsJars.forEach { jar ->
-                    val originalName = jar.name
-                    val strippedName = stripVersionFromJarName(originalName)
-                    content = XdkDistribution.replaceJarPaths(content, originalName, strippedName)
-                }
-                content = XdkDistribution.injectXtcModulePaths(content, "org.xvm.tool.Launcher", isWindows, "xec")
-                content = XdkDistribution.injectXdkHomeDelegation(content, isWindows)
-                content = XdkDistribution.fixPathResolution(content, isWindows)
-                scriptFile.writeText(content)
-                // Create xcc script by copying and replacing xec -> xcc
-                val xccFile = File(outputDir, if (isWindows) "xcc.bat" else "xcc")
-                xccFile.writeText(content.replace("Launcher xec", "Launcher xcc"))
-                // Create xtc script by copying and replacing xec -> xtc
-                val xtcFile = File(outputDir, if (isWindows) "xtc.bat" else "xtc")
-                xtcFile.writeText(content.replace("Launcher xec", "Launcher xtc"))
+        listOf("xcc", "xtc").forEach { toolName ->
+            val unixScript = File(outputDir, "xec")
+            val windowsScript = File(outputDir, "xec.bat")
+            
+            if (unixScript.exists()) {
+                val newScript = File(outputDir, toolName)
+                newScript.writeText(
+                    unixScript.readText().replace("\$APP_BASE_NAME", toolName)
+                )
+                newScript.setExecutable(true)
+            }
+            
+            if (windowsScript.exists()) {
+                File(outputDir, "$toolName.bat").writeText(
+                    windowsScript.readText().replace("%APP_BASE_NAME%", toolName)
+                )
             }
         }
     }

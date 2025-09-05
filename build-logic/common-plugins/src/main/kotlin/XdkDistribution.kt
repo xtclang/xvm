@@ -137,58 +137,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         )
         val binaryLauncherNames = listOf("xcc", "xec", "xtc")
 
-        fun delegateForPlatform(isWindows: Boolean): String {
-            if (isWindows) {
-                return """
-                if defined XDK_HOME if exist "%XDK_HOME%\" (
-                    rem === if a same-named script is in XDK_HOME, use it instead of this script ===
-                    set "XDK_CMD=%XDK_HOME%\bin\%APP_BASE_NAME%"
-                    if exist "%XDK_CMD%" (
-                        for %%F in ("%XDK_CMD%") do set "XDK_ID=%%~fF"
-                        for %%F in ("%app_path%") do set "APP_ID=%%~fF"
-                        if /I not "%XDK_ID%"=="%APP_ID%" (
-                            "%XDK_ID%" %*
-                            goto end
-                        )
-                    )
-                    rem === use the libraries specified by XDK_HOME ===
-                    set "APP_HOME=%XDK_HOME%"
-                )
-                
-                if not exist %APP_HOME%\javatools\javatools.jar (
-                    echo Unable to locate a valid XDK in "%APP_HOME%"; set XDK_HOME to the "xdk" directory containing "bin\", "lib\", and "javatools\"
-                    goto fail
-                )""".trimIndent()
-            }
-            
-            return """
-                # for any Linux/macOS/Unix/POSIX system, build a unique file id for comparison
-                get_file_id() {
-                    inode=$(ls -di "$1" 2>/dev/null | awk '{print $1}')
-                    device=$(df "$1" 2>/dev/null | awk 'NR==2 {print $1}')
-                    if [ -n "${'$'}inode" ] && [ -n "${'$'}device" ]; then
-                        printf '%s:%s\n' "${'$'}device" "${'$'}inode"
-                    else
-                        echo "failed to get file id for $1"
-                        exit 1
-                    fi
-                }
-                
-                if [ -n "${'$'}XDK_HOME" ]; then
-                    # delegate to the command in XDK_HOME if there is one
-                    XDK_CMD="${'$'}XDK_HOME/bin/${'$'}APP_BASE_NAME"
-                    if [ -e "${'$'}XDK_CMD" ]; then
-                        xdk_id=$(get_file_id "${'$'}XDK_CMD")
-                        app_id=$(get_file_id "${'$'}app_path")
-                        if [ "${'$'}xdk_id" != "${'$'}app_id" ]; then
-                            exec "${'$'}XDK_CMD" "$@"
-                        fi
-                    fi
-                
-                    # switch to using the libs etc. from the XDK at XDK_HOME
-                    APP_HOME="${'$'}XDK_HOME"
-                fi""".trimIndent()
-        }
+        // Removed delegateForPlatform - now handled by templates
 
         fun isDistributionArchiveTask(task: Task): Boolean {
             return task.group == DISTRIBUTION_TASK_GROUP && task.name in distributionTasks
@@ -239,20 +188,9 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
          * @param isWindows true for Windows batch files, false for Unix shell scripts
          * @return formatted module path arguments string
          */
-        fun generateXtcModulePathArgs(isWindows: Boolean): String {
-            val (envVarFormat, pathSeparator, lineContinuation) = getPlatformFormatting(isWindows)
-            return REQUIRED_XTC_MODULES.joinToString(lineContinuation) { module ->
-                val path = module.toPath(isWindows)
-                "-L \"$envVarFormat$pathSeparator$path\""
-            }
-        }
+        // Removed generateXtcModulePathArgs - XTC module paths are now handled in templates
         
-        private fun getPlatformFormatting(isWindows: Boolean): Triple<String, String, String> = 
-            if (isWindows) {
-                Triple("%XDK_HOME:APP_HOME=%", "\\", " ")
-            } else {
-                Triple("\${XDK_HOME:-\$APP_HOME}", "/", " \\\n        ")
-            }
+        // Removed getPlatformFormatting - now handled by templates
 
         /**
          * Replace jar paths in script content, handling both Unix and Windows path separators.
@@ -263,83 +201,29 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
          * @param strippedName the jar name without version
          * @return modified script content with updated jar paths
          */
-        fun replaceJarPaths(scriptContent: String, originalName: String, strippedName: String): String =
-            scriptContent
-                .replace("/lib/$originalName", "/javatools/$strippedName")
-                .replace("\\lib\\$originalName", "\\javatools\\$strippedName")
+        // Removed replaceJarPaths - jar paths are now handled in templates
 
         /**
          * Add XTC module paths to launcher script and inject script name as first argument.
          */
-        fun injectXtcModulePaths(scriptContent: String, mainClassName: String, isWindows: Boolean, scriptName: String = ""): String {
-            val modulePathArgs = generateXtcModulePathArgs(isWindows)
-
-            // For unified Launcher approach, inject script name as first argument
-            if (mainClassName == "org.xvm.tool.Launcher" && scriptName.isNotEmpty()) {
-                return scriptContent.replace("org.xvm.tool.Launcher", "org.xvm.tool.Launcher $scriptName $modulePathArgs")
-            }
-
-            // Legacy approach: append module paths after the main class
-            val mainClass = mainClassName.substringAfterLast('.')
-            return scriptContent.replace("org.xvm.tool.$mainClass", "org.xvm.tool.$mainClass $modulePathArgs")
-        }
+        // Removed injectXtcModulePaths - module paths are now handled in templates
 
         /**
          * Find insertion point for delegation logic in script content.
          * @return insertion index, or -1 if not found
          */
-        private fun findDelegationInsertionPoint(content: String, isWindows: Boolean): Int {
-            if (isWindows) {
-                val quoted = content.indexOf("set \"CLASSPATH=")
-                if (quoted >= 0) {
-                    return quoted;
-                }
-                return content.indexOf("set CLASSPATH=")
-            }
-
-            // Look for the APP_HOME resolution line (avoid PWD escaping issues)
-            val patterns = listOf("APP_HOME=\$( cd -P", "CLASSPATH=\$APP_HOME")
-
-            for (pattern in patterns) {
-                val index = content.indexOf(pattern)
-                if (index >= 0) {
-                    val lineEnd = content.indexOf('\n', index)
-                    return if (lineEnd >= 0) lineEnd + 1 else index
-                }
-            }
-            return -1
-        }
+        // Removed findDelegationInsertionPoint - delegation is now handled in templates
 
         /**
          * Cross-platform XDK_HOME delegation logic injection for launcher scripts.
          * Implements proper delegation to XDK_HOME installations with infinite recursion prevention.
          */
-        fun injectXdkHomeDelegation(content: String, isWindows: Boolean): String {
-            val delegationLogic = delegateForPlatform(isWindows)
-            val insertionPoint = findDelegationInsertionPoint(content, isWindows)
-            
-            if (insertionPoint <= 0) {
-                // TODO Marcus logger.warn("[build-logic] WARNING: ..")
-                System.out.println("*** could not find insertion point for isWindows=" + isWindows)
-                return content
-            }
-            
-            val beforeInsertion = content.take(insertionPoint)
-            val afterInsertion = content.substring(insertionPoint)
-            return "$beforeInsertion\n$delegationLogic\n\n$afterInsertion"
-        }
+        // Removed injectXdkHomeDelegation - XDK_HOME delegation is now handled in templates
 
         /**
          * Fix path resolution to use APP_HOME consistently after XDK_HOME delegation.
          */
-        fun fixPathResolution(content: String, isWindows: Boolean): String {
-            val (oldPattern, newPattern) = if (isWindows) {
-                "%XDK_HOME:APP_HOME=%" to "%APP_HOME%"
-            } else {
-                "\${XDK_HOME:-\$APP_HOME}" to "\$APP_HOME"
-            }
-            return content.replace(oldPattern, newPattern)
-        }
+        // Removed fixPathResolution - path resolution is now handled in templates
     }
 
     init {

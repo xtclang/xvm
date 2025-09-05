@@ -205,11 +205,11 @@ The images are public and can be used immediately:
 ```bash
 # Check if XVM tools work
 docker run --rm ghcr.io/xtclang/xvm:latest xec --version
-docker run --rm ghcr.io/xtclang/xvm:latest xcc --version
+docker run --rm ghcr.io/xtclang/xvm:latest xtc --version
 
 # Compile and run an Ecstasy program
 echo 'module HelloWorld { void run() { @Inject Console console; console.print("Hello, World"); } }' > hello.x
-docker run -v $(pwd):/workspace -w /workspace --rm ghcr.io/xtclang/xvm:latest xcc hello.x
+docker run -v $(pwd):/workspace -w /workspace --rm ghcr.io/xtclang/xvm:latest xtc hello.x
 docker run -v $(pwd):/workspace -w /workspace --rm ghcr.io/xtclang/xvm:latest xec hello
 ```
 
@@ -242,11 +242,11 @@ ghcr.io/xtclang/xvm:latest-arm64
 # Run xec directly (default command)
 docker run --rm ghcr.io/xtclang/xvm:latest
 
-# Run xcc compiler
-docker run --rm ghcr.io/xtclang/xvm:latest xcc --help
+# Run xtc compiler
+docker run --rm ghcr.io/xtclang/xvm:latest xtc --help
 
 # Compile local files
-docker run -v $(pwd):/workspace -w /workspace --rm ghcr.io/xtclang/xvm:latest xcc myfile.x
+docker run -v $(pwd):/workspace -w /workspace --rm ghcr.io/xtclang/xvm:latest xtc myfile.x
 
 # Run compiled program
 docker run -v $(pwd):/workspace -w /workspace --rm ghcr.io/xtclang/xvm:latest xec MyProgram
@@ -293,7 +293,7 @@ services:
     volumes:
       - ./src:/workspace
     working_dir: /workspace
-    command: xcc main.x
+    command: xtc main.x
     
   xvm-runtime:
     image: ghcr.io/xtclang/xvm:latest
@@ -364,7 +364,7 @@ The GitHub Actions workflow (`.github/workflows/ci.yml`) performs:
    - Pushes to GitHub Container Registry with multiple tags
 
 4. **Docker Testing**: Validates functionality
-   - Tests both `xec` and `xcc` commands
+   - Tests both `xec` and `xtc` commands
    - Validates compilation and execution of test programs
    - Ensures native launcher functionality works correctly
 
