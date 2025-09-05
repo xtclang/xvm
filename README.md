@@ -3,6 +3,71 @@
 This is the public repository for the Ecstasy language ([xtclang.org](http://xtclang.org/)) and the
 Ecstasy virtual machine (XVM) project.
 
+## 🚀 Quick Start
+
+**Want to try Ecstasy right now? Here's the fastest way:**
+
+### Option 1: Homebrew (macOS/Linux) - Recommended
+```bash
+# Install Homebrew if you don't have it: https://brew.sh/
+brew tap xtclang/xvm && brew install xdk-latest
+
+# Create your first Ecstasy program
+echo 'module HelloWorld { void run() { @Inject Console console; console.print("Hello, World!"); } }' > HelloWorld.x
+
+# Compile and run it
+xcc HelloWorld.x
+xec HelloWorld
+```
+
+### Option 2: Docker - Works everywhere
+```bash
+# Create your first program
+echo 'module HelloWorld { void run() { @Inject Console console; console.print("Hello, World!"); } }' > HelloWorld.x
+
+# Compile and run using Docker
+docker run --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest xcc /workspace/HelloWorld.x
+docker run --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest xec /workspace/HelloWorld
+```
+
+### Option 3: Build from source
+```bash
+git clone https://github.com/xtclang/xvm.git
+cd xvm
+./gradlew xdk:installDist
+export PATH=$PWD/xdk/build/install/xdk/bin:$PATH
+
+# Now you can use xcc and xec commands
+```
+
+**Next Steps:**
+- 📖 [Learn Ecstasy Language Basics](https://github.com/xtclang/xvm/wiki)
+- 🛠️ [XDK Development Kit Guide](#installation-options) (below)
+- 🐳 [Docker Development Guide](docker/README.md)
+- ⚙️ [GitHub Actions & CI Documentation](.github/README.md)
+
+---
+
+## 📚 Documentation Navigation
+
+This repository contains comprehensive documentation organized hierarchically:
+
+### Core Documentation
+- **[Main README](README.md)** (this file) - Platform overview, quickstart, and XDK installation
+- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to the Ecstasy project
+- **[Code of Conduct](CODE_OF_CONDUCT.md)** - Community guidelines and expectations
+
+### Development Documentation  
+- **[Docker Guide](docker/README.md)** - Container development, build instructions, and CI integration
+- **[GitHub Actions](/.github/README.md)** - CI/CD pipeline, workflows, and automation documentation
+- **[Build Logic](/build-logic/README.md)** - Gradle build system and custom plugins (if exists)
+
+### Language Documentation
+- **[Ecstasy Language Wiki](https://github.com/xtclang/xvm/wiki)** - Language specification, tutorials, and examples
+- **[XTC Language Website](http://xtclang.org/)** - Official language website and resources
+
+---
+
 ## What is Ecstasy?
 
 <table cellspacing="0" cellpadding="0" style="border-collapse: collapse; border: none;">
