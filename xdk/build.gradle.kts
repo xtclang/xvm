@@ -82,26 +82,19 @@ private val semanticVersion: SemanticVersion by extra
 
 private val xdkDist = xdkBuildLogic.distro()
 
-/**
- * Strip version suffix from jar names, matching the rename logic used in distribution
- */
-private fun stripVersionFromJarName(jarName: String): String {
-    return jarName.replace(Regex("(.*)\\-${Regex.escape(semanticVersion.artifactVersion)}\\.jar"), "$1.jar")
+// Configuration cache compatibility: Extract just the version string to avoid holding project references
+val artifactVersion = semanticVersion.artifactVersion
+
+// Configuration cache compatibility: Define version stripping function without script context references  
+fun stripVersionFromJarName(jarName: String, version: String): String {
+    return jarName.replace(Regex("(.*)\\-${Regex.escape(version)}\\.jar"), "$1.jar")
 }
 
 // Resolve XDK properties once at script level to avoid configuration cache issues
 val enablePreview = getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)
 val enableNativeAccess = getXdkPropertyBoolean("org.xtclang.java.enableNativeAccess", false)
-
-// Capture configuration values at configuration time for configuration cache compatibility
-val javaToolsJars = configurations.xdkJavaTools.get().files
-// Capture specific script template values at configuration time for configuration cache
 val capturedWindowsTemplates = XdkDistribution.SCRIPT_TEMPLATES["windows"]!!
 val capturedUnixTemplates = XdkDistribution.SCRIPT_TEMPLATES["unix"]!!
-// Capture distribution-related values at configuration time
-val capturedProcessResourcesOutput = tasks.processResources.get().outputs.files.singleFile
-val capturedXtcVersionFile = tasks.xtcVersionFile
-val capturedDistributionScriptsDir = layout.buildDirectory.dir("distribution-scripts")
 
 // Configure application plugin to create multiple scripts instead of default single script
 application {
@@ -111,7 +104,7 @@ application {
 
 // Configure the application plugin to generate scripts using custom templates
 tasks.startScripts {
-    applicationName = "xec"
+    applicationName = "xec"  
     classpath = configurations.xdkJavaTools.get()
     // Configure default JVM options  
     defaultJvmOpts = buildList {
@@ -142,10 +135,10 @@ val modifyScripts by tasks.registering {
             if (script.exists()) {
                 var content = script.readText()
                 
-                // Replace jar paths with version-stripped equivalents
-                javaToolsJars.forEach { jar ->
+                // Replace jar paths with version-stripped equivalents  
+                configurations.xdkJavaTools.get().files.forEach { jar ->
                     val originalName = jar.name
-                    val strippedName = stripVersionFromJarName(originalName)
+                    val strippedName = stripVersionFromJarName(originalName, artifactVersion)
                     content = content.replace("/lib/$originalName", "/javatools/$strippedName")
                         .replace("\\lib\\$originalName", "\\javatools\\$strippedName")
                 }
@@ -206,16 +199,17 @@ val modifyScripts by tasks.registering {
     // Declare inputs and outputs for incremental build support
     inputs.property("enablePreview", enablePreview)
     inputs.property("enableNativeAccess", enableNativeAccess)
-    outputs.files(listOf("xcc", "xec", "xtc").flatMap { script ->
-        val outputDir = tasks.startScripts.get().outputDir!!
-        listOf(File(outputDir, script), File(outputDir, "$script.bat"))
+    outputs.files(tasks.startScripts.map { task ->
+        listOf("xcc", "xec", "xtc").flatMap { script ->
+            listOf(File(task.outputDir!!, script), File(task.outputDir!!, "$script.bat"))
+        }
     })
 }
 
 // Copy scripts to distribution location
 val prepareDistributionScripts by tasks.registering(Copy::class) {
     dependsOn(modifyScripts)
-    from(tasks.startScripts.get().outputDir!!) {
+    from(tasks.startScripts.map { it.outputDir!! }) {
         include("xec*", "xcc*", "xtc*")
     }
     into(layout.buildDirectory.dir("distribution-scripts"))
@@ -295,7 +289,11 @@ distributions {
             duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             
             // Core XDK content
-            from(File(capturedProcessResourcesOutput, "xdk")) {
+            val xdkTemplate = tasks.processResources.map {
+                logger.info("[xdk] Resolving processResources output (this should be during the execution phase).")
+                File(it.outputs.files.singleFile, "xdk")
+            }
+            from(xdkTemplate) {
                 exclude("**/bin/**")  // Exclude bin directory to avoid conflicts with generated scripts  
                 eachFile {
                     includeEmptyDirs = false
@@ -314,21 +312,23 @@ distributions {
             
             // Java tools (strip version from jar names)
             from(configurations.xdkJavaTools) {
-                rename { originalName -> stripVersionFromJarName(originalName) }
+                // Configuration cache: Use function with version parameter to avoid script context reference
+                rename { originalName -> stripVersionFromJarName(originalName, artifactVersion) }
                 into("javatools")
             }
             
             // Include javatools-jitbridge binary blob (separate from normal javatools classpath)
             from(xdkJavaToolsJitBridge) {
-                rename { originalName -> stripVersionFromJarName(originalName) }
+                // Configuration cache: Use function with version parameter to avoid script context reference
+                rename { originalName -> stripVersionFromJarName(originalName, artifactVersion) }
                 into("javatools")
             }
             
             // Version file
-            from(capturedXtcVersionFile)
+            from(tasks.xtcVersionFile)
             
             // Include launcher scripts directly in bin/
-            from(capturedDistributionScriptsDir) {
+            from(prepareDistributionScripts.map { it.destinationDir }) {
                 include("xcc")
                 include("xcc.bat")
                 include("xec")
@@ -352,7 +352,11 @@ distributions {
             duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             
             // Core XDK content (same as main distribution)
-            from(File(capturedProcessResourcesOutput, "xdk")) {
+            val xdkTemplate = tasks.processResources.map {
+                logger.info("[xdk] Resolving processResources output (this should be during the execution phase).")
+                File(it.outputs.files.singleFile, "xdk")
+            }
+            from(xdkTemplate) {
                 exclude("**/bin/**")  // Exclude bin directory to avoid conflicts with generated scripts  
                 eachFile {
                     includeEmptyDirs = false
@@ -369,20 +373,22 @@ distributions {
                 include(JAVATOOLS_PREFIX_PATTERN) // only javatools_*.xtc
             }
             
-            // Java tools (strip version from jar names)
+            // Java tools (strip version from jar names)  
             from(configurations.xdkJavaTools) {
-                rename { originalName -> stripVersionFromJarName(originalName) }
+                // Configuration cache: Use function with version parameter to avoid script context reference
+                rename { originalName -> stripVersionFromJarName(originalName, artifactVersion) }
                 into("javatools")
             }
             
             // Include javatools-jitbridge binary blob (separate from normal javatools classpath)
             from(xdkJavaToolsJitBridge) {
-                rename { originalName -> stripVersionFromJarName(originalName) }
+                // Configuration cache: Use function with version parameter to avoid script context reference
+                rename { originalName -> stripVersionFromJarName(originalName, artifactVersion) }
                 into("javatools")
             }
             
             // Version file
-            from(capturedXtcVersionFile)
+            from(tasks.xtcVersionFile)
             
             // Install platform-specific binary launchers that work on the host system
             XdkDistribution.binaryLauncherNames.forEach {
@@ -398,6 +404,19 @@ distributions {
             capturedDistributionExcludes.forEach { exclude(it) }
         }
     }
+}
+
+// Ensure distribution tasks depend on script preparation
+tasks.installDist {
+    dependsOn(prepareDistributionScripts)
+}
+
+tasks.distTar {
+    dependsOn(prepareDistributionScripts) 
+}
+
+tasks.distZip {
+    dependsOn(prepareDistributionScripts)
 }
 
 // Let the Distribution plugin handle dependencies properly through the standard lifecycle
