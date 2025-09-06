@@ -51,7 +51,7 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
         final var mainClassName = cmd.getMainClassName();
         final var jvmArgs = cmd.getJvmArgs();
         logger.info("[plugin] WARNING: Task will launch '{}' from its build process. No JavaExec/Exec will be performed.", mainClassName);
-        if (DefaultXtcLauncherTaskExtension.hasModifiedJvmArgs(jvmArgs)) {
+        if (DefaultXtcLauncherTaskExtension.areJvmArgsModified(jvmArgs)) {
             logger.warn("[plugin] WARNING: Task has non-default JVM args ({}). These will be ignored, as launcher is configured not to fork.", jvmArgs);
         }
         return false;
