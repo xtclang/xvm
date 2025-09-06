@@ -7,8 +7,6 @@ import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
-import java.lang.constant.MethodTypeDesc;
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -16,13 +14,9 @@ import org.xvm.asm.OpProperty;
 import org.xvm.asm.Scope;
 
 import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
-import org.xvm.javajit.Builder;
-import org.xvm.javajit.JitMethodDesc;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -149,26 +143,7 @@ public class P_Get
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        Slot targetSlot = bctx.loadArgument(code, m_nTarget);
-        if (!targetSlot.isSingle()) {
-            throw new UnsupportedOperationException("Multislot P_Get");
-        }
-        PropertyConstant idProp     = (PropertyConstant) bctx.getConstant(m_nPropId);
-        PropertyInfo     infoProp   = targetSlot.type().ensureTypeInfo().getProperties().get(idProp);
-        JitMethodDesc    jmd        = infoProp.getGetterJitDesc(bctx.typeSystem);
-        String           methodName = infoProp.getGetterId().ensureJitMethodName(bctx.typeSystem);
-        MethodTypeDesc   md;
-
-        if (jmd.isOptimized) {
-            md         = jmd.optimizedMD;
-            methodName += Builder.OPT;
-        } else {
-            md = jmd.standardMD;
-        }
-
-        bctx.loadCtx(code);
-        code.invokevirtual(targetSlot.cd(), methodName, md);
-        bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue});
+        bctx.buildGetProperty(code, bctx.loadArgument(code, m_nTarget), m_nPropId, m_nRetValue);
     }
 
     // ----- fields --------------------------------------------------------------------------------

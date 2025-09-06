@@ -26,6 +26,7 @@ import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -637,6 +638,60 @@ public class BuildContext {
     }
 
     /**
+     * Get the property value.
+     */
+    public void buildGetProperty(CodeBuilder code, Slot targetSlot, int propIdIndex, int retIndex) {
+        if (!targetSlot.isSingle()) {
+            throw new UnsupportedOperationException("Multislot P_Get");
+        }
+        PropertyConstant propId     = (PropertyConstant) getConstant(propIdIndex);
+        PropertyInfo     propInfo   = propId.getClassIdentity().getType().ensureTypeInfo().findProperty(propId);
+        JitMethodDesc    jmd        = propInfo.getGetterJitDesc(typeSystem);
+        String           methodName = propInfo.getGetterId().ensureJitMethodName(typeSystem);
+
+        MethodTypeDesc   md;
+
+        if (jmd.isOptimized) {
+            md         = jmd.optimizedMD;
+            methodName += Builder.OPT;
+        } else {
+            md = jmd.standardMD;
+        }
+
+        loadCtx(code);
+        code.invokevirtual(targetSlot.cd(), methodName, md);
+        assignReturns(code, jmd, 1, new int[] {retIndex});
+    }
+
+    /**
+     * Set the property value.
+     */
+    public void buildSetProperty(CodeBuilder code, Slot targetSlot, int propIdIndex, int valIndex) {
+        if (!targetSlot.isSingle()) {
+            throw new UnsupportedOperationException("Multislot P_Set");
+        }
+        PropertyConstant propId    = (PropertyConstant) getConstant(propIdIndex);
+        PropertyInfo     propInfo   = propId.getClassIdentity().getType().ensureTypeInfo().findProperty(propId);
+        JitMethodDesc    jmd        = propInfo.getSetterJitDesc(typeSystem);
+        String           methodName = propInfo.getSetterId().ensureJitMethodName(typeSystem);
+
+        MethodTypeDesc md;
+        if (jmd.isOptimized) {
+            md         = jmd.optimizedMD;
+            methodName += Builder.OPT;
+        } else {
+            md = jmd.standardMD;
+        }
+
+        loadCtx(code);
+        Slot valueSlot = loadArgument(code, valIndex);
+        if (!valueSlot.isSingle()) {
+            throw new UnsupportedOperationException("Multislot L_Set");
+        }
+        code.invokevirtual(targetSlot.cd(), methodName, md);
+    }
+
+    /**
      * Assign return values from a method invocation.
      */
     public void assignReturns(CodeBuilder code, JitMethodDesc jmd, int cReturns, int[] anVar) {
@@ -734,7 +789,9 @@ public class BuildContext {
             return pushSlot(type, cd, name);
         }
         Slot slot = getSlot(varIndex);
-        assert slot.cd().equals(cd);
+        if (slot == null) {
+            throw new IllegalStateException("Invalid slot for variable: " + varIndex);
+        }
         return slot;
     }
     /**
