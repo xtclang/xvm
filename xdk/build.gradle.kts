@@ -95,6 +95,13 @@ val enableNativeAccess = getXdkPropertyBoolean("org.xtclang.java.enableNativeAcc
 
 // Capture configuration values at configuration time for configuration cache compatibility
 val javaToolsJars = configurations.xdkJavaTools.get().files
+// Capture specific script template values at configuration time for configuration cache
+val capturedWindowsTemplates = XdkDistribution.SCRIPT_TEMPLATES["windows"]!!
+val capturedUnixTemplates = XdkDistribution.SCRIPT_TEMPLATES["unix"]!!
+// Capture distribution-related values at configuration time
+val capturedProcessResourcesOutput = tasks.processResources.get().outputs.files.singleFile
+val capturedXtcVersionFile = tasks.xtcVersionFile
+val capturedDistributionScriptsDir = layout.buildDirectory.dir("distribution-scripts")
 
 // Configure application plugin to create multiple scripts instead of default single script
 application {
@@ -106,30 +113,31 @@ application {
 tasks.startScripts {
     applicationName = "xec"
     classpath = configurations.xdkJavaTools.get()
-    // Configure default JVM options
-    val enablePreview = getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)
-    val enableNativeAccess = getXdkPropertyBoolean("org.xtclang.java.enableNativeAccess", false)
+    // Configure default JVM options  
     defaultJvmOpts = buildList {
         add("-ea")
-        //add("-DXDK_HOME=\$APP_HOME")
         if (enablePreview) {
             add("--enable-preview")
             logger.info("[xdk] You have enabled preview features for XTC launchers")
         }
         if (enableNativeAccess) {
-            add("--enable-native-access=ALL-UNNAMED")
+            add("--enable-native-access=ALL-UNNAMED") 
             logger.info("[xdk] You have enabled native access for XTC launchers")
         }
     }
+}
+
+// Configuration-cache-compatible script modification task
+val modifyScripts by tasks.registering {
+    dependsOn(tasks.startScripts)
     
-    // Clean script modification using doLast pattern
     doLast {
-        // Read existing working content and apply minimal changes
-        // Use the captured javaToolsJars from configuration time to avoid configuration cache issues
+        val outputDir = tasks.startScripts.get().outputDir!!
         
+        // Read existing working content and apply minimal changes
         listOf(
-            unixScript to false,    // Unix shell script
-            windowsScript to true   // Windows batch file
+            File(outputDir, "xec") to false,      // Unix shell script
+            File(outputDir, "xec.bat") to true    // Windows batch file
         ).forEach { (script, isWindows) ->
             if (script.exists()) {
                 var content = script.readText()
@@ -142,9 +150,8 @@ tasks.startScripts {
                         .replace("\\lib\\$originalName", "\\javatools\\$strippedName")
                 }
                 
-                // Add XDK_HOME delegation and XTC module paths using templates
-                val platformKey = if (isWindows) "windows" else "unix"
-                val templates = XdkDistribution.SCRIPT_TEMPLATES[platformKey]!!
+                // Add XDK_HOME delegation and XTC module paths using captured templates
+                val templates = if (isWindows) capturedWindowsTemplates else capturedUnixTemplates
                 
                 if (isWindows) {
                     // Insert XDK_HOME delegation for Windows - place it right after APP_HOME calculation
@@ -195,17 +202,19 @@ tasks.startScripts {
             }
         }
     }
+    
     // Declare inputs and outputs for incremental build support
     inputs.property("enablePreview", enablePreview)
     inputs.property("enableNativeAccess", enableNativeAccess)
     outputs.files(listOf("xcc", "xec", "xtc").flatMap { script ->
+        val outputDir = tasks.startScripts.get().outputDir!!
         listOf(File(outputDir, script), File(outputDir, "$script.bat"))
     })
 }
 
 // Copy scripts to distribution location
 val prepareDistributionScripts by tasks.registering(Copy::class) {
-    dependsOn(tasks.startScripts)
+    dependsOn(modifyScripts)
     from(tasks.startScripts.get().outputDir!!) {
         include("xec*", "xcc*", "xtc*")
     }
@@ -265,6 +274,9 @@ private val distributionExcludes = listOf(
     "**/bin/README.md"
 )
 
+// Capture distributionExcludes for configuration cache compatibility
+val capturedDistributionExcludes = distributionExcludes
+
 /*
  * Distribution archives contain internal directory names like "xdk0.4.4SNAPSHOT" rather than "xdk-0.4.4-SNAPSHOT".
  * This is intentional and follows Gradle's standard behavior - the Distribution plugin sanitizes version strings
@@ -283,11 +295,7 @@ distributions {
             duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             
             // Core XDK content
-            val xdkTemplate = tasks.processResources.map {
-                logger.info("[xdk] Resolving processResources output (this should be during the execution phase).")
-                File(it.outputs.files.singleFile, "xdk")
-            }
-            from(xdkTemplate) {
+            from(File(capturedProcessResourcesOutput, "xdk")) {
                 exclude("**/bin/**")  // Exclude bin directory to avoid conflicts with generated scripts  
                 eachFile {
                     includeEmptyDirs = false
@@ -317,10 +325,10 @@ distributions {
             }
             
             // Version file
-            from(tasks.xtcVersionFile)
+            from(capturedXtcVersionFile)
             
             // Include launcher scripts directly in bin/
-            from(prepareDistributionScripts.map { it.destinationDir }) {
+            from(capturedDistributionScriptsDir) {
                 include("xcc")
                 include("xcc.bat")
                 include("xec")
@@ -331,7 +339,7 @@ distributions {
             }
             
             // Exclude unwanted files and prevent auto-inclusion of script task outputs
-            distributionExcludes.forEach { exclude(it) }
+            capturedDistributionExcludes.forEach { exclude(it) }
         }
     }
     val withNativeLaunchers by registering {
@@ -344,11 +352,7 @@ distributions {
             duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             
             // Core XDK content (same as main distribution)
-            val xdkTemplate = tasks.processResources.map {
-                logger.info("[xdk] Resolving processResources output (this should be during the execution phase).")
-                File(it.outputs.files.singleFile, "xdk")
-            }
-            from(xdkTemplate) {
+            from(File(capturedProcessResourcesOutput, "xdk")) {
                 exclude("**/bin/**")  // Exclude bin directory to avoid conflicts with generated scripts  
                 eachFile {
                     includeEmptyDirs = false
@@ -378,7 +382,7 @@ distributions {
             }
             
             // Version file
-            from(tasks.xtcVersionFile)
+            from(capturedXtcVersionFile)
             
             // Install platform-specific binary launchers that work on the host system
             XdkDistribution.binaryLauncherNames.forEach {
@@ -391,7 +395,7 @@ distributions {
             }
             
             // Exclude unwanted files and prevent auto-inclusion of script task outputs
-            distributionExcludes.forEach { exclude(it) }
+            capturedDistributionExcludes.forEach { exclude(it) }
         }
     }
 }
