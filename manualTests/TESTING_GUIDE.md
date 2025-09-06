@@ -1,6 +1,9 @@
-# Directory: ./manualTests/ #
+# Manual Testing Guide
 
-This directory contains various tests. Some are current; others (unfortunately) not.
+> **📌 Looking for the main project README?**  
+> **👉 [Go to Main README](../README.md)** - Platform overview, quickstart, and installation
+
+This directory contains manual tests for the XVM project. Some tests are current; others may need updating.
 
 In general, before creating a pull request (or for committers, before pushing), you
 should do the following actions in a shell window, from the `./xvm/` directory:
