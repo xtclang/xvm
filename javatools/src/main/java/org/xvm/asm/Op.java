@@ -2233,6 +2233,11 @@ public abstract class Op {
      */
     public static final Op[] NO_OPS = new Op[0];
 
+    /**
+     * An empty array of args.
+     */
+    public static int[] NO_ARGS = new int[0];
+
     private static final long REACHABLE_BIT        = 0x8000_0000_0000_0000L;
     private static final long NECESSARY_BIT        = 0x4000_0000_0000_0000L;
     private static final long REDUNDANT_BIT        = 0x2000_0000_0000_0000L;

@@ -556,6 +556,9 @@ public abstract class OpCallable extends Op {
 
     // ----- JIT support ---------------------------------------------------------------------------
 
+    /**
+     * Support for NEW_ ops.
+     */
     protected void buildNew(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         TypeSystem       ts         = bctx.typeSystem;
         MethodConstant   idCtor     = (MethodConstant) bctx.getConstant(m_nFunctionId);
@@ -590,6 +593,43 @@ public abstract class OpCallable extends Op {
         code.invokestatic(cdTarget, sJitNew, md);
 
         bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, typeTarget, cdTarget, ""));
+    }
+
+    /**
+     * Support for CONSTR_ ops.
+     */
+    protected void buildConstruct(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
+        TypeSystem       ts         = bctx.typeSystem;
+        MethodConstant   idCtor     = (MethodConstant) bctx.getConstant(m_nFunctionId);
+        IdentityConstant idTarget   = idCtor.getNamespace();
+        TypeConstant     typeTarget = idTarget.getType();
+        TypeInfo         infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+        MethodInfo       infoCtor   = infoTarget.getMethodById(idCtor);
+
+        if (infoCtor == null) {
+            throw new RuntimeException("Unresolvable constructor \"" +
+                idCtor.getValueString() + "\" for " + typeTarget.getValueString());
+        }
+        String        sJitTarget = typeTarget.ensureJitClassName(ts);
+        ClassDesc     cdTarget   = ClassDesc.of(sJitTarget);
+        JitMethodDesc jmdCtor    = infoCtor.getJitDesc(ts);
+
+        boolean fOptimized = jmdCtor.isOptimized;
+        String  sJitCtor   = idCtor.ensureJitMethodName(ts);
+        MethodTypeDesc md;
+        if (fOptimized) {
+            md       = jmdCtor.optimizedMD;
+            sJitCtor += Builder.OPT;
+        }
+        else {
+            md = jmdCtor.standardMD;
+        }
+
+        bctx.loadCtx(code);
+        bctx.loadCtorCtx(code);
+        bctx.loadThis(code);
+        bctx.loadArguments(code, jmdCtor, anArgValue);
+        code.invokestatic(cdTarget, sJitCtor, md);
     }
 
     // ----- fields --------------------------------------------------------------------------------

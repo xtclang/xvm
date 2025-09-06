@@ -246,6 +246,15 @@ public class BuildContext {
     }
 
     /**
+     * Build the code to load the CtorCtx instance on the Java stack.
+     */
+    public CodeBuilder loadCtorCtx(CodeBuilder code) {
+        assert isConstructor;
+        code.aload(code.parameterSlot(1));
+        return code;
+    }
+
+    /**
      * Build the code to load "this" instance on the Java stack.
      */
     public Slot loadThis(CodeBuilder code) {
