@@ -46,7 +46,7 @@ val publishRemote by tasks.registering {
     }
     doLast {
         if (gitHubToken.isEmpty()) {
-            throw buildException("ERROR: No remote repositories for remote publication are configured.")
+            throw GradleException("ERROR: No remote repositories for remote publication are configured.")
         }
     }
 }

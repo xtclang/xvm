@@ -69,6 +69,12 @@ public final class XtcPluginConstants {
     @SuppressWarnings("unused")
     public static final long XTC_MAGIC = 0xEC57_A5EEL;
 
+    // Project property names
+    public static final String PROPERTY_VERBOSE_LOGGING_OVERRIDE = "xtcPluginOverrideVerboseLogging";
+
+    // Default values
+    public static final int DEFAULT_DEBUG_PORT = 4711;
+
     private XtcPluginConstants() {
     }
 }

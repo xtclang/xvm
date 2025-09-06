@@ -144,12 +144,6 @@ fun Task.getXdkProperty(key: String, defaultValue: String? = null): String {
     return registerXdkPropertyInput(this, key, project.getXdkProperty(key, defaultValue))
 }
 
-fun Project.buildException(msg: String, level: LogLevel = LIFECYCLE): Throwable {
-    val prefixed = "[build-logic] $msg"
-    logger.log(level, prefixed)
-    return GradleException(prefixed)
-}
-
 /**
  * Extension method that can be called during the configuration phase, marking its
  * task instance as forever out of date.
