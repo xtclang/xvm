@@ -913,12 +913,6 @@ The xtclang organization maintains several repositories supporting the Ecstasy e
 
 ### Core Platform
 - **[platform](https://github.com/xtclang/platform)** - Ecstasy "Platform as a Service" implementation for cloud deployment
-- **[examples](https://github.com/xtclang/examples)** - Example web applications demonstrating platform capabilities
-
-### Development Tools
-- **[intellij-plugin](https://github.com/xtclang/intellij-plugin)** - IntelliJ IDEA plugin for XTC language support
-- **[language-support](https://github.com/xtclang/language-support)** - Language Server Protocol implementation for IDE integration
-- **[xtc-app-template](https://github.com/xtclang/xtc-app-template)** - Template repository for creating new XTC applications
 
 ### Distribution & Packaging
 - **[xdk-release](https://github.com/xtclang/xdk-release)** - Cross-platform XDK distribution and release automation
