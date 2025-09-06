@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import org.gradle.process.ExecResult;
-import org.gradle.process.internal.ExecException;
+import org.gradle.api.GradleException;
 
 public final class XtcExecResult implements ExecResult {
     private final int exitValue;
@@ -55,17 +55,17 @@ public final class XtcExecResult implements ExecResult {
     }
 
     @Override
-    public ExecResult assertNormalExitValue() throws ExecException {
+    public ExecResult assertNormalExitValue() throws GradleException {
         if (exitValue != 0) {
-            throw new ExecException("XTC Launcher exited with non-zero exit code: " + exitValue, failure);
+            throw new GradleException("XTC Launcher exited with non-zero exit code: " + exitValue, failure);
         }
         return this;
     }
 
     @Override
-    public ExecResult rethrowFailure() throws ExecException {
+    public ExecResult rethrowFailure() throws GradleException {
         if (failure != null) {
-            throw new ExecException("XTC Launcher exited with exception: " + failure.getMessage(), failure);
+            throw new GradleException("XTC Launcher exited with exception: " + failure.getMessage(), failure);
         }
         return this;
     }
@@ -167,7 +167,7 @@ public final class XtcExecResult implements ExecResult {
 
         @SuppressWarnings("UnusedReturnValue")
         XtcExecResultBuilder failure(final Throwable failure) {
-            this.failure = new ExecException(launcherClass.getSimpleName() + ' ' + failure.getMessage(), failure);
+            this.failure = new GradleException(launcherClass.getSimpleName() + ' ' + failure.getMessage(), failure);
             return this;
         }
 
@@ -177,7 +177,7 @@ public final class XtcExecResult implements ExecResult {
             try {
                 execResult.rethrowFailure();
                 execResult.assertNormalExitValue();
-            } catch (final ExecException e) {
+            } catch (final GradleException e) {
                 failure(e);
             }
             return this;

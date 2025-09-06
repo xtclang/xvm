@@ -1,3 +1,4 @@
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.VersionCatalogsExtension
@@ -28,7 +29,7 @@ class XdkVersionHandler(project: Project): XdkProjectBuildLogic(project) {
         val verXdk = catalogSemanticVersion(XDK_VERSION_CATALOG_GROUP, XDK_VERSION_CATALOG_VERSION)
         val verXtcPlugin = catalogSemanticVersion(XTC_VERSION_PLUGIN_CATALOG_GROUP, XTC_VERSION_PLUGIN_CATALOG_VERSION)
         if (verXdk != verXtcPlugin) {
-            throw project.buildException("Illegal state: version mismatch between XDK and XTC plugin: '$verXdk' != '$verXtcPlugin'")
+            throw GradleException("[versioning] Illegal state: version mismatch between XDK and XTC plugin: '$verXdk' != '$verXtcPlugin'")
         }
         return verXdk
     }
@@ -39,7 +40,7 @@ class XdkVersionHandler(project: Project): XdkProjectBuildLogic(project) {
         ensureNotVersioned(project)
 
         if (project.name != name) {
-            throw project.buildException("Illegal state: project name '${project.name}' does not match the name in the semantic version: '$name'")
+            throw GradleException("[versioning] Illegal state: project name '${project.name}' does not match the name in the semantic version: '$name'")
         }
 
         project.group = group
@@ -83,7 +84,7 @@ class XdkVersionHandler(project: Project): XdkProjectBuildLogic(project) {
                 return value.get().toString()
             }
         }
-        throw project.buildException("Version catalog entry '$name' has no value for '$catalog:$name'")
+        throw GradleException("[versioning] Version catalog entry '$name' has no value for '$catalog:$name'")
     }
 
     private fun ensureNotVersioned(project: Project): Unit = project.run {

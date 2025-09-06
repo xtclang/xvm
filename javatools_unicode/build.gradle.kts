@@ -8,6 +8,7 @@
 
 import de.undercouch.gradle.tasks.download.Download
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
+import org.gradle.process.ExecOperations
 
 plugins {
     alias(libs.plugins.xdk.build.java)
@@ -77,15 +78,13 @@ val rebuildUnicodeTables by tasks.registering {
             val unicodeJar = jar.get().archiveFile
             val localUcdZip = downloadUcdFlatZip.get().outputs.files.singleFile
             logger.lifecycle("[javatools_unicode] Downloaded unicode file: ${localUcdZip.absolutePath}")
-            providers.exec {
-                executable = "java"
-                args = listOf(
-                    "-cp", 
-                    files(configurations.runtimeClasspath, unicodeJar).asPath,
-                    "org.xvm.tool.BuildUnicodeTables",
-                    localUcdZip.absolutePath, 
-                    File(processedResourcesDir, "ecstasy/text").absolutePath
-                )
+            
+            // Use ExecOperations service for Gradle 9 compatibility
+            val execOps = project.objects.newInstance<ExecOperations>()
+            execOps.javaexec {
+                mainClass.set("org.xvm.tool.BuildUnicodeTables")
+                classpath = files(configurations.runtimeClasspath, unicodeJar)
+                args = listOf(localUcdZip.absolutePath, File(processedResourcesDir, "ecstasy/text").absolutePath)
             }
         }
     }

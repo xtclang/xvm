@@ -25,3 +25,21 @@ This is a composite build where you CAN run gradlew with many tasks across multi
 3. Then run your desired tasks: `./gradlew build` or `./gradlew installDist`
 
 This prevents task interference and allows for reliable builds.
+
+## Gradle Best Practices
+
+When working with Gradle build files, always follow [Gradle Best Practices](https://docs.gradle.org/9.0.0/userguide/best_practices_general.html):
+
+- **Configuration Cache Compatibility**: Use injected services (`ExecOperations`, `FileSystemOperations`) instead of project-level methods (`project.exec`, `project.javaexec`)
+- **Task Dependencies**: Declare explicit task dependencies using `dependsOn`, `mustRunAfter`, or input/output relationships
+- **Lazy Configuration**: Use Provider APIs and avoid eager evaluation during configuration
+- **Incremental Builds**: Properly declare inputs and outputs for custom tasks
+- **Build Performance**: Minimize configuration time work and prefer build cache compatible patterns
+
+When refactoring build scripts, proactively suggest migrations to follow these best practices, especially for configuration cache compatibility and proper task modeling.
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.

@@ -1,3 +1,4 @@
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import java.io.File
 import java.io.FileInputStream
@@ -81,12 +82,12 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
         logger.info("[build-logic] get($key) invoked (props: ${System.identityHashCode(this)})")
         if (!key.startsWith("org.xtclang")) {
             // TODO: Remove this artificial limitation.
-            throw project.buildException("ERROR: XdkProperties are currently expected to start with org.xtclang. Remove this artificial limitation.")
+            throw GradleException("[properties] ERROR: XdkProperties are currently expected to start with org.xtclang. Remove this artificial limitation.")
         }
         if (!has(key)) {
             return defaultValue?.also {
                 logger.info("[build-logic] XdkProperties; resolved property '$key' to its default value.")
-            } ?: throw project.buildException("ERROR: XdkProperty '$key' has no value, and no default was given.")
+            } ?: throw GradleException("[properties] ERROR: XdkProperty '$key' has no value, and no default was given.")
         }
 
         // First check a system env override

@@ -400,6 +400,18 @@ The difference between `build` and `installDist` is that `build` creates all the
 
 ## Development
 
+### XTC Plugin and Build System Testing
+
+For comprehensive examples of using the XTC Gradle plugin and testing XTC applications, see the [**manualTests**](manualTests/README.md) project documentation. This project demonstrates:
+
+- XTC Gradle plugin configuration and usage
+- Build lifecycle best practices and caching
+- Configuration cache compatibility
+- Custom task creation and testing scenarios
+- Debugging and troubleshooting XTC builds
+
+The manualTests project serves as both integration tests and comprehensive documentation for the XTC build system.
+
 ### Git Workflow: Rebase-Only, Linear History
 
 **Core Principle**: We maintain a **strict linear history** in master. **NEVER merge from master to branches** - always rebase instead to avoid merge commits and keep history clean.

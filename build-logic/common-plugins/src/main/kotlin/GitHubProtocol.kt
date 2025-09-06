@@ -3,6 +3,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonPrimitive
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.logging.Logger
 
@@ -242,14 +243,14 @@ data class GitHubProtocol(private val project: Project) {
                 require(versionArray is JsonArray)
 
                 val timeMap = mutableMapOf<Pair<String, Int>, MutableList<String>>()
-                versionArray.map { it as? JsonObject ?: throw buildException("Expected JsonObject for version") }
+                versionArray.map { it as? JsonObject ?: throw GradleException("[git] Expected JsonObject for version") }
                     .forEach { version ->
                         val versionName =
-                            version["name"]?.jsonPrimitive?.content ?: throw buildException("Version name not found")
+                            version["name"]?.jsonPrimitive?.content ?: throw GradleException("[git] Version name not found")
                         val versionId =
-                            version["id"]?.jsonPrimitive?.int ?: throw buildException("Version id not found")
+                            version["id"]?.jsonPrimitive?.int ?: throw GradleException("[git] Version id not found")
                         val versionUpdatedAt = version["updated_at"]?.jsonPrimitive?.content
-                            ?: throw buildException("Version updated time not found")
+                            ?: throw GradleException("[git] Version updated time not found")
                         val timestamps = timeMap.getOrPut(versionName to versionId) { mutableListOf() }
                         timestamps.add(versionUpdatedAt)
                     }
@@ -263,8 +264,17 @@ data class GitHubProtocol(private val project: Project) {
     /**
      * Get git commit and branch information from environment variables or git commands.
      * Prefers environment variables (for Docker builds) over git commands (for local development).
+     * This method is safe for configuration cache as it only calls git during task execution.
      */
-    fun getGitInfo(): Map<String, String> = project.run {
+    fun getGitInfoProvider() = project.provider {
+        getGitInfo()
+    }
+    
+    /**
+     * Internal method that performs the actual git information gathering.
+     * Should only be called during task execution, not configuration time.
+     */
+    private fun getGitInfo(): Map<String, String> = project.run {
         val ghCommit = System.getenv("GH_COMMIT")
         val ghBranch = System.getenv("GH_BRANCH")
         

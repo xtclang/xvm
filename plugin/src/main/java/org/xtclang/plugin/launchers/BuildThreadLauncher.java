@@ -13,7 +13,9 @@ import java.net.URLClassLoader;
 
 import java.util.Objects;
 
+import org.gradle.api.GradleException;
 import org.gradle.api.Project;
+import org.gradle.api.logging.Logger;
 import org.gradle.process.ExecResult;
 
 import org.xtclang.plugin.XtcLauncherTaskExtension;
@@ -36,14 +38,21 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
         this.main = resolveMethod(task);
     }
 
+    public BuildThreadLauncher(final T task, final Logger logger) {
+        super(task, logger);
+        this.main = resolveMethod(task);
+    }
+
+
+
     @Override
     protected boolean validateCommandLine(final CommandLine cmd) {
         Objects.requireNonNull(cmd);
         final var mainClassName = cmd.getMainClassName();
         final var jvmArgs = cmd.getJvmArgs();
-        logger.info("{} WARNING: Task will launch '{}' from its build process. No JavaExec/Exec will be performed.", prefix, mainClassName);
-        if (DefaultXtcLauncherTaskExtension.areJvmArgsModified(jvmArgs)) {
-            logger.warn("{} WARNING: Task has non-default JVM args ({}). These will be ignored, as launcher is configured not to fork.", prefix, jvmArgs);
+        logger.info("[plugin] WARNING: Task will launch '{}' from its build process. No JavaExec/Exec will be performed.", mainClassName);
+        if (DefaultXtcLauncherTaskExtension.hasModifiedJvmArgs(jvmArgs)) {
+            logger.warn("[plugin] WARNING: Task has non-default JVM args ({}). These will be ignored, as launcher is configured not to fork.", jvmArgs);
         }
         return false;
     }
@@ -54,7 +63,7 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
 
     @Override
     public ExecResult apply(final CommandLine cmd) {
-        logger.info("{} Launching task {}}", prefix, this);
+        logger.info("[plugin] Launching task {}}", this);
 
         validateCommandLine(cmd);
 
@@ -64,8 +73,8 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
         final var builder = resultBuilder(cmd);
         try {
             if (task.hasVerboseLogging()) {
-                logger.lifecycle("{} WARNING: (equivalent to what we are executing without forking in current thread) JavaExec command: {}",
-                    prefix, cmd.toString());
+                logger.lifecycle("[plugin] WARNING: (equivalent to what we are executing without forking in current thread) JavaExec command: {}",
+                    cmd.toString());
             }
             // TODO: Rewrite super.redirectIo so we can reuse it here. That is prettier. Push and pop streams to field?
             //   (may be even more readable to implement it as a try-with-resources of some kind)
@@ -81,7 +90,7 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
             main.invoke(null, (Object)cmd.toList().toArray(new String[0]));
             builder.exitValue(0);
         } catch (final IllegalAccessException e) {
-            throw buildException("Failed to invoke '{}.{}' through reflection: {}", main.getDeclaringClass().getName(), main.getName(), e.getMessage());
+            throw new GradleException("[plugin] Failed to invoke '" + main.getDeclaringClass().getName() + "." + main.getName() + "' through reflection: " + e.getMessage());
         } catch (final InvocationTargetException e) {
             handleThrowable(builder, e);
         } finally {
@@ -95,8 +104,7 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
     private void handleThrowable(final XtcExecResultBuilder builder, final Throwable t) {
         final var cause = t.getCause();
         if (cause == null) {
-            throw buildException("Unexpected throwable from invocation to '{}.{}' through reflection: {}",
-                main.getDeclaringClass().getName(), main.getName(), t.getMessage());
+            throw new GradleException("[plugin] Unexpected throwable from invocation to '" + main.getDeclaringClass().getName() + "." + main.getName() + "' through reflection: " + t.getMessage());
         }
 
         // Check if cause was a launcher exception.
@@ -109,7 +117,7 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
         //   javatools, so we prefer to avoid it if can, or at least never assume we have
         //   compile time access to javatools in the plugin.
         final boolean isError = cause.toString().contains("isError=true");
-        logger.warn("{} LauncherException caught in {}, isError={}", prefix, getClass().getSimpleName(), isError, cause);
+        logger.warn("[plugin] LauncherException caught in {}, isError={}", getClass().getSimpleName(), isError, cause);
         builder.exitValue(isError ? -1 : 0);
         if (isError) {
             builder.failure(cause);
@@ -121,7 +129,7 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
         try (var classLoader = new URLClassLoader(new URL[]{jar.toURI().toURL()})) {
             return classLoader.loadClass(className);
         } catch (final ClassNotFoundException e) {
-            throw buildException(e, "Failed to load class from jar '{}': {}", jar, e.getMessage());
+            throw new GradleException("[plugin] Failed to load class from jar '" + jar + "': " + e.getMessage(), e);
         }
     }
 
@@ -130,8 +138,7 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
         try {
             return Class.forName(task.getJavaLauncherClassName()).getMethod(LAUNCH_METHOD_NAME, LAUNCH_METHOD_PARAMS);
         } catch (final ClassNotFoundException | NoSuchMethodException e) {
-            throw task.buildException(e, "Failed to resolve method '{}' in class '{}': {}.",
-                LAUNCH_METHOD_NAME, task.getJavaLauncherClassName(), e.getMessage());
+            throw new GradleException("[plugin] Failed to resolve method '" + LAUNCH_METHOD_NAME + "' in class '" + task.getJavaLauncherClassName() + "': " + e.getMessage() + ".", e);
         }
     }
 }
