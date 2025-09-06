@@ -60,7 +60,6 @@ This repository contains comprehensive documentation organized hierarchically:
 ### Development Documentation  
 - **[Docker Guide](docker/README.md)** - Container development, build instructions, and CI integration
 - **[GitHub Actions](/.github/GITHUB_WORKFLOWS.md)** - CI/CD pipeline, workflows, and automation documentation
-- **[Developer Scripts](bin/DEVELOPER_SCRIPTS.md)** - Build automation and development utility scripts
 - **[Testing Guide](manualTests/TESTING_GUIDE.md)** - Manual testing procedures and test suite documentation
 
 ### Language Documentation
