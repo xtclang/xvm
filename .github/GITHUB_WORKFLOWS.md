@@ -152,6 +152,24 @@ git push origin your-branch
 gh workflow run ci.yml
 ```
 
+#### Parameter Syntax Options
+
+GitHub CLI provides two ways to pass workflow inputs:
+
+- **`-f`** or **`--raw-field`**: Simple key=value format (recommended for most cases)
+- **`-F`** or **`--field`**: Advanced format that respects @ syntax for file input/JSON processing
+
+**For workflow dispatch inputs, both work identically:**
+```bash
+# These are equivalent:
+gh workflow run ci.yml -f platforms=ubuntu-latest
+gh workflow run ci.yml --raw-field platforms=ubuntu-latest  
+gh workflow run ci.yml -F platforms=ubuntu-latest
+gh workflow run ci.yml --field platforms=ubuntu-latest
+```
+
+**Use `-f` for simplicity** unless you need advanced features like reading values from files.
+
 #### Manual Control Examples
 ```bash
 # Test only on Ubuntu (faster iteration)
