@@ -11,7 +11,7 @@ module test1.examples.org {
         console.print(prop2);
         console.print(prop3);
 
-//        TestBase t0 = new TestBase(5);
+        TestBase t0 = new TestBase(5);
     }
 
 //    void test(TestDerived t) {

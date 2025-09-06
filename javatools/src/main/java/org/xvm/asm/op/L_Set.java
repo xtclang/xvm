@@ -5,11 +5,25 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
+import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpProperty;
 
 import org.xvm.asm.constants.PropertyConstant;
+
+import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Slot;
+
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitMethodDesc;
+import org.xvm.javajit.TypeSystem;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -94,8 +108,40 @@ public class L_Set
 
     @Override
     public String toString() {
-        return super.toString()+ ", " + Argument.toIdString(m_argValue, m_nValue);
+        return super.toString() + ", " + Argument.toIdString(m_argValue, m_nValue);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        TypeSystem       ts         = bctx.typeSystem;
+        PropertyConstant idProp     = (PropertyConstant) bctx.getConstant(m_nPropId);
+        TypeConstant     typeTarget = idProp.getClassIdentity().getType();
+        ClassDesc        cdTarget   = typeTarget.ensureClassDesc(ts);
+        PropertyInfo     infoProp   = typeTarget.ensureTypeInfo().getProperties().get(idProp);
+        JitMethodDesc    jmd        = infoProp.getSetterJitDesc(ts);
+        String           methodName = infoProp.getSetterId().ensureJitMethodName(ts);
+
+        MethodTypeDesc md;
+        if (jmd.isOptimized) {
+            md         = jmd.optimizedMD;
+            methodName += Builder.OPT;
+        } else {
+            md = jmd.standardMD;
+        }
+
+        bctx.loadThis(code);
+        bctx.loadCtx(code);
+        Slot valueSlot = bctx.loadArgument(code, m_nValue);
+        if (!valueSlot.isSingle()) {
+            throw new UnsupportedOperationException("Multislot L_Set");
+        }
+
+        code.invokevirtual(cdTarget, methodName, md);
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int m_nValue;
 

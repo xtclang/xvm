@@ -15,6 +15,7 @@ import java.util.Map;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
@@ -53,13 +54,14 @@ public class BuildContext {
      * Construct {@link BuildContext} for a method.
      */
     public BuildContext(TypeSystem typeSystem, TypeInfo typeInfo, MethodInfo methodInfo) {
-        this.typeSystem   = typeSystem;
-        this.typeInfo     = typeInfo;
-        this.callChain    = methodInfo.getChain();
-        this.methodStruct = callChain[0].getMethodStructure();
-        this.jmd          = methodInfo.getJitDesc(typeSystem);
-        this.isStatic     = methodInfo.isFunction();
-        this.isOptimized  = jmd.optimizedMD != null;
+        this.typeSystem    = typeSystem;
+        this.typeInfo      = typeInfo;
+        this.callChain     = methodInfo.getChain();
+        this.methodStruct  = callChain[0].getMethodStructure();
+        this.jmd           = methodInfo.getJitDesc(typeSystem);
+        this.isFunction    = methodInfo.isFunction();
+        this.isConstructor = methodInfo.isConstructor();
+        this.isOptimized   = jmd.optimizedMD != null;
     }
 
     /**
@@ -67,17 +69,18 @@ public class BuildContext {
      */
     public BuildContext(TypeSystem typeSystem, TypeInfo typeInfo, PropertyInfo propInfo,
                         boolean isGetter) {
-        this.typeSystem   = typeSystem;
-        this.typeInfo     = typeInfo;
-        this.callChain    = isGetter
+        this.typeSystem    = typeSystem;
+        this.typeInfo      = typeInfo;
+        this.callChain     = isGetter
                 ? propInfo.ensureOptimizedGetChain(typeInfo, null)
                 : propInfo.ensureOptimizedSetChain(typeInfo, null);
-        this.methodStruct = callChain[0].getMethodStructure();
-        this.jmd          = isGetter
+        this.methodStruct  = callChain[0].getMethodStructure();
+        this.jmd           = isGetter
                 ? propInfo.getGetterJitDesc(typeSystem)
                 : propInfo.getSetterJitDesc(typeSystem);
-        this.isStatic     = propInfo.isConstant();
-        this.isOptimized  = jmd.optimizedMD != null;
+        this.isFunction    = propInfo.isConstant();
+        this.isConstructor = false;
+        this.isOptimized   = jmd.optimizedMD != null;
     }
 
     public final TypeInfo        typeInfo;
@@ -86,7 +89,8 @@ public class BuildContext {
     public final TypeSystem      typeSystem;
     public final JitMethodDesc   jmd;
     public final boolean         isOptimized;
-    public final boolean         isStatic;
+    public final boolean         isFunction;
+    public final boolean         isConstructor;
 
     /**
      * The map of {@link Slot}s indexed by the Var index.
@@ -160,7 +164,7 @@ public class BuildContext {
             }
         }
 
-        if (!isStatic && type.containsAutoNarrowing(true)) {
+        if (!isFunction && type.containsAutoNarrowing(true)) {
             // TODO: how to resolve?
         }
 
@@ -181,10 +185,15 @@ public class BuildContext {
             .localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, startScope, endScope)
             ;
 
-        if (!isStatic) {
-            TypeConstant thisType = typeInfo.getType();
-            slots.put(Op.A_THIS, new SingleSlot(Op.A_THIS, thisType,
-                thisType.ensureClassDesc(typeSystem), "thi$"));
+
+        int          extraArgs = jmd.getImplicitParamCount(); // account for $ctx, $cctx, thi$
+        TypeConstant thisType  = typeInfo.getType();
+        ClassDesc    CD_this   = thisType.ensureClassDesc(typeSystem);
+        if (isConstructor) {
+            slots.put(Op.A_THIS, new SingleSlot(extraArgs-1, thisType.ensureAccess(Access.STRUCT),
+                CD_this, "thi$"));
+        } else if (!isFunction) {
+            slots.put(Op.A_THIS, new SingleSlot(0, thisType, CD_this, "this$"));
         }
 
         JitParamDesc[] params = isOptimized ? jmd.optimizedParams : jmd.standardParams;
@@ -194,7 +203,7 @@ public class BuildContext {
             Parameter    param     = methodStruct.getParam(varIndex);
             String       name      = param.getName();
             TypeConstant type      = param.getType();
-            int          slot      = code.parameterSlot(i+1); // compensate for $ctx
+            int          slot      = code.parameterSlot(extraArgs + i); // compensate for implicits
 
             code.localVariable(slot, name, paramDesc.cd, startScope, endScope);
 
@@ -204,7 +213,7 @@ public class BuildContext {
                 break;
 
             case MultiSlotPrimitive, PrimitiveWithDefault:
-                int extSlot = code.parameterSlot(i+2);
+                int extSlot = code.parameterSlot(extraArgs + i + 1);
 
                 slots.put(varIndex,
                     new DoubleSlot(slot, extSlot, paramDesc.flavor, type, paramDesc.cd, name));
@@ -217,7 +226,7 @@ public class BuildContext {
         // TODO: this will be done using a pass over all the ops to compute the total number
         //       of Java slots used by the numbered XTC registers
         // For now, we don't mind to overshoot... ("this", "$ctx", ...)
-        tailSlot = (isStatic ? 0 : 1) + 1 + methodStruct.getMaxVars() * 2;
+        tailSlot = (isFunction ? 0 : 1) + extraArgs + methodStruct.getMaxVars() * 2;
     }
 
     /**
@@ -239,9 +248,11 @@ public class BuildContext {
      * Build the code to load "this" instance on the Java stack.
      */
     public Slot loadThis(CodeBuilder code) {
-        assert !isStatic;
-        code.aload(0);
-        return slots.get(Op.A_THIS);
+        assert isConstructor || !isFunction;
+
+        Slot slot = slots.get(Op.A_THIS);
+        code.aload(slot.slot());
+        return slot;
     }
 
     /**
