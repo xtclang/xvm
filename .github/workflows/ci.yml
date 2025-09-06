@@ -58,7 +58,7 @@ on:
           - 'all'
           - 'ubuntu-latest'
           - 'windows-latest'
-      extra_gradle_options:
+      extra-gradle-options:
         description: 'Extra Gradle options to pass to the build'
         required: false
       test:
@@ -91,7 +91,7 @@ env:
   MAVEN_CENTRAL_USERNAME: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
   MAVEN_CENTRAL_PASSWORD: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
 
-  gradle_options: "-Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false -Dorg.gradle.jvmargs='-Xmx4g -XX:+UseG1GC -XX:ParallelGCThreads=2 -XX:ConcGCThreads=1 -XX:+UseStringDeduplication' --stacktrace --warning-mode=all --console=plain ${{ github.event.inputs.extra_gradle_options }}"
+  gradle_options: "-Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false -Dorg.gradle.jvmargs='-Xmx4g -XX:+UseG1GC -XX:ParallelGCThreads=2 -XX:ConcGCThreads=1 -XX:+UseStringDeduplication' --stacktrace --warning-mode=all --console=plain ${{ github.event.inputs.extra-gradle-options }}"
 
   # Optional flags to control manual tests
   run_manual_tests: ${{ github.event.inputs.test != 'false' }}
@@ -201,7 +201,7 @@ jobs:
           echo "    platforms: '${{ github.event.inputs.platforms }}'"
           echo "    test: '${{ github.event.inputs.test }}'"
           echo "    parallel-test: '${{ github.event.inputs.parallel-test }}'"
-          echo "    extra_gradle_options: '${{ github.event.inputs.extra_gradle_options }}'"
+          echo "    extra-gradle-options: '${{ github.event.inputs.extra-gradle-options }}'"
           echo "*** Environment variables:"
           echo "    always_publish_maven_artifact_snapshot: '${{ env.always_publish_maven_artifact_snapshot }}'"
           echo "    run_manual_tests: '${{ env.run_manual_tests }}'"

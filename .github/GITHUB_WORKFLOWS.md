@@ -55,7 +55,7 @@ test: true/false           # Enable/disable manual tests
 parallel-test: true/false # Run manual tests in parallel
 
 # Build Control
-extra_gradle_options: "string"        # Additional Gradle options
+extra-gradle-options: "string"        # Additional Gradle options
 ```
 
 ### Build Matrix
@@ -164,7 +164,7 @@ gh workflow run ci.yml -f snapshot-maven=true
 gh workflow run ci.yml -f master-semantics=true
 
 # Build with extra Gradle options
-gh workflow run ci.yml -f extra_gradle_options="--debug --scan"
+gh workflow run ci.yml -f extra-gradle-options="--debug --scan"
 
 # Disable manual tests for faster builds
 gh workflow run ci.yml -f test=false
