@@ -78,9 +78,28 @@ public final class XtcPluginUtils {
          *
          * @param file file to check
          * @return true if the file seems to be a valid XTC module, false otherwise
+         * @throws XtcBuildRuntimeException if there's an I/O error reading the file
          */
         public static boolean isValidXtcModule(final File file) {
             return isValidXtcModule(file, true);
+        }
+        
+        /**
+         * Safe version of isValidXtcModule for use in filters and streams.
+         * Logs I/O exceptions and returns false instead of throwing.
+         * 
+         * @param file file to check
+         * @param logger Gradle logger for error reporting
+         * @return true if the file seems to be a valid XTC module, false otherwise (including I/O errors)
+         */
+        public static boolean isValidXtcModuleSafe(final File file, final org.gradle.api.logging.Logger logger) {
+            try {
+                return isValidXtcModule(file);
+            } catch (final XtcBuildRuntimeException e) {
+                // Log the exception and return false for safe usage in filters
+                logger.warn("[plugin] Cannot validate XTC module file '{}': {}", file.getAbsolutePath(), e.getMessage(), e);
+                return false;
+            }
         }
 
         @SuppressWarnings("SameParameterValue")
@@ -94,7 +113,10 @@ public final class XtcPluginUtils {
             try (var in = new DataInputStream(new FileInputStream(file))) {
                 return (in.readInt() & 0xffff_ffffL) == XTC_MAGIC;
             } catch (final IOException e) {
-                return false;
+                // IOException when reading magic number must be logged and propagated
+                // This could happen due to file corruption, truncation, or permission issues
+                throw new XtcBuildRuntimeException(e, "Failed to read magic number from potential XTC module file: '{}'", 
+                    file.getAbsolutePath());
             }
         }
 

@@ -31,4 +31,5 @@ val xdkJavaToolsJitBridgeProvider by configurations.registering {
 
 dependencies {
     implementation(libs.javatools)
+    implementation(libs.javatools.utils)  // Needed for org.xvm.util.Handy.require
 }

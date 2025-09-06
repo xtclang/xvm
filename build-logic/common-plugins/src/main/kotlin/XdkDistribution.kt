@@ -1,7 +1,15 @@
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.file.Directory
+import org.gradle.api.file.FileCollection
+import org.gradle.api.file.RegularFile
+import org.gradle.api.provider.Provider
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.tasks.TaskProvider
+import org.gradle.api.tasks.application.CreateStartScripts
 import org.gradle.internal.os.OperatingSystem
 import org.gradle.kotlin.dsl.assign
 import org.gradle.kotlin.dsl.withType
@@ -63,7 +71,7 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
         if (key.isEmpty() || password.isEmpty()) {
             logger.warn("[build-logic] WARNING: Could not resolve a GPG signing key or a passphrase.")
             if (XdkDistribution.isCiEnabled) {
-                throw buildException("No GPG signing key or password found in CI build, and no manual way to set them.")
+                throw GradleException("[distribution] No GPG signing key or password found in CI build, and no manual way to set them.")
             }
             return false
         }

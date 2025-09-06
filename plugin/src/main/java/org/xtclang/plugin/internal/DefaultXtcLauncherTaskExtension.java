@@ -5,7 +5,10 @@ import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_DEFAULT_JVM_ARGS_
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import java.util.Collections;
 import java.util.List;
+
+import static org.xtclang.plugin.XtcPluginConstants.DEFAULT_DEBUG_PORT;
 
 import org.gradle.api.Project;
 import org.gradle.api.logging.Logger;
@@ -21,8 +24,7 @@ import org.xtclang.plugin.XtcPluginUtils;
 public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTaskExtension {
     private static final List<String> DEFAULT_JVM_ARGS = List.of("-ea");
 
-    protected final Project project;
-    protected final String prefix;
+    // Project field removed to avoid configuration cache serialization issues
     protected final ObjectFactory objects;
     protected final Logger logger;
     protected final List<String> defaultJvmArgs;
@@ -40,8 +42,6 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     protected final Property<OutputStream> stderr;
 
     protected DefaultXtcLauncherTaskExtension(final Project project) {
-        this.project = project;
-        this.prefix = ProjectDelegate.prefix(project);
         this.objects = project.getObjects();
         this.logger = project.getLogger();
 
@@ -50,7 +50,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         // TODO: Consider replacing the debug configuration with the debug flags inherited directly from its JavaExec extension
         //   DSL, or at least reimplementing them so that they look the same for different kinds of launchers.
         this.debug = objects.property(Boolean.class).convention(Boolean.parseBoolean(env.getOrDefault("XTC_DEBUG", "false")));
-        this.debugPort = objects.property(Integer.class).convention(Integer.parseInt(env.getOrDefault("XTC_DEBUG_PORT", "4711")));
+        this.debugPort = objects.property(Integer.class).convention(Integer.parseInt(env.getOrDefault("XTC_DEBUG_PORT", String.valueOf(DEFAULT_DEBUG_PORT))));
         this.debugSuspend = objects.property(Boolean.class).convention(Boolean.parseBoolean(env.getOrDefault("XTC_DEBUG_SUSPEND", "true")));
 
         // Use default JVM args from properties file generated at plugin build time
@@ -125,7 +125,8 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
 
     @Override
     public void jvmArg(final Provider<? extends String> arg) {
-        jvmArgs(XtcPluginUtils.singleArgumentIterableProvider(project, arg));
+        // Use objects factory instead of Project to create provider
+        jvmArgs(objects.listProperty(String.class).value(arg.map(Collections::singletonList)));
     }
 
     @Override
