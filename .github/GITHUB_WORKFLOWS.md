@@ -42,17 +42,17 @@ The workflow provides comprehensive manual control through workflow dispatch inp
 
 ```yaml
 # Publishing Control
-always_publish_maven_artifact_snapshot: true/false    # Force Maven artifact snapshot publishing
-always_build_docker_image: true/false  # Force Docker image builds
-always_update_homebrew_tap: true/false # Force Homebrew tap updates
-as_master: true/false                   # Run branch as if it were master
+snapshot-maven: true/false    # Force Maven artifact snapshot publishing
+docker-image: true/false  # Force Docker image builds
+homebrew: true/false # Force Homebrew tap updates
+master-semantics: true/false                   # Run branch as if it were master
 
 # Platform Control
-single_platform: full|ubuntu-latest|windows-latest  # Control build matrix
+platforms: all|ubuntu-latest|windows-latest  # Control build matrix
 
 # Testing Control
-run_manual_tests: true/false           # Enable/disable manual tests
-run_manual_tests_parallel: true/false # Run manual tests in parallel
+test: true/false           # Enable/disable manual tests
+parallel-test: true/false # Run manual tests in parallel
 
 # Build Control
 extra_gradle_options: "string"        # Additional Gradle options
@@ -155,19 +155,19 @@ gh workflow run ci.yml
 #### Manual Control Examples
 ```bash
 # Test only on Ubuntu (faster iteration)
-gh workflow run ci.yml -f single_platform=ubuntu-latest
+gh workflow run ci.yml -f platforms=ubuntu-latest
 
 # Force publish Maven artifact snapshot from feature branch
-gh workflow run ci.yml -f always_publish_maven_artifact_snapshot=true
+gh workflow run ci.yml -f snapshot-maven=true
 
 # Run as if master branch (enables all publishing)
-gh workflow run ci.yml -f as_master=true
+gh workflow run ci.yml -f master-semantics=true
 
 # Build with extra Gradle options
 gh workflow run ci.yml -f extra_gradle_options="--debug --scan"
 
 # Disable manual tests for faster builds
-gh workflow run ci.yml -f run_manual_tests=false
+gh workflow run ci.yml -f test=false
 ```
 
 #### Monitoring Builds
