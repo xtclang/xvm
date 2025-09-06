@@ -328,7 +328,7 @@ The CI workflow accepts these input parameters:
 - `platforms`: Run only single platform (ubuntu-latest, windows-latest, or all platforms)
 - `test`: Run manual tests (default: true)
 - `parallel-test`: Run manual tests in parallel mode (default: true)
-- `extra_gradle_options`: Extra Gradle options to pass to the build
+- `extra-gradle-options`: Extra Gradle options to pass to the build
 
 #### Triggering Workflows Manually
 
