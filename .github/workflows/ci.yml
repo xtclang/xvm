@@ -91,7 +91,7 @@ env:
   MAVEN_CENTRAL_USERNAME: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
   MAVEN_CENTRAL_PASSWORD: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
 
-  gradle_options: "-Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false -Dorg.gradle.jvmargs='-Xmx4g -XX:+UseG1GC -XX:ParallelGCThreads=2 -XX:ConcGCThreads=1 -XX:+UseStringDeduplication' --stacktrace --warning-mode=all --console=plain ${{ inputs.extra_gradle_options }}"
+  gradle_options: "-Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false -Dorg.gradle.jvmargs='-Xmx4g -XX:+UseG1GC -XX:ParallelGCThreads=2 -XX:ConcGCThreads=1 -XX:+UseStringDeduplication' --stacktrace --warning-mode=all --console=plain ${{ github.event.inputs.extra_gradle_options }}"
 
   # Optional flags to control manual tests
   run_manual_tests: ${{ github.event.inputs.test != 'false' }}
