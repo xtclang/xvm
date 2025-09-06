@@ -246,6 +246,15 @@ public class BuildContext {
     }
 
     /**
+     * Build the code to load the CtorCtx instance on the Java stack.
+     */
+    public CodeBuilder loadCtorCtx(CodeBuilder code) {
+        assert isConstructor;
+        code.aload(code.parameterSlot(1));
+        return code;
+    }
+
+    /**
      * Build the code to load "this" instance on the Java stack.
      */
     public Slot loadThis(CodeBuilder code) {
@@ -501,52 +510,42 @@ public class BuildContext {
     }
 
     /**
-     * Introduce a new variable for the specified type id, name id style and an optional value.
+     * Introduce a new variable for the specified type and name.
      *
      * @param varIndex  the variable index
      * @param type      the variable type
      * @param name      the variable name
      */
     public Slot introduceVar(CodeBuilder code, int varIndex, TypeConstant type, String name) {
-        if (name.isEmpty() && varIndex >= 0) {
+        if (varIndex < 0) {
+            throw new IllegalArgumentException("Invalid var index: " + varIndex);
+        }
+        if (name.isEmpty()) {
             name = "v$" + varIndex;
         }
+
+        Label varStartScope = code.newLabel();
+        code.labelBinding(varStartScope);
 
         ClassDesc cd;
         Slot      slot;
         if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null) {
+            int slotIndex = code.allocateLocal(Builder.toTypeKind(cd));
+            int slotExt   = code.allocateLocal(TypeKind.BOOLEAN);
 
-            Label varStartScope = code.newLabel();
-            code.labelBinding(varStartScope);
+            code.localVariable(slotIndex, name, cd, varStartScope, endScope);
+            code.localVariable(slotExt,   name+EXT, CD_boolean, varStartScope, endScope);
 
-            if (varIndex == Op.A_STACK) {
-                slot = pushExtSlot(type, cd, JitFlavor.MultiSlotPrimitive, name);
-            } else {
-                int slotIndex = code.allocateLocal(Builder.toTypeKind(cd));
-                int slotExt   = code.allocateLocal(TypeKind.BOOLEAN);
-
-                code.localVariable(slotIndex, name, cd, varStartScope, endScope);
-                code.localVariable(slotExt,   name+EXT, CD_boolean, varStartScope, endScope);
-                slot = new DoubleSlot(slotIndex, slotExt, JitFlavor.MultiSlotPrimitive, type, cd, name);
-                slots.put(varIndex, slot);
-            }
-
+            slot = new DoubleSlot(slotIndex, slotExt, JitFlavor.MultiSlotPrimitive, type, cd, name);
         } else {
             cd = JitParamDesc.getJitClass(typeSystem, type);
 
-            Label varStartScope = code.newLabel();
-            code.labelBinding(varStartScope);
+            int slotIndex = code.allocateLocal(Builder.toTypeKind(cd));
+            code.localVariable(slotIndex, name, cd, varStartScope, endScope);
 
-            if (varIndex == Op.A_STACK) {
-                slot = pushSlot(type, cd, name);
-            } else {
-                int slotIndex = code.allocateLocal(Builder.toTypeKind(cd));
-                code.localVariable(slotIndex, name, cd, varStartScope, endScope);
-
-                slot = new SingleSlot(slotIndex, type, cd, name);
-                slots.put(varIndex, slot);
-            }
+            slot = new SingleSlot(slotIndex, type, cd, name);
         }
+        slots.put(varIndex, slot);
         return slot;
     }
 
@@ -785,15 +784,11 @@ public class BuildContext {
      * Ensure a Slot the specified var index.
      */
     public Slot ensureSlot(int varIndex, TypeConstant type, ClassDesc cd, String name) {
-        if (varIndex == Op.A_STACK) {
-            return pushSlot(type, cd, name);
-        }
-        Slot slot = getSlot(varIndex);
-        if (slot == null) {
-            throw new IllegalStateException("Invalid slot for variable: " + varIndex);
-        }
-        return slot;
+        return varIndex == Op.A_STACK
+            ? pushSlot(type, cd, name)
+            : slots.computeIfAbsent(varIndex, n -> new SingleSlot(n, type, cd, name));
     }
+
     /**
      * Push a Slot onto the tail stack.
      */

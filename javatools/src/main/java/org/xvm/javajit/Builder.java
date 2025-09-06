@@ -83,6 +83,32 @@ public abstract class Builder {
     }
 
     /**
+     * Generate a value "store" for the specified Java class.
+     */
+    public static void store(CodeBuilder code, ClassDesc cd, int slot) {
+        if (cd.isPrimitive()) {
+            switch (cd.descriptorString()) {
+            case "I", "S", "B", "C", "Z":
+                code.istore(slot);
+                break;
+            case "J":
+                code.lstore(slot);
+                break;
+            case "F":
+                code.fstore(slot);
+                break;
+            case "D":
+                code.dstore(slot);
+                break;
+            default:
+                throw new IllegalStateException();
+            }
+        } else {
+            code.astore(slot);
+        }
+    }
+
+    /**
      * Generate a default value "load" for the specified Java class.
      */
     public static void defaultLoad(CodeBuilder code, ClassDesc cd) {

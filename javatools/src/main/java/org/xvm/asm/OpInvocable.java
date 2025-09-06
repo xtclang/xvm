@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
+import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.Constants.Access;
@@ -306,12 +307,19 @@ public abstract class OpInvocable extends Op {
         if (!targetSlot.isSingle()) {
             throw new UnsupportedOperationException("Multislot invoke");
         }
+
+        ClassDesc      cdTarget   = targetSlot.cd();
         MethodConstant idMethod   = (MethodConstant) bctx.getConstant(m_nMethodId);
         MethodInfo     infoMethod = targetSlot.type().ensureTypeInfo().getMethodById(idMethod);
         JitMethodDesc  jmd        = infoMethod.getJitDesc(bctx.typeSystem);
         String         methodName = idMethod.ensureJitMethodName(bctx.typeSystem);
         boolean        fOptimized = jmd.isOptimized;
         MethodTypeDesc md;
+
+        if (cdTarget.isPrimitive()) {
+            Builder.box(code, bctx.typeSystem, targetSlot.type(), cdTarget);
+            cdTarget = targetSlot.type().ensureClassDesc(bctx.typeSystem);
+        }
 
         if (fOptimized) {
             md         = jmd.optimizedMD;
@@ -325,9 +333,9 @@ public abstract class OpInvocable extends Op {
         bctx.loadArguments(code, jmd, anArgValue);
 
         if (infoMethod.getHead().getImplementation().getExistence() == MethodBody.Existence.Interface) {
-            code.invokeinterface(targetSlot.cd(), methodName, md);
+            code.invokeinterface(cdTarget, methodName, md);
         } else {
-            code.invokevirtual(targetSlot.cd(), methodName, md);
+            code.invokevirtual(cdTarget, methodName, md);
         }
 
         int cReturns = infoMethod.getSignature().getReturnCount();
@@ -351,6 +359,4 @@ public abstract class OpInvocable extends Op {
 
     // categories for cached info
     enum Category {Chain, Composition}
-
-    public static int[] NO_ARGS = new int[0];
 }
