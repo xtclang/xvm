@@ -352,5 +352,5 @@ public abstract class OpInvocable extends Op {
     // categories for cached info
     enum Category {Chain, Composition}
 
-    protected static int[] NO_ARGS = new int[0];
+    public static int[] NO_ARGS = new int[0];
 }

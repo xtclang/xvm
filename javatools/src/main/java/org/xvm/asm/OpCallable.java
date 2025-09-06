@@ -5,6 +5,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
+import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
+
 import org.xvm.asm.Constants.Access;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -14,6 +19,11 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitMethodDesc;
+import org.xvm.javajit.TypeSystem;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
@@ -543,6 +553,46 @@ public abstract class OpCallable extends Op {
             }
         }
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    protected void buildNew(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
+        TypeSystem       ts         = bctx.typeSystem;
+        MethodConstant   idCtor     = (MethodConstant) bctx.getConstant(m_nFunctionId);
+        IdentityConstant idTarget   = idCtor.getNamespace();
+        TypeConstant     typeTarget = idTarget.getType();
+        TypeInfo         infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+        MethodInfo       infoCtor   = infoTarget.getMethodById(idCtor);
+
+        if (infoCtor == null) {
+            throw new RuntimeException("Unresolvable constructor \"" +
+                idCtor.getValueString() + "\" for " + typeTarget.getValueString());
+        }
+        String        sJitTarget = typeTarget.ensureJitClassName(ts);
+        ClassDesc     cdTarget   = ClassDesc.of(sJitTarget);
+        JitMethodDesc jmdNew     =
+            Builder.convertConstructToNew(infoTarget, sJitTarget, infoCtor.getJitDesc(ts));
+
+        boolean fOptimized = jmdNew.isOptimized;
+        String  sJitNew    = idCtor.ensureJitMethodName(ts).replace("construct", Builder.NEW);
+        MethodTypeDesc md;
+        if (fOptimized) {
+            md       = jmdNew.optimizedMD;
+            sJitNew += Builder.OPT;
+        }
+        else {
+            md = jmdNew.standardMD;
+        }
+
+        bctx.loadCtx(code);
+        bctx.loadArguments(code, jmdNew, anArgValue);
+
+        code.invokestatic(cdTarget, sJitNew, md);
+
+        bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, typeTarget, cdTarget, ""));
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     protected int   m_nFunctionId;
     protected int   m_nRetValue = A_IGNORE;

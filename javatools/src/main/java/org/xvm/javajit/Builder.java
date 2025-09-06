@@ -10,11 +10,13 @@ import java.lang.constant.MethodTypeDesc;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
+import static org.xvm.javajit.JitFlavor.Specific;
 
 /**
  * Base class for JIT class builders.
@@ -53,6 +55,32 @@ public abstract class Builder {
         return MethodTypeDesc.of(returnTypes.length == 0 ? CD_void :
                 returnTypes[0].ensureClassDesc(typeSystem), paramCDs);
         }
+
+    /**
+     * Generate a value "load" for the specified Java class.
+     */
+    public static void load(CodeBuilder code, ClassDesc cd, int slot) {
+        if (cd.isPrimitive()) {
+            switch (cd.descriptorString()) {
+            case "I", "S", "B", "C", "Z":
+                code.iload(slot);
+                break;
+            case "J":
+                code.lload(slot);
+                break;
+            case "F":
+                code.fload(slot);
+                break;
+            case "D":
+                code.dload(slot);
+                break;
+            default:
+                throw new IllegalStateException();
+            }
+        } else {
+            code.aload(slot);
+        }
+    }
 
     /**
      * Generate a default value "load" for the specified Java class.
@@ -334,6 +362,20 @@ public abstract class Builder {
                     .aastore();
             }
         }
+    }
+
+    /**
+     * Convert the "void construct$0(...)" to "This new$0(...)"
+     */
+    public static JitMethodDesc convertConstructToNew(TypeInfo typeInfo, String className,
+                                                      JitMethodDesc jmdCtor) {
+        JitParamDesc retDesc = new JitParamDesc(typeInfo.getType(), Specific,
+                ClassDesc.of(className), 0, -1, false);
+
+        JitParamDesc[] standardReturns  = new JitParamDesc[] {retDesc};
+        JitParamDesc[] optimizedReturns = jmdCtor.isOptimized ? standardReturns : null;
+        return new JitMethodDesc(standardReturns,  jmdCtor.standardParams,
+                                 optimizedReturns, jmdCtor.optimizedParams);
     }
 
     // ----- native class names --------------------------------------------------------------------

@@ -151,7 +151,7 @@ public class P_Get
     public void build(BuildContext bctx, CodeBuilder code) {
         Slot targetSlot = bctx.loadArgument(code, m_nTarget);
         if (!targetSlot.isSingle()) {
-            throw new UnsupportedOperationException("Multislot get");
+            throw new UnsupportedOperationException("Multislot P_Get");
         }
         PropertyConstant idProp     = (PropertyConstant) bctx.getConstant(m_nPropId);
         PropertyInfo     infoProp   = targetSlot.type().ensureTypeInfo().getProperties().get(idProp);
