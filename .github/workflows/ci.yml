@@ -50,14 +50,14 @@ on:
         required: false
         default: false
       platforms:
-        description: 'Run only single platform (ubuntu-latest, windows-2025, or all platforms)'
+        description: 'Run only single platform (ubuntu-latest, windows-latest, or all platforms)'
         type: choice
         required: false
         default: 'all'
         options:
           - 'all'
           - 'ubuntu-latest'
-          - 'windows-2025'
+          - 'windows-latest'
       extra_gradle_options:
         description: 'Extra Gradle options to pass to the build'
         required: false
@@ -141,12 +141,9 @@ concurrency:
 
 jobs:
   build-verify:
-    # NOTE: Updated to windows-2025 (Windows Server 2025) from windows-latest (Windows Server 2022)
-    # windows-latest will migrate to windows-2025 on September 2, 2025, but we're adopting early
-    # for better compatibility and to avoid deprecation warnings
     strategy:
       matrix:
-        os: ${{ github.event.inputs.platforms == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.platforms == 'windows-2025' && fromJSON('["windows-2025"]') || fromJSON('["ubuntu-latest", "windows-2025"]') }}
+        os: ${{ github.event.inputs.platforms == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.platforms == 'windows-latest' && fromJSON('["windows-latest"]') || fromJSON('["ubuntu-latest", "windows-latest"]') }}
 
     runs-on: ${{ matrix.os }}
     
