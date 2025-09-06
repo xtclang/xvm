@@ -315,32 +315,32 @@ services:
 
 Docker images are automatically built and published when:
 - Code is pushed to the `master` branch
-- Manual workflow dispatch is triggered with `always_build_docker_image: true`
-- Manual workflow dispatch is triggered with `always_clean_docker: true` (runs cleanup only)
+- Manual workflow dispatch is triggered with `docker-image: true`
+- Manual workflow dispatch is triggered with `docker-clean: true` (runs cleanup only)
 
 #### Workflow Input Options
 
 The CI workflow accepts these input parameters:
 
-- `always_build_docker_image`: Always build Docker images regardless of branch
-- `always_clean_docker`: Always run Docker cleanup regardless of branch  
-- `always_publish_snapshot`: Always publish snapshot packages regardless of branch
-- `single_platform`: Run only single platform (ubuntu-latest, windows-latest, or full matrix)
-- `run_manual_tests`: Run manual tests (default: true)
-- `run_manual_tests_parallel`: Run manual tests in parallel mode (default: true)
+- `docker-image`: Always build Docker images regardless of branch
+- `docker-clean`: Always run Docker cleanup regardless of branch  
+- `snapshot-maven`: Always publish snapshot packages regardless of branch
+- `platforms`: Run only single platform (ubuntu-latest, windows-latest, or all platforms)
+- `test`: Run manual tests (default: true)
+- `parallel-test`: Run manual tests in parallel mode (default: true)
 - `extra_gradle_options`: Extra Gradle options to pass to the build
 
 #### Triggering Workflows Manually
 
 ```bash
 # Build Docker images on any branch
-gh workflow run ci.yml --ref your-branch-name --raw-field always_build_docker_image=true
+gh workflow run ci.yml --ref your-branch-name --raw-field docker-image=true
 
 # Test cleanup functionality only
-gh workflow run ci.yml --ref your-branch-name --raw-field always_clean_docker=true --raw-field single_platform=ubuntu-latest
+gh workflow run ci.yml --ref your-branch-name --raw-field docker-clean=true --raw-field platforms=ubuntu-latest
 
 # Full build with single platform for faster testing
-gh workflow run ci.yml --ref your-branch-name --raw-field always_build_docker_image=true --raw-field single_platform=ubuntu-latest
+gh workflow run ci.yml --ref your-branch-name --raw-field docker-image=true --raw-field platforms=ubuntu-latest
 ```
 
 ### CI Process
@@ -540,8 +540,8 @@ The `GITHUB_TOKEN` is automatically provided and has sufficient permissions for 
 # Test manual workflow dispatch
 gh workflow run "XVM Verification and Package Updates" \
   --ref your-branch-name \
-  --field always_build_docker_image=true \
-  --field single_platform=full
+  --field docker-image=true \
+  --field platforms=all
 
 # Monitor the workflow
 gh run list --limit 3
