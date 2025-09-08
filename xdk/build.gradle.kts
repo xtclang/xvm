@@ -1,9 +1,18 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE
 import XdkDistribution.Companion.JAVATOOLS_PREFIX_PATTERN
+import org.gradle.api.DefaultTask
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.OutputFiles
+import org.gradle.api.tasks.TaskAction
 import org.xtclang.plugin.tasks.XtcCompileTask
 import java.io.File
 
@@ -85,16 +94,10 @@ private val xdkDist = xdkBuildLogic.distro()
 // Configuration cache compatibility: Extract just the version string to avoid holding project references
 val artifactVersion = semanticVersion.artifactVersion
 
-// Configuration cache compatibility: Define version stripping function without script context references  
-fun stripVersionFromJarName(jarName: String, version: String): String {
-    return jarName.replace(Regex("(.*)\\-${Regex.escape(version)}\\.jar"), "$1.jar")
-}
 
 // Resolve XDK properties once at script level to avoid configuration cache issues
 val enablePreview = getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)
 val enableNativeAccess = getXdkPropertyBoolean("org.xtclang.java.enableNativeAccess", false)
-val capturedWindowsTemplates = XdkDistribution.SCRIPT_TEMPLATES["windows"]!!
-val capturedUnixTemplates = XdkDistribution.SCRIPT_TEMPLATES["unix"]!!
 
 // Configure application plugin to create multiple scripts instead of default single script
 application {
@@ -120,86 +123,37 @@ tasks.startScripts {
     }
 }
 
-// Configuration-cache-compatible script modification task
-val modifyScripts by tasks.registering {
+// Configuration-cache-compatible script modification task using proper task type
+abstract class ModifyScriptsTask : DefaultTask() {
+    @get:Input
+    abstract val artifactVersionProperty: Property<String>
+    
+    @get:InputFiles  
+    abstract val javaToolsFiles: ConfigurableFileCollection
+    
+    @get:InputDirectory
+    abstract val scriptsDir: DirectoryProperty
+    
+    @get:OutputFiles
+    abstract val modifiedScripts: ConfigurableFileCollection
+    
+    @TaskAction
+    fun modifyScripts() {
+        XdkDistribution.modifyLauncherScripts(
+            outputDir = scriptsDir.get().asFile,
+            artifactVersion = artifactVersionProperty.get(),
+            javaToolsFiles = javaToolsFiles.files
+        )
+    }
+}
+
+val modifyScripts by tasks.registering(ModifyScriptsTask::class) {
     dependsOn(tasks.startScripts)
     
-    doLast {
-        val outputDir = tasks.startScripts.get().outputDir!!
-        
-        // Read existing working content and apply minimal changes
-        listOf(
-            File(outputDir, "xec") to false,      // Unix shell script
-            File(outputDir, "xec.bat") to true    // Windows batch file
-        ).forEach { (script, isWindows) ->
-            if (script.exists()) {
-                var content = script.readText()
-                
-                // Replace jar paths with version-stripped equivalents  
-                configurations.xdkJavaTools.get().files.forEach { jar ->
-                    val originalName = jar.name
-                    val strippedName = stripVersionFromJarName(originalName, artifactVersion)
-                    content = content.replace("/lib/$originalName", "/javatools/$strippedName")
-                        .replace("\\lib\\$originalName", "\\javatools\\$strippedName")
-                }
-                
-                // Add XDK_HOME delegation and XTC module paths using captured templates
-                val templates = if (isWindows) capturedWindowsTemplates else capturedUnixTemplates
-                
-                if (isWindows) {
-                    // Insert XDK_HOME delegation for Windows - place it right after APP_HOME calculation
-                    val insertPoint = content.indexOf(":execute")
-                    if (insertPoint >= 0) {
-                        val lineEnd = content.indexOf('\n', insertPoint)
-                        val endOfLine = if (lineEnd >= 0) lineEnd + 1 else content.length
-                        val before = content.substring(0, endOfLine)
-                        val after = content.substring(endOfLine)
-                        content = before + templates["xdk_home_delegation"] + after
-                    }
-                    
-                    // Add XTC module paths to Windows script
-                    content = content.replace("org.xvm.tool.Launcher", templates["launcher_args"]!!)
-                } else {
-                    // Insert XDK_HOME delegation for Unix - place it right after APP_HOME calculation
-                    val insertPoint = content.indexOf("APP_HOME=\$( cd -P")
-                    if (insertPoint >= 0) {
-                        val lineEnd = content.indexOf('\n', insertPoint)
-                        val endOfLine = if (lineEnd >= 0) lineEnd + 1 else content.length
-                        val before = content.substring(0, endOfLine)
-                        val after = content.substring(endOfLine)
-                        content = before + templates["xdk_home_delegation"] + after
-                    }
-                    
-                    // Add XTC module paths to Unix script  
-                    content = content.replace("org.xvm.tool.Launcher", templates["launcher_args"]!!)
-                }
-                
-                script.writeText(content)
-            }
-        }
-        
-        // Create additional scripts for xcc and xtc
-        listOf("xcc", "xtc").forEach { toolName ->
-            val unixOriginal = File(outputDir, "xec")
-            val windowsOriginal = File(outputDir, "xec.bat")
-            
-            if (unixOriginal.exists()) {
-                val newScript = File(outputDir, toolName)
-                newScript.writeText(unixOriginal.readText().replace("Launcher \$APP_BASE_NAME", "Launcher $toolName"))
-                newScript.setExecutable(true)
-            }
-            
-            if (windowsOriginal.exists()) {
-                File(outputDir, "$toolName.bat").writeText(
-                    windowsOriginal.readText().replace("Launcher %APP_BASE_NAME%", "Launcher $toolName"))
-            }
-        }
-    }
-    
-    // Declare inputs and outputs for incremental build support
-    inputs.property("enablePreview", enablePreview)
-    inputs.property("enableNativeAccess", enableNativeAccess)
-    outputs.files(tasks.startScripts.map { task ->
+    artifactVersionProperty.set(artifactVersion)
+    javaToolsFiles.from(configurations.getByName("xdkJavaTools"))
+    scriptsDir.set(layout.dir(tasks.startScripts.map { it.outputDir!! }))
+    modifiedScripts.from(tasks.startScripts.map { task ->
         listOf("xcc", "xec", "xtc").flatMap { script ->
             listOf(File(task.outputDir!!, script), File(task.outputDir!!, "$script.bat"))
         }
@@ -295,9 +249,7 @@ distributions {
             }
             from(xdkTemplate) {
                 exclude("**/bin/**")  // Exclude bin directory to avoid conflicts with generated scripts  
-                eachFile {
-                    includeEmptyDirs = false
-                }
+                includeEmptyDirs = false
             }
             
             // XTC modules
@@ -312,15 +264,15 @@ distributions {
             
             // Java tools (strip version from jar names)
             from(configurations.xdkJavaTools) {
-                // Configuration cache: Use function with version parameter to avoid script context reference
-                rename { originalName -> stripVersionFromJarName(originalName, artifactVersion) }
+                // Configuration cache: Use static transformer to avoid script object references
+                rename(XdkDistribution.createRenameTransformer(artifactVersion))
                 into("javatools")
             }
             
             // Include javatools-jitbridge binary blob (separate from normal javatools classpath)
             from(xdkJavaToolsJitBridge) {
-                // Configuration cache: Use function with version parameter to avoid script context reference
-                rename { originalName -> stripVersionFromJarName(originalName, artifactVersion) }
+                // Configuration cache: Use static transformer to avoid script object references
+                rename(XdkDistribution.createRenameTransformer(artifactVersion))
                 into("javatools")
             }
             
@@ -375,15 +327,15 @@ distributions {
             
             // Java tools (strip version from jar names)  
             from(configurations.xdkJavaTools) {
-                // Configuration cache: Use function with version parameter to avoid script context reference
-                rename { originalName -> stripVersionFromJarName(originalName, artifactVersion) }
+                // Configuration cache: Use static transformer to avoid script object references
+                rename(XdkDistribution.createRenameTransformer(artifactVersion))
                 into("javatools")
             }
             
             // Include javatools-jitbridge binary blob (separate from normal javatools classpath)
             from(xdkJavaToolsJitBridge) {
-                // Configuration cache: Use function with version parameter to avoid script context reference
-                rename { originalName -> stripVersionFromJarName(originalName, artifactVersion) }
+                // Configuration cache: Use static transformer to avoid script object references
+                rename(XdkDistribution.createRenameTransformer(artifactVersion))
                 into("javatools")
             }
             
