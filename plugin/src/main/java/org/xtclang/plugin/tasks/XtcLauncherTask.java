@@ -246,19 +246,16 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return debugSuspend;
     }
 
-    @Optional
     @Internal  // Streams are not serializable for configuration cache
     public Property<InputStream> getStdin() {
         return stdin;
     }
 
-    @Optional
     @Internal  // Streams are not serializable for configuration cache
     public Property<OutputStream> getStdout() {
         return stdout;
     }
 
-    @Optional
     @Internal  // Streams are not serializable for configuration cache
     public Property<OutputStream> getStderr() {
         return stderr;
