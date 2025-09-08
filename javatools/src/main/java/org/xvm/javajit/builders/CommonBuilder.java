@@ -745,10 +745,9 @@ public class CommonBuilder
                         Label ifNotNull = code.newLabel();
                         Label endIf     = code.newLabel();
 
-                        code
-                           .aload(stdParamSlot)
-                           .getstatic(CD_Nullable, "Null", CD_Nullable)
-                           .if_acmpne(ifNotNull);
+                        code.aload(stdParamSlot);
+                        Builder.loadNull(code);
+                        code.if_acmpne(ifNotNull);
                         // the value is `Null`
                         Builder.defaultLoad(code, optParamDesc.cd);  // default primitive
                         code.iconst_1();                             // true
@@ -847,8 +846,8 @@ public class CommonBuilder
                         storeToContext(code, stdCD, stdIx);
                         code.goto_(endIf);
                     }
-                    code.labelBinding(ifNull)
-                        .getstatic(CD_Nullable, "Null", CD_Nullable);
+                    code.labelBinding(ifNull);
+                    Builder.loadNull(code);
 
                     if (optIx == 0) {
                         code.areturn();
@@ -1131,8 +1130,35 @@ public class CommonBuilder
 
         if (className.toLowerCase().contains("test")) {
             Op[] ops = bctx.methodStruct.getOps();
-            for (Op op : ops){
-                op.build(bctx, code);
+            for (Op op : ops) {
+                op.preprocess(bctx, code);
+            }
+
+            // the collected labels need to be bound before the corresponding ops being processed
+            var   labels     = bctx.labels;
+            int   labelCount = labels.size();
+            int   nextIndex  = 0;
+            int   nextAddr   = -1;
+            Label nextLabel  = null;
+            if (labelCount > 0) {
+                var nextEntry = labels.entryAt(0);
+                nextAddr  = nextEntry.getKey();
+                nextLabel = nextEntry.getValue();
+            }
+            for (int i = 0, c = ops.length; i < c; i++) {
+                if (i == nextAddr) {
+                    code.labelBinding(nextLabel);
+
+                    if (++nextIndex < labelCount) {
+                        var nextEntry = labels.entryAt(nextIndex);
+                        nextAddr  = nextEntry.getKey();
+                        nextLabel = nextEntry.getValue();
+                    } else {
+                        nextAddr = -1;
+                    }
+                }
+
+                ops[i].build(bctx, code);
             }
         } else {
             defaultLoad(code, md.returnType());

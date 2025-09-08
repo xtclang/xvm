@@ -4,9 +4,13 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpJump;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 
@@ -110,6 +114,15 @@ public class Jump
         private final int m_iPC;
         private final int m_nJumpScope;
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        code.goto_(bctx.getLabel(getAddress() + m_ofJmp));
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     protected transient boolean m_fCallFinally;
     protected transient int     m_ixAllGuard;

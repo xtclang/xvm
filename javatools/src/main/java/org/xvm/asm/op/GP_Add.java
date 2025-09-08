@@ -98,7 +98,6 @@ public class GP_Add
         } else {
             throw new UnsupportedOperationException("TODO: " + cdTarget.descriptorString());
         }
-        Slot slot = bctx.ensureSlot(m_nRetValue, typeRet, "");
-        bctx.storeValue(code, slot);
+        bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, typeRet));
     }
 }

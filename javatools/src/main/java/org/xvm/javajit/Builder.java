@@ -135,6 +135,13 @@ public abstract class Builder {
     }
 
     /**
+     * Generate a "load" for the XTC `Null` value.
+     */
+    public static void loadNull(CodeBuilder code) {
+        code.getstatic(CD_Nullable, "Null", CD_Nullable);
+    }
+
+    /**
      * Generate a default return for the specified Java class assuming the corresponding value
      * is already on java stack.
      */

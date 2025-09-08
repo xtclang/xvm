@@ -33,10 +33,11 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.util.ListMap;
+
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_long;
 
-import static org.xvm.javajit.Builder.CD_Boolean;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_JavaString;
 import static org.xvm.javajit.Builder.CD_Nullable;
@@ -92,6 +93,11 @@ public class BuildContext {
     public final boolean         isOptimized;
     public final boolean         isFunction;
     public final boolean         isConstructor;
+
+    /**
+     * The ListMap of {@link Label}s indexed by the corresponding Op's address.
+     */
+    public final ListMap<Integer, Label> labels = new ListMap<>();
 
     /**
      * The map of {@link Slot}s indexed by the Var index.
@@ -238,6 +244,20 @@ public class BuildContext {
     }
 
     /**
+     * Register a label for the specified address.
+     */
+    public void addLabel(CodeBuilder code, int opAddress) {
+        labels.putIfAbsent(opAddress, code.newLabel());
+    }
+
+    /**
+     * Get a label for the specified address.
+     */
+    public Label getLabel(int opAddress) {
+        return labels.get(opAddress);
+    }
+
+    /**
      * Build the code to load the Ctx instance on the Java stack.
      */
     public CodeBuilder loadCtx(CodeBuilder code) {
@@ -329,8 +349,8 @@ public class BuildContext {
                 code.goto_(endIf)
                     .labelBinding(ifTrue);
                 Builder.pop(code, doubleSlot.cd);
-                code.getstatic(CD_Nullable, "Null", CD_Nullable)
-                    .labelBinding(endIf);
+                Builder.loadNull(code);
+                code.labelBinding(endIf);
                 slot = new SingleSlot(Op.A_STACK, targetDesc.type, targetDesc.cd, slot.name() + "?");
             } else {
                 Builder.box(code, typeSystem, slot.type(), slot.cd());
@@ -374,7 +394,7 @@ public class BuildContext {
         if (constant instanceof EnumValueConstant enumConstant) {
             ConstantPool pool = constant.getConstantPool();
             if (enumConstant.getType().isOnlyNullable()) {
-                code.getstatic(CD_Nullable, "Null", CD_Nullable);
+                Builder.loadNull(code);
                 return new SingleSlot(-1, pool.typeNullable(), CD_Nullable, "");
             } else if (enumConstant.getType().isA(pool.typeBoolean())) {
                 if (enumConstant.getIntValue().getInt() == 0) {
@@ -382,7 +402,7 @@ public class BuildContext {
                 } else {
                     code.iconst_1();
                 }
-            return new SingleSlot(-1, pool.typeBoolean(), CD_Boolean, "");
+            return new SingleSlot(-1, pool.typeBoolean(), CD_boolean, "");
             }
         }
         if (constant instanceof LiteralConstant litConstant) {
@@ -721,9 +741,9 @@ public class BuildContext {
                         Builder.box(code, typeSystem, typeRet, cdRet);
                         code.goto_(endIf)
                             .labelBinding(ifTrue)
-                            .pop()
-                            .getstatic(CD_Nullable, "Null", CD_Nullable)
-                            .labelBinding(endIf);
+                            .pop();
+                        Builder.loadNull(code);
+                        code.labelBinding(endIf);
                     }
                     storeValue(code, slot);
                     break;
@@ -750,9 +770,9 @@ public class BuildContext {
                         Builder.box(code, typeSystem, typeRet, cdRet);
                         code.goto_(endIf);
                         code.labelBinding(ifTrue)
-                            .pop()
-                            .getstatic(CD_Nullable, "Null", CD_Nullable)
-                            .labelBinding(endIf);
+                            .pop();
+                        Builder.loadNull(code);
+                        code.labelBinding(endIf);
                     }
                     storeValue(code, slot);
                     break;
@@ -774,10 +794,10 @@ public class BuildContext {
     }
 
     /**
-     * Ensure a Slot the specified var index and an optimized ClassDesc for the specified type.
+     * Ensure an unnamed Slot the specified var index and an optimized ClassDesc for the specified type.
      */
-    public Slot ensureSlot(int varIndex, TypeConstant type, String name) {
-        return ensureSlot(varIndex, type, JitTypeDesc.getJitClass(typeSystem, type), name);
+    public Slot ensureSlot(int varIndex, TypeConstant type) {
+        return ensureSlot(varIndex, type, JitTypeDesc.getJitClass(typeSystem, type), "name");
     }
 
     /**

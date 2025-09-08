@@ -4,10 +4,14 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpCondJump;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -49,5 +53,13 @@ public class JumpTrue
     @Override
     protected int completeUnaryOp(Frame frame, int iPC, ObjectHandle hValue) {
         return ((BooleanHandle) hValue).get() ? jump(frame, iPC + m_ofJmp, m_cExits) : iPC + 1;
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    protected void buildUnary(BuildContext bctx, CodeBuilder code) {
+        bctx.loadArgument(code, m_nArg);
+        code.ifne(bctx.getLabel(getAddress() + m_ofJmp));
     }
 }
