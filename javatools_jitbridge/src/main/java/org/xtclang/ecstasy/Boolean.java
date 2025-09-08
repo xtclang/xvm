@@ -18,4 +18,9 @@ public class Boolean
     public static Boolean $box(boolean value) {
         return value ? True : False;
     }
+
+    @Override
+    public String toString() {
+        return $value ? "True" : "False";
+    }
 }

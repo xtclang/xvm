@@ -4,7 +4,7 @@ import java.lang.constant.ClassDesc;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.MethodBody;
 
 import static org.xvm.javajit.Builder.CD_CtorCtx;
 
@@ -16,11 +16,11 @@ import static org.xvm.javajit.Builder.CD_CtorCtx;
  */
 public class JitCtorDesc
         extends JitMethodDesc {
-    public JitCtorDesc(TypeSystem ts, MethodInfo method,
+    public JitCtorDesc(TypeSystem ts, MethodBody methodBody,
                        JitParamDesc[] standardReturns, JitParamDesc[] standardParams,
                        JitParamDesc[] optimizedReturns, JitParamDesc[] optimizedParams) {
-        this.ts     = ts;
-        this.method = method;
+        this.ts         = ts;
+        this.methodBody = methodBody;
 
         super(standardReturns, standardParams, optimizedReturns, optimizedParams);
     }
@@ -34,7 +34,7 @@ public class JitCtorDesc
     protected void fillExtraClassDesc(ClassDesc[] paramCDs) {
         super.fillExtraClassDesc(paramCDs);
 
-        ClassStructure clz = method.getHead().getMethodStructure().getContainingClass();
+        ClassStructure clz = methodBody.getMethodStructure().getContainingClass();
 
         paramCDs[1] = CD_CtorCtx;
         paramCDs[2] = clz.getCanonicalType().ensureClassDesc(ts);
@@ -43,5 +43,5 @@ public class JitCtorDesc
     // ----- fields --------------------------------------------------------------------------------
 
     protected final TypeSystem ts;
-    protected final MethodInfo method;
+    protected final MethodBody methodBody;
 }

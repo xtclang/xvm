@@ -15,12 +15,15 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.TypeSystem;
@@ -555,6 +558,65 @@ public abstract class OpCallable extends Op {
     }
 
     // ----- JIT support ---------------------------------------------------------------------------
+
+    /**
+     * Support for CALL_ ops.
+     */
+    protected void buildCall(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
+        TypeSystem ts = bctx.typeSystem;
+
+        ClassDesc         cdTarget;
+        JitMethodDesc     jmdCall;
+        SignatureConstant sigCall;
+        MethodTypeDesc    mdCall;
+        boolean           fSpecial;
+
+        if (m_nFunctionId == A_SUPER) {
+            MethodBody body = bctx.callChain[1];
+
+            cdTarget = body.getIdentity().getType().ensureClassDesc(ts);;
+            jmdCall  = body.getJitDesc(bctx.typeSystem);
+            sigCall  = body.getSignature();
+            fSpecial = true;
+        } else if (m_nFunctionId <= CONSTANT_OFFSET) {
+            MethodConstant   idMethod   = (MethodConstant) bctx.getConstant(m_nFunctionId);
+            IdentityConstant idTarget   = idMethod.getClassIdentity();
+            MethodInfo       infoMethod = idTarget.getType().ensureTypeInfo().getMethodById(idMethod);
+
+            cdTarget = idTarget.getType().ensureClassDesc(ts);
+            jmdCall  = infoMethod.getJitDesc(ts);
+            sigCall  = infoMethod.getSignature();
+            fSpecial = false;
+        } else {
+            Slot slotFn = bctx.getSlot(m_nFunctionId);
+            // TODO: call "invoke(Ctx $ctx, Tuple args)"
+            throw new UnsupportedOperationException("function call " + slotFn.type());
+        }
+
+        String methodName = sigCall.getName();
+        if (jmdCall.isOptimized) {
+            mdCall      = jmdCall.optimizedMD;
+            methodName += Builder.OPT;
+        }
+        else {
+            mdCall = jmdCall.standardMD;
+        }
+
+        bctx.loadCtx(code);
+        bctx.loadArguments(code, jmdCall, anArgValue);
+
+        if (fSpecial) {
+            code.invokespecial(cdTarget, methodName, mdCall);
+        } else {
+            code.invokestatic(cdTarget, methodName, mdCall);
+        }
+
+        int cReturns = sigCall.getReturnCount();
+        if (cReturns > 0) {
+            int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
+            bctx.assignReturns(code, jmdCall, cReturns, anVar);
+        }
+    }
 
     /**
      * Support for NEW_ ops.

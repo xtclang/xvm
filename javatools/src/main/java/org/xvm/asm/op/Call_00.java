@@ -4,10 +4,14 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -88,6 +92,15 @@ public class Call_00
     private static int callFunction(Frame frame, FunctionHandle hFunction) {
         return hFunction.call1(frame, null, new ObjectHandle[hFunction.getVarCount()], A_IGNORE);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        buildCall(bctx, code, NO_ARGS);
+    }
+
+    // ----- constants -----------------------------------------------------------------------------
 
     private static final Frame.Continuation CALL =
         frameCaller -> callFunction(frameCaller, (FunctionHandle) frameCaller.popStack());

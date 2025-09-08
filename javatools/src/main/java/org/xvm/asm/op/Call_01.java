@@ -5,10 +5,14 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -124,5 +128,12 @@ public class Call_01
         checkReturnRegister(frame, hFunction.getMethod());
 
         return hFunction.call1(frame, null, new ObjectHandle[hFunction.getVarCount()], m_nRetValue);
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        buildCall(bctx, code, NO_ARGS);
     }
 }
