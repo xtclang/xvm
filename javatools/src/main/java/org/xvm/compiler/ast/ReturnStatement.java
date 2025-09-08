@@ -18,6 +18,7 @@ import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.ReturnStmtAST;
 import org.xvm.asm.ast.UnpackExprAST;
 
+import org.xvm.asm.constants.EnumValueConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Jump;
@@ -418,21 +419,29 @@ public class ReturnStatement
                     aASTs[i] = expr.getExprAST(ctx);
                 }
 
-                Label labelFalse = fConditional ? new Label("false") : null;
-                if (fConditional) {
-                    code.add(new JumpFalse(aArgs[0], labelFalse));
-                }
+                if (fConditional && aArgs[0] instanceof EnumValueConstant enumValue) {
+                    // no need to generate the check
+                    if (enumValue.equals(pool.valTrue())) {
+                        code.add(new Return_N(aArgs));
+                    } else {
+                        code.add(new Return_1(pool.valFalse()));
+                    }
+                } else {
+                    Label labelFalse = fConditional ? new Label("false") : null;
+                    if (fConditional) {
+                        code.add(new JumpFalse(aArgs[0], labelFalse));
+                    }
 
-                code.add(new Return_N(aArgs));
+                    code.add(new Return_N(aArgs));
 
-                if (fConditional) {
-                    code.add(labelFalse);
-                    code.add(new Return_1(pool.valFalse()));
+                    if (fConditional) {
+                        code.add(labelFalse);
+                        code.add(new Return_1(pool.valFalse()));
+                    }
                 }
                 astResult = new ReturnStmtAST(aASTs);
                 break;
-            }
-            }
+            }}
         }
 
         ctx.getHolder().setAst(this, astResult);
