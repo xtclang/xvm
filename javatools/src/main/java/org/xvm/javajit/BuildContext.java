@@ -26,6 +26,7 @@ import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.NamedCondition;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SingletonConstant;
@@ -424,6 +425,10 @@ public class BuildContext {
             ClassDesc cd = jtd.cd;
             code.getstatic(cd, Instance, cd);
             return new SingleSlot(-1, type, cd, "");
+        }
+        if (constant instanceof NamedCondition cond) {
+            code.loadConstant(cond.getName());
+            return new SingleSlot(Op.A_STACK, cond.getConstantPool().typeString(), CD_String, "");
         }
         throw new UnsupportedOperationException(constant.toString());
         // return code;

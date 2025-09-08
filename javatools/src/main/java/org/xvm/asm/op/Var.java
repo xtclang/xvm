@@ -4,9 +4,13 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 
@@ -46,5 +50,12 @@ public class Var
         frame.introduceVar(m_nVar, convertId(m_nType), 0, Frame.VAR_STANDARD, null);
 
         return iPC + 1;
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        bctx.introduceVar(code, m_nVar, m_nType, 0);
     }
 }

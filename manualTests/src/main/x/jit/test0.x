@@ -43,6 +43,7 @@ module test0.examples.org {
     }
 
     static Boolean call4(Int i) {
-        return i > 0;
+        assert i > 0;
+        return i > 7;
     }
 }

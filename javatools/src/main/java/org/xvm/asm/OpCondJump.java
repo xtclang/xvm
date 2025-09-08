@@ -9,6 +9,7 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
 
 import java.util.List;
 
@@ -23,6 +24,13 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
+
+import static java.lang.constant.ConstantDescs.CD_boolean;
+
+import static org.xvm.javajit.Builder.CD_Container;
+import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_JavaString;
+import static org.xvm.javajit.Builder.CD_LinkerCtx;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -336,7 +344,7 @@ public abstract class OpCondJump
                     case OP_JMP_GTE -> code.if_icmpge(lblJump);
                     case OP_JMP_LT  -> code.if_icmplt(lblJump);
                     case OP_JMP_LTE -> code.if_icmple(lblJump);
-                    default        -> throw new IllegalStateException();
+                    default         -> throw new IllegalStateException();
                 }
                 break;
 
@@ -366,9 +374,27 @@ public abstract class OpCondJump
     }
 
     protected void buildUnary(BuildContext bctx, CodeBuilder code) {
-        Slot      slot    = bctx.loadArgument(code, m_nArg);
-        Label     lblJump = bctx.getLabel(getAddress() + m_ofJmp);
-        ClassDesc cd      = slot.cd();
+        Label lblJump = bctx.getLabel(getAddress() + m_ofJmp);
+        int   op      = getOpCode();
+
+        switch (op) {
+        case OP_JMP_COND, OP_JMP_NCOND:
+            bctx.loadCtx(code);
+            code.getfield(CD_Ctx, "container", CD_Container)
+                .checkcast(Builder.CD_LinkerCtx);
+            bctx.loadArgument(code, m_nArg);
+            code.invokeinterface(CD_LinkerCtx, "isSpecified",
+                                 MethodTypeDesc.of(CD_boolean, CD_JavaString));
+            if (op == OP_JMP_COND) {
+                code.ifne(lblJump);
+            } else {
+                code.ifeq(lblJump);
+            }
+            return;
+        }
+
+        Slot      slot = bctx.loadArgument(code, m_nArg);
+        ClassDesc cd   = slot.cd();
         if (cd.isPrimitive()) {
             Builder.defaultLoad(code, cd);
 
@@ -388,7 +414,7 @@ public abstract class OpCondJump
                     case "F" -> code.fcmpl(); // REVIEW CP: fcmpl vs fcmpg?
                     case "D" -> code.dcmpl(); // REVIEW CP: ditto
                 }
-                switch (getOpCode()) {
+                switch (op) {
                     case OP_JMP_ZERO  -> code.ifeq(lblJump);
                     case OP_JMP_NZERO -> code.ifne(lblJump);
                     default -> throw new IllegalStateException();
@@ -399,11 +425,18 @@ public abstract class OpCondJump
                 throw new IllegalStateException();
             }
         } else {
-            Builder.loadNull(code);
-            switch (getOpCode()) {
-                case OP_JMP_NULL  -> code.ifeq(lblJump);
-                case OP_JMP_NNULL -> code.ifne(lblJump);
-                default           -> throw new IllegalStateException();
+            switch (op) {
+            case OP_JMP_NULL, OP_JMP_NNULL:
+                Builder.loadNull(code);
+                if (op == OP_JMP_NULL) {
+                    code.ifeq(lblJump);
+                } else {
+                    code.ifne(lblJump);
+                }
+                break;
+
+            default:
+                throw new IllegalStateException();
             }
         }
     }

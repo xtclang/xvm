@@ -5,6 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
@@ -12,6 +15,9 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.Ctx;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
@@ -23,6 +29,8 @@ import org.xvm.runtime.template.xBoolean.BooleanHandle;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
+
+import static org.xvm.javajit.Builder.CD_Ctx;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -154,6 +162,34 @@ public class Assert
     public String toString() {
         return super.toString() + ' ' + Argument.toIdString(m_argTest, m_nTest);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        Label labelEnd = code.newLabel();
+
+        bctx.loadArgument(code, m_nTest);
+        code.ifne(labelEnd);
+        bctx.loadCtx(code);
+        if (m_nConstructor == A_IGNORE) {
+            code.loadConstant( "Debugger support for jit is not yet implemented");
+            code.invokevirtual(CD_Ctx, "log", Ctx.MD_log);
+        } else {
+            buildMessage(bctx, code);
+            code.invokevirtual(CD_Ctx, "log", Ctx.MD_log); // TODO: throw
+    }
+        code.labelBinding(labelEnd);
+    }
+
+    /**
+     * Build the assert message.
+     */
+    protected void buildMessage(BuildContext bctx, CodeBuilder code) {
+        code.loadConstant("Assertion failed");
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int m_nTest;
     private int m_nConstructor = A_IGNORE;   // important: no constructor means A_IGNORE means DEBUG

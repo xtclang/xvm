@@ -11,6 +11,8 @@ import java.lang.constant.ConstantDescs;
 import java.lang.constant.MethodTypeDesc;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -1128,7 +1130,7 @@ public class CommonBuilder
 
         bctx.enterMethod(code);
 
-        if (className.toLowerCase().contains("test")) {
+        if (Arrays.stream(TEST_SET).anyMatch(name -> className.toLowerCase().contains(name))) {
             Op[] ops = bctx.methodStruct.getOps();
             for (Op op : ops) {
                 op.preprocess(bctx, code);
@@ -1161,9 +1163,15 @@ public class CommonBuilder
                 ops[i].build(bctx, code);
             }
         } else {
+            if (SKIP_SET.add(className)) {
+                System.err.println("*** Skipping code gen for " + className);
+            }
             defaultLoad(code, md.returnType());
             addReturn(code, md.returnType());
         }
         bctx.exitMethod(code);
     }
+
+    private final static String[] TEST_SET = new String[] {"test", "tck"};
+    private final static HashSet<String> SKIP_SET = new HashSet<>();
 }
