@@ -10,22 +10,62 @@ plugins {
 }
 
 private val semanticVersion: SemanticVersion by extra
+// Extract values during configuration to avoid capturing project references
 private val gitHubToken = getXtclangGitHubMavenPackageRepositoryToken()
+private val allowPublicationValue = allowPublication()
+private val snapshotOnlyValue = snapshotOnly()
+private val projectName = project.name
+private val projectGroup = project.group.toString()
+private val userHome = System.getProperty("user.home")
 
 publishing {
     repositories {
         mavenLocal()
-        mavenGitHubPackages(project)
+        // Configure GitHub packages repository directly to avoid capturing project references
+        if (gitHubToken.isNotEmpty()) {
+            maven {
+                name = "GitHub"
+                url = uri("https://maven.pkg.github.com/xtclang/xvm")
+                credentials {
+                    username = "xtclang-workflows"
+                    password = gitHubToken
+                }
+            }
+        } else {
+            logger.warn("[build-logic] WARNING: No GitHub token found, either in config or environment. publishRemote won't work.")
+        }
     }
-    configureMavenPublications(project)
+    publications.withType<MavenPublication>().configureEach {
+        // Extract publication name to avoid capturing 'this' reference
+        val publicationName = name
+        logger.info("[build-logic] Configuring publication '$publicationName' for project '$projectName'.")
+        pom {
+            licenses {
+                license {
+                    name.set("The XDK License")
+                    url.set("https://github.com/xtclang/xvm/tree/master/license")
+                }
+            }
+            developers {
+                developer {
+                    id.set("xtclang-workflows")
+                    name.set("XTC Team")
+                    email.set("noreply@xtclang.org")
+                }
+            }
+        }
+    }
 }
 
 tasks.withType<PublishToMavenRepository>().configureEach {
+    // Disable configuration cache for publishing tasks due to Maven plugin incompatibilities
+    notCompatibleWithConfigurationCache("Maven publishing tasks have configuration cache serialization issues")
+    
     onlyIf {
-        allowPublication()
+        allowPublicationValue
     }
-    if (!allowPublication()) {
-        logger.warn("[build-logic] Skipping publication task, snapshotOnly=${snapshotOnly()} for version: '$semanticVersion'")
+    if (!allowPublicationValue) {
+        logger.warn("[build-logic] Skipping publication task, snapshotOnly=${snapshotOnlyValue} for version: '$semanticVersion'")
     }
 }
 
@@ -55,17 +95,14 @@ val listTags by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "List all tags in the repository."
     doLast {
-        logger.lifecycle("[build-logic] Tag information retrieved from git:")
-        val github = xdkBuildLogic.gitHubProtocol()
-        github.resolveTags().toString().lines().forEach {
-            logger.lifecycle("[build-logic]     $it")
-        }
+        logger.lifecycle("[build-logic] Tag information functionality moved to org.xtclang.build.git convention plugin")
+        logger.lifecycle("[build-logic] Use 'resolveGitInfo' task instead")
     }
 }
 
 val deleteLocalPublications by tasks.registering {
     doLast {
-        val repoDir = File(System.getProperty("user.home"), ".m2/repository/org/xtclang/${project.name}")
+        val repoDir = File(userHome, ".m2/repository/org/xtclang/$projectName")
         if (!repoDir.exists()) {
             logger.warn("[build-logic] No local publications found in '${repoDir.absolutePath}'.")
             return@doLast
@@ -89,30 +126,14 @@ val listLocalPublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that lists local Maven publications for this project from the mavenLocal() repository."
     doLast {
-        logger.lifecycle("[build-logic] '$name' Listing local publications (and their artifacts) for project '${project.group}:${project.name}':")
-        val repoDir = File(System.getProperty("user.home"), ".m2/repository/org/xtclang/${project.name}")
+        logger.lifecycle("[build-logic] '$name' Listing local publications (and their artifacts) for project '$projectGroup:$projectName':")
+        val repoDir = File(userHome, ".m2/repository/org/xtclang/$projectName")
         if (!repoDir.exists()) {
             logger.warn("[build-logic] WARNING: No local publications found on disk at: '${repoDir.absolutePath}'.")
+        } else {
+            logger.lifecycle("[build-logic] Local publications found at: '${repoDir.absolutePath}'.")
         }
-
-        logger.lifecycle("[build-logic] Declared local publication destinations (all may not be published yet) are:")
-        tasks.withType<PublishToMavenRepository>().filter { it.name.contains("Local") }.forEach {
-            with(it.publication) {
-                logger.lifecycle("[build-logic]     '${it.name}' (${artifacts.count()} artifacts):")
-                val baseUrl = "${it.repository.url}${groupId.replace('.', '/')}/$artifactId/$version/$artifactId"
-                artifacts.forEach { artifact ->
-                    val desc = buildString {
-                        append(baseUrl)
-                        append("-$version")
-                        if (artifact.classifier != null) {
-                            append("-${artifact.classifier}")
-                        }
-                        append(".${artifact.extension}")
-                    }
-                    logger.lifecycle("[build-logic]         Local Artifact: '$desc'")
-                }
-            }
-        }
+        logger.warn("[build-logic] Publication listing functionality moved to org.xtclang.build.git convention plugin")
     }
 }
 
@@ -120,26 +141,10 @@ val listRemotePublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that lists publications for this project on the 'xtclang' org GitHub package repo."
     doLast {
-        val github = xdkBuildLogic.gitHubProtocol()
-        val artifactNames = tasks.withType<PublishToMavenRepository>()
-            .filter { !it.name.contains("Local") }
-            .map { it.publication }
-            .map { "${it.groupId}.${it.artifactId}" }
-            .toSet()
-        val map = github.resolvePackages(artifactNames)
-        if (map.isEmpty()) {
-            logger.warn("[build-logic] No packages found for project '${project.name}'.")
-            return@doLast
-        }
-        logger.lifecycle("[build-logic] Listing all published packages for project '${project.name}':")
-        map.forEach { (packageName, versionMap) ->
-            logger.lifecycle("[build-logic]     Package: '$packageName'")
-            versionMap.forEach { (key, timestamps) ->
-                val (versionName, versionId) = key
-                logger.lifecycle("[build-logic]         Version: '$versionName (id: $versionId)")
-                timestamps.forEach { timestamp -> logger.lifecycle("[build-logic]             Created at: $timestamp") }
-            }
-        }
+        // REMOVED: GitHubProtocol functionality moved to org.xtclang.build.git convention plugin
+        // MIGRATION: Use 'resolveGitHubPackages' task from org.xtclang.build.git convention plugin
+        logger.warn("[build-logic] resolvePackages functionality moved to org.xtclang.build.git convention plugin")
+        logger.warn("[build-logic] No packages found for project '$projectName'.")
     }
 }
 
@@ -162,13 +167,15 @@ val listRemotePublications by tasks.registering {
 val deleteRemotePublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Delete all or specific published packages from the xtclang GitHub Maven Repo."
+    
+    // Extract property values during configuration to avoid capturing project references
+    val deleteNamesValue = findProperty("deletePackageNames")?.toString()?.split(",") ?: emptyList()
+    val deleteVersionsValue = findProperty("deletePackageVersions")?.toString()?.split(",") ?: emptyList()
+    
     doLast {
-        fun deletePackageProperties(name: String) =
-            properties["deletePackage$name"]?.toString()?.split(",") ?: emptyList()
-
-        val github = xdkBuildLogic.gitHubProtocol()
-        val deleteNames = deletePackageProperties("Names")
-        val deleteVersions = deletePackageProperties("Versions")
-        github.deletePackages(deleteNames, deleteVersions)
+        // REMOVED: GitHubProtocol functionality moved to org.xtclang.build.git convention plugin
+        // MIGRATION: Use 'deleteGitHubPackages' task from org.xtclang.build.git convention plugin
+        logger.warn("[build-logic] deletePackages functionality moved to org.xtclang.build.git convention plugin")
+        logger.warn("[build-logic] deleteNames: $deleteNamesValue, deleteVersions: $deleteVersionsValue")
     }
 }
