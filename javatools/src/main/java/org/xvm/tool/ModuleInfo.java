@@ -68,30 +68,33 @@ public class ModuleInfo {
     /**
      * Construct the module information from the specified file.
      *
-     * @param fileSpec  the file to analyze, which may or may not exist
+     * @param fileSpec the file to analyze, which may or may not exist
+     * @param deduce   pass true to enable the algorithm to deduce/search for likely locations
      */
-    public ModuleInfo(File fileSpec) {
-        this(fileSpec, null, null);
+    public ModuleInfo(File fileSpec, boolean deduce) {
+        this(fileSpec, deduce, null, null);
     }
 
     /**
      * Construct the module information from the specified file.
      *
-     * @param fileSpec       the file or directory to analyze, which may or may not exist
-     * @param resourceSpecs  an array of files and/or directories which represent (in aggregate)
-     *                       the resource path; null indicates that the default resources
-     *                       location should be used, while an empty array explicitly indicates
-     *                       that there is no resource path; as provided to the compiler using
-     *                       the "-rp" command line switch
-     * @param binarySpec     the file or directory which represents the target of the binary; as
-     *                       provided to the compiler using the "-o" command line switch
+     * @param fileSpec      the file or directory to analyze, which may or may not exist
+     * @param deduce        pass true to enable the algorithm to deduce/search for likely locations
+     * @param resourceSpecs an array of files and/or directories which represent (in aggregate)
+     *                      the resource path; null indicates that the default resources
+     *                      location should be used, while an empty array explicitly indicates
+     *                      that there is no resource path; as provided to the compiler using
+     *                      the "-rp" command line switch
+     * @param binarySpec    the file or directory which represents the target of the binary; as
+     *                      provided to the compiler using the "-o" command line switch
      */
-    public ModuleInfo(File fileSpec, File[] resourceSpecs, File binarySpec) {
+    public ModuleInfo(File fileSpec, boolean deduce, File[] resourceSpecs, File binarySpec) {
         if (fileSpec == null) {
             throw new IllegalArgumentException("A file specification is required for the module");
         }
 
         this.fileSpec = fileSpec;
+        this.deduce   = deduce;
 
         // start by figuring out the directory to work from and the file name to look for (which may
         // not be specified!), based on some combination of the current working directory and the
@@ -197,17 +200,17 @@ public class ModuleInfo {
 
                     srcFiles = sourceFiles(searchDir);
                     srcCount = srcFiles.length;
-                } while (srcCount > 0);
+                } while (deduce && srcCount > 0);
             }
         } while (false);
 
         if (projectDir == null) {
             if (sourceDir != null) {
-                projectDir = projectDirFromSubDir(sourceDir);
+                projectDir = deduce ? projectDirFromSubDir(sourceDir) : sourceDir;
             } else if (binaryDir != null) {
-                projectDir = projectDirFromSubDir(binaryDir);
+                projectDir = deduce ? projectDirFromSubDir(binaryDir) : binaryDir;
             } else if (curDir != null) {
-                projectDir = projectDirFromSubDir(curDir);
+                projectDir = deduce ? projectDirFromSubDir(curDir) : curDir;
             } else {
                 throw new IllegalArgumentException(
                         "Unable to identify a module project directory for " + fileSpec);
@@ -217,7 +220,7 @@ public class ModuleInfo {
         // at this point, there's a project directory; if we have not already done so, locate the
         // source file for the module from the project directory
         if (sourceFile == null) {
-            if (sourceDir == null) {
+            if (deduce && sourceDir == null) {
                 sourceDir = sourceDirFromPrjDir(projectDir);
             }
 
@@ -351,8 +354,8 @@ public class ModuleInfo {
     }
 
     /**
-     * @return True if the module binary exists and is at least as up-to-date as all of the
-     *         existent source and resource files and directories
+     * @return True if the module binary exists and is at least as up-to-date as the existent source
+     *         and resource files and directories
      */
     public boolean isUpToDate() {
         long binTimestamp = getBinaryTimestamp();
@@ -372,7 +375,8 @@ public class ModuleInfo {
      * @return the full module name, which may or may not be qualified
      */
     public String getQualifiedModuleName() {
-        UnknownModule: if (moduleName == null) {
+        UnknownModule:
+        if (moduleName == null) {
             if (sourceStatus == Status.Exists && sourceContent != Content.Invalid) {
                 moduleName = extractModuleName(sourceFile);
                 if (moduleName == null) {
@@ -461,10 +465,10 @@ public class ModuleInfo {
             sourceTimestamp = sourceFile.lastModified();
             if (sourceIsTree) {
                 synchronized (this) {
-                    File subdir = new File(sourceFile.getParentFile(), removeExtension(sourceFile.getName()));
-                    if (subdir.isDirectory()) {
+                    File subDir = new File(sourceFile.getParentFile(), removeExtension(sourceFile.getName()));
+                    if (subDir.isDirectory()) {
                         accumulator = sourceTimestamp;
-                        visitTree(subdir, "x", f -> accumulator = Math.max(accumulator, f.lastModified()));
+                        visitTree(subDir, "x", f -> accumulator = Math.max(accumulator, f.lastModified()));
                         sourceTimestamp = accumulator;
                         accumulator     = 0L;
                     }
@@ -484,7 +488,7 @@ public class ModuleInfo {
     public ResourceDir getResourceDir() {
         if (resourceDir == null) {
             File sourceFile = getSourceFile();
-            resourceDir = sourceFile.exists() ? ResourceDir.forSource(sourceFile) : NoResources;
+            resourceDir = sourceFile.exists() ? ResourceDir.forSource(sourceFile, deduce) : NoResources;
         }
 
         return resourceDir;
@@ -526,7 +530,7 @@ public class ModuleInfo {
     public File getBinaryDir() {
         if (binaryDir == null) {
             binaryDir = binaryFile == null
-                    ? binaryDirFromPrjDir(projectDir)
+                    ? (deduce ? binaryDirFromPrjDir(projectDir) : projectDir)
                     : binaryFile.getParentFile();
         }
 
@@ -627,8 +631,8 @@ public class ModuleInfo {
     // ----- internal ------------------------------------------------------------------------------
 
     /**
-     * Visit all of the subdirectories (recursively) and files matching the optional extension
-     * within the specified directory, and do so in a stable, repeatable order.
+     * Visit all subdirectories (recursively) and files matching the optional extension within the
+     * specified directory, and do so in a stable, repeatable order.
      *
      * @param dir      a directory
      * @param ext      an optional extension to match; otherwise null
@@ -1349,11 +1353,7 @@ public class ModuleInfo {
             String[] segments = parseDelimitedString(path, '/');
             for (int i = 0, last = segments.length - 1; i <= last; ++i) {
                 String segment = segments[i];
-                if (segment.isEmpty()) {
-                    return null;
-                }
-
-                if (".".equals(segment)) {
+                if (segment.isEmpty() || ".".equals(segment)) {
                     // nothing to do
                 } else if ("..".equals(segment)) {
                     dir = dir.getParent();
@@ -1369,7 +1369,6 @@ public class ModuleInfo {
                     }
                 }
             }
-
             return dir;
         }
 
@@ -1827,26 +1826,27 @@ public class ModuleInfo {
 
     transient long accumulator;
 
-    private final File   fileSpec;       // original file spec that was used to create this info
-    private String       fileName;       // selected file name, without the file extension
-    private String       moduleName;     // the module name (potentially qualified)
-    private File         projectDir;     // the directory containing the "project"
+    private final File    fileSpec;       // original file spec that was used to create this info
+    private final boolean deduce;         // use knowledge of common file layouts to find locations
+    private String        fileName;       // selected file name, without the file extension
+    private String        moduleName;     // the module name (potentially qualified)
+    private File          projectDir;     // the directory containing the "project"
 
-    private final Status sourceStatus;
-    private File         sourceDir;      // directory containing source code
-    private File         sourceFile;     // the "module root" source code file
-    private boolean      sourceIsTree;   // true iff the module sources include subdirectories
-    private Content      sourceContent = Content.Unknown;  // what is known about the module source file content
-    private long         sourceTimestamp;// last known change to a source file
-    private Node         sourceNode;     // root node of the source tree
+    private final Status  sourceStatus;
+    private File          sourceDir;      // directory containing source code
+    private File          sourceFile;     // the "module root" source code file
+    private boolean       sourceIsTree;   // true iff the module sources include subdirectories
+    private Content       sourceContent = Content.Unknown;  // what is known about the module source file content
+    private long          sourceTimestamp;// last known change to a source file
+    private Node          sourceNode;     // root node of the source tree
 
-    private ResourceDir  resourceDir;
-    private long         resourceTimestamp;
+    private ResourceDir   resourceDir;
+    private long          resourceTimestamp;
 
-    private Status       binaryStatus = Status.Unknown;
-    private File         binaryDir;
-    private File         binaryFile;
-    private Version      binaryVersion;
-    private Content      binaryContent = Content.Unknown;  // what is known about the compiled module file content
-    private long         binaryTimestamp;
+    private Status        binaryStatus = Status.Unknown;
+    private File          binaryDir;
+    private File          binaryFile;
+    private Version       binaryVersion;
+    private Content       binaryContent = Content.Unknown;  // what is known about the compiled module file content
+    private long          binaryTimestamp;
 }

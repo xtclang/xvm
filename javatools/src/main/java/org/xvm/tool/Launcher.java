@@ -127,7 +127,7 @@ public abstract class Launcher
 
         checkErrors(fHelp);
 
-        if (opts.isVerbose()) {
+        if (opts.verbose()) {
             out();
             out(opts);
             out();
@@ -138,7 +138,7 @@ public abstract class Launcher
 
         process();
 
-        if (opts.isVerbose()) {
+        if (opts.verbose()) {
             out();
         }
     }
@@ -429,9 +429,10 @@ public abstract class Launcher
          * Construct a holder for command-line options.
          */
         public Options() {
-            addOption(null, "help",    Form.Name, false, "Displays this help message");
-            addOption("v",  "verbose", Form.Name, false, "Enables \"verbose\" logging and messages");
-            addOption(null, "version", Form.Name, false, "Displays the Ecstasy runtime version");
+            addOption(null, "help",    Form.Name, false, "Display this help message");
+            addOption("d",  "deduce",  Form.Name, false, "Automatically deduce locations when possible");
+            addOption("v",  "verbose", Form.Name, false, "Enable verbose logging and messages");
+            addOption(null, "version", Form.Name, false, "Display the Ecstasy runtime version");
         }
 
         /**
@@ -447,33 +448,33 @@ public abstract class Launcher
         /**
          * (Internal) Add meta-data for an option that is supported for this command line tool.
          *
-         * @param sPosix  the POSIX-like command line switch ("-X" would be passed as "X")
-         * @param sLinux  the Linux-like command line switch ("--test" would be passed as "test")
-         * @param form    the form of the data for the option (or {@link Form#Name} for a switch)
-         * @param fMulti  pass true if the option can appear multiple times on the command line
-         * @param sDesc   a human-readable description of the option, for the help display
+         * @param posixName  the POSIX-like command line switch ("-X" would be passed as "X")
+         * @param linuxName  the Linux-like command line switch ("--test" would be passed as "test")
+         * @param form       the form of the data for the option (or {@link Form#Name} for a switch)
+         * @param multi      pass true if the option can appear multiple times on the command line
+         * @param desc       a human-readable description of the option, for the help display
          */
-        protected void addOption(String sPosix, String sLinux, Form form, boolean fMulti, String sDesc) {
-            assert sPosix != null || sLinux != null;
-            assert sPosix == null || sPosix.length() == 1 || sPosix.equals(ArgV) || sPosix.equals(Trailing);
-            assert !Trailing.equals(sPosix) || sLinux == null;
-            assert !ArgV    .equals(sPosix) || sLinux == null;
+        protected void addOption(String posixName, String linuxName, Form form, boolean multi, String desc) {
+            assert posixName != null || linuxName != null;
+            assert posixName == null || posixName.length() == 1 || posixName.equals(ArgV) || posixName.equals(Trailing);
+            assert !Trailing.equals(posixName) || linuxName == null;
+            assert !ArgV    .equals(posixName) || linuxName == null;
             assert form != null;
 
-            Option opt = new Option(sPosix, sLinux, form, fMulti, sDesc);
-            if (sPosix != null) {
-                var prev = options().put(sPosix, opt);
+            Option opt = new Option(posixName, linuxName, form, multi, desc);
+            if (posixName != null) {
+                var prev = options().put(posixName, opt);
                 assert prev == null;
             }
-            if (sLinux != null && !sLinux.equals(sPosix)) {
-                var prev = options().put(sLinux, opt);
+            if (linuxName != null && !linuxName.equals(posixName)) {
+                var prev = options().put(linuxName, opt);
                 assert prev == null;
             }
 
-            assert ArgV.equals(sPosix) == (form == Form.AsIs);
+            assert ArgV.equals(posixName) == (form == Form.AsIs);
             if (form == Form.AsIs) {
                 assert !m_fArgV;
-                assert fMulti;
+                assert multi;
                 m_fArgV = true;
             }
         }
@@ -481,25 +482,37 @@ public abstract class Launcher
         /**
          * Determine the form of the specified option.
          *
-         * @param sName  the name of the option
+         * @param name  the name of the option
          *
          * @return the form of the option, or null if the option does not exist
          */
-        public Form formOf(String sName) {
-            Option opt = options().get(sName);
+        public Form formOf(String name) {
+            Option opt = options().get(name);
             return opt == null ? null : opt.form();
+        }
+
+        /**
+         * Determine the simplified form of the specified option name.
+         *
+         * @param name  the name of the option
+         *
+         * @return the simplest form of the option name, or null if the option does not exist
+         */
+        public String simplify(String name) {
+            Option opt = options().get(name);
+            return opt == null ? null : opt.simplestName();
         }
 
         /**
          * Determine if the specified option can be specified more than once.
          *
-         * @param sName  the name of the option
+         * @param name  the name of the option
          *
          * @return true iff the specified option can be specified more than once
          */
-        public boolean allowMultiple(String sName) {
-            Option opt = options().get(sName);
-            return (opt != null && opt.isMulti());
+        public boolean allowMultiple(String name) {
+            Option opt = options().get(name);
+            return opt != null && opt.isMulti();
         }
 
         /**
@@ -514,26 +527,27 @@ public abstract class Launcher
         /**
          * Determine if an option has already specified.
          *
-         * @param sName  the name of the option
+         * @param name  the name of the option
          *
          * @return true iff the option has already been specified
          */
-        public boolean specified(String sName) {
-            return values().containsKey(sName);
+        public boolean specified(String name) {
+            return values().containsKey(simplify(name));
         }
 
         /**
          * Register that the specified option is specified.
          *
-         * @param sName  the name of the option
+         * @param name  the name of the option
          *
          * @return true if the option is accepted; false if specifying the option is an error
          */
-        public boolean specify(String sName) {
+        public boolean specify(String name) {
+            name = simplify(name);
             boolean fMulti;
-            if (formOf(sName) == Form.Name &&
-                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName))) {
-                store(sName, fMulti, "specified");
+            if (formOf(name) == Form.Name &&
+                    ((fMulti = allowMultiple(name)) || !values().containsKey(name))) {
+                store(name, fMulti, "specified");
                 return true;
             } else {
                 return false;
@@ -543,16 +557,17 @@ public abstract class Launcher
         /**
          * Register a value for the specified option.
          *
-         * @param sName  the name of the option
-         * @param f      the value for the option
+         * @param name   the name of the option
+         * @param value  the value for the option, a boolean
          *
          * @return true if the value is accepted; false if the value represents an error
          */
-        public boolean specify(String sName, boolean f) {
+        public boolean specify(String name, boolean value) {
+            name = simplify(name);
             boolean fMulti;
-            if (formOf(sName) == Form.Boolean &&
-                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName))) {
-                store(sName, fMulti, f);
+            if (formOf(name) == Form.Boolean &&
+                    ((fMulti = allowMultiple(name)) || !values().containsKey(name))) {
+                store(name, fMulti, value);
                 return true;
             } else {
                 return false;
@@ -562,16 +577,17 @@ public abstract class Launcher
         /**
          * Register a value for the specified option.
          *
-         * @param sName  the name of the option
-         * @param n      the value for the option
+         * @param name   the name of the option
+         * @param value  the value for the option, an int
          *
          * @return true if the value is accepted; false if the value represents an error
          */
-        public boolean specify(String sName, int n) {
-            boolean fMulti;
-            if (formOf(sName) == Form.Int &&
-                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName))) {
-                store(sName, fMulti, n);
+        public boolean specify(String name, int value) {
+            name = simplify(name);
+            boolean multi;
+            if (formOf(name) == Form.Int &&
+                    ((multi = allowMultiple(name)) || !values().containsKey(name))) {
+                store(name, multi, value);
                 return true;
             } else {
                 return false;
@@ -581,16 +597,17 @@ public abstract class Launcher
         /**
          * Register a value for the specified option.
          *
-         * @param sName  the name of the option
-         * @param s      the value for the option
+         * @param name   the name of the option
+         * @param value  the value for the option, a string
          *
          * @return true if the value is accepted; false if the value represents an error
          */
-        public boolean specify(String sName, String s) {
-            boolean fMulti;
-            if (formOf(sName) == Form.String &&
-                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName))) {
-                store(sName, fMulti, s);
+        public boolean specify(String name, String value) {
+            name = simplify(name);
+            boolean multi;
+            if (formOf(name) == Form.String &&
+                    ((multi = allowMultiple(name)) || !values().containsKey(name))) {
+                store(name, multi, value);
                 return true;
             } else {
                 return false;
@@ -600,16 +617,17 @@ public abstract class Launcher
         /**
          * Register a value for the specified option.
          *
-         * @param sName  the name of the option
-         * @param file   the value for the option
+         * @param name  the name of the option
+         * @param file  the value for the option, a file
          *
          * @return true if the value is accepted; false if the value represents an error
          */
-        public boolean specify(String sName, File file) {
-            boolean fMulti;
-            if (formOf(sName) == Form.File &&
-                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName))) {
-                store(sName, fMulti, file);
+        public boolean specify(String name, File file) {
+            name = simplify(name);
+            boolean multi;
+            if (formOf(name) == Form.File &&
+                    ((multi = allowMultiple(name)) || !values().containsKey(name))) {
+                store(name, multi, file);
                 return true;
             } else {
                 return false;
@@ -619,16 +637,17 @@ public abstract class Launcher
         /**
          * Register a value for the specified option.
          *
-         * @param sName      the name of the option
-         * @param listFiles  the value for the option
+         * @param name   the name of the option
+         * @param files  the value for the option, a list of files
          *
          * @return true if the value is accepted; false if the value represents an error
          */
-        public boolean specify(String sName, List<File> listFiles) {
-            boolean fMulti;
-            if (formOf(sName) == Form.Repo &&
-                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName))) {
-                store(sName, fMulti, listFiles);
+        public boolean specify(String name, List<File> files) {
+            name = simplify(name);
+            boolean multi;
+            if (formOf(name) == Form.Repo &&
+                    ((multi = allowMultiple(name)) || !values().containsKey(name))) {
+                store(name, multi, files);
                 return true;
             } else {
                 return false;
@@ -638,17 +657,18 @@ public abstract class Launcher
         /**
          * Register a value for the specified option of the Pair Form (key/value).
          *
-         * @param sName  the name of the option
+         * @param name  the name of the option
          * @param pairs  the key/value pairs
          *
          * @return true if the value is accepted; false if the value represents an error
          */
-        public boolean specify(String sName, Map<String,String> pairs) {
-            boolean fMulti;
-            if (formOf(sName) == Form.Pair &&
-                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName) && pairs.size() <= 1)) {
+        public boolean specify(String name, Map<String,String> pairs) {
+            name = simplify(name);
+            boolean multi;
+            if (formOf(name) == Form.Pair &&
+                    ((multi = allowMultiple(name)) || !values().containsKey(name) && pairs.size() <= 1)) {
                 if (!pairs.isEmpty()) {
-                    store(sName, fMulti, pairs);
+                    store(name, multi, pairs);
                 }
                 return true;
             } else {
@@ -657,10 +677,17 @@ public abstract class Launcher
         }
 
         /**
-         * @return true if a "show version" option has been specified
+         * @return true iff the "show version" option was specified
          */
-        boolean isShowVersion() {
+        boolean showVersion() {
             return specified("version");
+        }
+
+        /**
+         * @return true iff the "deduce" option was specified
+         */
+        boolean deduce() {
+            return specified("deduce");
         }
 
         /**
@@ -929,8 +956,6 @@ public abstract class Launcher
 
         /**
          * Validate the options once the options have all been registered successfully.
-         *
-         * @return null on success, or a String to describe the validation error
          */
         public void validate() {
         }
@@ -1043,8 +1068,8 @@ public abstract class Launcher
         /**
          * @return true if a verbose option has been specified
          */
-        boolean isVerbose() {
-            return specified("v") || specified("verbose");
+        boolean verbose() {
+            return specified("verbose");
         }
 
         /**
@@ -1055,7 +1080,7 @@ public abstract class Launcher
          * @return true if an error of that severity should be displayed
          */
         boolean isBadEnoughToPrint(Severity sev) {
-            return isVerbose() || sev.compareTo(Severity.WARNING) >= 0;
+            return verbose() || sev.compareTo(Severity.WARNING) >= 0;
         }
 
         /**
@@ -1259,7 +1284,7 @@ public abstract class Launcher
             }
         }
 
-        ModuleInfo info = new ModuleInfo(fileSpec, resourceSpecs, binarySpec);
+        ModuleInfo info = new ModuleInfo(fileSpec, options().deduce(), resourceSpecs, binarySpec);
 
         if (fCache) {
             if (moduleCache == null) {

@@ -50,7 +50,7 @@ public class Ecstasy
         ModuleRepository repo    = configureLibraryRepo(options.getModulePath());
         checkErrors();
 
-        boolean fShowVer = options.isShowVersion();
+        boolean fShowVer = options.showVersion();
         if (fShowVer) {
             showSystemVersion(repo);
         } else {

@@ -59,17 +59,18 @@ public class ResourceDir {
     /**
      * Given a source file, create the default ResourceDir that corresponds to that source file.
      *
-     * @param sourceFile  the location of an Ecstasy module source file
+     * @param sourceFile the location of an Ecstasy module source file
+     * @param deduce     pass true to enable the algorithm to search for a likely resource directory
      */
-    public static ResourceDir forSource(File sourceFile) {
+    public static ResourceDir forSource(File sourceFile, boolean deduce) {
         if (sourceFile == null) {
             return NoResources;
         }
 
-        ModuleInfo info   = new ModuleInfo(sourceFile);
+        ModuleInfo info   = new ModuleInfo(sourceFile, deduce);
         File       prjDir = info.getProjectDir();
         File       srcDir = info.getSourceDir();
-        if (prjDir != null && srcDir != null && !prjDir.equals(srcDir)) {
+        if (deduce && prjDir != null && srcDir != null && !prjDir.equals(srcDir)) {
             File parentDir = srcDir.getParentFile();
             while (parentDir != null && parentDir.isDirectory()) {
                 File resDir = new File(parentDir, "resources");

@@ -138,7 +138,7 @@ public class Compiler
 
     @Override
     protected void process() {
-        if (options().isShowVersion()) {
+        if (options().showVersion()) {
             showSystemVersion(ensureLibraryRepo());
         }
 
@@ -152,7 +152,7 @@ public class Compiler
 
         int cTargets = aTarget.length;
         if (cTargets == 0) {
-            if (!options().isShowVersion()) {
+            if (!options().showVersion()) {
                 displayHelp();
             }
             return;
@@ -747,7 +747,7 @@ public class Compiler
 
         @Override
         boolean isBadEnoughToPrint(Severity sev) {
-            if (isVerbose()) {
+            if (verbose()) {
                 return true;
             }
 

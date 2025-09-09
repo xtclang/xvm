@@ -88,7 +88,7 @@ public class Runner
         ModuleRepository repo    = configureLibraryRepo(options.getModulePath());
         checkErrors();
 
-        boolean fShowVer = options.isShowVersion();
+        boolean fShowVer = options.showVersion();
         if (fShowVer) {
             showSystemVersion(repo);
         }
@@ -120,7 +120,7 @@ public class Runner
             ModuleInfo info    = null;
             File       outFile = (File) options.values().get("o");
             try {
-                info = new ModuleInfo(fileSpec, null, outFile);
+                info = new ModuleInfo(fileSpec, options().deduce(), null, outFile);
             } catch (RuntimeException e) {
                 log(Severity.ERROR, "Failed to identify the module for: " + fileSpec + " (" + e + ")");
             }
@@ -180,21 +180,18 @@ public class Runner
                     && info.getSourceFile().exists() && !info.isUpToDate()) {
                 log(Severity.INFO, "The compiled module \"" + info.getQualifiedModuleName()
                         + "\" is out-of-date; recompiling ....");
-                File fileBak = new File(fileBin.getParentFile(), fileBin.getName() + ".old");
-                if (fileBak.exists() && !fileBak.delete()) {
-                    log(Severity.ERROR, "Failed to delete the previously-backed-up module: " + fileBak);
-                } else if (fileBin.exists() && !fileBin.renameTo(fileBak)) {
-                    log(Severity.ERROR, "Failed to back up the out-of-date module file: " + fileBin);
-                } else {
-                    fCompile = true;
-                }
+                fCompile = true;
             }
             checkErrors();
 
             if (fCompile) {
                 List<String> compilerArgs = new ArrayList<>();
-                if (options.specified("v")) {
+                if (options.verbose()) {
                     compilerArgs.add("-v");
+                }
+
+                if (options.deduce()) {
+                    compilerArgs.add("-d");
                 }
 
                 List<File> libPath = options.getModulePath();
@@ -213,7 +210,8 @@ public class Runner
                 compilerArgs.add(fileSpec.getPath());
 
                 new Compiler(compilerArgs.toArray(new String[0]), m_console).run();
-                info      = new ModuleInfo(fileSpec, null, outFile);
+
+                info      = new ModuleInfo(fileSpec, options().deduce(), null, outFile);
                 fileBin   = info.getBinaryFile();
                 binExists = fileBin != null && fileBin.exists();
                 repo      = configureLibraryRepo(libPath);
@@ -414,7 +412,7 @@ public class Runner
          * @return true iff "-J" or "--jit" is specified
          */
         public boolean isJit() {
-            return specified("J");
+            return specified("jit");
         }
 
         /**
