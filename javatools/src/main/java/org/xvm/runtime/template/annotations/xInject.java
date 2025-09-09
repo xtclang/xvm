@@ -26,13 +26,13 @@ import org.xvm.runtime.template.reflect.xRef;
 
 
 /**
- * Native InjectedRef implementation.
+ * Native Inject implementation.
  */
-public class xInjectedRef
+public class xInject
         extends xRef {
-    public static xInjectedRef INSTANCE;
+    public static xInject INSTANCE;
 
-    public xInjectedRef(Container container, ClassStructure structure, boolean fInstance) {
+    public xInject(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
         if (fInstance) {

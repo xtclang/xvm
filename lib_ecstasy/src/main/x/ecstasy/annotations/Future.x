@@ -1,5 +1,5 @@
 /**
- * A FutureVar represents a result that may be asynchronously provided, allowing the caller to
+ * A Future represents a result that may be asynchronously provided, allowing the caller to
  * indicate a response to the result.
  *
  *   service Pi {
@@ -28,8 +28,8 @@
  *          .passTo(s -> console.print(s));
  *   }
  *
- * The FutureVar does override the behavior of the Ref interface in a few specific ways:
- * * The [assigned] property on a FutureVar indicates whether the future has completed, either
+ * The Future does override the behavior of the Ref interface in a few specific ways:
+ * * The [assigned] property on a Future indicates whether the future has completed, either
  *   successfully or exceptionally.
  * * The [peek] method performs a non-blocking examination of the future:
  * * * `peek` returns negatively iff the future has not completed.
@@ -42,8 +42,8 @@
  * * The [set] method can only be invoked by completing the future; the future's value cannot
  *   be modified once it is set.
  */
-annotation FutureVar<Referent>
-        extends VolatileVar<Referent>
+annotation Future<Referent>
+        extends Volatile<Referent>
         implements Closeable {
     /**
      * Future completion status:
@@ -145,7 +145,7 @@ annotation FutureVar<Referent>
      * * If the new future completes successfully, then its value will be the same as this
      *   future's value.
      */
-    FutureVar! thenDo(function void () run) {
+    Future! thenDo(function void () run) {
         return chain(new ThenDoStep(run));
     }
 
@@ -164,7 +164,7 @@ annotation FutureVar<Referent>
      * * If the new future completes successfully, then its value will be the same as this
      *   future's value.
      */
-    FutureVar! passTo(function void (Referent) consume) {
+    Future! passTo(function void (Referent) consume) {
         return chain(new PassToStep(consume));
     }
 
@@ -184,7 +184,7 @@ annotation FutureVar<Referent>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-    <NewType> FutureVar!<NewType> transform(function NewType (Referent) convert) {
+    <NewType> Future!<NewType> transform(function NewType (Referent) convert) {
         return chain(new TransformStep<NewType, Referent>(convert));
     }
 
@@ -204,7 +204,7 @@ annotation FutureVar<Referent>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-    FutureVar! handle(function Referent (Exception) convert) {
+    Future! handle(function Referent (Exception) convert) {
         return chain(new HandleStep(convert));
     }
 
@@ -224,7 +224,7 @@ annotation FutureVar<Referent>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-    <NewType> FutureVar!<NewType> transformOrHandle(function NewType (Referent?, Exception?) convert) {
+    <NewType> Future!<NewType> transformOrHandle(function NewType (Referent?, Exception?) convert) {
         return chain(new Transform2Step<NewType, Referent>(convert));
     }
 
@@ -241,7 +241,7 @@ annotation FutureVar<Referent>
      * * If this future or the other future completes exceptionally, and the new future has not
      *   already completed, then the new future will complete exceptionally with the same exception.
      */
-    FutureVar!<Referent> or(FutureVar!<Referent> other) {
+    Future!<Referent> or(Future!<Referent> other) {
         return chain(new OrStep<Referent>(other));
     }
 
@@ -259,8 +259,8 @@ annotation FutureVar<Referent>
      *   not already completed, then the new future will complete exceptionally with the same
      *   exception.
      */
-    FutureVar!<Referent> orAny(FutureVar!<Referent>[] others = []) {
-        @Volatile FutureVar<Referent> result = this;
+    Future!<Referent> orAny(Future!<Referent>[] others = []) {
+        @Volatile Future<Referent> result = this;
         others.iterator().forEach(other -> {result = result.or(other);});
         return result;
     }
@@ -283,7 +283,7 @@ annotation FutureVar<Referent>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-    <OtherType, NewType> FutureVar!<NewType> and(FutureVar!<OtherType> other,
+    <OtherType, NewType> Future!<NewType> and(Future!<OtherType> other,
             function NewType (Referent, OtherType) combine) {
         return chain(new AndStep<NewType, Referent, OtherType>(other, combine));
     }
@@ -300,7 +300,7 @@ annotation FutureVar<Referent>
      *   (successfully or exceptionally) and with the same result (value or exception) as this
      *   future.
      */
-    FutureVar!<Referent> whenComplete(function void (Referent?, Exception?) notify) {
+    Future!<Referent> whenComplete(function void (Referent?, Exception?) notify) {
         return chain(new WhenCompleteStep<Referent>(notify));
     }
 
@@ -321,7 +321,7 @@ annotation FutureVar<Referent>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-    <NewType> FutureVar!<NewType> createContinuation(function NewType (Referent) async) {
+    <NewType> Future!<NewType> createContinuation(function NewType (Referent) async) {
         return chain(new ContinuationStep<NewType, Referent>(async));
     }
 
@@ -332,8 +332,8 @@ annotation FutureVar<Referent>
      * Wait for the completion of the future.
      */
     @Concurrent
-    FutureVar waitForCompletion() {
-        static Boolean waitFor(FutureVar future) {
+    Future waitForCompletion() {
+        static Boolean waitFor(Future future) {
             @Future Boolean done;
             future.thenDo(() -> {
                 done = True;
@@ -408,17 +408,17 @@ annotation FutureVar<Referent>
     /**
      * Add a DependentFuture to the list of things that this future must notify when it completes.
      * The DependentFuture contains a [DependentFuture.parentCompleted()] method that is used as
-     * a [NotifyDependent] function, allowing one or more FutureVar instances to notify it of
-     * their completion. The FutureVar can chain to any number of DependentFuture instances.
+     * a [NotifyDependent] function, allowing one or more Future instances to notify it of
+     * their completion. The Future can chain to any number of DependentFuture instances.
      */
-    <NewType> FutureVar!<NewType> chain(DependentFuture<NewType> nextFuture) {
+    <NewType> Future!<NewType> chain(DependentFuture<NewType> nextFuture) {
         chain(nextFuture.parentCompleted);
         return nextFuture;
     }
 
     /**
      * Add a NotifyDependent function to the list of things that this future must notify when it
-     * completes. The FutureVar can chain to any number of NotifyDependent functions.
+     * completes. The Future can chain to any number of NotifyDependent functions.
      */
     void chain(NotifyDependent notify) {
         switch (completion) {
@@ -444,13 +444,13 @@ annotation FutureVar<Referent>
 
     @Override
     String toString() {
-        return $"FutureVar<{Referent}>(completion={completion})";
+        return $"Future<{Referent}>(completion={completion})";
     }
 
 
     // ----- inner classes -------------------------------------------------------------------------
 
-    @FutureVar
+    @Future
     @Abstract static class BaseFuture<Referent>
             implements Var<Referent> {}
 
@@ -498,7 +498,7 @@ annotation FutureVar<Referent>
         }
 
         /**
-         * The "multi" completer is actually a "bi" completer, and the FutureVar's implementation
+         * The "multi" completer is actually a "bi" completer, and the Future's implementation
          * of the chain method will link multiple of them together in a left-legged-only binary tree
          * in order to emulate a linked list of notifications (i.e. notifications are always
          * appended to the end of the list).
@@ -641,7 +641,7 @@ annotation FutureVar<Referent>
      */
     static class OrStep<Referent>
             extends DependentFuture<Referent, Referent> {
-        construct(FutureVar<Referent> other) {
+        construct(Future<Referent> other) {
         } finally {
             other.whenComplete((result, e) -> parentCompleted(e == Null ? Result : Error, result, e));
         }
@@ -655,7 +655,7 @@ annotation FutureVar<Referent>
      */
     static class AndStep<Referent, InputType, Input2Type>
             extends DependentFuture<Referent, InputType> {
-        construct(FutureVar<Input2Type> other, function Referent (InputType, Input2Type) combine) {
+        construct(Future<Input2Type> other, function Referent (InputType, Input2Type) combine) {
         } finally {
             other.whenComplete((result, e) -> parent2Completed(e == Null ? Result : Error, result, e));
         }
@@ -776,7 +776,7 @@ annotation FutureVar<Referent>
      */
     static class ContinuationStep<Referent, InputType>(function Referent (InputType) invokeAsync)
             extends DependentFuture<Referent, InputType> {
-        protected FutureVar<Referent>? asyncResult;
+        protected Future<Referent>? asyncResult;
 
         @Override
         void parentCompleted(Completion completion, InputType? input, Exception? e) {

@@ -24,7 +24,7 @@ import org.xvm.runtime.template.numbers.xConstrainedInteger;
  * Native implementation for AtomicIntNumber<Referent> for any Referent that uses JavaLong handle.
  */
 public class xAtomicIntNumber
-        extends xAtomicVar {
+        extends xAtomic {
     public static xAtomicIntNumber INSTANCE;
 
     public xAtomicIntNumber(Container container, ClassStructure structure, boolean fInstance) {

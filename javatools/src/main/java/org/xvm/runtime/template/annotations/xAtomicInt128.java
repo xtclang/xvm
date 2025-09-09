@@ -23,7 +23,7 @@ import org.xvm.runtime.template.numbers.LongLong;
  * Native implementation for @Atomic Int128 and UInt128.
  */
 public class xAtomicInt128
-        extends xAtomicVar {
+        extends xAtomic {
     public xAtomicInt128(BaseInt128 templateIntBase) {
         super(templateIntBase.f_container, xAtomicIntNumber.INSTANCE.getStructure(), false);
 

@@ -465,7 +465,7 @@ public class AssignmentStatement
 
                 if (exprLeft instanceof NameExpression exprName && exprName.isDynamicVar()) {
                     // test for a future assignment first
-                    TypeConstant typeFuture = pool.ensureFutureVar(typeLeft);
+                    TypeConstant typeFuture = pool.ensureFuture(typeLeft);
                     if (rvalue.testFit(ctxRValue, typeFuture, false, null).isFit()) {
                         typeLeft = typeFuture;
                     }

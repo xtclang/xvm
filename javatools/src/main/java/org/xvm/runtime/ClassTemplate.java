@@ -53,7 +53,7 @@ import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xOrdered;
 
-import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
+import org.xvm.runtime.template.annotations.xFuture.FutureHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
 
@@ -2404,7 +2404,7 @@ public abstract class ClassTemplate
     public final Container f_container;
 
     /**
-     * Globally known ClassTemplate name (e.g. Boolean or annotations.LazyVar)
+     * Globally known ClassTemplate name (e.g. Boolean or annotations.Lazy)
      */
     public final String f_sName;
 

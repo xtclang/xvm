@@ -29,13 +29,13 @@ import org.xvm.runtime.template.reflect.xVar;
 
 
 /**
- * Native implementation of AtomicVar.
+ * Native implementation of Atomic.
  */
-public class xAtomicVar
+public class xAtomic
         extends xVar {
-    public static xAtomicVar INSTANCE;
+    public static xAtomic INSTANCE;
 
-    public xAtomicVar(Container container, ClassStructure structure, boolean fInstance) {
+    public xAtomic(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
         if (fInstance) {
@@ -48,8 +48,8 @@ public class xAtomicVar
         markNativeMethod("exchange", null, null);
         markNativeMethod("replaceFailed", null, null);
 
-        ConstantPool                  pool         = f_container.getConstantPool();
-        Map<TypeConstant, xAtomicVar> mapTemplates = new HashMap<>();
+        ConstantPool               pool         = f_container.getConstantPool();
+        Map<TypeConstant, xAtomic> mapTemplates = new HashMap<>();
 
         // Int128, UInt128
         mapTemplates.put(pool.typeInt128(),  new xAtomicInt128(xInt128.INSTANCE));
@@ -249,5 +249,5 @@ public class xAtomicVar
 
     // ----- data fields ---------------------------------------------------------------------------
 
-    protected static Map<TypeConstant, xAtomicVar> NUMBER_TEMPLATES;
+    protected static Map<TypeConstant, xAtomic> NUMBER_TEMPLATES;
 }

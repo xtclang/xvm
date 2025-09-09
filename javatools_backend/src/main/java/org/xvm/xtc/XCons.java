@@ -100,8 +100,8 @@ public abstract class XCons {
   public static XClz RANGEII     = make_java("ecstasy","RangeII"      ,"ecstasy","XRangeII",RANGE,RANGE,JLONG); // No Ecstasy matching class
 
   // This is a mixin type
-  public static XClz VOLATILEVAR = make_java("ecstasy.annotations","VolatileVar","ecstasy.annotations","VolatileVar",null,"Referent",XXTC);
-  public static XClz FUTUREVAR   = make_java("ecstasy.annotations","FutureVar","ecstasy.annotations","FutureVar",VOLATILEVAR,"Referent",XXTC);
+  public static XClz VOLATILEVAR = make_java("ecstasy.annotations","Volatile","ecstasy.annotations","Volatile",null,"Referent",XXTC);
+  public static XClz FUTURE      = make_java("ecstasy.annotations","Future","ecstasy.annotations","Future",VOLATILEVAR,"Referent",XXTC);
 
   // Convert a Java primitive to the Java object version.
   static final HashMap<XBase, XClz> XBOX = new HashMap<>() {{

@@ -227,11 +227,11 @@ public abstract class XValue {
     case AnnotTCon acon ->
       switch( acon.clz()._name ) {
         // Gets a special "CONTAINER.inject" call
-      case "InjectedRef" -> _val(acon.con().is_generic());
+      case "Inject" -> _val(acon.con().is_generic());
       // Wraps the type as "Future<whatever>".
-      case "FutureVar" -> XType.xtype(acon,true).clz(ASB.p("new ")).p("()");
+      case "Future" -> XType.xtype(acon,true).clz(ASB.p("new ")).p("()");
       // Does nothing for Java, I believe.  It's not a Java "volatile" for sure.
-      case "VolatileVar" -> _val(acon.con());
+      case "Volatile" -> _val(acon.con());
       default -> throw XEC.TODO();
       };
 

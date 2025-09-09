@@ -383,10 +383,10 @@ public abstract class XType {
 
     case AnnotTCon acon ->
       switch( acon.clz()._name ) {
-      case "InjectedRef" -> xtype(acon.con().is_generic(),true,self);
-      case "FutureVar" ->
+      case "Inject" -> xtype(acon.con().is_generic(),true,self);
+      case "Future" ->
         XClz.wrapFuture(xtype(((ParamTCon)acon.con())._parms[0],true,self));
-      case "VolatileVar" ->
+      case "Volatile" ->
         xtype(acon.con(),false,self);
       default ->  throw XEC.TODO();
       };

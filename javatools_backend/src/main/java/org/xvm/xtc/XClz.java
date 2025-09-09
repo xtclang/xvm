@@ -556,14 +556,14 @@ public class XClz extends XType {
     return vclz;
   }
 
-  // Make a specialized FutureVar type
+  // Make a specialized Future type
   public static XClz wrapFuture( XType xt ) {
-    ClzBuilder.add_import(XCons.FUTUREVAR);
+    ClzBuilder.add_import(XCons.FUTURE);
     if( xt instanceof XClz clz ) ClzBuilder.add_import(clz);
-    XClz xclz = _malloc(XCons.FUTUREVAR._clz);
-    xclz._tns = XCons.FUTUREVAR._tns;
+    XClz xclz = _malloc(XCons.FUTURE._clz);
+    xclz._tns = XCons.FUTURE._tns;
     xclz._xts[0] = xt;
-    return xclz._intern(XCons.FUTUREVAR);
+    return xclz._intern(XCons.FUTURE);
   }
 
   // You'd think the clz._super would be it, but not for enums
@@ -604,7 +604,7 @@ public class XClz extends XType {
 
   @Override public boolean isTuple() { return S.eq(_jname,"Tuple");  }
   // TODO: Really needs to be an ISA on XTC Var
-  @Override public boolean isVar() { return S.eq(_name,"Var") || S.eq(_jname,"FutureVar"); }
+  @Override public boolean isVar() { return S.eq(_name,"Var") || S.eq(_jname,"Future"); }
   // Some kind of array
   @Override public boolean isAry() { return S.eq("ecstasy.collections",_pack) && S.eq("Array",_name); }
   // XTC array element type

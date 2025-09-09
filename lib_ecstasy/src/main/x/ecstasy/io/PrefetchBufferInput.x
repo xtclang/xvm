@@ -33,7 +33,7 @@
     /**
      * Asynchronously filled buffer.
      */
-    protected FutureVar<ReadBuffer> bufferRef;
+    protected Future<ReadBuffer> bufferRef;
     protected ReadBuffer buffer.get() = bufferRef.get();
 
     /**

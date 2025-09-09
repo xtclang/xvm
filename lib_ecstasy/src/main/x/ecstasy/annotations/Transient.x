@@ -23,8 +23,8 @@
  *   the property will be _unassigned_ if the it does not have an initial value.
  *
  * * It is a compile-time error for a `@Transient` property to not have an initial value (either
- *   explicit or implicit), unless the property also has the [@Unassigned](UnassignedVar) or
- *   [@Lazy](LazyVar) annotation.
+ *   explicit or implicit), unless the property also has the [@Unassigned](Unassigned) or
+ *   [@Lazy](Lazy) annotation.
  *
  * * `@Transient` properties on a `const` object are **not** included in any of the following
  *   automatically-generated capabilities of the object:

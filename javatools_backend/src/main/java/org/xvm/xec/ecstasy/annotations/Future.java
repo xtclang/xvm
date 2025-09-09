@@ -7,11 +7,11 @@ import org.xvm.xrun.Never;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-public class FutureVar<Referent extends XTC> extends XTC {
-  public FutureVar(Never n) {_future=null;}
+public class Future<Referent extends XTC> extends XTC {
+  public Future(Never n) {_future=null;}
   
   private final CompletableFuture<Referent> _future;
-  public FutureVar() { _future = new CompletableFuture<>(); }
+  public Future() { _future = new CompletableFuture<>(); }
   public Referent $get() throws XTC.Exception {
     try {
       return _future.get();

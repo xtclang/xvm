@@ -5,7 +5,7 @@
  * TODO this is AtomicIntNumber, but sub-pieces are needed, like AtomicSequential
  */
 mixin AtomicIntNumber<Referent extends IntNumber>
-        into AtomicVar<Referent> {
+        into Atomic<Referent> {
 
     @Op("++") void increment() {
         Referent oldValue = get();

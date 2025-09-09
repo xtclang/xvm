@@ -1,23 +1,23 @@
 /**
- * A SoftVar is used to make a reference into a soft reference. A soft reference is a reference
+ * A Soft is used to make a reference into a soft reference. A soft reference is a reference
  * whose reference can be cleared by the garbage collector if the garbage collector decides that it
  * wants to reclaim the memory represented by the referent. Generally, it is expected that the
  * runtime will attempt to prioritize the retention of soft references that represent some
  * combination of smaller memory usage, more frequent usage, more recent usage, and (in the case of
- * the combination of SoftVar and LazyVar) more expensive-to-calculate values.
+ * the combination of Soft and Lazy) more expensive-to-calculate values.
  *
- * In order to avoid the possibility of an unassigned reference becoming visible, the SoftVar must
+ * In order to avoid the possibility of an unassigned reference becoming visible, the Soft must
  * be of a `Referent` that has a default value (such as [Nullable], with its default
- * value of `Null`), or it must be combined with [LazyVar] so that the value is
+ * value of `Null`), or it must be combined with [Lazy] so that the value is
  * calculable on-demand.
  *
- * A SoftVar can have a `notify` notification function provided in its construction that is
+ * A Soft can have a `notify` notification function provided in its construction that is
  * enqueued into the service's runtime event queue each time that the soft reference is cleared by
  * the garbage collector; see [Service.pendingRuntimeEvents] and [Service.dispatchRuntimeEvents].
  *
  * TODO use timer instead of clock
  */
-annotation SoftVar<Referent>(function void ()? notify)
+annotation Soft<Referent>(function void ()? notify)
         into Var<Referent> {
     /**
      * The runtime's clock that this reference will stamp itself with on every access. The runtime
@@ -63,7 +63,7 @@ annotation SoftVar<Referent>(function void ()? notify)
     Referent get() {
         // soft+lazy references are unassigned after being cleared by the garbage collector
         if (!assigned) {
-            // TODO assert (&this).incorporates_(LazyVar);
+            // TODO assert (&this).incorporates_(Lazy);
 
             Time     start = clock.now;
             Referent value = super();

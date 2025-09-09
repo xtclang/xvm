@@ -1272,7 +1272,7 @@ public class NameExpression
                     Register     regOuter  = new Register(typeOuter, null, Op.A_STACK);
 
                     code.add(new MoveThis(cSteps, regOuter, typeOuter.getAccess()));
-                    if (idProp.isFutureVar()) {
+                    if (idProp.isFuture()) {
                         regTemp = code.createRegister(typeOuter);
                         code.add(new Var_D(regTemp));
                     }
@@ -1289,7 +1289,7 @@ public class NameExpression
 
                         m_astResult = new OuterExprAST(ctx.getThisRegisterAST(), 1, getType());
                     } else {
-                        if (idProp.isFutureVar()) {
+                        if (idProp.isFuture()) {
                             regTemp = code.createRegister(idProp.getRefType(ctx.getThisType()));
                             code.add(new Var_D(regTemp));
                         } else {
@@ -1308,7 +1308,7 @@ public class NameExpression
                         return idProp;
                     }
                     Argument argLeft = left.generateArgument(ctx, code, false, true, errs);
-                    if (idProp.isFutureVar()) {
+                    if (idProp.isFuture()) {
                         regTemp = code.createRegister(idProp.getRefType(argLeft.getType()));
                         code.add(new Var_D(regTemp));
                     }

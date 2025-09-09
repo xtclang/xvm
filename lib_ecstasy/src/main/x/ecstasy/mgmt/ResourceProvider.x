@@ -4,7 +4,7 @@
 interface ResourceProvider
         extends Closeable {
 
-    import annotations.InjectedRef.Options;
+    import annotations.Inject.Options;
 
     /**
      * While we can only postulate that the compile-time type of a resource is Object, at run-time

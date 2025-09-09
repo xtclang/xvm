@@ -30,7 +30,7 @@
     /**
      * Asynchronously filled buffer.
      */
-    protected FutureVar<Byte[]> bufferRef;
+    protected Future<Byte[]> bufferRef;
     protected Byte[] buffer.get() = bufferRef.get();
 
     /**

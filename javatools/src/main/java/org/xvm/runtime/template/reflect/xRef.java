@@ -41,7 +41,7 @@ import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 
-import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
+import org.xvm.runtime.template.annotations.xFuture.FutureHandle;
 
 import org.xvm.runtime.template.numbers.xInt64;
 

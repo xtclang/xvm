@@ -51,8 +51,8 @@
  *       ++Statistics.misses;
  *   }
  */
-annotation AtomicVar<Referent>
-        extends VolatileVar<Referent>
+annotation Atomic<Referent>
+        extends Volatile<Referent>
         incorporates conditional AtomicIntNumber<Referent extends IntNumber> {
     /**
      * Atomically replace the referent for this variable reference.

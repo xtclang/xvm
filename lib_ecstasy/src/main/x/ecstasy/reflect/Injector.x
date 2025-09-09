@@ -1,5 +1,3 @@
-import annotations.InjectedRef;
-
 /**
  * Injector represents an ability to dynamically inject resources at run-time.
  *
@@ -33,5 +31,5 @@ interface Injector {
      * @return the injected object
      */
      <InjectionType> InjectionType inject(Type<InjectionType> type, String name,
-                                          InjectedRef.Options opts = Null);
+                                          Inject.Options opts = Null);
 }

@@ -1060,11 +1060,11 @@ public class InvocationExpression
                 if (atypeResult.length > 0) {
                     atypeResult = atypeResult.clone(); // don't mess up the actual types
                     for (int i = 0, c = atypeResult.length; i < c; i++) {
-                        atypeResult[i] = pool.ensureFutureVar(atypeResult[i]);
+                        atypeResult[i] = pool.ensureFuture(atypeResult[i]);
                     }
                 } else {
                     // @Future<Void>
-                    atypeResult = new TypeConstant[] {pool.ensureFutureVar(pool.typeTuple0())};
+                    atypeResult = new TypeConstant[] {pool.ensureFuture(pool.typeTuple0())};
                 }
             }
         }
@@ -1172,7 +1172,7 @@ public class InvocationExpression
                 Argument[]   aargResult = new Argument[cRVals];
 
                 for (int i = 0; i < cRVals; i++) {
-                    Register reg = code.createRegister(pool.ensureFutureVar(atype[i]), null);
+                    Register reg = code.createRegister(pool.ensureFuture(atype[i]), null);
 
                     code.add(new Var_D(reg));
 
@@ -3081,7 +3081,7 @@ public class InvocationExpression
                                                          // type (e.g. Value.hashCode(value))
     private transient Argument[]      m_aargTypeParams;  // "hidden" type parameters
     private transient MethodConstant  m_idConvert;       // conversion method
-    private transient boolean         m_fAutoFuture;     // implicit FutureVar
+    private transient boolean         m_fAutoFuture;     // implicit Future
 
     /**
      * Cached ExprAST nodes for the target and the invocation.

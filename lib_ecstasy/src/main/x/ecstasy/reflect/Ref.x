@@ -65,12 +65,12 @@ interface Ref<Referent> {
      *
      * A small number of references cannot be blindly dereferenced without risking a runtime
      * exception:
-     * * `@Lazy` references ([annotations.LazyVar]) are allowed to be unassigned,
+     * * `@Lazy` references ([annotations.Lazy]) are allowed to be unassigned,
      *   because they will lazily assign themselves on the first dereference attempt.
-     * * `@Future` references ([annotations.FutureVar]) are allowed to be unassigned,
+     * * `@Future` references ([annotations.Future]) are allowed to be unassigned,
      *   because they assigned only on completion of the future, and an attempt to dereference
      *   before that point in time will block until that completion occurs.
-     * * `@Soft` and `@Weak` references ([annotations.SoftVar] and [annotations.WeakRef]) are
+     * * `@Soft` and `@Weak` references ([annotations.Soft] and [annotations.WeakRef]) are
      *   allowed to be unassigned, because the garbage collector is allowed under specific
      *   conditions to clear the reference.
      */
@@ -231,7 +231,7 @@ interface Ref<Referent> {
 
     /**
     * The reference annotations. These are the annotations that apply to the reference itself (i.e.
-    * they mix into [Ref] or [Var]), such as [@Future](FutureVar) and [@Lazy](LazyVar). The order of
+    * they mix into [Ref] or [Var]), such as [@Future](Future) and [@Lazy](Lazy). The order of
     * the annotations in the array is "left-to-right"; so for example an annotated Var:
     *
     *     @A1 @A2 List list = ...

@@ -17,7 +17,7 @@ public abstract class PropBuilder {
   // Injection gets initialized from container:
   //   private Type prop = _container.prop(); // Container name and prop name matches
   //
-  // LazyVar:
+  // Lazy:
   //   private boolean prop$init;
   //   Type prop$get() { if( !prop$init ) { prop$init=true; prop=prop$calc(); } return prop; }
   //   Type prop$calc() { ... }
@@ -25,7 +25,7 @@ public abstract class PropBuilder {
   // Const:
   //   void prop$set(Type p) { throw new ReadOnlyException(); }
   //
-  // Fancier, e.g. marked LazyVar, or has non-default get/set or other pieces:
+  // Fancier, e.g. marked Lazy, or has non-default get/set or other pieces:
   //   private Prop$Type prop = new Prop$Type();
   //   // Calls are e.g. prop.$get() or prop.$set(p)
   public static void make_class( ClzBuilder X, PropPart pp ) {
@@ -40,8 +40,8 @@ public abstract class PropBuilder {
     if( pp._contribs != null )
       for( Contrib c : pp._contribs ) {
         String ano = c._annot.part()._name;
-        if( "LazyVar".equals(ano) ) lazy = true;
-        if( "InjectedRef".equals(ano) ) inject = true;
+        if( "Lazy".equals(ano) ) lazy = true;
+        if( "Inject".equals(ano) ) inject = true;
       }
     boolean stat = pp.isStatic() || pp._par instanceof ModPart;
     boolean tfld = X._tclz.find(pname)!=null; // Is a type field
@@ -82,7 +82,7 @@ public abstract class PropBuilder {
       sb.i();                     // Not private, so child can reference
       if( stat ) sb.p("static ");
       (tfld ? sb.p("XTC") : xtype.clz(sb)).p(" ").p(pname);
-      // Special init for InjectedRef.  Other props get no init()?
+      // Special init for Inject.  Other props get no init()?
       if( inject )
         sb.fmt(" = %0.XEC.CONTAINER.get().%1()",XEC.ROOT,pname);
 

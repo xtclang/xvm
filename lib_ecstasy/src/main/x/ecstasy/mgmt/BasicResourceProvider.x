@@ -19,7 +19,6 @@ service BasicResourceProvider
              implements ResourceProvider {
     @Override
     Supplier getResource(Type type, String name) {
-        import annotations.InjectedRef;
         import Container.Linker;
 
         switch (type, name) {
@@ -32,14 +31,14 @@ service BasicResourceProvider
             return clock;
 
         case (Timer, "timer"):
-            return (InjectedRef.Options opts) -> {
+            return (Inject.Options opts) -> {
                 @Inject(opts=opts) Timer timer;
                 return timer;
             };
 
         case (Random, "random"):
         case (Random, "rnd"):
-            return (InjectedRef.Options opts) -> {
+            return (Inject.Options opts) -> {
                 @Inject(opts=opts) Random random;
                 return random;
             };
@@ -50,7 +49,7 @@ service BasicResourceProvider
             // resource at run time)
             return Nullable.as(Type).isA(type)
                 ? Null.as(Supplier)
-                : (InjectedRef.Options opts) ->
+                : (Inject.Options opts) ->
                     throw new Exception($|Unsupported resource: type="{type}", name="{name}"
                                        );
         }

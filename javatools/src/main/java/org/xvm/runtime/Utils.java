@@ -41,10 +41,10 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xOrdered;
 
-import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
-import org.xvm.runtime.template.annotations.xFutureVar.FutureTupleHandle;
-import org.xvm.runtime.template.annotations.xInjectedRef;
-import org.xvm.runtime.template.annotations.xInjectedRef.InjectedHandle;
+import org.xvm.runtime.template.annotations.xFuture.FutureHandle;
+import org.xvm.runtime.template.annotations.xFuture.FutureTupleHandle;
+import org.xvm.runtime.template.annotations.xInject;
+import org.xvm.runtime.template.annotations.xInject.InjectedHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
@@ -442,7 +442,7 @@ public abstract class Utils {
                 if (fDynamic && !((RefHandle) hValue).isAssigned() &&
                         iReturn != Op.A_IGNORE_ASYNC) {
                     if (hValue instanceof InjectedHandle hRef) {
-                        int iResult = ((xInjectedRef) hRef.getTemplate()).
+                        int iResult = ((xInject) hRef.getTemplate()).
                                 getReferent(frameCaller, hRef, Op.A_STACK);
                         switch (iResult) {
                         case Op.R_NEXT:
@@ -533,7 +533,7 @@ public abstract class Utils {
                 boolean fDynamic = afDynamic != null && afDynamic[index];
                 if (fDynamic && !((RefHandle) hValue).isAssigned()) {
                     if (hValue instanceof InjectedHandle hRef) {
-                        int iResult = ((xInjectedRef) hRef.getTemplate()).
+                        int iResult = ((xInject) hRef.getTemplate()).
                                 getReferent(frameCaller, hRef, Op.A_STACK);
                         switch (iResult) {
                         case Op.R_NEXT:
@@ -569,7 +569,7 @@ public abstract class Utils {
 
             // at this point we have all deferred values resolved and some (not yet completed)
             // future returns that the caller (previous frame) expects to be "realized"
-            TypeConstant typeFuture = frameCaller.poolContext().ensureFutureVar(typeTuple);
+            TypeConstant typeFuture = frameCaller.poolContext().ensureFuture(typeTuple);
             FutureHandle hFuture    = new FutureTupleHandle(typeFuture.ensureClass(frameCaller),
                                                             ahValue);
             return frameCaller.returnValue(iReturn, hFuture, true);

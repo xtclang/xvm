@@ -858,7 +858,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
 
         @Future Boolean start; // we just need some Future Boolean to chain from
-        FutureVar<Boolean> proceed = eval(&start, rec.prepare, ConcurrentConflict, &result);
+        Future<Boolean> proceed = eval(&start, rec.prepare, ConcurrentConflict, &result);
         &start.complete(True); // kick off the prepare
 
         // "require" the transaction
@@ -1596,7 +1596,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             }
 
             // prepare phase
-            FutureVar<Boolean>? preparedAll = Null;
+            Future<Boolean>? preparedAll = Null;
 
             Int destinationId = selectPrepareId();
             for (Int storeId : storeIds) {
@@ -2015,7 +2015,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
             // now get the ObjectStores to asynchronously write all of their transactional changes
             // to disk
-            FutureVar<Tuple<>>? commitAll = Null;
+            Future<Tuple<>>? commitAll = Null;
             for (Int storeId : enlisted) {
                 Tuple<> commitOne = storeFor(storeId).commit^(writeId);
                 commitAll = commitAll?.and(&commitOne, (_, _) -> ()) : &commitOne;
@@ -2172,7 +2172,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
             status = result == Committed ? Committed : RolledBack;
 
-            if (FutureVar<CommitResult> pending ?= this.pending, !pending.assigned) {
+            if (Future<CommitResult> pending ?= this.pending, !pending.assigned) {
                 pending.complete(result);
                 this.pending = Null;
             }

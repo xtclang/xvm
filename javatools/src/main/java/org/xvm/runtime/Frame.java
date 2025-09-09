@@ -40,8 +40,8 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
-import org.xvm.runtime.template.annotations.xFutureVar;
-import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
+import org.xvm.runtime.template.annotations.xFuture;
+import org.xvm.runtime.template.annotations.xFuture.FutureHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
@@ -231,7 +231,7 @@ public class Frame
      * @return a new frame
      */
     public Frame createWaitFrame(CompletableFuture<ObjectHandle> cfResult, int iReturn) {
-        return createWaitFrame(xFutureVar.makeHandle(cfResult), iReturn);
+        return createWaitFrame(xFuture.makeHandle(cfResult), iReturn);
     }
 
     /**
@@ -247,7 +247,7 @@ public class Frame
 
         Frame frameNext = createNativeFrame(WAIT_FOR_FUTURE, ahFuture, iReturn, null);
 
-        frameNext.f_aInfo[0] = new VarInfo(xFutureVar.TYPE, VAR_DYNAMIC_REF);
+        frameNext.f_aInfo[0] = new VarInfo(xFuture.TYPE, VAR_DYNAMIC_REF);
 
         // add a wait completion notification; the service is responsible for timing out
         hFuture.getFuture().whenComplete((r, x) -> f_fiber.onResponse());
@@ -275,9 +275,9 @@ public class Frame
             CompletableFuture<ObjectHandle> cfReturn =
                     cfResult.thenApply(ahResult -> ahResult[iResult]);
 
-            ahFuture[i] = xFutureVar.makeHandle(cfReturn);
+            ahFuture[i] = xFuture.makeHandle(cfReturn);
 
-            frameNext.f_aInfo[i] = new VarInfo(xFutureVar.TYPE, VAR_DYNAMIC_REF);
+            frameNext.f_aInfo[i] = new VarInfo(xFuture.TYPE, VAR_DYNAMIC_REF);
         }
 
         // add a wait completion notification; the service is responsible for timing out
@@ -1002,11 +1002,11 @@ public class Frame
      */
     public int assignFutureResult(int iReturn, CompletableFuture<ObjectHandle> cfResult) {
         if (cfResult.isDone()) {
-            return xFutureVar.assignCompleted(this, cfResult, iReturn);
+            return xFuture.assignCompleted(this, cfResult, iReturn);
         }
 
-        if (isFutureVar(iReturn)) {
-            return assignValue(iReturn, xFutureVar.makeHandle(cfResult));
+        if (isFuture(iReturn)) {
+            return assignValue(iReturn, xFuture.makeHandle(cfResult));
         }
 
         // the wait frame will deal with exceptions
@@ -1695,10 +1695,10 @@ public class Frame
     }
 
     /**
-     * @return true if the specified register holds a "FutureVar"
+     * @return true if the specified register holds a "Future"
      */
-    public boolean isFutureVar(int nVar) {
-        return nVar >= 0 && getVarInfo(nVar).isFutureVar();
+    public boolean isFuture(int nVar) {
+        return nVar >= 0 && getVarInfo(nVar).isFuture();
     }
 
     /**
@@ -2427,7 +2427,7 @@ public class Frame
         /**
          * @return iff the register holds a future var
          */
-        public boolean isFutureVar() {
+        public boolean isFuture() {
             return (m_nStyle & FUTURE_HANDLE) != 0;
         }
 

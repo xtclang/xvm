@@ -791,7 +791,7 @@ public class ClassComposition
         }
 
         /**
-         * @return true iff the field is LazyVar annotated
+         * @return true iff the field is Lazy annotated
          */
         public boolean isLazy() {
             return f_fLazy;

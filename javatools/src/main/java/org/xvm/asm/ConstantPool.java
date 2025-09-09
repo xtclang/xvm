@@ -1977,7 +1977,7 @@ public class ConstantPool
      *
      * @return a resulting Future-annotated Var type
      */
-    public TypeConstant ensureFutureVar(TypeConstant typeReferent) {
+    public TypeConstant ensureFuture(TypeConstant typeReferent) {
         return ensureAnnotatedTypeConstant(ensureParameterizedTypeConstant(typeVar(), typeReferent),
                 ensureAnnotation(clzFuture()));
     }

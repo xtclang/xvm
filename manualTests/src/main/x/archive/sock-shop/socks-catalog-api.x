@@ -204,7 +204,7 @@ module SockShopCatalogApi
                 }
             });
 
-        private void checkRunning(WebServer server, Timer timer, FutureVar<Tuple> result)
+        private void checkRunning(WebServer server, Timer timer, Future<Tuple> result)
             {
             if (server.isRunning())
                 {

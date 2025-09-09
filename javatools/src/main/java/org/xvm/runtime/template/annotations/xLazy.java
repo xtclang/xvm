@@ -22,11 +22,11 @@ import org.xvm.runtime.template.xException;
 
 
 /**
- * Native implementation of LazyVar.
+ * Native implementation of Lazy.
  */
-public class xLazyVar
+public class xLazy
         extends xVar {
-    public xLazyVar(Container container, ClassStructure structure, boolean fInstance) {
+    public xLazy(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
     }
 
@@ -36,12 +36,12 @@ public class xLazyVar
 
     @Override
     public RefHandle createRefHandle(Frame frame, TypeComposition clazz, String sName) {
-        return new LazyVarHandle(clazz, sName);
+        return new LazyHandle(clazz, sName);
     }
 
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
-        LazyVarHandle hThis = (LazyVarHandle) hTarget;
+        LazyHandle hThis = (LazyHandle) hTarget;
 
         switch (sPropName) {
         case "assigned":
@@ -59,7 +59,7 @@ public class xLazyVar
                              ObjectHandle hArg, int iReturn) {
         switch (method.getName()) {
         case "set": {
-            LazyVarHandle hLazy = (LazyVarHandle) hTarget;
+            LazyHandle hLazy = (LazyHandle) hTarget;
             if (hLazy.isPropertyOnImmutable()) {
                 return invokeImmutableSet(frame, hLazy, hArg);
             }
@@ -70,7 +70,7 @@ public class xLazyVar
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
     }
 
-    protected int invokeImmutableSet(Frame frame, LazyVarHandle hLazy, ObjectHandle hValue) {
+    protected int invokeImmutableSet(Frame frame, LazyHandle hLazy, ObjectHandle hValue) {
         if (!hValue.isPassThrough()) {
             if (hValue.getType().isA(frame.poolContext().typeFreezable())) {
                 return Utils.callFreeze(frame, hValue, null, frameCaller ->
@@ -84,7 +84,7 @@ public class xLazyVar
         return completeInvokeSet(frame, hLazy, hValue);
     }
 
-    protected int completeInvokeSet(Frame frame, LazyVarHandle hLazy, ObjectHandle hValue) {
+    protected int completeInvokeSet(Frame frame, LazyHandle hLazy, ObjectHandle hValue) {
         synchronized (hLazy) {
             boolean fAllowDupe = hLazy.unregisterAssign(frame.f_fiber);
             if (hLazy.isAssigned()) {
@@ -102,10 +102,10 @@ public class xLazyVar
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
-    protected static class LazyVarHandle
+    protected static class LazyHandle
             extends RefHandle {
         /**
-         * A set of services that have seen this LazyVar unassigned. Only used by lazy properties
+         * A set of services that have seen this Lazy unassigned. Only used by lazy properties
          * on immutable objects that could be shared across services.
          *
          * In theory, this could leak a service reference in a weird scenario, when some code
@@ -114,7 +114,7 @@ public class xLazyVar
          */
         protected Set<Fiber> m_setInitFiber;
 
-        protected LazyVarHandle(TypeComposition clazz, String sName) {
+        protected LazyHandle(TypeComposition clazz, String sName) {
             super(clazz, sName);
         }
 

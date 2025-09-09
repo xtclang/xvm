@@ -319,7 +319,7 @@ public class PropertyComposition
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * @return true if the custom property this class represents is LazyVar annotated.
+     * @return true if the custom property this class represents is Lazy annotated.
      */
     public boolean isLazy() {
         return f_infoProp.isLazy();

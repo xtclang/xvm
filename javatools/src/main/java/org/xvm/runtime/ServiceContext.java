@@ -50,7 +50,7 @@ import org.xvm.runtime.template.xService.PropertyOperation10;
 import org.xvm.runtime.template.xService.PropertyOperation01;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
-import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
+import org.xvm.runtime.template.annotations.xFuture.FutureHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
@@ -1303,7 +1303,7 @@ public class ServiceContext {
 
         boolean fAsync = true;
         for (int iReturn : aiReturn) {
-            if (!frame.isFutureVar(iReturn)) {
+            if (!frame.isFuture(iReturn)) {
                 fAsync = false;
                 break;
             }
@@ -1419,7 +1419,7 @@ public class ServiceContext {
                                 iReturn == A_IGNORE ? A_IGNORE : 0);
 
                 // don't return a FutureHandle, but wait till it's done
-                return idProp.isFutureVar() && iResult == Op.R_NEXT
+                return idProp.isFuture() && iResult == Op.R_NEXT
                     ? ((FutureHandle) frame.f_ahVar[0]).waitAndAssign(frame, 0)
                     : iResult;
             }

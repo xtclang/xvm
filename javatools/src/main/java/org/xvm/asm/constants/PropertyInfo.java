@@ -989,7 +989,7 @@ public class PropertyInfo
     }
 
     /**
-     * @return true iff the property has the LazyVar annotation
+     * @return true iff the property has the Lazy annotation
      */
     public boolean isLazy() {
         return containsRefAnnotation(pool().clzLazy());
@@ -1252,7 +1252,7 @@ public class PropertyInfo
         } else if (hasField() && !isNative()) {
             MethodBody bodyHead = chain[0];
             if (bodyHead.isNative()) {
-                // if a Ref or Var annotation overrides "get" or "set" (e.g. FutureVar), but the
+                // if a Ref or Var annotation overrides "get" or "set" (e.g. Future), but the
                 // implementation is native, we need to replace it with the field access
                 chain = new MethodBody[] {new MethodBody(idMethod, idMethod.getSignature(),
                         Implementation.Field, getFieldIdentity())};

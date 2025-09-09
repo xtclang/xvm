@@ -35,15 +35,15 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
 /**
- * FutureVar native implementation.
+ * Future native implementation.
  */
-public class xFutureVar
+public class xFuture
         extends xVar {
-    public static xFutureVar INSTANCE;
+    public static xFuture INSTANCE;
     public static TypeConstant TYPE;
     public static xEnum COMPLETION;
 
-    public xFutureVar(Container container, ClassStructure structure, boolean fInstance) {
+    public xFuture(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
         if (fInstance) {
@@ -59,7 +59,7 @@ public class xFutureVar
         TypeConstant  typeVar  = xVar.INSTANCE.getCanonicalType();
 
         TYPE       = pool.ensureAnnotatedTypeConstant(typeVar, anno);
-        COMPLETION = (xEnum) f_container.getTemplate("annotations.FutureVar.Completion");
+        COMPLETION = (xEnum) f_container.getTemplate("annotations.Future.Completion");
 
         markNativeMethod("thenDo", null, null);
         markNativeMethod("passTo", null, null);
@@ -93,10 +93,10 @@ public class xFutureVar
         if (!typeActual.isAnnotated()) {
             ConstantPool pool = typeActual.getConstantPool();
 
-            // turn FutureVar<T> into @Future Var<T>
+            // turn Future<T> into @Future Var<T>
             assert typeActual.getDefiningConstant().equals(pool.clzFuture());
 
-            typeActual = pool.ensureFutureVar(typeActual.getParamType(0));
+            typeActual = pool.ensureFuture(typeActual.getParamType(0));
         }
 
         return super.ensureClass(container, typeActual);
@@ -198,7 +198,7 @@ public class xFutureVar
     // ----- native method implementations ---------------------------------------------------------
 
     /**
-     * Implementation of "FutureVar! thenDo(function void () run)"
+     * Implementation of "Future! thenDo(function void () run)"
      */
     protected int invokeThenDo(Frame frame, FutureHandle hThis, FunctionHandle hRun, int iReturn) {
         CompletableFuture<ObjectHandle> cfThis = hThis.getFuture();
@@ -245,7 +245,7 @@ public class xFutureVar
     }
 
     /**
-     * Implementation of "FutureVar! passTo(function void (Referent) consume)"
+     * Implementation of "Future! passTo(function void (Referent) consume)"
      */
     protected int invokePassTo(Frame frame, FutureHandle hThis, FunctionHandle hConsume, int iReturn) {
         CompletableFuture<ObjectHandle> cfThis = hThis.getFuture();
@@ -294,7 +294,7 @@ public class xFutureVar
     }
 
     /**
-     * Implementation of "<NewType> FutureVar!<NewType> transform(function NewType (Referent) convert)"
+     * Implementation of "<NewType> Future!<NewType> transform(function NewType (Referent) convert)"
      */
     protected int invokeTransform(Frame frame, FutureHandle hThis, TypeHandle hNewType,
                                   FunctionHandle hConvert, int iReturn) {
@@ -346,7 +346,7 @@ public class xFutureVar
     }
 
     /**
-     * Implementation of "FutureVar! handle(function Referent (Exception) convert)"
+     * Implementation of "Future! handle(function Referent (Exception) convert)"
      */
     protected int invokeHandle(Frame frame, FutureHandle hThis, FunctionHandle hConvert, int iReturn) {
         CompletableFuture<ObjectHandle> cfThis    = hThis.getFuture();
@@ -400,7 +400,7 @@ public class xFutureVar
     }
 
     /**
-     * Implementation of "<NewType> FutureVar!<NewType>
+     * Implementation of "<NewType> Future!<NewType>
      *                      transformOrHandle(function NewType (Referent?, Exception?) convert)"
      */
     protected int invokeTransformOrHandle(Frame frame, FutureHandle hThis, TypeHandle hNewType,
@@ -443,7 +443,7 @@ public class xFutureVar
     }
 
     /**
-     * Implementation of "<OtherType, NewType> FutureVar!<NewType> and(FutureVar!<OtherType> other,
+     * Implementation of "<OtherType, NewType> Future!<NewType> and(Future!<OtherType> other,
      *                      function NewType (Referent, OtherType) combine)"
      */
     protected int invokeAndFuture(Frame frame, FutureHandle hThis,
@@ -511,7 +511,7 @@ public class xFutureVar
     }
 
     /**
-     * Implementation of "FutureVar!<Referent> or(FutureVar!<Referent> other)"
+     * Implementation of "Future!<Referent> or(Future!<Referent> other)"
      */
     protected int invokeOrFuture(Frame frame, FutureHandle hThis, FutureHandle hThat, int iReturn) {
         CompletableFuture<ObjectHandle> cfThis = hThis.getFuture();
@@ -531,7 +531,7 @@ public class xFutureVar
     }
 
     /**
-     * Implementation of "FutureVar!<Referent> whenComplete(function void (Referent?, Exception?) notify)"
+     * Implementation of "Future!<Referent> whenComplete(function void (Referent?, Exception?) notify)"
      */
     protected int invokeWhenComplete(Frame frame, FutureHandle hThis, FunctionHandle hNotify, int iReturn) {
         CompletableFuture<ObjectHandle> cfThis = hThis.getFuture();
@@ -687,7 +687,7 @@ public class xFutureVar
         }
 
         if (cfThis.isDone()) {
-            return frame.raiseException("FutureVar has already been set");
+            return frame.raiseException("Future has already been set");
         }
 
         cfThis.complete(hValue);
@@ -695,10 +695,10 @@ public class xFutureVar
     }
 
     /**
-     * @return a TypeComposition for a FutureVar of a given referent type
+     * @return a TypeComposition for a Future of a given referent type
      */
     private TypeComposition ensureComposition(Container container, TypeConstant typeReferent) {
-        return ensureClass(container, typeReferent.getConstantPool().ensureFutureVar(typeReferent));
+        return ensureClass(container, typeReferent.getConstantPool().ensureFuture(typeReferent));
     }
 
     /**

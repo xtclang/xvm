@@ -36,7 +36,7 @@ public class DefRegAST extends AST {
       _init = null;
     }
 
-    // At least FutureVar redefines the type so save the AST architected type
+    // At least Future redefines the type so save the AST architected type
     // till after annotation processing
     _reg = X.define(_name,_type);
   }

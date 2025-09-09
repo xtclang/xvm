@@ -214,7 +214,7 @@ public abstract class Container
      * @param frame  the current frame
      * @param sName  the name of the injected object
      * @param type   the type of the injected object
-     * @param hOpts  an optional "opts" handle (see InjectedRef.x)
+     * @param hOpts  an optional "opts" handle (see Inject.x)
      *
      * @return the injectable handle (can be a DeferredCallHandle) or null, if the name is not
      *         known to the container

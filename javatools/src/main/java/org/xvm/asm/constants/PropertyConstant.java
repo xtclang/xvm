@@ -192,7 +192,7 @@ public class PropertyConstant
     /**
      * @return true iff the property has a Future annotation
      */
-    public boolean isFutureVar() {
+    public boolean isFuture() {
         PropertyStructure prop = (PropertyStructure) getComponent();
         return prop != null && prop.isFuture();
     }

@@ -1,8 +1,9 @@
 /**
- * The AutoConversion is used as an annotation on methods for the following compile-time purpose:
+ * [@Auto](AutoConvertible) is used as an annotation on methods for the following compile-time
+ * purpose:
  *
  * * When the compiler is faced with an incompatible assignment from type A to type B, if type A
- *   contains a no-parameter method annotated with AutoConversion that returns type B, then the
+ *   contains a no-parameter method annotated with AutoConvertible that returns type B, then the
  *   compiler will automatically add an invocation of that method to achieve the necessary type
  *   conversion.
  *
@@ -38,6 +39,6 @@
  *   nature. **In other words, "automatic" behavior benefits the writer at the cost of the reader,
  *   and the more easily that the trade-off is accepted, the more likely it is to be wrong.**
  */
-annotation AutoConversion
+annotation AutoConvertible
         into Method {
 }

@@ -20,8 +20,8 @@
  * internal value of the property, and every subsequent access will use that previously calculated
  * value.
  */
-annotation LazyVar<Referent>(function Referent ()? calculate = Null)
-        extends VolatileVar<Referent> {
+annotation Lazy<Referent>(function Referent ()? calculate = Null)
+        extends Volatile<Referent> {
 
     private function Referent ()? calculate;
 
@@ -53,6 +53,6 @@ annotation LazyVar<Referent>(function Referent ()? calculate = Null)
 
         // if this method was not overridden by an implementation that calculated the value, and if
         // no `calculate` function was provided, then the developer needs to do one or the other
-        TODO("construct LazyVar with a calculate function, or override the calc() method");
+        TODO("construct Lazy with a calculate function, or override the calc() method");
     }
 }

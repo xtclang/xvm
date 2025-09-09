@@ -322,7 +322,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
         /**
          * A secondary map of pending operations, null up until the first call to process.
          */
-        protected/private @Lazy HasherMap<Key, FutureVar> pendingByKey.calc() {
+        protected/private @Lazy HasherMap<Key, Future> pendingByKey.calc() {
             return new HasherMap(hasher);
         }
 
@@ -486,13 +486,13 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
         <Result> Result process(Key key, function Result (Entry<Key, Value>) compute) {
             Entry<Key, Value> entry = new KeyEntry(this, key);
             @Future Result result;
-            FutureVar<Result> rVar = &result;
+            Future<Result> rVar = &result;
 
             // ensure that when we complete if there are no more pending actions that
             // we clean our entry from the pending map
             rVar.whenComplete((_, _) -> pendingByKey.remove(key, rVar));
 
-            if (FutureVar pending := pendingByKey.get(key)) {
+            if (Future pending := pendingByKey.get(key)) {
                 // there are pending operations, add our action to the end of the list
                 pendingByKey.put(key, rVar);
                 pending.whenComplete((_, _) -> {

@@ -7,15 +7,15 @@ module Runner {
     @Inject Console console;
 
     void run(String[] modules=[]) {
-        Tuple<FutureVar, ConsoleBuffer>?[] results =
+        Tuple<Future, ConsoleBuffer>?[] results =
             new Array(modules.size, i -> loadAndRun(modules[i]));
         reportResults(results, 0);
     }
 
-    void reportResults(Tuple<FutureVar, ConsoleBuffer>?[] results, Int index) {
+    void reportResults(Tuple<Future, ConsoleBuffer>?[] results, Int index) {
         try {
             while (index < results.size) {
-                Tuple<FutureVar, ConsoleBuffer>? resultTuple = results[index++];
+                Tuple<Future, ConsoleBuffer>? resultTuple = results[index++];
                 if (resultTuple != Null) {
                     resultTuple[0].whenComplete((_, e) -> {
                         console.print(resultTuple[1].backService.toString());
@@ -32,7 +32,7 @@ module Runner {
         }
     }
 
-    Tuple<FutureVar, ConsoleBuffer>? loadAndRun(String moduleName) {
+    Tuple<Future, ConsoleBuffer>? loadAndRun(String moduleName) {
         @Inject("repository") ModuleRepository repository;
 
         try {
