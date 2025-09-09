@@ -23,6 +23,7 @@ import java.io.File
 
 plugins {
     id("org.xtclang.build.xdk.versioning")
+    id("org.xtclang.build.git")
     alias(libs.plugins.xdk.build.publish)
     alias(libs.plugins.xtc)
     alias(libs.plugins.sonatype.publish)
@@ -431,30 +432,40 @@ val test by tasks.existing {
  *
  * For a normal release, we fail if there already is a tag for this version.
  */
+// Configure the central git tagging task with XDK-specific values
+tasks.ensureGitTags.configure {
+    val snapshotOnlyValue = snapshotOnly()
+    val currentVersionValue = semanticVersion.artifactVersion  // Use artifactVersion instead of toString()
+    
+    version.set(currentVersionValue)
+    snapshotOnly.set(snapshotOnlyValue)
+}
+
 val ensureTags by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Ensure that the current commit is tagged with the current version."
 
     // Capture values during configuration phase to avoid runtime project access
-    val snapshotOnly = snapshotOnly()
-    val currentVersion = semanticVersion
-    val gitHubProtocol = xdkBuildLogic.gitHubProtocol()
-    if (!allowPublication()) {
-        logger.lifecycle("[xdk] Skipping publication task, snapshotOnly=${snapshotOnly} for version: '$currentVersion")
+    val snapshotOnlyValue = snapshotOnly()
+    val currentVersionValue = semanticVersion.artifactVersion  // Extract just the version string
+    val allowPublicationValue = allowPublication()  // Extract boolean value
+    
+    if (!allowPublicationValue) {
+        logger.lifecycle("[xdk] Skipping publication task, snapshotOnly=${snapshotOnlyValue} for version: '$currentVersionValue")
     }
     onlyIf {
-        allowPublication()
+        allowPublicationValue
     }
+    
+    // Simply depend on the configured git tagging task
+    dependsOn(tasks.ensureGitTags)
+    
     doLast {
         logger.lifecycle("""
-            [xdk] Ensuring that the current commit is tagged with version.
-            [xdk]     version: $currentVersion
-            [xdk]     snapshotOnly: $snapshotOnly
+            [xdk] Git tagging completed via ensureGitTags task.
+            [xdk]     version: $currentVersionValue
+            [xdk]     snapshotOnly: $snapshotOnlyValue
         """.trimIndent())
-        val tag = gitHubProtocol.ensureTags(snapshotOnly)
-        if (GitHubProtocol.tagCreated(tag)) {
-            logger.lifecycle("[xdk] Created or updated tag '$tag' for version: '$currentVersion'")
-        }
     }
 }
 

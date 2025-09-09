@@ -4,12 +4,16 @@
  */
 
 import XdkDistribution.Companion.normalizeArchitecture
+import org.gradle.process.ExecOperations
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.time.Instant
+import javax.inject.Inject
 
 plugins {
     base
     id("org.xtclang.build.xdk.versioning")
+    id("org.xtclang.build.git")
 }
 
 private val semanticVersion: SemanticVersion by extra
@@ -55,19 +59,15 @@ data class DockerConfig(
     }
 }
 
-fun createDockerConfig(): DockerConfig {
-    val version = semanticVersion.artifactVersion
-    val branch = System.getenv("GH_BRANCH") ?: try {
-        val result = spawn("git", "branch", "--show-current", throwOnError = false, logger = logger)
-        if (result.isSuccessful()) result.output.ifBlank { "master" } else "master"
-    } catch (_: Exception) { "master" }
+fun createDockerConfigFromGitInfo(gitInfoFile: File): DockerConfig {
+    val props = java.util.Properties()
+    gitInfoFile.inputStream().use { props.load(it) }
     
-    val commit = System.getenv("GH_COMMIT") ?: try {
-        val result = spawn("git", "rev-parse", "HEAD", throwOnError = false, logger = logger)
-        if (result.isSuccessful()) result.output else "unknown"
-    } catch (_: Exception) { "unknown" }
-    
-    return DockerConfig(version, branch, commit)
+    return DockerConfig(
+        props.getProperty("version"),
+        props.getProperty("git.branch"),
+        props.getProperty("git.commit")
+    )
 }
 
 
@@ -122,13 +122,17 @@ val buildAmd64 by tasks.registering {
     group = "docker"
     description = "Build Docker image for AMD64 (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
     
-    // Note: XDK dependency managed by root project - docker tasks forwarded with installDist dependency
+    dependsOn(tasks.resolveGitInfo)
+    // Note: XDK dependency managed by root project - docker tasks forwarded with installDist dependency  
     // Declare environment variable as input for proper incremental build tracking
     inputs.property("DIST_ZIP_URL", providers.environmentVariable("DIST_ZIP_URL").orElse(""))
+    inputs.file(tasks.resolveGitInfo.flatMap { it.outputFile })
+    
+    val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
     
     doLast {
         if (!checkCrossPlatformBuild("amd64")) return@doLast
-        val config = createDockerConfig()
+        val config = createDockerConfigFromGitInfo(gitInfoProvider.get().asFile)
         val distZipUrl = System.getenv("DIST_ZIP_URL")
         if (distZipUrl != null) {
             logger.info("Using snapshot distribution: $distZipUrl")
@@ -143,13 +147,17 @@ val buildArm64 by tasks.registering {
     group = "docker"
     description = "Build Docker image for ARM64 (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
     
+    dependsOn(tasks.resolveGitInfo)
     // Note: XDK dependency managed by root project - docker tasks forwarded with installDist dependency
     // Declare environment variable as input for proper incremental build tracking
     inputs.property("DIST_ZIP_URL", providers.environmentVariable("DIST_ZIP_URL").orElse(""))
+    inputs.file(tasks.resolveGitInfo.flatMap { it.outputFile })
+    
+    val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
     
     doLast {
         if (!checkCrossPlatformBuild("arm64")) return@doLast
-        val config = createDockerConfig()
+        val config = createDockerConfigFromGitInfo(gitInfoProvider.get().asFile)
         val distZipUrl = System.getenv("DIST_ZIP_URL")
         if (distZipUrl != null) {
             logger.info("Using snapshot distribution: $distZipUrl")
@@ -163,8 +171,15 @@ val buildArm64 by tasks.registering {
 val buildAll by tasks.registering {
     group = "docker"
     description = "Build multi-platform Docker images (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
+    
+    dependsOn(tasks.resolveGitInfo)
+    inputs.property("DIST_ZIP_URL", providers.environmentVariable("DIST_ZIP_URL").orElse(""))
+    inputs.file(tasks.resolveGitInfo.flatMap { it.outputFile })
+    
+    val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
+    
     doLast {
-        val config = createDockerConfig()
+        val config = createDockerConfigFromGitInfo(gitInfoProvider.get().asFile)
         val distZipUrl = System.getenv("DIST_ZIP_URL")
         if (distZipUrl != null) {
             logger.info("Using snapshot distribution: $distZipUrl")
@@ -178,9 +193,16 @@ val buildAll by tasks.registering {
 val pushAmd64 by tasks.registering {
     group = "docker"
     description = "Push AMD64 Docker image to GitHub Container Registry (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
+    
+    dependsOn(tasks.resolveGitInfo)
+    inputs.property("DIST_ZIP_URL", providers.environmentVariable("DIST_ZIP_URL").orElse(""))
+    inputs.file(tasks.resolveGitInfo.flatMap { it.outputFile })
+    
+    val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
+    
     doLast {
         if (!checkCrossPlatformBuild("amd64")) return@doLast
-        val config = createDockerConfig()
+        val config = createDockerConfigFromGitInfo(gitInfoProvider.get().asFile)
         val distZipUrl = System.getenv("DIST_ZIP_URL")
         if (distZipUrl != null) {
             logger.info("Using snapshot distribution: $distZipUrl")
@@ -194,9 +216,16 @@ val pushAmd64 by tasks.registering {
 val pushArm64 by tasks.registering {
     group = "docker"
     description = "Push ARM64 Docker image to GitHub Container Registry (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
+    
+    dependsOn(tasks.resolveGitInfo)
+    inputs.property("DIST_ZIP_URL", providers.environmentVariable("DIST_ZIP_URL").orElse(""))
+    inputs.file(tasks.resolveGitInfo.flatMap { it.outputFile })
+    
+    val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
+    
     doLast {
         if (!checkCrossPlatformBuild("arm64")) return@doLast
-        val config = createDockerConfig()
+        val config = createDockerConfigFromGitInfo(gitInfoProvider.get().asFile)
         val distZipUrl = System.getenv("DIST_ZIP_URL")
         if (distZipUrl != null) {
             logger.info("Using snapshot distribution: $distZipUrl")
@@ -210,8 +239,15 @@ val pushArm64 by tasks.registering {
 val pushAll by tasks.registering {
     group = "docker"
     description = "Build and push multi-platform Docker images (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
+    
+    dependsOn(tasks.resolveGitInfo)
+    inputs.property("DIST_ZIP_URL", providers.environmentVariable("DIST_ZIP_URL").orElse(""))
+    inputs.file(tasks.resolveGitInfo.flatMap { it.outputFile })
+    
+    val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
+    
     doLast {
-        val config = createDockerConfig()
+        val config = createDockerConfigFromGitInfo(gitInfoProvider.get().asFile)
         val distZipUrl = System.getenv("DIST_ZIP_URL")
         if (distZipUrl != null) {
             logger.info("Using snapshot distribution: $distZipUrl")
@@ -225,9 +261,13 @@ val pushAll by tasks.registering {
 val createManifest by tasks.registering {
     group = "docker"
     description = "Create multi-platform manifest"
-    dependsOn(pushAmd64, pushArm64)
+    dependsOn(pushAmd64, pushArm64, tasks.resolveGitInfo)
+    inputs.file(tasks.resolveGitInfo.flatMap { it.outputFile })
+    
+    val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
+    
     doLast {
-        val config = createDockerConfig()
+        val config = createDockerConfigFromGitInfo(gitInfoProvider.get().asFile)
         val multiTags = config.multiPlatformTags()
         
         multiTags.forEach { tag ->
@@ -337,14 +377,17 @@ fun testDockerImage(imageTag: String, logger: Logger) {
 val testImageFunctionalityAmd64 by tasks.registering {
     group = "docker"
     description = "Test AMD64 Docker image functionality"
-    dependsOn(buildAmd64)
+    dependsOn(buildAmd64, tasks.resolveGitInfo)
     
     inputs.file("test/DockerTest.x")
     inputs.file("Dockerfile")
+    inputs.file(tasks.resolveGitInfo.flatMap { it.outputFile })
     outputs.file(layout.buildDirectory.file("docker-test-amd64-results.txt"))
     
+    val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
+    
     doLast {
-        val config = createDockerConfig()
+        val config = createDockerConfigFromGitInfo(gitInfoProvider.get().asFile)
         val imageTag = "${config.baseImage}:${config.tagPrefix}-amd64"
         testDockerImage(imageTag, logger)
         outputs.files.singleFile.writeText("AMD64 Docker tests passed at ${Instant.now()}")
@@ -354,14 +397,17 @@ val testImageFunctionalityAmd64 by tasks.registering {
 val testImageFunctionalityArm64 by tasks.registering {
     group = "docker"
     description = "Test ARM64 Docker image functionality"
-    dependsOn(buildArm64)
+    dependsOn(buildArm64, tasks.resolveGitInfo)
     
     inputs.file("test/DockerTest.x")
     inputs.file("Dockerfile")
+    inputs.file(tasks.resolveGitInfo.flatMap { it.outputFile })
     outputs.file(layout.buildDirectory.file("docker-test-arm64-results.txt"))
     
+    val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
+    
     doLast {
-        val config = createDockerConfig()
+        val config = createDockerConfigFromGitInfo(gitInfoProvider.get().asFile)
         val imageTag = "${config.baseImage}:${config.tagPrefix}-arm64"
         testDockerImage(imageTag, logger)
         outputs.files.singleFile.writeText("ARM64 Docker tests passed at ${Instant.now()}")

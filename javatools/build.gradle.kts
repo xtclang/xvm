@@ -8,52 +8,29 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.xdk.build.java)
+    id("org.xtclang.build.git")
 }
 
 private val semanticVersion: SemanticVersion by extra
 
-// Create a custom task for generating git properties to avoid script object references
-val generateGitProperties by tasks.registering {
-    val outputFile = layout.buildDirectory.file("generated/resources/main/git.properties")
-    val versionString = version.toString()
-    
-    // Make the task depend on environment variables so Gradle knows when to re-run it  
-    inputs.property("GH_COMMIT", providers.environmentVariable("GH_COMMIT").orElse(""))
-    inputs.property("GH_BRANCH", providers.environmentVariable("GH_BRANCH").orElse("master"))
-    inputs.property("version", versionString)
-    
-    outputs.file(outputFile)
-    
-    doLast {
-        logger.info(">>> GENERATING GIT PROPERTIES")
-        
-        // Use environment variables if available, otherwise use defaults
-        val ghCommit = System.getenv("GH_COMMIT")
-        val ghBranch = System.getenv("GH_BRANCH") ?: "master"
-        
-        val props = mutableMapOf<String, String>()
-        props["git.branch"] = ghBranch
-        props["git.commit.id"] = ghCommit ?: "unknown"
-        props["git.dirty"] = "false" // Assume clean for configuration cache compatibility
-        props["git.build.version"] = versionString
-        
-        logger.info("Calculated git properties: $props")
-        val gitPropsFile = outputFile.get().asFile
-        logger.info("Writing git properties file: ${gitPropsFile.absolutePath}")
-        logger.debug("  Parent dir exists: ${gitPropsFile.parentFile.exists()}")
-        gitPropsFile.parentFile.mkdirs()
-        logger.debug("  Parent dir exists after mkdirs: ${gitPropsFile.parentFile.exists()}")
-        gitPropsFile.writeText(props.map { "${it.key}=${it.value}" }.joinToString("\n"))
-        logger.info("Git configuration properties:: ${gitPropsFile.readText()}")
-    }
-}
-
-// Make processResources depend on our custom task
+// Use the standard git convention plugin instead of custom logic
 tasks.processResources {
-    dependsOn(generateGitProperties)
+    dependsOn(tasks.resolveGitInfo)
 }
 
-val processResources by tasks.existing
+// Separate task to copy git info to legacy location
+val copyGitInfoForBuildInfo by tasks.registering(Copy::class) {
+    description = "Copy git info to legacy location for BuildInfo compatibility"
+    dependsOn(tasks.resolveGitInfo)
+    
+    from(tasks.resolveGitInfo.flatMap { it.outputFile })
+    into(layout.buildDirectory.dir("resources/main"))
+    rename { "git.properties" }
+}
+
+tasks.processResources {
+    dependsOn(copyGitInfoForBuildInfo)
+}
 
 // TODO: Move these to common-plugins, the XDK composite build does use them in some different places.
 val xdkJavaToolsProvider by configurations.registering {
@@ -101,15 +78,15 @@ val copyEcstasyResources by tasks.registering(Copy::class) {
 
 val generateBuildInfo by tasks.registering {
     description = "Generate build-info.properties with version and git information"
-    dependsOn(processResources)
+    dependsOn(tasks.resolveGitInfo)
     
     val versionPropsFile = compositeRootProjectDirectory.file("version.properties")
     val outputFile = layout.buildDirectory.file("resources/main/build-info.properties")
-    val gitPropsFile = layout.buildDirectory.file("resources/main/git.properties")
+    val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
     val intellijOutputFile = project.file("out/production/resources/build-info.properties")
     
     inputs.file(versionPropsFile)
-    inputs.file(gitPropsFile).optional()
+    inputs.file(gitInfoProvider)
     outputs.file(outputFile)
     // Conditionally add IntelliJ output if directory exists
     if (intellijOutputFile.parentFile.exists()) {
@@ -121,10 +98,11 @@ val generateBuildInfo by tasks.registering {
         val buildInfo = Properties()
         versionPropsFile.asFile.inputStream().use { buildInfo.load(it) }
         
-        // Add git information from git.properties
-        if (gitPropsFile.get().asFile.exists()) {
+        // Add git information directly from git info file
+        val gitInfoFile = gitInfoProvider.get().asFile
+        if (gitInfoFile.exists()) {
             val gitProps = Properties()
-            gitPropsFile.get().asFile.inputStream().use { gitProps.load(it) }
+            gitInfoFile.inputStream().use { gitProps.load(it) }
             
             gitProps.getProperty("git.commit.id")?.let { buildInfo.setProperty("git.commit", it) }
             
@@ -168,7 +146,7 @@ tasks.compileTestJava {
 }
 
 val jar by tasks.existing(Jar::class) {
-    dependsOn(processResources, generateBuildInfo)
+    dependsOn(tasks.processResources, generateBuildInfo)
     
     // CRITICAL: Explicitly declare that this task reads from compileClasspath
     // This forces Gradle to wait for javatools_utils:jar and other dependency tasks to complete

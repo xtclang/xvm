@@ -18,10 +18,6 @@ abstract class XdkProjectBuildLogic(protected val project: Project) {
 }
 
 class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic(project) {
-    private val xdkGit: GitHubProtocol by lazy {
-        // A semantic version must be resolved when this is called, or we will get an exception.
-        GitHubProtocol(project)
-    }
 
     private val xdkVersions: XdkVersionHandler by lazy {
         XdkVersionHandler(project)
@@ -48,9 +44,7 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
         return xdkDistributions
     }
 
-    fun gitHubProtocol(): GitHubProtocol {
-        return xdkGit
-    }
+    // GitHubProtocol has been removed - use org.xtclang.build.git convention plugin tasks instead
 
     companion object {
         const val XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE = "xdk-distribution-archive"
