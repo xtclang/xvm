@@ -576,9 +576,10 @@ val cleanImages by tasks.registering {
     group = "docker"
     description = "Clean up old Docker package versions (default: keep 10 most recent, protect master images)"
     
-    val keepCount = project.findProperty("keepCount")?.toString()?.toIntOrNull() ?: 10
-    val isDryRun = project.findProperty("dryRun")?.toString()?.toBoolean() ?: false
-    val isForced = project.findProperty("force")?.toString()?.toBoolean() ?: false
+    // Extract property values during configuration to avoid capturing project references
+    val keepCount = findProperty("keepCount")?.toString()?.toIntOrNull() ?: 10
+    val isDryRun = findProperty("dryRun")?.toString()?.toBoolean() ?: false
+    val isForced = findProperty("force")?.toString()?.toBoolean() ?: false
     
     doLast {
         logger.lifecycle("🧹 Docker Package Cleanup")

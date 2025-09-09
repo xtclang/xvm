@@ -58,9 +58,6 @@ publishing {
 }
 
 tasks.withType<PublishToMavenRepository>().configureEach {
-    // Disable configuration cache for publishing tasks due to Maven plugin incompatibilities
-    notCompatibleWithConfigurationCache("Maven publishing tasks have configuration cache serialization issues")
-    
     onlyIf {
         allowPublicationValue
     }
