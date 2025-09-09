@@ -60,6 +60,6 @@ public class JumpFalse
     @Override
     protected void buildUnary(BuildContext bctx, CodeBuilder code) {
         bctx.loadArgument(code, m_nArg);
-        code.ifeq(bctx.getLabel(getAddress() + m_ofJmp));
+        code.ifeq(bctx.ensureLabel(code, getAddress() + m_ofJmp));
     }
 }

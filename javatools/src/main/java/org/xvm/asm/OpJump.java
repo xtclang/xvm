@@ -5,13 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.lang.classfile.CodeBuilder;
-
 import java.util.List;
 
 import org.xvm.asm.op.Label;
-
-import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 
@@ -118,13 +114,6 @@ public abstract class OpJump
     @Override
     public String toString() {
         return toName(getOpCode()) + ' ' + getLabelDesc();
-    }
-
-    // ----- JIT support ---------------------------------------------------------------------------
-
-    @Override
-    public void preprocess(BuildContext bctx, CodeBuilder code) {
-        bctx.addLabel(code, getAddress() + m_ofJmp);
     }
 
     // ----- fields --------------------------------------------------------------------------------

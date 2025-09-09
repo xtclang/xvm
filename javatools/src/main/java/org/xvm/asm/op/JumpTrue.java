@@ -60,6 +60,6 @@ public class JumpTrue
     @Override
     protected void buildUnary(BuildContext bctx, CodeBuilder code) {
         bctx.loadArgument(code, m_nArg);
-        code.ifne(bctx.getLabel(getAddress() + m_ofJmp));
+        code.ifne(bctx.ensureLabel(code, getAddress() + m_ofJmp));
     }
 }

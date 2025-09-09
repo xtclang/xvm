@@ -34,8 +34,6 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.util.ListMap;
-
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_long;
 
@@ -94,11 +92,6 @@ public class BuildContext {
     public final boolean         isOptimized;
     public final boolean         isFunction;
     public final boolean         isConstructor;
-
-    /**
-     * The ListMap of {@link Label}s indexed by the corresponding Op's address.
-     */
-    public final ListMap<Integer, Label> labels = new ListMap<>();
 
     /**
      * The map of {@link Slot}s indexed by the Var index.
@@ -245,17 +238,22 @@ public class BuildContext {
     }
 
     /**
-     * Register a label for the specified address.
+     * Ensure there is a Java label associated with the specified Op address.
      */
-    public void addLabel(CodeBuilder code, int opAddress) {
-        labels.putIfAbsent(opAddress, code.newLabel());
-    }
+    public java.lang.classfile.Label ensureLabel(CodeBuilder code, int opAddress) {
+        Op[] ops = methodStruct.getOps();
+        Op   op  = ops[opAddress];
+        if (op instanceof org.xvm.asm.op.Label label) {
+            return label.getLabel();
+        }
+        // replace the original op with a Label op
+        java.lang.classfile.Label javaLabel = code.newLabel();
+        org.xvm.asm.op.Label      xvmLabel  = new org.xvm.asm.op.Label(opAddress);
 
-    /**
-     * Get a label for the specified address.
-     */
-    public Label getLabel(int opAddress) {
-        return labels.get(opAddress);
+        xvmLabel.setLabel(javaLabel);
+        xvmLabel.append(op);
+        ops[opAddress] = xvmLabel;
+        return javaLabel;
     }
 
     /**

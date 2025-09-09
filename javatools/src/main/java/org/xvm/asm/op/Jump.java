@@ -119,7 +119,7 @@ public class Jump
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        code.goto_(bctx.getLabel(getAddress() + m_ofJmp));
+        code.goto_(bctx.ensureLabel(code, getAddress() + m_ofJmp));
     }
 
     // ----- fields --------------------------------------------------------------------------------

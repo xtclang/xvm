@@ -419,12 +419,6 @@ public abstract class Op {
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
-     * Collect all the necessary information for the subsequent {@link #build}.
-     */
-    public void preprocess(BuildContext bctx, CodeBuilder code) {
-    }
-
-    /**
      * Build the Java code for this op.
      */
     public void build(BuildContext bctx, CodeBuilder code) {

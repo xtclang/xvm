@@ -30,7 +30,6 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 import static org.xvm.javajit.Builder.CD_Container;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_JavaString;
-import static org.xvm.javajit.Builder.CD_LinkerCtx;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -310,11 +309,6 @@ public abstract class OpCondJump
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void preprocess(BuildContext bctx, CodeBuilder code) {
-        bctx.addLabel(code, getAddress() + m_ofJmp);
-    }
-
-    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         if (isBinaryOp()) {
             buildBinary(bctx, code);
@@ -333,7 +327,7 @@ public abstract class OpCondJump
         assert typeCommon.equals(bctx.getConstant(m_nType));
 
         if (cdCommon.isPrimitive()) {
-            Label  lblJump = bctx.getLabel(getAddress() + m_ofJmp);
+            Label  lblJump = bctx.ensureLabel(code, getAddress() + m_ofJmp);
             String desc    = cdCommon.descriptorString();
             switch (desc) {
             case "I", "S", "B", "C", "Z":
@@ -374,17 +368,16 @@ public abstract class OpCondJump
     }
 
     protected void buildUnary(BuildContext bctx, CodeBuilder code) {
-        Label lblJump = bctx.getLabel(getAddress() + m_ofJmp);
+        Label lblJump = bctx.ensureLabel(code, getAddress() + m_ofJmp);
         int   op      = getOpCode();
 
         switch (op) {
         case OP_JMP_COND, OP_JMP_NCOND:
             bctx.loadCtx(code);
-            code.getfield(CD_Ctx, "container", CD_Container)
-                .checkcast(Builder.CD_LinkerCtx);
+            code.getfield(CD_Ctx, "container", CD_Container);
             bctx.loadArgument(code, m_nArg);
-            code.invokeinterface(CD_LinkerCtx, "isSpecified",
-                                 MethodTypeDesc.of(CD_boolean, CD_JavaString));
+            code.invokevirtual(CD_Container, "isSpecified",
+                               MethodTypeDesc.of(CD_boolean, CD_JavaString));
             if (op == OP_JMP_COND) {
                 code.ifne(lblJump);
             } else {

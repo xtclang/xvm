@@ -1132,35 +1132,9 @@ public class CommonBuilder
 
         if (Arrays.stream(TEST_SET).anyMatch(name -> className.toLowerCase().contains(name))) {
             Op[] ops = bctx.methodStruct.getOps();
+
             for (Op op : ops) {
-                op.preprocess(bctx, code);
-            }
-
-            // the collected labels need to be bound before the corresponding ops being processed
-            var   labels     = bctx.labels;
-            int   labelCount = labels.size();
-            int   nextIndex  = 0;
-            int   nextAddr   = -1;
-            Label nextLabel  = null;
-            if (labelCount > 0) {
-                var nextEntry = labels.entryAt(0);
-                nextAddr  = nextEntry.getKey();
-                nextLabel = nextEntry.getValue();
-            }
-            for (int i = 0, c = ops.length; i < c; i++) {
-                if (i == nextAddr) {
-                    code.labelBinding(nextLabel);
-
-                    if (++nextIndex < labelCount) {
-                        var nextEntry = labels.entryAt(nextIndex);
-                        nextAddr  = nextEntry.getKey();
-                        nextLabel = nextEntry.getValue();
-                    } else {
-                        nextAddr = -1;
-                    }
-                }
-
-                ops[i].build(bctx, code);
+                op.build(bctx, code);
             }
         } else {
             if (SKIP_SET.add(className)) {

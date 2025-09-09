@@ -8,7 +8,6 @@ import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.LinkerContext;
 
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -17,6 +16,7 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
+
 import static org.xvm.javajit.JitFlavor.Specific;
 
 /**
@@ -454,7 +454,6 @@ public abstract class Builder {
     public static final ClassDesc CD_Container     = ClassDesc.of(Container.class.getName());
     public static final ClassDesc CD_Ctx           = ClassDesc.of(Ctx.class.getName());
     public static final ClassDesc CD_CtorCtx       = ClassDesc.of(Ctx.CtorCtx.class.getName());
-    public static final ClassDesc CD_LinkerCtx     = ClassDesc.of(LinkerContext.class.getName());
     public static final ClassDesc CD_TypeConstant  = ClassDesc.of(TypeConstant.class.getName());
     public static final ClassDesc CD_TypeSystem    = ClassDesc.of(TypeSystem.class.getName());
 
