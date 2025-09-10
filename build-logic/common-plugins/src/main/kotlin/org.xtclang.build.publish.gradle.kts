@@ -97,41 +97,19 @@ val listTags by tasks.registering {
     }
 }
 
-val deleteLocalPublications by tasks.registering {
-    doLast {
-        val repoDir = File(userHome, ".m2/repository/org/xtclang/$projectName")
-        if (!repoDir.exists()) {
-            logger.warn("[build-logic] No local publications found in '${repoDir.absolutePath}'.")
-            return@doLast
-        }
-
-        val xtclangDir = repoDir.parentFile
-        require(xtclangDir.exists() && xtclangDir.isDirectory) {
-            "Illegal state: parent directory of '$repoDir' does not exist."
-        }
-        logger.lifecycle("[build-logic] Deleting all local publications in '${repoDir.absolutePath}'.")
-        delete(repoDir)
-        val xtclangFiles = xtclangDir.listFiles()
-        if (xtclangFiles == null || xtclangFiles.isEmpty()) {
-            logger.lifecycle("[build-logic] Deleting empty parent directory '${xtclangDir.absolutePath}'.")
-            delete(xtclangDir)
-        }
-    }
+val deleteLocalPublications by tasks.registering(DeleteLocalPublicationsTask::class) {
+    group = PUBLISH_TASK_GROUP
+    description = "Delete all local Maven publications for this project from the mavenLocal() repository."
+    userHomePath.set(userHome)
+    projectName.set(providers.provider { project.name })
 }
 
-val listLocalPublications by tasks.registering {
+val listLocalPublications by tasks.registering(ListLocalPublicationsTask::class) {
     group = PUBLISH_TASK_GROUP
     description = "Task that lists local Maven publications for this project from the mavenLocal() repository."
-    doLast {
-        logger.lifecycle("[build-logic] '$name' Listing local publications (and their artifacts) for project '$projectGroup:$projectName':")
-        val repoDir = File(userHome, ".m2/repository/org/xtclang/$projectName")
-        if (!repoDir.exists()) {
-            logger.warn("[build-logic] WARNING: No local publications found on disk at: '${repoDir.absolutePath}'.")
-        } else {
-            logger.lifecycle("[build-logic] Local publications found at: '${repoDir.absolutePath}'.")
-        }
-        logger.warn("[build-logic] Publication listing functionality moved to org.xtclang.build.git convention plugin")
-    }
+    userHomePath.set(userHome)
+    projectName.set(providers.provider { project.name })
+    projectGroup.set(providers.provider { project.group.toString() })
 }
 
 val listRemotePublications by tasks.registering {

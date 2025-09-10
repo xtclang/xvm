@@ -17,7 +17,7 @@ plugins.withId("org.xtclang.build.git") {
         platforms: List<String>,
         action: String,
         architectureCheck: String? = null
-    ) = tasks.register(taskName, DockerBuildTask::class) {
+    ) = tasks.register(taskName, DockerTask::class) {
         group = "docker"
         description = "Build Docker image for ${platforms.joinToString("/")} (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
         
