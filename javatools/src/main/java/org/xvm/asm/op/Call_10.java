@@ -5,11 +5,15 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpCallable;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -144,6 +148,15 @@ public class Call_10
     protected String getParamsString() {
         return Argument.toIdString(m_argValue, m_nArgValue);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        buildCall(bctx, code, new int[] {m_nArgValue});
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int m_nArgValue;
 

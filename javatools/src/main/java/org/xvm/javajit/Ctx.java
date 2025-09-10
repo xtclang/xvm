@@ -9,6 +9,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.constants.TypeConstant;
 
 import static java.lang.constant.ConstantDescs.CD_int;
+import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_JavaObject;
 import static org.xvm.javajit.Builder.CD_JavaString;
@@ -123,7 +124,21 @@ public final class Ctx {
         // TODO
     }
 
+    // ----- Constructor support -------------------------------------------------------------------
+
+    public CtorCtx ctorCtx() {
+        return new CtorCtx();
+    }
+
+    /**
+     * The constructor context is required if a “finally” chain exists.
+     */
+    public static class CtorCtx {
+        // TODO CP:
+    }
+
     // ----- Container and Service support ---------------------------------------------------------
+
     // TODO
 
 
@@ -143,11 +158,19 @@ public final class Ctx {
         return supplier == null ? null : supplier.apply(opts);
     }
 
+    // ----- debugging support ---------------------------------------------------------------------
+
+    public void log(java.lang.String message) {
+        System.err.println(message);
+    }
+
+    // ----- Ctx method descriptors ----------------------------------------------------------------
+
+    public static final MethodTypeDesc MD_log = MethodTypeDesc.of(CD_void, CD_JavaString);
+
     public static final MethodTypeDesc MD_getConstant = MethodTypeDesc.of(
         ClassDesc.of(Constant.class.getName()), CD_int);
 
     public static MethodTypeDesc MD_inject = MethodTypeDesc.of(
         CD_JavaObject, CD_TypeConstant, CD_JavaString, CD_JavaObject);
-
-
 }

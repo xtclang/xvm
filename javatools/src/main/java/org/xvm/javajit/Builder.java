@@ -10,11 +10,14 @@ import java.lang.constant.MethodTypeDesc;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
+
+import static org.xvm.javajit.JitFlavor.Specific;
 
 /**
  * Base class for JIT class builders.
@@ -55,6 +58,58 @@ public abstract class Builder {
         }
 
     /**
+     * Generate a value "load" for the specified Java class.
+     */
+    public static void load(CodeBuilder code, ClassDesc cd, int slot) {
+        if (cd.isPrimitive()) {
+            switch (cd.descriptorString()) {
+            case "I", "S", "B", "C", "Z":
+                code.iload(slot);
+                break;
+            case "J":
+                code.lload(slot);
+                break;
+            case "F":
+                code.fload(slot);
+                break;
+            case "D":
+                code.dload(slot);
+                break;
+            default:
+                throw new IllegalStateException();
+            }
+        } else {
+            code.aload(slot);
+        }
+    }
+
+    /**
+     * Generate a value "store" for the specified Java class.
+     */
+    public static void store(CodeBuilder code, ClassDesc cd, int slot) {
+        if (cd.isPrimitive()) {
+            switch (cd.descriptorString()) {
+            case "I", "S", "B", "C", "Z":
+                code.istore(slot);
+                break;
+            case "J":
+                code.lstore(slot);
+                break;
+            case "F":
+                code.fstore(slot);
+                break;
+            case "D":
+                code.dstore(slot);
+                break;
+            default:
+                throw new IllegalStateException();
+            }
+        } else {
+            code.astore(slot);
+        }
+    }
+
+    /**
      * Generate a default value "load" for the specified Java class.
      */
     public static void defaultLoad(CodeBuilder code, ClassDesc cd) {
@@ -78,6 +133,13 @@ public abstract class Builder {
         } else {
             code.aconst_null();
         }
+    }
+
+    /**
+     * Generate a "load" for the XTC `Null` value.
+     */
+    public static void loadNull(CodeBuilder code) {
+        code.getstatic(CD_Nullable, "Null", CD_Nullable);
     }
 
     /**
@@ -336,6 +398,20 @@ public abstract class Builder {
         }
     }
 
+    /**
+     * Convert the "void construct$0(...)" to "This new$0(...)"
+     */
+    public static JitMethodDesc convertConstructToNew(TypeInfo typeInfo, String className,
+                                                      JitMethodDesc jmdCtor) {
+        JitParamDesc retDesc = new JitParamDesc(typeInfo.getType(), Specific,
+                ClassDesc.of(className), 0, -1, false);
+
+        JitParamDesc[] standardReturns  = new JitParamDesc[] {retDesc};
+        JitParamDesc[] optimizedReturns = jmdCtor.isOptimized ? standardReturns : null;
+        return new JitMethodDesc(standardReturns,  jmdCtor.standardParams,
+                                 optimizedReturns, jmdCtor.optimizedParams);
+    }
+
     // ----- native class names --------------------------------------------------------------------
 
     public static final String N_Object      = "org.xtclang.ecstasy.Object";
@@ -355,8 +431,10 @@ public abstract class Builder {
 
     // ----- well-known suffixes -------------------------------------------------------------------
 
-    public static final String OPT = "$p";   // method contains primitive types
-    public static final String EXT = "$ext"; // a multi-slot extension field of a primitive field
+    public static final String NEW  = "$new";  // the instance creation static method
+    public static final String INIT = "$init"; // the singleton initialization instance method
+    public static final String OPT  = "$p";    // method contains primitive types
+    public static final String EXT  = "$ext";  // a multi-slot extension field of a primitive field
 
     // ----- well-known class descriptors ----------------------------------------------------------
 
@@ -375,6 +453,7 @@ public abstract class Builder {
 
     public static final ClassDesc CD_Container     = ClassDesc.of(Container.class.getName());
     public static final ClassDesc CD_Ctx           = ClassDesc.of(Ctx.class.getName());
+    public static final ClassDesc CD_CtorCtx       = ClassDesc.of(Ctx.CtorCtx.class.getName());
     public static final ClassDesc CD_TypeConstant  = ClassDesc.of(TypeConstant.class.getName());
     public static final ClassDesc CD_TypeSystem    = ClassDesc.of(TypeSystem.class.getName());
 

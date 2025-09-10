@@ -4,11 +4,17 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpMove;
 import org.xvm.asm.Register;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.Builder;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -71,5 +77,16 @@ public class Move
             return true;
         }
         return false;
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        Slot slotFrom = bctx.loadArgument(code, m_nFromValue);
+        Slot slotTo   = bctx.ensureSlot(m_nToValue, slotFrom.type(), slotFrom.cd(), "");
+
+        Builder.load(code,  slotFrom.cd(), slotFrom.slot());
+        Builder.store(code, slotTo.cd(), slotTo.slot());
     }
 }

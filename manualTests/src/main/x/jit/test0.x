@@ -17,10 +17,13 @@ module test0.examples.org {
         (Int? i1N, Int i2N) = call2N(10);
         console.print(i2N);
         console.print(i1N);
-//
-//        if (Int i3 := call3(0)) {
-//            i3++;
-//        }
+
+        if (Int i3 := call3(30)) {
+            console.print(i3);
+        }
+
+        console.print(call4(-1));
+        console.print(call4(1));
     }
 
     Int call1(Int i, Int j = 2) {
@@ -32,11 +35,15 @@ module test0.examples.org {
     (Int?, Int) call2N(Int i) {
         return Null, i+2;
     }
-//    conditional Int call3(Int i) {
-//        return True, i;
-//    }
-//
-//    Boolean call4(Int i) {
-//        return i > 0;
-//    }
+    conditional Int call3(Int i) {
+        if (i > -1) {
+            return True, i + 3;
+        }
+        return False;
+    }
+
+    static Boolean call4(Int i) {
+        assert i > 0;
+        return i > 7;
+    }
 }

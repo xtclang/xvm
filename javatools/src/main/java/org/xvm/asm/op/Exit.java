@@ -1,8 +1,12 @@
 package org.xvm.asm.op;
 
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 
@@ -46,5 +50,12 @@ public class Exit
     @Override
     public void simulate(Scope scope) {
         scope.exit(this);
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        // ignore for now
     }
 }

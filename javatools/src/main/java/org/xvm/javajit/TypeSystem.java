@@ -303,7 +303,8 @@ public class TypeSystem {
                 // TODO: force some of them or make configurable
                 ClassFile classFile = ClassFile.of(
                     ClassFile.ClassHierarchyResolverOption.of(
-                        ClassHierarchyResolver.ofClassLoading(loader))
+                        ClassHierarchyResolver.ofClassLoading(loader)),
+                    ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS
                 );
 
                 return classFile.build(ClassDesc.of(className), handler);

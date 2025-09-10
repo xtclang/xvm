@@ -1,8 +1,12 @@
 package org.xvm.asm.op;
 
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 
@@ -49,6 +53,15 @@ public class Enter
 
         m_nNextVar = scope.getCurVars();
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        // ignore for now
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private transient int m_nNextVar;
 }

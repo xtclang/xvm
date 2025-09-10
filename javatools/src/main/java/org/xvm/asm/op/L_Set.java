@@ -5,11 +5,15 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpProperty;
 
 import org.xvm.asm.constants.PropertyConstant;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -94,8 +98,17 @@ public class L_Set
 
     @Override
     public String toString() {
-        return super.toString()+ ", " + Argument.toIdString(m_argValue, m_nValue);
+        return super.toString() + ", " + Argument.toIdString(m_argValue, m_nValue);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        bctx.buildSetProperty(code, bctx.loadThis(code), m_nPropId, m_nValue);
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int m_nValue;
 

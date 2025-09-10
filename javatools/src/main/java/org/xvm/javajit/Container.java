@@ -1,11 +1,18 @@
 package org.xvm.javajit;
 
+import org.xvm.asm.LinkerContext;
+
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.VersionConstant;
+
 import static org.xvm.util.Handy.require;
 
 /**
  * Represents an Ecstasy `Container`.
  */
-public class Container {
+public class Container
+        implements LinkerContext {
     /**
      * Construct a new Ecstasy container.
      *
@@ -98,4 +105,33 @@ public class Container {
     // TODO
     // public long committed()
     // public long allocated()
+
+    // ----- LinkerContext interface ---------------------------------------------------------------
+
+    @Override
+    public boolean isSpecified(String sName) {
+        // TODO CP: environment based?
+        return switch (sName) {
+            case "debug", "test" -> true;
+            default              -> false;
+        };
+    }
+
+    @Override
+    public boolean isPresent(IdentityConstant constId) {
+        // TODO CP: is this sufficient - part of the Ecstasy module?
+        return constId.getModuleConstant().equals(typeSystem.mainModule().getIdentityConstant());
+    }
+
+    @Override
+    public boolean isVersionMatch(ModuleConstant constModule, VersionConstant constVer) {
+        // TODO CP
+        return true;
+    }
+
+    @Override
+    public boolean isVersion(VersionConstant constVer) {
+        // TODO CP:
+        return true;
+    }
 }

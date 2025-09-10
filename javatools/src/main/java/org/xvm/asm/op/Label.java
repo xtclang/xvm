@@ -1,6 +1,8 @@
 package org.xvm.asm.op;
 
 
+import java.lang.classfile.CodeBuilder;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -8,6 +10,8 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.compiler.ast.Context;
+
+import org.xvm.javajit.BuildContext;
 
 
 /**
@@ -81,6 +85,43 @@ public class Label
 
         return sb.toString();
     }
+
+    // ----- JIT support ------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        assert m_label != null;
+        code.labelBinding(m_label);
+        getNextOp().build(bctx, code);
+    }
+
+    /**
+     * Ensure there is a Java label associated with this Prefix.
+     */
+    public void setLabel(java.lang.classfile.Label label) {
+        assert m_label == null;
+        m_label = label;
+    }
+
+    /**
+     * @return the associated label (if any)
+     */
+    public java.lang.classfile.Label getLabel() {
+        return m_label;
+    }
+
+    // ----- fields -----------------------------------------------------------------------
+
+    /**
+     * The "next" op that this op acts as a prefix for. Note that the next op may itself be a
+     * prefix op, so this can act as a linked list.
+     */
+    private Op m_op;
+
+    /**
+     * The label associated with this Prefix.
+     */
+    private java.lang.classfile.Label m_label;
 
     /**
      * A name of the label, which is typically auto-generated. This is only for debugging; it is

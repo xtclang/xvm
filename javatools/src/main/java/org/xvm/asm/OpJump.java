@@ -116,6 +116,8 @@ public abstract class OpJump
         return toName(getOpCode()) + ' ' + getLabelDesc();
     }
 
+    // ----- fields --------------------------------------------------------------------------------
+
     protected int m_ofJmp;
 
     private Op m_opDest;
