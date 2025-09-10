@@ -5,6 +5,7 @@
 
 import XdkDistribution.Companion.normalizeArchitecture
 import org.gradle.process.ExecOperations
+import org.gradle.workers.WorkerExecutor
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.time.Instant
@@ -14,6 +15,7 @@ plugins {
     base
     id("org.xtclang.build.xdk.versioning")
     id("org.xtclang.build.git")
+    id("org.xtclang.build.docker")
 }
 
 private val semanticVersion: SemanticVersion by extra
@@ -70,13 +72,27 @@ fun createDockerConfigFromGitInfo(gitInfoFile: File): DockerConfig {
     )
 }
 
+// Configuration cache compatible function for Docker config setup and logging
+fun setupDockerConfigAndLog(gitInfoFile: File, taskLogger: Logger): Pair<DockerConfig, String?> {
+    val config = createDockerConfigFromGitInfo(gitInfoFile)
+    val distZipUrl = System.getenv("DIST_ZIP_URL")
+    
+    if (distZipUrl != null) {
+        taskLogger.info("Using snapshot distribution: $distZipUrl")
+    } else {
+        taskLogger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
+    }
+    
+    return Pair(config, distZipUrl)
+}
 
-fun execDockerCommand(cmd: List<String>) {
+
+fun execDockerCommand(cmd: List<String>, logger: Logger) {
     logger.info("Docker: ${cmd.joinToString(" ")}")
     
     // Use ProcessBuilder for live output streaming
     val builder = ProcessBuilder(cmd).redirectErrorStream(true)
-    builder.directory(projectDir)
+    builder.directory(File(System.getProperty("user.dir")))
     
     val process = builder.start()
     
@@ -93,7 +109,7 @@ fun execDockerCommand(cmd: List<String>) {
     }
 }
 
-fun buildDockerImage(config: DockerConfig, platforms: List<String>, tags: List<String>, action: String, distZipUrl: String? = null) {
+fun buildDockerImage(config: DockerConfig, platforms: List<String>, tags: List<String>, action: String, logger: Logger, distZipUrl: String? = null) {
     val platformArg = platforms.joinToString(",")
     val cmd = listOf("docker", "buildx", "build", "--platform", platformArg) +
               listOf("--progress=${System.getenv("DOCKER_BUILDX_PROGRESS") ?: "plain"}") +
@@ -102,7 +118,7 @@ fun buildDockerImage(config: DockerConfig, platforms: List<String>, tags: List<S
               config.cacheArgs(if (platforms.size == 1) platforms[0].substringAfter("/") else null) +
               tags.flatMap { listOf("--tag", "${config.baseImage}:${it}") } +
               listOf("--$action", ".")
-    execDockerCommand(cmd)
+    execDockerCommand(cmd, logger)
 }
 
 fun checkCrossPlatformBuild(targetArch: String): Boolean {
@@ -132,40 +148,32 @@ val buildAmd64 by tasks.registering {
     
     doLast {
         if (!checkCrossPlatformBuild("amd64")) return@doLast
-        val config = createDockerConfigFromGitInfo(gitInfoProvider.get().asFile)
-        val distZipUrl = System.getenv("DIST_ZIP_URL")
-        if (distZipUrl != null) {
-            logger.info("Using snapshot distribution: $distZipUrl")
-        } else {
-            logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
-        }
-        buildDockerImage(config, listOf("linux/amd64"), config.tagsForArch("amd64"), "load", distZipUrl)
+        val (config, distZipUrl) = setupDockerConfigAndLog(gitInfoProvider.get().asFile, logger)
+        buildDockerImage(config, listOf("linux/amd64"), config.tagsForArch("amd64"), "load", logger, distZipUrl)
     }
 }
 
-val buildArm64 by tasks.registering {
+val buildArm64 by tasks.registering(DockerBuildTask::class) {
     group = "docker"
     description = "Build Docker image for ARM64 (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
     
     dependsOn(tasks.resolveGitInfo)
-    // Note: XDK dependency managed by root project - docker tasks forwarded with installDist dependency
-    // Declare environment variable as input for proper incremental build tracking
-    inputs.property("DIST_ZIP_URL", providers.environmentVariable("DIST_ZIP_URL").orElse(""))
-    inputs.file(tasks.resolveGitInfo.flatMap { it.outputFile })
     
+    gitInfoFile.set(tasks.resolveGitInfo.flatMap { it.outputFile })
+    platforms.set(listOf("linux/arm64"))
+    action.set("load")
+    distZipUrl.set(providers.environmentVariable("DIST_ZIP_URL"))
+    jdkVersion.set(project.extra["jdkVersion"] as Int)
+    
+    // Set tags based on git info - this is computed at configuration time
     val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
-    
-    doLast {
-        if (!checkCrossPlatformBuild("arm64")) return@doLast
+    tags.set(provider {
         val config = createDockerConfigFromGitInfo(gitInfoProvider.get().asFile)
-        val distZipUrl = System.getenv("DIST_ZIP_URL")
-        if (distZipUrl != null) {
-            logger.info("Using snapshot distribution: $distZipUrl")
-        } else {
-            logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
+        if (!checkCrossPlatformBuild("arm64")) {
+            throw GradleException("Cannot build ARM64 on this architecture")
         }
-        buildDockerImage(config, listOf("linux/arm64"), config.tagsForArch("arm64"), "load", distZipUrl)
-    }
+        config.tagsForArch("arm64")
+    })
 }
 
 val buildAll by tasks.registering {
@@ -179,14 +187,8 @@ val buildAll by tasks.registering {
     val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
     
     doLast {
-        val config = createDockerConfigFromGitInfo(gitInfoProvider.get().asFile)
-        val distZipUrl = System.getenv("DIST_ZIP_URL")
-        if (distZipUrl != null) {
-            logger.info("Using snapshot distribution: $distZipUrl")
-        } else {
-            logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
-        }
-        buildDockerImage(config, listOf("linux/amd64", "linux/arm64"), config.multiPlatformTags(), "load", distZipUrl)
+        val (config, distZipUrl) = setupDockerConfigAndLog(gitInfoProvider.get().asFile, logger)
+        buildDockerImage(config, listOf("linux/amd64", "linux/arm64"), config.multiPlatformTags(), "load", logger, distZipUrl)
     }
 }
 
@@ -200,16 +202,13 @@ val pushAmd64 by tasks.registering {
     
     val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
     
+    // Disable configuration cache for Docker tasks due to logger references
+    notCompatibleWithConfigurationCache("Docker tasks use logger references")
+    
     doLast {
         if (!checkCrossPlatformBuild("amd64")) return@doLast
-        val config = createDockerConfigFromGitInfo(gitInfoProvider.get().asFile)
-        val distZipUrl = System.getenv("DIST_ZIP_URL")
-        if (distZipUrl != null) {
-            logger.info("Using snapshot distribution: $distZipUrl")
-        } else {
-            logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
-        }
-        buildDockerImage(config, listOf("linux/amd64"), config.tagsForArch("amd64"), "push", distZipUrl)
+        val (config, distZipUrl) = setupDockerConfigAndLog(gitInfoProvider.get().asFile, logger)
+        buildDockerImage(config, listOf("linux/amd64"), config.tagsForArch("amd64"), "push", logger, distZipUrl)
     }
 }
 
@@ -223,16 +222,13 @@ val pushArm64 by tasks.registering {
     
     val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
     
+    // Disable configuration cache for Docker tasks due to logger references
+    notCompatibleWithConfigurationCache("Docker tasks use logger references")
+    
     doLast {
         if (!checkCrossPlatformBuild("arm64")) return@doLast
-        val config = createDockerConfigFromGitInfo(gitInfoProvider.get().asFile)
-        val distZipUrl = System.getenv("DIST_ZIP_URL")
-        if (distZipUrl != null) {
-            logger.info("Using snapshot distribution: $distZipUrl")
-        } else {
-            logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
-        }
-        buildDockerImage(config, listOf("linux/arm64"), config.tagsForArch("arm64"), "push", distZipUrl)
+        val (config, distZipUrl) = setupDockerConfigAndLog(gitInfoProvider.get().asFile, logger)
+        buildDockerImage(config, listOf("linux/arm64"), config.tagsForArch("arm64"), "push", logger, distZipUrl)
     }
 }
 
@@ -246,15 +242,12 @@ val pushAll by tasks.registering {
     
     val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
     
+    // Disable configuration cache for Docker tasks due to logger references
+    notCompatibleWithConfigurationCache("Docker tasks use logger references")
+    
     doLast {
-        val config = createDockerConfigFromGitInfo(gitInfoProvider.get().asFile)
-        val distZipUrl = System.getenv("DIST_ZIP_URL")
-        if (distZipUrl != null) {
-            logger.info("Using snapshot distribution: $distZipUrl")
-        } else {
-            logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
-        }
-        buildDockerImage(config, listOf("linux/amd64", "linux/arm64"), config.multiPlatformTags(), "push", distZipUrl)
+        val (config, distZipUrl) = setupDockerConfigAndLog(gitInfoProvider.get().asFile, logger)
+        buildDockerImage(config, listOf("linux/amd64", "linux/arm64"), config.multiPlatformTags(), "push", logger, distZipUrl)
     }
 }
 
@@ -265,6 +258,9 @@ val createManifest by tasks.registering {
     inputs.file(tasks.resolveGitInfo.flatMap { it.outputFile })
     
     val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
+    
+    // Disable configuration cache for Docker tasks due to logger references
+    notCompatibleWithConfigurationCache("Docker tasks use logger references")
     
     doLast {
         val config = createDockerConfigFromGitInfo(gitInfoProvider.get().asFile)
@@ -277,10 +273,10 @@ val createManifest by tasks.registering {
             val createCmd = listOf("docker", "manifest", "create", manifestTag,
                                  "${config.baseImage}:$tag-amd64",
                                  "${config.baseImage}:$tag-arm64")
-            execDockerCommand(createCmd)
+            execDockerCommand(createCmd, logger)
             
             val pushCmd = listOf("docker", "manifest", "push", manifestTag)
-            execDockerCommand(pushCmd)
+            execDockerCommand(pushCmd, logger)
             
             logger.info("✅ Created and pushed manifest: $manifestTag")
         }

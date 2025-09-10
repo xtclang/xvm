@@ -43,3 +43,11 @@ Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
 NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+
+# CRITICAL GRADLE RULE - CONFIGURATION CACHE COMPATIBILITY
+**NEVER WRITE GRADLE CODE THAT IS INCOMPATIBLE WITH THE CONFIGURATION CACHE**
+- Every time you write Gradle code, you MUST test the build to verify configuration cache compatibility
+- Do NOT capture script object references (like `logger`, `project`) in task actions
+- Use injected services (`@Inject` with `ExecOperations`, `Logger`, etc.) for configuration cache compatibility
+- Use Worker API or convention plugins for complex task logic
+- Always test with `./gradlew <task> --info` after making changes
