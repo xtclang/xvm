@@ -103,7 +103,7 @@ abstract class ResolveGitInfoTask : DefaultTask() {
             writeText(gitInfo.map { "${it.key}=${it.value}" }.joinToString("\n"))
         }
         
-        logger.info("Git info resolved: branch=$branch, commit=${commit.take(8)}, dirty=$isDirty")
+        logger.info("Git info resolved: branch=$branch, commit=${commit.take(8)}, dirty=$isDirty, auto-tracking enabled")
     }
 }
 
