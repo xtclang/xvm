@@ -25,6 +25,14 @@ abstract class ResolveGitInfoTask : DefaultTask() {
     @get:Input
     abstract val version: Property<String>
     
+    @get:InputFile
+    @get:Optional
+    abstract val gitHeadFile: RegularFileProperty
+    
+    @get:InputDirectory
+    @get:Optional
+    abstract val gitDirectory: DirectoryProperty
+    
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
     
@@ -108,6 +116,16 @@ val resolveGitInfo by tasks.registering(ResolveGitInfoTask::class) {
     commitEnv.set(providers.environmentVariable("GH_COMMIT").orElse(""))
     version.set(provider { project.version.toString() })
     outputFile.set(layout.buildDirectory.file("git-info.properties"))
+    
+    // Monitor git repository state for proper up-to-date checking
+    val gitDir = project.rootProject.layout.projectDirectory.dir(".git")
+    if (gitDir.asFile.exists()) {
+        gitDirectory.set(gitDir)
+        val headFile = gitDir.file("HEAD")
+        if (headFile.asFile.exists()) {
+            gitHeadFile.set(headFile)
+        }
+    }
 }
 
 // Extension function to easily create git-based configurations from the resolved info
