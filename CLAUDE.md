@@ -44,6 +44,10 @@ NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
 NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
 
+# Code Style Rules (UNBREAKABLE)
+1. ALWAYS add a newline at the end of every file
+2. NEVER use star imports (import foo.*) - always use explicit imports
+
 # CRITICAL GRADLE RULE - CONFIGURATION CACHE COMPATIBILITY
 **NEVER WRITE GRADLE CODE THAT IS INCOMPATIBLE WITH THE CONFIGURATION CACHE**
 - Every time you write Gradle code, you MUST test the build to verify configuration cache compatibility
