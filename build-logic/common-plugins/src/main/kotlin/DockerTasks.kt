@@ -90,7 +90,7 @@ abstract class DockerTask : DefaultTask() {
                   computedTags.flatMap { listOf("--tag", "${config.baseImage}:${it}") } +
                   listOf("--${action.get()}", ".")
         
-        logger.info("Docker: ${cmd.joinToString(" ")}")
+        logger.info("Executing Docker command: ${cmd.joinToString(" ")}")
         
         execOperations.exec {
             commandLine(cmd)
