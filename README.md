@@ -3,6 +3,72 @@
 This is the public repository for the Ecstasy language ([xtclang.org](http://xtclang.org/)) and the
 Ecstasy virtual machine (XVM) project.
 
+## 🚀 Quick Start
+
+**Want to try Ecstasy right now? Here's the fastest way:**
+
+### Option 1: Homebrew (macOS/Linux) - Recommended
+```bash
+# Install Homebrew if you don't have it: https://brew.sh/
+brew tap xtclang/xvm && brew install xdk-latest
+
+# Create your first Ecstasy program
+echo 'module HelloWorld { void run() { @Inject Console console; console.print("Hello, World!"); } }' > HelloWorld.x
+
+# Compile and run it
+xcc HelloWorld.x
+xec HelloWorld
+```
+
+### Option 2: Docker - Works everywhere
+```bash
+# Create your first program
+echo 'module HelloWorld { void run() { @Inject Console console; console.print("Hello, World!"); } }' > HelloWorld.x
+
+# Compile and run using Docker
+docker run --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest xcc /workspace/HelloWorld.x
+docker run --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest xec /workspace/HelloWorld
+```
+
+### Option 3: Build from source
+```bash
+git clone https://github.com/xtclang/xvm.git
+cd xvm
+./gradlew xdk:installDist
+export PATH=$PWD/xdk/build/install/xdk/bin:$PATH
+
+# Now you can use xcc and xec commands
+```
+
+**Next Steps:**
+- 📖 [Learn Ecstasy Language Basics](https://github.com/xtclang/xvm/wiki)
+- 🛠️ [XDK Development Kit Guide](#installation-options) (below)
+- 🐳 [Docker Development Guide](docker/README.md)
+- ⚙️ [GitHub Actions & CI Documentation](.github/GITHUB_WORKFLOWS.md)
+
+---
+
+## 📚 Documentation Navigation
+
+This repository contains comprehensive documentation organized hierarchically:
+
+### Core Documentation
+- **[Main README](README.md)** (this file) - Platform overview, quickstart, and XDK installation
+- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to the Ecstasy project
+- **[Code of Conduct](CODE_OF_CONDUCT.md)** - Community guidelines and expectations
+
+### Development Documentation  
+- **[Docker Guide](docker/README.md)** - Container development, build instructions, and CI integration
+- **[GitHub Actions](/.github/GITHUB_WORKFLOWS.md)** - CI/CD pipeline, workflows, and automation documentation
+- **[Testing Guide](manualTests/TESTING_GUIDE.md)** - Manual testing procedures and test suite documentation
+
+### Language Documentation
+- **[Ecstasy Language Wiki](https://github.com/xtclang/xvm/wiki)** - Language specification, tutorials, and examples
+- **[XTC Language Website](http://xtclang.org/)** - Official language website and resources
+- **[Core Documentation](doc/DOCUMENTATION.md)** - Language specification files, BNF grammar, and VM instruction set
+
+---
+
 ## What is Ecstasy?
 
 <table cellspacing="0" cellpadding="0" style="border-collapse: collapse; border: none;">
@@ -103,7 +169,7 @@ Our project uses comprehensive GitHub workflows for continuous integration, depe
 
 **For complete documentation of our CI/CD pipeline, GitHub Actions, custom actions, manual workflow controls, Dependabot configuration, and all automation details, see:**
 
-**[📖 .github/README.md - XVM GitHub Workflows and Actions](.github/README.md)**
+**[📖 .github/GITHUB_WORKFLOWS.md - XVM GitHub Workflows and Actions](.github/GITHUB_WORKFLOWS.md)**
 
 This includes:
 - **CI/CD Pipeline**: Multi-platform builds, testing, Docker images, and publishing
@@ -839,6 +905,20 @@ repositories {
    mavenLocal()
 }
 ```
+
+## Related Repositories
+
+The xtclang organization maintains several repositories supporting the Ecstasy ecosystem:
+
+### Core Platform
+- **[platform](https://github.com/xtclang/platform)** - Ecstasy "Platform as a Service" implementation for cloud deployment
+
+### Distribution & Packaging
+- **[xdk-release](https://github.com/xtclang/xdk-release)** - Cross-platform XDK distribution and release automation
+- **[homebrew-xvm](https://github.com/xtclang/homebrew-xvm)** - Homebrew tap for macOS/Linux XDK installations
+
+### Research & Extensions
+- **[jmixin](https://github.com/xtclang/jmixin)** - Java port of Ecstasy mixin functionality for research and comparison
 
 ## Questions?
 
