@@ -112,15 +112,10 @@ val listLocalPublications by tasks.registering(ListLocalPublicationsTask::class)
     projectGroup.set(providers.provider { project.group.toString() })
 }
 
-val listRemotePublications by tasks.registering {
+val listRemotePublications by tasks.registering(ListRemotePublicationsTask::class) {
     group = PUBLISH_TASK_GROUP
     description = "Task that lists publications for this project on the 'xtclang' org GitHub package repo."
-    doLast {
-        // REMOVED: GitHubProtocol functionality moved to org.xtclang.build.git convention plugin
-        // MIGRATION: Use 'resolveGitHubPackages' task from org.xtclang.build.git convention plugin
-        logger.warn("[build-logic] resolvePackages functionality moved to org.xtclang.build.git convention plugin")
-        logger.warn("[build-logic] No packages found for project '$projectName'.")
-    }
+    projectName.set(providers.provider { project.name })
 }
 
 /**
@@ -139,7 +134,7 @@ val listRemotePublications by tasks.registering {
  * There is also a -PdryRun property, which will likely grow into a project wide way of knowing
  * whether to do mutating operations or not during the build.
  */
-val deleteRemotePublications by tasks.registering {
+val deleteRemotePublications by tasks.registering(DeleteRemotePublicationsTask::class) {
     group = PUBLISH_TASK_GROUP
     description = "Delete all or specific published packages from the xtclang GitHub Maven Repo."
     
@@ -147,10 +142,6 @@ val deleteRemotePublications by tasks.registering {
     val deleteNamesValue = findProperty("deletePackageNames")?.toString()?.split(",") ?: emptyList()
     val deleteVersionsValue = findProperty("deletePackageVersions")?.toString()?.split(",") ?: emptyList()
     
-    doLast {
-        // REMOVED: GitHubProtocol functionality moved to org.xtclang.build.git convention plugin
-        // MIGRATION: Use 'deleteGitHubPackages' task from org.xtclang.build.git convention plugin
-        logger.warn("[build-logic] deletePackages functionality moved to org.xtclang.build.git convention plugin")
-        logger.warn("[build-logic] deleteNames: $deleteNamesValue, deleteVersions: $deleteVersionsValue")
-    }
+    deletePackageNames.set(providers.provider { deleteNamesValue })
+    deletePackageVersions.set(providers.provider { deleteVersionsValue })
 }
