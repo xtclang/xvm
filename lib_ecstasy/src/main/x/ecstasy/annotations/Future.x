@@ -41,9 +41,14 @@
  * * * `get` returns the result iff the future has completed successfully.
  * * The [set] method can only be invoked by completing the future; the future's value cannot
  *   be modified once it is set.
+ *
+ * Because a `@Future` has no value until it completes, it extends [Unassigned] to indicate that it
+ * does not require an initial value. `Future` is annotated by [@Volatile](Volatile) to indicate
+ * that it should be captured by reference, and is assignable from within a lambda.
  */
+@Volatile
 annotation Future<Referent>
-        extends Volatile<Referent>
+        extends Unassigned<Referent>
         implements Closeable {
     /**
      * Future completion status:

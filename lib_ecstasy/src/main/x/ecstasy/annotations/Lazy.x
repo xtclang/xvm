@@ -18,10 +18,14 @@
  * occurs, the internal value of the `@Lazy` property is still unassigned, and so the property
  * invokes its [calc] method to calculate a value for the property. That value is then stored as the
  * internal value of the property, and every subsequent access will use that previously calculated
- * value.
+ * value. Because a `@Lazy` exists without a value until that value is requested, it extends
+ * [Unassigned] to indicate that it does not require an initial value. `Lazy` is annotated by
+ * [@Volatile](Volatile) to indicate that it should be captured by reference, so that a lambda does
+ * not force the lazy evaluation at the point of capture.
  */
+@Volatile
 annotation Lazy<Referent>(function Referent ()? calculate = Null)
-        extends Volatile<Referent> {
+        extends Unassigned<Referent> {
 
     private function Referent ()? calculate;
 
