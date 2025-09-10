@@ -1,13 +1,17 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
-import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.*
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
+import javax.inject.Inject
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.time.Instant
-import javax.inject.Inject
 
 // Cross-platform build check utility
 fun checkCrossPlatformBuild(targetArch: String): Boolean {
@@ -24,17 +28,15 @@ fun checkCrossPlatformBuild(targetArch: String): Boolean {
     return true
 }
 
-// Configuration cache compatible Docker build task
-abstract class DockerBuildTask @Inject constructor() : DefaultTask() {
+abstract class DockerTask : DefaultTask() {
+    @get:Inject
+    abstract val execOperations: ExecOperations
     
     @get:InputFile
     abstract val gitInfoFile: RegularFileProperty
     
     @get:Input
     abstract val platforms: ListProperty<String>
-    
-    @get:Input
-    abstract val tags: ListProperty<String>
     
     @get:Input
     abstract val action: Property<String>
@@ -50,8 +52,8 @@ abstract class DockerBuildTask @Inject constructor() : DefaultTask() {
     @get:Optional
     abstract val architectureCheck: Property<String>
     
-    @get:Inject
-    abstract val execOperations: ExecOperations
+    @get:Input
+    abstract val tags: ListProperty<String>
     
     @TaskAction
     fun buildDockerImage() {
@@ -149,3 +151,46 @@ data class DockerConfig(
     }
 }
 
+abstract class DockerCleanupTask : DefaultTask() {
+    @get:Inject
+    abstract val execOps: ExecOperations
+    
+    @get:Input
+    abstract val keepCount: Property<Int>
+    
+    @get:Input
+    abstract val dryRun: Property<Boolean>
+    
+    @get:Input
+    abstract val forced: Property<Boolean>
+    
+    @get:Input
+    abstract val packageName: Property<String>
+    
+    @TaskAction
+    fun cleanupImages() {
+        logger.lifecycle("Docker cleanup: keepCount=${keepCount.get()}, dryRun=${dryRun.get()}, packageName=${packageName.get()}")
+        
+        if (dryRun.get()) {
+            logger.lifecycle("DRY RUN: Would clean up old Docker package versions")
+            return
+        }
+        
+        val result = ByteArrayOutputStream()
+        try {
+            execOps.exec {
+                commandLine("gh", "api", "https://api.github.com/orgs/xtclang/packages/container/${packageName.get()}/versions")
+                standardOutput = result
+                errorOutput = result
+            }
+            logger.lifecycle("Successfully fetched package versions for cleanup")
+        } catch (e: Exception) {
+            val output = result.toString()
+            if (forced.get()) {
+                logger.warn("Failed to fetch package versions: $output")
+            } else {
+                throw GradleException("Failed to fetch package versions: $output", e)
+            }
+        }
+    }
+}
