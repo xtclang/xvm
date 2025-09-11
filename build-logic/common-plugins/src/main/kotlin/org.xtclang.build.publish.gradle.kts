@@ -59,6 +59,11 @@ tasks.withType<PublishToMavenRepository>().configureEach {
     if (!allowPublicationValue) {
         logger.warn("[build-logic] Skipping publication task, snapshotOnly=${snapshotOnlyValue} for version: '$semanticVersion'")
     }
+    
+    // Mark GitHub repository publication tasks as incompatible with configuration cache
+    if (name.contains("GitHub")) {
+        notCompatibleWithConfigurationCache("GitHub Maven publication requires network authentication which cannot be serialized")
+    }
 }
 
 val publishAllPublicationsToMavenLocalRepository by tasks.existing

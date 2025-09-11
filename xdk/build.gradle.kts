@@ -241,6 +241,35 @@ val deleteRemotePublications by tasks.existing {
     }
 }
 
+// Extract publication values during configuration to avoid capturing project references
+private val publicationGroupId = project.group.toString()
+private val publicationArtifactId = project.name
+private val publicationVersion = project.version.toString()
+
+// Add XDK Maven publication to GitHub packages (like in master)
+publishing {
+    publications {
+        val xdkArchive by registering(MavenPublication::class) {
+            groupId = publicationGroupId
+            artifactId = publicationArtifactId
+            version = publicationVersion
+            
+            pom {
+                name.set("xdk")
+                description.set("XTC Language Software Development Kit (XDK) Distribution Archive")
+                url.set("https://xtclang.org")
+            }
+            logger.info("[xdk] Publication '$name' configured for '$publicationGroupId:$publicationArtifactId:$publicationVersion'")
+            artifact(tasks.distZip) {
+                extension = "zip"
+            }
+        }
+    }
+}
+
+// Now publishRemote will use the convention plugin behavior to publish xdkArchive to GitHub
+// No need to override publishRemote - let it use the default behavior from convention plugin
+
 
 // Signing removed since we're not using Maven publication for XDK
 // signing {
