@@ -83,15 +83,13 @@ val generateBuildInfo by tasks.registering {
     val versionPropsFile = compositeRootProjectDirectory.file("version.properties")
     val outputFile = layout.buildDirectory.file("resources/main/build-info.properties")
     val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
+    // Always declare IntelliJ output for configuration cache compatibility
     val intellijOutputFile = project.file("out/production/resources/build-info.properties")
     
     inputs.file(versionPropsFile)
     inputs.file(gitInfoProvider)
     outputs.file(outputFile)
-    // Conditionally add IntelliJ output if directory exists
-    if (intellijOutputFile.parentFile.exists()) {
-        outputs.file(intellijOutputFile)
-    }
+    outputs.file(intellijOutputFile)
     
     doLast {
         // Read version properties as base
@@ -116,12 +114,11 @@ val generateBuildInfo by tasks.registering {
             outputStream().use { buildInfo.store(it, "Build information generated at build time") }
         }
         
-        // Also write to IntelliJ output directory if it exists
-        if (intellijOutputFile.parentFile.exists()) {
-            intellijOutputFile.apply {
-                parentFile.mkdirs()
-                outputStream().use { buildInfo.store(it, "Build information generated at build time") }
-            }
+        // Always copy to IntelliJ output directory for IDE compatibility
+        // TODO: Consider making runtime code check multiple locations instead of duplicating files
+        intellijOutputFile.apply {
+            parentFile.mkdirs()
+            outputStream().use { buildInfo.store(it, "Build information generated at build time") }
         }
     }
 }
