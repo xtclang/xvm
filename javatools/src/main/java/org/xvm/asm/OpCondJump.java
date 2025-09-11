@@ -16,8 +16,10 @@ import java.util.List;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.DoubleSlot;
 import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitTypeDesc;
 
 import org.xvm.runtime.Frame;
@@ -324,7 +326,7 @@ public abstract class OpCondJump
         ClassDesc    cdCommon   = JitTypeDesc.getPrimitiveClass(typeCommon);
 
         // TODO: remove the assert
-        assert typeCommon.equals(bctx.getConstant(m_nType));
+        assert ((TypeConstant) bctx.getConstant(m_nType)).removeAutoNarrowing().equals(typeCommon);
 
         if (cdCommon.isPrimitive()) {
             Label  lblJump = bctx.ensureLabel(code, getAddress() + m_ofJmp);
@@ -389,6 +391,16 @@ public abstract class OpCondJump
         Slot      slot = bctx.loadArgument(code, m_nArg);
         ClassDesc cd   = slot.cd();
         if (cd.isPrimitive()) {
+            if (slot instanceof DoubleSlot doubleSlot) {
+                assert doubleSlot.flavor() == JitFlavor.MultiSlotPrimitive;
+                code.iload(doubleSlot.extSlot()); // boolean Null indication
+                switch (op) {
+                    case OP_JMP_NULL  -> code.ifne(lblJump);
+                    case OP_JMP_NNULL -> code.ifeq(lblJump);
+                    default           -> throw new IllegalStateException();
+                }
+                return;
+            }
             Builder.defaultLoad(code, cd);
 
             String desc = cd.descriptorString();
