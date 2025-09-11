@@ -207,23 +207,46 @@ public class PropertyConstant
      * @return a TypeConstant
      */
     public TypeConstant getRefType(TypeConstant typeTarget) {
-        if (typeTarget == null) {
-            typeTarget = getConstantPool().ensureAccessTypeConstant(
-                getClassIdentity().getType(), Access.PRIVATE);
-        }
-
-        Access access = getComponent().getAccess();
-        if (access.isLessAccessibleThan(typeTarget.getAccess())) {
-            typeTarget = typeTarget.getConstantPool().ensureAccessTypeConstant(typeTarget, access);
-        }
-
-        PropertyInfo infoThis = typeTarget.ensureTypeInfo().findProperty(this);
-
-        assert infoThis != null;
-
+        PropertyInfo infoThis = getPropertyInfo(typeTarget);
         return infoThis.isCustomLogic()
                 ? getConstantPool().ensurePropertyClassTypeConstant(typeTarget, this)
                 : infoThis.getBaseRefType();
+    }
+
+    /**
+     * @return the PropertyInfo for this property using its {@link #getClassIdentity() class
+     *         identity} as the target
+     */
+    public PropertyInfo getPropertyInfo() {
+        PropertyInfo info = m_info;
+        if (info == null) {
+            info = m_info = getPropertyInfo(null);
+        }
+        return info;
+    }
+
+    /**
+     * Obtain the PropertyInfo for this property on the specified target type.
+     *
+     * @param typeTarget  the target type (null if the property's {@link #getClassIdentity()
+     *                    class identity} is the target)
+     *
+     * @return the PropertyInfo
+     */
+    public PropertyInfo getPropertyInfo(TypeConstant typeTarget) {
+        if (typeTarget == null) {
+            typeTarget = getConstantPool().ensureAccessTypeConstant(
+                getClassIdentity().getType(), Access.PRIVATE);
+        } else {
+            Access access = getComponent().getAccess();
+            if (access.isLessAccessibleThan(typeTarget.getAccess())) {
+                typeTarget = typeTarget.getConstantPool().ensureAccessTypeConstant(typeTarget, access);
+            }
+        }
+
+        PropertyInfo infoThis = typeTarget.ensureTypeInfo().findProperty(this);
+        assert infoThis != null;
+        return infoThis;
     }
 
     /**
@@ -432,6 +455,11 @@ public class PropertyConstant
      * Cached constraint type.
      */
     protected transient TypeConstant m_typeConstraint;
+
+    /**
+     * Cached PropertyInfo.
+     */
+    protected transient PropertyInfo m_info;
 
     /**
      * Cached JIT property name.

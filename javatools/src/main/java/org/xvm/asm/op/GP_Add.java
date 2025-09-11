@@ -12,15 +12,19 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.BuildContext.Slot;
 
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitMethodDesc;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
-import static org.xvm.javajit.Builder.CD_String;
 import static org.xvm.javajit.Builder.CD_xObj;
 
 /**
@@ -64,18 +68,22 @@ public class GP_Add
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         Slot slotTarget = bctx.loadArgument(code, m_nTarget);
-        Slot slotArg    = bctx.loadArgument(code, m_nArgValue);
 
-        if (!slotTarget.isSingle() || !slotArg.isSingle()) {
-            throw new UnsupportedOperationException("Add operation on multi-slot");
+        if (!slotTarget.isSingle()) {
+            throw new UnsupportedOperationException("'+' operation on multi-slot");
         }
 
         ClassDesc    cdTarget = slotTarget.cd();
-        ClassDesc    cdArg    = slotArg.cd();
         TypeConstant typeRet  = slotTarget.type();
 
         if (cdTarget.isPrimitive()) {
-            assert cdArg.equals(cdTarget);
+            Slot slotArg = bctx.loadArgument(code, m_nArgValue);
+
+            if (!slotArg.cd().equals(cdTarget)) {
+                throw new UnsupportedOperationException("Convert " +
+                    slotArg.type().getValueString() + " to " + slotTarget.type().getValueString());
+            }
+
             switch (cdTarget.descriptorString()) {
                 case "I", "S", "B", "C", "Z":
                     code.iadd();
@@ -92,11 +100,24 @@ public class GP_Add
                 default:
                     throw new IllegalStateException();
             }
-        } else if (cdTarget.equals(CD_String)) {
-            MethodTypeDesc mdAdd = MethodTypeDesc.of(CD_String, CD_String, CD_xObj);
-            code.invokevirtual(CD_String, "add", mdAdd);
         } else {
-            throw new UnsupportedOperationException("TODO: " + cdTarget.descriptorString());
+            // TODO: there could be multiple "add" methods; need to use the arg type
+            TypeInfo      info     = slotTarget.type().ensureTypeInfo();
+            MethodInfo    method   = info.findOpMethod("add", "+", 1);
+            String        sJitName = method.getIdentity().ensureJitMethodName(bctx.typeSystem);
+            JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem);
+
+            MethodTypeDesc md;
+            if (jmd.isOptimized) {
+                md        = jmd.optimizedMD;
+                sJitName += Builder.OPT;
+            } else {
+                md = jmd.standardMD;
+            }
+
+            bctx.loadCtx(code);
+            bctx.loadArgument(code, m_nArgValue);
+            code.invokevirtual(slotTarget.cd(), sJitName, md);
         }
         bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, typeRet));
     }

@@ -339,16 +339,16 @@ public class BuildContext {
                 assert doubleSlot.flavor == JitFlavor.MultiSlotPrimitive;
                 // loadArgument() has already loaded the value and the boolean
 
-                Label ifTrue     = code.newLabel();
-                Label endIf      = code.newLabel();
-                code
-                    .iconst_0()
+                Label ifTrue = code.newLabel();
+                Label endIf  = code.newLabel();
+
+                code.iconst_0()
                     .if_icmpne(ifTrue);
-                    Builder.box(code, typeSystem, slot.type().removeNullable(), slot.cd());
+                Builder.box(code, typeSystem, slot.type().removeNullable(), slot.cd());
                 code.goto_(endIf)
                     .labelBinding(ifTrue);
-                Builder.pop(code, doubleSlot.cd);
-                Builder.loadNull(code);
+                    Builder.pop(code, doubleSlot.cd);
+                    Builder.loadNull(code);
                 code.labelBinding(endIf);
                 slot = new SingleSlot(Op.A_STACK, targetDesc.type, targetDesc.cd, slot.name() + "?");
             } else {
@@ -667,12 +667,11 @@ public class BuildContext {
             throw new UnsupportedOperationException("Multislot P_Get");
         }
         PropertyConstant propId     = (PropertyConstant) getConstant(propIdIndex);
-        PropertyInfo     propInfo   = propId.getClassIdentity().getType().ensureTypeInfo().findProperty(propId);
+        PropertyInfo     propInfo   = propId.getPropertyInfo();
         JitMethodDesc    jmd        = propInfo.getGetterJitDesc(typeSystem);
         String           methodName = propInfo.getGetterId().ensureJitMethodName(typeSystem);
 
-        MethodTypeDesc   md;
-
+        MethodTypeDesc md;
         if (jmd.isOptimized) {
             md         = jmd.optimizedMD;
             methodName += Builder.OPT;
@@ -692,8 +691,8 @@ public class BuildContext {
         if (!targetSlot.isSingle()) {
             throw new UnsupportedOperationException("Multislot P_Set");
         }
-        PropertyConstant propId    = (PropertyConstant) getConstant(propIdIndex);
-        PropertyInfo     propInfo   = propId.getClassIdentity().getType().ensureTypeInfo().findProperty(propId);
+        PropertyConstant propId     = (PropertyConstant) getConstant(propIdIndex);
+        PropertyInfo     propInfo   = propId.getPropertyInfo();
         JitMethodDesc    jmd        = propInfo.getSetterJitDesc(typeSystem);
         String           methodName = propInfo.getSetterId().ensureJitMethodName(typeSystem);
 
@@ -845,6 +844,22 @@ public class BuildContext {
             tailSlot--;
         }
         return slot;
+    }
+
+    /**
+     * Load a value from the tail slot onto the Java stack.
+     */
+    public void popTempVar(CodeBuilder code) {
+        Slot slot = popSlot();
+        code.loadLocal(Builder.toTypeKind(slot.cd()), slot.slot());
+    }
+
+    /**
+     * Store a value on the Java stack to the tail slot.
+     */
+    public void pushTempVar(CodeBuilder code, TypeConstant type, ClassDesc cd) {
+        Slot slot = pushSlot(type, cd, "");
+        code.storeLocal(Builder.toTypeKind(cd), slot.slot());
     }
 
     public interface Slot {

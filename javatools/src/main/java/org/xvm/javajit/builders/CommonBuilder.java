@@ -21,6 +21,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
@@ -1133,8 +1134,29 @@ public class CommonBuilder
         if (Arrays.stream(TEST_SET).anyMatch(name -> className.toLowerCase().contains(name))) {
             Op[] ops = bctx.methodStruct.getOps();
 
-            for (Op op : ops) {
-                op.build(bctx, code);
+            for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
+                try {
+                    ops[iPC].build(bctx, code);
+                } catch (Throwable e) {
+                    MethodStructure struct = bctx.methodStruct;
+                    java.lang.StringBuilder sb = new java.lang.StringBuilder();
+                    sb.append(className)
+                      .append('.')
+                      .append(struct.getIdentityConstant().getName())
+                      .append('(')
+                      .append(struct.getContainingClass().getSourceFileName());
+
+                    int nLine = struct.calculateLineNumber(iPC);
+                    if (nLine > 0) {
+                        sb.append(':').append(nLine);
+                    } else {
+                        sb.append(" iPC=")
+                          .append(iPC);
+                    }
+                    sb.append(')');
+                    throw new RuntimeException("Failed to generate code for " +
+                        "op=" + Op.toName(ops[iPC].getOpCode()) + "\n" + sb, e);
+                }
             }
         } else {
             if (SKIP_SET.add(className)) {
@@ -1146,6 +1168,6 @@ public class CommonBuilder
         bctx.exitMethod(code);
     }
 
-    private final static String[] TEST_SET = new String[] {"test", "tck"};
+    private final static String[] TEST_SET = new String[] {"Test", "test", "tck"};
     private final static HashSet<String> SKIP_SET = new HashSet<>();
 }
