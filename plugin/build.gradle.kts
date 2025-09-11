@@ -3,6 +3,7 @@ import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_JAR
 plugins {
     id("org.xtclang.build.xdk.versioning")
     alias(libs.plugins.xdk.build.java)
+    id("org.xtclang.build.publish")  // Add publication convention plugin for GitHub support
     // Switch to Vanniktech Maven Publish for configuration cache compatibility
     alias(libs.plugins.vanniktech.maven.publish)
     alias(libs.plugins.gradle.portal.publish)
@@ -109,45 +110,26 @@ mavenPublishing {
     }
 }
 
-// Create publishLocal task for compatibility 
-val publishLocal by tasks.registering {
-    group = "publishing"
-    description = "Publishes all publications to the local Maven repository"
+// Override the convention plugin's publishLocal task for plugin-specific local publishing  
+val publishLocal by tasks.existing {
+    // Clear default dependencies from convention plugin
+    setDependsOn(emptyList<Task>())
+    
+    // Add plugin-specific local publishing dependencies
     dependsOn(
         tasks.named("publishPluginMavenPublicationToMavenLocal"),
         tasks.named("publishXtcPluginMarkerMavenPublicationToMavenLocal")
     )
 }
 
-// Create missing publication management tasks that root build expects
-val deleteLocalPublications by tasks.registering(DeleteLocalPublicationsTask::class) {
-    group = "publishing"
-    description = "Delete all local Maven publications for this project from the mavenLocal() repository."
-    userHomePath.set(System.getProperty("user.home"))
-    projectName.set(providers.provider { project.name })
-}
+// The convention plugin provides all publication management tasks:
+// - deleteLocalPublications, listLocalPublications 
+// - listRemotePublications, deleteRemotePublications
+// No need to duplicate them here
 
-val listLocalPublications by tasks.registering(ListLocalPublicationsTask::class) {
-    group = "publishing" 
-    description = "List local Maven publications for this project from the mavenLocal() repository."
-    userHomePath.set(System.getProperty("user.home"))
-    projectName.set(providers.provider { project.name })
-    projectGroup.set(providers.provider { project.group.toString() })
-}
-
-val listRemotePublications by tasks.registering(ListRemotePublicationsTask::class) {
-    group = "publishing"
-    description = "List remote publications for this project from remote repositories."
-    projectName.set(providers.provider { project.name })
-}
-
-val deleteRemotePublications by tasks.registering(DeleteRemotePublicationsTask::class) {
-    group = "publishing"
-    description = "Delete remote publications for this project from remote repositories."
-    // These properties can be passed via command line if needed
-    deletePackageNames.set(providers.provider { emptyList<String>() })
-    deletePackageVersions.set(providers.provider { emptyList<String>() })
-}
+// No need to override publishRemote - let it use the convention plugin's default behavior
+// which publishes to GitHub packages only (like in master)
+// Publishing to Gradle Plugin Portal and Maven Central are separate concerns
 
 // Extract plugin configuration values during configuration
 private val isAutomatedPublishingValue = getXdkPropertyBoolean("$pprefix.plugin.isAutomatedPublishing", true)
