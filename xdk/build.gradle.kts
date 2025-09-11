@@ -24,7 +24,7 @@ import java.io.File
 plugins {
     id("org.xtclang.build.xdk.versioning")
     id("org.xtclang.build.git")
-    alias(libs.plugins.xdk.build.publish)
+    id("org.xtclang.build.publish")  // Use the publication convention plugin
     alias(libs.plugins.xtc)
     alias(libs.plugins.sonatype.publish)
     application
@@ -187,31 +187,65 @@ subprojects {
     }
 }
 
-publishing {
-    // TODO: Set up a hook to the maven central/osasrh/sonatype repository here, once the keys have been recovered.
-    publications {
-        val xdkArchive by registering(MavenPublication::class) {
-            with(project) {
-                groupId = group.toString()
-                artifactId = project.name
-                version = version.toString()
+// Override the convention plugin's publishLocal task to do XDK-specific distribution publishing
+val publishLocal by tasks.existing {
+    // Clear default dependencies from convention plugin
+    setDependsOn(emptyList<Task>())
+    // Add XDK-specific dependency 
+    dependsOn(tasks.distZip)
+    
+    // Extract the path during configuration to avoid capturing task reference
+    val distZipPath = layout.buildDirectory.file("distributions/xdk-${artifactVersion}.zip")
+    
+    doLast {
+        logger.lifecycle("[xdk] XDK distribution created: ${distZipPath.get().asFile}")
+        logger.lifecycle("[xdk] To use locally, extract the distribution or run './gradlew installDist'")
+    }
+}
+
+// Override the convention plugin's publication management tasks for XDK-specific behavior
+val deleteLocalPublications by tasks.existing {
+    doLast {
+        logger.lifecycle("[xdk] XDK uses file-based distribution. To clean, use './gradlew clean' or delete build/distributions/")
+    }
+}
+
+val listLocalPublications by tasks.existing {
+    // Extract path during configuration to avoid script reference capture
+    val distributionsDir = layout.buildDirectory.dir("distributions")
+    
+    doLast {
+        val distDir = distributionsDir.get().asFile
+        logger.lifecycle("[xdk] XDK distribution artifacts:")
+        if (distDir.exists()) {
+            distDir.listFiles()?.filter { it.name.startsWith("xdk-") }?.forEach {
+                logger.lifecycle("[xdk]   ${it.absolutePath}")
             }
-            pom {
-                name = "xdk"
-                description = "XTC Language Software Development Kit (XDK) Distribution Archive"
-                url = "https://xtclang.org"
-            }
-            logger.info("[xdk] Publication '$name' configured for '$groupId:$artifactId:$version'")
-            artifact(tasks.distZip) {
-                extension = "zip"
-            }
+        } else {
+            logger.lifecycle("[xdk]   No distribution artifacts found. Run './gradlew distZip' to create them.")
         }
     }
 }
 
-signing {
-    mavenCentralSigning()
+val listRemotePublications by tasks.existing {
+    doLast {
+        logger.lifecycle("[xdk] XDK uses file-based distribution, not remote Maven publication.")
+        logger.lifecycle("[xdk] For Docker images, use './gradlew dockerBuild' tasks.")
+    }
 }
+
+val deleteRemotePublications by tasks.existing {
+    doLast {
+        logger.lifecycle("[xdk] XDK uses file-based distribution, not remote Maven publication.")
+        logger.lifecycle("[xdk] For Docker cleanup, use Docker commands directly.")
+    }
+}
+
+
+// Signing removed since we're not using Maven publication for XDK
+// signing {
+//     mavenCentralSigning()
+// }
 
 /**
  * Common exclude patterns for unwanted files in distributions

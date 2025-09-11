@@ -3,7 +3,8 @@ import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_JAR
 plugins {
     id("org.xtclang.build.xdk.versioning")
     alias(libs.plugins.xdk.build.java)
-    alias(libs.plugins.xdk.build.publish)
+    // Switch to Vanniktech Maven Publish for configuration cache compatibility
+    alias(libs.plugins.vanniktech.maven.publish)
     alias(libs.plugins.gradle.portal.publish)
 }
 
@@ -82,18 +83,70 @@ dependencies {
     testImplementation(libs.junit.jupiter)
 }
 
-publishing {
-    publications {
-        val xtcPlugin by registering(MavenPublication::class) {
-            groupId = pluginGroup
-            artifactId = pluginName
-            version = pluginVersion
-            artifact(tasks.jar)
-            // we have two more jar artifacts with "javadoc" and "source" classifiers, respectively. Tell Gradle we do NOT want those to be part of the
-            // publication (i.e. don't use from(components["java"])
-            logger.info("[plugin] Publication '$groupId:$artifactId:$version' (name: '$name') configured.")
+// Configure Vanniktech Maven Publish for configuration cache compatibility
+mavenPublishing {
+    coordinates(pluginGroup, pluginName, pluginVersion)
+    
+    pom {
+        name.set(pluginName)
+        description.set("XTC Gradle Plugin")
+        url.set("https://xtclang.org")
+        
+        licenses {
+            license {
+                name.set("The XDK License")
+                url.set("https://github.com/xtclang/xvm/tree/master/license")
+            }
+        }
+        
+        developers {
+            developer {
+                id.set("xtclang-workflows")
+                name.set("XTC Team")
+                email.set("noreply@xtclang.org")
+            }
         }
     }
+}
+
+// Create publishLocal task for compatibility 
+val publishLocal by tasks.registering {
+    group = "publishing"
+    description = "Publishes all publications to the local Maven repository"
+    dependsOn(
+        tasks.named("publishPluginMavenPublicationToMavenLocal"),
+        tasks.named("publishXtcPluginMarkerMavenPublicationToMavenLocal")
+    )
+}
+
+// Create missing publication management tasks that root build expects
+val deleteLocalPublications by tasks.registering(DeleteLocalPublicationsTask::class) {
+    group = "publishing"
+    description = "Delete all local Maven publications for this project from the mavenLocal() repository."
+    userHomePath.set(System.getProperty("user.home"))
+    projectName.set(providers.provider { project.name })
+}
+
+val listLocalPublications by tasks.registering(ListLocalPublicationsTask::class) {
+    group = "publishing" 
+    description = "List local Maven publications for this project from the mavenLocal() repository."
+    userHomePath.set(System.getProperty("user.home"))
+    projectName.set(providers.provider { project.name })
+    projectGroup.set(providers.provider { project.group.toString() })
+}
+
+val listRemotePublications by tasks.registering(ListRemotePublicationsTask::class) {
+    group = "publishing"
+    description = "List remote publications for this project from remote repositories."
+    projectName.set(providers.provider { project.name })
+}
+
+val deleteRemotePublications by tasks.registering(DeleteRemotePublicationsTask::class) {
+    group = "publishing"
+    description = "Delete remote publications for this project from remote repositories."
+    // These properties can be passed via command line if needed
+    deletePackageNames.set(providers.provider { emptyList<String>() })
+    deletePackageVersions.set(providers.provider { emptyList<String>() })
 }
 
 // Extract plugin configuration values during configuration
@@ -104,27 +157,37 @@ private val implementationClassValue = getXdkProperty("$pprefix.plugin.implement
 private val displayNameValue = getXdkProperty("$pprefix.plugin.display.name")
 private val descriptionValue = getXdkProperty("$pprefix.plugin.description")
 
+// Extract all gradle plugin configuration values to avoid script references
+val gradlePluginIsAutomatedPublishing = isAutomatedPublishingValue
+val gradlePluginVcsUrl = vcsUrlValue
+val gradlePluginWebsite = websiteValue
+val gradlePluginVersion = pluginVersion
+val gradlePluginId = pluginId
+val gradlePluginImplementationClass = implementationClassValue
+val gradlePluginDisplayName = displayNameValue
+val gradlePluginDescription = descriptionValue
+
 @Suppress("UnstableApiUsage")
 gradlePlugin {
     // The built-in pluginMaven publication can be disabled with "isAutomatedPublishing=false"
     // However, this results in the Gradle version (with Gradle specific metadata) of the plugin not
     // being published. To read it from at least a local repo, we need that artifact too, hence we
     // get three artifacts.
-    isAutomatedPublishing = isAutomatedPublishingValue
+    isAutomatedPublishing = gradlePluginIsAutomatedPublishing
 
-    logger.info("[plugin] Configuring Gradle Plugin; isAutomatedPublishing=$isAutomatedPublishingValue")
+    logger.info("[plugin] Configuring Gradle Plugin; isAutomatedPublishing=$gradlePluginIsAutomatedPublishing")
 
-    vcsUrl = vcsUrlValue
-    website = websiteValue
+    vcsUrl = gradlePluginVcsUrl
+    website = gradlePluginWebsite
 
     plugins {
         val xtc by registering {
-            version = pluginVersion
-            id = pluginId
-            implementationClass = implementationClassValue
-            displayName = displayNameValue
-            description = descriptionValue
-            logger.info("[plugin] Configuring gradlePlugin; pluginId=$pluginId, implementationClass=$implementationClassValue, displayName=$displayNameValue, description=$descriptionValue")
+            version = gradlePluginVersion
+            id = gradlePluginId
+            implementationClass = gradlePluginImplementationClass
+            displayName = gradlePluginDisplayName
+            description = gradlePluginDescription
+            logger.info("[plugin] Configuring gradlePlugin; pluginId=$gradlePluginId, implementationClass=$gradlePluginImplementationClass, displayName=$gradlePluginDisplayName, description=$gradlePluginDescription")
             tags = listOf("xtc", "language", "ecstasy", "xdk")
         }
     }

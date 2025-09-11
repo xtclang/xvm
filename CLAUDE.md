@@ -38,6 +38,30 @@ When working with Gradle build files, always follow [Gradle Best Practices](http
 
 When refactoring build scripts, proactively suggest migrations to follow these best practices, especially for configuration cache compatibility and proper task modeling.
 
+## CRITICAL KOTLIN DSL SYNTAX REQUIREMENTS
+
+**NEVER use old untyped Gradle syntax in build.gradle.kts files. ALWAYS use typed operations:**
+
+❌ **FORBIDDEN - Never do this:**
+```kotlin
+tasks.register("taskName") {
+    dependsOn("otherTask")  // String-based dependency
+}
+```
+
+✅ **REQUIRED - Always do this:**
+```kotlin
+val taskName by tasks.registering {
+    dependsOn(tasks.named("otherTask"))  // Typed dependency
+}
+```
+
+**Rules:**
+- Always use `val taskName by tasks.registering` instead of `tasks.register("taskName")`
+- Always use `dependsOn(tasks.named("taskName"))` instead of `dependsOn("taskName")`
+- Always use typed task references with proper Provider API
+- This ensures proper build cache support, configuration cache compatibility, and IDE support
+
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.
