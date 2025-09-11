@@ -31,14 +31,9 @@ publishing {
                     password = gitHubToken
                 }
             }
-        } else {
-            logger.warn("[build-logic] WARNING: No GitHub token found, either in config or environment. publishRemote won't work.")
         }
     }
     publications.withType<MavenPublication>().configureEach {
-        // Extract publication name to avoid capturing 'this' reference
-        val publicationName = name
-        logger.info("[build-logic] Configuring publication '$publicationName' for project '$projectName'.")
         pom {
             licenses {
                 license {
