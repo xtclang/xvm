@@ -66,7 +66,7 @@ val rebuildUnicodeTables by tasks.registering {
     description = "If the unicode files should be regenerated, generate them from the build tool, and place them under the build resources."
 
     val rebuildUnicode = getXdkPropertyBoolean("org.xtclang.unicode.rebuild", false)
-    logger.info("[javatools_unicode] Should rebuild unicode: $rebuildUnicode")
+    // Note: moved logger usage to task action for configuration cache compatibility
 
     dependsOn(jar)
     outputs.dir(processedResourcesDir)
@@ -74,6 +74,7 @@ val rebuildUnicodeTables by tasks.registering {
     if (rebuildUnicode) {
         dependsOn(downloadUcdFlatZip)
         doLast {
+            logger.lifecycle("[javatools_unicode] Should rebuild unicode: $rebuildUnicode")
             logger.lifecycle("[javatools_unicode] Rebuilding unicode tables...")
             val unicodeJar = jar.get().archiveFile
             val localUcdZip = downloadUcdFlatZip.get().outputs.files.singleFile
