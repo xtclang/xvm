@@ -227,7 +227,7 @@ public class BuildContext {
         // TODO: this will be done using a pass over all the ops to compute the total number
         //       of Java slots used by the numbered XTC registers
         // For now, we don't mind to overshoot... ("this", "$ctx", ...)
-        tailSlot = (isFunction ? 0 : 1) + extraArgs + methodStruct.getMaxVars() * 2;
+        tailSlot = (isFunction ? 0 : 1) + extraArgs + methodStruct.getMaxVars() * 2 + 2;
     }
 
     /**
@@ -454,33 +454,15 @@ public class BuildContext {
      * Load one or two values at the specified slot onto the Java stack.
      */
     public void loadValue(CodeBuilder code, Slot slot) {
+        if (slot.isIgnore()) {
+            throw new IllegalStateException();
+        }
+
         if (slot instanceof DoubleSlot doubleSlot) {
             code.iload(doubleSlot.extSlot()); // load the boolean flag
         }
 
-        ClassDesc cd = slot.cd();
-        if (slot.isIgnore()) {
-            throw new IllegalStateException();
-        } else if (cd.isPrimitive()) {
-            switch (cd.descriptorString()) {
-            case "I", "S", "B", "C", "Z":
-                code.iload(slot.slot());
-                break;
-            case "J":
-                code.lload(slot.slot());
-                break;
-            case "F":
-                code.fload(slot.slot());
-                break;
-            case "D":
-                code.dload(slot.slot());
-                break;
-            default:
-                throw new IllegalStateException();
-            }
-        } else {
-            code.aload(slot.slot());
-        }
+        Builder.load(code, slot.cd(), slot.slot());
     }
 
     /**
@@ -494,25 +476,8 @@ public class BuildContext {
         ClassDesc cd = slot.cd();
         if (slot.isIgnore()) {
             Builder.pop(code, cd);
-        } else if (cd.isPrimitive()) {
-            switch (cd.descriptorString()) {
-            case "I", "S", "B", "C", "Z":
-                code.istore(slot.slot());
-                break;
-            case "J":
-                code.lstore(slot.slot());
-                break;
-            case "F":
-                code.fstore(slot.slot());
-                break;
-            case "D":
-                code.dstore(slot.slot());
-                break;
-            default:
-                throw new IllegalStateException();
-            }
         } else {
-            code.astore(slot.slot());
+            Builder.store(code, cd, slot.slot());
         }
     }
 
@@ -545,6 +510,8 @@ public class BuildContext {
         }
         if (name.isEmpty()) {
             name = "v$" + varIndex;
+        } else {
+            name = name.replace('#', '$').replace('.', '$');
         }
 
         Label varStartScope = code.newLabel();

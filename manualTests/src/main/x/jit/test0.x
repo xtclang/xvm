@@ -24,6 +24,10 @@ module test0.examples.org {
 
         console.print(call4(-1));
         console.print(call4(1));
+
+        for (Int i : 0..3) {
+            console.print(i);
+        }
     }
 
     Int call1(Int i, Int j = 2) {
@@ -41,7 +45,6 @@ module test0.examples.org {
         }
         return False;
     }
-
     static Boolean call4(Int i) {
         assert i > 0;
         return i > 7;
