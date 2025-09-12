@@ -3,8 +3,23 @@ import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_JAR
 plugins {
     id("org.xtclang.build.xdk.versioning")
     alias(libs.plugins.xdk.build.java)
-    alias(libs.plugins.xdk.build.publish)
+    id("org.xtclang.build.publish")  // Add publication convention plugin for GitHub support
+    // Switch to Vanniktech Maven Publish for configuration cache compatibility
+    alias(libs.plugins.vanniktech.maven.publish)
     alias(libs.plugins.gradle.portal.publish)
+}
+
+// Extract values during configuration to avoid capturing project references
+private val enablePreviewValue = getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)
+private val enableNativeAccessValue = getXdkPropertyBoolean("org.xtclang.java.enableNativeAccess", false)
+private val defaultJvmArgsValue = buildList {
+    add("-ea")
+    if (enablePreviewValue) {
+        add("--enable-preview")
+    }
+    if (enableNativeAccessValue) {
+        add("--enable-native-access=ALL-UNNAMED")
+    }
 }
 
 // Generate resource file with default JVM args computed at plugin build time
@@ -12,22 +27,9 @@ val generateDefaultJvmArgs by tasks.registering {
     val outputDir = layout.buildDirectory.dir("generated/resources")
     val outputFile = outputDir.map { it.file("org/xtclang/build/internal/defaultJvmArgs.properties") }
     
-    // Compute JVM args based on properties available at plugin build time
-    val enablePreview = getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)
-    val enableNativeAccess = getXdkPropertyBoolean("org.xtclang.java.enableNativeAccess", false)
-    val defaultJvmArgs = buildList {
-        add("-ea")
-        if (enablePreview) {
-            add("--enable-preview")
-        }
-        if (enableNativeAccess) {
-            add("--enable-native-access=ALL-UNNAMED")
-        }
-    }
-    
     // Declare properties as inputs for proper invalidation
-    inputs.property("enablePreview", enablePreview)
-    inputs.property("enableNativeAccess", enableNativeAccess)
+    inputs.property("enablePreview", enablePreviewValue)
+    inputs.property("enableNativeAccess", enableNativeAccessValue)
     
     outputs.file(outputFile)
     
@@ -36,10 +38,10 @@ val generateDefaultJvmArgs by tasks.registering {
             parentFile.mkdirs()
             writeText("""
                 # Auto-generated default JVM arguments computed at plugin build time
-                defaultJvmArgs=${defaultJvmArgs.joinToString(",")}
+                defaultJvmArgs=${defaultJvmArgsValue.joinToString(",")}
                 """.trimIndent())
         }
-        logger.info("[plugin] Generated defaultJvmArgs.properties with: $defaultJvmArgs")
+        logger.info("[plugin] Generated defaultJvmArgs.properties with: $defaultJvmArgsValue")
     }
 }
 
@@ -53,10 +55,10 @@ private val semanticVersion: SemanticVersion by extra
 
 private val pprefix = "org.xtclang"
 
-// Property for the Plugin ID (unique to a plugin)
+// Property for the Plugin ID (unique to a plugin) - extracted during configuration
 private val pluginId = getXdkProperty("$pprefix.plugin.id")
 
-// Properties for the artifact
+// Properties for the artifact - extracted during configuration
 private val pluginName = project.name
 private val pluginGroup = getXdkProperty("$pprefix.plugin.group", group.toString())
 private val pluginVersion = getXdkProperty("$pprefix.plugin.version", version.toString())
@@ -64,7 +66,7 @@ private val pluginVersion = getXdkProperty("$pprefix.plugin.version", version.to
 logger.info("[plugin] Plugin (id: '$pluginId') artifact version identifier: '$pluginGroup:$pluginName:$pluginVersion'")
 
 private val shouldBundleJavaTools = getXdkPropertyBoolean("$pprefix.plugin.bundle.javatools")
-private val javaToolsContents = project.objects.fileCollection()
+private val javaToolsContents = objects.fileCollection()
 
 val xdkJavaToolsJarConsumer by configurations.registering {
     isCanBeResolved = true
@@ -82,19 +84,70 @@ dependencies {
     testImplementation(libs.junit.jupiter)
 }
 
-publishing {
-    publications {
-        val xtcPlugin by registering(MavenPublication::class) {
-            groupId = pluginGroup
-            artifactId = pluginName
-            version = pluginVersion
-            artifact(tasks.jar)
-            // we have two more jar artifacts with "javadoc" and "source" classifiers, respectively. Tell Gradle we do NOT want those to be part of the
-            // publication (i.e. don't use from(components["java"])
-            logger.info("[plugin] Publication '$groupId:$artifactId:$version' (name: '$name') configured.")
+// Configure Vanniktech Maven Publish for configuration cache compatibility
+mavenPublishing {
+    coordinates(pluginGroup, pluginName, pluginVersion)
+    
+    pom {
+        name.set(pluginName)
+        description.set("XTC Gradle Plugin")
+        url.set("https://xtclang.org")
+        
+        licenses {
+            license {
+                name.set("The XDK License")
+                url.set("https://github.com/xtclang/xvm/tree/master/license")
+            }
+        }
+        
+        developers {
+            developer {
+                id.set("xtclang-workflows")
+                name.set("XTC Team")
+                email.set("noreply@xtclang.org")
+            }
         }
     }
 }
+
+// Override the convention plugin's publishLocal task for plugin-specific local publishing  
+val publishLocal by tasks.existing {
+    // Clear default dependencies from convention plugin
+    setDependsOn(emptyList<Task>())
+    
+    // Add plugin-specific local publishing dependencies
+    dependsOn(
+        tasks.named("publishPluginMavenPublicationToMavenLocal"),
+        tasks.named("publishXtcPluginMarkerMavenPublicationToMavenLocal")
+    )
+}
+
+// The convention plugin provides all publication management tasks:
+// - deleteLocalPublications, listLocalPublications 
+// - listRemotePublications, deleteRemotePublications
+// No need to duplicate them here
+
+// No need to override publishRemote - let it use the convention plugin's default behavior
+// which publishes to GitHub packages only (like in master)
+// Publishing to Gradle Plugin Portal and Maven Central are separate concerns
+
+// Extract plugin configuration values during configuration
+private val isAutomatedPublishingValue = getXdkPropertyBoolean("$pprefix.plugin.isAutomatedPublishing", true)
+private val vcsUrlValue = getXdkProperty("$pprefix.plugin.vcs.url")
+private val websiteValue = getXdkProperty("$pprefix.plugin.website")
+private val implementationClassValue = getXdkProperty("$pprefix.plugin.implementation.class")
+private val displayNameValue = getXdkProperty("$pprefix.plugin.display.name")
+private val descriptionValue = getXdkProperty("$pprefix.plugin.description")
+
+// Extract all gradle plugin configuration values to avoid script references
+val gradlePluginIsAutomatedPublishing = isAutomatedPublishingValue
+val gradlePluginVcsUrl = vcsUrlValue
+val gradlePluginWebsite = websiteValue
+val gradlePluginVersion = pluginVersion
+val gradlePluginId = pluginId
+val gradlePluginImplementationClass = implementationClassValue
+val gradlePluginDisplayName = displayNameValue
+val gradlePluginDescription = descriptionValue
 
 @Suppress("UnstableApiUsage")
 gradlePlugin {
@@ -102,21 +155,21 @@ gradlePlugin {
     // However, this results in the Gradle version (with Gradle specific metadata) of the plugin not
     // being published. To read it from at least a local repo, we need that artifact too, hence we
     // get three artifacts.
-    isAutomatedPublishing = getXdkPropertyBoolean("$pprefix.plugin.isAutomatedPublishing", true)
+    isAutomatedPublishing = gradlePluginIsAutomatedPublishing
 
-    logger.info("[plugin] Configuring Gradle Plugin; isAutomatedPublishing=$isAutomatedPublishing")
+    logger.info("[plugin] Configuring Gradle Plugin; isAutomatedPublishing=$gradlePluginIsAutomatedPublishing")
 
-    vcsUrl = getXdkProperty("$pprefix.plugin.vcs.url")
-    website = getXdkProperty("$pprefix.plugin.website")
+    vcsUrl = gradlePluginVcsUrl
+    website = gradlePluginWebsite
 
     plugins {
         val xtc by registering {
-            version = pluginVersion
-            id = pluginId
-            implementationClass = getXdkProperty("$pprefix.plugin.implementation.class")
-            displayName = getXdkProperty("$pprefix.plugin.display.name")
-            description = getXdkProperty("$pprefix.plugin.description")
-            logger.info("[plugin] Configuring gradlePlugin; pluginId=$pluginId, implementationClass=$implementationClass, displayName=$displayName, description=$description")
+            version = gradlePluginVersion
+            id = gradlePluginId
+            implementationClass = gradlePluginImplementationClass
+            displayName = gradlePluginDisplayName
+            description = gradlePluginDescription
+            logger.info("[plugin] Configuring gradlePlugin; pluginId=$gradlePluginId, implementationClass=$gradlePluginImplementationClass, displayName=$gradlePluginDisplayName, description=$gradlePluginDescription")
             tags = listOf("xtc", "language", "ecstasy", "xdk")
         }
     }
@@ -131,13 +184,15 @@ tasks.withType<Javadoc>().configureEach {
 tasks.withType<PublishToMavenRepository>().matching { it.name.startsWith("publishPluginMaven") }.configureEach {
     enabled = false
     // TODO: Reuse the existing PluginMaven task instead, because that is the one gradlePluginPortal hardcodes.
+    val taskName = name
     logger.info(
-        "[plugin] Disabled default publication task: '$name'. The task '${name.replace("PluginMaven", "XtcPlugin")}' should be equivalent."
+        "[plugin] Disabled default publication task: '$taskName'. The task '${taskName.replace("PluginMaven", "XtcPlugin")}' should be equivalent."
     )
 }
 
 tasks.withType<Jar>().configureEach {
-    if (name == "jar") {
+    val taskName = name
+    if (taskName == "jar") {
         if (shouldBundleJavaTools) {
             /*
              * It's important that this is a provider/lazy, because xdkJavaToolsJarConsumer kickstarts an

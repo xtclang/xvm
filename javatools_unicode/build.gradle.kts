@@ -8,6 +8,7 @@
 
 import de.undercouch.gradle.tasks.download.Download
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
+import org.gradle.process.ExecOperations
 
 plugins {
     alias(libs.plugins.xdk.build.java)
@@ -65,7 +66,7 @@ val rebuildUnicodeTables by tasks.registering {
     description = "If the unicode files should be regenerated, generate them from the build tool, and place them under the build resources."
 
     val rebuildUnicode = getXdkPropertyBoolean("org.xtclang.unicode.rebuild", false)
-    logger.info("[javatools_unicode] Should rebuild unicode: $rebuildUnicode")
+    // Note: moved logger usage to task action for configuration cache compatibility
 
     dependsOn(jar)
     outputs.dir(processedResourcesDir)
@@ -73,19 +74,18 @@ val rebuildUnicodeTables by tasks.registering {
     if (rebuildUnicode) {
         dependsOn(downloadUcdFlatZip)
         doLast {
+            logger.lifecycle("[javatools_unicode] Should rebuild unicode: $rebuildUnicode")
             logger.lifecycle("[javatools_unicode] Rebuilding unicode tables...")
             val unicodeJar = jar.get().archiveFile
             val localUcdZip = downloadUcdFlatZip.get().outputs.files.singleFile
             logger.lifecycle("[javatools_unicode] Downloaded unicode file: ${localUcdZip.absolutePath}")
-            providers.exec {
-                executable = "java"
-                args = listOf(
-                    "-cp", 
-                    files(configurations.runtimeClasspath, unicodeJar).asPath,
-                    "org.xvm.tool.BuildUnicodeTables",
-                    localUcdZip.absolutePath, 
-                    File(processedResourcesDir, "ecstasy/text").absolutePath
-                )
+            
+            // Use ExecOperations service for Gradle 9 compatibility
+            val execOps = project.objects.newInstance<ExecOperations>()
+            execOps.javaexec {
+                mainClass.set("org.xvm.tool.BuildUnicodeTables")
+                classpath = files(configurations.runtimeClasspath, unicodeJar)
+                args = listOf(localUcdZip.absolutePath, File(processedResourcesDir, "ecstasy/text").absolutePath)
             }
         }
     }

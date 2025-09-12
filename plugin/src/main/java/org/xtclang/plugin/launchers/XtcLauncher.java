@@ -3,27 +3,38 @@ package org.xtclang.plugin.launchers;
 import static org.xtclang.plugin.launchers.XtcExecResult.XtcExecResultBuilder;
 
 import org.gradle.api.Project;
+import org.gradle.api.logging.Logger;
 import org.gradle.process.BaseExecSpec;
 import org.gradle.process.ExecResult;
 
-import org.xtclang.plugin.ProjectDelegate;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 
-public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends ProjectDelegate<CommandLine, ExecResult> {
+public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> {
     protected final T task;
     protected final String taskName;
+    protected final Logger logger;
 
     protected XtcLauncher(final Project project, final T task) {
-        super(project);
         this.task = task;
         this.taskName = task.getName();
+        this.logger = project.getLogger();
     }
+
+    protected XtcLauncher(final T task, final Logger logger) {
+        this.task = task;
+        this.taskName = task.getName();
+        this.logger = logger;
+    }
+    
+    
+    // Abstract method that subclasses must implement
+    public abstract ExecResult apply(final CommandLine cmd);
 
     @Override
     public String toString() {
-        return String.format("%s (launcher='%s', task='%s', fork=%s, native=%s).",
-                prefix, getClass().getSimpleName(), taskName, shouldFork(), isNativeLauncher());
+        return String.format("[plugin] (launcher='%s', task='%s', fork=%s, native=%s).",
+                getClass().getSimpleName(), taskName, shouldFork(), isNativeLauncher());
     }
 
     protected boolean shouldFork() {

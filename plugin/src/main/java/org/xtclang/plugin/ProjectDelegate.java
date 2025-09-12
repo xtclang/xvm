@@ -1,6 +1,7 @@
 package org.xtclang.plugin;
 
 import static org.xtclang.plugin.XtcBuildException.resolveEllipsis;
+import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_VERBOSE_LOGGING_OVERRIDE;
 
 import java.net.URL;
 
@@ -22,9 +23,9 @@ import org.gradle.api.plugins.ExtraPropertiesExtension;
 import org.gradle.api.tasks.TaskContainer;
 
 public abstract class ProjectDelegate<T, R> {
-    protected final Project project;
+    // Project reference marked transient to avoid configuration cache serialization
+    protected final transient Project project;
     protected final String projectName;
-    protected final String prefix;
     protected final ObjectFactory objects;
     protected final Logger logger;
     protected final Gradle gradle;
@@ -36,7 +37,7 @@ public abstract class ProjectDelegate<T, R> {
     protected final ProjectLayout layout;
     protected final DirectoryProperty buildDir;
     protected final ExtraPropertiesExtension extra;
-    protected final ExtensionContainer extensions;
+    protected final transient ExtensionContainer extensions;
     protected final VersionCatalogsExtension versionCatalogExtension;
 
     @SuppressWarnings("unused")
@@ -51,7 +52,6 @@ public abstract class ProjectDelegate<T, R> {
     protected ProjectDelegate(final Project project, final String taskName, final AdhocComponentWithVariants component) {
         this.project = project;
         this.projectName = project.getName();
-        this.prefix = prefix(taskName);
         this.objects = project.getObjects();
         this.layout = project.getLayout();
         this.gradle = project.getGradle();
@@ -68,7 +68,7 @@ public abstract class ProjectDelegate<T, R> {
         this.pluginUrl = getClass().getProtectionDomain().getCodeSource().getLocation();
 
         // add a property to the existing environment, project.setProperty assumes the property exists already
-        extra.set("logPrefix", prefix);
+        // Removed logPrefix property - using hardcoded [plugin] instead
     }
 
     @SuppressWarnings("UnusedReturnValue")
@@ -92,29 +92,11 @@ public abstract class ProjectDelegate<T, R> {
      * @return true if "extra important" logging should always be displayed at lifecycle level, false otherwise
      */
     public static boolean hasVerboseLogging(final Project project) {
-        final var overrideVerboseLogging = Boolean.parseBoolean(String.valueOf(project.findProperty("xtcPluginOverrideVerboseLogging")));
+        final var overrideVerboseLogging = Boolean.parseBoolean(String.valueOf(project.findProperty(PROPERTY_VERBOSE_LOGGING_OVERRIDE)));
         return switch (getLogLevel(project)) {
         case DEBUG, INFO -> true;
         default -> overrideVerboseLogging;
         };
-    }
-
-    public final XtcBuildRuntimeException buildException(final String msg, final Object... args) {
-        return buildException(null, msg, args);
-    }
-
-    public static XtcBuildRuntimeException buildException(final Logger logger, final String prefix, final String msg, final Object... args) {
-        return buildException(logger, prefix, null, msg, args);
-    }
-
-    public final XtcBuildRuntimeException buildException(final Throwable t, final String msg, final Object... args) {
-        return buildException(logger, prefix, t, msg, args);
-    }
-
-    public static XtcBuildRuntimeException buildException(
-        final Logger logger, final String prefix, final Throwable t, final String msg, final Object... args) {
-        logger.error(resolveEllipsis(msg, args), t);
-        return new XtcBuildRuntimeException(t, prefix + ": " + msg, args);
     }
 
     @SuppressWarnings("unused")
@@ -122,45 +104,13 @@ public abstract class ProjectDelegate<T, R> {
         return startParameter.getShowStacktrace() != ShowStacktrace.INTERNAL_EXCEPTIONS;
     }
 
-    public final String prefix() {
-        return prefix(project);
-    }
-
-    public final String prefix(final Task task) {
-        return prefix(project, task);
-    }
-
-    public final String prefix(final String taskName) {
-        return prefix(projectName, taskName);
-    }
-
-    public static String prefix(final Project project) {
-        return prefix(project, (String)null);
-    }
-
-    public static String prefix(final Project project, final Task task) {
-        return prefix(project.getName(), task == null ? null : task.getName());
-    }
-
-    public static String prefix(final Project project, final String taskName) {
-        return prefix(project.getName(), taskName);
-    }
-
-    public static String prefix(final String projectName, final String taskName) {
-        final var taskString = taskName == null ? "" : (':' + taskName);
-        return '[' + java.util.Objects.requireNonNull(projectName) + taskString + ']';
-    }
-
-    public Project getProject() {
-        return project;
-    }
 
     public ObjectFactory getObjects() {
         return objects;
     }
 
     public Logger getLogger() {
-        return project.getLogger();
+        return logger;
     }
 
     @SuppressWarnings("unused")
@@ -189,7 +139,7 @@ public abstract class ProjectDelegate<T, R> {
     public void considerNeverUpToDate(final Task task) {
         task.getOutputs().cacheIf(t -> false);
         task.getOutputs().upToDateWhen(t -> false);
-        logger.warn("{} WARNING: '{}' is configured to always be treated as out of date, and will be run.", prefix, task.getName());
+        logger.warn("[plugin] WARNING: '{}' is configured to always be treated as out of date, and will be run.", task.getName());
     }
 
     protected static <E> E ensureExtension(final Project project, final String name, final Class<E> clazz) {

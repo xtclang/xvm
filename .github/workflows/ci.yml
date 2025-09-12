@@ -229,9 +229,9 @@ jobs:
           java -XX:+PrintFlagsFinal -version 2>&1 || echo "  Flag printing failed (non-fatal)"
           
           inspect_gradle_cache "before clean, check and distZip"
-          ./gradlew ${{ env.gradle_options }} clean
-          ./gradlew ${{ env.gradle_options }} check
-          ./gradlew ${{ env.gradle_options }} :xdk:distZip
+          ./gradlew ${{ env.gradle_options }} clean --info
+          ./gradlew ${{ env.gradle_options }} check --info
+          ./gradlew ${{ env.gradle_options }} :xdk:distZip --info
           
           # Run manual tests inline if enabled (avoids cache rebuild)
           if [ "${{ env.run_manual_tests }}" = "true" ]; then

@@ -259,7 +259,7 @@ The plugin handles all XDK dependencies automatically - most XTC developers won'
 
 Manual local build for **any computer** (for advanced users):
 
-* **Bootstrap JVM**: Any Java 8+ to run the Gradle wrapper (just to bootstrap the build)
+* **Bootstrap JVM**: Any Java 17+ to run the Gradle wrapper (just to bootstrap the build)
 * **Target JDK**: Gradle toolchain automatically provisions the correct JDK version for building XTC
 * **Gradle**: Not required to be pre-installed (project includes Gradle Wrapper)
 
@@ -399,6 +399,18 @@ After running any install task, you'll find:
 The difference between `build` and `installDist` is that `build` creates all the necessary artifacts but leaves them in their individual project build directories, while `installDist` assembles everything into a unified, deployable XDK structure ready for use.
 
 ## Development
+
+### XTC Plugin and Build System Testing
+
+For comprehensive examples of using the XTC Gradle plugin and testing XTC applications, see the [**manualTests**](manualTests/README.md) project documentation. This project demonstrates:
+
+- XTC Gradle plugin configuration and usage
+- Build lifecycle best practices and caching
+- Configuration cache compatibility
+- Custom task creation and testing scenarios
+- Debugging and troubleshooting XTC builds
+
+The manualTests project serves as both integration tests and comprehensive documentation for the XTC build system.
 
 ### Git Workflow: Rebase-Only, Linear History
 

@@ -8,32 +8,28 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.xdk.build.java)
+    id("org.xtclang.build.git")
 }
 
 private val semanticVersion: SemanticVersion by extra
-private val gitProtocol = xdkBuildLogic.gitHubProtocol()
 
-val processResources by tasks.existing {
-    // Make the task depend on environment variables so Gradle knows when to re-run it
-    inputs.property("GH_COMMIT", providers.environmentVariable("GH_COMMIT").orElse(""))
-    inputs.property("GH_BRANCH", providers.environmentVariable("GH_BRANCH").orElse("master"))
-    inputs.property("version", version)
+// Use the standard git convention plugin instead of custom logic
+tasks.processResources {
+    dependsOn(tasks.resolveGitInfo)
+}
+
+// Separate task to copy git info to legacy location
+val copyGitInfoForBuildInfo by tasks.registering(Copy::class) {
+    description = "Copy git info to legacy location for BuildInfo compatibility"
+    dependsOn(tasks.resolveGitInfo)
     
-    outputs.file(layout.buildDirectory.file("generated/resources/main/git.properties"))
-    
-    doFirst {
-        logger.info(">>> GENERATING GIT PROPERTIES")
-        val props = gitProtocol.getGitInfo().toMutableMap()
-        props["git.build.version"] = version.toString()
-        logger.info("Calculated git properties: $props")
-        val gitPropsFile = layout.buildDirectory.file("generated/resources/main/git.properties").get().asFile
-        logger.info("Writing git properties file: ${gitPropsFile.absolutePath}")
-        logger.debug("  Parent dir exists: ${gitPropsFile.parentFile.exists()}")
-        gitPropsFile.parentFile.mkdirs()
-        logger.debug("  Parent dir exists after mkdirs: ${gitPropsFile.parentFile.exists()}")
-        gitPropsFile.writeText(props.map { "${it.key}=${it.value}" }.joinToString("\n"))
-        logger.info("Git configuration properties:: ${gitPropsFile.readText()}")
-    }
+    from(tasks.resolveGitInfo.flatMap { it.outputFile })
+    into(layout.buildDirectory.dir("resources/main"))
+    rename { "git.properties" }
+}
+
+tasks.processResources {
+    dependsOn(copyGitInfoForBuildInfo)
 }
 
 // TODO: Move these to common-plugins, the XDK composite build does use them in some different places.
@@ -77,39 +73,34 @@ val copyEcstasyResources by tasks.registering(Copy::class) {
     description = "Copy ecstasy resources to avoid IntelliJ cross-module path issues"
     from(xdkEcstasyResourcesConsumer)
     into(layout.buildDirectory.dir("generated/resources/main"))
-    // Only copy when source changes or destination doesn't exist
-    onlyIf { 
-        !destinationDir.exists() || 
-        source.files.any { it.lastModified() > destinationDir.lastModified() }
-    }
+    // Remove onlyIf condition - let Gradle handle incremental builds with proper inputs/outputs
 }
 
 val generateBuildInfo by tasks.registering {
     description = "Generate build-info.properties with version and git information"
-    dependsOn(processResources)
+    dependsOn(tasks.resolveGitInfo)
     
     val versionPropsFile = compositeRootProjectDirectory.file("version.properties")
     val outputFile = layout.buildDirectory.file("resources/main/build-info.properties")
-    val gitPropsFile = layout.buildDirectory.file("resources/main/git.properties")
+    val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
+    // Always declare IntelliJ output for configuration cache compatibility
     val intellijOutputFile = project.file("out/production/resources/build-info.properties")
     
     inputs.file(versionPropsFile)
-    inputs.file(gitPropsFile).optional()
+    inputs.file(gitInfoProvider)
     outputs.file(outputFile)
-    // Conditionally add IntelliJ output if directory exists
-    if (intellijOutputFile.parentFile.exists()) {
-        outputs.file(intellijOutputFile)
-    }
+    outputs.file(intellijOutputFile)
     
     doLast {
         // Read version properties as base
         val buildInfo = Properties()
         versionPropsFile.asFile.inputStream().use { buildInfo.load(it) }
         
-        // Add git information from git.properties
-        if (gitPropsFile.get().asFile.exists()) {
+        // Add git information directly from git info file
+        val gitInfoFile = gitInfoProvider.get().asFile
+        if (gitInfoFile.exists()) {
             val gitProps = Properties()
-            gitPropsFile.get().asFile.inputStream().use { gitProps.load(it) }
+            gitInfoFile.inputStream().use { gitProps.load(it) }
             
             gitProps.getProperty("git.commit.id")?.let { buildInfo.setProperty("git.commit", it) }
             
@@ -123,12 +114,11 @@ val generateBuildInfo by tasks.registering {
             outputStream().use { buildInfo.store(it, "Build information generated at build time") }
         }
         
-        // Also write to IntelliJ output directory if it exists
-        if (intellijOutputFile.parentFile.exists()) {
-            intellijOutputFile.apply {
-                parentFile.mkdirs()
-                outputStream().use { buildInfo.store(it, "Build information generated at build time") }
-            }
+        // Always copy to IntelliJ output directory for IDE compatibility
+        // TODO: Consider making runtime code check multiple locations instead of duplicating files
+        intellijOutputFile.apply {
+            parentFile.mkdirs()
+            outputStream().use { buildInfo.store(it, "Build information generated at build time") }
         }
     }
 }
@@ -152,26 +142,14 @@ tasks.compileTestJava {
     dependsOn(generateBuildInfo)
 }
 
-/**
- * Sync (not copy) all dependencies from the compile classpath. This is to prevent
- * older versions of dependencies with different file names (due to version changed),
- * still being in the build output, as we have not cleaned.
- */
-val syncDependencies by tasks.registering(Sync::class) {
-    val taskPrefix = "[${project.name}:syncDependencies]"
-    from(configurations.compileClasspath) {
-        include("**/*.jar")
-    }
-    into(layout.buildDirectory.dir("javatools-dependencies"))
-    doLast {
-        outputs.files.asFileTree.forEach {
-            logger.info("$taskPrefix Resolved javatools dependency file: $it")
-        }
-    }
-}
-
 val jar by tasks.existing(Jar::class) {
-    dependsOn(processResources, generateBuildInfo)
+    dependsOn(tasks.processResources, generateBuildInfo)
+    
+    // CRITICAL: Explicitly declare that this task reads from compileClasspath
+    // This forces Gradle to wait for javatools_utils:jar and other dependency tasks to complete
+    inputs.files(configurations.compileClasspath)
+    // Also declare dependency on ecstasy resources (like implicit.x) that get copied
+    inputs.files(xdkEcstasyResourcesConsumer)
     inputs.property("manifestSemanticVersion") {
         semanticVersion.toString()
     }
@@ -183,22 +161,15 @@ val jar by tasks.existing(Jar::class) {
      * This "from" statement will copy everything in the dependencies section, and our resources
      * to the javatools-<version>.jar. In that respect it's a fat jar.
      *
-     * The "copyDependencies" task will output a build directory containing all our dependencies,
-     * which are currently just javatools-utils-<version>.jar and jline.
-     *
-     * Map semantics guarantee that we resolve the "from" input only during the execution phase.
-     * We take the destination directory, known to be an output of copyDependencies, and a
-     * single directory. This is implicit from the "into" configuration of that task.
-     * Then we lazily (with "map") assume that every file in the destination tree is a jar/zip file
-     * (we will break if it isn't) and unpack that into the javatools jar that is being built.
-     *
-     * TODO: an alternative solution would be to leave the run-time dependent libraries "as is" and
-     *      use the "Class-Path" attribute of the manifest to point to them.
+     * Include project's own classes and resources (default Jar behavior)
+     * PLUS extract dependency JARs into the fat jar.
      */
-    from(syncDependencies.map { fileTree(it.destinationDir).map { jarFile ->
-        logger.info("[javatools] Resolving dependency: $jarFile for $version")
-        zipTree(jarFile)
-    }})
+    // With proper inputs declaration above, this should now work correctly with configuration cache
+    from(configurations.compileClasspath.map { config ->
+        config.filter { it.name.endsWith(".jar") }.map { jarFile -> 
+            zipTree(jarFile) 
+        }
+    })
 
     archiveBaseName = "javatools"
 

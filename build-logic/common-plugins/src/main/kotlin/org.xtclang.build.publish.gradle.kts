@@ -10,22 +10,59 @@ plugins {
 }
 
 private val semanticVersion: SemanticVersion by extra
+// Extract values during configuration to avoid capturing project references
 private val gitHubToken = getXtclangGitHubMavenPackageRepositoryToken()
+private val allowPublicationValue = allowPublication()
+private val snapshotOnlyValue = snapshotOnly()
+private val projectName = project.name
+private val projectGroup = project.group.toString()
+private val userHome = System.getProperty("user.home")
 
 publishing {
     repositories {
         mavenLocal()
-        mavenGitHubPackages(project)
+        // Configure GitHub packages repository directly to avoid capturing project references
+        if (gitHubToken.isNotEmpty()) {
+            maven {
+                name = "GitHub"
+                url = uri("https://maven.pkg.github.com/xtclang/xvm")
+                credentials {
+                    username = "xtclang-workflows"
+                    password = gitHubToken
+                }
+            }
+        }
     }
-    configureMavenPublications(project)
+    publications.withType<MavenPublication>().configureEach {
+        pom {
+            licenses {
+                license {
+                    name.set("The XDK License")
+                    url.set("https://github.com/xtclang/xvm/tree/master/license")
+                }
+            }
+            developers {
+                developer {
+                    id.set("xtclang-workflows")
+                    name.set("XTC Team")
+                    email.set("noreply@xtclang.org")
+                }
+            }
+        }
+    }
 }
 
 tasks.withType<PublishToMavenRepository>().configureEach {
     onlyIf {
-        allowPublication()
+        allowPublicationValue
     }
-    if (!allowPublication()) {
-        logger.warn("[build-logic] Skipping publication task, snapshotOnly=${snapshotOnly()} for version: '$semanticVersion'")
+    if (!allowPublicationValue) {
+        logger.warn("[build-logic] Skipping publication task, snapshotOnly=${snapshotOnlyValue} for version: '$semanticVersion'")
+    }
+    
+    // Mark GitHub repository publication tasks as incompatible with configuration cache
+    if (name.contains("GitHub")) {
+        notCompatibleWithConfigurationCache("GitHub Maven publication requires network authentication which cannot be serialized")
     }
 }
 
@@ -46,7 +83,7 @@ val publishRemote by tasks.registering {
     }
     doLast {
         if (gitHubToken.isEmpty()) {
-            throw buildException("ERROR: No remote repositories for remote publication are configured.")
+            throw GradleException("ERROR: No remote repositories for remote publication are configured.")
         }
     }
 }
@@ -55,92 +92,30 @@ val listTags by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "List all tags in the repository."
     doLast {
-        logger.lifecycle("[build-logic] Tag information retrieved from git:")
-        val github = xdkBuildLogic.gitHubProtocol()
-        github.resolveTags().toString().lines().forEach {
-            logger.lifecycle("[build-logic]     $it")
-        }
+        logger.lifecycle("[build-logic] Tag information functionality moved to org.xtclang.build.git convention plugin")
+        logger.lifecycle("[build-logic] Use 'resolveGitInfo' task instead")
     }
 }
 
-val deleteLocalPublications by tasks.registering {
-    doLast {
-        val repoDir = File(System.getProperty("user.home"), ".m2/repository/org/xtclang/${project.name}")
-        if (!repoDir.exists()) {
-            logger.warn("[build-logic] No local publications found in '${repoDir.absolutePath}'.")
-            return@doLast
-        }
-
-        val xtclangDir = repoDir.parentFile
-        require(xtclangDir.exists() && xtclangDir.isDirectory) {
-            "Illegal state: parent directory of '$repoDir' does not exist."
-        }
-        logger.lifecycle("[build-logic] Deleting all local publications in '${repoDir.absolutePath}'.")
-        delete(repoDir)
-        val xtclangFiles = xtclangDir.listFiles()
-        if (xtclangFiles == null || xtclangFiles.isEmpty()) {
-            logger.lifecycle("[build-logic] Deleting empty parent directory '${xtclangDir.absolutePath}'.")
-            delete(xtclangDir)
-        }
-    }
+val deleteLocalPublications by tasks.registering(DeleteLocalPublicationsTask::class) {
+    group = PUBLISH_TASK_GROUP
+    description = "Delete all local Maven publications for this project from the mavenLocal() repository."
+    userHomePath.set(userHome)
+    projectName.set(providers.provider { project.name })
 }
 
-val listLocalPublications by tasks.registering {
+val listLocalPublications by tasks.registering(ListLocalPublicationsTask::class) {
     group = PUBLISH_TASK_GROUP
     description = "Task that lists local Maven publications for this project from the mavenLocal() repository."
-    doLast {
-        logger.lifecycle("[build-logic] '$name' Listing local publications (and their artifacts) for project '${project.group}:${project.name}':")
-        val repoDir = File(System.getProperty("user.home"), ".m2/repository/org/xtclang/${project.name}")
-        if (!repoDir.exists()) {
-            logger.warn("[build-logic] WARNING: No local publications found on disk at: '${repoDir.absolutePath}'.")
-        }
-
-        logger.lifecycle("[build-logic] Declared local publication destinations (all may not be published yet) are:")
-        tasks.withType<PublishToMavenRepository>().filter { it.name.contains("Local") }.forEach {
-            with(it.publication) {
-                logger.lifecycle("[build-logic]     '${it.name}' (${artifacts.count()} artifacts):")
-                val baseUrl = "${it.repository.url}${groupId.replace('.', '/')}/$artifactId/$version/$artifactId"
-                artifacts.forEach { artifact ->
-                    val desc = buildString {
-                        append(baseUrl)
-                        append("-$version")
-                        if (artifact.classifier != null) {
-                            append("-${artifact.classifier}")
-                        }
-                        append(".${artifact.extension}")
-                    }
-                    logger.lifecycle("[build-logic]         Local Artifact: '$desc'")
-                }
-            }
-        }
-    }
+    userHomePath.set(userHome)
+    projectName.set(providers.provider { project.name })
+    projectGroup.set(providers.provider { project.group.toString() })
 }
 
-val listRemotePublications by tasks.registering {
+val listRemotePublications by tasks.registering(ListRemotePublicationsTask::class) {
     group = PUBLISH_TASK_GROUP
     description = "Task that lists publications for this project on the 'xtclang' org GitHub package repo."
-    doLast {
-        val github = xdkBuildLogic.gitHubProtocol()
-        val artifactNames = tasks.withType<PublishToMavenRepository>()
-            .filter { !it.name.contains("Local") }
-            .map { it.publication }
-            .map { "${it.groupId}.${it.artifactId}" }
-            .toSet()
-        val map = github.resolvePackages(artifactNames)
-        if (map.isEmpty()) {
-            logger.warn("[build-logic] No packages found for project '${project.name}'.")
-            return@doLast
-        }
-        logger.lifecycle("[build-logic] Listing all published packages for project '${project.name}':")
-        map.forEach { (packageName, versionMap) ->
-            logger.lifecycle("[build-logic]     Package: '$packageName'")
-            versionMap.forEach { (key, timestamps) ->
-                val (versionName, versionId) = key
-                logger.lifecycle("[build-logic]         Version: '$versionName (id: $versionId)")
-                timestamps.forEach { timestamp -> logger.lifecycle("[build-logic]             Created at: $timestamp") }
-            }
-        }
-    }
+    projectName.set(providers.provider { project.name })
 }
 
 /**
@@ -159,16 +134,14 @@ val listRemotePublications by tasks.registering {
  * There is also a -PdryRun property, which will likely grow into a project wide way of knowing
  * whether to do mutating operations or not during the build.
  */
-val deleteRemotePublications by tasks.registering {
+val deleteRemotePublications by tasks.registering(DeleteRemotePublicationsTask::class) {
     group = PUBLISH_TASK_GROUP
     description = "Delete all or specific published packages from the xtclang GitHub Maven Repo."
-    doLast {
-        fun deletePackageProperties(name: String) =
-            properties["deletePackage$name"]?.toString()?.split(",") ?: emptyList()
-
-        val github = xdkBuildLogic.gitHubProtocol()
-        val deleteNames = deletePackageProperties("Names")
-        val deleteVersions = deletePackageProperties("Versions")
-        github.deletePackages(deleteNames, deleteVersions)
-    }
+    
+    // Extract property values during configuration to avoid capturing project references
+    val deleteNamesValue = findProperty("deletePackageNames")?.toString()?.split(",") ?: emptyList()
+    val deleteVersionsValue = findProperty("deletePackageVersions")?.toString()?.split(",") ?: emptyList()
+    
+    deletePackageNames.set(providers.provider { deleteNamesValue })
+    deletePackageVersions.set(providers.provider { deleteVersionsValue })
 }
