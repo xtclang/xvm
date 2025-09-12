@@ -259,7 +259,7 @@ The plugin handles all XDK dependencies automatically - most XTC developers won'
 
 Manual local build for **any computer** (for advanced users):
 
-* **Bootstrap JVM**: Any Java 8+ to run the Gradle wrapper (just to bootstrap the build)
+* **Bootstrap JVM**: Any Java 17+ to run the Gradle wrapper (just to bootstrap the build)
 * **Target JDK**: Gradle toolchain automatically provisions the correct JDK version for building XTC
 * **Gradle**: Not required to be pre-installed (project includes Gradle Wrapper)
 

@@ -1,5 +1,6 @@
 import org.gradle.api.GradleException
 import org.gradle.api.Project
+import org.gradle.api.provider.ProviderFactory
 import java.io.File
 import java.io.FileInputStream
 import java.util.Objects.requireNonNull
@@ -28,7 +29,7 @@ interface XdkProperties {
     fun has(key: String): Boolean
 }
 
-class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkProperties {
+class XdkPropertiesImpl(project: Project, private val providers: ProviderFactory = project.providers): XdkProjectBuildLogic(project), XdkProperties {
     companion object {
         const val REDACTED = "[REDACTED]"
         private const val PROPERTIES_EXT = "properties"
@@ -92,10 +93,10 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
 
         // First check a system env override
         val envKey = toSystemEnvKey(key)
-        val envValue = System.getenv(envKey)
-        if (envValue != null) {
+        val envProvider = providers.environmentVariable(envKey)
+        if (envProvider.isPresent) {
             logger.info("[build-logic] XdkProperties; resolved System ENV property '$key' (${envKey}).")
-            return envValue.toString()
+            return envProvider.get()
         }
 
         // Check Gradle project properties (from -P command line args)
@@ -105,10 +106,10 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
             return projectPropValue.toString()
         }
 
-        val sysPropValue = System.getProperty(key)
-        if (sysPropValue != null) {
+        val sysPropProvider = providers.systemProperty(key)
+        if (sysPropProvider.isPresent) {
             logger.info("[build-logic] XdkProperties; resolved Java System property '$key'.")
-            return sysPropValue.toString()
+            return sysPropProvider.get()
         }
 
         logger.info("[build-logic] XdkProperties; resolved property '$key' from properties table.")
@@ -124,7 +125,10 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
     }
 
     override fun has(key: String): Boolean {
-        return properties[key] != null || System.getenv(toSystemEnvKey(key)) != null || project.findProperty(key) != null || System.getProperty(key) != null
+        return properties[key] != null || 
+               providers.environmentVariable(toSystemEnvKey(key)).isPresent || 
+               project.findProperty(key) != null || 
+               providers.systemProperty(key).isPresent
     }
 
     override fun toString(): String {
@@ -221,5 +225,6 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
 }
 
 fun Project.getXtclangGitHubMavenPackageRepositoryToken(): String {
-    return getXdkProperty("org.xtclang.repo.github.token", System.getenv("GITHUB_TOKEN") ?: "")
+    val fallbackToken = providers.environmentVariable("GITHUB_TOKEN").getOrElse("")
+    return getXdkProperty("org.xtclang.repo.github.token", fallbackToken)
 }

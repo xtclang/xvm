@@ -32,7 +32,7 @@ We strongly suggest the use of the JetBrains IntelliJ IDEA IDE, even if we have 
 
 IDEA also has built-in Git support, and that is included in the community edition.
 
-You will need JDK 8 or later installed. You can download the JDK from: <https://aws.amazon.com/corretto/> or <https://developers.redhat.com/products/openjdk/download>. (Oracle JDK and OpenJDK are both supported, but the former has licensing issues and the latter is purposefully kept out-of-date with security updates to drive business to the former.)
+You will need JDK 17 or later installed to run Gradle. You can download the JDK from: <https://aws.amazon.com/corretto/> or <https://developers.redhat.com/products/openjdk/download>. (Oracle JDK and OpenJDK are both supported, but the former has licensing issues and the latter is purposefully kept out-of-date with security updates to drive business to the former.)
 
 Create an "xvm" project in IDEA for the `./xvm/` directory. Build the project, which compiles the Java sources. After the build completes, you should be able to run the shell-based test script from the `./xsrc` directory: `../bin/runAll.sh`; this will run various "tests" (we use the term loosely here, since we have not yet incorporated a CI model).
 

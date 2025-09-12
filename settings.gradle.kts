@@ -17,7 +17,7 @@ plugins {
 develocity {
     projectId = "xvm"
     buildScan {
-        val isCi = System.getenv("CI") != null
+        val isCi = providers.environmentVariable("CI").isPresent
         publishing.onlyIf {
             isCi
         }
