@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.xvm.asm.MethodStructure;
@@ -60,7 +61,7 @@ public class Fiber
             // if the call is async, we must clone context tokens on the spot
             Map<ObjectHandle, ObjectHandle> mapTokens = msgCall.f_mapTokens;
             if (mapTokens != null && msgCall.isAsync()) {
-                m_mapTokens = new HashMap<>(mapTokens);
+                m_mapTokens = new ConcurrentHashMap<>(mapTokens);
                 m_fCloneMap = false;
             } else {
                 m_mapTokens = mapTokens;
@@ -122,10 +123,10 @@ public class Fiber
     public Map<ObjectHandle, ObjectHandle> ensureTokens() {
         Map<ObjectHandle, ObjectHandle> map = m_mapTokens;
         if (map == null) {
-            m_mapTokens = map = new HashMap<>();
+            m_mapTokens = map = new ConcurrentHashMap<>();
             m_fCloneMap = false;
         } else if (m_fCloneMap) {
-            m_mapTokens = map = new HashMap<>(map);
+            m_mapTokens = map = new ConcurrentHashMap<>(map);
             m_fCloneMap = false;
         }
         return map;

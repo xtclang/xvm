@@ -1,10 +1,8 @@
 module TestSimple {
 
-    protected @Lazy function void() log.calc() = () -> {
-        @Inject Console console;
-        console.print("run");
-    };
+    import ecstasy.SharedContext;
 
+    @Inject Console console;
     void run() {
         new Runner() {
             @Override
