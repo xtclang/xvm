@@ -335,12 +335,38 @@ jobs:
         shell: bash
         run: |
           ${{ env.GRADLE_CACHE_INSPECT }}
-          
+
           inspect_gradle_cache "before publishing (reused from build-verify)"
-          
+
           echo "Reusing build cache from build-verify job..."
           ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true
           ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true
+
+      - name: Clean up old Maven package versions (keep 50 newest)
+        if: ${{ success() && ((github.event.inputs.snapshot-maven == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
+        run: |
+          echo "🧹 Cleaning up old XDK Maven package versions (keeping 50 newest)..."
+
+      - uses: actions/delete-package-versions@v4
+        if: ${{ success() && ((github.event.inputs.snapshot-maven == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
+        with:
+          package-name: 'org.xtclang.xdk'
+          package-type: 'maven'
+          min-versions-to-keep: 50
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Clean up old Plugin package versions (keep 50 newest)
+        if: ${{ success() && ((github.event.inputs.snapshot-maven == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
+        run: |
+          echo "🧹 Cleaning up old Plugin Maven package versions (keeping 50 newest)..."
+
+      - uses: actions/delete-package-versions@v4
+        if: ${{ success() && ((github.event.inputs.snapshot-maven == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
+        with:
+          package-name: 'org.xtclang.xtc-plugin'
+          package-type: 'maven'
+          min-versions-to-keep: 50
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   compute-docker-tags:
     name: Compute Docker tags and metadata
