@@ -104,14 +104,14 @@ public class BuildContext {
     public int lineNumber;
 
     /**
-     * The start-of-method label.
+     * The top index of the Java stack for this method.
      */
-    public Label startScope;
+    public int maxLocal;
 
     /**
-     * The end-of-method label.
+     * The current scope.
      */
-    public Label endScope;
+    public Scope scope;
 
     /**
      * The Java slot past the last one used by the numbered XTC registers. The slots from this point
@@ -177,15 +177,13 @@ public class BuildContext {
      */
     public void enterMethod(CodeBuilder code) {
         lineNumber = methodStruct.getSourceLineNumber();
-        startScope = code.newLabel();
-        endScope   = code.newLabel();
+        scope      = new Scope(this, code);
 
         code
             .lineNumber(lineNumber)
-            .labelBinding(startScope)
-            .localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, startScope, endScope)
+            .labelBinding(scope.startLabel)
+            .localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, scope.startLabel, scope.endLabel)
             ;
-
 
         int          extraArgs = jmd.getImplicitParamCount(); // account for $ctx, $cctx, thi$
         TypeConstant thisType  = typeInfo.getType();
@@ -206,7 +204,7 @@ public class BuildContext {
             TypeConstant type      = param.getType();
             int          slot      = code.parameterSlot(extraArgs + i); // compensate for implicits
 
-            code.localVariable(slot, name, paramDesc.cd, startScope, endScope);
+            code.localVariable(slot, name, paramDesc.cd, scope.startLabel, scope.endLabel);
 
             switch (paramDesc.flavor) {
             case Specific, Widened, Primitive, SpecificWithDefault, WidenedWithDefault:
@@ -227,14 +225,14 @@ public class BuildContext {
         // TODO: this will be done using a pass over all the ops to compute the total number
         //       of Java slots used by the numbered XTC registers
         // For now, we don't mind to overshoot... ("this", "$ctx", ...)
-        tailSlot = (isFunction ? 0 : 1) + extraArgs + methodStruct.getMaxVars() * 2 + 2;
+        tailSlot = (isFunction ? 0 : 1) + extraArgs + methodStruct.getMaxVars() * 2;
     }
 
     /**
      * Finish the compilation.
      */
     public void exitMethod(CodeBuilder code) {
-        code.labelBinding(endScope);
+        code.labelBinding(scope.endLabel);
     }
 
     /**
@@ -520,18 +518,18 @@ public class BuildContext {
         ClassDesc cd;
         Slot      slot;
         if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null) {
-            int slotIndex = code.allocateLocal(Builder.toTypeKind(cd));
-            int slotExt   = code.allocateLocal(TypeKind.BOOLEAN);
+            int slotIndex = scope.allocateLocal(Builder.toTypeKind(cd));
+            int slotExt   = scope.allocateLocal(TypeKind.BOOLEAN);
 
-            code.localVariable(slotIndex, name, cd, varStartScope, endScope);
-            code.localVariable(slotExt,   name+EXT, CD_boolean, varStartScope, endScope);
+            code.localVariable(slotIndex, name, cd, varStartScope, scope.endLabel);
+            code.localVariable(slotExt,   name+EXT, CD_boolean, varStartScope, scope.endLabel);
 
             slot = new DoubleSlot(slotIndex, slotExt, JitFlavor.MultiSlotPrimitive, type, cd, name);
         } else {
             cd = JitParamDesc.getJitClass(typeSystem, type);
 
-            int slotIndex = code.allocateLocal(Builder.toTypeKind(cd));
-            code.localVariable(slotIndex, name, cd, varStartScope, endScope);
+            int slotIndex = scope.allocateLocal(Builder.toTypeKind(cd));
+            code.localVariable(slotIndex, name, cd, varStartScope, scope.endLabel);
 
             slot = new SingleSlot(slotIndex, type, cd, name);
         }
@@ -563,9 +561,9 @@ public class BuildContext {
                     code.labelBinding(varStartScope);
 
                     ClassDesc resourceCD = resourceType.ensureClassDesc(typeSystem);
-                    int       slotIndex  = code.allocateLocal(TypeKind.REFERENCE);
+                    int       slotIndex  = scope.allocateLocal(TypeKind.REFERENCE);
                     Slot      slot       = new SingleSlot(slotIndex, resourceType, resourceCD, name);
-                    code.localVariable(slotIndex, name, resourceCD, varStartScope, endScope);
+                    code.localVariable(slotIndex, name, resourceCD, varStartScope, scope.endLabel);
 
                     slots.put(varIndex, slot);
 
@@ -860,4 +858,5 @@ public class BuildContext {
             return false;
         }
     }
+
 }

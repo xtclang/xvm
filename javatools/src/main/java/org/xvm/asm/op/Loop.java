@@ -25,5 +25,7 @@ public class Loop
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         code.labelBinding(bctx.ensureLabel(code, getAddress()));
+
+        super.build(bctx, code);
     }
 }

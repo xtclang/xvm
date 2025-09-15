@@ -91,6 +91,8 @@ public class LoopEnd
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         code.goto_(bctx.ensureLabel(code, getAddress() + m_ofJmp));
+
+        super.build(bctx, code);
     }
 
     // ----- fields --------------------------------------------------------------------------------

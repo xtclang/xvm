@@ -1013,27 +1013,23 @@ public class CommonBuilder
             if (isSingleton) {
                 thisSlot = 0;
             } else {
-                // step 0 TODO anonymous classes support
+                // step 1: TODO
 
-                // get permission to use the memory
+                // step 2: get permission to use the memory
                 code.aload(ctxSlot)
                     .ldc(implSize)
                     .invokevirtual(CD_Ctx, "alloc", MethodTypeDesc.of(CD_void, CD_long));
 
-                // step 1 (initializer)
+                // step 3: (initializer)
                 thisSlot = code.allocateLocal(TypeKind.REFERENCE);
                 code.localVariable(thisSlot, "thi$", CD_this, startScope, endScope);
                 invokeDefaultConstructor(className, code);
                 code.astore(thisSlot);
-
-                // TODO step 2: execute annotation constructors
-
             }
 
-            // step 3: call the constructor;
-            // a constructor context is required if a “finally” chain will exist
+            // steps 4: a constructor context is required if a “finally” chain will exist
+            //          (assume true for now)
             // CtorCtx cctx = ctx.ctorCtx();
-            // construct$0(ctx, cctx, thi$, x, y, z);
 
             int cctxSlot = code.allocateLocal(TypeKind.REFERENCE);
             code.localVariable(cctxSlot, "cctx", CD_CtorCtx, startScope, endScope);
@@ -1042,7 +1038,8 @@ public class CommonBuilder
                 .astore(cctxSlot)
             ;
 
-
+            // step 6: call the constructor
+            // construct$0(ctx, cctx, thi$, x, y, z);
             String        ctorName = constructor.getIdentity().ensureJitMethodName(typeSystem);
             JitMethodDesc ctorDesc = constructor.getJitDesc(typeSystem);
 
@@ -1071,7 +1068,8 @@ public class CommonBuilder
 
             code.invokestatic(CD_this, ctorName, ctorMd);
 
-            // step 4:
+            // step 7, 8, 9, 10: TODO
+
             code.labelBinding(endScope)
                 .aload(thisSlot)
                 .areturn();
