@@ -3664,8 +3664,6 @@ public abstract class TypeConstant
      * Layer on the passed method contributions onto the method information already collected.
      *
      * @param constId            identity of the class
-     * @param fSelf              true if the layer being added represents the "Equals" contribution of
-     *                           the type
      * @param contribSource      the contribution source
      * @param idDelegate         the property constant that provides the reference to delegate to
      * @param mapMethods         methods of the class
