@@ -1,9 +1,46 @@
 /**
- * The Orderable interface represents the general capabilities of data types that can be compared
- * for purposes of ordering.
+ * The [Orderable] interface represents the general capabilities of data types that can be compared
+ * for purposes of ordering. Its primary function is to [compare] two values for order, which yields
+ * an [Ordered] result. Any implementation of the `Orderable` interface must implement both the
+ * [compare] and [equals] functions, and the [equals] function must return `True` for two values iff
+ * the [compare] function returns [Ordered.Equal] for the same two values.
+ *
+ * The binary operators `<`, `<=`, `>`, and `>=` all require their left and right arguments to be
+ * of the same [Orderable] type, and these operators rely on the [compare] function to determine
+ * the operator result.
+ *
+ * The `min()` and `max()` functionality that is common in many languages is also enabled by the
+ * [Orderable] interface via the [minOf] and [maxOf] functions. Additionally, for readability
+ * purposes, the [notGreaterThan] and [notLessThan] functions provide identical functionality
+ * under separate names that are more readable when using dot notation, aka the Uniform Function
+ * Call Syntax (UFCS).
+ *
+ * [Range] objects are also based on the [Orderable] interface, and the operators for creating a
+ * `Range` (`..`, `>..`, `..<`, and `>..<`) are methods on all `Orderable` types.
  */
 interface Orderable
         extends Comparable {
+    /**
+     * Compare two objects of the same type for purposes of ordering.
+     *
+     * Note: this function must yield `Equal` *if and only if* the result of [equals] function is
+     *       `True`.
+     */
+    static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
+
+    /**
+     * Compare two objects of the same Orderable type for equality.
+     *
+     * Note: this function must yield `True` *if and only if* the result of [compare] function is
+     *       `Equal`.
+     *
+     * @return True iff the objects are equivalent
+     */
+    @Override
+    static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
+
+    // ----- Range creation ------------------------------------------------------------------------
+
     /**
      * Create a Range that represents the values from _this_ (inclusive) **to** _that_
      * (inclusive).
@@ -40,6 +77,8 @@ interface Orderable
         return new Range<immutable Orderable>(this, that, firstExclusive=True, lastExclusive=True);
     }
 
+    // ----- min/max functionality -----------------------------------------------------------------
+
     /**
      * Return the minimum value of the two specified values. This is the traditional `min` function
      * found in many standard libraries; for example, if `n1` and `n2` are both of type `Int`:
@@ -65,7 +104,7 @@ interface Orderable
      *     Int width = size.notLessThan(4).notGreaterThan(32);
      */
     static <CompileType extends Orderable> CompileType notGreaterThan(CompileType value1, CompileType value2) {
-        return value1 <= value2 ? value1 : value2;
+        return minOf(value1, value2);
     }
 
     /**
@@ -93,25 +132,6 @@ interface Orderable
      *     Int width = size.notLessThan(4).notGreaterThan(32);
      */
     static <CompileType extends Orderable> CompileType notLessThan(CompileType value1, CompileType value2) {
-        return value1 >= value2 ? value1 : value2;
+        return maxOf(value1, value2);
     }
-
-    /**
-     * Compare two objects of the same type for purposes of ordering.
-     *
-     * Note: this function must yield "Equal" *if and only if* the result of `equals` function is
-     *       "True".
-     */
-    static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
-
-    /**
-     * Compare two objects of the same Orderable type for equality.
-     *
-     * Note: this function must yield "True" *if and only if* the result of `compare` function is
-     *       "Equal".
-     *
-     * @return True iff the objects are equivalent
-     */
-    @Override
-    static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
 }
