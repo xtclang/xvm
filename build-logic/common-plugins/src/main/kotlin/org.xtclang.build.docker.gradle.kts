@@ -30,6 +30,19 @@ plugins.withId("org.xtclang.build.git") {
         this.jdkVersion.set(jdkVersion)
         this.architectureCheck.set(architectureCheck ?: "")
         
+        // Configuration cache compatible input properties
+        hostArch.set(providers.systemProperty("os.arch").map { arch ->
+            when (arch) {
+                "amd64", "x86_64" -> "amd64"
+                "aarch64", "arm64" -> "arm64"
+                else -> "unknown"
+            }
+        })
+        allowEmulation.set(providers.systemProperty("org.xtclang.docker.allowEmulation").map { it.toBoolean() }.orElse(false))
+        dockerProgress.set(providers.environmentVariable("DOCKER_BUILDX_PROGRESS").orElse("plain"))
+        ciMode.set(providers.environmentVariable("CI").map { it == "true" }.orElse(false))
+        userHome.set(providers.systemProperty("user.home"))
+        
         // Tags will be computed at execution time in the task action
         tags.set(emptyList()) // Dummy value to satisfy the property
     }

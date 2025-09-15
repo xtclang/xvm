@@ -66,12 +66,12 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
             return false
         }
         
-        val password = (project.findProperty("signing.password") ?: System.getenv("GPG_SIGNING_PASSWORD") ?: "") as String
-        val key = (project.findProperty("signing.key") ?: System.getenv("GPG_SIGNING_KEY") ?: readKeyFile()) as String
+        val password = (project.findProperty("signing.password") ?: project.providers.environmentVariable("GPG_SIGNING_PASSWORD").getOrElse("")) as String
+        val key = (project.findProperty("signing.key") ?: project.providers.environmentVariable("GPG_SIGNING_KEY").getOrElse("") ?: readKeyFile()) as String
         
         if (key.isEmpty() || password.isEmpty()) {
             logger.warn("[build-logic] WARNING: Could not resolve a GPG signing key or a passphrase.")
-            if (XdkDistribution.isCiEnabled) {
+            if (XdkDistribution.isCiEnabled(project)) {
                 throw GradleException("[distribution] No GPG signing key or password found in CI build, and no manual way to set them.")
             }
             return false
@@ -136,9 +136,10 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
 
         private const val CI = "CI"
 
-        val isCiEnabled = System.getenv(CI) == "true"
+        // These need to be computed at execution time to be configuration cache compatible
+        fun isCiEnabled(project: Project): Boolean = project.providers.environmentVariable(CI).getOrElse("") == "true"
         val currentOs: OperatingSystem = OperatingSystem.current()
-        val currentArch: String = normalizeArchitecture(System.getProperty("os.arch"))
+        fun getCurrentArch(project: Project): String = normalizeArchitecture(project.providers.systemProperty("os.arch").get())
         val distributionTasks = listOf(
             "distTar",
             "distZip",
@@ -407,11 +408,11 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
             [build-logic]   Name        : '$distributionName'
             [build-logic]   Version     : '$distributionVersion'
             [build-logic]   Target OS   : '${getOsName()}'
-            [build-logic]   Target Arch : '$currentArch'
-            [build-logic]   Platform    : '${getOsName()}_$currentArch'
+            [build-logic]   Target Arch : '${getCurrentArch(project)}'
+            [build-logic]   Platform    : '${getOsName()}_${getCurrentArch(project)}'
             [build-logic]   Environment:
-            [build-logic]       CI             : '$isCiEnabled' (CI property can be overwritten)
-            [build-logic]       GITHUB_ACTIONS : '${System.getenv("GITHUB_ACTIONS") ?: "[not set]"}'
+            [build-logic]       CI             : '${isCiEnabled(project)}' (CI property can be overwritten)
+            [build-logic]       GITHUB_ACTIONS : '${project.providers.environmentVariable("GITHUB_ACTIONS").getOrElse("[not set]")}'
         """.trimIndent())
     }
 
@@ -422,7 +423,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     val distributionVersion: String get() = project.version.toString()
 
     @Suppress("MemberVisibilityCanBePrivate")
-    fun launcherFileName(os: String = getOsName(), arch: String = currentArch): String {
+    fun launcherFileName(os: String = getOsName(), arch: String = getCurrentArch(project)): String {
         val extension = if (os == "windows") ".exe" else ""
         return "${os}_launcher_$arch$extension"
     }
@@ -430,7 +431,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     /*
      * Helper for jreleaser etc.
      */
-    fun osClassifier(os: String = getOsName(), arch: String = currentArch): String = "${os}_$arch"
+    fun osClassifier(os: String = getOsName(), arch: String = getCurrentArch(project)): String = "${os}_$arch"
 
     override fun toString(): String = "$distributionName-$distributionVersion"
 
