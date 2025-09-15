@@ -25,6 +25,9 @@ abstract class ResolveGitInfoTask : DefaultTask() {
     @get:Input
     abstract val version: Property<String>
     
+    @get:Input
+    abstract val ciFlag: Property<String>
+    
     @get:InputFile
     @get:Optional
     abstract val gitHeadFile: RegularFileProperty
@@ -95,7 +98,7 @@ abstract class ResolveGitInfoTask : DefaultTask() {
             "docker.baseImage" to "ghcr.io/xtclang/xvm",
             "docker.isMaster" to (branch == "master").toString(),
             "docker.tagPrefix" to if (branch == "master") "latest" else branch.replace(Regex("[^a-zA-Z0-9._-]"), "_"),
-            "docker.isCI" to (System.getenv("CI") == "true").toString()
+            "docker.isCI" to (ciFlag.get() == "true").toString()
         )
         
         outputFile.get().asFile.apply {
@@ -115,6 +118,7 @@ val resolveGitInfo by tasks.registering(ResolveGitInfoTask::class) {
     branchEnv.set(providers.environmentVariable("GH_BRANCH").orElse(""))
     commitEnv.set(providers.environmentVariable("GH_COMMIT").orElse(""))
     version.set(provider { project.version.toString() })
+    ciFlag.set(providers.environmentVariable("CI").orElse(""))
     outputFile.set(layout.buildDirectory.file("git-info.properties"))
     
     // Monitor git repository state for proper up-to-date checking

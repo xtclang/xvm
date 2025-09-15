@@ -13,14 +13,14 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.time.Instant
 
-// Cross-platform build check utility
-fun checkCrossPlatformBuild(targetArch: String): Boolean {
-    val hostArch = when (System.getProperty("os.arch")) {
+// Cross-platform build check utility - configuration cache compatible version  
+fun checkCrossPlatformBuild(project: org.gradle.api.Project, targetArch: String): Boolean {
+    val hostArch = when (project.providers.systemProperty("os.arch").get()) {
         "amd64", "x86_64" -> "amd64"
         "aarch64", "arm64" -> "arm64"
         else -> "unknown"
     }
-    val allowEmulation = System.getProperty("org.xtclang.docker.allowEmulation", "false").toBoolean()
+    val allowEmulation = project.providers.systemProperty("org.xtclang.docker.allowEmulation").getOrElse("false").toBoolean()
     
     if (targetArch != hostArch && !allowEmulation) {
         return false
@@ -55,12 +55,29 @@ abstract class DockerTask : DefaultTask() {
     @get:Input
     abstract val tags: ListProperty<String>
     
+    @get:Input
+    abstract val hostArch: Property<String>
+    
+    @get:Input
+    abstract val allowEmulation: Property<Boolean>
+    
+    @get:Input
+    abstract val dockerProgress: Property<String>
+    
+    @get:Input
+    abstract val ciMode: Property<Boolean>
+    
+    @get:Input
+    abstract val userHome: Property<String>
+    
     @TaskAction
     fun buildDockerImage() {
         // Architecture check at execution time
         val archCheck = architectureCheck.orNull
-        if (archCheck != null && archCheck.isNotEmpty() && !checkCrossPlatformBuild(archCheck)) {
-            throw GradleException("Cannot build $archCheck on this architecture")
+        if (archCheck != null && archCheck.isNotEmpty()) {
+            if (archCheck != hostArch.get() && !allowEmulation.get()) {
+                throw GradleException("Cannot build $archCheck on this architecture")
+            }
         }
         
         val gitInfo = gitInfoFile.get().asFile
@@ -83,10 +100,10 @@ abstract class DockerTask : DefaultTask() {
         
         val platformArg = platforms.get().joinToString(",")
         val cmd = listOf("docker", "buildx", "build", "--platform", platformArg) +
-                  listOf("--progress=${System.getenv("DOCKER_BUILDX_PROGRESS") ?: "plain"}") +
+                  listOf("--progress=${dockerProgress.get()}") +
                   config.buildArgs(distZip, jdkVersion.get()).flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
                   config.metadataLabels().flatMap { listOf("--label", "${it.key}=${it.value}") } +
-                  config.cacheArgs(if (platforms.get().size == 1) platforms.get()[0].substringAfter("/") else null) +
+                  config.cacheArgs(ciMode.get(), userHome.get(), if (platforms.get().size == 1) platforms.get()[0].substringAfter("/") else null) +
                   computedTags.flatMap { listOf("--tag", "${config.baseImage}:${it}") } +
                   listOf("--${action.get()}", ".")
         
@@ -109,12 +126,15 @@ abstract class DockerTask : DefaultTask() {
     }
 }
 
+// Helper function for CI detection
+fun isCI(project: org.gradle.api.Project): Boolean = 
+    project.providers.environmentVariable("CI").getOrElse("") == "true"
+
 // Docker configuration data class
 data class DockerConfig(
     val version: String,
     val branch: String,
-    val commit: String,
-    val isCI: Boolean = System.getenv("CI") == "true"
+    val commit: String
 ) {
     val baseImage = "ghcr.io/xtclang/xvm"
     val isMaster = branch == "master"
@@ -139,12 +159,12 @@ data class DockerConfig(
         "org.opencontainers.image.source" to "https://github.com/xtclang/xvm/tree/$branch"
     )
     
-    fun cacheArgs(arch: String? = null): List<String> {
+    fun cacheArgs(isCI: Boolean, userHome: String, arch: String? = null): List<String> {
         return if (isCI) {
             val scope = arch?.let { ",scope=$it" } ?: ""
             listOf("--cache-from", "type=gha$scope", "--cache-to", "type=gha,mode=max$scope")
         } else {
-            val cacheDir = File(System.getProperty("user.home"), ".cache/docker-buildx${arch?.let { "-$it" } ?: ""}")
+            val cacheDir = File(userHome, ".cache/docker-buildx${arch?.let { "-$it" } ?: ""}")
             cacheDir.mkdirs()
             listOf("--cache-from", "type=local,src=${cacheDir.absolutePath}", "--cache-to", "type=local,dest=${cacheDir.absolutePath},mode=max")
         }

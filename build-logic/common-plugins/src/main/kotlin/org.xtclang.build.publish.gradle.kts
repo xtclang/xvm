@@ -16,7 +16,7 @@ private val allowPublicationValue = allowPublication()
 private val snapshotOnlyValue = snapshotOnly()
 private val projectName = project.name
 private val projectGroup = project.group.toString()
-private val userHome = System.getProperty("user.home")
+private val userHome = providers.systemProperty("user.home").get()
 
 publishing {
     repositories {
