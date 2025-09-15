@@ -1,5 +1,4 @@
 interface Const
-        extends immutable Object
         extends Hashable
         extends Orderable
         extends Stringable {
