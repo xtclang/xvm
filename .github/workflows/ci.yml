@@ -331,6 +331,7 @@ jobs:
           java -XshowSettings:properties --version
 
       - name: Create or Update Maven Artifact Snapshot (if pushed to 'master', or env.snapshot-maven is true)
+        id: publish-maven-snapshot
         if: ${{ (github.event.inputs.snapshot-maven == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master') }}
         shell: bash
         run: |
@@ -342,13 +343,9 @@ jobs:
           ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true
           ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true
 
-      - name: Clean up old Maven package versions (keep 50 newest)
-        if: ${{ success() && ((github.event.inputs.snapshot-maven == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
-        run: |
-          echo "🧹 Cleaning up old XDK Maven package versions (keeping 50 newest)..."
-
-      - uses: actions/delete-package-versions@v4
-        if: ${{ success() && ((github.event.inputs.snapshot-maven == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
+      - name: Clean up old XDK package versions (keep 50 newest)
+        if: steps.publish-maven-snapshot.outcome == 'success'
+        uses: actions/delete-package-versions@v4
         with:
           package-name: 'org.xtclang.xdk'
           package-type: 'maven'
@@ -356,12 +353,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Clean up old Plugin package versions (keep 50 newest)
-        if: ${{ success() && ((github.event.inputs.snapshot-maven == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
-        run: |
-          echo "🧹 Cleaning up old Plugin Maven package versions (keeping 50 newest)..."
-
-      - uses: actions/delete-package-versions@v4
-        if: ${{ success() && ((github.event.inputs.snapshot-maven == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
+        if: steps.publish-maven-snapshot.outcome == 'success'
+        uses: actions/delete-package-versions@v4
         with:
           package-name: 'org.xtclang.xtc-plugin'
           package-type: 'maven'
@@ -369,12 +362,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Clean up old Plugin Marker package versions (keep 50 newest)
-        if: ${{ success() && ((github.event.inputs.snapshot-maven == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
-        run: |
-          echo "🧹 Cleaning up old Plugin Marker Maven package versions (keeping 50 newest)..."
-
-      - uses: actions/delete-package-versions@v4
-        if: ${{ success() && ((github.event.inputs.snapshot-maven == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
+        if: steps.publish-maven-snapshot.outcome == 'success'
+        uses: actions/delete-package-versions@v4
         with:
           package-name: 'org.xtclang.xtc-plugin.org.xtclang.xtc-plugin.gradle.plugin'
           package-type: 'maven'
