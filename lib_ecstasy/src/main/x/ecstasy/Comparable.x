@@ -1,3 +1,8 @@
+/**
+ * The Comparable interface represents the general capabilities of data types that can be compared
+ * for purposes of equality. Its primary function is [equals], which yields a [True] iff two values
+ * are equal.
+ */
 interface Comparable {
     /**
      * Compare two objects of the same compile-time type for equality.
@@ -7,33 +12,36 @@ interface Comparable {
     static <CompileType extends Comparable> Boolean equals(CompileType value1, CompileType value2);
 
     /**
-     * The `equals` **method** is a "virtual equals", similar in some ways to OO languages including
-     * Java and C#. This concept is only rarely needed or used in Ecstasy, because equality in
+     * This `equals` **method** behaves as a "virtual equals", _similar_ to how other OO languages
+     * implement object equality. This concept is only rarely needed or used in Ecstasy, because equality in
      * Ecstasy normally is based on the *compile-time type* of the two objects being compared. This
      * method, on the other hand, uses the *run-time type* of the two objects to select the
-     * appropriate `equals` **function** to invoke.
+     * appropriate [equals] **function** to invoke.
      *
      * @param that  a second value to compare this value to
      *
-     * @return True iff this value and the provided value are both of the same class, and if that
-     *         class' implementation of [equals] evaluates the two objects to be equal
+     * @return True iff this value and the provided value are both of the same type or class, and
+     *         that type's or class' [equals](equals(CompileType, CompileType)) function returns
+     *         `True`
      */
     Boolean equals(Comparable that) {
         // first, check if this is the same object as the second object
-        Ref thisRef = &this;
-        Ref thatRef = &that;
-        if (thisRef == thatRef) {
+        if (&this == &that) {
             return True;
         }
 
         // if they're both of the same runtime type, then use that type
-        Type shared = thisRef.type;
-        if (shared == thatRef.type) {
-            return this.as(shared.DataType) == that.as(shared.DataType);
+        Type runtimeType = &this.type;
+        if (runtimeType == &that.type) {
+            return this.as(runtimeType.DataType) == that.as(runtimeType.DataType);
         }
 
         // otherwise, verify that they are of the same actual class, and use that class' public type
-        shared = thisRef.class.PublicType;
-        return this.is(shared.DataType)? == that.is(shared.DataType)? : False;
+        if (&this.class == &that.class) {
+            Type classType = &this.class.PublicType;
+            return this.as(classType.DataType) == that.as(classType.DataType);
+        }
+
+        return False;
     }
 }

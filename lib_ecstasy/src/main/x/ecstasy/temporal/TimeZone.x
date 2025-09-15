@@ -39,7 +39,7 @@ const TimeZone(Int64 picos, String? name = Null) {
      * @param name   the name of the TimeZone
      */
     construct(Int picos, String? name = Null) {
-        assert picos.abs() <= TimeOfDay.PicosPerDay;
+        assert:arg picos.abs() <= TimeOfDay.PicosPerDay;
         this.picos = picos;
         this.name  = name;
     }
