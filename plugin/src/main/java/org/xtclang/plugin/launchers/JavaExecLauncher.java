@@ -10,7 +10,13 @@ import java.io.IOException;
 
 import java.util.zip.ZipFile;
 
+import org.gradle.api.GradleException;
 import org.gradle.api.Project;
+import org.gradle.api.file.FileCollection;
+import org.gradle.api.file.FileTree;
+import org.gradle.api.logging.Logger;
+import org.gradle.api.provider.Provider;
+import org.gradle.jvm.toolchain.JavaLauncher;
 import org.gradle.process.ExecOperations;
 import org.gradle.process.ExecResult;
 
@@ -28,27 +34,63 @@ import org.xtclang.plugin.tasks.XtcLauncherTask;
  */
 public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends XtcLauncher<E, T> {
     private final ExecOperations execOperations;
+    private final Provider<String> toolchainExecutable;
+    private final Provider<String> projectVersion;
+    private final Provider<FileTree> xdkFileTree;
+    private final Provider<FileCollection> javaToolsConfig;
     
     public JavaExecLauncher(final Project project, final T task, final ExecOperations execOperations) {
         super(project, task);
         this.execOperations = execOperations;
+        
+        // Resolve toolchain at configuration time, not execution time
+        this.toolchainExecutable = project.provider(() -> {
+            final var javaExtension = project.getExtensions().findByType(org.gradle.api.plugins.JavaPluginExtension.class);
+            if (javaExtension != null) {
+                final var toolchains = project.getExtensions().getByType(org.gradle.jvm.toolchain.JavaToolchainService.class);
+                final var launcher = toolchains.launcherFor(javaExtension.getToolchain());
+                return launcher.get().getExecutablePath().toString();
+            }
+            return null;
+        });
+        
+        // Resolve project version at configuration time, not execution time
+        this.projectVersion = project.provider(() -> project.getVersion().toString());
+        
+        // Resolve XDK file tree at configuration time, not execution time
+        this.xdkFileTree = XtcProjectDelegate.getXdkContentsDir(project).map(project::fileTree);
+        
+        // Resolve JavaTools configuration at configuration time, not execution time
+        this.javaToolsConfig = project.provider(() -> 
+            project.files(project.getConfigurations().getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING)));
+    }
+    
+    public JavaExecLauncher(final T task, final Logger logger, final ExecOperations execOperations,
+                           final Provider<String> toolchainExecutable, final Provider<String> projectVersion,
+                           final Provider<FileTree> xdkFileTree, final Provider<FileCollection> javaToolsConfig) {
+        super(task, logger);
+        this.execOperations = execOperations;
+        this.toolchainExecutable = toolchainExecutable;
+        this.projectVersion = projectVersion;
+        this.xdkFileTree = xdkFileTree;
+        this.javaToolsConfig = javaToolsConfig;
     }
 
     @Override
     public ExecResult apply(final CommandLine cmd) {
-        logger.info("{} Launching task: {}}", prefix, this);
+        logger.info("[plugin] Launching task: {}}", this);
 
         final var javaToolsJar = resolveJavaTools();
         if (javaToolsJar == null) {
-            throw buildException("Failed to resolve '{}' in any classpath.", JAVATOOLS_JAR_NAME);
+            throw new GradleException("[plugin] Failed to resolve '" + JAVATOOLS_JAR_NAME + "' in any classpath.");
         }
 
-        logger.info("{} {} (launcher: {}); Using '{}' in classpath from: {}", prefix, cmd.getIdentifier(), cmd.getClass(), JAVATOOLS_JAR_NAME, javaToolsJar);
+        logger.info("[plugin] {} (launcher: {}); Using '{}' in classpath from: {}", cmd.getIdentifier(), cmd.getClass(), JAVATOOLS_JAR_NAME, javaToolsJar);
 
         if (task.hasVerboseLogging()) {
             final var launchLine = cmd.toString(javaToolsJar);
-            logger.lifecycle("{} JavaExec command (launcher {}):", prefix, getClass().getSimpleName());
-            logger.lifecycle("{}     {}", prefix, launchLine);
+            logger.lifecycle("[plugin] JavaExec command (launcher {}):", getClass().getSimpleName());
+            logger.lifecycle("[plugin]     {}", launchLine);
         }
 
         final var builder = resultBuilder(cmd);
@@ -61,15 +103,12 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
             spec.setIgnoreExitValue(true);
             
             // Use the project's configured Java toolchain instead of current JVM
-            final var javaExtension = project.getProject().getExtensions().findByType(org.gradle.api.plugins.JavaPluginExtension.class);
-            if (javaExtension != null) {
-                final var toolchains = project.getProject().getExtensions().getByType(org.gradle.jvm.toolchain.JavaToolchainService.class);
-                final var launcher = toolchains.launcherFor(javaExtension.getToolchain());
-                final var toolchainExecutable = launcher.get().getExecutablePath().toString();
-                logger.info("{} Using Java toolchain executable: {}", prefix, toolchainExecutable);
-                spec.setExecutable(toolchainExecutable);
+            final var executable = toolchainExecutable.getOrNull();
+            if (executable != null) {
+                logger.info("[plugin] Using Java toolchain executable: {}", executable);
+                spec.setExecutable(executable);
             } else {
-                logger.warn("{} No Java extension found, using default JVM", prefix);
+                logger.warn("[plugin] No Java toolchain found, using default JVM");
             }
         })));
     }
@@ -101,44 +140,44 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
          * we keep this code here for now. It will very likely go away in the future, and assume and assert that
          * there is only one configuration available to consume, containing the javatools.jar.
          */
-        final String artifactVersion = project.getVersion().toString();
-        final var javaToolsFromConfig = task.filesFromConfigs(true, XDK_CONFIG_NAME_JAVATOOLS_INCOMING).filter(file -> FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
-        final var javaToolsFromXdk = project.fileTree(XtcProjectDelegate.getXdkContentsDir(project)).filter(file -> FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
+        final String artifactVersion = projectVersion.get();
+        final var javaToolsFromConfig = javaToolsConfig.get().filter(file -> FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
+        final var javaToolsFromXdk = xdkFileTree.get().filter(file -> FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
 
         logger.info("""            
-                {} javaToolsFromConfig files: {}
-                {} javaToolsFromXdk files: {}
-                """.trim(), prefix, javaToolsFromConfig.getFiles(), prefix, javaToolsFromXdk.getFiles());
+                [plugin] javaToolsFromConfig files: {}
+                [plugin] javaToolsFromXdk files: {}
+                """.trim(), javaToolsFromConfig.getFiles(), javaToolsFromXdk.getFiles());
 
         final File resolvedFromConfig = javaToolsFromConfig.isEmpty() ? null : javaToolsFromConfig.getSingleFile();
         final File resolvedFromXdk = javaToolsFromXdk.isEmpty() ? null : javaToolsFromXdk.getSingleFile();
         if (resolvedFromConfig == null && resolvedFromXdk == null) {
-            throw buildException("ERROR: Failed to resolve '{}' from any configuration or dependency.", JAVATOOLS_JAR_NAME);
+            throw new GradleException("[plugin] ERROR: Failed to resolve '" + JAVATOOLS_JAR_NAME + "' from any configuration or dependency.");
         }
 
         logger.info("""
-                {} Check for '{}' in {} config and XDK (unpacked zip, or module collection) dependency, if present.
-                {}     Resolved to: [xdkJavaTools: {}, xdkContents: {}]
-                """.trim(), prefix, JAVATOOLS_JAR_NAME, XDK_CONFIG_NAME_JAVATOOLS_INCOMING, prefix, resolvedFromConfig, resolvedFromXdk);
+                [plugin] Check for '{}' in {} config and XDK (unpacked zip, or module collection) dependency, if present.
+                [plugin]     Resolved to: [xdkJavaTools: {}, xdkContents: {}]
+                """.trim(), JAVATOOLS_JAR_NAME, XDK_CONFIG_NAME_JAVATOOLS_INCOMING, resolvedFromConfig, resolvedFromXdk);
 
         final String versionConfig = readXdkVersionFromJar(resolvedFromConfig);
         final String versionXdk = readXdkVersionFromJar(resolvedFromXdk);
         if (resolvedFromConfig != null && resolvedFromXdk != null) {
             if (!versionConfig.equals(versionXdk) || !areIdenticalFiles(resolvedFromConfig, resolvedFromXdk)) {
-                logger.warn("{} Different '{}' files resolved, preferring the non-XDK version: {}",
-                    prefix, JAVATOOLS_JAR_NAME, resolvedFromConfig.getAbsolutePath());
+                logger.warn("[plugin] Different '{}' files resolved, preferring the non-XDK version: {}",
+                    JAVATOOLS_JAR_NAME, resolvedFromConfig.getAbsolutePath());
                 return processJar(resolvedFromConfig);
             }
         }
 
         if (resolvedFromConfig != null) {
             assert resolvedFromXdk == null;
-            logger.info("{} Resolved unique '{}' from config/artifacts/dependencies: {} (version: {})",
-                prefix, JAVATOOLS_JAR_NAME, resolvedFromConfig.getAbsolutePath(), versionConfig);
+            logger.info("[plugin] Resolved unique '{}' from config/artifacts/dependencies: {} (version: {})",
+                JAVATOOLS_JAR_NAME, resolvedFromConfig.getAbsolutePath(), versionConfig);
             return processJar(resolvedFromConfig);
         }
 
-        logger.info("{} Resolved unique '{}' from XDK: {} (version: {})", prefix, JAVATOOLS_JAR_NAME, resolvedFromXdk.getAbsolutePath(), versionXdk);
+        logger.info("[plugin] Resolved unique '{}' from XDK: {} (version: {})", JAVATOOLS_JAR_NAME, resolvedFromXdk.getAbsolutePath(), versionXdk);
         return processJar(resolvedFromXdk);
     }
 
@@ -146,8 +185,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
         try {
             return FileUtils.areIdenticalFiles(f1, f2);
         } catch (final IOException e) {
-            throw buildException("{} Resolved non-identical multiple '{}' ('{}' and '{}')",
-                prefix, JAVATOOLS_JAR_NAME, f1.getAbsolutePath(), f2.getAbsolutePath());
+            throw new GradleException("[plugin] Resolved non-identical multiple '" + JAVATOOLS_JAR_NAME + "' ('" + f1.getAbsolutePath() + "' and '" + f2.getAbsolutePath() + "')");
         }
     }
 
@@ -156,7 +194,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
         try (var zip = new ZipFile(file)) {
             return zip.getEntry(JAR_MANIFEST_PATH) != null;
         } catch (final IOException e) {
-            throw buildException("Failed to read jar file: '{}' (is the format correct?)", file.getAbsolutePath());
+            throw new GradleException("[plugin] Failed to read jar file: '" + file.getAbsolutePath() + "' (is the format correct?)");
         }
     }
 

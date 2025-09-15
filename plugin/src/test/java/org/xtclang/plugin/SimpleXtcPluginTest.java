@@ -31,8 +31,12 @@ public class SimpleXtcPluginTest {
         System.out.println("There are " + tasksBefore + " tasks in project '" + project.getName() + "' before plugin application:");
         tasks.forEach(task -> System.err.println('\t' + task.getName()));
 
-        // Apply only the inner XtcProjectPlugin which doesn't depend on build-logic plugins
-        project.getPluginManager().apply(XtcPlugin.XtcProjectPlugin.class);
+        // Apply Java base plugin first (required dependency)
+        final var pluginManager = project.getPluginManager();
+        pluginManager.apply(org.gradle.api.plugins.JavaBasePlugin.class);
+        
+        // Apply only the XtcProjectPlugin which doesn't depend on build-logic plugins
+        pluginManager.apply(XtcPlugin.XtcProjectPlugin.class);
 
         final int tasksAfter = tasks.size();
         System.out.println("There are " + tasksAfter + " tasks in project '" + project.getName() + "' after plugin application:");

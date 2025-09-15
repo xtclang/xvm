@@ -1,7 +1,16 @@
+import org.gradle.api.Action
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.file.Directory
+import org.gradle.api.file.FileCollection
+import org.gradle.api.file.RegularFile
+import org.gradle.api.provider.Provider
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.tasks.TaskProvider
+import org.gradle.api.tasks.application.CreateStartScripts
 import org.gradle.internal.os.OperatingSystem
 import org.gradle.kotlin.dsl.assign
 import org.gradle.kotlin.dsl.withType
@@ -63,7 +72,7 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
         if (key.isEmpty() || password.isEmpty()) {
             logger.warn("[build-logic] WARNING: Could not resolve a GPG signing key or a passphrase.")
             if (XdkDistribution.isCiEnabled) {
-                throw buildException("No GPG signing key or password found in CI build, and no manual way to set them.")
+                throw GradleException("[distribution] No GPG signing key or password found in CI build, and no manual way to set them.")
             }
             return false
         }
@@ -117,6 +126,7 @@ fun PublishingExtension.mavenGitHubPackages(project: Project): Boolean = project
 
 // TODO: Add sonatype repository for mavenCentral once we have recovered the credentials (tokens) and
 //  have manually verified that we can publish artifacts there.
+
 
 class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     companion object {
@@ -293,6 +303,102 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
          * Fix path resolution to use APP_HOME consistently after XDK_HOME delegation.
          */
         // Removed fixPathResolution - path resolution is now handled in templates
+
+        /**
+         * Strip version suffix from jar names for distribution.
+         * Configuration cache compatible - no script context references.
+         */
+        fun stripVersionFromJarName(jarName: String, version: String): String {
+            return jarName.replace(Regex("(.*)\\-${Regex.escape(version)}\\.jar"), "$1.jar")
+        }
+
+        /**
+         * Create a configuration-cache compatible rename transformer for distribution.
+         * This avoids script object references by using a static method.
+         */
+        fun createRenameTransformer(version: String): (String) -> String = { jarName ->
+            stripVersionFromJarName(jarName, version)
+        }
+
+
+
+        /**
+         * Configuration cache compatible script modification logic.
+         * This static method avoids script object references.
+         */
+        fun modifyLauncherScripts(
+            outputDir: File,
+            artifactVersion: String,
+            javaToolsFiles: Set<File>
+        ) {
+            // Process scripts in the output directory
+            listOf(
+                File(outputDir, "xec") to false,      // Unix shell script
+                File(outputDir, "xec.bat") to true    // Windows batch file
+            ).forEach { (script, isWindows) ->
+                if (script.exists()) {
+                    var content = script.readText()
+                    
+                    // Replace jar paths with version-stripped equivalents  
+                    javaToolsFiles.forEach { jar ->
+                        val originalName = jar.name
+                        val strippedName = stripVersionFromJarName(originalName, artifactVersion)
+                        content = content.replace("/lib/$originalName", "/javatools/$strippedName")
+                            .replace("\\lib\\$originalName", "\\javatools\\$strippedName")
+                    }
+                    
+                    // Add XDK_HOME delegation and XTC module paths using templates directly
+                    val templates = if (isWindows) SCRIPT_TEMPLATES["windows"]!! else SCRIPT_TEMPLATES["unix"]!!
+                    
+                    if (isWindows) {
+                        // Insert XDK_HOME delegation for Windows - place it right after :execute line
+                        val insertPoint = content.indexOf(":execute")
+                        if (insertPoint >= 0) {
+                            val lineEnd = content.indexOf('\n', insertPoint)
+                            val endOfLine = if (lineEnd >= 0) lineEnd + 1 else content.length
+                            val before = content.substring(0, endOfLine)
+                            val after = content.substring(endOfLine)
+                            content = before + templates["xdk_home_delegation"] + after
+                        }
+                        
+                        // Add XTC module paths to Windows script
+                        content = content.replace("org.xvm.tool.Launcher", templates["launcher_args"]!!)
+                    } else {
+                        // Insert XDK_HOME delegation for Unix - place it right after APP_HOME calculation
+                        val insertPoint = content.indexOf("APP_HOME=\$( cd -P")
+                        if (insertPoint >= 0) {
+                            val lineEnd = content.indexOf('\n', insertPoint)
+                            val endOfLine = if (lineEnd >= 0) lineEnd + 1 else content.length
+                            val before = content.substring(0, endOfLine)
+                            val after = content.substring(endOfLine)
+                            content = before + templates["xdk_home_delegation"] + after
+                        }
+                        
+                        // Add XTC module paths to Unix script  
+                        content = content.replace("org.xvm.tool.Launcher", templates["launcher_args"]!!)
+                    }
+                    
+                    script.writeText(content)
+                }
+            }
+            
+            // Create additional scripts for xcc and xtc by copying modified xec scripts
+            listOf("xcc", "xtc").forEach { toolName ->
+                val unixOriginal = File(outputDir, "xec")
+                val windowsOriginal = File(outputDir, "xec.bat")
+                
+                if (unixOriginal.exists()) {
+                    val newScript = File(outputDir, toolName)
+                    newScript.writeText(unixOriginal.readText().replace("Launcher \$APP_BASE_NAME", "Launcher $toolName"))
+                    newScript.setExecutable(true)
+                }
+                
+                if (windowsOriginal.exists()) {
+                    File(outputDir, "$toolName.bat").writeText(
+                        windowsOriginal.readText().replace("Launcher %APP_BASE_NAME%", "Launcher $toolName"))
+                }
+            }
+        }
     }
 
     init {

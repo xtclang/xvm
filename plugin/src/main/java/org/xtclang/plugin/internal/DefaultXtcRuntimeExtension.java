@@ -59,20 +59,23 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension 
     }
 
     private XtcRunModule createModule(final String moduleName) {
-        return createModule(project, moduleName);
+        // Use objects factory instead of Project - create instance then set module name
+        final var runModule = objects.newInstance(DefaultXtcRunModule.class);
+        runModule.getModuleName().set(moduleName);
+        return runModule;
     }
 
     private XtcRunModule addModule(final XtcRunModule runModule) {
-        logger.info("{} Adding module {}", prefix, runModule);
+        logger.info("[plugin] Adding module {}", runModule);
         modules.add(runModule);
         return runModule;
     }
 
     @Override
     public XtcRunModule module(final Action<XtcRunModule> action) {
-        final var runModule = project.getObjects().newInstance(DefaultXtcRunModule.class, project);
+        final var runModule = objects.newInstance(DefaultXtcRunModule.class);
         action.execute(runModule);
-        logger.info("{} Resolved xtcRunModule configuration: {}", prefix, runModule);
+        logger.info("[plugin] Resolved xtcRunModule configuration: {}", runModule);
         return addModule(runModule);
     }
 

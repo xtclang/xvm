@@ -18,6 +18,7 @@ import java.util.Map;
 import javax.inject.Inject;
 
 import org.gradle.api.Action;
+import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
@@ -104,7 +105,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @InputDirectory
     @PathSensitive(PathSensitivity.RELATIVE)
     Provider<Directory> getInputXdkModules() {
-        return XtcProjectDelegate.getXdkContentsDir(project); // Modules in the XDK directory, if one exists.
+        return xdkContentsDirAtConfigurationTime; // Modules in the XDK directory, captured at configuration time.
     }
 
     // XTC modules needed to resolve module path (the ones in the output of the project source set, that the compileXtc tasks create)
@@ -113,8 +114,11 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputModulesCompiledByProject() {
         FileCollection fc = objects.fileCollection();
-        for (final var sourceSet : getDependentSourceSets()) {
-            fc = fc.plus(XtcProjectDelegate.getXtcSourceSetOutput(project, sourceSet));
+        for (final String sourceSetName : sourceSetNamesAtConfigurationTime) {
+            final Provider<Directory> outputDir = sourceSetOutputDirsAtConfigurationTime.get(sourceSetName);
+            if (outputDir != null) {
+                fc = fc.plus(objects.fileCollection().from(outputDir));
+            }
         }
         return fc;
     }
@@ -208,7 +212,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         final var modulesToRun = resolveModulesToRunFromModulePath(modulePath);
         final var results = modulesToRun.stream().map(module -> runSingleModule(module, createLauncher(), cmd.copy())).toList();
         if (modulesToRun.size() != results.size()) {
-            logger.warn("{} Task was configured to run {} modules, but only {} where executed.", prefix(), modulesToRun.size(), results.size());
+            logger.warn("[plugin] Task was configured to run {} modules, but only {} where executed.", modulesToRun.size(), results.size());
         }
         logFinishedRuns();
     }
@@ -216,18 +220,18 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     protected List<XtcRunModule> resolveModulesToRunFromModulePath(final List<File> resolvedModulePath) {
         checkIsBeingExecuted();
 
-        logger.lifecycle("{} Resolving modules to run from module path: '{}'", prefix(), resolvedModulePath);
-        final var prefix = prefix();
+        logger.lifecycle("[plugin] Resolving modules to run from module path: '{}'", resolvedModulePath);
+        // Using hardcoded [plugin] instead of prefix variable
 
         if (isEmpty()) {
-            logger.warn("{} Task extension '{}' and/or local task configuration do not declare any modules to run for '{}'. Skipping task.",
-                prefix, ext.getName(), getName());
+            logger.warn("[plugin] Task extension '{}' and/or local task configuration do not declare any modules to run for '{}'. Skipping task.",
+                ext.getName(), getName());
             return emptyList();
         }
 
         final List<XtcRunModule> selectedModules = getModules().get();
         if (!taskLocalModules.get().isEmpty()) {
-            logger.lifecycle("{} Task local module configuration is present, overriding extension configuration.", prefix);
+            logger.lifecycle("[plugin] Task local module configuration is present, overriding extension configuration.");
         }
 
         // TODO: Add abstraction that actually implements a ModulePath instance, including keeping track of its status and perhaps a method for resolving it.
@@ -237,8 +241,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         // If we don't have any source set output, we should already return empty amd warn
         // If we do have a module spec with one or more modules, we will queue them up to run in sequence.
         // We will also check if the modules are in the module path, and if not, fail the build.
-        logger.info("{} Found {} modules(s) in task and extension specification.", prefix, size());
-        selectedModules.forEach(module -> logger.info("{}    ***** Module to run: {}", prefix, module));
+        logger.info("[plugin] Found {} modules(s) in task and extension specification.", size());
+        selectedModules.forEach(module -> logger.info("[plugin]    ***** Module to run: {}", module));
 
         return selectedModules.stream().map(this::validatedModule).sorted().toList();
     }
@@ -249,7 +253,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
      */
     private XtcRunModule validatedModule(final XtcRunModule module) {
         if (!module.validate()) {
-            throw buildException("ERROR: XtcRunModule was declared without a valid moduleName property: {}", module);
+            throw new GradleException("[plugin] ERROR: XtcRunModule was declared without a valid moduleName property: " + module);
         }
         return module;
     }
@@ -262,7 +266,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         final CommandLine cmd) {
         // TODO: Maybe make this inheritable + add a runMultipleModules, so that we can customize even better
         //  (e.g. XUnit, and a less hacky way of executing the XTC parallel test runner, for example)
-        logger.info("{} Executing resolved xtcRuntime module closure: {}", prefix(), runConfig);
+        logger.info("[plugin] Executing resolved xtcRuntime module closure: {}", runConfig);
         final var moduleMethod = runConfig.getMethodName().get();
         if (!runConfig.hasDefaultMethodName()) {
             cmd.add(XEC_ARG_RUN_METHOD, moduleMethod);
@@ -274,16 +278,15 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
         final ExecResult result = launcher.apply(cmd);
         executedModules.put(runConfig, result);
-        logger.info("{}    Finished executing: {}", prefix(), moduleName);
+        logger.info("[plugin]    Finished executing: {}", moduleName);
 
         return handleExecResult(result);
     }
 
     private void logFinishedRuns() {
         checkIsBeingExecuted();
-        final var prefix = prefix();
         final int count = executedModules.size();
-        logger.info("{} Task executed {} modules:", prefix, count);
+        logger.info("[plugin] Task executed {} modules:", count);
         int i = 0;
         for (final var entry : executedModules.entrySet()) {
             final XtcRunModule config = entry.getKey();
@@ -291,8 +294,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
             final String index = String.format("(%2d/%2d)", ++i, count);
             final boolean success = result.getExitValue() == 0;
             final LogLevel level = success ? (hasVerboseLogging() ? LIFECYCLE : INFO) : ERROR;
-            logger.log(level, "{} {}   {} {}", prefix, index, config.getModuleName().get(), config.toString(true));
-            logger.log(level, "{} {}       {} {}", prefix, index, success ? "SUCCESS" : "FAILURE", result);
+            logger.log(level, "[plugin] {}   {} {}", index, config.getModuleName().get(), config.toString(true));
+            logger.log(level, "[plugin] {}       {} {}", index, success ? "SUCCESS" : "FAILURE", result);
         }
     }
 

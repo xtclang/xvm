@@ -20,9 +20,12 @@ FROM alpine/git:latest AS source-cloner
 
 ARG GH_BRANCH
 ARG GH_COMMIT
+ARG DIST_ZIP_URL
 WORKDIR /source
 COPY scripts/clone-xdk.sh /clone-xdk.sh
+# Cache invalidation: include branch, commit, and dist URL to invalidate cache when any change
 RUN --mount=type=cache,target=/git-cache,sharing=shared \
+    echo "Cache key: ${GH_BRANCH}:${GH_COMMIT}:${DIST_ZIP_URL}" && \
     apk add --no-cache bash curl && \
     /clone-xdk.sh "${GH_BRANCH}" "${GH_COMMIT}"
 
