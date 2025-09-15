@@ -368,6 +368,19 @@ jobs:
           min-versions-to-keep: 50
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Clean up old Plugin Marker package versions (keep 50 newest)
+        if: ${{ success() && ((github.event.inputs.snapshot-maven == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
+        run: |
+          echo "🧹 Cleaning up old Plugin Marker Maven package versions (keeping 50 newest)..."
+
+      - uses: actions/delete-package-versions@v4
+        if: ${{ success() && ((github.event.inputs.snapshot-maven == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
+        with:
+          package-name: 'org.xtclang.xtc-plugin.org.xtclang.xtc-plugin.gradle.plugin'
+          package-type: 'maven'
+          min-versions-to-keep: 50
+          token: ${{ secrets.GITHUB_TOKEN }}
+
   compute-docker-tags:
     name: Compute Docker tags and metadata
     needs: build-verify
