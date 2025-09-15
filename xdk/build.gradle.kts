@@ -24,12 +24,10 @@ import java.io.File
 plugins {
     id("org.xtclang.build.xdk.versioning")
     id("org.xtclang.build.git")
-    id("org.xtclang.build.publish")  // Use the publication convention plugin
+    alias(libs.plugins.vanniktech.maven.publish)
     alias(libs.plugins.xtc)
-    alias(libs.plugins.sonatype.publish)
     application
     distribution
-    signing
 }
 
 val xtcLauncherBinaries by configurations.registering {
@@ -61,6 +59,22 @@ val xdkProvider by configurations.registering {
     attributes {
         attribute(CATEGORY_ATTRIBUTE, objects.named(LIBRARY))
         attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE))
+    }
+}
+
+repositories {
+    mavenCentral()
+    gradlePluginPortal()
+    val gitHubToken = getXtclangGitHubMavenPackageRepositoryToken()
+    if (gitHubToken.isNotEmpty()) {
+        maven {
+            name = "GitHub"
+            url = uri("https://maven.pkg.github.com/xtclang/xvm")
+            credentials {
+                username = "xtclang-workflows"
+                password = gitHubToken
+            }
+        }
     }
 }
 
@@ -187,88 +201,190 @@ subprojects {
     }
 }
 
-// Override the convention plugin's publishLocal task to do XDK-specific distribution publishing
-val publishLocal by tasks.existing {
-    // Clear default dependencies from convention plugin
-    setDependsOn(emptyList<Task>())
-    // Add XDK-specific dependency 
-    dependsOn(tasks.distZip)
-    
-    // Extract the path during configuration to avoid capturing task reference
-    val distZipPath = layout.buildDirectory.file("distributions/xdk-${artifactVersion}.zip")
-    
-    doLast {
-        logger.lifecycle("[xdk] XDK distribution created: ${distZipPath.get().asFile}")
-        logger.lifecycle("[xdk] To use locally, extract the distribution or run './gradlew installDist'")
-    }
-}
-
-// Override the convention plugin's publication management tasks for XDK-specific behavior
-val deleteLocalPublications by tasks.existing {
-    doLast {
-        logger.lifecycle("[xdk] XDK uses file-based distribution. To clean, use './gradlew clean' or delete build/distributions/")
-    }
-}
-
-val listLocalPublications by tasks.existing {
-    // Extract path during configuration to avoid script reference capture
-    val distributionsDir = layout.buildDirectory.dir("distributions")
-    
-    doLast {
-        val distDir = distributionsDir.get().asFile
-        logger.lifecycle("[xdk] XDK distribution artifacts:")
-        if (distDir.exists()) {
-            distDir.listFiles()?.filter { it.name.startsWith("xdk-") }?.forEach {
-                logger.lifecycle("[xdk]   ${it.absolutePath}")
-            }
-        } else {
-            logger.lifecycle("[xdk]   No distribution artifacts found. Run './gradlew distZip' to create them.")
-        }
-    }
-}
-
-val listRemotePublications by tasks.existing {
-    doLast {
-        logger.lifecycle("[xdk] XDK uses file-based distribution, not remote Maven publication.")
-        logger.lifecycle("[xdk] For Docker images, use './gradlew dockerBuild' tasks.")
-    }
-}
-
-val deleteRemotePublications by tasks.existing {
-    doLast {
-        logger.lifecycle("[xdk] XDK uses file-based distribution, not remote Maven publication.")
-        logger.lifecycle("[xdk] For Docker cleanup, use Docker commands directly.")
-    }
-}
 
 // Extract publication values during configuration to avoid capturing project references
 private val publicationGroupId = project.group.toString()
 private val publicationArtifactId = project.name
 private val publicationVersion = project.version.toString()
 
-// Add XDK Maven publication to GitHub packages (like in master)
-publishing {
-    publications {
-        val xdkArchive by registering(MavenPublication::class) {
-            groupId = publicationGroupId
-            artifactId = publicationArtifactId
-            version = publicationVersion
-            
-            pom {
-                name.set("xdk")
-                description.set("XTC Language Software Development Kit (XDK) Distribution Archive")
-                url.set("https://xtclang.org")
-            }
-            logger.info("[xdk] Publication '$name' configured for '$publicationGroupId:$publicationArtifactId:$publicationVersion'")
+// Configure Vanniktech Maven Publish for configuration cache compatibility  
+mavenPublishing {
+    coordinates(publicationGroupId, publicationArtifactId, publicationVersion)
+    
+    // Configure as Generic publication to handle custom ZIP artifact
+    configure(
+        com.vanniktech.maven.publish.JavaLibrary(
+            javadocJar = com.vanniktech.maven.publish.JavadocJar.None(),
+            sourcesJar = false
+        )
+    )
+    
+    // Add the ZIP distribution as the main artifact
+    afterEvaluate {
+        publishing.publications.named<MavenPublication>("maven") {
+            // Remove default JAR artifact and replace with ZIP
+            artifacts.clear()
             artifact(tasks.distZip) {
                 extension = "zip"
             }
         }
     }
+    
+    // Configure publication targets based on properties
+    val enableGitHub = getXdkPropertyBoolean("org.xtclang.publish.github", true)  // Default: enabled
+    val enableMavenCentral = getXdkPropertyBoolean("org.xtclang.publish.mavenCentral", false)
+    
+    // Maven Central publishing (disabled by default)
+    if (enableMavenCentral) {
+        publishToMavenCentral(automaticRelease = false)
+        logger.lifecycle("[xdk] Maven Central publishing is enabled")
+    } else {
+        logger.lifecycle("[xdk] Maven Central publishing is disabled (use -Porg.xtclang.publish.mavenCentral=true to enable)")
+    }
+    
+    
+    pom {
+        name.set("xdk")
+        description.set("XTC Language Software Development Kit (XDK) Distribution Archive")
+        url.set("https://xtclang.org")
+        packaging = "zip"  // Specify ZIP packaging
+        
+        licenses {
+            license {
+                name.set("The XDK License")
+                url.set("https://github.com/xtclang/xvm/tree/master/license")
+            }
+        }
+        
+        developers {
+            developer {
+                id.set("xtclang-workflows")
+                name.set("XTC Team")
+                email.set("noreply@xtclang.org")
+            }
+        }
+    }
 }
 
-// Now publishRemote will use the convention plugin behavior to publish xdkArchive to GitHub
-// No need to override publishRemote - let it use the default behavior from convention plugin
+// Configure GitHub Packages repository (vanniktech applies maven-publish plugin automatically)
+publishing {
+    repositories {
+        val enableGitHub = getXdkPropertyBoolean("org.xtclang.publish.github", true)
+        if (enableGitHub) {
+            val gitHubToken = getXtclangGitHubMavenPackageRepositoryToken()
+            if (gitHubToken.isNotEmpty()) {
+                logger.lifecycle("[xdk] Configuring GitHub Packages repository")
+                maven {
+                    name = "GitHubPackages"
+                    url = uri("https://maven.pkg.github.com/xtclang/xvm")
+                    credentials {
+                        username = "xtclang-workflows"
+                        password = gitHubToken
+                    }
+                }
+            } else {
+                logger.lifecycle("[xdk] GitHub token is empty - no GitHub repository configured")
+            }
+        } else {
+            logger.lifecycle("[xdk] GitHub publishing is disabled (use -Porg.xtclang.publish.github=true to enable)")
+        }
+    }
+}
+
+// Publishing tasks are handled by root build.gradle.kts
+
+// Publication listing tasks (called by root aggregator)
+abstract class ListLocalPublicationsTask : DefaultTask() {
+    @get:Input
+    abstract val projectName: Property<String>
+    
+    
+    @TaskAction
+    fun listPublications() {
+        val userHome = System.getProperty("user.home")
+        val repoDir = File(userHome, ".m2/repository/org/xtclang/${projectName.get()}")
+        
+        if (!repoDir.exists()) {
+            logger.lifecycle("[${projectName.get()}] No local publications found")
+            return
+        }
+        
+        logger.lifecycle("[${projectName.get()}] Local Maven publications in ${repoDir.absolutePath}:")
+        repoDir.walkTopDown().forEach { file ->
+            if (file.isFile && (file.extension == "jar" || file.extension == "pom" || file.extension == "zip")) {
+                val relativePath = file.relativeTo(repoDir)
+                logger.lifecycle("[${projectName.get()}]   $relativePath")
+            }
+        }
+    }
+}
+
+abstract class ListRemotePublicationsTask : DefaultTask() {
+    @get:Input
+    abstract val projectName: Property<String>
+    
+    
+    @TaskAction
+    fun listPublications() {
+        logger.lifecycle("[${projectName.get()}] Project would publish to GitHub packages as org.xtclang:${projectName.get()}")
+        logger.lifecycle("[${projectName.get()}] Use root-level './gradlew listRemotePublications' for actual GitHub API queries")
+    }
+}
+
+abstract class DeleteLocalPublicationsTask : DefaultTask() {
+    @get:Input
+    abstract val projectName: Property<String>
+    
+    
+    @TaskAction
+    fun deletePublications() {
+        val userHome = System.getProperty("user.home")
+        val repoDir = File(userHome, ".m2/repository/org/xtclang/${projectName.get()}")
+        
+        if (!repoDir.exists()) {
+            logger.lifecycle("[${projectName.get()}] No local publications found to delete")
+            return
+        }
+        
+        repoDir.deleteRecursively()
+        logger.lifecycle("[${projectName.get()}] Deleted local publications: ${repoDir.absolutePath}")
+    }
+}
+
+abstract class DeleteRemotePublicationsTask : DefaultTask() {
+    @get:Input
+    abstract val projectName: Property<String>
+    
+    
+    @TaskAction
+    fun deletePublications() {
+        logger.lifecycle("[${projectName.get()}] Use GitHub packages management to delete remote publications")
+    }
+}
+
+val listLocalPublications by tasks.registering(ListLocalPublicationsTask::class) {
+    group = "publishing"
+    description = "List local Maven publications for this project"
+    projectName.set(publicationArtifactId)
+}
+
+val listRemotePublications by tasks.registering(ListRemotePublicationsTask::class) {
+    group = "publishing"
+    description = "List remote GitHub publications for this project"
+    projectName.set(publicationArtifactId)
+}
+
+val deleteLocalPublications by tasks.registering(DeleteLocalPublicationsTask::class) {
+    group = "publishing"
+    description = "Delete local Maven publications for this project"
+    projectName.set(publicationArtifactId)
+}
+
+val deleteRemotePublications by tasks.registering(DeleteRemotePublicationsTask::class) {
+    group = "publishing"
+    description = "Delete remote GitHub publications for this project"
+    projectName.set(publicationArtifactId)
+}
 
 
 // Signing removed since we're not using Maven publication for XDK
@@ -431,6 +547,11 @@ tasks.distTar {
 
 tasks.distZip {
     dependsOn(prepareDistributionScripts)
+    
+    // Add build metadata files as inputs for proper task dependency tracking and force republication
+    val buildInfoFile = layout.projectDirectory.file("../javatools/build/resources/main/build-info.properties")
+    val gitPropsFile = layout.projectDirectory.file("../javatools/build/resources/main/git.properties")
+    inputs.files(buildInfoFile, gitPropsFile).withPropertyName("buildMetadata").optional()
 }
 
 // Let the Distribution plugin handle dependencies properly through the standard lifecycle
