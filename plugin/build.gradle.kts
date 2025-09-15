@@ -3,8 +3,6 @@ import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_JAR
 plugins {
     id("org.xtclang.build.xdk.versioning")
     alias(libs.plugins.xdk.build.java)
-    id("org.xtclang.build.publish")  // Add publication convention plugin for GitHub support
-    // Switch to Vanniktech Maven Publish for configuration cache compatibility
     alias(libs.plugins.vanniktech.maven.publish)
     alias(libs.plugins.gradle.portal.publish)
 }
@@ -77,6 +75,22 @@ val xdkJavaToolsJarConsumer by configurations.registering {
     }
 }
 
+repositories {
+    mavenCentral()
+    gradlePluginPortal()
+    val gitHubToken = getXtclangGitHubMavenPackageRepositoryToken()
+    if (gitHubToken.isNotEmpty()) {
+        maven {
+            name = "GitHub"
+            url = uri("https://maven.pkg.github.com/xtclang/xvm")
+            credentials {
+                username = "xtclang-workflows"
+                password = gitHubToken
+            }
+        }
+    }
+}
+
 dependencies {
     if (shouldBundleJavaTools) {
         @Suppress("UnstableApiUsage") xdkJavaToolsJarConsumer(libs.javatools)
@@ -87,6 +101,35 @@ dependencies {
 // Configure Vanniktech Maven Publish for configuration cache compatibility
 mavenPublishing {
     coordinates(pluginGroup, pluginName, pluginVersion)
+    
+    // Configure publication targets based on properties
+    val enableGitHub = getXdkPropertyBoolean("org.xtclang.publish.github", true)  // Default: enabled
+    val enableMavenCentral = getXdkPropertyBoolean("org.xtclang.publish.mavenCentral", false)
+    val enableGradlePluginPortal = getXdkPropertyBoolean("org.xtclang.publish.gradlePluginPortal", false)
+    
+    // Configure publication platform (always configure vanniktech for GitHub by default)
+    configure(
+        com.vanniktech.maven.publish.JavaLibrary(
+            javadocJar = com.vanniktech.maven.publish.JavadocJar.None(),  // Avoid conflicts
+            sourcesJar = true
+        )
+    )
+    
+    // Maven Central publishing (disabled by default)
+    if (enableMavenCentral) {
+        publishToMavenCentral(automaticRelease = false)
+        logger.lifecycle("[plugin] Maven Central publishing is enabled")
+    } else {
+        logger.lifecycle("[plugin] Maven Central publishing is disabled (use -Porg.xtclang.publish.mavenCentral=true to enable)")
+    }
+    
+    // Gradle Plugin Portal publishing (controlled by property, but always configured for compatibility)
+    if (enableGradlePluginPortal) {
+        logger.lifecycle("[plugin] Gradle Plugin Portal publishing is enabled")
+    } else {
+        logger.lifecycle("[plugin] Gradle Plugin Portal publishing is disabled (use -Porg.xtclang.publish.gradlePluginPortal=true to enable)")
+    }
+    
     
     pom {
         name.set(pluginName)
@@ -110,26 +153,125 @@ mavenPublishing {
     }
 }
 
-// Override the convention plugin's publishLocal task for plugin-specific local publishing  
-val publishLocal by tasks.existing {
-    // Clear default dependencies from convention plugin
-    setDependsOn(emptyList<Task>())
-    
-    // Add plugin-specific local publishing dependencies
-    dependsOn(
-        tasks.named("publishPluginMavenPublicationToMavenLocal"),
-        tasks.named("publishXtcPluginMarkerMavenPublicationToMavenLocal")
-    )
+// Configure GitHub Packages repository (vanniktech applies maven-publish plugin automatically)
+publishing {
+    repositories {
+        val enableGitHub = getXdkPropertyBoolean("org.xtclang.publish.github", true)
+        if (enableGitHub) {
+            val gitHubToken = getXtclangGitHubMavenPackageRepositoryToken()
+            if (gitHubToken.isNotEmpty()) {
+                logger.lifecycle("[plugin] Configuring GitHub Packages repository")
+                maven {
+                    name = "GitHubPackages" 
+                    url = uri("https://maven.pkg.github.com/xtclang/xvm")
+                    credentials {
+                        username = "xtclang-workflows"
+                        password = gitHubToken
+                    }
+                }
+            } else {
+                logger.lifecycle("[plugin] GitHub token is empty - no GitHub repository configured")
+            }
+        } else {
+            logger.lifecycle("[plugin] GitHub publishing is disabled (use -Porg.xtclang.publish.github=true to enable)")
+        }
+    }
 }
 
-// The convention plugin provides all publication management tasks:
-// - deleteLocalPublications, listLocalPublications 
-// - listRemotePublications, deleteRemotePublications
-// No need to duplicate them here
+// Publishing tasks are handled by root build.gradle.kts
 
-// No need to override publishRemote - let it use the convention plugin's default behavior
-// which publishes to GitHub packages only (like in master)
-// Publishing to Gradle Plugin Portal and Maven Central are separate concerns
+// Publication listing tasks (called by root aggregator)
+abstract class ListLocalPublicationsTask : DefaultTask() {
+    @get:Input
+    abstract val projectName: Property<String>
+    
+    
+    @TaskAction
+    fun listPublications() {
+        val userHome = System.getProperty("user.home")
+        val repoDir = File(userHome, ".m2/repository/org/xtclang/${projectName.get()}")
+        
+        if (!repoDir.exists()) {
+            logger.lifecycle("[${projectName.get()}] No local publications found")
+            return
+        }
+        
+        logger.lifecycle("[${projectName.get()}] Local Maven publications in ${repoDir.absolutePath}:")
+        repoDir.walkTopDown().forEach { file ->
+            if (file.isFile && (file.extension == "jar" || file.extension == "pom")) {
+                val relativePath = file.relativeTo(repoDir)
+                logger.lifecycle("[${projectName.get()}]   $relativePath")
+            }
+        }
+    }
+}
+
+val listLocalPublications by tasks.registering(ListLocalPublicationsTask::class) {
+    group = "publishing"
+    description = "List local Maven publications for this project"
+    projectName.set(pluginName)
+}
+
+abstract class ListRemotePublicationsTask : DefaultTask() {
+    @get:Input
+    abstract val projectName: Property<String>
+    
+    
+    @TaskAction
+    fun listPublications() {
+        logger.lifecycle("[${projectName.get()}] Project would publish to GitHub packages as org.xtclang:${projectName.get()}")
+        logger.lifecycle("[${projectName.get()}] Use root-level './gradlew listRemotePublications' for actual GitHub API queries")
+    }
+}
+
+abstract class DeleteLocalPublicationsTask : DefaultTask() {
+    @get:Input
+    abstract val projectName: Property<String>
+    
+    
+    @TaskAction
+    fun deletePublications() {
+        val userHome = System.getProperty("user.home")
+        val repoDir = File(userHome, ".m2/repository/org/xtclang/${projectName.get()}")
+        
+        if (!repoDir.exists()) {
+            logger.lifecycle("[${projectName.get()}] No local publications found to delete")
+            return
+        }
+        
+        repoDir.deleteRecursively()
+        logger.lifecycle("[${projectName.get()}] Deleted local publications: ${repoDir.absolutePath}")
+    }
+}
+
+abstract class DeleteRemotePublicationsTask : DefaultTask() {
+    @get:Input
+    abstract val projectName: Property<String>
+    
+    
+    @TaskAction
+    fun deletePublications() {
+        logger.lifecycle("[${projectName.get()}] Use GitHub packages management to delete remote publications")
+    }
+}
+
+val listRemotePublications by tasks.registering(ListRemotePublicationsTask::class) {
+    group = "publishing"
+    description = "List remote GitHub publications for this project"
+    projectName.set(pluginName)
+}
+
+val deleteLocalPublications by tasks.registering(DeleteLocalPublicationsTask::class) {
+    group = "publishing"
+    description = "Delete local Maven publications for this project"
+    projectName.set(pluginName)
+}
+
+val deleteRemotePublications by tasks.registering(DeleteRemotePublicationsTask::class) {
+    group = "publishing"
+    description = "Delete remote GitHub publications for this project"
+    projectName.set(pluginName)
+}
 
 // Extract plugin configuration values during configuration
 private val isAutomatedPublishingValue = getXdkPropertyBoolean("$pprefix.plugin.isAutomatedPublishing", true)
@@ -139,8 +281,7 @@ private val implementationClassValue = getXdkProperty("$pprefix.plugin.implement
 private val displayNameValue = getXdkProperty("$pprefix.plugin.display.name")
 private val descriptionValue = getXdkProperty("$pprefix.plugin.description")
 
-// Extract all gradle plugin configuration values to avoid script references
-val gradlePluginIsAutomatedPublishing = isAutomatedPublishingValue
+// Extract all gradle plugin configuration values to avoid script references  
 val gradlePluginVcsUrl = vcsUrlValue
 val gradlePluginWebsite = websiteValue
 val gradlePluginVersion = pluginVersion
@@ -151,13 +292,11 @@ val gradlePluginDescription = descriptionValue
 
 @Suppress("UnstableApiUsage")
 gradlePlugin {
-    // The built-in pluginMaven publication can be disabled with "isAutomatedPublishing=false"
-    // However, this results in the Gradle version (with Gradle specific metadata) of the plugin not
-    // being published. To read it from at least a local repo, we need that artifact too, hence we
-    // get three artifacts.
-    isAutomatedPublishing = gradlePluginIsAutomatedPublishing
-
-    logger.info("[plugin] Configuring Gradle Plugin; isAutomatedPublishing=$gradlePluginIsAutomatedPublishing")
+    // Gradle Plugin Portal requires automated publishing (cannot be disabled in v1.0+)
+    isAutomatedPublishing = true
+    
+    logger.lifecycle("[plugin] Gradle Plugin Portal: automated publishing enabled (required)")
+    logger.lifecycle("[plugin] Note: Use publishPlugins task to publish to Gradle Plugin Portal when ready")
 
     vcsUrl = gradlePluginVcsUrl
     website = gradlePluginWebsite
@@ -208,7 +347,13 @@ tasks.withType<Jar>().configureEach {
             from(jarFiles)
         }
         manifest {
-            attributes(
+            // Declare build-info and git properties files as inputs for proper task dependency tracking
+            val buildInfoFile = layout.projectDirectory.file("../javatools/build/resources/main/build-info.properties")
+            val gitPropsFile = layout.projectDirectory.file("../javatools/build/resources/main/git.properties")
+            
+            inputs.files(buildInfoFile, gitPropsFile).withPropertyName("buildMetadata").optional()
+            
+            val baseAttributes = mapOf(
                 "Manifest-Version" to "1.0",
                 "Xdk-Version" to semanticVersion.toString(),
                 "Main-Class" to "$pprefix.plugin.Usage",
@@ -221,6 +366,8 @@ tasks.withType<Jar>().configureEach {
                 "Implementation-Vendor" to "xtclang.org",
                 "Implementation-Version" to pluginVersion,
             )
+            
+            attributes(baseAttributes)
         }
     }
 }
