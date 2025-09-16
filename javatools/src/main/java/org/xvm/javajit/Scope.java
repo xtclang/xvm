@@ -15,8 +15,9 @@ public class Scope {
     public Scope(BuildContext bctx, CodeBuilder code) {
         this.bctx       = bctx;
         this.code       = code;
-        this.startLocal = 0;
-        this.topLocal   = 0;
+        this.startLocal = -1;
+        this.topLocal   = -1;
+        this.topVar     = -1;
 
         startLabel = code.newLabel();
         endLabel   = code.newLabel();
@@ -29,8 +30,9 @@ public class Scope {
         this(parent.bctx, parent.code);
 
         this.parent     = parent;
-        this.startLocal = parent.topLocal;
+        this.startLocal = parent.startLocal;
         this.topLocal   = parent.topLocal;
+        this.topVar     = parent.topVar;
     }
 
     private final BuildContext bctx;
@@ -62,6 +64,11 @@ public class Scope {
     public int topLocal;
 
     /**
+     * The top index of the XVM var for this scope.
+     */
+    public int topVar;
+
+    /**
      * Enter a new Scope.
      */
     public Scope enter() {
@@ -73,16 +80,24 @@ public class Scope {
      *
      * @return the Java slot for the newly allocated local variable
      */
-    public int allocateLocal(TypeKind kind) {
+    public int allocateLocal(int varIndex, TypeKind kind) {
         int slot;
-        if (parent == null) {
+        if (topLocal >= bctx.maxLocal || startLocal == -1) {
             slot = code.allocateLocal(kind);
+            if (startLocal == -1) {
+                startLocal = slot;
+            }
             bctx.maxLocal = topLocal = slot + kind.slotSize();
-        } else {
-            // for a child Scope we will update the code's locals upon the exit
+        } else { // topLocal < bctx.maxLocal
             slot      = topLocal;
             topLocal += kind.slotSize();
+            if (topLocal > bctx.maxLocal) {
+                bctx.maxLocal = code.allocateLocal(TypeKind.REFERENCE) + 1; // bump the code counter
+                assert bctx.maxLocal == topLocal;
+            }
         }
+        assert parent == null || varIndex > parent.topVar;
+        topVar = Math.max(topVar, varIndex);
         return slot;
     }
 
@@ -93,13 +108,8 @@ public class Scope {
         if (parent == null) {
             throw new IllegalStateException();
         }
-
-        int extras = topLocal - parent.topLocal;
-        if (extras > 0) {
-            bctx.maxLocal = topLocal;
-            while (extras-- > 0) {
-                code.allocateLocal(TypeKind.REFERENCE); // single slot
-            }
+        if (parent.startLocal == -1) {
+            parent.startLocal = parent.topLocal = startLocal;
         }
         code.labelBinding(endLabel);
         return parent;

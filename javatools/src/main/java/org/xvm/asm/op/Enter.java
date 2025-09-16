@@ -58,7 +58,7 @@ public class Enter
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        bctx.scope = bctx.scope.enter();
+        bctx.enterScope(code);
     }
 
     // ----- fields --------------------------------------------------------------------------------

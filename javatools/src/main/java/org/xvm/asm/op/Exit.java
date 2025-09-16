@@ -56,6 +56,6 @@ public class Exit
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        bctx.scope = bctx.scope.exit();
+        bctx.exitScope(code);
     }
 }

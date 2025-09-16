@@ -16,8 +16,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.ConstantPool;
@@ -31,6 +33,8 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.RegisterConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -38,6 +42,7 @@ import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.BuildContext.DoubleSlot;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.Ctx;
 import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
@@ -210,15 +215,19 @@ public class CommonBuilder
         List<PropertyInfo> initProps = new ArrayList<>();
 
         for (PropertyInfo prop : structInfo.getProperties().values()) {
-            if (!prop.hasField() || !prop.getFieldIdentity().getNamespace().equals(thisId)) {
-                continue; // not our responsibility
-            }
-            assembleField(className, classBuilder, prop);
+            if ((prop.hasField() || prop.isInjected()) &&
+                    prop.getFieldIdentity().getNamespace().equals(thisId)) {
+                assembleField(className, classBuilder, prop);
 
-            if (prop.isConstant()) {
-                constProps.add(prop);
-            } else if (prop.isInitialized()) {
-                initProps.add(prop);
+                if (prop.isConstant()) {
+                    constProps.add(prop);
+                }
+                else if (prop.isInitialized()) {
+                    initProps.add(prop);
+                }
+            }
+            else {
+                // not our responsibility
             }
         }
 
@@ -422,7 +431,11 @@ public class CommonBuilder
         MethodInfo getterInfo = typeInfo.getMethodById(prop.getGetterId());
         if (getterInfo == null) {
             if (prop.hasField() && prop.getFieldIdentity().getNamespace().equals(thisId)) {
-                generateTrivialGetter(className, classBuilder, prop);
+                if (prop.isInjected()) {
+                    generateInjected(className, classBuilder, prop);
+                } else {
+                    generateTrivialGetter(className, classBuilder, prop);
+                }
             }
         } else {
             switch (getterInfo.getHead().getImplementation()) {
@@ -604,6 +617,96 @@ public class CommonBuilder
         }
     }
 
+    private void generateInjected(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+        assert !prop.isConstant();
+
+        String jitGetterName = prop.getGetterId().ensureJitMethodName(typeSystem);
+        String jitFieldName  = prop.getIdentity().ensureJitPropertyName(typeSystem);
+
+        ClassDesc CD_this = ClassDesc.of(className);
+        int       flags   = ClassFile.ACC_PUBLIC;
+
+        JitMethodDesc  jmd     = prop.getGetterJitDesc(typeSystem);
+        boolean        isOpt   = jmd.isOptimized;
+        MethodTypeDesc md      = isOpt ? jmd.optimizedMD : jmd.standardMD;
+        String         jitName = isOpt ? jitGetterName+OPT : jitGetterName;
+
+        TypeConstant resourceType = prop.getType();
+        Annotation   anno         = prop.getRefAnnotations()[0];
+        Constant[]   params       = anno.getParams();
+        int          paramCount   = params.length;
+
+        Constant nameConst = paramCount > 0 ? params[0] : null;
+        Constant optsConst = paramCount > 1 ? params[1] : null;
+        String   resourceName = nameConst instanceof StringConstant stringConst
+                        ? stringConst.getValue()
+                        : prop.getName();
+        if (optsConst != null && !(optsConst instanceof RegisterConstant regConst &&
+                                   regConst.getRegisterIndex() == Op.A_DEFAULT)) {
+            throw new UnsupportedOperationException("retrieve opts");
+        }
+
+        classBuilder.withMethodBody(jitName, md, flags, code -> {
+            int typeIndex = typeSystem.registerConstant(resourceType);
+
+            // generate the following:
+            // T value = this.prop;
+            // if (value == null} { value = this.prop = ctx$.inject(type, name, opts);}
+            // return value;
+
+            if (isOpt) {
+                JitParamDesc pdOpt = jmd.optimizedReturns[0];
+                ClassDesc    cdOpt = pdOpt.cd;
+                switch (pdOpt.flavor) {
+                case Primitive:
+                    code.aload(0)
+                        .getfield(CD_this, jitFieldName, cdOpt);
+                    throw new UnsupportedOperationException("Primitive injection");
+
+                case MultiSlotPrimitive:
+                    code.aload(0)
+                        .getfield(CD_this, jitFieldName, cdOpt)
+                        .getfield(CD_this, jitFieldName+EXT, CD_boolean);
+                    throw new UnsupportedOperationException("MultiSlotPrimitive injection");
+
+                default:
+                    throw new IllegalStateException("Unsupported property flavor: " + pdOpt.flavor);
+                }
+            } else {
+                JitParamDesc pdStd     = jmd.standardReturns[0];
+                Label        endLbl    = code.newLabel();
+                int          valueSlot = code.allocateLocal(TypeKind.REFERENCE);
+                code.aload(0)
+                    .getfield(CD_this, jitFieldName, pdStd.cd)
+                    .dup()
+                    .astore(valueSlot)
+                    .ifnonnull(endLbl)
+                    .aload(1) // ctx$
+                    .dup()
+                    .loadConstant(typeIndex)
+                    .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
+                    .checkcast(CD_TypeConstant)                               // <- type
+                    .ldc(resourceName)
+                    .aconst_null()                                            // opts
+                    .invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
+                    .checkcast(pdStd.cd)
+                    .dup()
+                    .astore(valueSlot)
+                    .aload(0)
+                    .swap()
+                    .putfield(CD_this, jitFieldName, pdStd.cd)
+                    .labelBinding(endLbl)
+                    .aload(valueSlot)
+                    .areturn();
+            }
+        });
+
+        if (isOpt) {
+            // generate a wrapper
+            assembleMethodWrapper(className, classBuilder, jitGetterName, jmd, false, false);
+        }
+    }
+
     /**
      * Assemble methods for the "Impl" shape.
      */
@@ -722,8 +825,7 @@ public class CommonBuilder
 
                         code
                            .aload(stdParamSlot)
-                           .aconst_null()
-                           .if_acmpne(ifNotNull);
+                           .ifnonnull(ifNotNull);
                         // the value is `null`
                         Builder.defaultLoad(code, optParamDesc.cd); // default primitive
                         code.iconst_1();                            // true
