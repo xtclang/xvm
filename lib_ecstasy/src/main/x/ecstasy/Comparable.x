@@ -7,7 +7,10 @@ interface Comparable {
     /**
      * Compare two objects of the same compile-time type for equality.
      *
-     * @return True iff the objects are equivalent
+     * @param value1  the first value to compare
+     * @param value2  the second value to compare
+     *
+     * @return `True` iff the objects are equivalent
      */
     static <CompileType extends Comparable> Boolean equals(CompileType value1, CompileType value2);
 
