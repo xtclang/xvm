@@ -46,8 +46,7 @@ interface Orderable
      * (inclusive).
      */
     @Op("..") Range<Orderable> to(Orderable that) {
-        assert this.is(immutable) && that.is(immutable);
-        return new Range<immutable Orderable>(this, that);
+        return new Range<Orderable>(this, that);
     }
 
     /**
@@ -55,8 +54,7 @@ interface Orderable
      * (inclusive).
      */
     @Op(">..") Range<Orderable> exTo(Orderable that) {
-        assert this.is(immutable) && that.is(immutable);
-        return new Range<immutable Orderable>(this, that, firstExclusive=True);
+        return new Range<Orderable>(this, that, firstExclusive=True);
     }
 
     /**
@@ -64,8 +62,7 @@ interface Orderable
      * (**exclusive**).
      */
     @Op("..<") Range<Orderable> toEx(Orderable that) {
-        assert this.is(immutable) && that.is(immutable);
-        return new Range<immutable Orderable>(this, that, lastExclusive=True);
+        return new Range<Orderable>(this, that, lastExclusive=True);
     }
 
     /**
@@ -73,8 +70,7 @@ interface Orderable
      * (**exclusive**).
      */
     @Op(">..<") Range<Orderable> exToEx(Orderable that) {
-        assert this.is(immutable) && that.is(immutable);
-        return new Range<immutable Orderable>(this, that, firstExclusive=True, lastExclusive=True);
+        return new Range<Orderable>(this, that, firstExclusive=True, lastExclusive=True);
     }
 
     // ----- min/max functionality -----------------------------------------------------------------
