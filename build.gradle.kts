@@ -48,6 +48,7 @@ val installWithNativeLaunchersDist by tasks.registering {
 val publishRemote by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Publish XDK and plugin artifacts to GitHub Packages."
+    dependsOn(validateGitHubCredentials)
     // Publish all vanniktech publications to GitHub Packages for both projects
     dependsOn(
         plugin.task(":publishAllPublicationsToGitHubRepository"),
@@ -381,11 +382,69 @@ publishTaskPrefixes.forEach { prefix ->
     }
 }
 
+abstract class ValidateGitHubCredentialsTask : DefaultTask() {
+    @get:Input
+    abstract val gitHubUsername: Property<String>
+
+    @get:Input
+    abstract val gitHubPassword: Property<String>
+
+    @TaskAction
+    fun validate() {
+        val username = gitHubUsername.get()
+        val password = gitHubPassword.get()
+
+        if (password.isEmpty()) {
+            throw GradleException("""
+                |GitHub credentials not available for publishing!
+                |
+                |Please provide credentials using one of these methods:
+                |
+                |1. Local development - Set properties in ~/.config/xtc/gradle.properties:
+                |   GitHubUsername=your-username
+                |   GitHubPassword=your-personal-access-token
+                |
+                |2. CI/GitHub Actions - Environment variables (automatically set):
+                |   GITHUB_ACTOR=actor-name
+                |   GITHUB_TOKEN=github-token
+                |
+                |3. Command line properties:
+                |   ./gradlew publishRemote -PGitHubUsername=your-username -PGitHubPassword=your-token
+                |
+                |Current status:
+                |  Username: ${if (username.isNotEmpty()) "✅ Available ($username)" else "❌ Missing"}
+                |  Password/Token: ${if (password.isNotEmpty()) "✅ Available" else "❌ Missing"}
+            """.trimMargin())
+        }
+
+        logger.lifecycle("✅ GitHub credentials validated successfully")
+        logger.lifecycle("   Username: $username")
+        logger.lifecycle("   Token: Available (${password.take(8)}...)")
+    }
+}
+
+// Validate GitHub credentials are available for publishing
+val validateGitHubCredentials by tasks.registering(ValidateGitHubCredentialsTask::class) {
+    group = PUBLISH_TASK_GROUP
+    description = "Validate that GitHub credentials are available for publishing"
+
+    gitHubUsername.set(
+        project.findProperty("GitHubUsername")?.toString()
+            ?: providers.environmentVariable("GITHUB_ACTOR").getOrElse("xtclang-workflows")
+    )
+    gitHubPassword.set(
+        project.findProperty("GitHubPassword")?.toString()
+            ?: providers.environmentVariable("GITHUB_TOKEN").getOrElse("")
+    )
+}
+
 // Special handling for remote publication listing - use GitHub API integration instead of delegation
 val listRemotePublications by tasks.registering(ListRemotePublicationsTask::class) {
     group = PUBLISH_TASK_GROUP
     description = "List remote GitHub publications using GitHub API integration"
+    dependsOn(validateGitHubCredentials)
     val gitHubPassword = project.findProperty("GitHubPassword")?.toString()
+        ?: providers.environmentVariable("GITHUB_TOKEN").getOrNull()
     if (!gitHubPassword.isNullOrEmpty()) {
         gitHubToken.set(gitHubPassword)
     } else {

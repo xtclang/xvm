@@ -1,4 +1,5 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_JAR
+import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 
 plugins {
     id("org.xtclang.build.xdk.versioning")
@@ -137,9 +138,12 @@ mavenPublishing {
 publishing {
     repositories {
         val gitHubUsername = project.findProperty("GitHubUsername")?.toString()
+            ?: providers.environmentVariable("GITHUB_ACTOR").getOrNull()
+            ?: "xtclang-workflows"  // Default fallback for CI
         val gitHubPassword = project.findProperty("GitHubPassword")?.toString()
+            ?: providers.environmentVariable("GITHUB_TOKEN").getOrNull()
 
-        if (!gitHubUsername.isNullOrEmpty() && !gitHubPassword.isNullOrEmpty()) {
+        if (!gitHubPassword.isNullOrEmpty()) {
             maven {
                 name = "GitHub"
                 url = uri("https://maven.pkg.github.com/xtclang/xvm")
@@ -149,7 +153,7 @@ publishing {
                 }
             }
         } else {
-            logger.lifecycle("[plugin] GitHub Packages repository not configured - missing GitHubUsername or GitHubPassword properties")
+            logger.lifecycle("[plugin] GitHub Packages repository not configured - missing GitHubPassword/GITHUB_TOKEN")
         }
     }
 }
@@ -183,7 +187,7 @@ abstract class ListLocalPublicationsTask : DefaultTask() {
 }
 
 val listLocalPublications by tasks.registering(ListLocalPublicationsTask::class) {
-    group = "publishing"
+    group = PUBLISH_TASK_GROUP
     description = "List local Maven publications for this project"
     projectName.set(pluginName)
 }
@@ -232,19 +236,19 @@ abstract class DeleteRemotePublicationsTask : DefaultTask() {
 }
 
 val listRemotePublications by tasks.registering(ListRemotePublicationsTask::class) {
-    group = "publishing"
+    group = PUBLISH_TASK_GROUP
     description = "List remote GitHub publications for this project"
     projectName.set(pluginName)
 }
 
 val deleteLocalPublications by tasks.registering(DeleteLocalPublicationsTask::class) {
-    group = "publishing"
+    group = PUBLISH_TASK_GROUP
     description = "Delete local Maven publications for this project"
     projectName.set(pluginName)
 }
 
 val deleteRemotePublications by tasks.registering(DeleteRemotePublicationsTask::class) {
-    group = "publishing"
+    group = PUBLISH_TASK_GROUP
     description = "Delete remote GitHub publications for this project"
     projectName.set(pluginName)
 }
