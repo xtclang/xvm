@@ -4,7 +4,7 @@ plugins {
     id("org.xtclang.build.xdk.versioning")
     alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.vanniktech.maven.publish)
-    alias(libs.plugins.gradle.portal.publish)
+    id("java-gradle-plugin")
 }
 
 // Extract values during configuration to avoid capturing project references
@@ -78,17 +78,6 @@ val xdkJavaToolsJarConsumer by configurations.registering {
 repositories {
     mavenCentral()
     gradlePluginPortal()
-    val gitHubToken = getXtclangGitHubMavenPackageRepositoryToken()
-    if (gitHubToken.isNotEmpty()) {
-        maven {
-            name = "GitHub"
-            url = uri("https://maven.pkg.github.com/xtclang/xvm")
-            credentials {
-                username = "xtclang-workflows"
-                password = gitHubToken
-            }
-        }
-    }
 }
 
 dependencies {
@@ -98,37 +87,28 @@ dependencies {
     testImplementation(libs.junit.jupiter)
 }
 
-// Configure Vanniktech Maven Publish for configuration cache compatibility
+// Configure Vanniktech Maven Publish for Gradle Plugin
 mavenPublishing {
     coordinates(pluginGroup, pluginName, pluginVersion)
-    
-    // Configure publication targets based on properties
-    val enableGitHub = getXdkPropertyBoolean("org.xtclang.publish.github", true)  // Default: enabled
-    val enableMavenCentral = getXdkPropertyBoolean("org.xtclang.publish.mavenCentral", false)
-    val enableGradlePluginPortal = getXdkPropertyBoolean("org.xtclang.publish.gradlePluginPortal", false)
-    
-    // Configure publication platform (always configure vanniktech for GitHub by default)
+
+    // Configure as Gradle Plugin (vanniktech will handle plugin marker automatically)
     configure(
-        com.vanniktech.maven.publish.JavaLibrary(
-            javadocJar = com.vanniktech.maven.publish.JavadocJar.None(),  // Avoid conflicts
+        com.vanniktech.maven.publish.GradlePlugin(
+            javadocJar = com.vanniktech.maven.publish.JavadocJar.None(),
             sourcesJar = true
         )
     )
-    
+
     // Maven Central publishing (disabled by default)
+    val enableMavenCentral = getXdkPropertyBoolean("org.xtclang.publish.mavenCentral", false)
     if (enableMavenCentral) {
         publishToMavenCentral(automaticRelease = false)
         logger.lifecycle("[plugin] Maven Central publishing is enabled")
     } else {
         logger.lifecycle("[plugin] Maven Central publishing is disabled (use -Porg.xtclang.publish.mavenCentral=true to enable)")
     }
-    
-    // Gradle Plugin Portal publishing (controlled by property, but always configured for compatibility)
-    if (enableGradlePluginPortal) {
-        logger.lifecycle("[plugin] Gradle Plugin Portal publishing is enabled")
-    } else {
-        logger.lifecycle("[plugin] Gradle Plugin Portal publishing is disabled (use -Porg.xtclang.publish.gradlePluginPortal=true to enable)")
-    }
+
+    // Note: Gradle Plugin Portal publishing handled by vanniktech GradlePlugin configuration
     
     
     pom {
@@ -153,27 +133,23 @@ mavenPublishing {
     }
 }
 
-// Configure GitHub Packages repository (vanniktech applies maven-publish plugin automatically)
+// Configure GitHub Packages repository (enabled when credentials are available)
 publishing {
     repositories {
-        val enableGitHub = getXdkPropertyBoolean("org.xtclang.publish.github", true)
-        if (enableGitHub) {
-            val gitHubToken = getXtclangGitHubMavenPackageRepositoryToken()
-            if (gitHubToken.isNotEmpty()) {
-                logger.lifecycle("[plugin] Configuring GitHub Packages repository")
-                maven {
-                    name = "GitHubPackages" 
-                    url = uri("https://maven.pkg.github.com/xtclang/xvm")
-                    credentials {
-                        username = "xtclang-workflows"
-                        password = gitHubToken
-                    }
+        val gitHubUsername = project.findProperty("GitHubUsername")?.toString()
+        val gitHubPassword = project.findProperty("GitHubPassword")?.toString()
+
+        if (!gitHubUsername.isNullOrEmpty() && !gitHubPassword.isNullOrEmpty()) {
+            maven {
+                name = "GitHub"
+                url = uri("https://maven.pkg.github.com/xtclang/xvm")
+                credentials {
+                    username = gitHubUsername
+                    password = gitHubPassword
                 }
-            } else {
-                logger.lifecycle("[plugin] GitHub token is empty - no GitHub repository configured")
             }
         } else {
-            logger.lifecycle("[plugin] GitHub publishing is disabled (use -Porg.xtclang.publish.github=true to enable)")
+            logger.lifecycle("[plugin] GitHub Packages repository not configured - missing GitHubUsername or GitHubPassword properties")
         }
     }
 }
@@ -274,45 +250,24 @@ val deleteRemotePublications by tasks.registering(DeleteRemotePublicationsTask::
 }
 
 // Extract plugin configuration values during configuration
-private val isAutomatedPublishingValue = getXdkPropertyBoolean("$pprefix.plugin.isAutomatedPublishing", true)
 private val vcsUrlValue = getXdkProperty("$pprefix.plugin.vcs.url")
 private val websiteValue = getXdkProperty("$pprefix.plugin.website")
 private val implementationClassValue = getXdkProperty("$pprefix.plugin.implementation.class")
 private val displayNameValue = getXdkProperty("$pprefix.plugin.display.name")
 private val descriptionValue = getXdkProperty("$pprefix.plugin.description")
 
-// Extract all gradle plugin configuration values to avoid script references  
-val gradlePluginVcsUrl = vcsUrlValue
-val gradlePluginWebsite = websiteValue
-val gradlePluginVersion = pluginVersion
-val gradlePluginId = pluginId
-val gradlePluginImplementationClass = implementationClassValue
-val gradlePluginDisplayName = displayNameValue
-val gradlePluginDescription = descriptionValue
-
-@Suppress("UnstableApiUsage")
+// Minimal gradle plugin configuration for vanniktech
 gradlePlugin {
-    // Gradle Plugin Portal requires automated publishing (cannot be disabled in v1.0+)
-    isAutomatedPublishing = true
-    
-    logger.lifecycle("[plugin] Gradle Plugin Portal: automated publishing enabled (required)")
-    logger.lifecycle("[plugin] Note: Use publishPlugins task to publish to Gradle Plugin Portal when ready")
-
-    vcsUrl = gradlePluginVcsUrl
-    website = gradlePluginWebsite
-
     plugins {
         val xtc by registering {
-            version = gradlePluginVersion
-            id = gradlePluginId
-            implementationClass = gradlePluginImplementationClass
-            displayName = gradlePluginDisplayName
-            description = gradlePluginDescription
-            logger.info("[plugin] Configuring gradlePlugin; pluginId=$gradlePluginId, implementationClass=$gradlePluginImplementationClass, displayName=$gradlePluginDisplayName, description=$gradlePluginDescription")
-            tags = listOf("xtc", "language", "ecstasy", "xdk")
+            id = pluginId
+            implementationClass = implementationClassValue
+            displayName = displayNameValue
+            description = descriptionValue
         }
     }
 }
+
 
 tasks.withType<Javadoc>().configureEach {
     enabled = false
@@ -320,14 +275,6 @@ tasks.withType<Javadoc>().configureEach {
     logger.info("[plugin] Note: JavaDoc task is currently disabled, but certain publication methods, such as for the Gradle plugin portal will still generate and publish JavaDocs.")
 }
 
-tasks.withType<PublishToMavenRepository>().matching { it.name.startsWith("publishPluginMaven") }.configureEach {
-    enabled = false
-    // TODO: Reuse the existing PluginMaven task instead, because that is the one gradlePluginPortal hardcodes.
-    val taskName = name
-    logger.info(
-        "[plugin] Disabled default publication task: '$taskName'. The task '${taskName.replace("PluginMaven", "XtcPlugin")}' should be equivalent."
-    )
-}
 
 tasks.withType<Jar>().configureEach {
     val taskName = name

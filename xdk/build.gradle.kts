@@ -65,17 +65,6 @@ val xdkProvider by configurations.registering {
 repositories {
     mavenCentral()
     gradlePluginPortal()
-    val gitHubToken = getXtclangGitHubMavenPackageRepositoryToken()
-    if (gitHubToken.isNotEmpty()) {
-        maven {
-            name = "GitHub"
-            url = uri("https://maven.pkg.github.com/xtclang/xvm")
-            credentials {
-                username = "xtclang-workflows"
-                password = gitHubToken
-            }
-        }
-    }
 }
 
 dependencies {
@@ -230,11 +219,8 @@ mavenPublishing {
         }
     }
     
-    // Configure publication targets based on properties
-    val enableGitHub = getXdkPropertyBoolean("org.xtclang.publish.github", true)  // Default: enabled
-    val enableMavenCentral = getXdkPropertyBoolean("org.xtclang.publish.mavenCentral", false)
-    
     // Maven Central publishing (disabled by default)
+    val enableMavenCentral = getXdkPropertyBoolean("org.xtclang.publish.mavenCentral", false)
     if (enableMavenCentral) {
         publishToMavenCentral(automaticRelease = false)
         logger.lifecycle("[xdk] Maven Central publishing is enabled")
@@ -266,27 +252,23 @@ mavenPublishing {
     }
 }
 
-// Configure GitHub Packages repository (vanniktech applies maven-publish plugin automatically)
+// Configure GitHub Packages repository (enabled when credentials are available)
 publishing {
     repositories {
-        val enableGitHub = getXdkPropertyBoolean("org.xtclang.publish.github", true)
-        if (enableGitHub) {
-            val gitHubToken = getXtclangGitHubMavenPackageRepositoryToken()
-            if (gitHubToken.isNotEmpty()) {
-                logger.lifecycle("[xdk] Configuring GitHub Packages repository")
-                maven {
-                    name = "GitHubPackages"
-                    url = uri("https://maven.pkg.github.com/xtclang/xvm")
-                    credentials {
-                        username = "xtclang-workflows"
-                        password = gitHubToken
-                    }
+        val gitHubUsername = project.findProperty("GitHubUsername")?.toString()
+        val gitHubPassword = project.findProperty("GitHubPassword")?.toString()
+
+        if (!gitHubUsername.isNullOrEmpty() && !gitHubPassword.isNullOrEmpty()) {
+            maven {
+                name = "GitHub"
+                url = uri("https://maven.pkg.github.com/xtclang/xvm")
+                credentials {
+                    username = gitHubUsername
+                    password = gitHubPassword
                 }
-            } else {
-                logger.lifecycle("[xdk] GitHub token is empty - no GitHub repository configured")
             }
         } else {
-            logger.lifecycle("[xdk] GitHub publishing is disabled (use -Porg.xtclang.publish.github=true to enable)")
+            logger.lifecycle("[xdk] GitHub Packages repository not configured - missing GitHubUsername or GitHubPassword properties")
         }
     }
 }

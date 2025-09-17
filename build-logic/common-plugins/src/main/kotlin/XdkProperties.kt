@@ -228,3 +228,8 @@ fun Project.getXtclangGitHubMavenPackageRepositoryToken(): String {
     val fallbackToken = providers.environmentVariable("GITHUB_TOKEN").getOrElse("")
     return getXdkProperty("org.xtclang.repo.github.token", fallbackToken)
 }
+
+fun Project.getXtclangGitHubMavenPackageRepositoryUser(): String {
+    val fallbackUser = "xtclang-workflows"  // Default fallback
+    return getXdkProperty("org.xtclang.repo.github.user", fallbackUser)
+}
