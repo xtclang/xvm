@@ -262,48 +262,6 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
             )
         )
 
-        /**
-         * Generate module path arguments for XTC launchers (-L arguments).
-         *
-         * @param isWindows true for Windows batch files, false for Unix shell scripts
-         * @return formatted module path arguments string
-         */
-        // Removed generateXtcModulePathArgs - XTC module paths are now handled in templates
-        
-        // Removed getPlatformFormatting - now handled by templates
-
-        /**
-         * Replace jar paths in script content, handling both Unix and Windows path separators.
-         * Replaces `/lib/originalName` with `/javatools/strippedName` and Windows equivalents.
-         *
-         * @param scriptContent the script content to modify
-         * @param originalName the original jar name with version
-         * @param strippedName the jar name without version
-         * @return modified script content with updated jar paths
-         */
-        // Removed replaceJarPaths - jar paths are now handled in templates
-
-        /**
-         * Add XTC module paths to launcher script and inject script name as first argument.
-         */
-        // Removed injectXtcModulePaths - module paths are now handled in templates
-
-        /**
-         * Find insertion point for delegation logic in script content.
-         * @return insertion index, or -1 if not found
-         */
-        // Removed findDelegationInsertionPoint - delegation is now handled in templates
-
-        /**
-         * Cross-platform XDK_HOME delegation logic injection for launcher scripts.
-         * Implements proper delegation to XDK_HOME installations with infinite recursion prevention.
-         */
-        // Removed injectXdkHomeDelegation - XDK_HOME delegation is now handled in templates
-
-        /**
-         * Fix path resolution to use APP_HOME consistently after XDK_HOME delegation.
-         */
-        // Removed fixPathResolution - path resolution is now handled in templates
 
         /**
          * Strip version suffix from jar names for distribution.
@@ -320,8 +278,6 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         fun createRenameTransformer(version: String): (String) -> String = { jarName ->
             stripVersionFromJarName(jarName, version)
         }
-
-
 
         /**
          * Configuration cache compatible script modification logic.
