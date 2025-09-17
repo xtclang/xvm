@@ -10,6 +10,7 @@ import java.lang.constant.MethodTypeDesc;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 
 import org.xvm.asm.Annotation;
@@ -126,6 +127,11 @@ public class BuildContext {
     private final Deque<Slot> tailStack = new ArrayDeque<>();
 
     /**
+     * The Map of not-yet-assigned slots.
+     */
+    private Map<Slot, Label> unassignedSlots = new IdentityHashMap<>();
+
+    /**
      * @return the ConstantPool used by this {@link BuildContext}.
      */
     public ConstantPool pool() {
@@ -177,11 +183,10 @@ public class BuildContext {
      * Prepare the compilation.
      */
     public void enterMethod(CodeBuilder code) {
-        lineNumber = methodStruct.getSourceLineNumber();
+        lineNumber = 1; // XVM ops are 0 based; Java is 1-based
         scope      = new Scope(this, code);
-
         code
-            .lineNumber(lineNumber)
+            .lineNumber(methodStruct.getSourceLineNumber() + 1)
             .labelBinding(scope.startLabel)
             .localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, scope.startLabel, scope.endLabel)
             ;
@@ -483,11 +488,15 @@ public class BuildContext {
             code.istore(doubleSlot.extSlot()); // store the boolean flag
         }
 
-        ClassDesc cd = slot.cd();
         if (slot.isIgnore()) {
-            Builder.pop(code, cd);
+            Builder.pop(code, slot.cd());
         } else {
-            Builder.store(code, cd, slot.slot());
+            Builder.store(code, slot.cd(), slot.slot());
+        }
+
+        Label varStart = unassignedSlots.remove(slot);
+        if (varStart != null) {
+            code.labelBinding(varStart);
         }
     }
 
@@ -524,8 +533,7 @@ public class BuildContext {
             name = name.replace('#', '$').replace('.', '$');
         }
 
-        Label varStartScope = code.newLabel();
-        code.labelBinding(varStartScope);
+        Label varStart = code.newLabel();
 
         ClassDesc cd;
         Slot      slot;
@@ -533,19 +541,21 @@ public class BuildContext {
             int slotIndex = scope.allocateLocal(varIndex, Builder.toTypeKind(cd));
             int slotExt   = scope.allocateLocal(varIndex, TypeKind.BOOLEAN);
 
-            code.localVariable(slotIndex, name, cd, varStartScope, scope.endLabel);
-            code.localVariable(slotExt,   name+EXT, CD_boolean, varStartScope, scope.endLabel);
+            code.localVariable(slotIndex, name, cd, varStart, scope.endLabel);
+            code.localVariable(slotExt,   name+EXT, CD_boolean, varStart, scope.endLabel);
 
             slot = new DoubleSlot(slotIndex, slotExt, JitFlavor.MultiSlotPrimitive, type, cd, name);
         } else {
             cd = JitParamDesc.getJitClass(typeSystem, type);
 
             int slotIndex = scope.allocateLocal(varIndex, Builder.toTypeKind(cd));
-            code.localVariable(slotIndex, name, cd, varStartScope, scope.endLabel);
+            code.localVariable(slotIndex, name, cd, varStart, scope.endLabel);
 
             slot = new SingleSlot(slotIndex, type, cd, name);
         }
+
         slots.put(varIndex, slot);
+        unassignedSlots.put(slot, varStart);
         return slot;
     }
 
@@ -573,13 +583,11 @@ public class BuildContext {
                     throw new UnsupportedOperationException("retrieve opts");
                 }
 
-                Label varStartScope = code.newLabel();
-                code.labelBinding(varStartScope);
-
+                Label     varStart   = code.newLabel();
                 ClassDesc resourceCD = resourceType.ensureClassDesc(typeSystem);
                 int       slotIndex  = scope.allocateLocal(varIndex, TypeKind.REFERENCE);
                 Slot      slot       = new SingleSlot(slotIndex, resourceType, resourceCD, name);
-                code.localVariable(slotIndex, name, resourceCD, varStartScope, scope.endLabel);
+                code.localVariable(slotIndex, name, resourceCD, varStart, scope.endLabel);
 
                 slots.put(varIndex, slot);
 
@@ -592,7 +600,8 @@ public class BuildContext {
                     .ldc(resourceName)
                     .aconst_null()                                            // opts
                     .invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
-                    .astore(slot.slot());
+                    .astore(slot.slot())
+                    .labelBinding(varStart);
                 return slot;
             }
         }
