@@ -430,11 +430,13 @@ val validateGitHubCredentials by tasks.registering(ValidateGitHubCredentialsTask
 
     gitHubUsername.set(
         project.findProperty("GitHubUsername")?.toString()
-            ?: providers.environmentVariable("GITHUB_ACTOR").getOrElse("xtclang-workflows")
+            ?: providers.environmentVariable("GITHUB_ACTOR").getOrNull()
+            ?: "xtclang-workflows"
     )
     gitHubPassword.set(
         project.findProperty("GitHubPassword")?.toString()
-            ?: providers.environmentVariable("GITHUB_TOKEN").getOrElse("")
+            ?: providers.environmentVariable("GITHUB_TOKEN").getOrNull()
+            ?: ""
     )
 }
 
