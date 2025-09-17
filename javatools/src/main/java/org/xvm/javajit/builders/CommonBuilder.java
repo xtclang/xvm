@@ -62,18 +62,18 @@ import static java.lang.constant.ConstantDescs.INIT_NAME;
 public class CommonBuilder
         extends Builder {
     public CommonBuilder(TypeSystem typeSystem, TypeConstant type) {
+        super(typeSystem);
+
         assert type.isSingleUnderlyingClass(true);
 
         ConstantPool pool = typeSystem.pool();
 
-        this.typeSystem  = typeSystem;
         this.typeInfo    = pool.ensureAccessTypeConstant(type, Access.PRIVATE).ensureTypeInfo();
         this.structInfo  = pool.ensureAccessTypeConstant(type, Access.STRUCT).ensureTypeInfo();
         this.classStruct = typeInfo.getClassStructure();
         this.thisId      = classStruct.getIdentityConstant();
     }
 
-    protected final TypeSystem       typeSystem;
     protected final TypeInfo         typeInfo;
     protected final TypeInfo         structInfo;
     protected final ClassStructure   classStruct;
@@ -306,7 +306,7 @@ public class CommonBuilder
                 TypeSystem ts = typeSystem;
                 for (PropertyInfo prop : props) {
                     if (prop.getInitializer() == null) {
-                        Slot   slot    = BuildContext.loadConstant(ts, code, prop.getInitialValue());
+                        Slot   slot    = loadConstant(code, prop.getInitialValue());
                         String jitName = prop.getIdentity().ensureJitPropertyName(ts);
                         if (slot instanceof DoubleSlot doubleSlot) {
                             assert doubleSlot.flavor() == JitFlavor.MultiSlotPrimitive;
@@ -389,13 +389,12 @@ public class CommonBuilder
                     .invokespecial(getSuperDesc(), INIT_NAME, MD_Initializer);
 
                 // add field initialization
-                TypeSystem ts = typeSystem;
                 for (PropertyInfo prop : props) {
                     if (prop.getInitializer() == null) {
                         code.aload(0); // Stack: { this }
 
-                        Slot   slot    = BuildContext.loadConstant(ts, code, prop.getInitialValue());
-                        String jitName = prop.getIdentity().ensureJitPropertyName(ts);
+                        Slot   slot    = loadConstant(code, prop.getInitialValue());
+                        String jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
                         if (slot instanceof DoubleSlot doubleSlot) {
                             assert doubleSlot.flavor() == JitFlavor.MultiSlotPrimitive;
                             // loadConstant() has already loaded the value and the boolean
@@ -814,7 +813,7 @@ public class CommonBuilder
 
                     case Primitive:
                         code.aload(stdParamSlot);
-                        unbox(code, typeSystem, stdParamType, optParamDesc.cd);
+                        unbox(code, stdParamType, optParamDesc.cd);
                         break;
 
                     case PrimitiveWithDefault: {
@@ -834,7 +833,7 @@ public class CommonBuilder
                             .goto_(endIf)
                             .labelBinding(ifNotNull)
                             .aload(stdParamSlot);
-                        unbox(code, typeSystem, stdParamType, optParamDesc.cd); // unwrapped primitive
+                        unbox(code, stdParamType, optParamDesc.cd); // unwrapped primitive
                         code.iconst_0();                                        // false
 
                         code.labelBinding(endIf);
@@ -861,7 +860,7 @@ public class CommonBuilder
                             .goto_(endIf)
                             .labelBinding(ifNotNull)
                             .aload(stdParamSlot);
-                        unbox(code, typeSystem, primitiveType, optParamDesc.cd); // unboxed primitive
+                        unbox(code, primitiveType, optParamDesc.cd); // unboxed primitive
                         code.iconst_0();                                         // false
 
                         code.labelBinding(endIf);
@@ -921,11 +920,11 @@ public class CommonBuilder
                 case Primitive:
                     if (optIx == 0) {
                         // natural return
-                        box(code, typeSystem, optType, optCD);
+                        box(code, optType, optCD);
                         code.areturn();
                     } else {
                         loadFromContext(code, optCD, optRetIx);
-                        box(code, typeSystem, optType, optCD);
+                        box(code, optType, optCD);
                         storeToContext(code, stdCD, stdRetIx);
                     }
                     break;
@@ -944,7 +943,7 @@ public class CommonBuilder
                         .if_icmpeq(ifNull)  // if true, go to Null
                         ;
 
-                    box(code, typeSystem, optType, optCD);
+                    box(code, optType, optCD);
                     if (optIx == 0) {
                         code.areturn();
                     } else {
@@ -1008,7 +1007,7 @@ public class CommonBuilder
      *
      *    // step 2: get permission to use the memory
      *    // note: singletons move this step to the Java static initializer
-     *    ctx.alloc(32); // the RAM size is calc'd by the TypeInfo or compiler
+     *    ctx.alloc(32); // the RAM size is calculated by the TypeInfo or compiler
      *
      *    // step 3 (initializer) gets handled in the Java constructor for the class
      *    // - the constructor needs the context for any allocations
@@ -1189,7 +1188,7 @@ public class CommonBuilder
             flags |= ClassFile.ACC_ABSTRACT;
         }
 
-        BuildContext bctx = new BuildContext(typeSystem, typeInfo, prop, isGetter);
+        BuildContext bctx = new BuildContext(this, typeInfo, prop, isGetter);
 
         classBuilder.withMethod(jitName, md, flags,
             methodBuilder -> {
@@ -1214,7 +1213,7 @@ public class CommonBuilder
             flags |= ClassFile.ACC_STATIC;
         }
 
-        BuildContext bctx = new BuildContext(typeSystem, typeInfo, method);
+        BuildContext bctx = new BuildContext(this, typeInfo, method);
 
         classBuilder.withMethod(jitName, md, flags,
             methodBuilder -> {

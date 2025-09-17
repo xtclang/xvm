@@ -22,42 +22,32 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
-import org.xvm.asm.constants.EnumValueConstant;
-import org.xvm.asm.constants.IntConstant;
-import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodInfo;
-import org.xvm.asm.constants.NamedCondition;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RegisterConstant;
-import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
-import static java.lang.constant.ConstantDescs.CD_long;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_JavaString;
-import static org.xvm.javajit.Builder.CD_Nullable;
-import static org.xvm.javajit.Builder.CD_String;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.EXT;
-import static org.xvm.javajit.Builder.Instance;
 import static org.xvm.javajit.Builder.toTypeKind;
 
 /**
  * Whatever is necessary for the Ops compilation.
  */
 public class BuildContext {
-
     /**
      * Construct {@link BuildContext} for a method.
      */
-    public BuildContext(TypeSystem typeSystem, TypeInfo typeInfo, MethodInfo methodInfo) {
-        this.typeSystem    = typeSystem;
+    public BuildContext(Builder builder, TypeInfo typeInfo, MethodInfo methodInfo) {
+        this.builder       = builder;
+        this.typeSystem    = builder.typeSystem;
         this.typeInfo      = typeInfo;
         this.callChain     = methodInfo.getChain();
         this.methodStruct  = callChain[0].getMethodStructure();
@@ -70,9 +60,10 @@ public class BuildContext {
     /**
      * Construct {@link BuildContext} for a property accessor.
      */
-    public BuildContext(TypeSystem typeSystem, TypeInfo typeInfo, PropertyInfo propInfo,
+    public BuildContext(Builder builder, TypeInfo typeInfo, PropertyInfo propInfo,
                         boolean isGetter) {
-        this.typeSystem    = typeSystem;
+        this.builder       = builder;
+        this.typeSystem    = builder.typeSystem;
         this.typeInfo      = typeInfo;
         this.callChain     = isGetter
                 ? propInfo.ensureOptimizedGetChain(typeInfo, null)
@@ -86,10 +77,11 @@ public class BuildContext {
         this.isOptimized   = jmd.optimizedMD != null;
     }
 
+    public final Builder         builder;
+    public final TypeSystem      typeSystem;
     public final TypeInfo        typeInfo;
     public final MethodBody[]    callChain;
     public final MethodStructure methodStruct;
-    public final TypeSystem      typeSystem;
     public final JitMethodDesc   jmd;
     public final boolean         isOptimized;
     public final boolean         isFunction;
@@ -129,7 +121,7 @@ public class BuildContext {
     /**
      * The Map of not-yet-assigned slots.
      */
-    private Map<Slot, Label> unassignedSlots = new IdentityHashMap<>();
+    private final Map<Slot, Label> unassignedSlots = new IdentityHashMap<>();
 
     /**
      * @return the ConstantPool used by this {@link BuildContext}.
@@ -321,9 +313,9 @@ public class BuildContext {
                         .iconst_0()
                         .if_icmpne(ifTrue)
                         .loadLocal(Builder.toTypeKind(cd), doubleSlot.slot)
-                    .goto_(endIf)
-                    .labelBinding(ifTrue);
-                        loadConstant(typeSystem, code, parameter.getDefaultValue());
+                        .goto_(endIf)
+                        .labelBinding(ifTrue);
+                    builder.loadConstant(code, parameter.getDefaultValue());
                     code.labelBinding(endIf);
                     return new SingleSlot(Op.A_STACK, slot.type(), cd, slot.name());
 
@@ -359,7 +351,7 @@ public class BuildContext {
 
                 code.iconst_0()
                     .if_icmpne(ifTrue);
-                Builder.box(code, typeSystem, slot.type().removeNullable(), slot.cd());
+                builder.box(code, slot.type().removeNullable(), slot.cd());
                 code.goto_(endIf)
                     .labelBinding(ifTrue);
                     Builder.pop(code, doubleSlot.cd);
@@ -367,7 +359,7 @@ public class BuildContext {
                 code.labelBinding(endIf);
                 slot = new SingleSlot(Op.A_STACK, targetDesc.type, targetDesc.cd, slot.name() + "?");
             } else {
-                Builder.box(code, typeSystem, slot.type(), slot.cd());
+                builder.box(code, slot.type(), slot.cd());
                 slot = new SingleSlot(Op.A_STACK, targetDesc.type, targetDesc.cd, slot.name());
             }
         }
@@ -380,71 +372,7 @@ public class BuildContext {
      * We **always** load a primitive value if possible.
      */
     public Slot loadConstant(CodeBuilder code, int argId) {
-        return loadConstant(typeSystem, code, getConstant(argId));
-    }
-
-    /**
-     * Build the code to load a value for a constant on the Java stack.
-     *
-     * We **always** load a primitive value if possible.
-     */
-    public static Slot loadConstant(TypeSystem ts, CodeBuilder code, Constant constant) {
-        // see NativeContainer#getConstType()
-
-        if (constant instanceof StringConstant stringConst) {
-            MethodTypeDesc MD_of = MethodTypeDesc.of(CD_String, CD_Ctx, CD_JavaString);
-            // String.of(s)
-            code.aload(code.parameterSlot(0)) // $ctx
-                .ldc(stringConst.getValue())
-                .invokestatic(CD_String, "of", MD_of);
-            return new SingleSlot(Op.A_STACK, constant.getType(), CD_String, "");
-        }
-        if (constant instanceof IntConstant intConstant) {
-            // TODO: support all Int/UInt types
-            code
-                .ldc(intConstant.getValue().getLong());
-            return new SingleSlot(Op.A_STACK, constant.getType(), CD_long, "");
-        }
-        if (constant instanceof EnumValueConstant enumConstant) {
-            ConstantPool pool = constant.getConstantPool();
-            if (enumConstant.getType().isOnlyNullable()) {
-                Builder.loadNull(code);
-                return new SingleSlot(Op.A_STACK, pool.typeNullable(), CD_Nullable, "");
-            } else if (enumConstant.getType().isA(pool.typeBoolean())) {
-                if (enumConstant.getIntValue().getInt() == 0) {
-                    code.iconst_0();
-                } else {
-                    code.iconst_1();
-                }
-            return new SingleSlot(Op.A_STACK, pool.typeBoolean(), CD_boolean, "");
-            }
-        }
-        if (constant instanceof LiteralConstant litConstant) {
-            switch (litConstant.getFormat()) {
-            case IntLiteral:
-                // TODO: delegate to IntN
-                break;
-            case FPLiteral:
-                // TODO: delegate to FloatN
-                break;
-            }
-        }
-        if (constant instanceof SingletonConstant singleton) {
-            TypeConstant type = singleton.getType();
-            JitTypeDesc  jtd  = type.getJitDesc(ts);
-            assert jtd.flavor == JitFlavor.Specific;
-
-            // retrieve from Singleton.$INSTANCE (see CommonBuilder.assembleStaticInitializer)
-            ClassDesc cd = jtd.cd;
-            code.getstatic(cd, Instance, cd);
-            return new SingleSlot(Op.A_STACK, type, cd, "");
-        }
-        if (constant instanceof NamedCondition cond) {
-            code.loadConstant(cond.getName());
-            return new SingleSlot(Op.A_STACK, cond.getConstantPool().typeString(), CD_String, "");
-        }
-        throw new UnsupportedOperationException(constant.toString());
-        // return code;
+        return builder.loadConstant(code, getConstant(argId));
     }
 
     /**
@@ -727,7 +655,7 @@ public class BuildContext {
                         Label endIf  = code.newLabel();
                         code.iconst_0()
                             .if_icmpne(ifTrue);
-                        Builder.box(code, typeSystem, typeRet, cdRet);
+                        builder.box(code, typeRet, cdRet);
                         code.goto_(endIf)
                             .labelBinding(ifTrue)
                             .pop();
@@ -756,7 +684,7 @@ public class BuildContext {
                         Label endIf  = code.newLabel();
                         code.iconst_0()
                             .if_icmpeq(ifTrue);
-                        Builder.box(code, typeSystem, typeRet, cdRet);
+                        builder.box(code, typeRet, cdRet);
                         code.goto_(endIf);
                         code.labelBinding(ifTrue)
                             .pop();

@@ -7,10 +7,21 @@ import java.lang.classfile.TypeKind;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.EnumValueConstant;
+import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.LiteralConstant;
+import org.xvm.asm.constants.NamedCondition;
+import org.xvm.asm.constants.SingletonConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+
+import org.xvm.javajit.BuildContext.SingleSlot;
+import org.xvm.javajit.BuildContext.Slot;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
@@ -23,6 +34,12 @@ import static org.xvm.javajit.JitFlavor.Specific;
  * Base class for JIT class builders.
  */
 public abstract class Builder {
+    public Builder(TypeSystem typeSystem) {
+        this.typeSystem = typeSystem;
+    }
+
+    public final TypeSystem typeSystem;
+
     /**
      * Assemble the java class for an "impl" shape.
      */
@@ -42,7 +59,7 @@ public abstract class Builder {
     /**
      * Compute a MethodTypeDesc for a Java method with the specified parameter and return types.
      */
-    public static MethodTypeDesc computeMethodDesc(TypeSystem typeSystem, TypeConstant[] paramTypes,
+    public MethodTypeDesc computeMethodDesc(TypeConstant[] paramTypes,
                                             TypeConstant[] returnTypes) {
         int         paramCount = paramTypes.length;
         ClassDesc[] paramCDs   = new ClassDesc[paramCount + 1];
@@ -56,6 +73,70 @@ public abstract class Builder {
         return MethodTypeDesc.of(returnTypes.length == 0 ? CD_void :
                 returnTypes[0].ensureClassDesc(typeSystem), paramCDs);
         }
+
+    /**
+     * Build the code to load a value for a constant on the Java stack.
+     *
+     * We **always** load a primitive value if possible.
+     */
+    public Slot loadConstant(CodeBuilder code, Constant constant) {
+        // see NativeContainer#getConstType()
+
+        if (constant instanceof StringConstant stringConst) {
+            MethodTypeDesc MD_of = MethodTypeDesc.of(CD_String, CD_Ctx, CD_JavaString);
+            // String.of(s)
+            code.aload(code.parameterSlot(0)) // $ctx
+                .ldc(stringConst.getValue())
+                .invokestatic(CD_String, "of", MD_of);
+            return new SingleSlot(Op.A_STACK, constant.getType(), CD_String, "");
+        }
+        if (constant instanceof IntConstant intConstant) {
+            // TODO: support all Int/UInt types
+            code
+                .ldc(intConstant.getValue().getLong());
+            return new SingleSlot(Op.A_STACK, constant.getType(), CD_long, "");
+        }
+        if (constant instanceof EnumValueConstant enumConstant) {
+            ConstantPool pool = constant.getConstantPool();
+            if (enumConstant.getType().isOnlyNullable()) {
+                Builder.loadNull(code);
+                return new SingleSlot(Op.A_STACK, pool.typeNullable(), CD_Nullable, "");
+            } else if (enumConstant.getType().isA(pool.typeBoolean())) {
+                if (enumConstant.getIntValue().getInt() == 0) {
+                    code.iconst_0();
+                } else {
+                    code.iconst_1();
+                }
+            return new SingleSlot(Op.A_STACK, pool.typeBoolean(), CD_boolean, "");
+            }
+        }
+        if (constant instanceof LiteralConstant litConstant) {
+            switch (litConstant.getFormat()) {
+            case IntLiteral:
+                // TODO: delegate to IntN
+                break;
+            case FPLiteral:
+                // TODO: delegate to FloatN
+                break;
+            }
+        }
+        if (constant instanceof SingletonConstant singleton) {
+            TypeConstant type = singleton.getType();
+            JitTypeDesc  jtd  = type.getJitDesc(typeSystem);
+            assert jtd.flavor == JitFlavor.Specific;
+
+            // retrieve from Singleton.$INSTANCE (see CommonBuilder.assembleStaticInitializer)
+            ClassDesc cd = jtd.cd;
+            code.getstatic(cd, Instance, cd);
+            return new SingleSlot(Op.A_STACK, type, cd, "");
+        }
+        if (constant instanceof NamedCondition cond) {
+            code.loadConstant(cond.getName());
+            return new SingleSlot(Op.A_STACK, cond.getConstantPool().typeString(), CD_String, "");
+        }
+        throw new UnsupportedOperationException(constant.toString());
+        // return code;
+    }
 
     /**
      * Generate a value "load" for the specified Java class.
@@ -191,14 +272,16 @@ public abstract class Builder {
     }
 
     /**
-     * Generate unboxing opcodes for a wrapper reference on the stack and the specified primitive class.
+     * Generate unboxing opcodes for a wrapper reference on the stack and the specified primitive
+     * class.
+     *
      * In: the boxed reference
      * Out: unboxed primitive value
      *
-     * @param type  the primitive type
-     * @param cd    the corresponding ClassDesc
+     * @param type the primitive type
+     * @param cd   the corresponding ClassDesc
      */
-    public static void unbox(CodeBuilder code, TypeSystem ts, TypeConstant type, ClassDesc cd) {
+    public void unbox(CodeBuilder code, TypeConstant type, ClassDesc cd) {
         assert cd.isPrimitive() && type.isPrimitive();
 
         ConstantPool pool = type.getConstantPool();
@@ -213,7 +296,7 @@ public abstract class Builder {
                 code.getfield(CD_Int64, "$value", cd);
             } else {
                 // TODO: does this cover all types?
-                code.getfield(type.ensureClassDesc(ts), "$value", cd);
+                code.getfield(type.ensureClassDesc(typeSystem), "$value", cd);
             }
             break;
 
@@ -233,10 +316,11 @@ public abstract class Builder {
 
     /**
      * Generate boxing opcodes for a primitive value of the specified primitive class on the stack.
+     *
      * In: unboxed primitive value
      * Out: the boxed reference
      */
-    public static void box(CodeBuilder code, TypeSystem ts, TypeConstant type, ClassDesc cd) {
+    public void box(CodeBuilder code, TypeConstant type, ClassDesc cd) {
         assert cd.isPrimitive() && type.isPrimitive();
 
         ConstantPool pool = type.getConstantPool();
@@ -251,7 +335,7 @@ public abstract class Builder {
                 code.invokestatic(CD_Int64, "$box", MD_Int64_box);
             } else {
                 // TODO: does this cover all types?
-                ClassDesc      boxCD = type.ensureClassDesc(ts);
+                ClassDesc      boxCD = type.ensureClassDesc(typeSystem);
                 MethodTypeDesc boxMD = MethodTypeDesc.of(boxCD, cd);
                 code.invokestatic(boxCD, "$box", boxMD);
             }
