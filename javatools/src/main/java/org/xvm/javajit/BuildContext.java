@@ -10,6 +10,7 @@ import java.lang.constant.MethodTypeDesc;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 
 import org.xvm.asm.Annotation;
@@ -21,41 +22,32 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
-import org.xvm.asm.constants.EnumValueConstant;
-import org.xvm.asm.constants.IntConstant;
-import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodInfo;
-import org.xvm.asm.constants.NamedCondition;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
-import org.xvm.asm.constants.SingletonConstant;
+import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
-import static java.lang.constant.ConstantDescs.CD_long;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_JavaString;
-import static org.xvm.javajit.Builder.CD_Nullable;
-import static org.xvm.javajit.Builder.CD_String;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.EXT;
-import static org.xvm.javajit.Builder.Instance;
 import static org.xvm.javajit.Builder.toTypeKind;
 
 /**
  * Whatever is necessary for the Ops compilation.
  */
 public class BuildContext {
-
     /**
      * Construct {@link BuildContext} for a method.
      */
-    public BuildContext(TypeSystem typeSystem, TypeInfo typeInfo, MethodInfo methodInfo) {
-        this.typeSystem    = typeSystem;
+    public BuildContext(Builder builder, TypeInfo typeInfo, MethodInfo methodInfo) {
+        this.builder       = builder;
+        this.typeSystem    = builder.typeSystem;
         this.typeInfo      = typeInfo;
         this.callChain     = methodInfo.getChain();
         this.methodStruct  = callChain[0].getMethodStructure();
@@ -68,9 +60,10 @@ public class BuildContext {
     /**
      * Construct {@link BuildContext} for a property accessor.
      */
-    public BuildContext(TypeSystem typeSystem, TypeInfo typeInfo, PropertyInfo propInfo,
+    public BuildContext(Builder builder, TypeInfo typeInfo, PropertyInfo propInfo,
                         boolean isGetter) {
-        this.typeSystem    = typeSystem;
+        this.builder       = builder;
+        this.typeSystem    = builder.typeSystem;
         this.typeInfo      = typeInfo;
         this.callChain     = isGetter
                 ? propInfo.ensureOptimizedGetChain(typeInfo, null)
@@ -84,10 +77,11 @@ public class BuildContext {
         this.isOptimized   = jmd.optimizedMD != null;
     }
 
+    public final Builder         builder;
+    public final TypeSystem      typeSystem;
     public final TypeInfo        typeInfo;
     public final MethodBody[]    callChain;
     public final MethodStructure methodStruct;
-    public final TypeSystem      typeSystem;
     public final JitMethodDesc   jmd;
     public final boolean         isOptimized;
     public final boolean         isFunction;
@@ -104,14 +98,14 @@ public class BuildContext {
     public int lineNumber;
 
     /**
-     * The start-of-method label.
+     * The top index of the Java stack for this method.
      */
-    public Label startScope;
+    public int maxLocal;
 
     /**
-     * The end-of-method label.
+     * The current scope.
      */
-    public Label endScope;
+    private Scope scope;
 
     /**
      * The Java slot past the last one used by the numbered XTC registers. The slots from this point
@@ -123,6 +117,11 @@ public class BuildContext {
      * The stack of {@link Slot}s that are kept below the {@link #tailSlot}.
      */
     private final Deque<Slot> tailStack = new ArrayDeque<>();
+
+    /**
+     * The Map of not-yet-assigned slots.
+     */
+    private final Map<Slot, Label> unassignedSlots = new IdentityHashMap<>();
 
     /**
      * @return the ConstantPool used by this {@link BuildContext}.
@@ -176,16 +175,13 @@ public class BuildContext {
      * Prepare the compilation.
      */
     public void enterMethod(CodeBuilder code) {
-        lineNumber = methodStruct.getSourceLineNumber();
-        startScope = code.newLabel();
-        endScope   = code.newLabel();
-
+        lineNumber = 1; // XVM ops are 0 based; Java is 1-based
+        scope      = new Scope(this, code);
         code
-            .lineNumber(lineNumber)
-            .labelBinding(startScope)
-            .localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, startScope, endScope)
+            .lineNumber(methodStruct.getSourceLineNumber() + 1)
+            .labelBinding(scope.startLabel)
+            .localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, scope.startLabel, scope.endLabel)
             ;
-
 
         int          extraArgs = jmd.getImplicitParamCount(); // account for $ctx, $cctx, thi$
         TypeConstant thisType  = typeInfo.getType();
@@ -206,7 +202,7 @@ public class BuildContext {
             TypeConstant type      = param.getType();
             int          slot      = code.parameterSlot(extraArgs + i); // compensate for implicits
 
-            code.localVariable(slot, name, paramDesc.cd, startScope, endScope);
+            code.localVariable(slot, name, paramDesc.cd, scope.startLabel, scope.endLabel);
 
             switch (paramDesc.flavor) {
             case Specific, Widened, Primitive, SpecificWithDefault, WidenedWithDefault:
@@ -234,7 +230,18 @@ public class BuildContext {
      * Finish the compilation.
      */
     public void exitMethod(CodeBuilder code) {
-        code.labelBinding(endScope);
+        code.labelBinding(scope.endLabel);
+    }
+
+    public void enterScope(CodeBuilder code) {
+        scope = scope.enter();
+    }
+
+    public void exitScope(CodeBuilder code) {
+        scope = scope.exit();
+
+        // clear up the old scope's entries
+        slots.entrySet().removeIf(entry -> entry.getKey() > scope.topVar);
     }
 
     /**
@@ -306,9 +313,9 @@ public class BuildContext {
                         .iconst_0()
                         .if_icmpne(ifTrue)
                         .loadLocal(Builder.toTypeKind(cd), doubleSlot.slot)
-                    .goto_(endIf)
-                    .labelBinding(ifTrue);
-                        loadConstant(typeSystem, code, parameter.getDefaultValue());
+                        .goto_(endIf)
+                        .labelBinding(ifTrue);
+                    builder.loadConstant(code, parameter.getDefaultValue());
                     code.labelBinding(endIf);
                     return new SingleSlot(Op.A_STACK, slot.type(), cd, slot.name());
 
@@ -339,21 +346,21 @@ public class BuildContext {
                 assert doubleSlot.flavor == JitFlavor.MultiSlotPrimitive;
                 // loadArgument() has already loaded the value and the boolean
 
-                Label ifTrue     = code.newLabel();
-                Label endIf      = code.newLabel();
-                code
-                    .iconst_0()
+                Label ifTrue = code.newLabel();
+                Label endIf  = code.newLabel();
+
+                code.iconst_0()
                     .if_icmpne(ifTrue);
-                    Builder.box(code, typeSystem, slot.type().removeNullable(), slot.cd());
+                builder.box(code, slot.type().removeNullable(), slot.cd());
                 code.goto_(endIf)
                     .labelBinding(ifTrue);
-                Builder.pop(code, doubleSlot.cd);
-                Builder.loadNull(code);
+                    Builder.pop(code, doubleSlot.cd);
+                    Builder.loadNull(code);
                 code.labelBinding(endIf);
                 slot = new SingleSlot(Op.A_STACK, targetDesc.type, targetDesc.cd, slot.name() + "?");
             } else {
-                Builder.box(code, typeSystem, slot.type(), slot.cd());
-                slot = new SingleSlot(slot.slot(), targetDesc.type, targetDesc.cd, slot.name());
+                builder.box(code, slot.type(), slot.cd());
+                slot = new SingleSlot(Op.A_STACK, targetDesc.type, targetDesc.cd, slot.name());
             }
         }
         return slot;
@@ -365,71 +372,7 @@ public class BuildContext {
      * We **always** load a primitive value if possible.
      */
     public Slot loadConstant(CodeBuilder code, int argId) {
-        return loadConstant(typeSystem, code, getConstant(argId));
-    }
-
-    /**
-     * Build the code to load a value for a constant on the Java stack.
-     *
-     * We **always** load a primitive value if possible.
-     */
-    public static Slot loadConstant(TypeSystem ts, CodeBuilder code, Constant constant) {
-        // see NativeContainer#getConstType()
-
-        if (constant instanceof StringConstant stringConst) {
-            MethodTypeDesc MD_of = MethodTypeDesc.of(CD_String, CD_Ctx, CD_JavaString);
-            // String.of(s)
-            code.aload(code.parameterSlot(0)) // $ctx
-                .ldc(stringConst.getValue())
-                .invokestatic(CD_String, "of", MD_of);
-            return new SingleSlot(Op.A_STACK, constant.getType(), CD_String, "");
-        }
-        if (constant instanceof IntConstant intConstant) {
-            // TODO: support all Int/UInt types
-            code
-                .ldc(intConstant.getValue().getLong());
-            return new SingleSlot(Op.A_STACK, constant.getType(), CD_long, "");
-        }
-        if (constant instanceof EnumValueConstant enumConstant) {
-            ConstantPool pool = constant.getConstantPool();
-            if (enumConstant.getType().isOnlyNullable()) {
-                Builder.loadNull(code);
-                return new SingleSlot(-1, pool.typeNullable(), CD_Nullable, "");
-            } else if (enumConstant.getType().isA(pool.typeBoolean())) {
-                if (enumConstant.getIntValue().getInt() == 0) {
-                    code.iconst_0();
-                } else {
-                    code.iconst_1();
-                }
-            return new SingleSlot(-1, pool.typeBoolean(), CD_boolean, "");
-            }
-        }
-        if (constant instanceof LiteralConstant litConstant) {
-            switch (litConstant.getFormat()) {
-            case IntLiteral:
-                // TODO: delegate to IntN
-                break;
-            case FPLiteral:
-                // TODO: delegate to FloatN
-                break;
-            }
-        }
-        if (constant instanceof SingletonConstant singleton) {
-            TypeConstant type = singleton.getType();
-            JitTypeDesc  jtd  = type.getJitDesc(ts);
-            assert jtd.flavor == JitFlavor.Specific;
-
-            // retrieve from Singleton.$INSTANCE (see CommonBuilder.assembleStaticInitializer)
-            ClassDesc cd = jtd.cd;
-            code.getstatic(cd, Instance, cd);
-            return new SingleSlot(-1, type, cd, "");
-        }
-        if (constant instanceof NamedCondition cond) {
-            code.loadConstant(cond.getName());
-            return new SingleSlot(Op.A_STACK, cond.getConstantPool().typeString(), CD_String, "");
-        }
-        throw new UnsupportedOperationException(constant.toString());
-        // return code;
+        return builder.loadConstant(code, getConstant(argId));
     }
 
     /**
@@ -454,33 +397,15 @@ public class BuildContext {
      * Load one or two values at the specified slot onto the Java stack.
      */
     public void loadValue(CodeBuilder code, Slot slot) {
+        if (slot.isIgnore()) {
+            throw new IllegalStateException();
+        }
+
         if (slot instanceof DoubleSlot doubleSlot) {
             code.iload(doubleSlot.extSlot()); // load the boolean flag
         }
 
-        ClassDesc cd = slot.cd();
-        if (slot.isIgnore()) {
-            throw new IllegalStateException();
-        } else if (cd.isPrimitive()) {
-            switch (cd.descriptorString()) {
-            case "I", "S", "B", "C", "Z":
-                code.iload(slot.slot());
-                break;
-            case "J":
-                code.lload(slot.slot());
-                break;
-            case "F":
-                code.fload(slot.slot());
-                break;
-            case "D":
-                code.dload(slot.slot());
-                break;
-            default:
-                throw new IllegalStateException();
-            }
-        } else {
-            code.aload(slot.slot());
-        }
+        Builder.load(code, slot.cd(), slot.slot());
     }
 
     /**
@@ -491,28 +416,15 @@ public class BuildContext {
             code.istore(doubleSlot.extSlot()); // store the boolean flag
         }
 
-        ClassDesc cd = slot.cd();
         if (slot.isIgnore()) {
-            Builder.pop(code, cd);
-        } else if (cd.isPrimitive()) {
-            switch (cd.descriptorString()) {
-            case "I", "S", "B", "C", "Z":
-                code.istore(slot.slot());
-                break;
-            case "J":
-                code.lstore(slot.slot());
-                break;
-            case "F":
-                code.fstore(slot.slot());
-                break;
-            case "D":
-                code.dstore(slot.slot());
-                break;
-            default:
-                throw new IllegalStateException();
-            }
+            Builder.pop(code, slot.cd());
         } else {
-            code.astore(slot.slot());
+            Builder.store(code, slot.cd(), slot.slot());
+        }
+
+        Label varStart = unassignedSlots.remove(slot);
+        if (varStart != null) {
+            code.labelBinding(varStart);
         }
     }
 
@@ -545,30 +457,33 @@ public class BuildContext {
         }
         if (name.isEmpty()) {
             name = "v$" + varIndex;
+        } else {
+            name = name.replace('#', '$').replace('.', '$');
         }
 
-        Label varStartScope = code.newLabel();
-        code.labelBinding(varStartScope);
+        Label varStart = code.newLabel();
 
         ClassDesc cd;
         Slot      slot;
         if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null) {
-            int slotIndex = code.allocateLocal(Builder.toTypeKind(cd));
-            int slotExt   = code.allocateLocal(TypeKind.BOOLEAN);
+            int slotIndex = scope.allocateLocal(varIndex, Builder.toTypeKind(cd));
+            int slotExt   = scope.allocateLocal(varIndex, TypeKind.BOOLEAN);
 
-            code.localVariable(slotIndex, name, cd, varStartScope, endScope);
-            code.localVariable(slotExt,   name+EXT, CD_boolean, varStartScope, endScope);
+            code.localVariable(slotIndex, name, cd, varStart, scope.endLabel);
+            code.localVariable(slotExt,   name+EXT, CD_boolean, varStart, scope.endLabel);
 
             slot = new DoubleSlot(slotIndex, slotExt, JitFlavor.MultiSlotPrimitive, type, cd, name);
         } else {
             cd = JitParamDesc.getJitClass(typeSystem, type);
 
-            int slotIndex = code.allocateLocal(Builder.toTypeKind(cd));
-            code.localVariable(slotIndex, name, cd, varStartScope, endScope);
+            int slotIndex = scope.allocateLocal(varIndex, Builder.toTypeKind(cd));
+            code.localVariable(slotIndex, name, cd, varStart, scope.endLabel);
 
             slot = new SingleSlot(slotIndex, type, cd, name);
         }
+
         slots.put(varIndex, slot);
+        unassignedSlots.put(slot, varStart);
         return slot;
     }
 
@@ -586,36 +501,36 @@ public class BuildContext {
                 Constant[]   params       = anno.getParams();
                 int          paramCount   = params.length;
 
-                Constant constant     = paramCount == 0 ? null : params[0];
-                String   resourceName = constant instanceof StringConstant stringConst
+                Constant nameConst = paramCount > 0 ? params[0] : null;
+                Constant optsConst = paramCount > 1 ? params[1] : null;
+                String   resourceName = nameConst instanceof StringConstant stringConst
                                 ? stringConst.getValue()
                                 : name;
-                if (paramCount < 2) {
-                    // opts are not specified; the ref can be trivially initialized on-the-spot
-                    Label varStartScope = code.newLabel();
-                    code.labelBinding(varStartScope);
-
-                    ClassDesc resourceCD = resourceType.ensureClassDesc(typeSystem);
-                    int       slotIndex  = code.allocateLocal(TypeKind.REFERENCE);
-                    Slot      slot       = new SingleSlot(slotIndex, resourceType, resourceCD, name);
-                    code.localVariable(slotIndex, name, resourceCD, varStartScope, endScope);
-
-                    slots.put(varIndex, slot);
-
-                    int typeIndex = typeSystem.registerConstant(resourceType);
-                    loadCtx(code)
-                        .dup()
-                        .loadConstant(typeIndex)
-                        .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
-                        .checkcast(CD_TypeConstant)                               // <- type
-                        .ldc(resourceName)
-                        .aconst_null()                                            // opts
-                        .invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
-                        .astore(slot.slot());
-                    return slot;
-                } else {
-                    throw new UnsupportedOperationException("use opts");
+                if (optsConst != null && !(optsConst instanceof RegisterConstant regConst &&
+                                           regConst.getRegisterIndex() == Op.A_DEFAULT)) {
+                    throw new UnsupportedOperationException("retrieve opts");
                 }
+
+                Label     varStart   = code.newLabel();
+                ClassDesc resourceCD = resourceType.ensureClassDesc(typeSystem);
+                int       slotIndex  = scope.allocateLocal(varIndex, TypeKind.REFERENCE);
+                Slot      slot       = new SingleSlot(slotIndex, resourceType, resourceCD, name);
+                code.localVariable(slotIndex, name, resourceCD, varStart, scope.endLabel);
+
+                slots.put(varIndex, slot);
+
+                int typeIndex = typeSystem.registerConstant(resourceType);
+                loadCtx(code)
+                    .dup()
+                    .loadConstant(typeIndex)
+                    .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
+                    .checkcast(CD_TypeConstant)                               // <- type
+                    .ldc(resourceName)
+                    .aconst_null()                                            // opts
+                    .invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
+                    .astore(slot.slot())
+                    .labelBinding(varStart);
+                return slot;
             }
         }
         throw new UnsupportedOperationException("name=" + name + "; type=" + type);
@@ -667,21 +582,20 @@ public class BuildContext {
             throw new UnsupportedOperationException("Multislot P_Get");
         }
         PropertyConstant propId     = (PropertyConstant) getConstant(propIdIndex);
-        PropertyInfo     propInfo   = propId.getClassIdentity().getType().ensureTypeInfo().findProperty(propId);
+        PropertyInfo     propInfo   = propId.getPropertyInfo();
         JitMethodDesc    jmd        = propInfo.getGetterJitDesc(typeSystem);
-        String           methodName = propInfo.getGetterId().ensureJitMethodName(typeSystem);
+        String           getterName = propInfo.getGetterId().ensureJitMethodName(typeSystem);
 
-        MethodTypeDesc   md;
-
+        MethodTypeDesc md;
         if (jmd.isOptimized) {
             md         = jmd.optimizedMD;
-            methodName += Builder.OPT;
+            getterName += Builder.OPT;
         } else {
             md = jmd.standardMD;
         }
 
         loadCtx(code);
-        code.invokevirtual(targetSlot.cd(), methodName, md);
+        code.invokevirtual(targetSlot.cd(), getterName, md);
         assignReturns(code, jmd, 1, new int[] {retIndex});
     }
 
@@ -692,15 +606,15 @@ public class BuildContext {
         if (!targetSlot.isSingle()) {
             throw new UnsupportedOperationException("Multislot P_Set");
         }
-        PropertyConstant propId    = (PropertyConstant) getConstant(propIdIndex);
-        PropertyInfo     propInfo   = propId.getClassIdentity().getType().ensureTypeInfo().findProperty(propId);
+        PropertyConstant propId     = (PropertyConstant) getConstant(propIdIndex);
+        PropertyInfo     propInfo   = propId.getPropertyInfo();
         JitMethodDesc    jmd        = propInfo.getSetterJitDesc(typeSystem);
-        String           methodName = propInfo.getSetterId().ensureJitMethodName(typeSystem);
+        String           setterName = propInfo.getSetterId().ensureJitMethodName(typeSystem);
 
         MethodTypeDesc md;
         if (jmd.isOptimized) {
             md         = jmd.optimizedMD;
-            methodName += Builder.OPT;
+            setterName += Builder.OPT;
         } else {
             md = jmd.standardMD;
         }
@@ -710,7 +624,7 @@ public class BuildContext {
         if (!valueSlot.isSingle()) {
             throw new UnsupportedOperationException("Multislot L_Set");
         }
-        code.invokevirtual(targetSlot.cd(), methodName, md);
+        code.invokevirtual(targetSlot.cd(), setterName, md);
     }
 
     /**
@@ -741,7 +655,7 @@ public class BuildContext {
                         Label endIf  = code.newLabel();
                         code.iconst_0()
                             .if_icmpne(ifTrue);
-                        Builder.box(code, typeSystem, typeRet, cdRet);
+                        builder.box(code, typeRet, cdRet);
                         code.goto_(endIf)
                             .labelBinding(ifTrue)
                             .pop();
@@ -770,7 +684,7 @@ public class BuildContext {
                         Label endIf  = code.newLabel();
                         code.iconst_0()
                             .if_icmpeq(ifTrue);
-                        Builder.box(code, typeSystem, typeRet, cdRet);
+                        builder.box(code, typeRet, cdRet);
                         code.goto_(endIf);
                         code.labelBinding(ifTrue)
                             .pop();
@@ -809,7 +723,8 @@ public class BuildContext {
     public Slot ensureSlot(int varIndex, TypeConstant type, ClassDesc cd, String name) {
         return varIndex == Op.A_STACK
             ? pushSlot(type, cd, name)
-            : slots.computeIfAbsent(varIndex, n -> new SingleSlot(n, type, cd, name));
+            : slots.computeIfAbsent(varIndex, ix -> new SingleSlot(
+                    scope.allocateLocal(ix, Builder.toTypeKind(cd)), type, cd, name));
     }
 
     /**
@@ -847,6 +762,22 @@ public class BuildContext {
         return slot;
     }
 
+    /**
+     * Load a value from the tail slot onto the Java stack.
+     */
+    public void popTempVar(CodeBuilder code) {
+        Slot slot = popSlot();
+        code.loadLocal(Builder.toTypeKind(slot.cd()), slot.slot());
+    }
+
+    /**
+     * Store a value on the Java stack to the tail slot.
+     */
+    public void pushTempVar(CodeBuilder code, TypeConstant type, ClassDesc cd) {
+        Slot slot = pushSlot(type, cd, "");
+        code.storeLocal(Builder.toTypeKind(cd), slot.slot());
+    }
+
     public interface Slot {
         int          slot(); // Java slot index
         TypeConstant type();
@@ -878,4 +809,5 @@ public class BuildContext {
             return false;
         }
     }
+
 }

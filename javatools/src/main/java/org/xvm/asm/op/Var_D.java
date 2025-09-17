@@ -4,9 +4,13 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.TypeComposition;
@@ -48,5 +52,12 @@ public class Var_D
         TypeComposition clz = frame.resolveClass(m_nType);
 
         return ((VarSupport) clz.getSupport()).introduceRef(frame, clz, null, m_nVar);
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        bctx.introduceRef(code, "", bctx.getType(m_nType), m_nVar);
     }
 }

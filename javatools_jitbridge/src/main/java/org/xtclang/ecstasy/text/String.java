@@ -51,8 +51,8 @@ public class String
     /**
      * Construct an Ecstasy string from a Java String.
      *
-     * @param containerId  the container within which the string is being created
-     * @param s            the Java String
+     * @param ctx  the XVM context
+     * @param s    a Java String
      */
     public String(Ctx ctx, java.lang.String s) {
         super(ctx);
@@ -141,8 +141,8 @@ public class String
     /**
      * Construct an Ecstasy String from UTF-8 data
      *
-     * @param containerId  the container within which the string is being created
-     * @param utf8         UTF-8 data in a byte array
+     * @param ctx   the XVM context
+     * @param utf8  UTF-8 data in a byte array
      */
     public String(Ctx ctx, byte[] utf8) {
         // TODO
@@ -152,7 +152,7 @@ public class String
     /**
      * Internal constructor.
      *
-     * @param containerId  the container within which the string is being created
+     * @param ctx      the XVM context
      * @param data
      * @param unicode
      * @param hash

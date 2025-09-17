@@ -1,7 +1,8 @@
 module test0.examples.org {
 
+    @Inject Console console;
+
     void run() {
-        @Inject Console console;
         console.print("Hello", True);
         console.print(" World");
 
@@ -24,6 +25,17 @@ module test0.examples.org {
 
         console.print(call4(-1));
         console.print(call4(1));
+
+        for (Int i : 3..1) {
+            console.print(i);
+        }
+
+        for (Int i = 0; i < 3; ++i) {
+            if (i == 1) {
+                continue;
+              }
+            console.print(i);
+        }
     }
 
     Int call1(Int i, Int j = 2) {
@@ -41,9 +53,7 @@ module test0.examples.org {
         }
         return False;
     }
-
     static Boolean call4(Int i) {
-        assert i > 0;
-        return i > 7;
+        return i > 0;
     }
 }

@@ -1,14 +1,14 @@
 package org.xvm.asm.op;
 
 
-import java.io.DataInput;
-import java.io.IOException;
+import java.lang.classfile.CodeBuilder;
 
 import java.util.List;
-import org.xvm.asm.Constant;
+
 import org.xvm.asm.Op;
 import org.xvm.asm.OpJump;
-import org.xvm.asm.Scope;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 
@@ -60,7 +60,7 @@ public class LoopEnd
     public void markReachable(Op[] aop) {
         super.markReachable(aop);
         assert m_ofJmp < 0;
-        m_opDest = aop[getAddress()+m_ofJmp];
+        m_opDest = aop[getAddress() + m_ofJmp];
         assert m_opDest.getOpCode() == Op.OP_LOOP;
     }
 
@@ -85,6 +85,17 @@ public class LoopEnd
     public String toString() {
         return toName(getOpCode()) + ' ' + OpJump.getLabelDesc(m_opDest, m_ofJmp);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        code.goto_(bctx.ensureLabel(code, getAddress() + m_ofJmp));
+
+        super.build(bctx, code);
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     protected int m_ofJmp;
 

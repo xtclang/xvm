@@ -19,11 +19,11 @@ public class FunctionBuilder
         extends Builder {
 
     public FunctionBuilder(TypeSystem typeSystem, TypeConstant functionType) {
-        this.typeSystem   = typeSystem;
+        super(typeSystem);
+
         this.functionType = functionType;
     }
 
-    protected final TypeSystem   typeSystem;
     protected final TypeConstant functionType;
 
     /**
@@ -46,8 +46,8 @@ public class FunctionBuilder
         TypeConstant[] paramTypes  = pool.extractFunctionParams(functionType);
         TypeConstant[] returnTypes = pool.extractFunctionReturns(functionType);
 
-        MethodTypeDesc callMD   = computeMethodDesc(typeSystem, paramTypes, returnTypes);
-        MethodTypeDesc invokeMD = computeMethodDesc(typeSystem, paramTypes, returnTypes);
+        MethodTypeDesc callMD   = computeMethodDesc(paramTypes, returnTypes);
+        MethodTypeDesc invokeMD = computeMethodDesc(paramTypes, returnTypes);
 
         classBuilder
             .withSuperclass(CD_xFunction)

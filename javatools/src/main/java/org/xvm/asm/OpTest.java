@@ -257,18 +257,23 @@ public abstract class OpTest
         Slot         slot1      = bctx.loadArgument(code, m_nValue1);
         Slot         slot2      = bctx.loadArgument(code, m_nValue2);
         TypeConstant typeCommon = selectCommonType(slot1.type(), slot2.type(), ErrorListener.BLACKHOLE);
-        ClassDesc    cdCommon   = JitTypeDesc.getPrimitiveClass(typeCommon);
 
         // TODO: remove the assert
         assert typeCommon.equals(bctx.getConstant(m_nType));
 
-        if (cdCommon.isPrimitive()) {
-            Label  lblTrue = code.newLabel();
-            Label  lblEnd  = code.newLabel();
-            String desc    = cdCommon.descriptorString();
+        if (typeCommon.isPrimitive()) {
+            ClassDesc cdCommon = JitTypeDesc.getPrimitiveClass(typeCommon);
+            Label     lblTrue  = code.newLabel();
+            Label     lblEnd   = code.newLabel();
+            String    desc     = cdCommon.descriptorString();
             switch (desc) {
             case "I", "S", "B", "C", "Z":
                 switch (getOpCode()) {
+                    case OP_CMP -> {
+                        code.isub();
+                        bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, typeCommon));
+                        return;
+                    }
                     case OP_IS_EQ  -> code.if_icmpeq(lblTrue);
                     case OP_IS_NEQ -> code.if_icmpne(lblTrue);
                     case OP_IS_GT  -> code.if_icmpgt(lblTrue);
@@ -286,13 +291,17 @@ public abstract class OpTest
                     case "D" -> code.dcmpl(); // REVIEW CP: ditto
                 }
                 switch (getOpCode()) {
+                    case OP_CMP -> {
+                        bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, typeCommon));
+                        return;
+                    }
                     case OP_IS_EQ  -> code.ifeq(lblTrue);
                     case OP_IS_NEQ -> code.ifne(lblTrue);
                     case OP_IS_GT  -> code.ifgt(lblTrue);
                     case OP_IS_GTE -> code.ifge(lblTrue);
                     case OP_IS_LT  -> code.iflt(lblTrue);
                     case OP_IS_LTE -> code.ifle(lblTrue);
-                    default -> throw new IllegalStateException();
+                    default        -> throw new IllegalStateException();
                 }
                 break;
 
