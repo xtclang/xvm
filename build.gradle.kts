@@ -50,8 +50,8 @@ val publishRemote by tasks.registering {
     description = "Publish XDK and plugin artifacts to GitHub Packages."
     // Publish all vanniktech publications to GitHub Packages for both projects
     dependsOn(
-        plugin.task(":publishAllPublicationsToGitHubPackagesRepository"),
-        xdk.task(":publishMavenPublicationToGitHubPackagesRepository")
+        plugin.task(":publishAllPublicationsToGitHubRepository"),
+        xdk.task(":publishMavenPublicationToGitHubRepository")
     )
 }
 
@@ -220,7 +220,7 @@ abstract class ListRemotePublicationsTask : DefaultTask() {
             }
             // URL encode the package name in case it has dots or special characters
             val encodedPackageName = java.net.URLEncoder.encode(packageName, "UTF-8")
-            val url = "$baseUrl/maven/$encodedPackageName/versions"
+            val url = "$baseUrl/maven/$encodedPackageName/versions?per_page=100&page=1"
             val connection = java.net.URI(url).toURL().openConnection() as java.net.HttpURLConnection
             connection.setRequestProperty("Authorization", "Bearer $token")
             connection.setRequestProperty("Accept", "application/vnd.github+json")
@@ -235,10 +235,18 @@ abstract class ListRemotePublicationsTask : DefaultTask() {
                     if (versions.isNotEmpty()) {
                         logger.lifecycle("  $packageName")
                         versions.take(5).forEach { version ->
-                            logger.lifecycle("    ${version.name} (updated: ${version.updatedAt})")
+                            logger.lifecycle("    ${version.name} (GitHub API updated: ${version.updatedAt})")
                         }
                         if (versions.size > 5) {
                             logger.lifecycle("    ... and ${versions.size - 5} more versions")
+                        }
+
+                        // For snapshots, also check Maven metadata for actual latest timestamp
+                        if (versions.any { it.name.contains("SNAPSHOT") }) {
+                            val latestSnapshotInfo = getLatestSnapshotTimestamp(packageName, token)
+                            if (latestSnapshotInfo != null) {
+                                logger.lifecycle("    Latest snapshot artifacts: ${latestSnapshotInfo}")
+                            }
                         }
                     } else {
                         logger.lifecycle("  $packageName - Found package but response parsing failed or empty")
@@ -308,6 +316,54 @@ abstract class ListRemotePublicationsTask : DefaultTask() {
         }
     }
     
+    private fun getLatestSnapshotTimestamp(packageName: String, token: String): String? {
+        try {
+            // Try to access the Maven metadata to get actual snapshot timestamps
+            val metadataUrl = "https://maven.pkg.github.com/xtclang/xvm/${packageName.replace('.', '/')}/maven-metadata.xml"
+            val connection = java.net.URI(metadataUrl).toURL().openConnection() as java.net.HttpURLConnection
+            connection.setRequestProperty("Authorization", "Bearer $token")
+
+            logger.debug("Maven metadata request for $packageName: $metadataUrl -> ${connection.responseCode}")
+
+            if (connection.responseCode == 200) {
+                val response = connection.inputStream.bufferedReader().use { it.readText() }
+                logger.debug("Maven metadata response for $packageName: ${response.take(500)}")
+
+                // Parse XML to find latest snapshot timestamp
+                val lastUpdatedRegex = """<lastUpdated>(\d{14})</lastUpdated>""".toRegex()
+                val timestampRegex = """<timestamp>(\d{8}\.\d{6})</timestamp>""".toRegex()
+                val buildNumberRegex = """<buildNumber>(\d+)</buildNumber>""".toRegex()
+
+                val lastUpdated = lastUpdatedRegex.find(response)?.groupValues?.get(1)
+                val timestamp = timestampRegex.find(response)?.groupValues?.get(1)
+                val buildNumber = buildNumberRegex.find(response)?.groupValues?.get(1)
+
+                if (lastUpdated != null) {
+                    // Convert lastUpdated format: 20250917122716 -> 2025-09-17 12:27:16
+                    val year = lastUpdated.substring(0, 4)
+                    val month = lastUpdated.substring(4, 6)
+                    val day = lastUpdated.substring(6, 8)
+                    val hour = lastUpdated.substring(8, 10)
+                    val minute = lastUpdated.substring(10, 12)
+                    val second = lastUpdated.substring(12, 14)
+                    return "$year-$month-$day $hour:$minute:$second"
+                } else if (timestamp != null && buildNumber != null) {
+                    // Convert timestamp format: 20250917.122638 -> 2025-09-17 12:26:38
+                    val year = timestamp.substring(0, 4)
+                    val month = timestamp.substring(4, 6)
+                    val day = timestamp.substring(6, 8)
+                    val time = timestamp.substring(9).replace(".", ":")
+                    return "$year-$month-$day $time (build $buildNumber)"
+                } else {
+                    logger.debug("Could not find lastUpdated, timestamp, or buildNumber in Maven metadata for $packageName")
+                }
+            }
+        } catch (e: Exception) {
+            logger.debug("Could not fetch Maven metadata for $packageName: ${e.message}")
+        }
+        return null
+    }
+
     data class PackageVersion(val name: String, val updatedAt: String)
 }
 
@@ -329,7 +385,12 @@ publishTaskPrefixes.forEach { prefix ->
 val listRemotePublications by tasks.registering(ListRemotePublicationsTask::class) {
     group = PUBLISH_TASK_GROUP
     description = "List remote GitHub publications using GitHub API integration"
-    gitHubToken.set(getXtclangGitHubMavenPackageRepositoryToken())
+    val gitHubPassword = project.findProperty("GitHubPassword")?.toString()
+    if (!gitHubPassword.isNullOrEmpty()) {
+        gitHubToken.set(gitHubPassword)
+    } else {
+        logger.lifecycle("GitHub token not available - remote publication listing disabled")
+    }
 }
 
 // Handle deleteRemotePublications with delegation
