@@ -5,7 +5,7 @@ import org.xvm.javajit.Ctx;
 import org.xtclang.ecstasy.numbers.Int64;
 
 /**
- * Naotive implementation for `ecstasy.Range`.
+ * Native implementation for `ecstasy.Range`.
  *
  * Supports the primitive form of the `Range<Int>` type.
  */
@@ -85,8 +85,8 @@ public class Range<Element extends xObj> extends xConst {
         return (n & LE64) != 0;
     }
 
-    public static long $effectiveLowerBound(long n) {
-        return $lowerExclusive(n) ? Int64.$next($lowerBound(n)) : $lowerBound(n);
+    public static long $effectiveLowerBound(Ctx ctx, long n) {
+        return $lowerExclusive(n) ? Int64.$next(ctx, $lowerBound(n)) : $lowerBound(n);
     }
 
     public static long $upperBound(long n) {
@@ -97,8 +97,8 @@ public class Range<Element extends xObj> extends xConst {
         return (n & UE64) != 0;
     }
 
-    public static long $effectiveUpperBound(long n) {
-        return $upperExclusive(n) ? Int64.$prev($upperBound(n)) : $upperBound(n);
+    public static long $effectiveUpperBound(Ctx ctx, long n) {
+        return $upperExclusive(n) ? Int64.$prev(ctx, $upperBound(n)) : $upperBound(n);
     }
 
     public static boolean $descending(long n) {
@@ -113,8 +113,8 @@ public class Range<Element extends xObj> extends xConst {
         return $descending (n) ? $upperExclusive(n) : $lowerExclusive(n);
     }
 
-    public static long $effectiveFirst(long n) {
-        return $descending(n) ? $effectiveUpperBound(n) : $effectiveLowerBound(n);
+    public static long $effectiveFirst(Ctx ctx, long n) {
+        return $descending(n) ? $effectiveUpperBound(ctx, n) : $effectiveLowerBound(ctx, n);
     }
 
     public static long $last(long n) {
@@ -125,17 +125,17 @@ public class Range<Element extends xObj> extends xConst {
         return $descending (n) ? $lowerExclusive(n) : $upperExclusive(n);
     }
 
-    public static long $effectiveLast(long n) {
-        return $descending(n) ? $effectiveLowerBound(n) : $effectiveUpperBound(n);
+    public static long $effectiveLast(Ctx ctx, long n) {
+        return $descending(n) ? $effectiveLowerBound(ctx, n) : $effectiveUpperBound(ctx, n);
     }
 
-    public static boolean $empty(long n) {
-        return $effectiveLowerBound(n) > $effectiveUpperBound(n);
+    public static boolean $empty(Ctx ctx, long n) {
+        return $effectiveLowerBound(ctx, n) > $effectiveUpperBound(ctx, n);
     }
 
-    public static long $size(long n) {
-        long lo = $effectiveLowerBound(n);
-        long hi = $effectiveUpperBound(n);
+    public static long $size(Ctx ctx, long n) {
+        long lo = $effectiveLowerBound(ctx, n);
+        long hi = $effectiveUpperBound(ctx, n);
         if (hi < lo) {
             return 0;
         }
@@ -220,8 +220,8 @@ public class Range<Element extends xObj> extends xConst {
         return (n1 & E128) != 0;
     }
 
-    public static long $effectiveLowerBound(long n1, long n2) {
-        return $lowerExclusive(n1, n2) ? Int64.$next($lowerBound(n1, n2)) : $lowerBound(n1, n2);
+    public static long $effectiveLowerBound(Ctx ctx, long n1, long n2) {
+        return $lowerExclusive(n1, n2) ? Int64.$next(ctx, $lowerBound(n1, n2)) : $lowerBound(n1, n2);
     }
 
     public static long $upperBound(long n1, long n2) {
@@ -232,8 +232,8 @@ public class Range<Element extends xObj> extends xConst {
         return (n2 & E128) != 0;
     }
 
-    public static long $effectiveUpperBound(long n1, long n2) {
-        return $upperExclusive(n1, n2) ? Int64.$prev($upperBound(n1, n2)) : $upperBound(n1, n2);
+    public static long $effectiveUpperBound(Ctx ctx, long n1, long n2) {
+        return $upperExclusive(n1, n2) ? Int64.$prev(ctx, $upperBound(n1, n2)) : $upperBound(n1, n2);
     }
 
     public static boolean $descending(long n1, long n2) {
@@ -248,8 +248,8 @@ public class Range<Element extends xObj> extends xConst {
         return $descending(n1, n2) ? $upperExclusive(n1, n2) : $lowerExclusive(n1, n2);
     }
 
-    public static long $effectiveFirst(long n1, long n2) {
-        return $descending(n1, n2) ? $effectiveUpperBound(n1, n2) : $effectiveLowerBound(n1, n2);
+    public static long $effectiveFirst(Ctx ctx, long n1, long n2) {
+        return $descending(n1, n2) ? $effectiveUpperBound(ctx, n1, n2) : $effectiveLowerBound(ctx, n1, n2);
     }
 
     public static long $last(long n1, long n2) {
@@ -260,17 +260,17 @@ public class Range<Element extends xObj> extends xConst {
         return $descending (n1, n2) ? $lowerExclusive(n1, n2) : $upperExclusive(n1, n2);
     }
 
-    public static long $effectiveLast(long n1, long n2) {
-        return $descending(n1, n2) ? $effectiveLowerBound(n1, n2) : $effectiveUpperBound(n1, n2);
+    public static long $effectiveLast(Ctx ctx, long n1, long n2) {
+        return $descending(n1, n2) ? $effectiveLowerBound(ctx, n1, n2) : $effectiveUpperBound(ctx, n1, n2);
     }
 
-    public static boolean $empty(long n1, long n2) {
-        return $effectiveLowerBound(n1, n2) > $effectiveUpperBound(n1, n2);
+    public static boolean $empty(Ctx ctx, long n1, long n2) {
+        return $effectiveLowerBound(ctx, n1, n2) > $effectiveUpperBound(ctx, n1, n2);
     }
 
-    public static long $size(long n1, long n2) {
-        long lo = $effectiveLowerBound(n1, n2);
-        long hi = $effectiveUpperBound(n1, n2);
+    public static long $size(Ctx ctx, long n1, long n2) {
+        long lo = $effectiveLowerBound(ctx, n1, n2);
+        long hi = $effectiveUpperBound(ctx, n1, n2);
         if (hi < lo) {
             return 0;
         }

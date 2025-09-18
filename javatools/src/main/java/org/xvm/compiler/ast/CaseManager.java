@@ -457,7 +457,7 @@ public class CaseManager<CookieType> {
         // validate each separate value in the case label
         ConstantPool pool       = pool();
         boolean      fIfSwitch  = usesIfLadder();
-        boolean      fIntConsts = isCardinal() && m_typeCase.getExplicitClassFormat() != Component.Format.ENUM;
+        boolean      fIntConsts = isCardinal() && !m_typeCase.isEnum();
         int          cPrevCases = m_listsetCase.size();
         for (int iExpr = 0, cExprs = listExprs.size(); iExpr < cExprs; ++iExpr) {
             Expression     exprCase  = listExprs.get(iExpr);

@@ -212,7 +212,7 @@ public class CommonBuilder
      */
     protected void assembleImplProperties(String className, ClassBuilder classBuilder) {
         List<PropertyInfo> constProps = new ArrayList<>();
-        List<PropertyInfo> initProps = new ArrayList<>();
+        List<PropertyInfo> initProps  = new ArrayList<>();
 
         for (PropertyInfo prop : structInfo.getProperties().values()) {
             if ((prop.hasField() || prop.isInjected()) &&
@@ -238,12 +238,12 @@ public class CommonBuilder
                 ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL);
         }
 
-        if (!constProps.isEmpty() || isSingleton) {
+        if (!constProps.isEmpty() || isSingleton || hasStaticInitializer()) {
             assembleStaticInitializer(className, classBuilder, constProps);
         }
 
         switch (classStruct.getFormat()) {
-        case CLASS, CONST, SERVICE, MODULE, ENUMVALUE:
+        case CLASS, CONST, SERVICE, MODULE, ENUM, ENUMVALUE:
             assembleInitializer(className, classBuilder, initProps);
             break;
         }
@@ -347,11 +347,26 @@ public class CommonBuilder
                         .invokevirtual(CD_this, jitInit, MethodTypeDesc.of(CD_this, CD_Ctx))
                         .pop()
                     ;
-
                 }
+
+                augmentStaticInitializer(className, code);
+
                 code.labelBinding(endScope)
                     .return_();
             }));
+    }
+
+    /**
+     * Allow subclasses to augment the <clinit> assembly.
+     */
+    protected boolean hasStaticInitializer() {
+        return false;
+    }
+
+    /**
+     * Allow subclasses to augment the <clinit> assembly.
+     */
+    protected void augmentStaticInitializer(String className, CodeBuilder code) {
     }
 
     /**
@@ -1230,7 +1245,9 @@ public class CommonBuilder
 
         bctx.enterMethod(code);
 
-        if (Arrays.stream(TEST_SET).anyMatch(name -> className.toLowerCase().contains(name))) {
+        String moduleName = thisId.getModuleConstant().getName();
+        if (Arrays.stream(TEST_SET).anyMatch(name ->
+                    className.contains(name) || moduleName.contains(name))) {
             Op[] ops = bctx.methodStruct.getOps();
 
             for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
@@ -1267,6 +1284,9 @@ public class CommonBuilder
         bctx.exitMethod(code);
     }
 
-    private final static String[] TEST_SET = new String[] {"Test", "test", "tck"};
+    private final static String[] TEST_SET = new String[] {
+        "Test", "test",
+        "IOException", "OutOfBounds", "Unsupported",
+    };
     private final static HashSet<String> SKIP_SET = new HashSet<>();
 }

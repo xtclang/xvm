@@ -27,10 +27,16 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.builders.CommonBuilder;
+import org.xvm.javajit.builders.EnumBuilder;
+import org.xvm.javajit.builders.EnumValueBuilder;
+import org.xvm.javajit.builders.EnumerationBuilder;
 import org.xvm.javajit.builders.FunctionBuilder;
 import org.xvm.javajit.builders.ModuleBuilder;
 
 import org.xvm.util.ListMap;
+
+import static org.xvm.javajit.Builder.ENUMERATION;
+import static org.xvm.javajit.Builder.MODULE;
 
 import static org.xvm.util.Handy.require;
 
@@ -214,6 +220,13 @@ public class TypeSystem {
         IdentityConstant id     = type.getSingleUnderlyingClass(true);
         ModuleConstant   module = id.getModuleConstant();
 
+        // it's possible that the type is a parameterized shared type, e.g. Array<Person>
+        for (ModuleLoader loader : shared) {
+            if (loader.module.getIdentityConstant().equals(module)) {
+                return loader;
+            }
+        }
+
         for (ModuleLoader loader : owned) {
             if (loader.module.getIdentityConstant().equals(module)) {
                 return loader;
@@ -278,7 +291,24 @@ public class TypeSystem {
                     new FunctionBuilder(this, fnType).assemblePure(className, classBuilder));
         }
 
-        Artifact art = deduceArtifact(moduleLoader.module, name);
+        ModuleStructure module = moduleLoader.module;
+        if (name.endsWith(ENUMERATION)) {
+            String         enumName   = name.substring(0, name.length() - ENUMERATION.length());
+            ClassStructure enumStruct = (ClassStructure) module.getChildByPath(enumName.replace('$', '.'));
+            assert enumStruct != null;
+            TypeConstant enumerationType = enumStruct.getIdentityConstant().getValueType(pool(), null);
+
+            ClassFile classFile = ClassFile.of(
+                ClassFile.ClassHierarchyResolverOption.of(
+                    ClassHierarchyResolver.ofClassLoading(loader))
+            );
+
+            Builder builder = new EnumerationBuilder(this, enumerationType);
+            return classFile.build(ClassDesc.of(className), classBuilder ->
+                    builder.assembleImpl(className, classBuilder));
+        }
+
+        Artifact art = deduceArtifact(module, name);
         if (art != null) {
             if (art.id.getComponent() instanceof ClassStructure clz) {
                 TypeConstant type      = clz.getCanonicalType();
@@ -323,6 +353,24 @@ public class TypeSystem {
             assert !type.equals(pool.typeModule());
             return new ModuleBuilder(this, type);
         }
+
+        if (type.isEnum()) {
+            return new EnumBuilder(this, type);
+        }
+
+        if (type.isEnumValue()) {
+            return new EnumValueBuilder(this, type);
+        }
+
+        if (type.isA(pool.typeClass())) {
+            TypeConstant publicType = type.getParamType(0);
+            if (publicType.isEnumValue()) {
+                return new EnumerationBuilder(this, type);
+            } else {
+                System.err.println("Missing class builder " + type.getValueString());
+            }
+        }
+
         return new CommonBuilder(this, type);
     }
 
@@ -348,7 +396,7 @@ public class TypeSystem {
     public record Artifact(IdentityConstant id, ClassfileShape shape) {}
 
     public Artifact deduceArtifact(ModuleStructure module, String name) {
-        if (name.equals("$module")) {
+        if (name.equals(MODULE)) {
             return new Artifact(module.getIdentityConstant(), ClassfileShape.Impl);
         }
 
@@ -402,15 +450,6 @@ public class TypeSystem {
                     return Builder.N_xFunction + '$' + suffix;
                 });
                 return name;
-            }
-
-            ConstantPool pool = pool();
-            if (type.isTypeOfType()) {
-                return pool.typeType().ensureJitClassName(this);
-            }
-
-            if (type.isA(pool.typeClass())) {
-                return pool.typeClass().ensureJitClassName(this);
             }
 
             ClassStructure structure = (ClassStructure)

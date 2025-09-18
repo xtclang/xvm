@@ -4,7 +4,7 @@ import org.xvm.javajit.Container;
 import org.xvm.javajit.Ctx;
 import org.xvm.javajit.Xvm;
 
-public abstract class xObj implements org.xtclang.ecstasy.Object {
+public abstract class xObj implements Object {
     public xObj(Ctx ctx) {
         super();
         $meta = ctx == null ? -1 : ctx.container.id;
@@ -60,7 +60,7 @@ public abstract class xObj implements org.xtclang.ecstasy.Object {
 
     public abstract boolean $isImmut();
 
-    public void $makeImmut() {
+    public void $makeImmut(Ctx ctx) {
         if (!$isImmut()) {
             throw new UnsupportedOperationException();
         }
@@ -75,9 +75,9 @@ public abstract class xObj implements org.xtclang.ecstasy.Object {
 
     // ----- static helpers for when references may be non-xObj classes ----------------------------
 
-    public static java.lang.Object $makeImmut(java.lang.Object ref) {
+    public static java.lang.Object $makeImmut(Ctx ctx, java.lang.Object ref) {
         if (ref instanceof xObj xRef) {
-            xRef.$makeImmut();
+            xRef.$makeImmut(ctx);
             return xRef;
         }
 
