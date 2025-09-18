@@ -31,9 +31,14 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.asm.op.CatchStart;
+import org.xvm.asm.op.Guarded;
+
 import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_JavaString;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.toTypeKind;
@@ -105,7 +110,7 @@ public class BuildContext {
     /**
      * The current scope.
      */
-    private Scope scope;
+    public Scope scope;
 
     /**
      * The Java slot past the last one used by the numbered XTC registers. The slots from this point
@@ -233,15 +238,24 @@ public class BuildContext {
         code.labelBinding(scope.endLabel);
     }
 
-    public void enterScope(CodeBuilder code) {
+    /**
+     * @return the newly entered scope
+     */
+    public Scope enterScope(CodeBuilder code) {
         scope = scope.enter();
+        return scope;
     }
 
-    public void exitScope(CodeBuilder code) {
-        scope = scope.exit();
+    /**
+     * @return the exited scope
+     */
+    public Scope exitScope(CodeBuilder code) {
+        Scope prevScope = scope;
+        scope = prevScope.exit();
 
         // clear up the old scope's entries
         slots.entrySet().removeIf(entry -> entry.getKey() > scope.topVar);
+        return prevScope;
     }
 
     /**
@@ -261,6 +275,26 @@ public class BuildContext {
         xvmLabel.append(op);
         ops[opAddress] = xvmLabel;
         return javaLabel;
+    }
+
+    /**
+     * Add a {@link Guarded} label to the specified {@link CatchStart} op.
+     */
+    public void ensureGuarded(int opAddress) {
+        Op[] ops = methodStruct.getOps();
+        Op   op  = ops[opAddress];
+        if (op instanceof Guarded) {
+            throw new IllegalStateException("Already guarded");
+        }
+
+        if (op instanceof CatchStart catchOp) {
+            Guarded xvmLabel = new Guarded(scope);
+            xvmLabel.append(catchOp);
+            ops[opAddress] = xvmLabel;
+        }
+        else {
+            throw new IllegalStateException("Only CatchStart can be guarded");
+        }
     }
 
     /**
@@ -331,7 +365,6 @@ public class BuildContext {
         return argId <= Op.CONSTANT_OFFSET
                 ? loadConstant(code, argId)
                 : loadPredefineArgument(code, argId);
-
     }
 
     /**
@@ -546,7 +579,7 @@ public class BuildContext {
             int          iArg = anArgValue[i];
             JitParamDesc pd   = isOptimized ? jmd.getOptimizedParam(i) : jmd.standardParams[i];
             switch (pd.flavor) {
-            case SpecificWithDefault:
+            case SpecificWithDefault, WidenedWithDefault:
                 if (iArg == Op.A_DEFAULT) {
                     code.aconst_null();
                     continue;
@@ -778,6 +811,8 @@ public class BuildContext {
         code.storeLocal(Builder.toTypeKind(cd), slot.slot());
     }
 
+    // ----- Slot classes --------------------------------------------------------------------------
+
     public interface Slot {
         int          slot(); // Java slot index
         TypeConstant type();
@@ -810,4 +845,14 @@ public class BuildContext {
         }
     }
 
+    // ----- TEMPORARY: debugging support ----------------------------------------------------------
+
+    /**
+     * Adds a log message generation (this als allows to break in the debugger).
+     */
+    public void addLog(CodeBuilder code, String message) {
+        loadCtx(code);
+        code.loadConstant(message)
+            .invokevirtual(Builder.CD_Ctx, "log", MethodTypeDesc.of(CD_void, CD_JavaString));
+    }
 }

@@ -4,9 +4,15 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
+import java.lang.constant.ClassDesc;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -46,5 +52,19 @@ public class GP_Sub
 
     protected int completeBinary(Frame frame, ObjectHandle hTarget, ObjectHandle hArg) {
         return hTarget.getOpSupport().invokeSub(frame, hTarget, hArg, m_nRetValue);
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, ClassDesc cdTarget) {
+        switch (cdTarget.descriptorString()) {
+        case "I", "S", "B", "C", "Z"
+                 -> code.isub();
+        case "J" -> code.lsub();
+        case "F" -> code.fsub();
+        case "D" -> code.dsub();
+        default  -> throw new IllegalStateException();
+        }
     }
 }

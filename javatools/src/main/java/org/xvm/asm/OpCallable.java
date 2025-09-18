@@ -589,7 +589,7 @@ public abstract class OpCallable extends Op {
             fSpecial = false;
         } else {
             Slot slotFn = bctx.getSlot(m_nFunctionId);
-            // TODO: call "invoke(Ctx $ctx, Tuple args)"
+            // TODO: call "invoke(Ctx ctx, Tuple args)"
             throw new UnsupportedOperationException("function call " + slotFn.type());
         }
 

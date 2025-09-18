@@ -12,9 +12,11 @@ module test1.examples.org {
         console.print(prop3);
 
         TestBase t0 = new TestBase(5);
+        console.print(t0);
         console.print(t0.x);
 
         TestBase t1 = new TestDerived(6);
+        console.print(t1);
         console.print(t1.x);
 
 //        StringBuffer buf = new StringBuffer();

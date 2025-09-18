@@ -1,7 +1,11 @@
 package org.xtclang.ecstasy.numbers;
 
-import org.xtclang.ecstasy.xConst;
 import org.xtclang.ecstasy.Exception;
+import org.xtclang.ecstasy.xConst;
+
+import org.xtclang.ecstasy.text.String;
+
+import org.xvm.javajit.Ctx;
 
 /**
  * Native Int64 wrapper.
@@ -18,6 +22,11 @@ public class Int64 extends xConst {
     }
 
     public final long $value;
+
+    @Override
+    public String toString(Ctx ctx) {
+        return String.of(ctx, java.lang.String.valueOf($value));
+    }
 
     private static final int     SMALL_CACHE_OFFSET = 512;  // number of cached negative values
     private static final int     SMALL_CACHE_SIZE   = 8192; // must be power of 2
@@ -51,16 +60,16 @@ public class Int64 extends xConst {
 
     // ----- primitive helpers ---------------------------------------------------------------------
 
-    public static long $next(long n) {
+    public static long $next(Ctx ctx, long n) {
         if (n == Long.MAX_VALUE) {
-            throw Exception.$oob("64-bit max value exceeded", null);
+            throw Exception.$oob(ctx, "64-bit max value exceeded");
         }
         return n + 1;
     }
 
-    public static long $prev(long n) {
+    public static long $prev(Ctx ctx, long n) {
         if (n == Long.MIN_VALUE) {
-            throw Exception.$oob("64-bit min value exceeded", null);
+            throw Exception.$oob(ctx, "64-bit min value exceeded");
         }
         return n - 1;
     }

@@ -1,5 +1,8 @@
 package org.xvm.javajit;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -80,8 +83,10 @@ public class JitConnector
             Object module = clz.getDeclaredConstructor(Ctx.class).newInstance(ctx);
 
             // dump the generated classes
-            // xvm.nativeTypeSystem.loader.dump();
-            loader.dump();
+            loader.dump(new PrintStream(
+                new FileOutputStream(loader.typeSystem.mainModule().getSimpleName() + ".jasm")));
+            xvm.nativeTypeSystem.loader.dump(
+                        new PrintStream(new FileOutputStream("ecstasy.jasm")));
 
             Object result;
             if (asArg == null || asArg.length == 0) {
@@ -99,10 +104,27 @@ public class JitConnector
             throw new RuntimeException("Failed to load class \"" + typeName + '"', e);
         } catch (NoSuchMethodException e) {
             throw new RuntimeException("No \"run()\" method", e);
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-            e.printStackTrace();
+        } catch (InstantiationException | IllegalAccessException e) {
             throw new RuntimeException("Failed to invoke \"run()\" method", e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause.getClass().getSimpleName().equals("xException")) {
+                try {
+                    System.out.println(cause.getClass().getDeclaredField("exception").get(cause));
+                } catch (Throwable ignore) {}
+            } else {
+                e.printStackTrace();
+                throw new RuntimeException(cause);
+            }
         }
+    }
+
+    /**
+     * Print a JIT exception.
+     */
+    private void printFilteredException(Throwable e) {
     }
 
     @Override
