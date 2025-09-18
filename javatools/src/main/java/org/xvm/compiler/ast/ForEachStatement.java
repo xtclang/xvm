@@ -773,8 +773,7 @@ public class ForEachStatement
                 return emitConstantRange(ctx, fReachable, code, typeElement, errs);
             }
 
-            if (typeElement.isExplicitClassIdentity(false) &&
-                typeElement.getExplicitClassFormat() == Component.Format.ENUM) {
+            if (typeElement.isEnum()) {
                 return emitConstantRange(ctx, fReachable, code, typeElement, errs);
             }
         }

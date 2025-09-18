@@ -497,7 +497,15 @@ public abstract class TypeConstant
     }
 
     /**
-     * @return true iff the type represents an Enum value
+     * @return true iff the type represents an Enum (e.g. Nullable, Boolean, ...)
+     */
+    public boolean isEnum() {
+        return isExplicitClassIdentity(false) &&
+               getExplicitClassFormat() == Component.Format.ENUM;
+    }
+
+    /**
+     * @return true iff the type represents an Enum value (e.g. Null, True, ...)
      */
     public boolean isEnumValue() {
         return isExplicitClassIdentity(false) &&
