@@ -235,19 +235,24 @@ abstract class ListRemotePublicationsTask : DefaultTask() {
                     
                     if (versions.isNotEmpty()) {
                         logger.lifecycle("  $packageName")
-                        versions.take(5).forEach { version ->
-                            logger.lifecycle("    ${version.name} (GitHub API updated: ${version.updatedAt})")
-                        }
-                        if (versions.size > 5) {
-                            logger.lifecycle("    ... and ${versions.size - 5} more versions")
-                        }
 
-                        // For snapshots, also check Maven metadata for actual latest timestamp
-                        if (versions.any { it.name.contains("SNAPSHOT") }) {
+                        // For snapshots, show Maven metadata first as it's more reliable
+                        val hasSnapshots = versions.any { it.name.contains("SNAPSHOT") }
+                        if (hasSnapshots) {
                             val latestSnapshotInfo = getLatestSnapshotTimestamp(packageName, token)
                             if (latestSnapshotInfo != null) {
-                                logger.lifecycle("    Latest snapshot artifacts: ${latestSnapshotInfo}")
+                                logger.lifecycle("    Latest artifacts: ${latestSnapshotInfo} (from Maven metadata)")
+                            } else {
+                                logger.lifecycle("    Latest artifacts: Unable to fetch Maven metadata")
                             }
+                        }
+
+                        // Show GitHub API info as secondary/supplementary
+                        versions.take(3).forEach { version ->
+                            logger.lifecycle("    ${version.name} (GitHub API: ${version.updatedAt})")
+                        }
+                        if (versions.size > 3) {
+                            logger.lifecycle("    ... and ${versions.size - 3} more versions (GitHub API)")
                         }
                     } else {
                         logger.lifecycle("  $packageName - Found package but response parsing failed or empty")
