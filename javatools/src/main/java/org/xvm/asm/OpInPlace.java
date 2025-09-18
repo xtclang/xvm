@@ -240,8 +240,13 @@ public abstract class OpInPlace
                 if (isAssignOp()) {
                     bctx.ensureSlot(m_nRetValue, idProp.getType());
                 }
+            } else {
+                // call the corresponding op method
+                JitMethodDesc jmd = buildOpCallProperty(bctx, code);
+                if (isAssignOp()) {
+                    bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue});
+                }
             }
-
         }
     }
 
@@ -423,7 +428,7 @@ public abstract class OpInPlace
     }
 
     /**
-     * Build the non-primitive type ops.
+     * Build the non-primitive type ops for a local variable.
      *
      * In:  nothing on the Java stack
      * Out: the result on Java stack
@@ -581,6 +586,16 @@ public abstract class OpInPlace
         bctx.loadCtx(code);
         bctx.popTempVar(code);
         code.invokevirtual(slotTarget.cd(), sSetName, mdSet); // set the new value
+    }
+
+    /**
+     * Build a non-primitive type ops for a property.
+     *
+     * In:  nothing on the Java stack
+     * Out: the result on Java stack
+     */
+    protected JitMethodDesc buildOpCallProperty(BuildContext bctx, CodeBuilder code) {
+        throw new UnsupportedOperationException();
     }
 
     // ----- fields --------------------------------------------------------------------------------

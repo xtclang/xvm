@@ -14,7 +14,6 @@ import org.xvm.asm.Register;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.BuildContext.Slot;
-import org.xvm.javajit.Builder;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;

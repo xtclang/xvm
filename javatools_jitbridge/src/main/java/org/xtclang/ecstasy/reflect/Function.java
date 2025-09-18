@@ -11,5 +11,5 @@ public interface Function {
     /**
      * {@code ReturnTypes invoke(ParamTypes args)}
      */
-    Tuple invoke(Ctx $ctx, Tuple args);
+    Tuple invoke(Ctx ctx, Tuple args);
 }

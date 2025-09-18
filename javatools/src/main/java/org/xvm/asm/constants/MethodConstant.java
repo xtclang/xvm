@@ -17,6 +17,7 @@ import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Parameter;
 
+import org.xvm.javajit.NativeNames;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.Hash;
@@ -275,32 +276,42 @@ public class MethodConstant
     public String ensureJitMethodName(TypeSystem ts) {
         String sJitName = m_sJitName;
         if (sJitName == null) {
-            String            prefix   = "";
-            IdentityConstant  idParent = getNamespace();
-            ComputeName: while (true) {
-                switch (idParent.getFormat()) {
-                case Class, Package, Module:
-                    break ComputeName;
+            StringBuilder    prefix   = new StringBuilder();
+            IdentityConstant idParent = getNamespace();
 
-                case Property:
-                    prefix = ((PropertyConstant) idParent).ensureJitPropertyName(ts) + '$' + prefix;
-                    break;
+            String sReservedName = NativeNames.findReservedJitName(this);
+            if (sReservedName == null) {
+                ComputeName: while (true) {
+                    switch (idParent.getFormat()) {
+                    case Class, Package, Module:
+                        break ComputeName;
 
-                case Method:
-                    prefix = ((MethodConstant) idParent).ensureJitMethodName(ts) + '$' + prefix;
-                    break;
+                    case Property:
+                        prefix.insert(0, '$')
+                              .insert(0, ((PropertyConstant) idParent).ensureJitPropertyName(ts));
+                        break;
 
-                default:
-                    throw new IllegalStateException();
+                    case Method:
+                        prefix.insert(0, '$')
+                              .insert(0, ((MethodConstant) idParent).ensureJitMethodName(ts));
+                        break;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                    idParent = idParent.getNamespace();
                 }
-                idParent = idParent.getNamespace();
+
+                SignatureConstant sigJit = getSignature();
+                if (!prefix.isEmpty()) {
+                    sigJit  = sigJit.getConstantPool().ensureSignatureConstant(
+                        prefix + sigJit.getName(), sigJit.getRawParams(), sigJit.getRawReturns());
+                }
+                sJitName = sigJit.ensureJitMethodName(ts);
+            } else {
+                sJitName = sReservedName;
             }
-            SignatureConstant sigJit = getSignature();
-            if (!prefix.isEmpty()) {
-                sigJit  = sigJit.getConstantPool().ensureSignatureConstant(
-                    prefix + sigJit.getName(), sigJit.getRawParams(), sigJit.getRawReturns());
-            }
-            m_sJitName = sJitName = sigJit.ensureJitMethodName(ts);
+            m_sJitName = sJitName;
         }
         return sJitName;
     }

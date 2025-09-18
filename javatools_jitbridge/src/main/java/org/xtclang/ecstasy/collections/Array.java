@@ -1,8 +1,10 @@
 package org.xtclang.ecstasy.collections;
 
+
 import org.xvm.javajit.Ctx;
 
 import org.xtclang.ecstasy.Exception;
+import org.xtclang.ecstasy.xException;
 import org.xtclang.ecstasy.xObj;
 
 import org.xtclang.ecstasy.Range;
@@ -109,7 +111,7 @@ private int end;
         return $mut() == CONSTANT;
     }
 
-    @Override public abstract void $makeImmut();
+    @Override public abstract void $makeImmut(Ctx ctx);
 
     // ----- xArray API ----------------------------------------------------------------------------
 
@@ -226,7 +228,7 @@ private int end;
 //        if ($empty(n)) {
 //            return TODO
 //        }
-        return $slice(ctx, Range.$first(n), Range.$size(n), Range.$descending(n));
+        return $slice(ctx, Range.$first(n), Range.$size(ctx, n), Range.$descending(n));
     }
 
     /**
@@ -242,7 +244,7 @@ private int end;
 //        if ($empty(n)) {
 //            return TODO
 //        }
-        return $slice(ctx, Range.$first(n1, n2), Range.$size(n1, n2), Range.$descending(n1, n2));
+        return $slice(ctx, Range.$first(n1, n2), Range.$size(ctx, n1, n2), Range.$descending(n1, n2));
     }
 
     public abstract Array<Element> $slice(Ctx ctx, long offset, long size, boolean descending);
@@ -287,11 +289,11 @@ private int end;
      *
      * @throws Exception
      */
-    protected Exception $oob(long index) {
+    protected xException $oob(Ctx ctx, long index) {
         if (index < 0) {
-            throw Exception.$oob("negative index: " + index, null);
+            throw Exception.$oob(ctx, "negative index: " + index);
         }
-        throw Exception.$oob("index: " + index + " (size=" + $size() + ")", null);
+        throw Exception.$oob(ctx, "index: " + index + " (size=" + $size() + ")");
     }
 
     /**
@@ -299,8 +301,8 @@ private int end;
      *
      * @throws Exception
      */
-    protected Exception $ro() {
-        throw Exception.$ro("array mutability=" + $mutDesc(), null);
+    protected xException $ro(Ctx ctx) {
+        throw Exception.$ro(ctx, "array mutability=" + $mutDesc());
     }
 
     @Override public java.lang.String toString() {
