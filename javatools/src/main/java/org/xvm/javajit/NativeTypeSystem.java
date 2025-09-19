@@ -208,7 +208,6 @@ public class NativeTypeSystem
             nativeByName.put(entry.getValue(), entry.getKey());
         }
 
-        nativeBuilders.put(pool.typeBoolean(), org.xvm.javajit.builders.BoolBuilder.class);
         nativeBuilders.put(pool.typeInt64(),   org.xvm.javajit.builders.Int64Builder.class);
         nativeBuilders.put(pool.typeModule(),  org.xvm.javajit.builders.AugmentingBuilder.class);
         nativeBuilders.put(pool.typeObject(),  org.xvm.javajit.builders.AugmentingBuilder.class);

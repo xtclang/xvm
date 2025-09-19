@@ -1285,6 +1285,9 @@ public class CommonBuilder
         bctx.exitMethod(code);
     }
 
-    private final static String[] TEST_SET = new String[] {"test", "tck"};
+    private final static String[] TEST_SET = new String[] {
+        "test", "tck",
+        "Boolean",
+    };
     private final static HashSet<String> SKIP_SET = new HashSet<>();
 }

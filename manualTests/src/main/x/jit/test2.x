@@ -3,11 +3,19 @@ module test2.examples.org {
     void run() {
         @Inject Console console;
 
-        Color c = Red;
+        Color c = Blue;
         console.print(c.ordinal);
-        console.print(c.name);
+        console.print(c.text);
+        console.print(c.rgb);
         console.print(c);
+
+        Boolean b = True;
+        console.print(b);
+        console.print(b.not());
+        console.print(b.toInt64());
     }
 
-    enum Color {Red, Green, Blue}
+    enum Color(String text, Int rgb) {
+        Red("R", 0), Green("G", 255), Blue("B", 255*255)
+    }
 }
