@@ -5,6 +5,7 @@ plugins {
     id("org.xtclang.build.xdk.versioning")
     alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.vanniktech.maven.publish)
+    alias(libs.plugins.gradle.portal.publish)
     id("java-gradle-plugin")
 }
 
@@ -106,10 +107,11 @@ mavenPublishing {
         publishToMavenCentral(automaticRelease = false)
         logger.lifecycle("[plugin] Maven Central publishing is enabled")
     } else {
-        logger.lifecycle("[plugin] Maven Central publishing is disabled (use -Porg.xtclang.publish.mavenCentral=true to enable)")
+        logger.info("[plugin] Maven Central publishing is disabled (use -Porg.xtclang.publish.mavenCentral=true to enable)")
     }
 
-    // Note: Gradle Plugin Portal publishing handled by vanniktech GradlePlugin configuration
+    // Note: Plugin Portal credentials handled by standard gradle.publish.* properties
+    // Validation handled by root validateCredentials task when Portal publishing enabled
     
     
     pom {
@@ -260,14 +262,18 @@ private val implementationClassValue = getXdkProperty("$pprefix.plugin.implement
 private val displayNameValue = getXdkProperty("$pprefix.plugin.display.name")
 private val descriptionValue = getXdkProperty("$pprefix.plugin.description")
 
-// Minimal gradle plugin configuration for vanniktech
+// Gradle plugin configuration for both vanniktech and plugin portal
 gradlePlugin {
+    website = websiteValue
+    vcsUrl = vcsUrlValue
+
     plugins {
         val xtc by registering {
             id = pluginId
             implementationClass = implementationClassValue
             displayName = displayNameValue
             description = descriptionValue
+            tags = listOf("xtc", "language", "compiler", "ecstasy")
         }
     }
 }
