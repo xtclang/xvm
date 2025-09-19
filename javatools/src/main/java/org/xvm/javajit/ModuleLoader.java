@@ -1,5 +1,7 @@
 package org.xvm.javajit;
 
+import java.io.PrintStream;
+
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
 
@@ -103,7 +105,7 @@ public class ModuleLoader
 
     // ----- debugging -----------------------------------------------------------------------------
 
-    public void dump() {
+    public void dump(PrintStream out) {
         // TODO: REMOVE
 
         // the "dumping" itself causes the classes to be transitively loaded;
@@ -113,27 +115,27 @@ public class ModuleLoader
             List<ClassModel> currentlyLoaded = new ArrayList<>(loadedClasses);
             loadedClasses.clear();
             for (ClassModel model : currentlyLoaded) {
-                System.out.println("\n**** Class " + model.thisClass().asSymbol().displayName());
+                out.println("\n**** Class " + model.thisClass().asSymbol().displayName());
 
                 model.superclass().ifPresent(ce ->
-                    System.out.println("Extends: " + ce.asSymbol().displayName()));
+                    out.println("Extends: " + ce.asSymbol().displayName()));
 
                 List<ClassEntry> interfaces = model.interfaces();
                 if (!interfaces.isEmpty()) {
-                    System.out.println("Implements:");
+                    out.println("Implements:");
                     interfaces.stream().map(iface -> "  " + iface.asSymbol().displayName()).
-                        forEach(System.out::println);
+                        forEach(out::println);
                 }
 
-                System.out.println("Fields:");
+                out.println("Fields:");
                 model.fields().stream().map(f -> "  " + f.fieldName() + " " + f.fieldTypeSymbol().descriptorString()).
-                    forEach(System.out::println);
+                    forEach(out::println);
 
-                System.out.println("Methods:");
+                out.println("Methods:");
                 model.methods().stream().map(m -> "  " + m.methodName() +
                     m.methodTypeSymbol().displayDescriptor() +
                         (m.code().isPresent() ? "\n" + m.code().get().toDebugString() : "")).
-                    forEach(System.out::println);
+                    forEach(out::println);
             }
         } while (!loadedClasses.isEmpty() && --iters > 0);
     }

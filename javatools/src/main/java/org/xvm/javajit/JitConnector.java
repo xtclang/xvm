@@ -1,5 +1,8 @@
 package org.xvm.javajit;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -81,7 +84,8 @@ public class JitConnector
 
             // dump the generated classes
             // xvm.nativeTypeSystem.loader.dump();
-            loader.dump();
+            loader.dump(new PrintStream(
+                new FileOutputStream(loader.typeSystem.mainModule().getSimpleName() + ".jasm")));
 
             Object result;
             if (asArg == null || asArg.length == 0) {
@@ -102,6 +106,8 @@ public class JitConnector
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
             throw new RuntimeException("Failed to invoke \"run()\" method", e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 

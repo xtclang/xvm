@@ -1,6 +1,9 @@
 package org.xvm.javajit;
 
+import java.io.PrintStream;
+
 import java.util.Arrays;
+
 import org.xvm.asm.ModuleStructure;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
@@ -77,8 +80,8 @@ public class TypeSystemLoader
 
     // ----- debugging -----------------------------------------------------------------------------
 
-    public void dump() {
-        // Arrays.stream(shared).forEach(ModuleLoader::dump);
-        Arrays.stream(owned).forEach(ModuleLoader::dump);
+    public void dump(PrintStream out) {
+        // Arrays.stream(shared).forEach(loader -> loader.dump(out));
+        Arrays.stream(owned).forEach(loader -> loader.dump(out));
     }
 }
