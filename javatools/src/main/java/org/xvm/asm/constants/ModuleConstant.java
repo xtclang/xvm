@@ -16,6 +16,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
+import org.xvm.javajit.Builder;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.Hash;
@@ -222,7 +223,7 @@ public class ModuleConstant
 
     @Override
     public String getJitName(TypeSystem ts) {
-        return "$module";
+        return Builder.MODULE;
     }
 
     @Override

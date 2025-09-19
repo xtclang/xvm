@@ -34,6 +34,8 @@ import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.NATIVE_MODULE;
 import static org.xvm.asm.Constants.TURTLE_MODULE;
 
+import static org.xvm.javajit.Builder.ENUMERATION;
+
 import static org.xvm.util.Handy.require;
 
 /**
@@ -140,7 +142,7 @@ public class NativeTypeSystem
             if (in != null) {
                 byte[] classBytes = in.readAllBytes();
                 String simpleName = name.substring(name.lastIndexOf('.') + 1);
-                if (simpleName.startsWith("x")) {
+                if (simpleName.startsWith("x") || simpleName.endsWith(ENUMERATION)) {
                     // by convention the classes that start with an "x" are "rebase" classes
                     // that we take "as is" (they don't need to be augmented)
                     return classBytes;

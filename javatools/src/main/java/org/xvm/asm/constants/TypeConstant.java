@@ -53,6 +53,7 @@ import org.xvm.asm.constants.TypeInfo.Progress;
 
 import org.xvm.compiler.Compiler;
 
+import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.ModuleLoader;
 import org.xvm.javajit.TypeSystem;
@@ -4175,7 +4176,7 @@ public abstract class TypeConstant
             mapNarrowedNids = new HashMap<>();
         }
 
-        Set<Object> setNarrowing = mapNarrowedNids.computeIfAbsent(nidBase, key_ -> new HashSet<>());
+        Set<Object> setNarrowing = mapNarrowedNids.computeIfAbsent(nidBase, ignore -> new HashSet<>());
         setNarrowing.add(nidContrib);
         return mapNarrowedNids;
     }
@@ -6421,11 +6422,34 @@ public abstract class TypeConstant
 
             synchronized (type) {
                 sJitName = type.m_sJitName;
+                ComputeName:
                 if (sJitName == null) {
                     String name = ts.xvm.nativeTypeSystem.nativeByType.get(type);
                     if (name == null) {
+                        ConstantPool     pool  = getConstantPool();
+                        IdentityConstant idClz = getSingleUnderlyingClass(true);
+
+                        if (idClz.equals(pool.clzEnumeration())) {
+                            // JIT class name for Enumeration<Enum> is "Enumeration", but
+                            // JIT class name for Enumeration<X> is "X$Enumeration"
+                            TypeConstant typeValue = type.getParamType(0);
+                            if (!typeValue.isFormalType() && !typeValue.equals(pool.clzEnum().getType())) {
+                                sJitName = typeValue.ensureJitClassName(ts) + Builder.ENUMERATION;
+                                break ComputeName;
+                            }
+                        } else if (idClz.equals(pool.clzClass())) {
+                            TypeConstant typePublic = this.getParamType(0);
+                            if (!typePublic.isFormalType() && typePublic.isEnum() &&
+                                                             !typePublic.equals(pool.clzEnum().getType())) {
+                                // JIT class name for Class<PublicType> or Class<Enum> is "Class", but
+                                // JIT class name for Class<X> where X is an Enum is "X$Enumeration"
+                                sJitName = typePublic.ensureJitClassName(ts) + Builder.ENUMERATION;
+                                break ComputeName;
+                            }
+                        }
+                        sJitName = loader.prefix + idClz.getJitName(ts);
+
                         // TODO: check for collisions, reserved keywords etc.
-                        sJitName = loader.prefix + getSingleUnderlyingClass(true).getJitName(ts);
                     } else {
                         sJitName = name;
                     }
