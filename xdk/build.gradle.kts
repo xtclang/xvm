@@ -28,6 +28,7 @@ plugins {
     alias(libs.plugins.xtc)
     application
     distribution
+    id("org.xtclang.build.publishing")
 }
 
 val xtcLauncherBinaries by configurations.registering {
@@ -255,18 +256,16 @@ mavenPublishing {
 // Configure GitHub Packages repository (enabled when credentials are available)
 publishing {
     repositories {
-        val gitHubUsername = project.findProperty("GitHubUsername")?.toString()
-            ?: providers.environmentVariable("GITHUB_ACTOR").getOrNull()
-            ?: "xtclang-workflows"  // Default fallback for CI
-        val gitHubPassword = project.findProperty("GitHubPassword")?.toString()
-            ?: providers.environmentVariable("GITHUB_TOKEN").getOrNull()
+        // Use centralized credential management
+        val gitHubUsername = xdkPublishingCredentials.gitHubUsername.get()
+        val gitHubPassword = xdkPublishingCredentials.gitHubPassword.get()
 
-        if (!gitHubPassword.isNullOrEmpty()) {
+        if (gitHubPassword.isNotEmpty()) {
             maven {
                 name = "GitHub"
                 url = uri("https://maven.pkg.github.com/xtclang/xvm")
                 credentials {
-                    username = gitHubUsername
+                    username = gitHubUsername.ifEmpty { "xtclang-workflows" }
                     password = gitHubPassword
                 }
             }
