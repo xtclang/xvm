@@ -225,7 +225,7 @@ mavenPublishing {
         publishToMavenCentral(automaticRelease = false)
         logger.lifecycle("[xdk] Maven Central publishing is enabled")
     } else {
-        logger.lifecycle("[xdk] Maven Central publishing is disabled (use -Porg.xtclang.publish.mavenCentral=true to enable)")
+        logger.info("[xdk] Maven Central publishing is disabled (use -Porg.xtclang.publish.mavenCentral=true to enable)")
     }
     
     

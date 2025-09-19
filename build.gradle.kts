@@ -47,13 +47,30 @@ val installWithNativeLaunchersDist by tasks.registering {
  */
 val publishRemote by tasks.registering {
     group = PUBLISH_TASK_GROUP
-    description = "Publish XDK and plugin artifacts to GitHub Packages."
-    dependsOn(validateGitHubCredentials)
-    // Publish all vanniktech publications to GitHub Packages for both projects
-    dependsOn(
-        plugin.task(":publishAllPublicationsToGitHubRepository"),
-        xdk.task(":publishMavenPublicationToGitHubRepository")
-    )
+    description = "Publish XDK and plugin artifacts to enabled publishing repositories (GitHub Packages, Gradle Plugin Portal)."
+    dependsOn(validateCredentials)
+
+    // Set up dependencies and logging during configuration using direct property access
+    val enableGitHub = getXdkPropertyBoolean("org.xtclang.publish.GitHub", true)
+    if (enableGitHub) {
+        dependsOn(
+            plugin.task(":publishAllPublicationsToGitHubRepository"),
+            xdk.task(":publishMavenPublicationToGitHubRepository")
+        )
+        logger.lifecycle("Publishing to GitHub Packages is enabled")
+    } else {
+        logger.lifecycle("Publishing to GitHub Packages is disabled (use -Porg.xtclang.publish.GitHub=true to enable)")
+    }
+
+    val enableGradlePluginPortal = getXdkPropertyBoolean("org.xtclang.publish.gradlePluginPortal", false)
+    if (enableGradlePluginPortal) {
+        dependsOn(plugin.task(":publishPlugins"))
+        logger.lifecycle("Publishing to Gradle Plugin Portal is enabled")
+        logger.lifecycle("Note: Plugin Portal requires release versions (not SNAPSHOT) and gradle.publish.key/secret credentials")
+        logger.lifecycle("Enable credentials in ~/.gradle/gradle.properties before publishing")
+    } else {
+        logger.lifecycle("Publishing to Gradle Plugin Portal is disabled (use -Porg.xtclang.publish.gradlePluginPortal=true to enable)")
+    }
 }
 
 val publishLocal by tasks.registering {
@@ -116,7 +133,18 @@ dockerTaskNames.forEach { taskName ->
 abstract class ListRemotePublicationsTask : DefaultTask() {
     @get:Input
     abstract val gitHubToken: Property<String>
-    
+
+    @get:Input
+    abstract val enablePluginPortal: Property<Boolean>
+
+    @get:Input
+    @get:Optional
+    abstract val gradlePublishKey: Property<String>
+
+    @get:Input
+    @get:Optional
+    abstract val pluginId: Property<String>
+
     @TaskAction
     fun listPublications() {
         val token = gitHubToken.get()
@@ -186,7 +214,20 @@ abstract class ListRemotePublicationsTask : DefaultTask() {
                 getPackageVersions(packageName, token, true)  // Use org-level API
             }
         }
-        
+
+        // Check Plugin Portal if enabled
+        if (enablePluginPortal.get()) {
+            val portalKey = gradlePublishKey.get()
+            if (portalKey.isNotEmpty()) {
+                logger.lifecycle("")
+                logger.lifecycle("Fetching Gradle Plugin Portal publications...")
+                listPluginPortalVersions()
+            } else {
+                logger.lifecycle("")
+                logger.lifecycle("Plugin Portal listing requested but no credentials available")
+            }
+        }
+
         logger.lifecycle("")
         logger.lifecycle("View all packages: https://github.com/xtclang/xvm/packages")
     }
@@ -370,7 +411,84 @@ abstract class ListRemotePublicationsTask : DefaultTask() {
         return null
     }
 
+    private fun listPluginPortalVersions() {
+        try {
+            // Get plugin ID from configuration
+            val pluginId = pluginId.get()
+
+            // Plugin Portal API endpoint for plugin info
+            val url = "https://plugins.gradle.org/api/gradle/${java.net.URLEncoder.encode(pluginId, "UTF-8")}"
+            val connection = java.net.URI(url).toURL().openConnection() as java.net.HttpURLConnection
+            connection.setRequestProperty("Accept", "application/json")
+            connection.setRequestProperty("User-Agent", "XTC-Gradle-Build/1.0")
+
+            when (connection.responseCode) {
+                200 -> {
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+                    logger.debug("Plugin Portal API response: $response")
+
+                    val versions = parsePluginPortalVersions(response)
+                    if (versions.isNotEmpty()) {
+                        logger.lifecycle("  $pluginId")
+                        versions.take(5).forEach { version ->
+                            logger.lifecycle("    ${version.version} (published: ${version.date})")
+                        }
+                        if (versions.size > 5) {
+                            logger.lifecycle("    ... and ${versions.size - 5} more versions")
+                        }
+                        logger.lifecycle("    Portal URL: https://plugins.gradle.org/plugin/$pluginId")
+                    } else {
+                        logger.lifecycle("  $pluginId - Found but no versions parsed")
+                    }
+                }
+                404 -> {
+                    logger.lifecycle("  $pluginId - Plugin not found on Gradle Plugin Portal")
+                    logger.lifecycle("    This may indicate the plugin hasn't been published yet")
+                }
+                else -> {
+                    logger.lifecycle("  $pluginId - Error ${connection.responseCode}: ${connection.responseMessage}")
+                }
+            }
+        } catch (e: Exception) {
+            logger.lifecycle("Error fetching Plugin Portal info: ${e.message}")
+        }
+    }
+
+    private fun parsePluginPortalVersions(jsonResponse: String): List<PluginVersion> {
+        val versions = mutableListOf<PluginVersion>()
+        try {
+            // Simple regex parsing to extract version and date info
+            // Looking for pattern like: "version":"0.4.4","date":"2024-01-15T10:30:00.000+0000"
+            val versionPattern = Regex("\"version\"\\s*:\\s*\"([^\"]+)\"")
+            val datePattern = Regex("\"date\"\\s*:\\s*\"([^\"]+)\"")
+
+            val versionMatches = versionPattern.findAll(jsonResponse).toList()
+            val dateMatches = datePattern.findAll(jsonResponse).toList()
+
+            val minSize = minOf(versionMatches.size, dateMatches.size)
+            for (i in 0 until minSize) {
+                val version = versionMatches[i].groupValues[1]
+                val dateStr = dateMatches[i].groupValues[1]
+
+                // Format date for better readability
+                val formattedDate = try {
+                    val parts = dateStr.split("T")[0] // Get just the date part
+                    parts
+                } catch (e: Exception) {
+                    dateStr
+                }
+
+                versions.add(PluginVersion(version, formattedDate))
+            }
+        } catch (e: Exception) {
+            logger.debug("Failed to parse Plugin Portal API response: ${e.message}")
+        }
+
+        return versions.sortedByDescending { it.date }
+    }
+
     data class PackageVersion(val name: String, val updatedAt: String)
+    data class PluginVersion(val version: String, val date: String)
 }
 
 // list|deleteLocalPublicatiopns/remotePublications.
@@ -387,25 +505,39 @@ publishTaskPrefixes.forEach { prefix ->
     }
 }
 
-abstract class ValidateGitHubCredentialsTask : DefaultTask() {
+abstract class ValidateCredentialsTask : DefaultTask() {
     @get:Input
     abstract val gitHubUsername: Property<String>
 
     @get:Input
     abstract val gitHubPassword: Property<String>
 
+    @get:Input
+    abstract val enablePluginPortal: Property<Boolean>
+
+    @get:Input
+    @get:Optional
+    abstract val gradlePublishKey: Property<String>
+
+    @get:Input
+    @get:Optional
+    abstract val gradlePublishSecret: Property<String>
+
     @TaskAction
     fun validate() {
-        val username = gitHubUsername.get()
-        val password = gitHubPassword.get()
+        // Validate GitHub credentials (required only when GitHub publishing is enabled)
+        val enableGitHub = getXdkPropertyBoolean("org.xtclang.publish.GitHub", true)
+        if (enableGitHub) {
+            val username = gitHubUsername.get()
+            val password = gitHubPassword.get()
 
-        if (password.isEmpty()) {
+            if (password.isEmpty()) {
             throw GradleException("""
                 |GitHub credentials not available for publishing!
                 |
                 |Please provide credentials using one of these methods:
                 |
-                |1. Local development - Set properties in ~/.config/xtc/gradle.properties:
+                |1. Local development - Set properties in ~/.gradle/gradle.properties:
                 |   GitHubUsername=your-username
                 |   GitHubPassword=your-personal-access-token
                 |
@@ -419,20 +551,59 @@ abstract class ValidateGitHubCredentialsTask : DefaultTask() {
                 |Current status:
                 |  Username: ${if (username.isNotEmpty()) "✅ Available ($username)" else "❌ Missing"}
                 |  Password/Token: ${if (password.isNotEmpty()) "✅ Available" else "❌ Missing"}
-            """.trimMargin())
+                """.trimMargin())
+            }
+
+            logger.lifecycle("✅ GitHub credentials validated successfully")
+            logger.lifecycle("   Username: $username")
+            logger.lifecycle("   Token: Available (${password.take(8)}...)")
+        } else {
+            logger.lifecycle("ℹ️  GitHub publishing is disabled - skipping credential validation")
         }
 
-        logger.lifecycle("✅ GitHub credentials validated successfully")
-        logger.lifecycle("   Username: $username")
-        logger.lifecycle("   Token: Available (${password.take(8)}...)")
+        // Validate Plugin Portal credentials (only if enabled)
+        if (enablePluginPortal.get()) {
+            val portalKey = gradlePublishKey.getOrElse("")
+            val portalSecret = gradlePublishSecret.getOrElse("")
+
+            if (portalKey.isEmpty() || portalSecret.isEmpty()) {
+                throw GradleException("""
+                    |Gradle Plugin Portal credentials not available for publishing!
+                    |
+                    |Please provide credentials using one of these methods:
+                    |
+                    |1. Local development - Set properties in ~/.gradle/gradle.properties:
+                    |   gradle.publish.key=your-api-key
+                    |   gradle.publish.secret=your-api-secret
+                    |
+                    |2. Environment variables:
+                    |   GRADLE_PUBLISH_KEY=your-api-key
+                    |   GRADLE_PUBLISH_SECRET=your-api-secret
+                    |
+                    |3. Command line properties:
+                    |   ./gradlew publishRemote -Pgradle.publish.key=your-key -Pgradle.publish.secret=your-secret
+                    |
+                    |Get API keys from: https://plugins.gradle.org/ -> "My API Keys" -> Generate API Key
+                    |
+                    |Current status:
+                    |  API Key: ${if (portalKey.isNotEmpty()) "✅ Available (${portalKey.take(8)}...)" else "❌ Missing"}
+                    |  Secret: ${if (portalSecret.isNotEmpty()) "✅ Available" else "❌ Missing"}
+                """.trimMargin())
+            }
+
+            logger.lifecycle("✅ Plugin Portal credentials validated successfully")
+            logger.lifecycle("   API Key: Available (${portalKey.take(8)}...)")
+            logger.lifecycle("   Secret: Available")
+        }
     }
 }
 
-// Validate GitHub credentials are available for publishing
-val validateGitHubCredentials by tasks.registering(ValidateGitHubCredentialsTask::class) {
+// Validate credentials are available for publishing (GitHub + optional Plugin Portal)
+val validateCredentials by tasks.registering(ValidateCredentialsTask::class) {
     group = PUBLISH_TASK_GROUP
-    description = "Validate that GitHub credentials are available for publishing"
+    description = "Validate GitHub and Plugin Portal credentials are available for publishing"
 
+    // GitHub credentials (required only when GitHub publishing is enabled)
     gitHubUsername.set(
         project.findProperty("GitHubUsername")?.toString()
             ?: providers.environmentVariable("GITHUB_ACTOR").getOrNull()
@@ -443,13 +614,28 @@ val validateGitHubCredentials by tasks.registering(ValidateGitHubCredentialsTask
             ?: providers.environmentVariable("GITHUB_TOKEN").getOrNull()
             ?: ""
     )
+
+    // Publishing flags from XDK properties
+    enablePluginPortal.set(getXdkPropertyBoolean("org.xtclang.publish.gradlePluginPortal", false))
+    gradlePublishKey.set(
+        project.findProperty("gradle.publish.key")?.toString()
+            ?: providers.environmentVariable("GRADLE_PUBLISH_KEY").getOrNull()
+            ?: ""
+    )
+    gradlePublishSecret.set(
+        project.findProperty("gradle.publish.secret")?.toString()
+            ?: providers.environmentVariable("GRADLE_PUBLISH_SECRET").getOrNull()
+            ?: ""
+    )
 }
 
 // Special handling for remote publication listing - use GitHub API integration instead of delegation
 val listRemotePublications by tasks.registering(ListRemotePublicationsTask::class) {
     group = PUBLISH_TASK_GROUP
-    description = "List remote GitHub publications using GitHub API integration"
-    dependsOn(validateGitHubCredentials)
+    description = "List remote GitHub and Plugin Portal publications using API integration"
+    dependsOn(validateCredentials)
+
+    // GitHub token setup
     val gitHubPassword = project.findProperty("GitHubPassword")?.toString()
         ?: providers.environmentVariable("GITHUB_TOKEN").getOrNull()
     if (!gitHubPassword.isNullOrEmpty()) {
@@ -457,6 +643,15 @@ val listRemotePublications by tasks.registering(ListRemotePublicationsTask::clas
     } else {
         logger.lifecycle("GitHub token not available - remote publication listing disabled")
     }
+
+    // Plugin Portal setup
+    enablePluginPortal.set(getXdkPropertyBoolean("org.xtclang.publish.gradlePluginPortal", false))
+    gradlePublishKey.set(
+        project.findProperty("gradle.publish.key")?.toString()
+            ?: providers.environmentVariable("GRADLE_PUBLISH_KEY").getOrNull()
+            ?: ""
+    )
+    pluginId.set(getXdkProperty("org.xtclang.plugin.id"))
 }
 
 // Handle deleteRemotePublications with delegation
