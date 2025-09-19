@@ -416,29 +416,29 @@ abstract class ListRemotePublicationsTask : DefaultTask() {
             // Get plugin ID from configuration
             val pluginId = pluginId.get()
 
-            // Plugin Portal API endpoint for plugin info
-            val url = "https://plugins.gradle.org/api/gradle/${java.net.URLEncoder.encode(pluginId, "UTF-8")}"
+            // Plugin Portal web page (no public API available)
+            val url = "https://plugins.gradle.org/plugin/${java.net.URLEncoder.encode(pluginId, "UTF-8")}"
             val connection = java.net.URI(url).toURL().openConnection() as java.net.HttpURLConnection
-            connection.setRequestProperty("Accept", "application/json")
+            connection.setRequestProperty("Accept", "text/html")
             connection.setRequestProperty("User-Agent", "XTC-Gradle-Build/1.0")
 
             when (connection.responseCode) {
                 200 -> {
                     val response = connection.inputStream.bufferedReader().use { it.readText() }
-                    logger.debug("Plugin Portal API response: $response")
+                    logger.debug("Plugin Portal page response length: ${response.length}")
 
-                    val versions = parsePluginPortalVersions(response)
+                    val versions = parsePluginPortalHtml(response)
                     if (versions.isNotEmpty()) {
                         logger.lifecycle("  $pluginId")
                         versions.take(5).forEach { version ->
-                            logger.lifecycle("    ${version.version} (published: ${version.date})")
+                            logger.lifecycle("    ${version.version} (${version.status})")
                         }
                         if (versions.size > 5) {
                             logger.lifecycle("    ... and ${versions.size - 5} more versions")
                         }
                         logger.lifecycle("    Portal URL: https://plugins.gradle.org/plugin/$pluginId")
                     } else {
-                        logger.lifecycle("  $pluginId - Found but no versions parsed")
+                        logger.lifecycle("  $pluginId - Found but no versions parsed from page")
                     }
                 }
                 404 -> {
@@ -454,41 +454,43 @@ abstract class ListRemotePublicationsTask : DefaultTask() {
         }
     }
 
-    private fun parsePluginPortalVersions(jsonResponse: String): List<PluginVersion> {
+    private fun parsePluginPortalHtml(htmlResponse: String): List<PluginVersion> {
         val versions = mutableListOf<PluginVersion>()
         try {
-            // Simple regex parsing to extract version and date info
-            // Looking for pattern like: "version":"0.4.4","date":"2024-01-15T10:30:00.000+0000"
-            val versionPattern = Regex("\"version\"\\s*:\\s*\"([^\"]+)\"")
-            val datePattern = Regex("\"date\"\\s*:\\s*\"([^\"]+)\"")
+            // Parse HTML to extract version info
+            // Looking for pattern like: <h3>Version 0.4.5 (latest)</h3>
+            val versionPattern = Regex("<h3>Version\\s+([^\\s]+)\\s*(?:\\(([^)]+)\\))?\\s*</h3>")
+            val versionMatches = versionPattern.findAll(htmlResponse).toList()
 
-            val versionMatches = versionPattern.findAll(jsonResponse).toList()
-            val dateMatches = datePattern.findAll(jsonResponse).toList()
-
-            val minSize = minOf(versionMatches.size, dateMatches.size)
-            for (i in 0 until minSize) {
-                val version = versionMatches[i].groupValues[1]
-                val dateStr = dateMatches[i].groupValues[1]
-
-                // Format date for better readability
-                val formattedDate = try {
-                    val parts = dateStr.split("T")[0] // Get just the date part
-                    parts
-                } catch (e: Exception) {
-                    dateStr
+            for (match in versionMatches) {
+                val version = match.groupValues[1]
+                val status = if (match.groupValues.size > 2 && match.groupValues[2].isNotBlank()) {
+                    match.groupValues[2]
+                } else {
+                    "published"
                 }
 
-                versions.add(PluginVersion(version, formattedDate))
+                versions.add(PluginVersion(version, status))
+            }
+
+            // If no version found in h3, try alternative patterns
+            if (versions.isEmpty()) {
+                // Try plugin-id-version pattern
+                val altPattern = Regex("id=\"plugin-id-version\"[^>]*>([^<]+)<")
+                val altMatch = altPattern.find(htmlResponse)
+                if (altMatch != null) {
+                    versions.add(PluginVersion(altMatch.groupValues[1], "found"))
+                }
             }
         } catch (e: Exception) {
-            logger.debug("Failed to parse Plugin Portal API response: ${e.message}")
+            logger.debug("Failed to parse Plugin Portal HTML response: ${e.message}")
         }
 
-        return versions.sortedByDescending { it.date }
+        return versions
     }
 
     data class PackageVersion(val name: String, val updatedAt: String)
-    data class PluginVersion(val version: String, val date: String)
+    data class PluginVersion(val version: String, val status: String)
 }
 
 // list|deleteLocalPublicatiopns/remotePublications.
@@ -513,6 +515,9 @@ abstract class ValidateCredentialsTask : DefaultTask() {
     abstract val gitHubPassword: Property<String>
 
     @get:Input
+    abstract val enableGitHub: Property<Boolean>
+
+    @get:Input
     abstract val enablePluginPortal: Property<Boolean>
 
     @get:Input
@@ -526,8 +531,7 @@ abstract class ValidateCredentialsTask : DefaultTask() {
     @TaskAction
     fun validate() {
         // Validate GitHub credentials (required only when GitHub publishing is enabled)
-        val enableGitHub = getXdkPropertyBoolean("org.xtclang.publish.GitHub", true)
-        if (enableGitHub) {
+        if (enableGitHub.get()) {
             val username = gitHubUsername.get()
             val password = gitHubPassword.get()
 
@@ -616,6 +620,7 @@ val validateCredentials by tasks.registering(ValidateCredentialsTask::class) {
     )
 
     // Publishing flags from XDK properties
+    enableGitHub.set(getXdkPropertyBoolean("org.xtclang.publish.GitHub", true))
     enablePluginPortal.set(getXdkPropertyBoolean("org.xtclang.publish.gradlePluginPortal", false))
     gradlePublishKey.set(
         project.findProperty("gradle.publish.key")?.toString()
