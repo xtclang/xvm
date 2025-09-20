@@ -36,7 +36,7 @@ data class SemanticVersion(val artifactGroup: String, val artifactId: String, va
             if (lastDot == -1) {
                 throw IllegalArgumentException("Illegal version format: '$artifactVersion'")
             }
-            val majorMinorVersion = artifactVersion.substring(0, lastDot)
+            val majorMinorVersion = artifactVersion.take(lastDot)
             val microVersionFull = artifactVersion.substring(lastDot + 1)
             val microVersion = microVersionFull.trim { !it.isDigit() }
             val nextMicroVersion = microVersion.toInt() + 1

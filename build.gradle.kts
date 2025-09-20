@@ -9,7 +9,10 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 plugins {
     alias(libs.plugins.xdk.build.versioning)
     alias(libs.plugins.xdk.build.aggregator)
+    id("org.xtclang.build.publishing")
 }
+
+// Use the centralized credential management from the publishing convention
 
 /**
  * Installation and distribution tasks that aggregate publishable/distributable included
@@ -45,26 +48,38 @@ val installWithNativeLaunchersDist by tasks.registering {
  * we need to do it manually. "publishRemoteRelease", in which case we will also feed into
  * jreleaser.
  */
-val publishRemote by tasks.registering {
+val unpublishGradlePlugin by tasks.registering(UnpublishGradlePluginTask::class) {
     group = PUBLISH_TASK_GROUP
-    description = "Publish (aggregate) all artifacts in the XDK to the remote repositories."
-    // Call publishRemote in xdk and plugin projects.
-    includedBuildsWithPublications.forEach {
-        dependsOn(it.task(":$name"))
-    }
+    description = "Unpublish/delete a specific version from Gradle Plugin Portal (use -PunpublishGradlePlugin=version)"
+    dependsOn(validateCredentials)
+
+    pluginId.set(getXdkProperty("org.xtclang.plugin.id"))
+    unpublishVersion.set(project.findProperty("unpublishGradlePlugin")?.toString() ?: "")
+
+    // Use centralized credential management
+    hasCredentials.set(xdkPublishingCredentials.enablePluginPortal.zip(xdkPublishingCredentials.gradlePublishKey) { enabled, key ->
+        enabled && key.isNotEmpty() && xdkPublishingCredentials.gradlePublishSecret.get().isNotEmpty()
+    })
 }
 
-/**
- * Publish local publications to the mavenLocal repository. This is useful for testing
- * that a dependency to a particular XDK version of an XDK or XTC package works with
- * another application before you push it, and cause a "remote" publication to be made.
- */
+val publishRemote by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "Publish XDK and plugin artifacts to remote repositories (GitHub Packages, Gradle Plugin Portal)."
+    dependsOn(validateCredentials)
+    dependsOn(
+        plugin.task(":publishAllPublicationsToGitHubRepository"),
+        xdk.task(":publishMavenPublicationToGitHubRepository")
+    )
+}
+
 val publishLocal by tasks.registering {
     group = PUBLISH_TASK_GROUP
-    description = "Publish (aggregated) all artifacts in the XDK to the local Maven repository."
-    includedBuildsWithPublications.forEach {
-        dependsOn(it.task(":$name"))
-    }
+    description = "Publish XDK and plugin artifacts to local Maven repository."
+    // Publish to local Maven repository for both projects
+    dependsOn(
+        plugin.task(":publishToMavenLocal"),
+        xdk.task(":publishToMavenLocal")
+    )
 }
 
 /**
@@ -113,12 +128,12 @@ dockerTaskNames.forEach { taskName ->
     }
 }
 
+// Task classes are now extracted to separate files in build-logic/common-plugins/src/main/kotlin/
+
+
 // list|deleteLocalPublicatiopns/remotePublications.
 publishTaskPrefixes.forEach { prefix ->
-    buildList {
-        addAll(publishTaskSuffixesLocal)
-        addAll(publishTaskSuffixesRemote)
-    }.forEach { suffix ->
+    publishTaskSuffixesLocal.forEach { suffix ->
         val taskName = "$prefix$suffix"
         tasks.register(taskName) {
             group = PUBLISH_TASK_GROUP
@@ -127,5 +142,42 @@ publishTaskPrefixes.forEach { prefix ->
                 dependsOn(it.task(":$taskName"))
             }
         }
+    }
+}
+
+
+// Validate credentials are available for publishing (GitHub + optional Plugin Portal)
+val validateCredentials by tasks.registering(ValidateCredentialsTask::class) {
+    group = PUBLISH_TASK_GROUP
+    description = "Validate GitHub and Plugin Portal credentials are available for publishing"
+
+    // Use centralized credential management
+    gitHubUsername.set(xdkPublishingCredentials.gitHubUsername)
+    gitHubPassword.set(xdkPublishingCredentials.gitHubPassword)
+    enableGitHub.set(xdkPublishingCredentials.enableGitHub)
+    enablePluginPortal.set(xdkPublishingCredentials.enablePluginPortal)
+    gradlePublishKey.set(xdkPublishingCredentials.gradlePublishKey)
+    gradlePublishSecret.set(xdkPublishingCredentials.gradlePublishSecret)
+}
+
+// Special handling for remote publication listing - use GitHub API integration instead of delegation
+val listRemotePublications by tasks.registering(ListRemotePublicationsTask::class) {
+    group = PUBLISH_TASK_GROUP
+    description = "List remote GitHub and Plugin Portal publications using API integration"
+    dependsOn(validateCredentials)
+
+    // Use centralized credential management
+    gitHubToken.set(xdkPublishingCredentials.gitHubPassword)
+    enablePluginPortal.set(xdkPublishingCredentials.enablePluginPortal)
+    gradlePublishKey.set(xdkPublishingCredentials.gradlePublishKey)
+    pluginId.set(getXdkProperty("org.xtclang.plugin.id"))
+}
+
+// Handle deleteRemotePublications with delegation
+val deleteRemotePublications by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "Task that aggregates 'deleteRemotePublications' tasks for builds with publications."
+    includedBuildsWithPublications.forEach { it ->
+        dependsOn(it.task(":deleteRemotePublications"))
     }
 }

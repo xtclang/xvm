@@ -73,24 +73,13 @@ runs:
         echo "branch-tag=$BRANCH_TAG" >> $GITHUB_OUTPUT
         
         # Determine if master branch (check override first)
-        if [ -n "${{ inputs.is-master }}" ]; then
-          IS_MASTER="${{ inputs.is-master }}"
-        else
-          IS_MASTER=${{ github.ref == 'refs/heads/master' }}
-        fi
+        IS_MASTER=$( [ -n "${{ inputs.is-master }}" ] && echo "${{ inputs.is-master }}" || echo "${{ github.ref == 'refs/heads/master' }}" )
         echo "  👑 Is master: $IS_MASTER"
         echo "is-master=$IS_MASTER" >> $GITHUB_OUTPUT
         
         # Generate base tags (without image prefix)
-        if [ "$IS_MASTER" = "true" ]; then
-          # Master branch gets: latest, version, commit
-          BASE_TAGS='["latest", "'$VERSION'", "'${{ inputs.commit }}'"]'
-          LATEST_TAG="latest"
-        else
-          # Feature branches get: branch-name, commit  
-          BASE_TAGS='["'$BRANCH_TAG'", "'${{ inputs.commit }}'"]'
-          LATEST_TAG="$BRANCH_TAG"
-        fi
+        BASE_TAGS=$( [ "$IS_MASTER" = "true" ] && echo '["latest", "'$VERSION'", "'${{ inputs.commit }}'"]' || echo '["'$BRANCH_TAG'", "'${{ inputs.commit }}'"]' )
+        LATEST_TAG=$( [ "$IS_MASTER" = "true" ] && echo "latest" || echo "$BRANCH_TAG" )
         
         echo "  🏷️ Base tags: $BASE_TAGS"
         echo "tags-json=$BASE_TAGS" >> $GITHUB_OUTPUT
