@@ -42,10 +42,10 @@ module test0.examples.org {
         return i + j;
     }
     (Int, Int) call2(Int i) {
-        return i+1, i+2;
+        return i*2, i-2;
     }
     (Int?, Int) call2N(Int i) {
-        return Null, i+2;
+        return Null, i/2;
     }
     conditional Int call3(Int i) {
         if (i > -1) {
