@@ -12,7 +12,7 @@ inputs:
   gradle-version:
     description: 'Gradle version to use'
     required: false
-    default: '8.14.2'
+    default: '9.0.0'
   cache-read-only:
     description: 'Set Gradle cache to read-only mode'
     required: false

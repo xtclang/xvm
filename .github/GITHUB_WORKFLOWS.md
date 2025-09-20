@@ -74,7 +74,7 @@ Key environment variables and settings:
 # Build Configuration
 gradle_options: "-Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false -Dorg.gradle.jvmargs='-Xmx4g -XX:+UseG1GC' --stacktrace --warning-mode=all --console=plain"
 java_distribution: temurin
-gradle_version: 8.14.2
+gradle_version: 9.0.0
 
 # Project Configuration  
 ORG_GRADLE_PROJECT_includeBuildManualTests: true

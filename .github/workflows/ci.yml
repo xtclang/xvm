@@ -91,7 +91,7 @@ env:
   MAVEN_CENTRAL_USERNAME: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
   MAVEN_CENTRAL_PASSWORD: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
 
-  gradle_options: "-Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false -Dorg.gradle.jvmargs='-Xmx4g -XX:+UseG1GC -XX:ParallelGCThreads=2 -XX:ConcGCThreads=1 -XX:+UseStringDeduplication' --stacktrace --warning-mode=all --console=plain ${{ github.event.inputs.extra-gradle-options }}"
+  gradle_options: "-Dorg.gradle.vfs.verbose=false -Dorg.gradle.jvmargs='-Dfile.encoding=UTF-8 -Xmx4g -XX:+UseG1GC -XX:ParallelGCThreads=2 -XX:ConcGCThreads=1 -XX:+UseStringDeduplication' --stacktrace --console=plain ${{ github.event.inputs.extra-gradle-options }}"
 
   # Optional flags to control manual tests
   run_manual_tests: ${{ github.event.inputs.test != 'false' }}
@@ -99,7 +99,7 @@ env:
 
   # java_version will be set dynamically from xdk.properties in each job
   java_distribution: temurin
-  gradle_version: 8.14.2
+  gradle_version: 9.0.0
 
   # Docker build variables - computed once, used everywhere
   GH_COMMIT: ${{ github.sha }}
