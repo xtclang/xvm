@@ -95,34 +95,6 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
     }
 }
 
-/**
- * Add resolution logic for the GitHub maven package repository. We use that to keep
- * SNAPSHOT publications after every commit to master (optionally to another branch, if
- * you modify the build action accordingly). Will return false and do nothing if we
- * cannot resolve credentials from GITHUB_TOKEN or the xtclang properties from any
- * property file.
- */
-fun PublishingExtension.mavenGitHubPackages(project: Project): Boolean = project.run {
-    val gitHubToken = project.getXtclangGitHubMavenPackageRepositoryToken()
-    if (gitHubToken.isEmpty()) {
-        logger.warn("[build-logic] WARNING: No GitHub token found, either in config or environment. publishRemote won't work.")
-        return false
-    }
-
-    repositories {
-        maven {
-            name = "GitHub"
-            url = uri("https://maven.pkg.github.com/xtclang/xvm")
-            credentials {
-                username = "xtclang-bot"
-                password = gitHubToken
-            }
-            logger.info("[build-logic] Configured '$name' package repository for project '${project.name}'.")
-        }
-    }
-
-    return true
-}
 
 // TODO: Add sonatype repository for mavenCentral once we have recovered the credentials (tokens) and
 //  have manually verified that we can publish artifacts there.

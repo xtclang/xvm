@@ -1,12 +1,9 @@
-import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.invocation.Gradle
-import org.gradle.api.logging.LogLevel
-import org.gradle.api.logging.LogLevel.LIFECYCLE
 import java.io.File
 
 abstract class XdkProjectBuildLogic(protected val project: Project) {
@@ -89,8 +86,6 @@ val Project.compositeRootBuildDirectory: DirectoryProperty get() = gradle.rootLa
 
 val Project.userInitScriptDirectory: File get() = File(gradle.gradleUserHomeDir, "init.d")
 
-val Project.buildRepoDirectory get() = compositeRootBuildDirectory.dir("repo")
-
 val Project.xdkBuildLogic: XdkBuildLogic get() = XdkBuildLogic.instanceFor(this)
 
 
@@ -100,8 +95,6 @@ val Project.xdkIconFile: String get() = "$compositeRootProjectDirectory/javatool
 
 // TODO: A little bit hacky, for same reason as above; Better to add the resource directory as a source set?
 val Project.xdkImplicitsPath: String get() = "$compositeRootProjectDirectory/lib_ecstasy/src/main/resources/implicit.x"
-
-val Project.xdkImplicitsFile: File get() = File(xdkImplicitsPath)
 
 fun Project.isXdkPropertySet(key: String): Boolean {
     return xdkBuildLogic.props().has(key)
@@ -146,14 +139,6 @@ fun Task.considerNeverUpToDate() {
     outputs.cacheIf { false }
     outputs.upToDateWhen { false }
     logger.info("[build-logic] WARNING: Task '${project.name}:$name' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle...")
-}
-
-/**
- * Extension method to flag a task as always up to date. Declaring no outputs will
- * cause a task to rerun, even an extended task.
- */
-fun Task.considerAlwaqysUpToDate() {
-    outputs.upToDateWhen { true }
 }
 
 /**
