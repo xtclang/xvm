@@ -464,7 +464,7 @@ abstract class GitTaggingTask : DefaultTask() {
         
         logger.lifecycle("[git] Successfully created and pushed tag: $localTag")
     }
-}
+}- 22
 
 // Task registration
 val resolveGitHubPackages by tasks.registering(ResolveGitHubPackagesTask::class) {
