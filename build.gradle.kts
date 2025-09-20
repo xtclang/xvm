@@ -64,28 +64,12 @@ val unpublishGradlePlugin by tasks.registering(UnpublishGradlePluginTask::class)
 
 val publishRemote by tasks.registering {
     group = PUBLISH_TASK_GROUP
-    description = "Publish XDK and plugin artifacts to enabled publishing repositories (GitHub Packages, Gradle Plugin Portal)."
+    description = "Publish XDK and plugin artifacts to remote repositories (GitHub Packages, Gradle Plugin Portal)."
     dependsOn(validateCredentials)
-
-    // Set up dependencies and logging using centralized credentials
-    if (xdkPublishingCredentials.enableGitHub.get()) {
-        dependsOn(
-            plugin.task(":publishAllPublicationsToGitHubRepository"),
-            xdk.task(":publishMavenPublicationToGitHubRepository")
-        )
-        logger.lifecycle("Publishing to GitHub Packages is enabled")
-    } else {
-        logger.lifecycle("Publishing to GitHub Packages is disabled (use -Porg.xtclang.publish.GitHub=true to enable)")
-    }
-
-    if (xdkPublishingCredentials.enablePluginPortal.get()) {
-        dependsOn(plugin.task(":publishPlugins"))
-        logger.lifecycle("Publishing to Gradle Plugin Portal is enabled")
-        logger.lifecycle("Note: Plugin Portal requires release versions (not SNAPSHOT) and gradle.publish.key/secret credentials")
-        logger.lifecycle("Enable credentials in ~/.gradle/gradle.properties before publishing")
-    } else {
-        logger.lifecycle("Publishing to Gradle Plugin Portal is disabled (use -Porg.xtclang.publish.gradlePluginPortal=true to enable)")
-    }
+    dependsOn(
+        plugin.task(":publishAllPublicationsToGitHubRepository"),
+        xdk.task(":publishMavenPublicationToGitHubRepository")
+    )
 }
 
 val publishLocal by tasks.registering {

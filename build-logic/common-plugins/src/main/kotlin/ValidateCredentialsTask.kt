@@ -60,11 +60,11 @@ abstract class ValidateCredentialsTask : DefaultTask() {
                 """.trimMargin())
             }
 
-            logger.lifecycle("✅ GitHub credentials validated successfully")
-            logger.lifecycle("   Username: $username")
-            logger.lifecycle("   Token: Available (${password.take(8)}...)")
+            logger.info("✅ GitHub credentials validated successfully")
+            logger.info("   Username: $username")
+            logger.info("   Token: Available (${password.take(8)}...)")
         } else {
-            logger.lifecycle("ℹ️  GitHub publishing is disabled - skipping credential validation")
+            logger.info("ℹ️  GitHub publishing is disabled - skipping credential validation")
         }
 
         // Validate Plugin Portal credentials (only if enabled)
@@ -97,9 +97,9 @@ abstract class ValidateCredentialsTask : DefaultTask() {
                 """.trimMargin())
             }
 
-            logger.lifecycle("✅ Plugin Portal credentials validated successfully")
-            logger.lifecycle("   API Key: Available (${portalKey.take(8)}...)")
-            logger.lifecycle("   Secret: Available")
+            logger.info("✅ Plugin Portal credentials validated successfully")
+            logger.info("   API Key: Available (${portalKey.take(8)}...)")
+            logger.info("   Secret: Available")
         }
     }
 }

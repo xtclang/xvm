@@ -39,7 +39,7 @@ abstract class UnpublishGradlePluginTask : DefaultTask() {
 
         if (targetVersion == null) {
             logger.lifecycle("❌ Version '$version' not found on Gradle Plugin Portal")
-            logger.lifecycle("   Available versions: ${versions.map { it.version }.joinToString(", ")}")
+            logger.lifecycle("   Available versions: ${versions.joinToString(", ") { it.version }}")
             logger.lifecycle("   Portal URL: https://plugins.gradle.org/plugin/$pluginIdValue")
             return
         }

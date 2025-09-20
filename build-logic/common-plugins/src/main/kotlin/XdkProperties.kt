@@ -57,8 +57,8 @@ class XdkPropertiesImpl(project: Project, private val providers: ProviderFactory
 
     init {
         this.properties = resolve()
-        toString().lines().forEach { logger.debug("[build-logic] $it") }
-        logger.debug("[build-logic] Resolved ${properties.size} properties for project.")
+        toString().lines().forEach { logger.debug("[properties] $it") }
+        logger.debug("[properties] Resolved ${properties.size} properties for project.")
     }
 
     /**
@@ -80,14 +80,14 @@ class XdkPropertiesImpl(project: Project, private val providers: ProviderFactory
      * build breaks.
      */
     override fun get(key: String, defaultValue: String?): String {
-        logger.debug("[build-logic] get($key) invoked (props: ${System.identityHashCode(this)})")
+        logger.debug("[properties] get($key) invoked (props: ${System.identityHashCode(this)})")
         if (!key.startsWith("org.xtclang")) {
             // TODO: Remove this artificial limitation.
             throw GradleException("[properties] ERROR: XdkProperties are currently expected to start with org.xtclang. Remove this artificial limitation.")
         }
         if (!has(key)) {
             return defaultValue?.also {
-                logger.debug("[build-logic] XdkProperties; resolved property '$key' to its default value.")
+                logger.debug("[properties] XdkProperties; resolved property '$key' to its default value.")
             } ?: throw GradleException("[properties] ERROR: XdkProperty '$key' has no value, and no default was given.")
         }
 
@@ -95,24 +95,24 @@ class XdkPropertiesImpl(project: Project, private val providers: ProviderFactory
         val envKey = toSystemEnvKey(key)
         val envProvider = providers.environmentVariable(envKey)
         if (envProvider.isPresent) {
-            logger.debug("[build-logic] XdkProperties; resolved System ENV property '$key' (${envKey}).")
+            logger.debug("[properties] XdkProperties; resolved System ENV property '$key' (${envKey}).")
             return envProvider.get()
         }
 
         // Check Gradle project properties (from -P command line args)
         val projectPropValue = project.findProperty(key)
         if (projectPropValue != null) {
-            logger.debug("[build-logic] XdkProperties; resolved Gradle project property '$key' (from -P flag).")
+            logger.debug("[properties] XdkProperties; resolved Gradle project property '$key' (from -P flag).")
             return projectPropValue.toString()
         }
 
         val sysPropProvider = providers.systemProperty(key)
         if (sysPropProvider.isPresent) {
-            logger.debug("[build-logic] XdkProperties; resolved Java System property '$key'.")
+            logger.debug("[properties] XdkProperties; resolved Java System property '$key'.")
             return sysPropProvider.get()
         }
 
-        logger.debug("[build-logic] XdkProperties; resolved property '$key' from properties table.")
+        logger.debug("[properties] XdkProperties; resolved property '$key' from properties table.")
         return properties[key]!!.toString()
     }
 
@@ -154,7 +154,7 @@ class XdkPropertiesImpl(project: Project, private val providers: ProviderFactory
             resolveExternalDirs().forEach { mergeFromDir(ext, it) }
             ext.keys.map { it.toString() }.forEach(secrets::add)
         }
-        logger.debug("[build-logic] Internals; loaded properties (${all.size} internal, ${ext.size} external).")
+        logger.info("[properties] Internals; loaded properties (${all.size} internal, ${ext.size} external).")
         return merge(all, ext)
     }
 
@@ -194,14 +194,14 @@ class XdkPropertiesImpl(project: Project, private val providers: ProviderFactory
      * level, and should not be reset.
      */
     private fun merge(to: Properties, from: Properties): Properties {
-        from.forEach { key, value ->
+        from.forEach { (key, value) ->
             val old = to.putIfAbsent(key, value)
             if (old == null) {
-                logger.debug("[build-logic] Defined new property: '$key'")
+                logger.debug("[properties] Defined new property: '$key'")
             } else {
-                logger.debug("[build-logic] Property '$key' already defined, not overwriting.")
+                logger.debug("[properties] Property '$key' already defined, not overwriting.")
                 if (old != value) {
-                    logger.debug("[build-logic]     WARNING: Property '$key' has different values at different levels.")
+                    logger.debug("[properties]     WARNING: Property '$key' has different values at different levels.")
                 }
             }
         }
@@ -218,18 +218,8 @@ class XdkPropertiesImpl(project: Project, private val providers: ProviderFactory
         for (f in files) {
             assert(f.exists() && f.isFile)
             FileInputStream(f).use { local.load(it) }
-            logger.debug("[build-logic] Loaded ${local.size} properties from ${f.absolutePath}")
+            logger.info("[properties] Loaded ${local.size} properties from ${f.absolutePath}")
         }
         return merge(to, local)
     }
-}
-
-fun Project.getXtclangGitHubMavenPackageRepositoryToken(): String {
-    val fallbackToken = providers.environmentVariable("GITHUB_TOKEN").getOrElse("")
-    return getXdkProperty("org.xtclang.repo.github.token", fallbackToken)
-}
-
-fun Project.getXtclangGitHubMavenPackageRepositoryUser(): String {
-    val fallbackUser = "xtclang-workflows"  // Default fallback
-    return getXdkProperty("org.xtclang.repo.github.user", fallbackUser)
 }

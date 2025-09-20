@@ -77,7 +77,7 @@ abstract class ResolveGitInfoTask : DefaultTask() {
                 commandLine("git", "diff", "--quiet")
             }
             false // if git diff --quiet succeeds, working directory is clean
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             true // if git diff --quiet fails, working directory is dirty
         }
         
