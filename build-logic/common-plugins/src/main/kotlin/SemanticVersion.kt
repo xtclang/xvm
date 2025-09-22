@@ -1,18 +1,28 @@
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.serializer
 import kotlin.IllegalArgumentException
 
-@Serializable
 data class SemanticVersion(val artifactGroup: String, val artifactId: String, val artifactVersion: String) {
 
     companion object {
         fun fromJson(json: String): SemanticVersion {
-            return Json.decodeFromString(serializer(), json)
+            // Parse simple JSON manually: {"artifactGroup":"group","artifactId":"id","artifactVersion":"version"}
+            val trimmed = json.trim().removeSurrounding("{", "}")
+            val parts = mutableMapOf<String, String>()
+
+            // Simple JSON parsing for the expected format
+            val keyValueRegex = """"([^"]+)"\s*:\s*"([^"]*)"""".toRegex()
+            keyValueRegex.findAll(trimmed).forEach { match ->
+                parts[match.groupValues[1]] = match.groupValues[2]
+            }
+
+            return SemanticVersion(
+                artifactGroup = parts["artifactGroup"] ?: throw IllegalArgumentException("Missing artifactGroup in JSON"),
+                artifactId = parts["artifactId"] ?: throw IllegalArgumentException("Missing artifactId in JSON"),
+                artifactVersion = parts["artifactVersion"] ?: throw IllegalArgumentException("Missing artifactVersion in JSON")
+            )
         }
 
         fun toJson(semanticVersion: SemanticVersion): String {
-            return Json.encodeToString(serializer(), semanticVersion)
+            return """{"artifactGroup":"${semanticVersion.artifactGroup}","artifactId":"${semanticVersion.artifactId}","artifactVersion":"${semanticVersion.artifactVersion}"}"""
         }
     }
 
