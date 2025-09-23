@@ -1,5 +1,6 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
@@ -386,5 +387,109 @@ abstract class GitTaggingTask : DefaultTask() {
         }
 
         logger.lifecycle("[git] Successfully created and pushed tag: $localTag")
+    }
+}
+
+abstract class ResolveGitInfoTask : DefaultTask() {
+    @get:Inject
+    abstract val execOps: ExecOperations
+
+    @get:Input
+    abstract val branchEnv: Property<String>
+
+    @get:Input
+    abstract val commitEnv: Property<String>
+
+    @get:Input
+    abstract val version: Property<String>
+
+    @get:Input
+    abstract val ciFlag: Property<String>
+
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
+
+    @TaskAction
+    fun resolveGitInfo() {
+        logger.info(">>> RESOLVING GIT INFORMATION")
+
+        // Always get current git state
+        val branch = branchEnv.orNull?.takeIf { it.isNotEmpty() } ?: run {
+            try {
+                val output = ByteArrayOutputStream()
+                execOps.exec {
+                    commandLine("git", "rev-parse", "--abbrev-ref", "HEAD")
+                    standardOutput = output
+                }
+                output.toString().trim().ifBlank { "master" }
+            } catch (e: Exception) {
+                logger.warn("Could not get git branch: ${e.message}")
+                "master"
+            }
+        }
+
+        val commit = commitEnv.orNull?.takeIf { it.isNotEmpty() } ?: run {
+            try {
+                val output = ByteArrayOutputStream()
+                execOps.exec {
+                    commandLine("git", "rev-parse", "HEAD")
+                    standardOutput = output
+                }
+                output.toString().trim()
+            } catch (e: Exception) {
+                logger.warn("Could not get git commit: ${e.message}")
+                "unknown"
+            }
+        }
+
+        // Check if git working directory is dirty
+        val isDirty = try {
+            execOps.exec {
+                commandLine("git", "diff", "--quiet")
+            }
+            false // if git diff --quiet succeeds, working directory is clean
+        } catch (_: Exception) {
+            true // if git diff --quiet fails, working directory is dirty
+        }
+
+        // Generate new git info content
+        val gitInfo = mapOf(
+            // Core git info
+            "git.branch" to branch,
+            "git.commit" to commit,
+            "git.commit.id" to commit, // alias for compatibility
+            "git.dirty" to isDirty.toString(),
+            "git.status" to if (isDirty) "detached-head" else "clean",
+
+            // Build info
+            "git.build.version" to version.get(),
+            "version" to version.get(),
+
+            // Docker-specific derived info
+            "docker.baseImage" to "ghcr.io/xtclang/xvm",
+            "docker.isMaster" to (branch == "master").toString(),
+            "docker.tagPrefix" to if (branch == "master") "latest" else branch.replace(Regex("[^a-zA-Z0-9._-]"), "_"),
+            "docker.isCI" to (ciFlag.get() == "true").toString()
+        )
+
+        val newContent = gitInfo.map { "${it.key}=${it.value}" }.joinToString("\n")
+        val outputFile = outputFile.get().asFile
+
+        // Check if content has actually changed
+        if (outputFile.exists()) {
+            val existingContent = outputFile.readText().trim()
+            if (existingContent == newContent) {
+                logger.info("Git info unchanged: branch=$branch, commit=${commit.take(8)}, dirty=$isDirty")
+                return
+            }
+        }
+
+        // Content is different or file doesn't exist, write new content
+        outputFile.apply {
+            parentFile.mkdirs()
+            writeText(newContent)
+        }
+
+        logger.info("Git info updated: branch=$branch, commit=${commit.take(8)}, dirty=$isDirty")
     }
 }

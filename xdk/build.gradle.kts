@@ -497,22 +497,21 @@ distributions {
     }
 }
 
-// Ensure distribution tasks depend on script preparation
+// Ensure distribution tasks depend on script preparation AND javatools artifacts
 tasks.installDist {
     dependsOn(prepareDistributionScripts)
+    // Force dependency on javatools artifacts which triggers git info resolution
+    dependsOn(configurations.xdkJavaTools)
 }
 
 tasks.distTar {
-    dependsOn(prepareDistributionScripts) 
+    dependsOn(prepareDistributionScripts)
+    dependsOn(configurations.xdkJavaTools)
 }
 
 tasks.distZip {
     dependsOn(prepareDistributionScripts)
-    
-    // Declare git and build info as inputs to force rebuilds when they change
-    val buildInfoFile = compositeRootProjectDirectory.file("javatools/build/resources/main/build-info.properties")
-    val gitPropsFile = compositeRootProjectDirectory.file("javatools/build/resources/main/git.properties")
-    inputs.files(buildInfoFile, gitPropsFile).withPropertyName("buildMetadata").optional()
+    dependsOn(configurations.xdkJavaTools)
 }
 
 // Let the Distribution plugin handle dependencies properly through the standard lifecycle

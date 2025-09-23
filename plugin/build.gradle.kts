@@ -279,10 +279,7 @@ tasks.withType<Jar>().configureEach {
             from(jarFiles)
         }
         manifest {
-            // Declare git and build info as inputs to force rebuilds when they change
-            val buildInfoFile = compositeRootProjectDirectory.file("javatools/build/resources/main/build-info.properties")
-            val gitPropsFile = compositeRootProjectDirectory.file("javatools/build/resources/main/git.properties")
-            inputs.files(buildInfoFile, gitPropsFile).withPropertyName("buildMetadata").optional()
+            // Dependency on javatools handled through xdkJavaToolsJarConsumer configuration
             
             val baseAttributes = mapOf(
                 "Manifest-Version" to "1.0",
