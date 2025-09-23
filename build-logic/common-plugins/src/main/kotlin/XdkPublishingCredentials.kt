@@ -8,7 +8,7 @@ import javax.inject.Inject
  * publishing credentials from properties and environment variables.
  */
 abstract class XdkPublishingCredentials @Inject constructor(
-    private val project: Project,
+    //private val project: Project,
     private val providers: ProviderFactory
 ) {
     val gitHubUsername: Provider<String> =

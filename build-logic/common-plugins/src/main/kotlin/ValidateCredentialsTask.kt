@@ -11,16 +11,16 @@ import org.gradle.api.tasks.TaskAction
  */
 abstract class ValidateCredentialsTask : DefaultTask() {
     @get:Input
-    abstract val gitHubUsername: Property<String>
-
-    @get:Input
-    abstract val gitHubPassword: Property<String>
-
-    @get:Input
     abstract val enableGitHub: Property<Boolean>
 
     @get:Input
     abstract val enablePluginPortal: Property<Boolean>
+
+    @get:Input
+    abstract val gitHubUsername: Property<String>
+
+    @get:Input
+    abstract val gitHubPassword: Property<String>
 
     @get:Input
     @get:Optional

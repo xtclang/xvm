@@ -3,11 +3,6 @@
  * Provides configuration cache compatible Docker build tasks.
  */
 
-
-// Import task classes
-// (Tasks are defined in separate files to avoid non-static inner class issues)
-
-// Make sure this plugin depends on the git plugin
 plugins.withId("org.xtclang.build.git") {
     val jdkVersion = project.extra["jdkVersion"] as Int
     
@@ -19,14 +14,49 @@ plugins.withId("org.xtclang.build.git") {
         architectureCheck: String? = null
     ) = tasks.register(taskName, DockerTask::class) {
         group = "docker"
-        description = "Build Docker image for ${platforms.joinToString("/")} (use DIST_ZIP_URL env var for snapshot builds, or GH_COMMIT/GH_BRANCH for source builds)"
+        description = "Build Docker image for ${platforms.joinToString("/")} using XDK distribution"
 
+        // Always depend on the XDK distribution ZIP
         dependsOn(tasks.named("resolveGitInfo"))
+
+        // Try to depend on xdk:distZip if it exists (in composite builds)
+        try {
+            val xdkDistZipTask = project.tasks.findByPath(":xdk:distZip")
+                ?: project.rootProject.tasks.findByPath(":xdk:distZip")
+            if (xdkDistZipTask != null) {
+                dependsOn(xdkDistZipTask)
+                logger.info("Docker task $taskName will depend on xdk:distZip")
+            }
+        } catch (e: Exception) {
+            logger.debug("Could not find xdk:distZip task: ${e.message}")
+        }
 
         gitInfoFile.set(tasks.named<ResolveGitInfoTask>("resolveGitInfo").flatMap { it.outputFile })
         this.platforms.set(platforms)
         this.action.set(action)
-        distZipUrl.set(providers.environmentVariable("DIST_ZIP_URL"))
+
+        // Set distZipUrl from environment variable or default to finding the built distribution
+        distZipUrl.set(providers.environmentVariable("DIST_ZIP_URL").orElse(
+            providers.provider {
+                // Look for the XDK distribution in the standard location
+                val xdkDistDir = project.rootProject.layout.buildDirectory.dir("distributions").get().asFile
+                val distZips = xdkDistDir.listFiles { _, name -> name.startsWith("xdk-") && name.endsWith(".zip") }
+                if (distZips != null && distZips.isNotEmpty()) {
+                    distZips.first().absolutePath
+                } else {
+                    // Fallback - try to find in xdk subproject
+                    val xdkProject = project.rootProject.subprojects.find { it.name == "xdk" }
+                    if (xdkProject != null) {
+                        val xdkDistZips = xdkProject.layout.buildDirectory.dir("distributions").get().asFile
+                            .listFiles { _, name -> name.startsWith("xdk-") && name.endsWith(".zip") }
+                        xdkDistZips?.firstOrNull()?.absolutePath ?: ""
+                    } else {
+                        ""
+                    }
+                }
+            }
+        ))
+
         this.jdkVersion.set(jdkVersion)
         this.architectureCheck.set(architectureCheck ?: "")
 
@@ -66,5 +96,3 @@ plugins.withId("org.xtclang.build.git") {
         packageName.set("xvm")
     }
 }
-
-

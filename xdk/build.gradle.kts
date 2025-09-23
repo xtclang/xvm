@@ -174,8 +174,6 @@ val prepareDistributionScripts by tasks.registering(Copy::class) {
     into(layout.buildDirectory.dir("distribution-scripts"))
 }
 
-
-
 /**
  * Propagate the "version" part of the semanticVersion to all XTC compilers in all subprojects (the XDK modules
  * will get stamped with the Gradle project version, as defined in VERSION in the repo root).
@@ -279,48 +277,7 @@ publishing {
 
 // Publication listing tasks (called by root aggregator) - now uses centralized implementation from build-logic
 
-abstract class ListRemotePublicationsTask : DefaultTask() {
-    @get:Input
-    abstract val projectName: Property<String>
-    
-    
-    @TaskAction
-    fun listPublications() {
-        logger.lifecycle("[${projectName.get()}] Project would publish to GitHub packages as org.xtclang:${projectName.get()}")
-        logger.lifecycle("[${projectName.get()}] Use root-level './gradlew listRemotePublications' for actual GitHub API queries")
-    }
-}
 
-abstract class DeleteLocalPublicationsTask : DefaultTask() {
-    @get:Input
-    abstract val projectName: Property<String>
-    
-    
-    @TaskAction
-    fun deletePublications() {
-        val userHome = System.getProperty("user.home")
-        val repoDir = File(userHome, ".m2/repository/org/xtclang/${projectName.get()}")
-        
-        if (!repoDir.exists()) {
-            logger.lifecycle("[${projectName.get()}] No local publications found to delete")
-            return
-        }
-        
-        repoDir.deleteRecursively()
-        logger.lifecycle("[${projectName.get()}] Deleted local publications: ${repoDir.absolutePath}")
-    }
-}
-
-abstract class DeleteRemotePublicationsTask : DefaultTask() {
-    @get:Input
-    abstract val projectName: Property<String>
-    
-    
-    @TaskAction
-    fun deletePublications() {
-        logger.lifecycle("[${projectName.get()}] Use GitHub packages management to delete remote publications")
-    }
-}
 
 val listLocalPublications by tasks.registering(ListLocalPublicationsTask::class) {
     group = PUBLISH_TASK_GROUP

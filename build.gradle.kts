@@ -161,7 +161,7 @@ val validateCredentials by tasks.registering(ValidateCredentialsTask::class) {
 }
 
 // Special handling for remote publication listing - use GitHub API integration instead of delegation
-val listRemotePublications by tasks.registering(ListRemotePublicationsTask::class) {
+val listRemotePublications by tasks.registering(ListRemotePublicationsFromApiTask::class) {
     group = PUBLISH_TASK_GROUP
     description = "List remote GitHub and Plugin Portal publications using API integration"
     dependsOn(validateCredentials)

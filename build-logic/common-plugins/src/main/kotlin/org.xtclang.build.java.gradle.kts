@@ -141,11 +141,11 @@ tasks.withType<Test>().configureEach {
     }
 }
 
-
 if (enablePreview) {
     logger.info("[java] WARNING: Project has Java preview features enabled.")
 }
 if (enableNativeAccess) {
     logger.info("[java] WARNING: Project has native access enabled.")
 }
+
 logger.info("[java] Default JVM args will be generated: $defaultJvmArgs")

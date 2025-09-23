@@ -1,1 +1,0 @@
-# Test simplified git tracking approach

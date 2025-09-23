@@ -103,7 +103,6 @@ fun Task.getXdkProperty(key: String, defaultValue: String? = null): String {
     return registerXdkPropertyInput(this, key, project.getXdkProperty(key, defaultValue))
 }
 
-
 fun Project.isSnapshot(): Boolean {
     return project.version.toString().endsWith("-SNAPSHOT")
 }

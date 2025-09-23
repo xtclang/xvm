@@ -1,36 +1,19 @@
 # syntax=docker/dockerfile:1
 #
-# XDK Docker Container - Native multi-platform support
+# XDK Docker Container - Simplified version using pre-built distribution
 # See README.md for complete build and usage instructions
 #
 
-# Build arguments (JAVA_VERSION passed from CI/Gradle build)
+# Build arguments
 ARG JAVA_VERSION=MISSING
 ARG GH_BRANCH=master
 ARG GH_COMMIT
 ARG TARGETARCH
 ARG TARGETOS
 ARG BUILD_DATE
-ARG VCS_REF
-ARG NPROC=4
 ARG DIST_ZIP_URL
 
-# *** STAGE 1: Source stage (clone repository once and reuse across stages) ***
-FROM alpine/git:latest AS source-cloner
-
-ARG GH_BRANCH
-ARG GH_COMMIT
-ARG DIST_ZIP_URL
-WORKDIR /source
-COPY scripts/clone-xdk.sh /clone-xdk.sh
-# Cache invalidation: include branch, commit, and dist URL to invalidate cache when any change
-RUN --mount=type=cache,target=/git-cache,sharing=shared \
-    echo "Cache key: ${GH_BRANCH}:${GH_COMMIT}:${DIST_ZIP_URL}" && \
-    apk add --no-cache bash curl && \
-    /clone-xdk.sh "${GH_BRANCH}" "${GH_COMMIT}"
-
-# *** STAGE 4 (Dual-Mode Builder: Use pre-built artifacts from CI or build from source)
-ARG JAVA_VERSION=MISSING
+# *** STAGE 1: Java version validation ***
 FROM alpine:latest AS java-version-validator
 ARG JAVA_VERSION=MISSING
 RUN if [ "$JAVA_VERSION" = "MISSING" ]; then \
@@ -39,57 +22,42 @@ RUN if [ "$JAVA_VERSION" = "MISSING" ]; then \
         exit 1; \
     fi
 
-FROM bellsoft/liberica-openjdk-alpine:${JAVA_VERSION} AS builder
+# *** STAGE 2: Distribution extractor ***
+FROM alpine:latest AS distribution-extractor
+ARG DIST_ZIP_URL
 ARG GH_BRANCH
 ARG GH_COMMIT
+ARG BUILD_DATE
 ARG TARGETARCH
 ARG TARGETOS
-ARG BUILD_DATE
-ARG VCS_REF
-ARG NPROC
-ARG DIST_ZIP_URL
 
-ENV JAVA_OPTS="-XX:+UseContainerSupport" \
-    GRADLE_USER_HOME="/root/.gradle" \
-    GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=${NPROC} -Dorg.gradle.vfs.watch=false -Dorg.gradle.configureondemand=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dkotlin.compiler.execution.strategy=in-process -Dorg.gradle.project.git.properties.enabled=false" \
-    NPROC=${NPROC} \
-    XDK_INSTALL_DIR="/workspace/xdk/build/install"
+# Install required tools
+RUN apk add --no-cache unzip curl file
 
-RUN apk add --no-cache unzip curl git bash file
 WORKDIR /workspace
 
-# Copy source and build script
-COPY --from=source-cloner /source .
-COPY --from=source-cloner /tmp/git-info.env /tmp/git-info.env
-COPY scripts/build-xdk.sh /build-xdk.sh
-# Copy CI distribution if it exists (optional - for CI builds)  
-COPY ci-dist.zi[p] /workspace/
+# Copy the distribution ZIP from build context and extraction script
+COPY xdk-dist.zip /workspace/
+COPY scripts/extract-distribution.sh /extract-distribution.sh
+RUN chmod +x /extract-distribution.sh
 
-# Build XDK - handles both pre-built artifacts and source build modes
-RUN --mount=type=cache,target=/root/.gradle/caches,sharing=locked \
-    --mount=type=cache,target=/root/.gradle/wrapper,sharing=locked \
-    --mount=type=cache,target=/root/.gradle/build-cache,sharing=locked \
-    chmod +x /build-xdk.sh && \
-    /build-xdk.sh
+# Extract the distribution
+RUN /extract-distribution.sh "/workspace/xdk-dist.zip" "${GH_BRANCH}" "${GH_COMMIT}" "${BUILD_DATE}" "${TARGETARCH}" "${TARGETOS}"
 
-# Native launcher build stages removed - we now use script launchers from the distribution
-# This simplifies the build and ensures script/native launcher consistency
-
-# *** STAGE 5 (Final Runtime Image)
+# *** STAGE 3: Final Runtime Image ***
 ARG JAVA_VERSION=MISSING
 FROM bellsoft/liberica-runtime-container:jre-${JAVA_VERSION}-slim-musl
 
 ENV XDK_HOME=/opt/xdk
 ENV PATH="${XDK_HOME}/bin:${PATH}"
 
-# Copy XDK distribution from builder stage
-COPY --from=builder /workspace/xdk/ /opt/xdk/
+# Copy XDK distribution from extractor stage
+COPY --from=distribution-extractor /workspace/xdk/ /opt/xdk/
 
 # Copy Docker test program
 COPY test/DockerTest.x /opt/xdk/test/
 
-# Script launchers are already present from the distribution and should be working
-# No need to overwrite with native launchers - let's test the script launchers!
+# Verify the distribution and test launchers
 RUN echo "✅ Using script launchers from distribution" && \
     chmod +x /opt/xdk/bin/xcc /opt/xdk/bin/xec /opt/xdk/bin/xtc && \
     ls -la /opt/xdk/bin/ && \

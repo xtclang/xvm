@@ -3,13 +3,70 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
+import java.io.File
 import java.net.HttpURLConnection
+
+/**
+ * Task to list local Maven publications for a project.
+ * Centralized implementation to avoid duplication across build scripts.
+ */
+abstract class ListLocalPublicationsTask : DefaultTask() {
+    @get:Input
+    abstract val projectName: Property<String>
+
+    @get:Input
+    abstract val includeZip: Property<Boolean>
+
+    init {
+        // Default to not including zip files (most projects don't need them)
+        includeZip.convention(false)
+    }
+
+    @TaskAction
+    fun listPublications() {
+        val userHome = System.getProperty("user.home")
+        val repoDir = File(userHome, ".m2/repository/org/xtclang/${projectName.get()}")
+
+        if (!repoDir.exists()) {
+            logger.lifecycle("[${projectName.get()}] No local publications found")
+            return
+        }
+
+        logger.lifecycle("[${projectName.get()}] Local Maven publications in ${repoDir.absolutePath}:")
+        repoDir.walkTopDown().forEach { file ->
+            val extensions = mutableListOf("jar", "pom")
+            if (includeZip.get()) {
+                extensions.add("zip")
+            }
+
+            if (file.isFile && file.extension in extensions) {
+                val relativePath = file.relativeTo(repoDir)
+                logger.lifecycle("[${projectName.get()}]   $relativePath")
+            }
+        }
+    }
+}
+
+/**
+ * Simple task to list remote publications for a project.
+ * Provides guidance on using the root-level listRemotePublications task.
+ */
+abstract class ListRemotePublicationsTask : DefaultTask() {
+    @get:Input
+    abstract val projectName: Property<String>
+
+    @TaskAction
+    fun listPublications() {
+        logger.lifecycle("[${projectName.get()}] Project would publish to GitHub packages as org.xtclang:${projectName.get()}")
+        logger.lifecycle("[${projectName.get()}] Use root-level './gradlew listRemotePublications' for actual GitHub API queries")
+    }
+}
 
 /**
  * Task to list remote publications from GitHub Packages and Gradle Plugin Portal.
  * Uses GitHub API and web scraping to fetch version information.
  */
-abstract class ListRemotePublicationsTask : DefaultTask() {
+abstract class ListRemotePublicationsFromApiTask : DefaultTask() {
     @get:Input
     abstract val gitHubToken: Property<String>
 
@@ -381,4 +438,42 @@ abstract class ListRemotePublicationsTask : DefaultTask() {
 
     data class PackageVersion(val name: String, val updatedAt: String)
     data class PluginVersion(val version: String, val status: String)
+}
+
+/**
+ * Task to delete local Maven publications for a project.
+ * Removes the project directory from the local Maven repository.
+ */
+abstract class DeleteLocalPublicationsTask : DefaultTask() {
+    @get:Input
+    abstract val projectName: Property<String>
+
+    @TaskAction
+    fun deletePublications() {
+        val userHome = System.getProperty("user.home")
+        val repoDir = File(userHome, ".m2/repository/org/xtclang/${projectName.get()}")
+
+        if (!repoDir.exists()) {
+            logger.lifecycle("[${projectName.get()}] No local publications found to delete")
+            return
+        }
+
+        repoDir.deleteRecursively()
+        logger.lifecycle("[${projectName.get()}] Deleted local publications: ${repoDir.absolutePath}")
+    }
+}
+
+/**
+ * Task to delete remote GitHub publications for a project.
+ * Currently provides guidance on using GitHub packages management.
+ */
+abstract class DeleteRemotePublicationsTask : DefaultTask() {
+    @get:Input
+    abstract val projectName: Property<String>
+
+    @TaskAction
+    fun deletePublications() {
+        logger.lifecycle("[${projectName.get()}] Use GitHub packages management to delete remote publications")
+        logger.lifecycle("[${projectName.get()}] Or use the root-level deleteGitHubPackages task for bulk operations")
+    }
 }

@@ -1,10 +1,12 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
@@ -409,6 +411,7 @@ abstract class ResolveGitInfoTask : DefaultTask() {
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
 
+
     @TaskAction
     fun resolveGitInfo() {
         logger.info(">>> RESOLVING GIT INFORMATION")
@@ -453,7 +456,7 @@ abstract class ResolveGitInfoTask : DefaultTask() {
         }
 
         // Generate new git info content
-        val gitInfo = mapOf(
+        val gitInfoMap = mapOf(
             // Core git info
             "git.branch" to branch,
             "git.commit" to commit,
@@ -472,7 +475,7 @@ abstract class ResolveGitInfoTask : DefaultTask() {
             "docker.isCI" to (ciFlag.get() == "true").toString()
         )
 
-        val newContent = gitInfo.map { "${it.key}=${it.value}" }.joinToString("\n")
+        val newContent = gitInfoMap.map { "${it.key}=${it.value}" }.joinToString("\n")
         val outputFile = outputFile.get().asFile
 
         // Check if content has actually changed
@@ -491,5 +494,23 @@ abstract class ResolveGitInfoTask : DefaultTask() {
         }
 
         logger.info("Git info updated: branch=$branch, commit=${commit.take(8)}, dirty=$isDirty")
+    }
+}
+
+abstract class ShowGitInfoTask : DefaultTask() {
+    @get:org.gradle.api.tasks.InputFile
+    abstract val gitInfoFile: RegularFileProperty
+
+    @TaskAction
+    fun showGitInfo() {
+        val file = gitInfoFile.get().asFile
+        if (file.exists()) {
+            logger.lifecycle("Current Git Information:")
+            file.readLines().sorted().forEach { line ->
+                logger.lifecycle("  $line")
+            }
+        } else {
+            logger.lifecycle("No git information available")
+        }
     }
 }

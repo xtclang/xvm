@@ -79,45 +79,65 @@ abstract class DockerTask : DefaultTask() {
                 throw GradleException("Cannot build $archCheck on this architecture")
             }
         }
-        
+
         val gitInfo = gitInfoFile.get().asFile
         val config = createDockerConfigFromGitInfo(gitInfo)
         val distZip = distZipUrl.orNull
-        
-        // Log configuration
-        if (distZip != null) {
-            logger.info("Using snapshot distribution: $distZip")
-        } else {
-            logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
+
+        // Ensure we have a distribution ZIP
+        if (distZip.isNullOrEmpty()) {
+            throw GradleException("DIST_ZIP_URL is required but not provided. Run 'xdk:distZip' first or set DIST_ZIP_URL environment variable.")
         }
-        
-        // Compute tags at execution time based on platforms
-        val computedTags = when {
-            platforms.get().size == 1 && platforms.get()[0] == "linux/amd64" -> config.tagsForArch("amd64")
-            platforms.get().size == 1 && platforms.get()[0] == "linux/arm64" -> config.tagsForArch("arm64") 
-            else -> config.multiPlatformTags()
+
+        logger.lifecycle("Using XDK distribution: $distZip")
+
+        // Verify the distribution ZIP exists
+        val distZipFile = File(distZip)
+        if (!distZipFile.exists()) {
+            throw GradleException("Distribution ZIP not found: $distZip")
         }
-        
-        val platformArg = platforms.get().joinToString(",")
-        val cmd = listOf("docker", "buildx", "build", "--platform", platformArg) +
-                  listOf("--progress=${dockerProgress.get()}") +
-                  config.buildArgs(distZip, jdkVersion.get()).flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
-                  config.metadataLabels().flatMap { listOf("--label", "${it.key}=${it.value}") } +
-                  config.cacheArgs(ciMode.get(), userHome.get(), if (platforms.get().size == 1) platforms.get()[0].substringAfter("/") else null) +
-                  computedTags.flatMap { listOf("--tag", "${config.baseImage}:${it}") } +
-                  listOf("--${action.get()}", ".")
-        
-        logger.info("Executing Docker command: ${cmd.joinToString(" ")}")
-        
-        execOperations.exec {
-            commandLine(cmd)
+
+        // Copy the distribution ZIP to the Docker build context with a standard name
+        val dockerDir = File(project.projectDir, "docker")
+        val contextDistZip = File(dockerDir, "xdk-dist.zip")
+
+        logger.info("Copying distribution ZIP to Docker build context...")
+        distZipFile.copyTo(contextDistZip, overwrite = true)
+
+        try {
+            // Compute tags at execution time based on platforms
+            val computedTags = when {
+                platforms.get().size == 1 && platforms.get()[0] == "linux/amd64" -> config.tagsForArch("amd64")
+                platforms.get().size == 1 && platforms.get()[0] == "linux/arm64" -> config.tagsForArch("arm64")
+                else -> config.multiPlatformTags()
+            }
+
+            val platformArg = platforms.get().joinToString(",")
+            val cmd = listOf("docker", "buildx", "build", "--platform", platformArg) +
+                      listOf("--progress=${dockerProgress.get()}") +
+                      config.buildArgs("xdk-dist.zip", jdkVersion.get()).flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
+                      config.metadataLabels().flatMap { listOf("--label", "${it.key}=${it.value}") } +
+                      config.cacheArgs(ciMode.get(), userHome.get(), if (platforms.get().size == 1) platforms.get()[0].substringAfter("/") else null) +
+                      computedTags.flatMap { listOf("--tag", "${config.baseImage}:${it}") } +
+                      listOf("--${action.get()}", ".")
+
+            logger.info("Executing Docker command: ${cmd.joinToString(" ")}")
+
+            execOperations.exec {
+                commandLine(cmd)
+                workingDir(dockerDir)
+            }
+        } finally {
+            // Clean up the copied distribution ZIP
+            if (contextDistZip.exists()) {
+                contextDistZip.delete()
+            }
         }
     }
     
     private fun createDockerConfigFromGitInfo(gitInfoFile: File): DockerConfig {
         val props = java.util.Properties()
         gitInfoFile.inputStream().use { props.load(it) }
-        
         return DockerConfig(
             props.getProperty("version"),
             props.getProperty("git.branch"),
