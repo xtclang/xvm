@@ -1,0 +1,1 @@
+# Test git dependency chain after refactor
