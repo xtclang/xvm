@@ -161,31 +161,7 @@ publishing {
 
 // Publishing tasks are handled by root build.gradle.kts
 
-// Publication listing tasks (called by root aggregator)
-abstract class ListLocalPublicationsTask : DefaultTask() {
-    @get:Input
-    abstract val projectName: Property<String>
-    
-    
-    @TaskAction
-    fun listPublications() {
-        val userHome = System.getProperty("user.home")
-        val repoDir = File(userHome, ".m2/repository/org/xtclang/${projectName.get()}")
-        
-        if (!repoDir.exists()) {
-            logger.lifecycle("[${projectName.get()}] No local publications found")
-            return
-        }
-        
-        logger.lifecycle("[${projectName.get()}] Local Maven publications in ${repoDir.absolutePath}:")
-        repoDir.walkTopDown().forEach { file ->
-            if (file.isFile && (file.extension == "jar" || file.extension == "pom")) {
-                val relativePath = file.relativeTo(repoDir)
-                logger.lifecycle("[${projectName.get()}]   $relativePath")
-            }
-        }
-    }
-}
+// Publication listing tasks (called by root aggregator) - now uses centralized implementation from build-logic
 
 val listLocalPublications by tasks.registering(ListLocalPublicationsTask::class) {
     group = PUBLISH_TASK_GROUP
@@ -196,8 +172,8 @@ val listLocalPublications by tasks.registering(ListLocalPublicationsTask::class)
 abstract class ListRemotePublicationsTask : DefaultTask() {
     @get:Input
     abstract val projectName: Property<String>
-    
-    
+
+
     @TaskAction
     fun listPublications() {
         logger.lifecycle("[${projectName.get()}] Project would publish to GitHub packages as org.xtclang:${projectName.get()}")
@@ -303,10 +279,9 @@ tasks.withType<Jar>().configureEach {
             from(jarFiles)
         }
         manifest {
-            // Declare build-info and git properties files as inputs for proper task dependency tracking
-            val buildInfoFile = layout.projectDirectory.file("../javatools/build/resources/main/build-info.properties")
-            val gitPropsFile = layout.projectDirectory.file("../javatools/build/resources/main/git.properties")
-            
+            // Declare git and build info as inputs to force rebuilds when they change
+            val buildInfoFile = compositeRootProjectDirectory.file("javatools/build/resources/main/build-info.properties")
+            val gitPropsFile = compositeRootProjectDirectory.file("javatools/build/resources/main/git.properties")
             inputs.files(buildInfoFile, gitPropsFile).withPropertyName("buildMetadata").optional()
             
             val baseAttributes = mapOf(

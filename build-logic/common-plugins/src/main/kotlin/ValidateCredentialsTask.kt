@@ -57,14 +57,14 @@ abstract class ValidateCredentialsTask : DefaultTask() {
                     |   ./gradlew publishRemote -PGitHubUsername=your-username -PGitHubPassword=your-token
                     |
                     |Current status:
-                    |  Username: ${if (username.isNotEmpty()) "✅ Available ($username)" else "❌ Missing"}
+                    |  Username: ${if (username.isNotEmpty()) "✅ Available" else "❌ Missing"}
                     |  Password/Token: ${if (password.isNotEmpty()) "✅ Available" else "❌ Missing"}
                     """.trimMargin())
             }
 
             logger.info("✅ GitHub credentials validated successfully")
-            logger.info("   Username: $username")
-            logger.info("   Token: Available (${password.take(8)}...)")
+            logger.info("   Username: Available")
+            logger.info("   Token: Available")
         }
 
         // Validate Plugin Portal credentials (only if enabled)
@@ -93,13 +93,13 @@ abstract class ValidateCredentialsTask : DefaultTask() {
                 |Get API keys from: https://plugins.gradle.org/ -> "My API Keys" -> Generate API Key
                 |
                 |Current status:
-                |  API Key: ${if (portalKey.isNotEmpty()) "✅ Available (${portalKey.take(8)}...)" else "❌ Missing"}
+                |  API Key: ${if (portalKey.isNotEmpty()) "✅ Available" else "❌ Missing"}
                 |  Secret: ${if (portalSecret.isNotEmpty()) "✅ Available" else "❌ Missing"}
             """.trimMargin())
         }
 
         logger.info("✅ Plugin Portal credentials validated successfully")
-        logger.info("   API Key: Available (${portalKey.take(8)}...)")
+        logger.info("   API Key: Available")
         logger.info("   Secret: Available")
     }
 }
