@@ -3,6 +3,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
+import java.net.HttpURLConnection
 
 /**
  * Task to list remote publications from GitHub Packages and Gradle Plugin Portal.
@@ -51,7 +52,7 @@ abstract class ListRemotePublicationsTask : DefaultTask() {
                 connection.setRequestProperty("Accept", "application/vnd.github+json")
                 connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
 
-                if (connection.responseCode == 200) {
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
                     val response = connection.inputStream.bufferedReader().use { it.readText() }
                     val packageNames = parsePackageNames(response)
 
@@ -147,7 +148,7 @@ abstract class ListRemotePublicationsTask : DefaultTask() {
             connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
 
             when (connection.responseCode) {
-                200 -> {
+                HttpURLConnection.HTTP_OK -> {
                     val response = connection.inputStream.bufferedReader().use { it.readText() }
                     logger.debug("API response for $packageName: $response")
                     val versions = parseGitHubPackageVersions(response)
@@ -185,7 +186,7 @@ abstract class ListRemotePublicationsTask : DefaultTask() {
                         }
                     }
                 }
-                404 -> {
+                HttpURLConnection.HTTP_NOT_FOUND -> {
                     // Don't log 404s for fallback attempts to reduce noise
                 }
                 else -> {
@@ -232,9 +233,8 @@ abstract class ListRemotePublicationsTask : DefaultTask() {
             name = nameMatch?.groupValues?.get(1) ?: ""
             updatedAt = updatedAtMatch?.groupValues?.get(1) ?: ""
 
-            return if (name.isNotEmpty() && updatedAt.isNotEmpty()) {
-                PackageVersion(name, updatedAt)
-            } else null
+            if (name.isEmpty() || updatedAt.isEmpty()) return null
+            return PackageVersion(name, updatedAt)
         } catch (e: Exception) {
             logger.debug("Failed to parse package version object: ${e.message}")
             return null
@@ -250,7 +250,7 @@ abstract class ListRemotePublicationsTask : DefaultTask() {
 
             logger.debug("Maven metadata request for $packageName: $metadataUrl -> ${connection.responseCode}")
 
-            if (connection.responseCode == 200) {
+            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
                 logger.debug("Maven metadata response for $packageName: ${response.take(500)}")
 
@@ -301,7 +301,7 @@ abstract class ListRemotePublicationsTask : DefaultTask() {
             connection.setRequestProperty("User-Agent", "XTC-Gradle-Build/1.0")
 
             when (connection.responseCode) {
-                200 -> {
+                HttpURLConnection.HTTP_OK -> {
                     val response = connection.inputStream.bufferedReader().use { it.readText() }
                     logger.debug("Plugin Portal page response length: ${response.length}")
 
@@ -319,7 +319,7 @@ abstract class ListRemotePublicationsTask : DefaultTask() {
                         logger.lifecycle("  $pluginId - Found but no versions parsed from page")
                     }
                 }
-                404 -> {
+                HttpURLConnection.HTTP_NOT_FOUND -> {
                     logger.lifecycle("  $pluginId - Plugin not found on Gradle Plugin Portal")
                     logger.lifecycle("    This may indicate the plugin hasn't been published yet")
                 }

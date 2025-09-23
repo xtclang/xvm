@@ -68,8 +68,6 @@ val Project.userInitScriptDirectory: File get() = File(gradle.gradleUserHomeDir,
 
 val Project.xdkBuildLogic: XdkBuildLogic get() = XdkBuildLogic(this)
 
-
-
 fun Project.isXdkPropertySet(key: String): Boolean {
     return xdkBuildLogic.props().has(key)
 }

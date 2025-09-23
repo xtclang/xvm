@@ -33,73 +33,73 @@ abstract class ValidateCredentialsTask : DefaultTask() {
     @TaskAction
     fun validate() {
         // Validate GitHub credentials (required only when GitHub publishing is enabled)
-        if (enableGitHub.get()) {
+        if (!enableGitHub.get()) {
+            logger.info("ℹ️  GitHub publishing is disabled - skipping credential validation")
+        } else {
             val username = gitHubUsername.get()
             val password = gitHubPassword.get()
 
             if (password.isEmpty()) {
-            throw GradleException("""
-                |GitHub credentials not available for publishing!
-                |
-                |Please provide credentials using one of these methods:
-                |
-                |1. Local development - Set properties in ~/.gradle/gradle.properties:
-                |   GitHubUsername=your-username
-                |   GitHubPassword=your-personal-access-token
-                |
-                |2. CI/GitHub Actions - Environment variables (automatically set):
-                |   GITHUB_ACTOR=actor-name
-                |   GITHUB_TOKEN=github-token
-                |
-                |3. Command line properties:
-                |   ./gradlew publishRemote -PGitHubUsername=your-username -PGitHubPassword=your-token
-                |
-                |Current status:
-                |  Username: ${if (username.isNotEmpty()) "✅ Available ($username)" else "❌ Missing"}
-                |  Password/Token: ${if (password.isNotEmpty()) "✅ Available" else "❌ Missing"}
-                """.trimMargin())
+                throw GradleException("""
+                    |GitHub credentials not available for publishing!
+                    |
+                    |Please provide credentials using one of these methods:
+                    |
+                    |1. Local development - Set properties in ~/.gradle/gradle.properties:
+                    |   GitHubUsername=your-username
+                    |   GitHubPassword=your-personal-access-token
+                    |
+                    |2. CI/GitHub Actions - Environment variables (automatically set):
+                    |   GITHUB_ACTOR=actor-name
+                    |   GITHUB_TOKEN=github-token
+                    |
+                    |3. Command line properties:
+                    |   ./gradlew publishRemote -PGitHubUsername=your-username -PGitHubPassword=your-token
+                    |
+                    |Current status:
+                    |  Username: ${if (username.isNotEmpty()) "✅ Available ($username)" else "❌ Missing"}
+                    |  Password/Token: ${if (password.isNotEmpty()) "✅ Available" else "❌ Missing"}
+                    """.trimMargin())
             }
 
             logger.info("✅ GitHub credentials validated successfully")
             logger.info("   Username: $username")
             logger.info("   Token: Available (${password.take(8)}...)")
-        } else {
-            logger.info("ℹ️  GitHub publishing is disabled - skipping credential validation")
         }
 
         // Validate Plugin Portal credentials (only if enabled)
-        if (enablePluginPortal.get()) {
-            val portalKey = gradlePublishKey.getOrElse("")
-            val portalSecret = gradlePublishSecret.getOrElse("")
+        if (!enablePluginPortal.get()) return
 
-            if (portalKey.isEmpty() || portalSecret.isEmpty()) {
-                throw GradleException("""
-                    |Gradle Plugin Portal credentials not available for publishing!
-                    |
-                    |Please provide credentials using one of these methods:
-                    |
-                    |1. Local development - Set properties in ~/.gradle/gradle.properties:
-                    |   gradle.publish.key=your-api-key
-                    |   gradle.publish.secret=your-api-secret
-                    |
-                    |2. Environment variables:
-                    |   GRADLE_PUBLISH_KEY=your-api-key
-                    |   GRADLE_PUBLISH_SECRET=your-api-secret
-                    |
-                    |3. Command line properties:
-                    |   ./gradlew publishRemote -Pgradle.publish.key=your-key -Pgradle.publish.secret=your-secret
-                    |
-                    |Get API keys from: https://plugins.gradle.org/ -> "My API Keys" -> Generate API Key
-                    |
-                    |Current status:
-                    |  API Key: ${if (portalKey.isNotEmpty()) "✅ Available (${portalKey.take(8)}...)" else "❌ Missing"}
-                    |  Secret: ${if (portalSecret.isNotEmpty()) "✅ Available" else "❌ Missing"}
-                """.trimMargin())
-            }
+        val portalKey = gradlePublishKey.getOrElse("")
+        val portalSecret = gradlePublishSecret.getOrElse("")
 
-            logger.info("✅ Plugin Portal credentials validated successfully")
-            logger.info("   API Key: Available (${portalKey.take(8)}...)")
-            logger.info("   Secret: Available")
+        if (portalKey.isEmpty() || portalSecret.isEmpty()) {
+            throw GradleException("""
+                |Gradle Plugin Portal credentials not available for publishing!
+                |
+                |Please provide credentials using one of these methods:
+                |
+                |1. Local development - Set properties in ~/.gradle/gradle.properties:
+                |   gradle.publish.key=your-api-key
+                |   gradle.publish.secret=your-api-secret
+                |
+                |2. Environment variables:
+                |   GRADLE_PUBLISH_KEY=your-api-key
+                |   GRADLE_PUBLISH_SECRET=your-api-secret
+                |
+                |3. Command line properties:
+                |   ./gradlew publishRemote -Pgradle.publish.key=your-key -Pgradle.publish.secret=your-secret
+                |
+                |Get API keys from: https://plugins.gradle.org/ -> "My API Keys" -> Generate API Key
+                |
+                |Current status:
+                |  API Key: ${if (portalKey.isNotEmpty()) "✅ Available (${portalKey.take(8)}...)" else "❌ Missing"}
+                |  Secret: ${if (portalSecret.isNotEmpty()) "✅ Available" else "❌ Missing"}
+            """.trimMargin())
         }
+
+        logger.info("✅ Plugin Portal credentials validated successfully")
+        logger.info("   API Key: Available (${portalKey.take(8)}...)")
+        logger.info("   Secret: Available")
     }
 }

@@ -3,6 +3,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
+import java.net.HttpURLConnection
 
 /**
  * Task to unpublish/delete a specific version from Gradle Plugin Portal.
@@ -67,11 +68,10 @@ abstract class UnpublishGradlePluginTask : DefaultTask() {
         connection.setRequestProperty("Accept", "text/html")
         connection.setRequestProperty("User-Agent", "XTC-Gradle-Build/1.0")
 
-        return if (connection.responseCode == 200) {
-            connection.inputStream.bufferedReader().use { it.readText() }
-        } else {
+        if (connection.responseCode != HttpURLConnection.HTTP_OK) {
             throw GradleException("Failed to fetch plugin page: HTTP ${connection.responseCode}")
         }
+        return connection.inputStream.bufferedReader().use { it.readText() }
     }
 
     private fun compareVersions(v1: String, v2: String): Int {

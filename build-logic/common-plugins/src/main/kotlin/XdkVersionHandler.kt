@@ -45,11 +45,12 @@ class XdkVersionHandler(project: Project): XdkProjectBuildLogic(project) {
 
         // Check for version override property (only if explicitly provided and not "unspecified")
         val overrideVersion = project.findProperty("version")?.toString()
-        val finalVersion = if (overrideVersion != null && overrideVersion != "unspecified") {
-            logger.lifecycle("[versioning] Version override detected: using '$overrideVersion' instead of '$version'")
-            overrideVersion
-        } else {
-            version
+        val finalVersion = when {
+            overrideVersion != null && overrideVersion != "unspecified" -> {
+                logger.lifecycle("[versioning] Version override detected: using '$overrideVersion' instead of '$version'")
+                overrideVersion
+            }
+            else -> version
         }
 
         project.group = group

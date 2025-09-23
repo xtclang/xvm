@@ -1,5 +1,3 @@
-import kotlin.IllegalArgumentException
-
 data class SemanticVersion(val artifactGroup: String, val artifactId: String, val artifactVersion: String) {
 
     companion object {

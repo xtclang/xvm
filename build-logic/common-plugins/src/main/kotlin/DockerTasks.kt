@@ -208,9 +208,9 @@ abstract class DockerCleanupTask : DefaultTask() {
             val output = result.toString()
             if (forced.get()) {
                 logger.warn("Failed to fetch package versions: $output")
-            } else {
-                throw GradleException("Failed to fetch package versions: $output", e)
+                return
             }
+            throw GradleException("Failed to fetch package versions: $output", e)
         }
     }
 }

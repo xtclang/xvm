@@ -1,16 +1,8 @@
-import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.artifacts.Configuration
-import org.gradle.api.file.Directory
-import org.gradle.api.file.FileCollection
-import org.gradle.api.file.RegularFile
-import org.gradle.api.provider.Provider
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
-import org.gradle.api.tasks.TaskProvider
-import org.gradle.api.tasks.application.CreateStartScripts
 import org.gradle.internal.os.OperatingSystem
 import org.gradle.kotlin.dsl.assign
 import org.gradle.kotlin.dsl.withType
@@ -252,6 +244,20 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         }
 
         /**
+         * Insert text after a marker line in the content.
+         */
+        private fun insertAtMarker(content: String, marker: String, textToInsert: String): String {
+            val insertPoint = content.indexOf(marker)
+            if (insertPoint < 0) return content
+
+            val lineEnd = content.indexOf('\n', insertPoint)
+            val endOfLine = if (lineEnd >= 0) lineEnd + 1 else content.length
+            val before = content.substring(0, endOfLine)
+            val after = content.substring(endOfLine)
+            return before + textToInsert + after
+        }
+
+        /**
          * Configuration cache compatible script modification logic.
          * This static method avoids script object references.
          */
@@ -279,33 +285,12 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
                     // Add XDK_HOME delegation and XTC module paths using templates directly
                     val templates = if (isWindows) SCRIPT_TEMPLATES["windows"]!! else SCRIPT_TEMPLATES["unix"]!!
                     
-                    if (isWindows) {
-                        // Insert XDK_HOME delegation for Windows - place it right after :execute line
-                        val insertPoint = content.indexOf(":execute")
-                        if (insertPoint >= 0) {
-                            val lineEnd = content.indexOf('\n', insertPoint)
-                            val endOfLine = if (lineEnd >= 0) lineEnd + 1 else content.length
-                            val before = content.substring(0, endOfLine)
-                            val after = content.substring(endOfLine)
-                            content = before + templates["xdk_home_delegation"] + after
-                        }
-                        
-                        // Add XTC module paths to Windows script
-                        content = content.replace("org.xvm.tool.Launcher", templates["launcher_args"]!!)
-                    } else {
-                        // Insert XDK_HOME delegation for Unix - place it right after APP_HOME calculation
-                        val insertPoint = content.indexOf("APP_HOME=\$( cd -P")
-                        if (insertPoint >= 0) {
-                            val lineEnd = content.indexOf('\n', insertPoint)
-                            val endOfLine = if (lineEnd >= 0) lineEnd + 1 else content.length
-                            val before = content.substring(0, endOfLine)
-                            val after = content.substring(endOfLine)
-                            content = before + templates["xdk_home_delegation"] + after
-                        }
-                        
-                        // Add XTC module paths to Unix script  
-                        content = content.replace("org.xvm.tool.Launcher", templates["launcher_args"]!!)
-                    }
+                    // Insert XDK_HOME delegation at platform-specific location
+                    val insertMarker = if (isWindows) ":execute" else "APP_HOME=\$( cd -P"
+                    content = insertAtMarker(content, insertMarker, templates["xdk_home_delegation"]!!)
+
+                    // Add XTC module paths
+                    content = content.replace("org.xvm.tool.Launcher", templates["launcher_args"]!!)
                     
                     script.writeText(content)
                 }
