@@ -12,3 +12,17 @@ plugins {
     id("org.xtclang.build.git")
     id("org.xtclang.build.docker")
 }
+
+// Create consumer configuration for XDK distribution zip
+val xdkDistConsumer by configurations.registering {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("xdk-distribution-archive"))
+    }
+}
+
+dependencies {
+    xdkDistConsumer(libs.xdk)
+}

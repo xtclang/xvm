@@ -176,17 +176,6 @@ val listRemotePublications by tasks.registering(ListRemotePublicationsTask::clas
     projectName.set(pluginName)
 }
 
-val deleteLocalPublications by tasks.registering(DeleteLocalPublicationsTask::class) {
-    group = PUBLISH_TASK_GROUP
-    description = "Delete local Maven publications for this project"
-    projectName.set(pluginName)
-}
-
-val deleteRemotePublications by tasks.registering(DeleteRemotePublicationsTask::class) {
-    group = PUBLISH_TASK_GROUP
-    description = "Delete remote GitHub publications for this project"
-    projectName.set(pluginName)
-}
 
 // Extract plugin configuration values during configuration
 private val vcsUrlValue = getXdkProperty("$pprefix.plugin.vcs.url")

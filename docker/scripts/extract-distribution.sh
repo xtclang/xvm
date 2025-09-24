@@ -1,20 +1,12 @@
-#!/bin/bash
+#!/bin/sh
 set -euo pipefail
 
 # XDK Distribution Extractor Script
 # Simplified script that uses pre-built XDK distribution ZIP
 
 DIST_ZIP_URL="${1:-}"
-GH_BRANCH="${2:-master}"
-GH_COMMIT="${3:-unknown}"
-BUILD_DATE="${4:-$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"
-TARGETARCH="${5:-}"
-TARGETOS="${6:-}"
 
 echo "📦 XDK Distribution Extractor"
-echo "  Target: ${TARGETOS}/${TARGETARCH}"
-echo "  Branch: ${GH_BRANCH}"
-echo "  Commit: ${GH_COMMIT}"
 echo "  Distribution URL: ${DIST_ZIP_URL}"
 
 # Ensure we have a distribution ZIP URL
@@ -109,11 +101,7 @@ fi
 echo "📍 Creating xvm.json metadata"
 cat > "xdk/xvm.json" << JSONEOF
 {
-  "buildDate": "$BUILD_DATE",
-  "commit": "$GH_COMMIT",
-  "branch": "$GH_BRANCH",
-  "version": "$GH_BRANCH",
-  "platform": "${TARGETOS}/${TARGETARCH}",
+  "buildDate": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
   "distributionSource": "pre-built"
 }
 JSONEOF

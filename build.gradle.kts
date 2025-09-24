@@ -173,11 +173,3 @@ val listRemotePublications by tasks.registering(ListRemotePublicationsFromApiTas
     pluginId.set(getXdkProperty("org.xtclang.plugin.id"))
 }
 
-// Handle deleteRemotePublications with delegation
-val deleteRemotePublications by tasks.registering {
-    group = PUBLISH_TASK_GROUP
-    description = "Task that aggregates 'deleteRemotePublications' tasks for builds with publications."
-    includedBuildsWithPublications.forEach { it ->
-        dependsOn(it.task(":deleteRemotePublications"))
-    }
-}

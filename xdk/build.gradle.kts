@@ -292,17 +292,6 @@ val listRemotePublications by tasks.registering(ListRemotePublicationsTask::clas
     projectName.set(publicationArtifactId)
 }
 
-val deleteLocalPublications by tasks.registering(DeleteLocalPublicationsTask::class) {
-    group = PUBLISH_TASK_GROUP
-    description = "Delete local Maven publications for this project"
-    projectName.set(publicationArtifactId)
-}
-
-val deleteRemotePublications by tasks.registering(DeleteRemotePublicationsTask::class) {
-    group = PUBLISH_TASK_GROUP
-    description = "Delete remote GitHub publications for this project"
-    projectName.set(publicationArtifactId)
-}
 
 
 // Signing removed since we're not using Maven publication for XDK

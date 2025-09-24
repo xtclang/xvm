@@ -3,61 +3,40 @@
  * Provides configuration cache compatible Docker build tasks.
  */
 
-plugins.withId("org.xtclang.build.git") {
-    val jdkVersion = project.extra["jdkVersion"] as Int
-    
-    // Helper function to create docker tasks
-    fun createDockerBuildTask(
-        taskName: String,
-        platforms: List<String>,
-        action: String,
-        architectureCheck: String? = null
-    ) = tasks.register(taskName, DockerTask::class) {
+// Helper function to create docker tasks
+fun createDockerBuildTask(
+    taskName: String,
+    platforms: List<String>,
+    action: String,
+    architectureCheck: String? = null
+) = tasks.register(taskName, DockerTask::class) {
         group = "docker"
         description = "Build Docker image for ${platforms.joinToString("/")} using XDK distribution"
 
-        // Always depend on the XDK distribution ZIP
-        dependsOn(tasks.named("resolveGitInfo"))
+        // No longer need git dependencies since Docker build doesn't use git info
 
-        // Try to depend on xdk:distZip if it exists (in composite builds)
-        try {
-            val xdkDistZipTask = project.tasks.findByPath(":xdk:distZip")
-                ?: project.rootProject.tasks.findByPath(":xdk:distZip")
-            if (xdkDistZipTask != null) {
-                dependsOn(xdkDistZipTask)
-                logger.info("Docker task $taskName will depend on xdk:distZip")
-            }
-        } catch (e: Exception) {
-            logger.debug("Could not find xdk:distZip task: ${e.message}")
+        // Use the xdkDistConsumer configuration for XDK distribution zip dependency
+        val xdkDistConfiguration = project.configurations.findByName("xdkDistConsumer")
+
+        if (xdkDistConfiguration != null) {
+            // Set the DIST_ZIP_URL from the configuration's resolved files
+            distZipUrl.set(providers.provider {
+                val files = xdkDistConfiguration.files
+                val zipFile = files.find { it.name.endsWith(".zip") }
+                zipFile?.absolutePath ?: providers.environmentVariable("DIST_ZIP_URL").orNull ?: ""
+            })
+            logger.info("Docker task $taskName will use xdkDistConsumer config in the uration for distribution zip")
+        } else {
+            // Fallback to environment variable only
+            distZipUrl.set(providers.environmentVariable("DIST_ZIP_URL"))
+            logger.warn("Could not find xdkDistConsumer configuration - Docker task $taskName will only work if DIST_ZIP_URL environment variable is set")
         }
 
-        gitInfoFile.set(tasks.named<ResolveGitInfoTask>("resolveGitInfo").flatMap { it.outputFile })
+        // No longer need git info file since Docker doesn't use it
         this.platforms.set(platforms)
         this.action.set(action)
 
-        // Set distZipUrl from environment variable or default to finding the built distribution
-        distZipUrl.set(providers.environmentVariable("DIST_ZIP_URL").orElse(
-            providers.provider {
-                // Look for the XDK distribution in the standard location
-                val xdkDistDir = project.rootProject.layout.buildDirectory.dir("distributions").get().asFile
-                val distZips = xdkDistDir.listFiles { _, name -> name.startsWith("xdk-") && name.endsWith(".zip") }
-                if (distZips != null && distZips.isNotEmpty()) {
-                    distZips.first().absolutePath
-                } else {
-                    // Fallback - try to find in xdk subproject
-                    val xdkProject = project.rootProject.subprojects.find { it.name == "xdk" }
-                    if (xdkProject != null) {
-                        val xdkDistZips = xdkProject.layout.buildDirectory.dir("distributions").get().asFile
-                            .listFiles { _, name -> name.startsWith("xdk-") && name.endsWith(".zip") }
-                        xdkDistZips?.firstOrNull()?.absolutePath ?: ""
-                    } else {
-                        ""
-                    }
-                }
-            }
-        ))
-
-        this.jdkVersion.set(jdkVersion)
+        this.jdkVersion.set(project.extra["jdkVersion"] as Int)
         this.architectureCheck.set(architectureCheck ?: "")
 
         // Configuration cache compatible input properties
@@ -72,6 +51,7 @@ plugins.withId("org.xtclang.build.git") {
         dockerProgress.set(providers.environmentVariable("DOCKER_BUILDX_PROGRESS").orElse("plain"))
         ciMode.set(providers.environmentVariable("CI").map { it == "true" }.orElse(false))
         userHome.set(providers.systemProperty("user.home"))
+        dockerDir.set(layout.projectDirectory)
 
         // Tags will be computed at execution time in the task action
         tags.set(emptyList()) // Dummy value to satisfy the property
@@ -95,4 +75,3 @@ plugins.withId("org.xtclang.build.git") {
         forced.set(providers.gradleProperty("force").orElse("false").map { it.toBoolean() })
         packageName.set("xvm")
     }
-}

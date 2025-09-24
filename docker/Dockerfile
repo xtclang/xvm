@@ -6,11 +6,8 @@
 
 # Build arguments
 ARG JAVA_VERSION=MISSING
-ARG GH_BRANCH=master
-ARG GH_COMMIT
 ARG TARGETARCH
 ARG TARGETOS
-ARG BUILD_DATE
 ARG DIST_ZIP_URL
 
 # *** STAGE 1: Java version validation ***
@@ -25,9 +22,6 @@ RUN if [ "$JAVA_VERSION" = "MISSING" ]; then \
 # *** STAGE 2: Distribution extractor ***
 FROM alpine:latest AS distribution-extractor
 ARG DIST_ZIP_URL
-ARG GH_BRANCH
-ARG GH_COMMIT
-ARG BUILD_DATE
 ARG TARGETARCH
 ARG TARGETOS
 
@@ -41,8 +35,8 @@ COPY xdk-dist.zip /workspace/
 COPY scripts/extract-distribution.sh /extract-distribution.sh
 RUN chmod +x /extract-distribution.sh
 
-# Extract the distribution
-RUN /extract-distribution.sh "/workspace/xdk-dist.zip" "${GH_BRANCH}" "${GH_COMMIT}" "${BUILD_DATE}" "${TARGETARCH}" "${TARGETOS}"
+# Extract the distribution using just the DIST_ZIP_URL
+RUN /extract-distribution.sh "/workspace/xdk-dist.zip"
 
 # *** STAGE 3: Final Runtime Image ***
 ARG JAVA_VERSION=MISSING
