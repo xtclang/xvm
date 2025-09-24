@@ -88,6 +88,11 @@ val generateBuildInfo by tasks.registering {
     
     inputs.file(versionPropsFile)
     inputs.file(gitInfoProvider)
+    inputs.property("gitInfoContent", gitInfoProvider.map { file ->
+        if (file.asFile.exists()) {
+            file.asFile.readText()
+        } else ""
+    })
     outputs.file(outputFile)
     outputs.file(intellijOutputFile)
     
@@ -108,18 +113,24 @@ val generateBuildInfo by tasks.registering {
             buildInfo.setProperty("git.status", if (isDirty) "detached-head" else "clean")
         }
         
-        // Write to Gradle build directory
-        outputFile.get().asFile.apply {
-            parentFile.mkdirs()
-            outputStream().use { buildInfo.store(it, "Build information generated at build time") }
+        // Write properties manually to avoid timestamp-based cache invalidation
+        // Properties.store() includes current timestamp which breaks Gradle caching
+        val writeProperties = { file: File ->
+            file.parentFile.mkdirs()
+            file.writeText(buildString {
+                appendLine("#Build information generated at build time")
+                buildInfo.entries.sortedBy { it.key.toString() }.forEach { (key, value) ->
+                    appendLine("$key=$value")
+                }
+            })
         }
-        
+
+        // Write to Gradle build directory
+        writeProperties(outputFile.get().asFile)
+
         // Always copy to IntelliJ output directory for IDE compatibility
         // TODO: Consider making runtime code check multiple locations instead of duplicating files
-        intellijOutputFile.apply {
-            parentFile.mkdirs()
-            outputStream().use { buildInfo.store(it, "Build information generated at build time") }
-        }
+        writeProperties(intellijOutputFile)
     }
 }
 
