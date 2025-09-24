@@ -23,7 +23,7 @@ import java.io.File
 
 plugins {
     id("org.xtclang.build.xdk.versioning")
-    id("org.xtclang.build.git")
+    id("org.xtclang.build.git")  // For git tagging functionality only
     alias(libs.plugins.vanniktech.maven.publish)
     alias(libs.plugins.xtc)
     application

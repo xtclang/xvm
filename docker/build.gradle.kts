@@ -9,7 +9,6 @@
 plugins {
     base
     id("org.xtclang.build.xdk.versioning")
-    id("org.xtclang.build.git")
     id("org.xtclang.build.docker")
 }
 

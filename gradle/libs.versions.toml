@@ -27,7 +27,8 @@ sonatype-publish = "2.0.0"
 vanniktech-maven-publish = "0.34.0"
 jakarta = "2.3.3"
 jline = "3.30.5"
-ktlint = "12.1.1" 
+ktlint = "12.1.1"
+palantir-git-version = "4.0.0"
 junit = "5.13.4"
 
 [plugins]
@@ -42,6 +43,7 @@ gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradl
 sonatype-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "sonatype-publish" }
 vanniktech-maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-maven-publish" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
+palantir-git-version = { id = "com.palantir.git-version", version.ref = "palantir-git-version" }
 
 [libraries]
 xdk = { group = "org.xtclang", name = "xdk", version.ref = "xdk" }
