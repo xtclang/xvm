@@ -160,16 +160,5 @@ val validateCredentials by tasks.registering(ValidateCredentialsTask::class) {
     gradlePublishSecret.set(xdkPublishingCredentials.gradlePublishSecret)
 }
 
-// Special handling for remote publication listing - use GitHub API integration instead of delegation
-val listRemotePublications by tasks.registering(ListRemotePublicationsFromApiTask::class) {
-    group = PUBLISH_TASK_GROUP
-    description = "List remote GitHub and Plugin Portal publications using API integration"
-    dependsOn(validateCredentials)
-
-    // Use centralized credential management
-    gitHubToken.set(xdkPublishingCredentials.gitHubPassword)
-    enablePluginPortal.set(xdkPublishingCredentials.enablePluginPortal)
-    gradlePublishKey.set(xdkPublishingCredentials.gradlePublishKey)
-    pluginId.set(getXdkProperty("org.xtclang.plugin.id"))
-}
+// Publication listing tasks removed - use bin/list-publications.sh instead
 

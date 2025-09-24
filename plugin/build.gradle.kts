@@ -161,20 +161,7 @@ publishing {
 
 // Publishing tasks are handled by root build.gradle.kts
 
-// Publication listing tasks (called by root aggregator) - now uses centralized implementation from build-logic
-
-val listLocalPublications by tasks.registering(ListLocalPublicationsTask::class) {
-    group = PUBLISH_TASK_GROUP
-    description = "List local Maven publications for this project"
-    projectName.set(pluginName)
-}
-
-
-val listRemotePublications by tasks.registering(ListRemotePublicationsTask::class) {
-    group = PUBLISH_TASK_GROUP
-    description = "List remote GitHub publications for this project"
-    projectName.set(pluginName)
-}
+// Publication listing tasks removed - use bin/list-publications.sh instead
 
 
 // Extract plugin configuration values during configuration

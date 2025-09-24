@@ -279,18 +279,7 @@ publishing {
 
 
 
-val listLocalPublications by tasks.registering(ListLocalPublicationsTask::class) {
-    group = PUBLISH_TASK_GROUP
-    description = "List local Maven publications for this project"
-    projectName.set(publicationArtifactId)
-    includeZip.set(true) // XDK includes zip distributions
-}
-
-val listRemotePublications by tasks.registering(ListRemotePublicationsTask::class) {
-    group = PUBLISH_TASK_GROUP
-    description = "List remote GitHub publications for this project"
-    projectName.set(publicationArtifactId)
-}
+// Publication listing tasks removed - use bin/list-publications.sh instead
 
 
 
