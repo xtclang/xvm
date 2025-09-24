@@ -2,11 +2,13 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
@@ -44,7 +46,11 @@ abstract class DockerTask : DefaultTask() {
     @get:Input
     @get:Optional
     abstract val distZipUrl: Property<String>
-    
+
+    @get:InputFiles
+    @get:Optional
+    abstract val xdkDistributionFiles: ConfigurableFileCollection
+
     @get:Input
     abstract val jdkVersion: Property<Int>
     

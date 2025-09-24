@@ -25,7 +25,9 @@ fun createDockerBuildTask(
                 val zipFile = files.find { it.name.endsWith(".zip") }
                 zipFile?.absolutePath ?: providers.environmentVariable("DIST_ZIP_URL").orNull ?: ""
             })
-            logger.info("Docker task $taskName will use xdkDistConsumer config in the uration for distribution zip")
+            // CRITICAL: Wire the configuration files as task inputs for proper up-to-date checking
+            xdkDistributionFiles.from(xdkDistConfiguration)
+            logger.info("Docker task $taskName will use xdkDistConsumer config for distribution zip")
         } else {
             // Fallback to environment variable only
             distZipUrl.set(providers.environmentVariable("DIST_ZIP_URL"))
