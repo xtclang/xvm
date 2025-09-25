@@ -27,7 +27,7 @@ sonatype-publish = "2.0.0"
 vanniktech-maven-publish = "0.34.0"
 jakarta = "2.3.3"
 jline = "3.30.5"
-ktlint = "12.1.1"
+ktlint = "13.1.0"
 palantir-git-version = "4.0.0"
 junit = "5.13.4"
 
