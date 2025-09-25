@@ -55,6 +55,10 @@ testing {
     suites {
         @Suppress("UnstableApiUsage") val test by getting(JvmTestSuite::class) {
             useJUnitJupiter()
+            dependencies {
+                implementation(platform("org.junit:junit-bom:5.13.1"))
+                implementation("org.junit.jupiter:junit-jupiter")
+            }
         }
     }
 }

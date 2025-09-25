@@ -5,13 +5,12 @@
 
 pluginManagement {
     includeBuild("build-logic/aggregator")
-    includeBuild("build-logic/settings-plugins")
     includeBuild("build-logic/common-plugins")
 }
 
 plugins {
     id("com.gradle.develocity").version("4.1")
-    id("org.gradle.toolchains.foojay-resolver-convention").version("latest.release")
+    id("org.gradle.toolchains.foojay-resolver-convention").version("1.0.0")
 }
 
 develocity {
