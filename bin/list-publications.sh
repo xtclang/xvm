@@ -177,18 +177,13 @@ list_remote_publications() {
 
         # For SNAPSHOT versions, get real Maven metadata timestamp (like GitHubTasks.kt did)
         if [[ "$has_snapshots" == "true" ]]; then
-            # Skip metadata for Gradle Plugin Portal marker packages
-            if [[ "$package_name" == *".gradle.plugin" ]]; then
-                echo "    Latest artifacts: N/A (Gradle Plugin Portal marker)"
-            else
-                local maven_timestamp
-                maven_timestamp=$(get_maven_metadata_timestamp "$package_name" "$GITHUB_TOKEN" 2>/dev/null || echo "")
+            local maven_timestamp
+            maven_timestamp=$(get_maven_metadata_timestamp "$package_name" "$GITHUB_TOKEN" 2>/dev/null || echo "")
 
-                if [[ -n "$maven_timestamp" ]]; then
-                    echo "    Latest artifacts: $maven_timestamp (from Maven metadata)"
-                else
-                    echo "    Latest artifacts: Unable to fetch Maven metadata"
-                fi
+            if [[ -n "$maven_timestamp" ]]; then
+                echo "    Latest artifacts: $maven_timestamp (from Maven metadata)"
+            else
+                echo "    Latest artifacts: Unable to fetch Maven metadata"
             fi
         fi
 

@@ -34,34 +34,6 @@ val installWithNativeLaunchersDist by tasks.registering {
     dependsOn(xdk.task(":$name"))
 }
 
-/**
- * Register aggregated publication tasks to the top level project, to ensure we can publish both
- * the XDK and the XTC plugin (and other future artifacts) with './gradlew publish' or
- * './gradlew publishToMavenLocal'.  Snapshot builds should only be allowed to be published
- * in local repositories.
- *
- * Publishing tasks can be racy, but it seems that Gradle serializes tasks that have a common
- * output directory, which should be the case here. If not, we will have to put back the
- * parallel check/task failure condition.
- *
- * Publish remote - one way to do it is to only allow snapshot publications in GitHub, otherwise
- * we need to do it manually. "publishRemoteRelease", in which case we will also feed into
- * jreleaser.
- */
-val unpublishGradlePlugin by tasks.registering(UnpublishGradlePluginTask::class) {
-    group = PUBLISH_TASK_GROUP
-    description = "Unpublish/delete a specific version from Gradle Plugin Portal (use -PunpublishGradlePlugin=version)"
-    dependsOn(validateCredentials)
-
-    pluginId.set(getXdkProperty("org.xtclang.plugin.id"))
-    unpublishVersion.set(project.findProperty("unpublishGradlePlugin")?.toString() ?: "")
-
-    // Use centralized credential management
-    hasCredentials.set(xdkPublishingCredentials.enablePluginPortal.zip(xdkPublishingCredentials.gradlePublishKey) { enabled, key ->
-        enabled && key.isNotEmpty() && xdkPublishingCredentials.gradlePublishSecret.get().isNotEmpty()
-    })
-}
-
 val publishRemote by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Publish XDK and plugin artifacts to remote repositories (GitHub Packages, Gradle Plugin Portal)."
