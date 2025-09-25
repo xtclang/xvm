@@ -34,3 +34,25 @@ updates:
     commit-message:
       prefix: "docker"
       include: "scope"
+
+  # Enable version updates for Gradle dependencies
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "06:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "xtclang/maintainers"
+    assignees:
+      - "xtclang/maintainers"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    ignore:
+      # Ignore patch updates for build plugins (too noisy)
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"]
+        # But allow security updates even for patches
+        # (GitHub automatically overrides this for security updates)

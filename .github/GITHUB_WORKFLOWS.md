@@ -64,7 +64,7 @@ The **build-verify** job runs on a configurable matrix:
 - **Default**: Ubuntu Latest + Windows Latest
 - **Configurable**: Single platform or full matrix via `single_platform` input
 - **Java Version**: Dynamically determined from `xdk.properties`
-- **Gradle Version**: 8.14.2 (defined in environment)
+- **Gradle Version**: 9.0.0 (defined in environment)
 
 ### Environment Configuration
 

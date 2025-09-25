@@ -2,25 +2,28 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import javax.inject.Inject
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.time.Instant
 
-// Cross-platform build check utility
-fun checkCrossPlatformBuild(targetArch: String): Boolean {
-    val hostArch = when (System.getProperty("os.arch")) {
+// Cross-platform build check utility - configuration cache compatible version  
+fun checkCrossPlatformBuild(project: org.gradle.api.Project, targetArch: String): Boolean {
+    val hostArch = when (project.providers.systemProperty("os.arch").get()) {
         "amd64", "x86_64" -> "amd64"
         "aarch64", "arm64" -> "arm64"
         else -> "unknown"
     }
-    val allowEmulation = System.getProperty("org.xtclang.docker.allowEmulation", "false").toBoolean()
+    val allowEmulation = project.providers.systemProperty("org.xtclang.docker.allowEmulation").getOrElse("false").toBoolean()
     
     if (targetArch != hostArch && !allowEmulation) {
         return false
@@ -32,8 +35,7 @@ abstract class DockerTask : DefaultTask() {
     @get:Inject
     abstract val execOperations: ExecOperations
     
-    @get:InputFile
-    abstract val gitInfoFile: RegularFileProperty
+    // Git info no longer needed for Docker builds
     
     @get:Input
     abstract val platforms: ListProperty<String>
@@ -44,7 +46,11 @@ abstract class DockerTask : DefaultTask() {
     @get:Input
     @get:Optional
     abstract val distZipUrl: Property<String>
-    
+
+    @get:InputFiles
+    @get:Optional
+    abstract val xdkDistributionFiles: ConfigurableFileCollection
+
     @get:Input
     abstract val jdkVersion: Property<Int>
     
@@ -54,99 +60,140 @@ abstract class DockerTask : DefaultTask() {
     
     @get:Input
     abstract val tags: ListProperty<String>
+
+    @get:Input
+    @get:Optional
+    abstract val gitCommit: Property<String>
+
+    @get:Input
+    @get:Optional
+    abstract val gitBranch: Property<String>
+
+    @get:Input
+    @get:Optional
+    abstract val projectVersion: Property<String>
+    
+    @get:Input
+    abstract val hostArch: Property<String>
+    
+    @get:Input
+    abstract val allowEmulation: Property<Boolean>
+    
+    @get:Input
+    abstract val dockerProgress: Property<String>
+    
+    @get:Input
+    abstract val ciMode: Property<Boolean>
+    
+    @get:Input
+    abstract val userHome: Property<String>
+
+    @get:InputDirectory
+    abstract val dockerDir: DirectoryProperty
     
     @TaskAction
     fun buildDockerImage() {
         // Architecture check at execution time
         val archCheck = architectureCheck.orNull
-        if (archCheck != null && archCheck.isNotEmpty() && !checkCrossPlatformBuild(archCheck)) {
-            throw GradleException("Cannot build $archCheck on this architecture")
+        if (archCheck != null && archCheck.isNotEmpty()) {
+            if (archCheck != hostArch.get() && !allowEmulation.get()) {
+                throw GradleException("Cannot build $archCheck on this architecture")
+            }
         }
-        
-        val gitInfo = gitInfoFile.get().asFile
-        val config = createDockerConfigFromGitInfo(gitInfo)
-        val distZip = distZipUrl.orNull
-        
-        // Log configuration
-        if (distZip != null) {
-            logger.info("Using snapshot distribution: $distZip")
-        } else {
-            logger.info("Using source build with branch: ${config.branch}, commit: ${config.commit}")
-        }
-        
-        // Compute tags at execution time based on platforms
-        val computedTags = when {
-            platforms.get().size == 1 && platforms.get()[0] == "linux/amd64" -> config.tagsForArch("amd64")
-            platforms.get().size == 1 && platforms.get()[0] == "linux/arm64" -> config.tagsForArch("arm64") 
-            else -> config.multiPlatformTags()
-        }
-        
-        val platformArg = platforms.get().joinToString(",")
-        val cmd = listOf("docker", "buildx", "build", "--platform", platformArg) +
-                  listOf("--progress=${System.getenv("DOCKER_BUILDX_PROGRESS") ?: "plain"}") +
-                  config.buildArgs(distZip, jdkVersion.get()).flatMap { listOf("--build-arg", "${it.key}=${it.value}") } +
-                  config.metadataLabels().flatMap { listOf("--label", "${it.key}=${it.value}") } +
-                  config.cacheArgs(if (platforms.get().size == 1) platforms.get()[0].substringAfter("/") else null) +
-                  computedTags.flatMap { listOf("--tag", "${config.baseImage}:${it}") } +
-                  listOf("--${action.get()}", ".")
-        
-        logger.info("Executing Docker command: ${cmd.joinToString(" ")}")
-        
-        execOperations.exec {
-            commandLine(cmd)
-        }
-    }
-    
-    private fun createDockerConfigFromGitInfo(gitInfoFile: File): DockerConfig {
-        val props = java.util.Properties()
-        gitInfoFile.inputStream().use { props.load(it) }
-        
-        return DockerConfig(
-            props.getProperty("version"),
-            props.getProperty("git.branch"),
-            props.getProperty("git.commit")
-        )
-    }
-}
 
-// Docker configuration data class
-data class DockerConfig(
-    val version: String,
-    val branch: String,
-    val commit: String,
-    val isCI: Boolean = System.getenv("CI") == "true"
-) {
-    val baseImage = "ghcr.io/xtclang/xvm"
-    val isMaster = branch == "master"
-    val tagPrefix = if (isMaster) "latest" else branch.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-    val versionTags = if (isMaster) listOf(version) else emptyList()
-    
-    fun tagsForArch(arch: String) = (listOf("${tagPrefix}-$arch") + versionTags.map { "${it}-$arch" } + listOf("${commit}-$arch"))
-    fun multiPlatformTags() = listOf(tagPrefix) + versionTags + listOf(commit)
-    
-    fun buildArgs(distZipUrl: String? = null, jdkVersion: Int) = mapOf(
-        "GH_BRANCH" to branch,
-        "GH_COMMIT" to commit,
-        "JAVA_VERSION" to jdkVersion.toString()
-    ).let { baseArgs ->
-        if (distZipUrl != null) baseArgs + ("DIST_ZIP_URL" to distZipUrl) else baseArgs
-    }
-    
-    fun metadataLabels() = mapOf(
-        "org.opencontainers.image.created" to Instant.now().toString(),
-        "org.opencontainers.image.revision" to commit,
-        "org.opencontainers.image.version" to version,
-        "org.opencontainers.image.source" to "https://github.com/xtclang/xvm/tree/$branch"
-    )
-    
-    fun cacheArgs(arch: String? = null): List<String> {
-        return if (isCI) {
-            val scope = arch?.let { ",scope=$it" } ?: ""
-            listOf("--cache-from", "type=gha$scope", "--cache-to", "type=gha,mode=max$scope")
-        } else {
-            val cacheDir = File(System.getProperty("user.home"), ".cache/docker-buildx${arch?.let { "-$it" } ?: ""}")
-            cacheDir.mkdirs()
-            listOf("--cache-from", "type=local,src=${cacheDir.absolutePath}", "--cache-to", "type=local,dest=${cacheDir.absolutePath},mode=max")
+        // Docker build simplified - no git info needed anymore
+        val distZip = distZipUrl.orNull
+
+        // Ensure we have a distribution ZIP
+        if (distZip.isNullOrEmpty()) {
+            throw GradleException("DIST_ZIP_URL is required but not provided. Run 'xdk:distZip' first or set DIST_ZIP_URL environment variable.")
+        }
+
+        logger.lifecycle("Using XDK distribution: $distZip")
+
+        // Verify the distribution ZIP exists
+        val distZipFile = File(distZip)
+        if (!distZipFile.exists()) {
+            throw GradleException("Distribution ZIP not found: $distZip")
+        }
+
+        // Copy the distribution ZIP to the Docker build context with the expected name
+        val contextDistZip = File(dockerDir.get().asFile, "xdk-dist.zip")
+        logger.info("Copying XDK distribution ZIP to Docker build context: ${distZipFile.absolutePath} -> ${contextDistZip.absolutePath}")
+        distZipFile.copyTo(contextDistZip, overwrite = true)
+
+        try {
+            // Docker command construction with proper tag computation
+            val platformArg = platforms.get().joinToString(",")
+            val baseImage = "ghcr.io/xtclang/xvm"
+
+            // Compute tags similar to CI compute-docker-tags action
+            // Auto-detect git info if not provided via environment variables
+            val commit = if (gitCommit.orNull == "auto-detect") {
+                try {
+                    val output = ByteArrayOutputStream()
+                    execOperations.exec {
+                        commandLine("git", "rev-parse", "HEAD")
+                        standardOutput = output
+                    }
+                    output.toString().trim().takeIf { it.isNotEmpty() } ?: "latest"
+                } catch (e: Exception) {
+                    logger.warn("Failed to detect git commit: ${e.message}")
+                    "latest"
+                }
+            } else {
+                gitCommit.orNull ?: "latest"
+            }
+
+            val branch = if (gitBranch.orNull == "auto-detect") {
+                try {
+                    val output = ByteArrayOutputStream()
+                    execOperations.exec {
+                        commandLine("git", "branch", "--show-current")
+                        standardOutput = output
+                    }
+                    output.toString().trim().takeIf { it.isNotEmpty() } ?: "master"
+                } catch (e: Exception) {
+                    logger.warn("Failed to detect git branch: ${e.message}")
+                    "master"
+                }
+            } else {
+                gitBranch.orNull ?: "master"
+            }
+
+            val version = projectVersion.orNull ?: "unknown"
+
+            // Sanitize branch name for Docker tags (same as CI)
+            val branchTag = branch.replace(Regex(".*/"), "")
+                                  .replace(Regex("[^a-zA-Z0-9._-]"), "_")
+
+            val computedTags = if (branch == "master") listOf("latest", version, commit) else listOf(branchTag, commit)
+
+            logger.lifecycle("Computing Docker tags: branch=$branch, version=$version, commit=${commit.take(7)}")
+            logger.lifecycle("Generated tags: ${computedTags.joinToString(", ")}")
+
+            val cmd = listOf("docker", "buildx", "build", "--platform", platformArg) +
+                      listOf("--progress=${dockerProgress.get()}") +
+                      listOf("--build-arg", "JAVA_VERSION=${jdkVersion.get()}") +
+                      listOf("--build-arg", "DIST_ZIP_URL=xdk-dist.zip") +
+                      computedTags.flatMap { tag -> listOf("--tag", "$baseImage:$tag") } +
+                      listOf("--label", "org.opencontainers.image.revision=$commit") +
+                      listOf("--label", "org.opencontainers.image.version=$version") +
+                      listOf("--label", "org.opencontainers.image.source=https://github.com/xtclang/xvm/tree/$branch") +
+                      listOf("--${action.get()}", ".")
+
+            logger.info("Executing Docker command: ${cmd.joinToString(" ")}")
+
+            execOperations.exec {
+                commandLine(cmd)
+                workingDir(dockerDir.get().asFile)
+            }
+        } finally {
+            // Clean up the copied distribution ZIP
+            if (contextDistZip.exists()) {
+                contextDistZip.delete()
+                logger.info("Cleaned up copied distribution ZIP: ${contextDistZip.absolutePath}")
+            }
         }
     }
 }
@@ -188,9 +235,9 @@ abstract class DockerCleanupTask : DefaultTask() {
             val output = result.toString()
             if (forced.get()) {
                 logger.warn("Failed to fetch package versions: $output")
-            } else {
-                throw GradleException("Failed to fetch package versions: $output", e)
+                return
             }
+            throw GradleException("Failed to fetch package versions: $output", e)
         }
     }
 }

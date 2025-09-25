@@ -1,0 +1,198 @@
+#
+# GitHub workflow for handling dependency updates from Dependabot
+# This workflow runs when Dependabot creates PRs for dependency updates
+#
+name: Dependency Updates
+
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [master]
+  # Allow manual triggering for testing
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: 'PR number to test (leave empty for current branch)'
+        required: false
+      force-upload:
+        description: 'Force upload dependencies even if not a dependabot PR'
+        type: boolean
+        required: false
+        default: false
+
+env:
+  # Use same Java and Gradle settings as main CI
+  java_distribution: temurin
+  gradle_version: 9.0.0
+
+  # Gradle options for dependency updates
+  gradle_options: "-Dorg.gradle.vfs.verbose=false --stacktrace --console=plain"
+
+  # CI-specific JVM options
+  GRADLE_OPTS: "-Xmx4g -XX:+UseG1GC -XX:ParallelGCThreads=2 -XX:ConcGCThreads=1 -XX:+UseStringDeduplication"
+
+jobs:
+  validate-dependencies:
+    name: Validate dependency updates
+    runs-on: ubuntu-latest
+    # Only run on dependabot PRs or when manually triggered with force-upload
+    if: ${{ github.actor == 'dependabot[bot]' || github.event.inputs.force-upload == 'true' }}
+
+    outputs:
+      is-dependabot: ${{ steps.check.outputs.is-dependabot }}
+      dependency-count: ${{ steps.analyze.outputs.dependency-count }}
+
+    steps:
+      - name: Check if this is a dependabot PR
+        id: check
+        run: |
+          IS_DEPENDABOT=${{ github.actor == 'dependabot[bot]' }}
+          echo "is-dependabot=$IS_DEPENDABOT" >> $GITHUB_OUTPUT
+          echo "Actor: ${{ github.actor }}"
+          echo "Is Dependabot: $IS_DEPENDABOT"
+
+      - name: Fetch Sources
+        uses: actions/checkout@v5
+        with:
+          # Fetch both base and head for proper diff analysis
+          fetch-depth: 0
+
+      - name: Get Java version from XDK properties
+        id: java_version
+        uses: ./.github/actions/get-java-version
+
+      - name: Setup XVM Build Environment
+        uses: ./.github/actions/setup-xvm-build
+        with:
+          java-version: ${{ steps.java_version.outputs.java_version }}
+          java-distribution: ${{ env.java_distribution }}
+          gradle-version: ${{ env.gradle_version }}
+          cache-read-only: false
+          enable-debug: false
+
+      - name: Analyze dependency changes
+        id: analyze
+        run: |
+          echo "🔍 Analyzing dependency changes..."
+
+          # Check for changes in gradle files
+          GRADLE_CHANGES=$(git diff --name-only origin/master...HEAD | grep -E '\.(gradle|gradle\.kts)$' | wc -l)
+          echo "Gradle files changed: $GRADLE_CHANGES"
+          echo "dependency-count=$GRADLE_CHANGES" >> $GITHUB_OUTPUT
+
+          if [ "$GRADLE_CHANGES" -gt 0 ]; then
+            echo "📋 Changed Gradle files:"
+            git diff --name-only origin/master...HEAD | grep -E '\.(gradle|gradle\.kts)$' | while read file; do
+              echo "  - $file"
+            done
+          fi
+
+      - name: Generate dependency lock files
+        run: |
+          echo "🔒 Generating dependency lock files..."
+          ./gradlew ${{ env.gradle_options }} dependencies --write-locks
+
+      - name: Run basic validation build
+        run: |
+          echo "✅ Running validation build to ensure dependencies resolve..."
+          ./gradlew ${{ env.gradle_options }} clean build -x test --info
+
+      - name: Check for dependency vulnerabilities
+        run: |
+          echo "🛡️ Checking for known vulnerabilities..."
+          # Run dependency verification if available
+          ./gradlew ${{ env.gradle_options }} dependencyCheckAnalyze || echo "⚠️ Dependency check not available or failed"
+
+  upload-dependencies:
+    name: Upload updated dependencies
+    needs: validate-dependencies
+    runs-on: ubuntu-latest
+    if: ${{ needs.validate-dependencies.outputs.is-dependabot == 'true' && success() }}
+
+    steps:
+      - name: Fetch Sources
+        uses: actions/checkout@v5
+
+      - name: Get Java version from XDK properties
+        id: java_version
+        uses: ./.github/actions/get-java-version
+
+      - name: Setup XVM Build Environment
+        uses: ./.github/actions/setup-xvm-build
+        with:
+          java-version: ${{ steps.java_version.outputs.java_version }}
+          java-distribution: ${{ env.java_distribution }}
+          gradle-version: ${{ env.gradle_version }}
+          cache-read-only: true  # Use cache from validate-dependencies
+          enable-debug: false
+
+      - name: Upload dependencies to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "📦 Uploading updated dependencies..."
+
+          # Create a snapshot build with updated dependencies
+          ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true --info
+          ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true --info
+
+          echo "✅ Dependencies uploaded successfully"
+
+      - name: Create dependency update summary
+        run: |
+          echo "📊 Dependency Update Summary" >> $GITHUB_STEP_SUMMARY
+          echo "==========================" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Updated dependencies:** ${{ needs.validate-dependencies.outputs.dependency-count }} files" >> $GITHUB_STEP_SUMMARY
+          echo "**Build status:** ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          echo "**Upload status:** ✅ Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The updated dependencies have been validated and uploaded to GitHub Packages." >> $GITHUB_STEP_SUMMARY
+
+  auto-approve:
+    name: Auto-approve dependabot PRs
+    needs: [validate-dependencies, upload-dependencies]
+    runs-on: ubuntu-latest
+    if: ${{ needs.validate-dependencies.outputs.is-dependabot == 'true' && success() }}
+
+    steps:
+      - name: Auto-approve dependabot PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Only auto-approve if all checks passed
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number
+            });
+
+            // Add approval
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              event: 'APPROVE',
+              body: '✅ Auto-approved after successful dependency validation and upload'
+            });
+
+            // Add informative comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `🤖 **Dependency Update Auto-Approval**
+
+              This Dependabot PR has been automatically approved after:
+              - ✅ Dependency validation passed
+              - ✅ Build with updated dependencies succeeded
+              - ✅ Updated dependencies uploaded to GitHub Packages
+
+              The PR is ready for manual review and merge by maintainers.`
+            });

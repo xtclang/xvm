@@ -116,25 +116,22 @@ env:
       local gradle_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
       echo "🔍 Gradle Cache Inspection${label:+ ($label)}:"
       echo "  Cache location: $gradle_home"
-      if [ -d "$gradle_home" ]; then
-        echo "  Cache exists: ✅"
-        local total_size=$(du -sh "$gradle_home" 2>/dev/null | cut -f1 || echo "unknown")
-        local total_bytes=$(du -sb "$gradle_home" 2>/dev/null | cut -f1 || echo "unknown")
-        echo "  Cache size: $total_size ($total_bytes bytes)"
-        for dir in caches wrapper build-cache; do
-          if [ -d "$gradle_home/$dir" ]; then
-            local dir_size=$(du -sh "$gradle_home/$dir" 2>/dev/null | cut -f1 || echo "unknown")
-            echo "    $dir: $dir_size"
-          fi
-        done
-      else
+      if [ ! -d "$gradle_home" ]; then
         echo "  Cache exists: ❌"
+        return 0
       fi
+      echo "  Cache exists: ✅"
+      local total_size=$(du -sh "$gradle_home" 2>/dev/null | cut -f1 || echo "unknown")
+      local total_bytes=$(du -sb "$gradle_home" 2>/dev/null | cut -f1 || echo "unknown")
+      echo "  Cache size: $total_size ($total_bytes bytes)"
+      for dir in caches wrapper build-cache; do
+        if [ -d "$gradle_home/$dir" ]; then
+          local dir_size=$(du -sh "$gradle_home/$dir" 2>/dev/null | cut -f1 || echo "unknown")
+          echo "    $dir: $dir_size"
+        fi
+      done
     }
 
-  # Build environment and build workflow debug flags.
-  # ACTIONS_RUNNER_DEBUG: true
-  # ACTIONS_STEP_DEBUG: true
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: false
 
 # Concurrency settings: group by workflow and ref, cancel intermediate builds, but only if it's a pull request build.
@@ -237,25 +234,20 @@ jobs:
           ./gradlew ${{ env.gradle_options }} :xdk:distZip --info
           
           # Run manual tests inline if enabled (avoids cache rebuild)
-          if [ "${{ env.run_manual_tests }}" = "true" ]; then
-            echo "🧪 Running manual tests inline (cache still hot)..."
-            inspect_gradle_cache "before manual tests (inline)"
-            
-            # Always run basic manual tests
-            ./gradlew ${{ env.gradle_options }} manualTests:runXtc
-            ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc
-            ./gradlew ${{ env.gradle_options }} manualTests:runTwoTestsInSequence
-            
-            # Run parallel or sequential tests based on setting
-            MANUAL_TASK=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runAllTestTasks" )
-            echo "Running manual tests with given configuration: $MANUAL_TASK"
-            ./gradlew ${{ env.gradle_options }} manualTests:$MANUAL_TASK
-            
-            inspect_gradle_cache "after manual tests (inline)"
-            echo "✅ Manual tests completed inline"
-          else
+          if [ "${{ env.run_manual_tests }}" != "true" ]; then
             echo "⏭️ Manual tests skipped (disabled)"
+            exit 0
           fi
+          echo "🧪 Running manual tests inline (cache still hot)..."
+          inspect_gradle_cache "before manual tests (inline)"
+          ./gradlew ${{ env.gradle_options }} manualTests:runXtc
+          ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc
+          ./gradlew ${{ env.gradle_options }} manualTests:runTwoTestsInSequence            
+          MANUAL_TASK=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runAllTestTasks" )
+          echo "Running manual tests with given configuration: $MANUAL_TASK"
+          ./gradlew ${{ env.gradle_options }} manualTests:$MANUAL_TASK            
+          inspect_gradle_cache "after manual tests (inline)"
+          echo "✅ Manual tests completed inline"
 
       - name: Prepare Snapshot Release
         if: ${{ success() && matrix.os == 'ubuntu-latest' && ((github.event.inputs.homebrew == 'true') || (github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
@@ -331,16 +323,42 @@ jobs:
           java -XshowSettings:properties --version
 
       - name: Create or Update Maven Artifact Snapshot (if pushed to 'master', or env.snapshot-maven is true)
+        id: publish-maven-snapshot
         if: ${{ (github.event.inputs.snapshot-maven == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master') }}
         shell: bash
         run: |
           ${{ env.GRADLE_CACHE_INSPECT }}
-          
           inspect_gradle_cache "before publishing (reused from build-verify)"
-          
           echo "Reusing build cache from build-verify job..."
-          ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true
-          ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true
+          ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true --info
+          ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true --info
+
+      - name: Clean up old XDK package versions (keep 50 newest)
+        if: steps.publish-maven-snapshot.outcome == 'success'
+        uses: actions/delete-package-versions@v4
+        with:
+          package-name: 'org.xtclang.xdk'
+          package-type: 'maven'
+          min-versions-to-keep: 50
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Clean up old Plugin package versions (keep 50 newest)
+        if: steps.publish-maven-snapshot.outcome == 'success'
+        uses: actions/delete-package-versions@v4
+        with:
+          package-name: 'org.xtclang.xtc-plugin'
+          package-type: 'maven'
+          min-versions-to-keep: 50
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Clean up old Plugin Marker package versions (keep 50 newest)
+        if: steps.publish-maven-snapshot.outcome == 'success'
+        uses: actions/delete-package-versions@v4
+        with:
+          package-name: 'org.xtclang.xtc-plugin.org.xtclang.xtc-plugin.gradle.plugin'
+          package-type: 'maven'
+          min-versions-to-keep: 50
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   compute-docker-tags:
     name: Compute Docker tags and metadata
@@ -377,11 +395,7 @@ jobs:
           BRANCH_TAG="${{ steps.compute.outputs.branch-tag }}"
           
           # Generate base tags
-          if [ "$IS_MASTER" = "true" ]; then
-            BASE_TAGS='["latest","'$VERSION'","'${{ env.GH_COMMIT }}'"]'
-          else
-            BASE_TAGS='["'$BRANCH_TAG'","'${{ env.GH_COMMIT }}'"]'
-          fi
+          BASE_TAGS=$( [ "$IS_MASTER" = "true" ] && echo '["latest","'$VERSION'","'${{ env.GH_COMMIT }}'"]' || echo '["'$BRANCH_TAG'","'${{ env.GH_COMMIT }}'"]' )
           
           echo "tags-json=$BASE_TAGS" >> $GITHUB_OUTPUT
           
@@ -458,14 +472,11 @@ jobs:
         working-directory: docker
         run: |
           set -euo pipefail
-          
           echo "Building and pushing ${{ matrix.arch }} Docker image with pre-built artifacts..."
-          
           # Use computed metadata from previous job (single source of truth)
           VERSION="${{ needs.compute-docker-tags.outputs.version }}"
           BRANCH_TAG="${{ needs.compute-docker-tags.outputs.branch-tag }}"
           BASE_TAGS='${{ needs.compute-docker-tags.outputs.tags-json }}'
-          
           # Generate architecture-specific tags
           TAGS=$(echo "$BASE_TAGS" | jq -r --arg base "${{ env.DOCKER_BASE_IMAGE }}" --arg arch "${{ matrix.arch }}" '.[] | $base + ":" + . + "-" + $arch')
           TAG_ARGS=""
@@ -497,18 +508,16 @@ jobs:
             exit 1
           fi
           
-          # Copy ZIP to Docker build context with standard name
-          cp "$DIST_ZIP_FILE" ci-dist.zip
-          echo "📦 Copied distribution to Docker context: $DIST_ZIP_FILE → ci-dist.zip"
+          # Copy ZIP to Docker build context with expected name
+          cp "$DIST_ZIP_FILE" xdk-dist.zip
+          echo "📦 Copied distribution to Docker context: $DIST_ZIP_FILE → xdk-dist.zip"
           
           docker buildx build \
             --platform ${{ matrix.platform }} \
             --progress=plain \
             $TAG_ARGS \
             --build-arg JAVA_VERSION=${{ steps.java_version.outputs.java_version }} \
-            --build-arg DIST_ZIP_URL="ci-dist.zip" \
-            --build-arg GH_BRANCH=${{ env.GH_BRANCH }} \
-            --build-arg GH_COMMIT=${{ env.GH_COMMIT }} \
+            --build-arg DIST_ZIP_URL="xdk-dist.zip" \
             --label org.opencontainers.image.created=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
             --label org.opencontainers.image.revision=${{ env.GH_COMMIT }} \
             --label org.opencontainers.image.version="$VERSION" \
@@ -649,8 +658,7 @@ jobs:
         shell: bash
         run: |
           IMAGE="${{ env.DOCKER_BASE_IMAGE }}:${{ github.sha }}"
-          BRANCH_IMAGE="${{ env.DOCKER_BASE_IMAGE }}:${{ needs.compute-docker-tags.outputs.is-master == 'true' && 'latest' || needs.compute-docker-tags.outputs.branch-tag }}"
-          
+          BRANCH_IMAGE="${{ env.DOCKER_BASE_IMAGE }}:${{ needs.compute-docker-tags.outputs.is-master == 'true' && 'latest' || needs.compute-docker-tags.outputs.branch-tag }}"          
           ./.github/scripts/test-docker-image.sh \
             "$IMAGE" \
             "${{ github.sha }}" \

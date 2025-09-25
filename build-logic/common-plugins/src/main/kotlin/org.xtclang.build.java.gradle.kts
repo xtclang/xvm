@@ -55,6 +55,10 @@ testing {
     suites {
         @Suppress("UnstableApiUsage") val test by getting(JvmTestSuite::class) {
             useJUnitJupiter()
+            dependencies {
+                implementation(platform("org.junit:junit-bom:5.13.1"))
+                implementation("org.junit.jupiter:junit-jupiter")
+            }
         }
     }
 }
@@ -141,11 +145,11 @@ tasks.withType<Test>().configureEach {
     }
 }
 
-
 if (enablePreview) {
     logger.info("[java] WARNING: Project has Java preview features enabled.")
 }
 if (enableNativeAccess) {
     logger.info("[java] WARNING: Project has native access enabled.")
 }
+
 logger.info("[java] Default JVM args will be generated: $defaultJvmArgs")

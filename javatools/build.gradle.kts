@@ -1,5 +1,6 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_JAR
 import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
+import org.gradle.api.tasks.PathSensitivity
 import java.util.Properties
 
 /**
@@ -8,29 +9,12 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.xdk.build.java)
-    id("org.xtclang.build.git")
+    alias(libs.plugins.palantir.git.version)
 }
 
 private val semanticVersion: SemanticVersion by extra
 
-// Use the standard git convention plugin instead of custom logic
-tasks.processResources {
-    dependsOn(tasks.resolveGitInfo)
-}
-
-// Separate task to copy git info to legacy location
-val copyGitInfoForBuildInfo by tasks.registering(Copy::class) {
-    description = "Copy git info to legacy location for BuildInfo compatibility"
-    dependsOn(tasks.resolveGitInfo)
-    
-    from(tasks.resolveGitInfo.flatMap { it.outputFile })
-    into(layout.buildDirectory.dir("resources/main"))
-    rename { "git.properties" }
-}
-
-tasks.processResources {
-    dependsOn(copyGitInfoForBuildInfo)
-}
+// Using Palantir git plugin - no custom git tasks needed
 
 // TODO: Move these to common-plugins, the XDK composite build does use them in some different places.
 val xdkJavaToolsProvider by configurations.registering {
@@ -76,59 +60,78 @@ val copyEcstasyResources by tasks.registering(Copy::class) {
     // Remove onlyIf condition - let Gradle handle incremental builds with proper inputs/outputs
 }
 
-val generateBuildInfo by tasks.registering {
-    description = "Generate build-info.properties with version and git information"
-    dependsOn(tasks.resolveGitInfo)
-    
-    val versionPropsFile = compositeRootProjectDirectory.file("version.properties")
-    val outputFile = layout.buildDirectory.file("resources/main/build-info.properties")
-    val gitInfoProvider = tasks.resolveGitInfo.flatMap { it.outputFile }
-    // Always declare IntelliJ output for configuration cache compatibility
-    val intellijOutputFile = project.file("out/production/resources/build-info.properties")
-    
-    inputs.file(versionPropsFile)
-    inputs.file(gitInfoProvider)
-    outputs.file(outputFile)
-    outputs.file(intellijOutputFile)
-    
-    doLast {
-        // Read version properties as base
-        val buildInfo = Properties()
-        versionPropsFile.asFile.inputStream().use { buildInfo.load(it) }
-        
-        // Add git information directly from git info file
-        val gitInfoFile = gitInfoProvider.get().asFile
-        if (gitInfoFile.exists()) {
-            val gitProps = Properties()
-            gitInfoFile.inputStream().use { gitProps.load(it) }
-            
-            gitProps.getProperty("git.commit.id")?.let { buildInfo.setProperty("git.commit", it) }
-            
-            val isDirty = gitProps.getProperty("git.dirty")?.toBoolean() ?: false
-            buildInfo.setProperty("git.status", if (isDirty) "detached-head" else "clean")
+// Build-info.properties is now generated directly in the jar task
+
+
+// Get Palantir providers once (config time), but DO NOT read values yet
+val versionDetails: groovy.lang.Closure<com.palantir.gradle.gitversion.VersionDetails> by extra
+val gitHashFullProvider = providers.provider { versionDetails().gitHashFull }
+val gitIsCleanTagProvider = providers.provider { versionDetails().isCleanTag } // boolean
+
+// Path to your static base properties
+val versionPropsFile = compositeRootProjectDirectory.file("version.properties")
+
+abstract class GenerateBuildInfo : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val baseProps: RegularFileProperty
+
+    @get:Input
+    abstract val gitHashFull: Property<String>
+
+    @get:Input
+    abstract val gitIsCleanTag: Property<Boolean>
+
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
+
+    @TaskAction
+    fun run() {
+        val gitCommit = gitHashFull.get()
+        val gitStatus = if (gitIsCleanTag.get()) "clean" else "detached-head"
+
+        logger.lifecycle("[javatools] Generating build-info.properties with git commit: $gitCommit ($gitStatus)")
+
+        val buildInfo = Properties().apply {
+            baseProps.get().asFile.inputStream().use { load(it) }
+            setProperty("git.commit", gitCommit)
+            setProperty("git.status", gitStatus)
         }
-        
-        // Write to Gradle build directory
-        outputFile.get().asFile.apply {
-            parentFile.mkdirs()
-            outputStream().use { buildInfo.store(it, "Build information generated at build time") }
+
+        val content = buildString {
+            appendLine("#Build information generated at build time")
+            buildInfo.entries
+                .map { it.key.toString() to it.value.toString() }
+                .sortedBy { it.first }
+                .forEach { (k, v) -> appendLine("$k=$v") }
         }
-        
-        // Always copy to IntelliJ output directory for IDE compatibility
-        // TODO: Consider making runtime code check multiple locations instead of duplicating files
-        intellijOutputFile.apply {
-            parentFile.mkdirs()
-            outputStream().use { buildInfo.store(it, "Build information generated at build time") }
-        }
+
+        // Write to standard Gradle generated resources directory
+        val out = outputFile.get().asFile
+        out.parentFile.mkdirs()
+        out.writeText(content)
+
+        logger.lifecycle("[javatools] Build info written to: ${out.absolutePath}")
     }
 }
 
+val generateBuildInfo by tasks.registering(GenerateBuildInfo::class) {
+    description = "Generate build-info.properties deterministically (config-cache safe)"
+    baseProps.set(versionPropsFile)
+    gitHashFull.set(gitHashFullProvider)          // wire Providers — no reading yet
+    gitIsCleanTag.set(gitIsCleanTagProvider)
+
+    // Put it under build/, so Gradle owns it
+    outputFile.set(layout.buildDirectory.file("generated/resources/main/build-info.properties"))
+}
 
 sourceSets {
     main {
         resources {
             // Use build-time copied resources instead of direct reference
             srcDir(copyEcstasyResources.map { it.destinationDir })
+            // Include generated build info so IntelliJ can find it
+            srcDir(generateBuildInfo.map { it.outputFile.get().asFile.parentFile })
         }
     }
 }
@@ -137,38 +140,39 @@ tasks.processResources {
     dependsOn(copyEcstasyResources)
 }
 
-// Ensure test compilation has access to generated build info
+// Make sure generateBuildInfo runs for any compilation task that might need it
+tasks.compileJava {
+    dependsOn(generateBuildInfo)
+}
+
+// Also make it run for tests and other lifecycle tasks
 tasks.compileTestJava {
     dependsOn(generateBuildInfo)
 }
 
-val jar by tasks.existing(Jar::class) {
-    dependsOn(tasks.processResources, generateBuildInfo)
-    
-    // CRITICAL: Explicitly declare that this task reads from compileClasspath
-    // This forces Gradle to wait for javatools_utils:jar and other dependency tasks to complete
-    inputs.files(configurations.compileClasspath)
-    // Also declare dependency on ecstasy resources (like implicit.x) that get copied
-    inputs.files(xdkEcstasyResourcesConsumer)
-    inputs.property("manifestSemanticVersion") {
-        semanticVersion.toString()
+// Use the copied ecstasy resources as before
+tasks.processResources {
+    dependsOn(copyEcstasyResources, generateBuildInfo)
+    // Include the generated build-info.properties
+    from(generateBuildInfo.map { it.outputFile }) {
+        into("") // at root of resources in the jar
     }
-    inputs.property("manifestVersion") {
-        version
-    }
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
 
-    /*
-     * This "from" statement will copy everything in the dependencies section, and our resources
-     * to the javatools-<version>.jar. In that respect it's a fat jar.
-     *
-     * Include project's own classes and resources (default Jar behavior)
-     * PLUS extract dependency JARs into the fat jar.
-     */
-    // With proper inputs declaration above, this should now work correctly with configuration cache
-    from(configurations.compileClasspath.map { config ->
-        config.filter { it.name.endsWith(".jar") }.map { jarFile -> 
-            zipTree(jarFile) 
-        }
+// Make 'jar' clean: no I/O or repo reads inside actions
+val jar by tasks.existing(Jar::class) {
+    dependsOn(tasks.processResources)
+
+    // Declare inputs that affect jar content
+    inputs.files(configurations.compileClasspath)
+    inputs.files(xdkEcstasyResourcesConsumer)
+    inputs.property("manifestSemanticVersion", semanticVersion.toString())
+    inputs.property("manifestVersion", version.toString())
+
+    // Build your fat-jar content lazily
+    from(configurations.compileClasspath.map { cfg ->
+        cfg.filter { it.name.endsWith(".jar") }.map(::zipTree)
     })
 
     archiveBaseName = "javatools"
@@ -186,7 +190,6 @@ val jar by tasks.existing(Jar::class) {
             "Implementation-Vendor" to "xtclang.org",
             "Sealed" to "true",
             "Xdk-Version" to semanticVersion.toString(),
-            // Enable native access for JLine and other dependencies that load native libraries
             "Add-Opens" to "java.base/java.lang=ALL-UNNAMED",
             "Enable-Native-Access" to "ALL-UNNAMED",
         )

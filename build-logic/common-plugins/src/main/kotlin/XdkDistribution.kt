@@ -1,16 +1,8 @@
-import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.artifacts.Configuration
-import org.gradle.api.file.Directory
-import org.gradle.api.file.FileCollection
-import org.gradle.api.file.RegularFile
-import org.gradle.api.provider.Provider
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
-import org.gradle.api.tasks.TaskProvider
-import org.gradle.api.tasks.application.CreateStartScripts
 import org.gradle.internal.os.OperatingSystem
 import org.gradle.kotlin.dsl.assign
 import org.gradle.kotlin.dsl.withType
@@ -66,12 +58,12 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
             return false
         }
         
-        val password = (project.findProperty("signing.password") ?: System.getenv("GPG_SIGNING_PASSWORD") ?: "") as String
-        val key = (project.findProperty("signing.key") ?: System.getenv("GPG_SIGNING_KEY") ?: readKeyFile()) as String
+        val password = (project.findProperty("signing.password") ?: project.providers.environmentVariable("GPG_SIGNING_PASSWORD").getOrElse("")) as String
+        val key = (project.findProperty("signing.key") ?: project.providers.environmentVariable("GPG_SIGNING_KEY").getOrElse("") ?: readKeyFile()) as String
         
         if (key.isEmpty() || password.isEmpty()) {
             logger.warn("[build-logic] WARNING: Could not resolve a GPG signing key or a passphrase.")
-            if (XdkDistribution.isCiEnabled) {
+            if (XdkDistribution.isCiEnabled(project)) {
                 throw GradleException("[distribution] No GPG signing key or password found in CI build, and no manual way to set them.")
             }
             return false
@@ -95,34 +87,6 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
     }
 }
 
-/**
- * Add resolution logic for the GitHub maven package repository. We use that to keep
- * SNAPSHOT publications after every commit to master (optionally to another branch, if
- * you modify the build action accordingly). Will return false and do nothing if we
- * cannot resolve credentials from GITHUB_TOKEN or the xtclang properties from any
- * property file.
- */
-fun PublishingExtension.mavenGitHubPackages(project: Project): Boolean = project.run {
-    val gitHubToken = project.getXtclangGitHubMavenPackageRepositoryToken()
-    if (gitHubToken.isEmpty()) {
-        logger.warn("[build-logic] WARNING: No GitHub token found, either in config or environment. publishRemote won't work.")
-        return false
-    }
-
-    repositories {
-        maven {
-            name = "GitHub"
-            url = uri("https://maven.pkg.github.com/xtclang/xvm")
-            credentials {
-                username = "xtclang-bot"
-                password = gitHubToken
-            }
-            logger.info("[build-logic] Configured '$name' package repository for project '${project.name}'.")
-        }
-    }
-
-    return true
-}
 
 // TODO: Add sonatype repository for mavenCentral once we have recovered the credentials (tokens) and
 //  have manually verified that we can publish artifacts there.
@@ -136,9 +100,10 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
 
         private const val CI = "CI"
 
-        val isCiEnabled = System.getenv(CI) == "true"
+        // These need to be computed at execution time to be configuration cache compatible
+        fun isCiEnabled(project: Project): Boolean = project.providers.environmentVariable(CI).getOrElse("") == "true"
         val currentOs: OperatingSystem = OperatingSystem.current()
-        val currentArch: String = normalizeArchitecture(System.getProperty("os.arch"))
+        fun getCurrentArch(project: Project): String = normalizeArchitecture(project.providers.systemProperty("os.arch").get())
         val distributionTasks = listOf(
             "distTar",
             "distZip",
@@ -261,48 +226,6 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
             )
         )
 
-        /**
-         * Generate module path arguments for XTC launchers (-L arguments).
-         *
-         * @param isWindows true for Windows batch files, false for Unix shell scripts
-         * @return formatted module path arguments string
-         */
-        // Removed generateXtcModulePathArgs - XTC module paths are now handled in templates
-        
-        // Removed getPlatformFormatting - now handled by templates
-
-        /**
-         * Replace jar paths in script content, handling both Unix and Windows path separators.
-         * Replaces `/lib/originalName` with `/javatools/strippedName` and Windows equivalents.
-         *
-         * @param scriptContent the script content to modify
-         * @param originalName the original jar name with version
-         * @param strippedName the jar name without version
-         * @return modified script content with updated jar paths
-         */
-        // Removed replaceJarPaths - jar paths are now handled in templates
-
-        /**
-         * Add XTC module paths to launcher script and inject script name as first argument.
-         */
-        // Removed injectXtcModulePaths - module paths are now handled in templates
-
-        /**
-         * Find insertion point for delegation logic in script content.
-         * @return insertion index, or -1 if not found
-         */
-        // Removed findDelegationInsertionPoint - delegation is now handled in templates
-
-        /**
-         * Cross-platform XDK_HOME delegation logic injection for launcher scripts.
-         * Implements proper delegation to XDK_HOME installations with infinite recursion prevention.
-         */
-        // Removed injectXdkHomeDelegation - XDK_HOME delegation is now handled in templates
-
-        /**
-         * Fix path resolution to use APP_HOME consistently after XDK_HOME delegation.
-         */
-        // Removed fixPathResolution - path resolution is now handled in templates
 
         /**
          * Strip version suffix from jar names for distribution.
@@ -320,7 +243,19 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
             stripVersionFromJarName(jarName, version)
         }
 
+        /**
+         * Insert text after a marker line in the content.
+         */
+        private fun insertAtMarker(content: String, marker: String, textToInsert: String): String {
+            val insertPoint = content.indexOf(marker)
+            if (insertPoint < 0) return content
 
+            val lineEnd = content.indexOf('\n', insertPoint)
+            val endOfLine = if (lineEnd >= 0) lineEnd + 1 else content.length
+            val before = content.substring(0, endOfLine)
+            val after = content.substring(endOfLine)
+            return before + textToInsert + after
+        }
 
         /**
          * Configuration cache compatible script modification logic.
@@ -350,33 +285,12 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
                     // Add XDK_HOME delegation and XTC module paths using templates directly
                     val templates = if (isWindows) SCRIPT_TEMPLATES["windows"]!! else SCRIPT_TEMPLATES["unix"]!!
                     
-                    if (isWindows) {
-                        // Insert XDK_HOME delegation for Windows - place it right after :execute line
-                        val insertPoint = content.indexOf(":execute")
-                        if (insertPoint >= 0) {
-                            val lineEnd = content.indexOf('\n', insertPoint)
-                            val endOfLine = if (lineEnd >= 0) lineEnd + 1 else content.length
-                            val before = content.substring(0, endOfLine)
-                            val after = content.substring(endOfLine)
-                            content = before + templates["xdk_home_delegation"] + after
-                        }
-                        
-                        // Add XTC module paths to Windows script
-                        content = content.replace("org.xvm.tool.Launcher", templates["launcher_args"]!!)
-                    } else {
-                        // Insert XDK_HOME delegation for Unix - place it right after APP_HOME calculation
-                        val insertPoint = content.indexOf("APP_HOME=\$( cd -P")
-                        if (insertPoint >= 0) {
-                            val lineEnd = content.indexOf('\n', insertPoint)
-                            val endOfLine = if (lineEnd >= 0) lineEnd + 1 else content.length
-                            val before = content.substring(0, endOfLine)
-                            val after = content.substring(endOfLine)
-                            content = before + templates["xdk_home_delegation"] + after
-                        }
-                        
-                        // Add XTC module paths to Unix script  
-                        content = content.replace("org.xvm.tool.Launcher", templates["launcher_args"]!!)
-                    }
+                    // Insert XDK_HOME delegation at platform-specific location
+                    val insertMarker = if (isWindows) ":execute" else "APP_HOME=\$( cd -P"
+                    content = insertAtMarker(content, insertMarker, templates["xdk_home_delegation"]!!)
+
+                    // Add XTC module paths
+                    content = content.replace("org.xvm.tool.Launcher", templates["launcher_args"]!!)
                     
                     script.writeText(content)
                 }
@@ -407,11 +321,11 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
             [build-logic]   Name        : '$distributionName'
             [build-logic]   Version     : '$distributionVersion'
             [build-logic]   Target OS   : '${getOsName()}'
-            [build-logic]   Target Arch : '$currentArch'
-            [build-logic]   Platform    : '${getOsName()}_$currentArch'
+            [build-logic]   Target Arch : '${getCurrentArch(project)}'
+            [build-logic]   Platform    : '${getOsName()}_${getCurrentArch(project)}'
             [build-logic]   Environment:
-            [build-logic]       CI             : '$isCiEnabled' (CI property can be overwritten)
-            [build-logic]       GITHUB_ACTIONS : '${System.getenv("GITHUB_ACTIONS") ?: "[not set]"}'
+            [build-logic]       CI             : '${isCiEnabled(project)}' (CI property can be overwritten)
+            [build-logic]       GITHUB_ACTIONS : '${project.providers.environmentVariable("GITHUB_ACTIONS").getOrElse("[not set]")}'
         """.trimIndent())
     }
 
@@ -422,7 +336,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     val distributionVersion: String get() = project.version.toString()
 
     @Suppress("MemberVisibilityCanBePrivate")
-    fun launcherFileName(os: String = getOsName(), arch: String = currentArch): String {
+    fun launcherFileName(os: String = getOsName(), arch: String = getCurrentArch(project)): String {
         val extension = if (os == "windows") ".exe" else ""
         return "${os}_launcher_$arch$extension"
     }
@@ -430,7 +344,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     /*
      * Helper for jreleaser etc.
      */
-    fun osClassifier(os: String = getOsName(), arch: String = currentArch): String = "${os}_$arch"
+    fun osClassifier(os: String = getOsName(), arch: String = getCurrentArch(project)): String = "${os}_$arch"
 
     override fun toString(): String = "$distributionName-$distributionVersion"
 

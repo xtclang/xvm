@@ -998,3 +998,6 @@ with Maven style build systems.
 
 We will also work on IDE Language support as soon as we have enough cycles to do so, which
 should make getting up to speed with XTC and even less complicated process.
+# Test change for git properties rebuild verification
+# Test change for git detection
+# Test git change detection in full build chain

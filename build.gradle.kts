@@ -9,7 +9,10 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 plugins {
     alias(libs.plugins.xdk.build.versioning)
     alias(libs.plugins.xdk.build.aggregator)
+    id("org.xtclang.build.publishing")
 }
+
+// Use the centralized credential management from the publishing convention
 
 /**
  * Installation and distribution tasks that aggregate publishable/distributable included
@@ -31,40 +34,24 @@ val installWithNativeLaunchersDist by tasks.registering {
     dependsOn(xdk.task(":$name"))
 }
 
-/**
- * Register aggregated publication tasks to the top level project, to ensure we can publish both
- * the XDK and the XTC plugin (and other future artifacts) with './gradlew publish' or
- * './gradlew publishToMavenLocal'.  Snapshot builds should only be allowed to be published
- * in local repositories.
- *
- * Publishing tasks can be racy, but it seems that Gradle serializes tasks that have a common
- * output directory, which should be the case here. If not, we will have to put back the
- * parallel check/task failure condition.
- *
- * Publish remote - one way to do it is to only allow snapshot publications in GitHub, otherwise
- * we need to do it manually. "publishRemoteRelease", in which case we will also feed into
- * jreleaser.
- */
 val publishRemote by tasks.registering {
     group = PUBLISH_TASK_GROUP
-    description = "Publish (aggregate) all artifacts in the XDK to the remote repositories."
-    // Call publishRemote in xdk and plugin projects.
-    includedBuildsWithPublications.forEach {
-        dependsOn(it.task(":$name"))
-    }
+    description = "Publish XDK and plugin artifacts to remote repositories (GitHub Packages, Gradle Plugin Portal)."
+    dependsOn(validateCredentials)
+    dependsOn(
+        plugin.task(":publishAllPublicationsToGitHubRepository"),
+        xdk.task(":publishMavenPublicationToGitHubRepository")
+    )
 }
 
-/**
- * Publish local publications to the mavenLocal repository. This is useful for testing
- * that a dependency to a particular XDK version of an XDK or XTC package works with
- * another application before you push it, and cause a "remote" publication to be made.
- */
 val publishLocal by tasks.registering {
     group = PUBLISH_TASK_GROUP
-    description = "Publish (aggregated) all artifacts in the XDK to the local Maven repository."
-    includedBuildsWithPublications.forEach {
-        dependsOn(it.task(":$name"))
-    }
+    description = "Publish XDK and plugin artifacts to local Maven repository."
+    // Publish to local Maven repository for both projects
+    dependsOn(
+        plugin.task(":publishToMavenLocal"),
+        xdk.task(":publishToMavenLocal")
+    )
 }
 
 /**
@@ -113,12 +100,12 @@ dockerTaskNames.forEach { taskName ->
     }
 }
 
+// Task classes are now extracted to separate files in build-logic/common-plugins/src/main/kotlin/
+
+
 // list|deleteLocalPublicatiopns/remotePublications.
 publishTaskPrefixes.forEach { prefix ->
-    buildList {
-        addAll(publishTaskSuffixesLocal)
-        addAll(publishTaskSuffixesRemote)
-    }.forEach { suffix ->
+    publishTaskSuffixesLocal.forEach { suffix ->
         val taskName = "$prefix$suffix"
         tasks.register(taskName) {
             group = PUBLISH_TASK_GROUP
@@ -129,3 +116,21 @@ publishTaskPrefixes.forEach { prefix ->
         }
     }
 }
+
+
+// Validate credentials are available for publishing (GitHub + optional Plugin Portal)
+val validateCredentials by tasks.registering(ValidateCredentialsTask::class) {
+    group = PUBLISH_TASK_GROUP
+    description = "Validate GitHub and Plugin Portal credentials are available for publishing"
+
+    // Use centralized credential management
+    gitHubUsername.set(xdkPublishingCredentials.gitHubUsername)
+    gitHubPassword.set(xdkPublishingCredentials.gitHubPassword)
+    enableGitHub.set(xdkPublishingCredentials.enableGitHub)
+    enablePluginPortal.set(xdkPublishingCredentials.enablePluginPortal)
+    gradlePublishKey.set(xdkPublishingCredentials.gradlePublishKey)
+    gradlePublishSecret.set(xdkPublishingCredentials.gradlePublishSecret)
+}
+
+// Publication listing tasks removed - use bin/list-publications.sh instead
+

@@ -1,12 +1,13 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_JAR
+import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 
 plugins {
     id("org.xtclang.build.xdk.versioning")
     alias(libs.plugins.xdk.build.java)
-    id("org.xtclang.build.publish")  // Add publication convention plugin for GitHub support
-    // Switch to Vanniktech Maven Publish for configuration cache compatibility
     alias(libs.plugins.vanniktech.maven.publish)
     alias(libs.plugins.gradle.portal.publish)
+    id("java-gradle-plugin")
+    id("org.xtclang.build.publishing")
 }
 
 // Extract values during configuration to avoid capturing project references
@@ -77,6 +78,11 @@ val xdkJavaToolsJarConsumer by configurations.registering {
     }
 }
 
+repositories {
+    mavenCentral()
+    gradlePluginPortal()
+}
+
 dependencies {
     if (shouldBundleJavaTools) {
         @Suppress("UnstableApiUsage") xdkJavaToolsJarConsumer(libs.javatools)
@@ -84,9 +90,30 @@ dependencies {
     testImplementation(libs.junit.jupiter)
 }
 
-// Configure Vanniktech Maven Publish for configuration cache compatibility
+// Configure Vanniktech Maven Publish for Gradle Plugin
 mavenPublishing {
     coordinates(pluginGroup, pluginName, pluginVersion)
+
+    // Configure as Gradle Plugin (vanniktech will handle plugin marker automatically)
+    configure(
+        com.vanniktech.maven.publish.GradlePlugin(
+            javadocJar = com.vanniktech.maven.publish.JavadocJar.None(),
+            sourcesJar = true
+        )
+    )
+
+    // Maven Central publishing (disabled by default)
+    val enableMavenCentral = getXdkPropertyBoolean("org.xtclang.publish.mavenCentral", false)
+    if (enableMavenCentral) {
+        publishToMavenCentral(automaticRelease = false)
+        logger.lifecycle("[plugin] Maven Central publishing is enabled")
+    } else {
+        logger.info("[plugin] Maven Central publishing is disabled (use -Porg.xtclang.publish.mavenCentral=true to enable)")
+    }
+
+    // Note: Plugin Portal credentials handled by standard gradle.publish.* properties
+    // Validation handled by root validateCredentials task when Portal publishing enabled
+    
     
     pom {
         name.set(pluginName)
@@ -110,70 +137,56 @@ mavenPublishing {
     }
 }
 
-// Override the convention plugin's publishLocal task for plugin-specific local publishing  
-val publishLocal by tasks.existing {
-    // Clear default dependencies from convention plugin
-    setDependsOn(emptyList<Task>())
-    
-    // Add plugin-specific local publishing dependencies
-    dependsOn(
-        tasks.named("publishPluginMavenPublicationToMavenLocal"),
-        tasks.named("publishXtcPluginMarkerMavenPublicationToMavenLocal")
-    )
+// Configure GitHub Packages repository (enabled when credentials are available)
+publishing {
+    repositories {
+        // Use centralized credential management
+        val gitHubUsername = xdkPublishingCredentials.gitHubUsername.get()
+        val gitHubPassword = xdkPublishingCredentials.gitHubPassword.get()
+
+        if (gitHubPassword.isNotEmpty()) {
+            maven {
+                name = "GitHub"
+                url = uri("https://maven.pkg.github.com/xtclang/xvm")
+                credentials {
+                    username = gitHubUsername.ifEmpty { "xtclang-workflows" }
+                    password = gitHubPassword
+                }
+            }
+        } else {
+            logger.lifecycle("[plugin] GitHub Packages repository not configured - missing GitHubPassword/GITHUB_TOKEN")
+        }
+    }
 }
 
-// The convention plugin provides all publication management tasks:
-// - deleteLocalPublications, listLocalPublications 
-// - listRemotePublications, deleteRemotePublications
-// No need to duplicate them here
+// Publishing tasks are handled by root build.gradle.kts
 
-// No need to override publishRemote - let it use the convention plugin's default behavior
-// which publishes to GitHub packages only (like in master)
-// Publishing to Gradle Plugin Portal and Maven Central are separate concerns
+// Publication listing tasks removed - use bin/list-publications.sh instead
+
 
 // Extract plugin configuration values during configuration
-private val isAutomatedPublishingValue = getXdkPropertyBoolean("$pprefix.plugin.isAutomatedPublishing", true)
 private val vcsUrlValue = getXdkProperty("$pprefix.plugin.vcs.url")
 private val websiteValue = getXdkProperty("$pprefix.plugin.website")
 private val implementationClassValue = getXdkProperty("$pprefix.plugin.implementation.class")
 private val displayNameValue = getXdkProperty("$pprefix.plugin.display.name")
 private val descriptionValue = getXdkProperty("$pprefix.plugin.description")
 
-// Extract all gradle plugin configuration values to avoid script references
-val gradlePluginIsAutomatedPublishing = isAutomatedPublishingValue
-val gradlePluginVcsUrl = vcsUrlValue
-val gradlePluginWebsite = websiteValue
-val gradlePluginVersion = pluginVersion
-val gradlePluginId = pluginId
-val gradlePluginImplementationClass = implementationClassValue
-val gradlePluginDisplayName = displayNameValue
-val gradlePluginDescription = descriptionValue
-
-@Suppress("UnstableApiUsage")
+// Gradle plugin configuration for both vanniktech and plugin portal
 gradlePlugin {
-    // The built-in pluginMaven publication can be disabled with "isAutomatedPublishing=false"
-    // However, this results in the Gradle version (with Gradle specific metadata) of the plugin not
-    // being published. To read it from at least a local repo, we need that artifact too, hence we
-    // get three artifacts.
-    isAutomatedPublishing = gradlePluginIsAutomatedPublishing
-
-    logger.info("[plugin] Configuring Gradle Plugin; isAutomatedPublishing=$gradlePluginIsAutomatedPublishing")
-
-    vcsUrl = gradlePluginVcsUrl
-    website = gradlePluginWebsite
+    website = websiteValue
+    vcsUrl = vcsUrlValue
 
     plugins {
         val xtc by registering {
-            version = gradlePluginVersion
-            id = gradlePluginId
-            implementationClass = gradlePluginImplementationClass
-            displayName = gradlePluginDisplayName
-            description = gradlePluginDescription
-            logger.info("[plugin] Configuring gradlePlugin; pluginId=$gradlePluginId, implementationClass=$gradlePluginImplementationClass, displayName=$gradlePluginDisplayName, description=$gradlePluginDescription")
-            tags = listOf("xtc", "language", "ecstasy", "xdk")
+            id = pluginId
+            implementationClass = implementationClassValue
+            displayName = displayNameValue
+            description = descriptionValue
+            tags = listOf("xtc", "language", "compiler", "ecstasy")
         }
     }
 }
+
 
 tasks.withType<Javadoc>().configureEach {
     enabled = false
@@ -181,14 +194,6 @@ tasks.withType<Javadoc>().configureEach {
     logger.info("[plugin] Note: JavaDoc task is currently disabled, but certain publication methods, such as for the Gradle plugin portal will still generate and publish JavaDocs.")
 }
 
-tasks.withType<PublishToMavenRepository>().matching { it.name.startsWith("publishPluginMaven") }.configureEach {
-    enabled = false
-    // TODO: Reuse the existing PluginMaven task instead, because that is the one gradlePluginPortal hardcodes.
-    val taskName = name
-    logger.info(
-        "[plugin] Disabled default publication task: '$taskName'. The task '${taskName.replace("PluginMaven", "XtcPlugin")}' should be equivalent."
-    )
-}
 
 tasks.withType<Jar>().configureEach {
     val taskName = name
@@ -208,7 +213,9 @@ tasks.withType<Jar>().configureEach {
             from(jarFiles)
         }
         manifest {
-            attributes(
+            // Dependency on javatools handled through xdkJavaToolsJarConsumer configuration
+            
+            val baseAttributes = mapOf(
                 "Manifest-Version" to "1.0",
                 "Xdk-Version" to semanticVersion.toString(),
                 "Main-Class" to "$pprefix.plugin.Usage",
@@ -221,6 +228,8 @@ tasks.withType<Jar>().configureEach {
                 "Implementation-Vendor" to "xtclang.org",
                 "Implementation-Version" to pluginVersion,
             )
+            
+            attributes(baseAttributes)
         }
     }
 }

@@ -1,12 +1,9 @@
-import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.invocation.Gradle
-import org.gradle.api.logging.LogLevel
-import org.gradle.api.logging.LogLevel.LIFECYCLE
 import java.io.File
 
 abstract class XdkProjectBuildLogic(protected val project: Project) {
@@ -17,7 +14,7 @@ abstract class XdkProjectBuildLogic(protected val project: Project) {
     }
 }
 
-class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic(project) {
+class XdkBuildLogic(project: Project) : XdkProjectBuildLogic(project) {
 
     private val xdkVersions: XdkVersionHandler by lazy {
         XdkVersionHandler(project)
@@ -44,30 +41,10 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
         return xdkDistributions
     }
 
-    // GitHubProtocol has been removed - use org.xtclang.build.git convention plugin tasks instead
-
     companion object {
         const val XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE = "xdk-distribution-archive"
         const val XDK_ARTIFACT_NAME_JAVATOOLS_JAR = "javatools-jar"
         const val XDK_ARTIFACT_NAME_MACK_DIR = "mack-dir"
-
-        private val singletonCache: MutableMap<Project, XdkBuildLogic> = mutableMapOf()
-
-        fun instanceFor(project: Project): XdkBuildLogic {
-            if (singletonCache.contains(project)) {
-                return singletonCache[project]!!
-            }
-
-            val instance = XdkBuildLogic(project)
-            singletonCache[project] = instance
-            project.logger.info(
-                    """
-                    [build-logic] Creating new XdkBuildLogic for project '${project.name}'
-                    [build-logic] (singletonCache)      ${System.identityHashCode(singletonCache)}
-                    [build-logic] (project -> instance) ${System.identityHashCode(project)} -> ${System.identityHashCode(instance)}
-                """.trimIndent())
-            return instance
-        }
     }
 }
 
@@ -89,19 +66,7 @@ val Project.compositeRootBuildDirectory: DirectoryProperty get() = gradle.rootLa
 
 val Project.userInitScriptDirectory: File get() = File(gradle.gradleUserHomeDir, "init.d")
 
-val Project.buildRepoDirectory get() = compositeRootBuildDirectory.dir("repo")
-
-val Project.xdkBuildLogic: XdkBuildLogic get() = XdkBuildLogic.instanceFor(this)
-
-
-// TODO: A little bit hacky: use a config, but there is a mutual dependency between the lib_xtc and javatools.
-//  Better to add the resource directory as a source set?
-val Project.xdkIconFile: String get() = "$compositeRootProjectDirectory/javatools_launcher/src/main/c/x.ico"
-
-// TODO: A little bit hacky, for same reason as above; Better to add the resource directory as a source set?
-val Project.xdkImplicitsPath: String get() = "$compositeRootProjectDirectory/lib_ecstasy/src/main/resources/implicit.x"
-
-val Project.xdkImplicitsFile: File get() = File(xdkImplicitsPath)
+val Project.xdkBuildLogic: XdkBuildLogic get() = XdkBuildLogic(this)
 
 fun Project.isXdkPropertySet(key: String): Boolean {
     return xdkBuildLogic.props().has(key)
@@ -137,31 +102,6 @@ fun Task.getXdkPropertyInt(key: String, defaultValue: Int? = null): Int {
 fun Task.getXdkProperty(key: String, defaultValue: String? = null): String {
     return registerXdkPropertyInput(this, key, project.getXdkProperty(key, defaultValue))
 }
-
-/**
- * Extension method that can be called during the configuration phase, marking its
- * task instance as forever out of date.
- */
-fun Task.considerNeverUpToDate() {
-    outputs.cacheIf { false }
-    outputs.upToDateWhen { false }
-    logger.info("[build-logic] WARNING: Task '${project.name}:$name' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle...")
-}
-
-/**
- * Extension method to flag a task as always up to date. Declaring no outputs will
- * cause a task to rerun, even an extended task.
- */
-fun Task.considerAlwaqysUpToDate() {
-    outputs.upToDateWhen { true }
-}
-
-/**
- * Global predicate that any project can use to disable mutating operations, so that we
- * can, e.g. do a test run, and check the log outputs, but without actually modifying
- * anything.
- */
-fun Project.isDryRun() = project.findProperty("dryRun")?.toString()?.toBoolean() ?: false
 
 fun Project.isSnapshot(): Boolean {
     return project.version.toString().endsWith("-SNAPSHOT")

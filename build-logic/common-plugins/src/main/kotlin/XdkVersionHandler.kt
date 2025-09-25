@@ -43,24 +43,37 @@ class XdkVersionHandler(project: Project): XdkProjectBuildLogic(project) {
             throw GradleException("[versioning] Illegal state: project name '${project.name}' does not match the name in the semantic version: '$name'")
         }
 
-        project.group = group
-        project.version = version
-
-        if (name == XDK_ROOT_PROJECT_NAME) {
-            return semanticVersion
+        // Check for version override property (only if explicitly provided and not "unspecified")
+        val overrideVersion = project.findProperty("version")?.toString()
+        val finalVersion = when {
+            overrideVersion != null && overrideVersion != "unspecified" -> {
+                logger.lifecycle("[versioning] Version override detected: using '$overrideVersion' instead of '$version'")
+                overrideVersion
+            }
+            else -> version
         }
 
-        logger.info("[build-logic] XDK Project '$name' versioned as: '$semanticVersion'")
+        project.group = group
+        project.version = finalVersion
+
+        // Return updated semantic version with final version
+        val finalSemanticVersion = SemanticVersion(group, name, finalVersion)
+
+        if (name == XDK_ROOT_PROJECT_NAME) {
+            return finalSemanticVersion
+        }
+
+        logger.info("[build-logic] XDK Project '$name' versioned as: '$finalSemanticVersion'")
         with (project) {
             logger.info("""
                 [build-logic]    project.group  : $group
                 [build-logic]    project.name   : $name
-                [build-logic]    project.version: $version
+                [build-logic]    project.version: $finalVersion
             """.trimIndent()
             )
         }
 
-        return semanticVersion
+        return finalSemanticVersion
     }
 
     private fun catalogSemanticVersion(catalogGroup: String, catalogVersion: String): SemanticVersion {
