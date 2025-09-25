@@ -60,6 +60,18 @@ abstract class DockerTask : DefaultTask() {
     
     @get:Input
     abstract val tags: ListProperty<String>
+
+    @get:Input
+    @get:Optional
+    abstract val gitCommit: Property<String>
+
+    @get:Input
+    @get:Optional
+    abstract val gitBranch: Property<String>
+
+    @get:Input
+    @get:Optional
+    abstract val projectVersion: Property<String>
     
     @get:Input
     abstract val hostArch: Property<String>
@@ -111,16 +123,63 @@ abstract class DockerTask : DefaultTask() {
         distZipFile.copyTo(contextDistZip, overwrite = true)
 
         try {
-            // Simplified Docker command construction
+            // Docker command construction with proper tag computation
             val platformArg = platforms.get().joinToString(",")
             val baseImage = "ghcr.io/xtclang/xvm"
-            val tag = "latest" // Simplified - just use latest tag
+
+            // Compute tags similar to CI compute-docker-tags action
+            // Auto-detect git info if not provided via environment variables
+            val commit = if (gitCommit.orNull == "auto-detect") {
+                try {
+                    val output = ByteArrayOutputStream()
+                    execOperations.exec {
+                        commandLine("git", "rev-parse", "HEAD")
+                        standardOutput = output
+                    }
+                    output.toString().trim().takeIf { it.isNotEmpty() } ?: "latest"
+                } catch (e: Exception) {
+                    logger.warn("Failed to detect git commit: ${e.message}")
+                    "latest"
+                }
+            } else {
+                gitCommit.orNull ?: "latest"
+            }
+
+            val branch = if (gitBranch.orNull == "auto-detect") {
+                try {
+                    val output = ByteArrayOutputStream()
+                    execOperations.exec {
+                        commandLine("git", "branch", "--show-current")
+                        standardOutput = output
+                    }
+                    output.toString().trim().takeIf { it.isNotEmpty() } ?: "master"
+                } catch (e: Exception) {
+                    logger.warn("Failed to detect git branch: ${e.message}")
+                    "master"
+                }
+            } else {
+                gitBranch.orNull ?: "master"
+            }
+
+            val version = projectVersion.orNull ?: "unknown"
+
+            // Sanitize branch name for Docker tags (same as CI)
+            val branchTag = branch.replace(Regex(".*/"), "")
+                                  .replace(Regex("[^a-zA-Z0-9._-]"), "_")
+
+            val computedTags = if (branch == "master") listOf("latest", version, commit) else listOf(branchTag, commit)
+
+            logger.lifecycle("Computing Docker tags: branch=$branch, version=$version, commit=${commit.take(7)}")
+            logger.lifecycle("Generated tags: ${computedTags.joinToString(", ")}")
 
             val cmd = listOf("docker", "buildx", "build", "--platform", platformArg) +
                       listOf("--progress=${dockerProgress.get()}") +
                       listOf("--build-arg", "JAVA_VERSION=${jdkVersion.get()}") +
                       listOf("--build-arg", "DIST_ZIP_URL=xdk-dist.zip") +
-                      listOf("--tag", "$baseImage:$tag") +
+                      computedTags.flatMap { tag -> listOf("--tag", "$baseImage:$tag") } +
+                      listOf("--label", "org.opencontainers.image.revision=$commit") +
+                      listOf("--label", "org.opencontainers.image.version=$version") +
+                      listOf("--label", "org.opencontainers.image.source=https://github.com/xtclang/xvm/tree/$branch") +
                       listOf("--${action.get()}", ".")
 
             logger.info("Executing Docker command: ${cmd.joinToString(" ")}")

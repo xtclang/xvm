@@ -508,18 +508,16 @@ jobs:
             exit 1
           fi
           
-          # Copy ZIP to Docker build context with standard name
-          cp "$DIST_ZIP_FILE" ci-dist.zip
-          echo "📦 Copied distribution to Docker context: $DIST_ZIP_FILE → ci-dist.zip"
+          # Copy ZIP to Docker build context with expected name
+          cp "$DIST_ZIP_FILE" xdk-dist.zip
+          echo "📦 Copied distribution to Docker context: $DIST_ZIP_FILE → xdk-dist.zip"
           
           docker buildx build \
             --platform ${{ matrix.platform }} \
             --progress=plain \
             $TAG_ARGS \
             --build-arg JAVA_VERSION=${{ steps.java_version.outputs.java_version }} \
-            --build-arg DIST_ZIP_URL="ci-dist.zip" \
-            --build-arg GH_BRANCH=${{ env.GH_BRANCH }} \
-            --build-arg GH_COMMIT=${{ env.GH_COMMIT }} \
+            --build-arg DIST_ZIP_URL="xdk-dist.zip" \
             --label org.opencontainers.image.created=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
             --label org.opencontainers.image.revision=${{ env.GH_COMMIT }} \
             --label org.opencontainers.image.version="$VERSION" \

@@ -38,8 +38,14 @@ fun createDockerBuildTask(
         this.platforms.set(platforms)
         this.action.set(action)
 
-        this.jdkVersion.set(project.extra["jdkVersion"] as Int)
+        this.jdkVersion.set(providers.provider { project.extra["jdkVersion"] as Int })
         this.architectureCheck.set(architectureCheck ?: "")
+
+        // Wire git information: prefer environment variables (from CI), fall back to git commands at execution time
+        this.gitCommit.set(providers.environmentVariable("GH_COMMIT").orElse("auto-detect"))
+        this.gitBranch.set(providers.environmentVariable("GH_BRANCH").orElse("auto-detect"))
+
+        this.projectVersion.set(providers.provider { project.version.toString() })
 
         // Configuration cache compatible input properties
         hostArch.set(providers.systemProperty("os.arch").map { arch ->
