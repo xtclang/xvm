@@ -16,7 +16,7 @@
 # XDK versions are dynamically injected from VERSION file (single source of truth)
 # These placeholders are overridden by the settings plugin reading VERSION file
 xdk = "0.0.0-PLACEHOLDER"
-xtc-plugin = "0.0.0-PLACEHOLDER"
+xtc-plugin = "0.4.5"
 group-xdk = "org.xtclang"
 group-xtc-plugin = "org.xtclang"
 
