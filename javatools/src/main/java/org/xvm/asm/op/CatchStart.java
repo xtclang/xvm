@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
+import java.lang.constant.ClassDesc;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpVar;
@@ -14,10 +16,13 @@ import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
 
 import org.xvm.asm.constants.StringConstant;
-
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.TypeSystem;
+import org.xvm.javajit.TypeSystem.ClassfileShape;
 
 import org.xvm.runtime.Frame;
 
@@ -141,14 +146,16 @@ public class CatchStart
      * @param scopeGuarded  the guarded scope (not the current one)
      */
     public void build(BuildContext bctx, CodeBuilder code, org.xvm.javajit.Scope scopeGuarded) {
+        TypeSystem   ts     = bctx.typeSystem;
         Slot         slotEx = bctx.introduceVar(code, m_nVar, m_nType, m_nNameId);
         TypeConstant typeEx = slotEx.type();
-        assert typeEx.isA(bctx.typeSystem.pool().typeException());
+        assert typeEx.isA(ts.pool().typeException());
+
+        ClassDesc cdEx = Builder.getShapeDesc(typeEx.ensureJitClassName(ts), ClassfileShape.Exception);
 
         Label catchLabel = code.newLabel();
         code.labelBinding(catchLabel);
-        code.exceptionCatch(scopeGuarded.startLabel, scopeGuarded.endLabel, catchLabel,
-            CD_xException); // TODO: pkg + "e$" +
+        code.exceptionCatch(scopeGuarded.startLabel, scopeGuarded.endLabel, catchLabel, cdEx);
 
         bctx.enterScope(code);
         code.getfield(CD_xException, "exception", CD_Exception);

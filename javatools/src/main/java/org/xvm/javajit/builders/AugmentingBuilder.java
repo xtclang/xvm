@@ -53,6 +53,13 @@ public class AugmentingBuilder extends CommonBuilder {
 
         // implemented interfaces may not be native; add them if necessary
         assembleImplInterfaces(classBuilder);
+
+        // if there is any native Exception, we need to generate the "$createJavaException" method
+        TypeConstant type        = typeInfo.getType();
+        TypeConstant T_EXCEPTION = type.getConstantPool().typeException();
+        if (type.isA(T_EXCEPTION) && !type.removeAccess().equals(T_EXCEPTION)) {
+            new ExceptionBuilder(typeSystem, type).assembleCreateException(className, classBuilder);
+        }
     }
 
     @Override
