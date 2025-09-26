@@ -48,9 +48,11 @@ import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.TypeSystem;
+import org.xvm.javajit.TypeSystem.ClassfileShape;
 
 import org.xvm.util.ShallowSizeOf;
 
+import static java.lang.constant.ConstantDescs.CD_Throwable;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
@@ -94,6 +96,47 @@ public class CommonBuilder
         // assemblePureClass(className, classBuilder);
         // assemblePureProperties(className, classBuilder);
         // assemblePureMethods(className, classBuilder);
+    }
+
+
+    /**
+     * The class for e$XYZ (this type) should look like this:
+     * <code><pre>
+     * public class e$XYZ extends xException {
+     *     public e$XYZ(Throwable cause, XYZ exception) {
+     *         super(cause, exception);
+     *     }
+     *</pre></code>
+     */
+    @Override
+    public void assembleJavaException(String className, ClassBuilder classBuilder) {
+        ConstantPool pool      = typeSystem.pool();
+        TypeConstant superType = typeInfo.getExtends();
+        ClassDesc    superCD;
+        if (superType.equals(pool.typeException())) {
+            superCD = CD_xException;
+        } else {
+            superCD = getShapeDesc(typeSystem.ensureJitClassName(superType), ClassfileShape.Exception);
+        }
+
+        ClassDesc exCD = ClassDesc.of(typeSystem.ensureJitClassName(typeInfo.getType()));
+
+        classBuilder.withFlags(ClassFile.ACC_PUBLIC)
+                    .withSuperclass(superCD);
+        classBuilder.withMethod(INIT_NAME,
+            MethodTypeDesc.of(CD_void, CD_Throwable, exCD),
+            ClassFile.ACC_PUBLIC,
+            methodBuilder -> methodBuilder.withCode(code -> {
+                MethodTypeDesc superMD =  MethodTypeDesc.of(CD_void,
+                        CD_Throwable, ClassDesc.of(superType.ensureJitClassName(typeSystem)));
+                code.aload(0)
+                    .aload(1)
+                    .aload(2)
+                    .checkcast(CD_Exception)
+                    .invokespecial(superCD, INIT_NAME, superMD)
+                    .return_();
+            })
+        );
     }
 
     /**
@@ -1286,7 +1329,7 @@ public class CommonBuilder
 
     private final static String[] TEST_SET = new String[] {
         "Test", "test",
-        "IOException", "OutOfBounds", "Unsupported",
+        "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
     };
     private final static HashSet<String> SKIP_SET = new HashSet<>();
 }

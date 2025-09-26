@@ -35,10 +35,8 @@ import org.xvm.asm.op.CatchStart;
 import org.xvm.asm.op.Guarded;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
-import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_JavaString;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.toTypeKind;
@@ -208,6 +206,7 @@ public class BuildContext {
             int          slot      = code.parameterSlot(extraArgs + i); // compensate for implicits
 
             code.localVariable(slot, name, paramDesc.cd, scope.startLabel, scope.endLabel);
+            scope.topVar = Math.max(scope.topVar, varIndex);
 
             switch (paramDesc.flavor) {
             case Specific, Widened, Primitive, SpecificWithDefault, WidenedWithDefault:
@@ -843,16 +842,5 @@ public class BuildContext {
         public boolean isSingle() {
             return false;
         }
-    }
-
-    // ----- TEMPORARY: debugging support ----------------------------------------------------------
-
-    /**
-     * Adds a log message generation (this als allows to break in the debugger).
-     */
-    public void addLog(CodeBuilder code, String message) {
-        loadCtx(code);
-        code.loadConstant(message)
-            .invokevirtual(Builder.CD_Ctx, "log", MethodTypeDesc.of(CD_void, CD_JavaString));
     }
 }

@@ -29,7 +29,7 @@ public class Exception extends xConst {
     public static void construct$n(Ctx ctx, CtorCtx cctx, Exception thi$, xObj message, xObj cause) {
         thi$.text       = message instanceof String text ? text : Nullable.Null;
         thi$.cause      = cause instanceof Exception e ? e : Nullable.Null;
-        thi$.$exception = new xException(cause instanceof Exception e ? e.$exception : null, thi$);
+        thi$.$exception = thi$.$createJavaException(cause instanceof Exception e ? e.$exception : null);
     }
 
     /**
@@ -38,8 +38,15 @@ public class Exception extends xConst {
     public xException $init(Ctx ctx, java.lang.String message, Throwable cause) {
         this.text       = message == null ? String.of(ctx, message) : Nullable.Null;
         this.cause      = cause instanceof xException e ? e.exception : Nullable.Null;
-        this.$exception = new xException(cause, this);
+        this.$exception = $createJavaException(cause);
         return $exception;
+    }
+
+    /**
+     * This method will be overridden by each subclass to instantiate a corresponding Java exception.
+     */
+    public xException $createJavaException(Throwable cause) {
+        return new xException(cause, this);
     }
 
     @Override
