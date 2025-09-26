@@ -22,6 +22,7 @@ import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext.SingleSlot;
 import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.TypeSystem.ClassfileShape;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
@@ -41,16 +42,23 @@ public abstract class Builder {
     public final TypeSystem typeSystem;
 
     /**
-     * Assemble the java class for an "impl" shape.
+     * Assemble the java class for the "impl" shape.
      */
     public void assembleImpl(String className, ClassBuilder classBuilder) {
         throw new UnsupportedOperationException();
     }
 
     /**
-     * Assemble the java class for a "pure" shape.
+     * Assemble the java class for the "pure" shape.
      */
     public void assemblePure(String className, ClassBuilder classBuilder) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Assemble the java class for the "exception" shape.
+     */
+    public void assembleJavaException(String className, ClassBuilder classBuilder) {
         throw new UnsupportedOperationException();
     }
 
@@ -494,6 +502,34 @@ public abstract class Builder {
         JitParamDesc[] optimizedReturns = jmdCtor.isOptimized ? standardReturns : null;
         return new JitMethodDesc(standardReturns,  jmdCtor.standardParams,
                                  optimizedReturns, jmdCtor.optimizedParams);
+    }
+
+    /**
+     * For a given class name create a name for an associated class of the specified shape.
+     */
+    public static String getShapeName(String className, ClassfileShape shape) {
+        int simpleOffset = className.lastIndexOf('.');
+        assert simpleOffset > 0;
+        String simpleName = className.substring(simpleOffset + 1);
+        return className.substring(0, simpleOffset + 1) + shape.prefix + simpleName;
+    }
+
+    /**
+     * For a given class name create a ClassDesc for an associated class of the specified shape.
+     */
+    public static ClassDesc getShapeDesc(String className, ClassfileShape shape) {
+        return ClassDesc.of(getShapeName(className, shape));
+    }
+
+    // ----- TEMPORARY: debugging support ----------------------------------------------------------
+
+    /**
+     * Adds a log message generation (this also allows to break in the debugger).
+     */
+    public void addLog(CodeBuilder code, String message) {
+        code.invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
+            .loadConstant(message)
+            .invokevirtual(Builder.CD_Ctx, "log", MethodTypeDesc.of(CD_void, CD_JavaString));
     }
 
     // ----- native class names --------------------------------------------------------------------

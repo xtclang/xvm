@@ -10,12 +10,10 @@ import java.lang.constant.ClassDesc;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -30,6 +28,7 @@ import org.xvm.javajit.builders.CommonBuilder;
 import org.xvm.javajit.builders.EnumBuilder;
 import org.xvm.javajit.builders.EnumValueBuilder;
 import org.xvm.javajit.builders.EnumerationBuilder;
+import org.xvm.javajit.builders.ExceptionBuilder;
 import org.xvm.javajit.builders.FunctionBuilder;
 import org.xvm.javajit.builders.ModuleBuilder;
 
@@ -320,6 +319,10 @@ public class TypeSystem {
                             builder.assembleImpl(className, classBuilder);
                             break;
 
+                        case Exception:
+                            builder.assembleJavaException(className, classBuilder);
+                            break;
+
                         default:
                             throw new UnsupportedOperationException();
                     }
@@ -362,6 +365,12 @@ public class TypeSystem {
             return new EnumValueBuilder(this, type);
         }
 
+        if (type.isA(pool.typeException())) {
+            // the root Exception class is handled by the NativeTypeSystem
+            assert !type.equals(pool.typeException());
+            return new ExceptionBuilder(this, type);
+        }
+
         if (type.isA(pool.typeClass())) {
             TypeConstant publicType = type.getParamType(0);
             if (publicType.isEnumValue()) {
@@ -378,12 +387,13 @@ public class TypeSystem {
      * Jit class shapes.
      */
     public enum ClassfileShape {
-        Pure  ("i$"),
-        Proxy ("p$"),
-        Duck  ("d$"),
-        Mask  ("m$"),
-        Future("f$"),
-        Impl  (""), // needs to be last
+        Pure     ("i$"),
+        Proxy    ("p$"),
+        Duck     ("d$"),
+        Mask     ("m$"),
+        Future   ("f$"),
+        Exception("e$"),
+        Impl     (""), // needs to be last
         ;
 
         ClassfileShape(String prefix) {
@@ -401,35 +411,17 @@ public class TypeSystem {
         }
 
         for (ClassfileShape shape : ClassfileShape.values()) {
-            if (name.startsWith(shape.prefix)) {
+            int shapeOffset = name.indexOf(shape.prefix);
+            if (shapeOffset >= 0) {
                 if (shape != ClassfileShape.Impl) {
-                    name = name.substring(2); // all other suffixes are of the length 2
+                    // all other suffixes are of the length 2
+                    name = name.substring(0, shapeOffset) + name.substring(shapeOffset + 2);
                 }
                 if (module.getChildByPath(name.replace('$', '.')) instanceof ClassStructure struct) {
                     return new Artifact(struct.getIdentityConstant(), shape);
                 }
             }
         }
-        return null;
-    }
-
-    public Artifact deduceArtifact(ModuleStructure module, String prefix, String name) {
-        // TODO
-        return null;
-    }
-
-    public Set<ClassfileShape> expectedClassfileShape(Component component) {
-        // TODO
-        return null;
-    }
-
-    public ModuleLoader loaderForComponent(IdentityConstant id) {
-        // TODO
-        return null;
-    }
-
-    public String classfileNameForComponent(IdentityConstant id, ClassfileShape shape) {
-        // TODO
         return null;
     }
 

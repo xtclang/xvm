@@ -17,7 +17,7 @@ public class Scope {
         this.code       = code;
         this.startLocal = -1;
         this.topLocal   = -1;
-        this.topVar     = -1;
+        this.topVar     = 0;
 
         startLabel = code.newLabel();
         endLabel   = code.newLabel();

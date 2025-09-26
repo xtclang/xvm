@@ -75,18 +75,11 @@ public class JitConnector
     public void invoke0Impl(MethodStructure methodStructure, String... asArg) {
         String typeName = ts.owned[0].module.getIdentityConstant().getType().ensureJitClassName(ts);
 
+        TypeSystemLoader loader = ts.loader;
         try {
-            TypeSystemLoader loader = ts.loader;
-            Class            clz    = loader.loadClass(typeName);
-
+            Class  clz    = loader.loadClass(typeName);
             Ctx    ctx    = Ctx.get();
             Object module = clz.getDeclaredConstructor(Ctx.class).newInstance(ctx);
-
-            // dump the generated classes
-            loader.dump(new PrintStream(
-                new FileOutputStream(loader.typeSystem.mainModule().getSimpleName() + ".jasm")));
-            xvm.nativeTypeSystem.loader.dump(
-                        new PrintStream(new FileOutputStream("ecstasy.jasm")));
 
             Object result;
             if (asArg == null || asArg.length == 0) {
@@ -106,18 +99,26 @@ public class JitConnector
             throw new RuntimeException("No \"run()\" method", e);
         } catch (InstantiationException | IllegalAccessException e) {
             throw new RuntimeException("Failed to invoke \"run()\" method", e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         } catch (InvocationTargetException e) {
             Throwable cause = e.getCause();
-            if (cause.getClass().getSimpleName().equals("xException")) {
+            String    name  = cause.getClass().getSimpleName();
+            if (name.equals("xException") ||
+                    name.startsWith(TypeSystem.ClassfileShape.Exception.prefix)) {
                 try {
-                    System.out.println(cause.getClass().getDeclaredField("exception").get(cause));
+                    System.out.println(cause.getClass().getField("exception").get(cause));
                 } catch (Throwable ignore) {}
             } else {
                 e.printStackTrace();
                 throw new RuntimeException(cause);
             }
+        } finally {
+            try {
+                // dump the generated classes
+                loader.dump(new PrintStream(
+                    new FileOutputStream(loader.typeSystem.mainModule().getSimpleName() + ".jasm")));
+                xvm.nativeTypeSystem.loader.dump(
+                            new PrintStream(new FileOutputStream("ecstasy.jasm")));
+            } catch (IOException ignore) {}
         }
     }
 
