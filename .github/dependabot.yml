@@ -36,6 +36,12 @@ updates:
       include: "scope"
 
   # Enable version updates for Gradle dependencies
+  #
+  # NOTE: This repository uses dynamic version resolution for XDK-related dependencies.
+  # The libs.versions.toml file contains placeholder versions (0.0.0-PLACEHOLDER) that
+  # are dynamically replaced at build time from the version.properties file.
+  # Dependabot will see these placeholders but they are not real versions to update.
+  #
   - package-ecosystem: "gradle"
     directory: "/"
     schedule:
@@ -51,6 +57,10 @@ updates:
       prefix: "deps"
       include: "scope"
     ignore:
+      # Ignore XDK internal dependencies which use dynamic versioning
+      - dependency-name: "org.xtclang:*"
+      - dependency-name: "org.xtclang.xtc-plugin"
+      - dependency-name: "org.xtclang.build.*"
       # Ignore patch updates for build plugins (too noisy)
       - dependency-name: "*"
         update-types: ["version-update:semver-patch"]
