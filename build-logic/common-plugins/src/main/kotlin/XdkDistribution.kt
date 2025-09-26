@@ -1,102 +1,20 @@
-import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.publish.PublishingExtension
-import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.internal.os.OperatingSystem
-import org.gradle.kotlin.dsl.assign
-import org.gradle.kotlin.dsl.withType
-import org.gradle.plugins.signing.Sign
-import org.gradle.plugins.signing.SigningExtension
 import java.io.File
 
-/**
- * Configure all maven publications with some mandatory and helpful information.
- *
- * TODO: Add some generic XML point out more information about the build, like maybe
- *   SHA commit etc.
- */
-fun PublishingExtension.configureMavenPublications(project: Project) = project.run {
-    publications.withType<MavenPublication>().configureEach {
-        logger.info("[build-logic] Configuring publication '$name' for project '${project.name}'.")
-        pom {
-            licenses {
-                license {
-                    name = "The XDK License"
-                    url = "https://github.com/xtclang/xvm/tree/master/license"
-                }
-            }
-            developers {
-                developer {
-                    name = "The XTC Language Organization"
-                    email = "info@xtclang.org"
-                    organization = "xtclang.org"
-                    organizationUrl = "https://xtclang.org"
-                }
-            }
-            // see https://central.sonatype.org/publish/requirements/#scm-information
-            scm {
-                connection = "scm:git:git://github.com/xtclang/xvm.git"
-                developerConnection = "scm:git:ssh://github.com/xtclang/xvm.git"
-                url = "https://github.com/xtclang/xvm/tree/master"
-            }
-        }
-    }
-}
-
-fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
-    fun readKeyFile(): String {
-        val file = File(gradle.gradleUserHomeDir, XdkDistribution.GPGKEY_FILENAME)
-        if (!file.exists()) return ""
-        return file.readText().trim()
-    }
-
-    fun resolveGpgSecret(): Boolean {
-        val sign = getXdkPropertyBoolean("org.xtclang.signing.enabled", isRelease())
-        if (!sign) {
-            logger.info("[build-logic] Signing is disabled. Will not try to resolve any keys.")
-            return false
-        }
-        
-        val password = (project.findProperty("signing.password") ?: project.providers.environmentVariable("GPG_SIGNING_PASSWORD").getOrElse("")) as String
-        val key = (project.findProperty("signing.key") ?: project.providers.environmentVariable("GPG_SIGNING_KEY").getOrElse("") ?: readKeyFile()) as String
-        
-        if (key.isEmpty() || password.isEmpty()) {
-            logger.warn("[build-logic] WARNING: Could not resolve a GPG signing key or a passphrase.")
-            if (XdkDistribution.isCiEnabled(project)) {
-                throw GradleException("[distribution] No GPG signing key or password found in CI build, and no manual way to set them.")
-            }
-            return false
-        }
-        
-        logger.info("[build-logic] Signature: In-memory GPG keys successfully configured.")
-        assert(key.isNotEmpty() && password.isNotEmpty())
-        useInMemoryPgpKeys(key, password)
-        return true
-    }
-
-    resolveGpgSecret()
-    val publishing = project.extensions.getByType(PublishingExtension::class.java)
-    val publications = publishing.publications
-    return sign(publications).also {
-        if (publications.isEmpty()) {
-            logger.warn("[build-logic] WARNING: No publications found, but signature are still enabled.")
-        } else {
-            logger.info("[build-logic] Signature: Configured sign tasks publications in '${project.name}', publications: ${publications.map { it.name }}.")
-        }
-    }
-}
+// Legacy Maven publication configuration function removed
+// POM configuration is now handled directly by the Vanniktech plugin in each project's build.gradle.kts
 
 
-// TODO: Add sonatype repository for mavenCentral once we have recovered the credentials (tokens) and
-//  have manually verified that we can publish artifacts there.
+
+// Maven Central publishing is now handled via Vanniktech plugin with proper credentials
 
 
 class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     companion object {
         const val DISTRIBUTION_TASK_GROUP = "distribution"
         const val JAVATOOLS_PREFIX_PATTERN = "**/javatools*"
-        const val GPGKEY_FILENAME = "xtclang-gpgkey.asc"
 
         private const val CI = "CI"
 
@@ -252,7 +170,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
 
             val lineEnd = content.indexOf('\n', insertPoint)
             val endOfLine = if (lineEnd >= 0) lineEnd + 1 else content.length
-            val before = content.substring(0, endOfLine)
+            val before = content.take(endOfLine)
             val after = content.substring(endOfLine)
             return before + textToInsert + after
         }

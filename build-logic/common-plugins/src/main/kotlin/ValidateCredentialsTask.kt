@@ -17,6 +17,9 @@ abstract class ValidateCredentialsTask : DefaultTask() {
     abstract val enablePluginPortal: Property<Boolean>
 
     @get:Input
+    abstract val enableMavenCentral: Property<Boolean>
+
+    @get:Input
     abstract val gitHubUsername: Property<String>
 
     @get:Input
@@ -29,6 +32,30 @@ abstract class ValidateCredentialsTask : DefaultTask() {
     @get:Input
     @get:Optional
     abstract val gradlePublishSecret: Property<String>
+
+    @get:Input
+    @get:Optional
+    abstract val mavenCentralUsername: Property<String>
+
+    @get:Input
+    @get:Optional
+    abstract val mavenCentralPassword: Property<String>
+
+    @get:Input
+    @get:Optional
+    abstract val signingKeyId: Property<String>
+
+    @get:Input
+    @get:Optional
+    abstract val signingPassword: Property<String>
+
+    @get:Input
+    @get:Optional
+    abstract val signingSecretKey: Property<String>
+
+    @get:Input
+    @get:Optional
+    abstract val signingInMemoryKey: Property<String>
 
     @TaskAction
     fun validate() {
@@ -101,5 +128,77 @@ abstract class ValidateCredentialsTask : DefaultTask() {
         logger.info("✅ Plugin Portal credentials validated successfully")
         logger.info("   API Key: Available")
         logger.info("   Secret: Available")
+
+        // Validate Maven Central credentials (only if enabled)
+        if (!enableMavenCentral.get()) return
+
+        val username = mavenCentralUsername.getOrElse("")
+        val password = mavenCentralPassword.getOrElse("")
+        val keyId = signingKeyId.getOrElse("")
+        val signingPass = signingPassword.getOrElse("")
+        val secretKey = signingSecretKey.getOrElse("")
+        val inMemoryKey = signingInMemoryKey.getOrElse("")
+
+        val missingCredentials = mutableListOf<String>()
+        if (username.isEmpty()) missingCredentials.add("Maven Central username")
+        if (password.isEmpty()) missingCredentials.add("Maven Central password")
+        // Vanniktech plugin needs either signingInMemoryKey or traditional signing setup
+        if (inMemoryKey.isEmpty() && (keyId.isEmpty() || secretKey.isEmpty())) {
+            missingCredentials.add("Signing configuration (either signingInMemoryKey or keyId+secretKeyRingFile)")
+        }
+
+        if (missingCredentials.isNotEmpty()) {
+            throw GradleException("""
+                |Maven Central credentials not available for publishing!
+                |
+                |Missing: ${missingCredentials.joinToString(", ")}
+                |
+                |Please provide credentials using one of these methods:
+                |
+                |1. Local development - Set properties in ~/.gradle/gradle.properties:
+                |   mavenCentralUsername=your-maven-central-username
+                |   mavenCentralPassword=your-maven-central-password
+                |   signingInMemoryKey=base64-encoded-gpg-key
+                |
+                |   Or traditional signing:
+                |   signing.keyId=your-gpg-key-id
+                |   signing.password=your-gpg-key-password
+                |   signing.secretKeyRingFile=/path/to/secring.gpg
+                |
+                |2. Environment variables:
+                |   MAVEN_CENTRAL_USERNAME=your-maven-central-username
+                |   MAVEN_CENTRAL_PASSWORD=your-maven-central-password
+                |   SIGNING_IN_MEMORY_KEY=base64-encoded-gpg-key
+                |
+                |   Or traditional signing:
+                |   SIGNING_KEY_ID=your-gpg-key-id
+                |   SIGNING_PASSWORD=your-gpg-key-password
+                |   SIGNING_SECRET_KEY_RING_FILE=/path/to/secring.gpg
+                |
+                |Alternative environment variable names (legacy support):
+                |   SONATYPE_USERNAME, SONATYPE_PASSWORD, OSSRH_USERNAME, OSSRH_PASSWORD
+                |
+                |3. Command line properties:
+                |   ./gradlew publishRemote -PmavenCentralUsername=... -PmavenCentralPassword=...
+                |
+                |Get Maven Central credentials from: https://central.sonatype.org/
+                |
+                |Current status:
+                |  Username: ${if (username.isNotEmpty()) "✅ Available" else "❌ Missing"}
+                |  Password: ${if (password.isNotEmpty()) "✅ Available" else "❌ Missing"}
+                |  Signing (in-memory key): ${if (inMemoryKey.isNotEmpty()) "✅ Available" else "❌ Missing"}
+                |  Signing (traditional keyId): ${if (keyId.isNotEmpty()) "✅ Available" else "❌ Missing"}
+                |  Signing (traditional secretKey): ${if (secretKey.isNotEmpty()) "✅ Available" else "❌ Missing"}
+            """.trimMargin())
+        }
+
+        logger.info("✅ Maven Central credentials validated successfully")
+        logger.info("   Username: Available")
+        logger.info("   Password: Available")
+        if (inMemoryKey.isNotEmpty()) {
+            logger.info("   Signing: Using in-memory key (Vanniktech format)")
+        } else {
+            logger.info("   Signing: Using traditional keyId + secretKeyRingFile")
+        }
     }
 }

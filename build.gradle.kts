@@ -67,8 +67,6 @@ val publish by tasks.registering {
 private val xdk = gradle.includedBuild("xdk")
 private val plugin = gradle.includedBuild("plugin")
 private val includedBuildsWithPublications = listOf(xdk, plugin)
-private val publishTaskPrefixes = listOf("list", "delete")
-private val publishTaskSuffixesRemote = listOf("RemotePublications")
 private val publishTaskSuffixesLocal = listOf("LocalPublications")
 
 
@@ -104,6 +102,7 @@ dockerTaskNames.forEach { taskName ->
 
 
 // list|deleteLocalPublicatiopns/remotePublications.
+/*
 publishTaskPrefixes.forEach { prefix ->
     publishTaskSuffixesLocal.forEach { suffix ->
         val taskName = "$prefix$suffix"
@@ -115,21 +114,28 @@ publishTaskPrefixes.forEach { prefix ->
             }
         }
     }
-}
+}*/
 
 
-// Validate credentials are available for publishing (GitHub + optional Plugin Portal)
+// Validate credentials are available for publishing (GitHub + optional Plugin Portal + optional Maven Central)
 val validateCredentials by tasks.registering(ValidateCredentialsTask::class) {
     group = PUBLISH_TASK_GROUP
-    description = "Validate GitHub and Plugin Portal credentials are available for publishing"
+    description = "Validate GitHub, Plugin Portal, and Maven Central credentials are available for publishing"
 
     // Use centralized credential management
     gitHubUsername.set(xdkPublishingCredentials.gitHubUsername)
     gitHubPassword.set(xdkPublishingCredentials.gitHubPassword)
     enableGitHub.set(xdkPublishingCredentials.enableGitHub)
     enablePluginPortal.set(xdkPublishingCredentials.enablePluginPortal)
+    enableMavenCentral.set(xdkPublishingCredentials.enableMavenCentral)
     gradlePublishKey.set(xdkPublishingCredentials.gradlePublishKey)
     gradlePublishSecret.set(xdkPublishingCredentials.gradlePublishSecret)
+    mavenCentralUsername.set(xdkPublishingCredentials.mavenCentralUsername)
+    mavenCentralPassword.set(xdkPublishingCredentials.mavenCentralPassword)
+    signingKeyId.set(xdkPublishingCredentials.signingKeyId)
+    signingPassword.set(xdkPublishingCredentials.signingPassword)
+    signingSecretKey.set(xdkPublishingCredentials.signingSecretKey)
+    signingInMemoryKey.set(xdkPublishingCredentials.signingInMemoryKey)
 }
 
 // Publication listing tasks removed - use bin/list-publications.sh instead

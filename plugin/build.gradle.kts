@@ -56,8 +56,8 @@ private val semanticVersion: SemanticVersion by extra
 
 private val pprefix = "org.xtclang"
 
-// Property for the Plugin ID (unique to a plugin) - extracted during configuration
-private val pluginId = getXdkProperty("$pprefix.plugin.id")
+// Property for the Plugin ID (unique to a plugin)
+private val pluginId = "org.xtclang.xtc-plugin"
 
 // Properties for the artifact - extracted during configuration
 private val pluginName = project.name
@@ -105,7 +105,9 @@ mavenPublishing {
     // Maven Central publishing (disabled by default)
     val enableMavenCentral = getXdkPropertyBoolean("org.xtclang.publish.mavenCentral", false)
     if (enableMavenCentral) {
+        // Always use manual release for safety - use publishAndReleaseToMavenCentral task for immediate release
         publishToMavenCentral(automaticRelease = false)
+        signAllPublications()
         logger.lifecycle("[plugin] Maven Central publishing is enabled")
     } else {
         logger.info("[plugin] Maven Central publishing is disabled (use -Porg.xtclang.publish.mavenCentral=true to enable)")
@@ -133,6 +135,12 @@ mavenPublishing {
                 name.set("XTC Team")
                 email.set("noreply@xtclang.org")
             }
+        }
+
+        scm {
+            connection.set("scm:git:git://github.com/xtclang/xvm.git")
+            developerConnection.set("scm:git:ssh://github.com:xtclang/xvm.git")
+            url.set("https://github.com/xtclang/xvm")
         }
     }
 }
@@ -164,12 +172,12 @@ publishing {
 // Publication listing tasks removed - use bin/list-publications.sh instead
 
 
-// Extract plugin configuration values during configuration
-private val vcsUrlValue = getXdkProperty("$pprefix.plugin.vcs.url")
-private val websiteValue = getXdkProperty("$pprefix.plugin.website")
-private val implementationClassValue = getXdkProperty("$pprefix.plugin.implementation.class")
-private val displayNameValue = getXdkProperty("$pprefix.plugin.display.name")
-private val descriptionValue = getXdkProperty("$pprefix.plugin.description")
+// Plugin configuration values
+private val vcsUrlValue = "https://github.com/xtclang/xvm"
+private val websiteValue = "https://xtclang.org"
+private val implementationClassValue = "org.xtclang.plugin.XtcPlugin"
+private val displayNameValue = "XTC Language Gradle plugin"
+private val descriptionValue = "A plugin that teaches Gradle the XTC language. First step to language server debugging and IDE support."
 
 // Gradle plugin configuration for both vanniktech and plugin portal
 gradlePlugin {

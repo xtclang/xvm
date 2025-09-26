@@ -221,12 +221,13 @@ mavenPublishing {
     // Maven Central publishing (disabled by default)
     val enableMavenCentral = getXdkPropertyBoolean("org.xtclang.publish.mavenCentral", false)
     if (enableMavenCentral) {
+        // Always use manual release for safety - use publishAndReleaseToMavenCentral task for immediate release
         publishToMavenCentral(automaticRelease = false)
+        signAllPublications()
         logger.lifecycle("[xdk] Maven Central publishing is enabled")
     } else {
         logger.info("[xdk] Maven Central publishing is disabled (use -Porg.xtclang.publish.mavenCentral=true to enable)")
     }
-    
     
     pom {
         name.set("xdk")
@@ -247,6 +248,12 @@ mavenPublishing {
                 name.set("XTC Team")
                 email.set("noreply@xtclang.org")
             }
+        }
+
+        scm {
+            connection.set("scm:git:git://github.com/xtclang/xvm.git")
+            developerConnection.set("scm:git:ssh://github.com:xtclang/xvm.git")
+            url.set("https://github.com/xtclang/xvm")
         }
     }
 }
@@ -273,21 +280,6 @@ publishing {
     }
 }
 
-// Publishing tasks are handled by root build.gradle.kts
-
-// Publication listing tasks (called by root aggregator) - now uses centralized implementation from build-logic
-
-
-
-// Publication listing tasks removed - use bin/list-publications.sh instead
-
-
-
-// Signing removed since we're not using Maven publication for XDK
-// signing {
-//     mavenCentralSigning()
-// }
-
 /**
  * Common exclude patterns for unwanted files in distributions
  */
@@ -303,7 +295,7 @@ val capturedDistributionExcludes = distributionExcludes
 
 /*
  * Distribution archives contain internal directory names like "xdk0.4.4SNAPSHOT" rather than "xdk-0.4.4-SNAPSHOT".
- * This is intentional and follows Gradle's standard behavior - the Distribution plugin sanitizes version strings
+ * This is intentional and follows Gradle's standard behavior - the Distributiogin sanitizes version strings
  * to remove special characters (hyphens, dots) for filesystem compatibility. This naming convention is used
  * by many Gradle-built projects and should not be changed as it ensures compatibility across different
  * operating systems and deployment tools.
@@ -466,19 +458,7 @@ val clean by tasks.existing {
     }
 }
 
-/**
- * Set up signing tasks, only enabled if explicitly configured, or if not, only when we
- * are publishing a non-snapshot package.
- */
-tasks.withType<Sign>().configureEach {
-    val sign = getXdkPropertyBoolean("org.xtclang.signing.enabled", isRelease())
-    // TODO: Before mavenCentral access tokens are sorted, signing should never be enabled:
-    require(!sign) { "Signing is not enabled, and should not be enabled until we are sure default configs work." }
-    logger.info("[xdk] Publication will ${if (sign) "" else "NOT "}be signed.")
-    onlyIf {
-        sign
-    }
-}
+// Legacy signing tasks removed - Maven Central signing is now handled by Vanniktech plugin
 
 // Restore the proper distribution task dependencies using the existing utility
 tasks.filter { XdkDistribution.isDistributionArchiveTask(it) }.forEach {
