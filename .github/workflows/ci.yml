@@ -335,7 +335,7 @@ jobs:
 
       - name: Clean up old XDK package versions (keep 50 newest)
         if: steps.publish-maven-snapshot.outcome == 'success'
-        uses: actions/delete-package-versions@v4
+        uses: actions/delete-package-versions@v5
         with:
           package-name: 'org.xtclang.xdk'
           package-type: 'maven'
@@ -344,7 +344,7 @@ jobs:
 
       - name: Clean up old Plugin package versions (keep 50 newest)
         if: steps.publish-maven-snapshot.outcome == 'success'
-        uses: actions/delete-package-versions@v4
+        uses: actions/delete-package-versions@v5
         with:
           package-name: 'org.xtclang.xtc-plugin'
           package-type: 'maven'
@@ -353,7 +353,7 @@ jobs:
 
       - name: Clean up old Plugin Marker package versions (keep 50 newest)
         if: steps.publish-maven-snapshot.outcome == 'success'
-        uses: actions/delete-package-versions@v4
+        uses: actions/delete-package-versions@v5
         with:
           package-name: 'org.xtclang.xtc-plugin.org.xtclang.xtc-plugin.gradle.plugin'
           package-type: 'maven'
