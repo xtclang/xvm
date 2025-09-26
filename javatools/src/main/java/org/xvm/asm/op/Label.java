@@ -113,12 +113,6 @@ public class Label
     // ----- fields -----------------------------------------------------------------------
 
     /**
-     * The "next" op that this op acts as a prefix for. Note that the next op may itself be a
-     * prefix op, so this can act as a linked list.
-     */
-    private Op m_op;
-
-    /**
      * The label associated with this Prefix.
      */
     private java.lang.classfile.Label m_label;
