@@ -97,10 +97,15 @@ jobs:
           echo "🔒 Generating dependency lock files..."
           ./gradlew ${{ env.gradle_options }} dependencies --write-locks
 
+      - name: Clean build directory
+        run: |
+          echo "🧹 Cleaning build directory..."
+          ./gradlew ${{ env.gradle_options }} clean
+
       - name: Run basic validation build
         run: |
           echo "✅ Running validation build to ensure dependencies resolve..."
-          ./gradlew ${{ env.gradle_options }} clean build -x test --info
+          ./gradlew ${{ env.gradle_options }} build -x test --info
 
       - name: Check for dependency vulnerabilities
         run: |
