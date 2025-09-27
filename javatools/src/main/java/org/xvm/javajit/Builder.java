@@ -55,13 +55,6 @@ public abstract class Builder {
         throw new UnsupportedOperationException();
     }
 
-    /**
-     * Assemble the java class for the "exception" shape.
-     */
-    public void assembleJavaException(String className, ClassBuilder classBuilder) {
-        throw new UnsupportedOperationException();
-    }
-
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
