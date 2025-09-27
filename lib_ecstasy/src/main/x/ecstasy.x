@@ -105,6 +105,14 @@ module ecstasy.xtclang.org {
             extends Exception(text, cause);
 
     /**
+     * A `NotAssigned` exception is raised when a [Var] (a variable or a property) is _dereferenced_
+     * before a value has been assigned to it. Generally, this should only be able to occur when a
+     * variable or property is annotated with [@Unassigned](Unassigned).
+     */
+    const NotAssigned(String? text = Null, Exception? cause = Null)
+            extends Exception(text, cause);
+
+    /**
      * An `IllegalArgument` exception is raised when an invalid argument is passed to a method or a
      * function.
      */
