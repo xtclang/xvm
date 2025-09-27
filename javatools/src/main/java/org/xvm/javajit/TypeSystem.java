@@ -320,7 +320,8 @@ public class TypeSystem {
                             break;
 
                         case Exception:
-                            builder.assembleJavaException(className, classBuilder);
+                            ((ExceptionBuilder) builder).
+                                assembleJavaException(className, classBuilder);
                             break;
 
                         default:

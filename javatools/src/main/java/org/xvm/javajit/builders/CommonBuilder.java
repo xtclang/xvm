@@ -100,46 +100,6 @@ public class CommonBuilder
 
 
     /**
-     * The class for e$XYZ (this type) should look like this:
-     * <code><pre>
-     * public class e$XYZ extends xException {
-     *     public e$XYZ(Throwable cause, XYZ exception) {
-     *         super(cause, exception);
-     *     }
-     *</pre></code>
-     */
-    @Override
-    public void assembleJavaException(String className, ClassBuilder classBuilder) {
-        ConstantPool pool      = typeSystem.pool();
-        TypeConstant superType = typeInfo.getExtends();
-        ClassDesc    superCD;
-        if (superType.equals(pool.typeException())) {
-            superCD = CD_xException;
-        } else {
-            superCD = getShapeDesc(typeSystem.ensureJitClassName(superType), ClassfileShape.Exception);
-        }
-
-        ClassDesc exCD = ClassDesc.of(typeSystem.ensureJitClassName(typeInfo.getType()));
-
-        classBuilder.withFlags(ClassFile.ACC_PUBLIC)
-                    .withSuperclass(superCD);
-        classBuilder.withMethod(INIT_NAME,
-            MethodTypeDesc.of(CD_void, CD_Throwable, exCD),
-            ClassFile.ACC_PUBLIC,
-            methodBuilder -> methodBuilder.withCode(code -> {
-                MethodTypeDesc superMD =  MethodTypeDesc.of(CD_void,
-                        CD_Throwable, ClassDesc.of(superType.ensureJitClassName(typeSystem)));
-                code.aload(0)
-                    .aload(1)
-                    .aload(2)
-                    .checkcast(CD_Exception)
-                    .invokespecial(superCD, INIT_NAME, superMD)
-                    .return_();
-            })
-        );
-    }
-
-    /**
      * Compute the instance size of the generated class(es). If more than one class gets generated,
      * the return value reflects the total size of all instantiated objects. Specialized builders
      * should override this method augmenting the memory requirement accordingly.
