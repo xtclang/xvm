@@ -330,7 +330,6 @@ public class TypeSystem {
                 };
 
                 // There are other options that can be useful:
-                //     StackMapsOption.GENERATE_STACK_MAPS
                 //     DeadCodeOption.PATCH_DEAD_CODE
                 //     DebugElementsOption.DROP_DEBUG
                 //     LineNumbersOption.DROP_LINE_NUMBERS
@@ -338,7 +337,8 @@ public class TypeSystem {
                 ClassFile classFile = ClassFile.of(
                     ClassFile.ClassHierarchyResolverOption.of(
                         ClassHierarchyResolver.ofClassLoading(loader)),
-                    ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS
+                    ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
+                    ClassFile.StackMapsOption.GENERATE_STACK_MAPS
                 );
 
                 return classFile.build(ClassDesc.of(className), handler);

@@ -119,7 +119,11 @@ public class Jump
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        code.goto_(bctx.ensureLabel(code, getAddress() + m_ofJmp));
+        if (m_ofJmp > 0) {
+            code.goto_(bctx.ensureLabel(code, getAddress() + m_ofJmp));
+        } else {
+            assert m_ofJmp == 1;
+        }
     }
 
     // ----- fields --------------------------------------------------------------------------------

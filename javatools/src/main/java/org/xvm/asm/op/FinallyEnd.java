@@ -1,8 +1,13 @@
 package org.xvm.asm.op;
 
 
+import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
+
 import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.Frame.DeferredGuardAction;
@@ -79,6 +84,29 @@ public class FinallyEnd
     public void setCompletes(boolean fCompletes) {
         m_fAdvances = fCompletes;
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        org.xvm.javajit.Scope scopeFin = bctx.exitScope(code);
+
+        // the "$rethrow" is an optional exception that we are supposed to re-throw;
+        // see FinallyStart
+        int   slotRethrow = scopeFin.parent.getSynthetic("$rethrow");
+        assert slotRethrow >= 0;
+
+        Label labelNormal = code.newLabel();
+        code.aload(slotRethrow)
+            .dup()
+            .ifnull(labelNormal)
+            .athrow()
+            .labelBinding(labelNormal)
+            .pop();
+        bctx.exitScope(code);
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private transient boolean m_fAdvances = true;
 }

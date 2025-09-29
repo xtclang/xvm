@@ -1290,6 +1290,7 @@ public class CommonBuilder
     private final static String[] TEST_SET = new String[] {
         "Test", "test",
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
+        "TerminalConsole",
     };
     private final static HashSet<String> SKIP_SET = new HashSet<>();
 }

@@ -4,10 +4,15 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.TypeKind;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpJump;
 import org.xvm.asm.Scope;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.Frame.AllGuard;
@@ -73,6 +78,24 @@ public class GuardAll
     public boolean advances() {
         return true;
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        // the GuardAll introduces two scopes:
+        //  - outer with synthetic vars: $rethrow, $contLoop, $breakLoop
+        //  - inner loop that is guarded by "FinallyStart" op
+        org.xvm.javajit.Scope scopeOuter = bctx.enterScope(code);
+
+        // $rethrow = null;
+        int slotRethrow = scopeOuter.allocateSynthetic("$rethrow", TypeKind.REFERENCE);
+        code.aconst_null()
+            .astore(slotRethrow);
+        bctx.enterScope(code); // guarded by FinallyStart
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int m_nNextVar;
 

@@ -519,7 +519,7 @@ public abstract class Builder {
     /**
      * Adds a log message generation (this also allows to break in the debugger).
      */
-    public void addLog(CodeBuilder code, String message) {
+    public static void addLog(CodeBuilder code, String message) {
         code.invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
             .loadConstant(message)
             .invokevirtual(Builder.CD_Ctx, "log", MethodTypeDesc.of(CD_void, CD_JavaString));
