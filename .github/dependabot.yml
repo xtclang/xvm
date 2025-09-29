@@ -58,9 +58,7 @@ updates:
       include: "scope"
     ignore:
       # Ignore XDK internal dependencies which use dynamic versioning
-      - dependency-name: "org.xtclang:*"
-      - dependency-name: "org.xtclang.xtc-plugin"
-      - dependency-name: "org.xtclang.build.*"
+      - dependency-name: "org.xtclang.*"
       # Ignore patch updates for build plugins (too noisy)
       - dependency-name: "*"
         update-types: ["version-update:semver-patch"]
