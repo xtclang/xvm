@@ -18,6 +18,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
+import static org.xvm.javajit.Builder.CD_Exception;
 import static org.xvm.javajit.Builder.CD_xException;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -98,7 +99,7 @@ public class Throw
     public void build(BuildContext bctx, CodeBuilder code) {
         Slot target = bctx.loadArgument(code, m_nArgValue);
         assert target.type().isA(bctx.typeSystem.pool().typeException());
-        code.getfield(target.cd(), "$exception", CD_xException);
+        code.getfield(CD_Exception, "$exception", CD_xException);
         code.athrow();
     }
 

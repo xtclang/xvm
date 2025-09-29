@@ -5,7 +5,6 @@ import java.io.DataInput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
-import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
 
@@ -27,7 +26,6 @@ import org.xvm.javajit.TypeSystem.ClassfileShape;
 import org.xvm.runtime.Frame;
 
 import static org.xvm.javajit.Builder.CD_Exception;
-import static org.xvm.javajit.Builder.CD_xException;
 
 
 /**
@@ -146,20 +144,20 @@ public class CatchStart
      * @param scopeGuarded  the guarded scope (not the current one)
      */
     public void build(BuildContext bctx, CodeBuilder code, org.xvm.javajit.Scope scopeGuarded) {
-        TypeSystem   ts     = bctx.typeSystem;
-        Slot         slotEx = bctx.introduceVar(code, m_nVar, m_nType, m_nNameId);
-        TypeConstant typeEx = slotEx.type();
+        org.xvm.javajit.Scope scopeThis = bctx.enterScope(code);
+
+        TypeSystem   ts         = bctx.typeSystem;
+        Slot         slotEx     = bctx.introduceVar(code, m_nVar, m_nType, m_nNameId);
+        TypeConstant typeEx     = slotEx.type();
         assert typeEx.isA(ts.pool().typeException());
 
         ClassDesc cdEx = Builder.getShapeDesc(typeEx.ensureJitClassName(ts), ClassfileShape.Exception);
 
-        Label catchLabel = code.newLabel();
-        code.labelBinding(catchLabel);
-        code.exceptionCatch(scopeGuarded.startLabel, scopeGuarded.endLabel, catchLabel, cdEx);
-
-        bctx.enterScope(code);
-        code.getfield(CD_xException, "exception", CD_Exception);
+        code.getfield(cdEx, "exception", CD_Exception);
         bctx.storeValue(code, slotEx);
+
+        // add to the exception table
+        code.exceptionCatch(scopeGuarded.startLabel, scopeGuarded.endLabel, scopeThis.startLabel, cdEx);
     }
 
     // ----- fields --------------------------------------------------------------------------------

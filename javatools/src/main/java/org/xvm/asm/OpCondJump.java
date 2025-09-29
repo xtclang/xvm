@@ -434,9 +434,9 @@ public abstract class OpCondJump
             case OP_JMP_NULL, OP_JMP_NNULL:
                 Builder.loadNull(code);
                 if (op == OP_JMP_NULL) {
-                    code.ifeq(lblJump);
+                    code.if_acmpeq(lblJump);
                 } else {
-                    code.ifne(lblJump);
+                    code.if_acmpne(lblJump);
                 }
                 break;
 

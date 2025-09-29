@@ -32,6 +32,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.CatchStart;
+import org.xvm.asm.op.FinallyStart;
 import org.xvm.asm.op.Guarded;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
@@ -242,6 +243,7 @@ public class BuildContext {
      */
     public Scope enterScope(CodeBuilder code) {
         scope = scope.enter();
+        code.labelBinding(scope.startLabel);
         return scope;
     }
 
@@ -277,7 +279,7 @@ public class BuildContext {
     }
 
     /**
-     * Add a {@link Guarded} label to the specified {@link CatchStart} op.
+     * Add a {@link Guarded} label to the specified {@link CatchStart} or {@link FinallyStart} op.
      */
     public void ensureGuarded(int opAddress) {
         Op[] ops = methodStruct.getOps();

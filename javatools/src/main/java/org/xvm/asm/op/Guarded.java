@@ -15,7 +15,7 @@ public class Guarded
         extends Op.Prefix {
 
     /**
-     * Construct a Guard prefix
+     * Construct a Guarded prefix for the specified scope
      */
     public Guarded(Scope scope) {
         f_scope = scope;

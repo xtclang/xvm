@@ -4,6 +4,9 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 import java.lang.classfile.TypeKind;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Scope information for the JIT compiler.
  */
@@ -33,6 +36,7 @@ public class Scope {
         this.startLocal = parent.startLocal;
         this.topLocal   = parent.topLocal;
         this.topVar     = parent.topVar;
+        this.depth      = parent.depth + 1;
     }
 
     private final BuildContext bctx;
@@ -41,7 +45,7 @@ public class Scope {
     /**
      * The parent Scope.
      */
-    private Scope parent;
+    public Scope parent;
 
     /**
      * The start-of-scope label.
@@ -69,6 +73,16 @@ public class Scope {
     public int topVar;
 
     /**
+     * The depth of this scope.
+     */
+    public int depth;
+
+    /**
+     * A map of synthetic variables declared in this scope.
+     */
+    public Map<String, Integer> synthetics;
+
+    /**
      * Enter a new Scope.
      */
     public Scope enter() {
@@ -76,11 +90,34 @@ public class Scope {
     }
 
     /**
-     * Allocate Java slot(s) for a variable of the specified kind.
+     * Allocate Java slot(s) for an XVM variable of the specified kind.
      *
      * @return the Java slot for the newly allocated local variable
      */
     public int allocateLocal(int varIndex, TypeKind kind) {
+        int slot = allocateJavaSlot(kind);
+        assert parent == null || varIndex > parent.topVar;
+        topVar = Math.max(topVar, varIndex);
+        return slot;
+    }
+
+    /**
+     * Allocate Java slot(s) for a synthetic variable of the specified name and kind.
+     *
+     * @return the Java slot for the newly allocated synthetic variable
+     */
+    public int allocateSynthetic(String name, TypeKind kind) {
+        int slot = allocateJavaSlot(kind);
+        if (synthetics == null) {
+            synthetics = new HashMap<>();
+        } else {
+            assert !synthetics.containsKey(name);
+        }
+        synthetics.put(name, slot);
+        return slot;
+    }
+
+    private int allocateJavaSlot(TypeKind kind) {
         int slot;
         if (topLocal >= bctx.maxLocal || startLocal == -1) {
             slot = code.allocateLocal(kind);
@@ -96,9 +133,15 @@ public class Scope {
                 assert bctx.maxLocal == topLocal;
             }
         }
-        assert parent == null || varIndex > parent.topVar;
-        topVar = Math.max(topVar, varIndex);
         return slot;
+    }
+
+    /**
+     * @return a Java slot for the specified synthetic variable; -1 if not found
+     */
+    public int getSynthetic(String name) {
+        Integer slot = synthetics.get(name);
+        return slot == null ? -1 : slot.intValue();
     }
 
     /**

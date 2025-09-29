@@ -5,11 +5,15 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpMove;
 
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -108,6 +112,17 @@ public class MoveCast
     public String toString() {
         return super.toString() + ", " + Argument.toIdString(m_typeTo, m_nToType);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        TypeConstant type = (TypeConstant) bctx.loadConstant(code, m_nToType);
+        bctx.loadArgument(code, m_nFromValue);
+        code.checkcast(type.ensureClassDesc(bctx.typeSystem));
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     protected int m_nToType;
 
