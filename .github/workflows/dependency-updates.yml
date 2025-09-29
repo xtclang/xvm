@@ -113,55 +113,9 @@ jobs:
           # Run dependency verification if available
           ./gradlew ${{ env.gradle_options }} dependencyCheckAnalyze || echo "⚠️ Dependency check not available or failed"
 
-  upload-dependencies:
-    name: Upload updated dependencies
-    needs: validate-dependencies
-    runs-on: ubuntu-latest
-    if: ${{ needs.validate-dependencies.outputs.is-dependabot == 'true' && success() }}
-
-    steps:
-      - name: Fetch Sources
-        uses: actions/checkout@v5
-
-      - name: Get Java version from XDK properties
-        id: java_version
-        uses: ./.github/actions/get-java-version
-
-      - name: Setup XVM Build Environment
-        uses: ./.github/actions/setup-xvm-build
-        with:
-          java-version: ${{ steps.java_version.outputs.java_version }}
-          java-distribution: ${{ env.java_distribution }}
-          gradle-version: ${{ env.gradle_version }}
-          cache-read-only: true  # Use cache from validate-dependencies
-          enable-debug: false
-
-      - name: Upload dependencies to GitHub Packages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "📦 Uploading updated dependencies..."
-
-          # Create a snapshot build with updated dependencies
-          ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true --info
-          ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true --info
-
-          echo "✅ Dependencies uploaded successfully"
-
-      - name: Create dependency update summary
-        run: |
-          echo "📊 Dependency Update Summary" >> $GITHUB_STEP_SUMMARY
-          echo "==========================" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Updated dependencies:** ${{ needs.validate-dependencies.outputs.dependency-count }} files" >> $GITHUB_STEP_SUMMARY
-          echo "**Build status:** ✅ Passed" >> $GITHUB_STEP_SUMMARY
-          echo "**Upload status:** ✅ Completed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The updated dependencies have been validated and uploaded to GitHub Packages." >> $GITHUB_STEP_SUMMARY
-
   auto-approve:
     name: Auto-approve dependabot PRs
-    needs: [validate-dependencies, upload-dependencies]
+    needs: validate-dependencies
     runs-on: ubuntu-latest
     if: ${{ needs.validate-dependencies.outputs.is-dependabot == 'true' && success() }}
 
@@ -184,7 +138,7 @@ jobs:
               repo: context.repo.repo,
               pull_number: context.payload.pull_request.number,
               event: 'APPROVE',
-              body: '✅ Auto-approved after successful dependency validation and upload'
+              body: '✅ Auto-approved after successful dependency validation'
             });
 
             // Add informative comment
@@ -197,7 +151,6 @@ jobs:
               This Dependabot PR has been automatically approved after:
               - ✅ Dependency validation passed
               - ✅ Build with updated dependencies succeeded
-              - ✅ Updated dependencies uploaded to GitHub Packages
 
               The PR is ready for manual review and merge by maintainers.`
             });
