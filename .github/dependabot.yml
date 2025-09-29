@@ -12,9 +12,9 @@ updates:
       time: "06:00"
     open-pull-requests-limit: 5
     reviewers:
-      - "xtclang/maintainers"
+      - "maintainers"
     assignees:
-      - "xtclang/maintainers"
+      - "maintainers"
     commit-message:
       prefix: "ci"
       include: "scope"
@@ -28,14 +28,20 @@ updates:
       time: "06:00"
     open-pull-requests-limit: 5
     reviewers:
-      - "xtclang/maintainers"
+      - "maintainers"
     assignees:
-      - "xtclang/maintainers"
+      - "maintainers"
     commit-message:
       prefix: "docker"
       include: "scope"
 
   # Enable version updates for Gradle dependencies
+  #
+  # NOTE: This repository uses dynamic version resolution for XDK-related dependencies.
+  # The libs.versions.toml file contains placeholder versions (0.0.0-PLACEHOLDER) that
+  # are dynamically replaced at build time from the version.properties file.
+  # Dependabot will see these placeholders but they are not real versions to update.
+  #
   - package-ecosystem: "gradle"
     directory: "/"
     schedule:
@@ -44,13 +50,15 @@ updates:
       time: "06:00"
     open-pull-requests-limit: 10
     reviewers:
-      - "xtclang/maintainers"
+      - "maintainers"
     assignees:
-      - "xtclang/maintainers"
+      - "maintainers"
     commit-message:
       prefix: "deps"
       include: "scope"
     ignore:
+      # Ignore XDK internal dependencies which use dynamic versioning
+      - dependency-name: "org.xtclang.*"
       # Ignore patch updates for build plugins (too noisy)
       - dependency-name: "*"
         update-types: ["version-update:semver-patch"]
