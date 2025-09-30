@@ -23,7 +23,6 @@ import java.io.File
 
 plugins {
     id("org.xtclang.build.xdk.versioning")
-    id("org.xtclang.build.git")  // For git tagging functionality only
     alias(libs.plugins.vanniktech.maven.publish)
     alias(libs.plugins.xtc)
     application
@@ -498,53 +497,6 @@ tasks.withType<Tar>().configureEach {
 val test by tasks.existing {
     doLast {
         TODO("Implement response to the check lifecycle, probably some kind of aggregate XUnit.")
-    }
-}
-
-
-/**
- * Ensure that tags are correct. First we fetch remote tags, clobbering any locals ones,
- * the remote is always the single source of truth.
- *
- * For a snapshot release, we delete any existing tag for this version, and place a new
- * tag with hte same contents at the latest commit.
- *
- * For a normal release, we fail if there already is a tag for this version.
- */
-// Configure the central git tagging task with XDK-specific values
-tasks.ensureGitTags.configure {
-    val snapshotOnlyValue = snapshotOnly()
-    val currentVersionValue = semanticVersion.artifactVersion  // Use artifactVersion instead of toString()
-
-    version.set(currentVersionValue)
-    snapshotOnly.set(snapshotOnlyValue)
-}
-
-val ensureTags by tasks.registering {
-    group = PUBLISH_TASK_GROUP
-    description = "Ensure that the current commit is tagged with the current version."
-
-    // Capture values during configuration phase to avoid runtime project access
-    val snapshotOnlyValue = snapshotOnly()
-    val currentVersionValue = semanticVersion.artifactVersion  // Extract just the version string
-    val allowPublicationValue = allowPublication()  // Extract boolean value
-
-    if (!allowPublicationValue) {
-        logger.lifecycle("[xdk] Skipping publication task, snapshotOnly=${snapshotOnlyValue} for version: '$currentVersionValue")
-    }
-    onlyIf {
-        allowPublicationValue
-    }
-
-    // Simply depend on the configured git tagging task
-    dependsOn(tasks.ensureGitTags)
-
-    doLast {
-        logger.lifecycle("""
-            [xdk] Git tagging completed via ensureGitTags task.
-            [xdk]     version: $currentVersionValue
-            [xdk]     snapshotOnly: $snapshotOnlyValue
-        """.trimIndent())
     }
 }
 

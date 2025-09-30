@@ -330,7 +330,6 @@ jobs:
           ${{ env.GRADLE_CACHE_INSPECT }}
           inspect_gradle_cache "before publishing (reused from build-verify)"
           echo "Reusing build cache from build-verify job..."
-          ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true --info
           ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true --info
 
       - name: Clean up old XDK package versions (keep 50 newest)
