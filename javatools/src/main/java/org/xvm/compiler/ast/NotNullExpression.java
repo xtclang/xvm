@@ -235,10 +235,11 @@ public class NotNullExpression
             code.add(new JumpFalse(varCond.getRegister(), m_labelShort));
             return varVal.getRegister();
         } else {
-            TypeConstant typeTemp = typeExpr.ensureNullable();
-            Assignable   var      = createTempVar(code, typeTemp, false);
-            generateAssignment(ctx, code, var, errs);
-            return var.getRegister().narrowType(typeExpr);
+            Assignable var = createTempVar(code, typeExpr, false);
+            Argument   arg = expr.generateArgument(ctx, code, true, false, errs);
+            code.add(new JumpNull(arg, m_labelShort));
+            var.assign(arg, code, errs);
+            return var.getRegister();
         }
     }
 

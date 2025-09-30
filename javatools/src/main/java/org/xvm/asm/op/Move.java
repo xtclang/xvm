@@ -85,6 +85,9 @@ public class Move
         Slot slotFrom = bctx.loadArgument(code, m_nFromValue);
         Slot slotTo   = bctx.ensureSlot(m_nToValue, slotFrom.type(), slotFrom.cd(), "");
 
+        if (!slotFrom.type().isA(slotTo.type())) {
+            code.checkcast(slotTo.type().ensureClassDesc(bctx.typeSystem));
+        }
         bctx.storeValue(code, slotTo);
     }
 }
