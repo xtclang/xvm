@@ -105,7 +105,9 @@ public class JitConnector
             if (name.equals("xException") ||
                     name.startsWith(TypeSystem.ClassfileShape.Exception.prefix)) {
                 try {
-                    System.out.println(cause.getClass().getField("exception").get(cause));
+                    // TODO: add the service info; see Utils.log()
+                    System.out.println("\nUnhandled exception: " +
+                        cause.getClass().getField("exception").get(cause));
                 } catch (Throwable ignore) {}
             } else {
                 e.printStackTrace();
