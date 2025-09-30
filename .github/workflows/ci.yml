@@ -336,9 +336,7 @@ jobs:
           inspect_gradle_cache "before publishing (reused from build-verify)"
           echo "Reusing build cache from build-verify job..."
           echo "Publishing snapshot artifacts to GitHub Packages..."
-          # Note: Maven Central credentials are configured but publishing is disabled by default
-          # To enable: add -Porg.xtclang.publish.mavenCentral=true
-          ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true --info
+          ./gradlew ${{ env.gradle_options }} publish --info
 
       - name: Clean up old XDK package versions (keep 50 newest)
         if: steps.publish-maven-snapshot.outcome == 'success'
