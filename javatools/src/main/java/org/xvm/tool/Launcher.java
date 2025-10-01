@@ -122,6 +122,9 @@ public abstract class Launcher
                     + Runtime.version() + ") appears to be older");
         } else {
             log(Severity.INFO, "JVM version: " + Runtime.version());
+            boolean fAssertsEnabled = false;
+            assert  fAssertsEnabled = true;
+            log(Severity.INFO, "Java assertions are " + (fAssertsEnabled ? "enabled" : "disabled"));
         }
 
 

@@ -112,9 +112,9 @@ application {
 
 // Configure the application plugin to generate scripts using custom templates
 tasks.startScripts {
-    applicationName = "xec"  
+    applicationName = "xec"
     classpath = configurations.xdkJavaTools.get()
-    // Configure default JVM options  
+    // Configure default JVM options
     defaultJvmOpts = buildList {
         add("-ea")
         if (enablePreview) {
@@ -122,7 +122,7 @@ tasks.startScripts {
             logger.info("[xdk] You have enabled preview features for XTC launchers")
         }
         if (enableNativeAccess) {
-            add("--enable-native-access=ALL-UNNAMED") 
+            add("--enable-native-access=ALL-UNNAMED")
             logger.info("[xdk] You have enabled native access for XTC launchers")
         }
     }
@@ -132,16 +132,16 @@ tasks.startScripts {
 abstract class ModifyScriptsTask : DefaultTask() {
     @get:Input
     abstract val artifactVersionProperty: Property<String>
-    
-    @get:InputFiles  
+
+    @get:InputFiles
     abstract val javaToolsFiles: ConfigurableFileCollection
-    
+
     @get:InputDirectory
     abstract val scriptsDir: DirectoryProperty
-    
+
     @get:OutputFiles
     abstract val modifiedScripts: ConfigurableFileCollection
-    
+
     @TaskAction
     fun modifyScripts() {
         XdkDistribution.modifyLauncherScripts(
@@ -154,7 +154,7 @@ abstract class ModifyScriptsTask : DefaultTask() {
 
 val modifyScripts by tasks.registering(ModifyScriptsTask::class) {
     dependsOn(tasks.startScripts)
-    
+
     artifactVersionProperty.set(artifactVersion)
     javaToolsFiles.from(configurations.getByName("xdkJavaTools"))
     scriptsDir.set(layout.dir(tasks.startScripts.map { it.outputDir!! }))
@@ -195,10 +195,10 @@ private val publicationGroupId = project.group.toString()
 private val publicationArtifactId = project.name
 private val publicationVersion = project.version.toString()
 
-// Configure Vanniktech Maven Publish for configuration cache compatibility  
+// Configure Vanniktech Maven Publish for configuration cache compatibility
 mavenPublishing {
     coordinates(publicationGroupId, publicationArtifactId, publicationVersion)
-    
+
     // Configure as Generic publication to handle custom ZIP artifact
     configure(
         com.vanniktech.maven.publish.JavaLibrary(
@@ -206,7 +206,7 @@ mavenPublishing {
             sourcesJar = false
         )
     )
-    
+
     // Add the ZIP distribution as the main artifact
     afterEvaluate {
         publishing.publications.named<MavenPublication>("maven") {
@@ -217,7 +217,7 @@ mavenPublishing {
             }
         }
     }
-    
+
     // Maven Central publishing (disabled by default)
     val enableMavenCentral = getXdkPropertyBoolean("org.xtclang.publish.mavenCentral", false)
     if (enableMavenCentral) {
@@ -226,21 +226,21 @@ mavenPublishing {
     } else {
         logger.info("[xdk] Maven Central publishing is disabled (use -Porg.xtclang.publish.mavenCentral=true to enable)")
     }
-    
-    
+
+
     pom {
         name.set("xdk")
         description.set("XTC Language Software Development Kit (XDK) Distribution Archive")
         url.set("https://xtclang.org")
         packaging = "zip"  // Specify ZIP packaging
-        
+
         licenses {
             license {
                 name.set("The XDK License")
                 url.set("https://github.com/xtclang/xvm/tree/master/license")
             }
         }
-        
+
         developers {
             developer {
                 id.set("xtclang-workflows")
@@ -268,7 +268,7 @@ publishing {
                 }
             }
         } else {
-            logger.lifecycle("[xdk] GitHub Packages repository not configured - missing GitHubPassword/GITHUB_TOKEN")
+            logger.info("[xdk] GitHub Packages repository not configured - missing GitHubPassword/GITHUB_TOKEN")
         }
     }
 }
@@ -294,7 +294,7 @@ publishing {
 private val distributionExcludes = listOf(
     "**/scripts/**",    // Exclude any script build directories
     "**/cfg_*.sh",
-    "**/cfg_*.cmd", 
+    "**/cfg_*.cmd",
     "**/bin/README.md"
 )
 
@@ -313,21 +313,21 @@ distributions {
         // Configure as "xdk" distribution with launcher scripts
         distributionBaseName = xdkDist.distributionName  // "xdk"
         version = xdkDist.distributionVersion
-        
+
         contents {
             // Handle potential script duplicates
             duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-            
+
             // Core XDK content
             val xdkTemplate = tasks.processResources.map {
                 logger.info("[xdk] Resolving processResources output (this should be during the execution phase).")
                 File(it.outputs.files.singleFile, "xdk")
             }
             from(xdkTemplate) {
-                exclude("**/bin/**")  // Exclude bin directory to avoid conflicts with generated scripts  
+                exclude("**/bin/**")  // Exclude bin directory to avoid conflicts with generated scripts
                 includeEmptyDirs = false
             }
-            
+
             // XTC modules
             from(configurations.xtcModule) {
                 into("lib")
@@ -337,24 +337,24 @@ distributions {
                 into("javatools")
                 include(JAVATOOLS_PREFIX_PATTERN) // only javatools_*.xtc
             }
-            
+
             // Java tools (strip version from jar names)
             from(configurations.xdkJavaTools) {
                 // Configuration cache: Use static transformer to avoid script object references
                 rename(XdkDistribution.createRenameTransformer(artifactVersion))
                 into("javatools")
             }
-            
+
             // Include javatools-jitbridge binary blob (separate from normal javatools classpath)
             from(xdkJavaToolsJitBridge) {
                 // Configuration cache: Use static transformer to avoid script object references
                 rename(XdkDistribution.createRenameTransformer(artifactVersion))
                 into("javatools")
             }
-            
+
             // Version file
             from(tasks.xtcVersionFile)
-            
+
             // Include launcher scripts directly in bin/
             from(prepareDistributionScripts.map { it.destinationDir }) {
                 include("xcc")
@@ -365,7 +365,7 @@ distributions {
                 include("xtc.bat")
                 into("bin")
             }
-            
+
             // Exclude unwanted files and prevent auto-inclusion of script task outputs
             capturedDistributionExcludes.forEach { exclude(it) }
         }
@@ -374,21 +374,21 @@ distributions {
         distributionBaseName = xdkDist.distributionName
         version = xdkDist.distributionVersion
         distributionClassifier = "native-${xdkDist.osClassifier()}"
-        
+
         contents {
             // Handle potential script duplicates
             duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-            
+
             // Core XDK content (same as main distribution)
             val xdkTemplate = tasks.processResources.map {
                 logger.info("[xdk] Resolving processResources output (this should be during the execution phase).")
                 File(it.outputs.files.singleFile, "xdk")
             }
             from(xdkTemplate) {
-                exclude("**/bin/**")  // Exclude bin directory to avoid conflicts with generated scripts  
+                exclude("**/bin/**")  // Exclude bin directory to avoid conflicts with generated scripts
                 includeEmptyDirs = false
             }
-            
+
             // XTC modules
             from(configurations.xtcModule) {
                 into("lib")
@@ -398,24 +398,24 @@ distributions {
                 into("javatools")
                 include(JAVATOOLS_PREFIX_PATTERN) // only javatools_*.xtc
             }
-            
-            // Java tools (strip version from jar names)  
+
+            // Java tools (strip version from jar names)
             from(configurations.xdkJavaTools) {
                 // Configuration cache: Use static transformer to avoid script object references
                 rename(XdkDistribution.createRenameTransformer(artifactVersion))
                 into("javatools")
             }
-            
+
             // Include javatools-jitbridge binary blob (separate from normal javatools classpath)
             from(xdkJavaToolsJitBridge) {
                 // Configuration cache: Use static transformer to avoid script object references
                 rename(XdkDistribution.createRenameTransformer(artifactVersion))
                 into("javatools")
             }
-            
+
             // Version file
             from(tasks.xtcVersionFile)
-            
+
             // Install platform-specific binary launchers that work on the host system
             XdkDistribution.binaryLauncherNames.forEach {
                 val launcher = xdkDist.launcherFileName()
@@ -425,7 +425,7 @@ distributions {
                     into("bin")
                 }
             }
-            
+
             // Exclude unwanted files and prevent auto-inclusion of script task outputs
             capturedDistributionExcludes.forEach { exclude(it) }
         }
@@ -515,7 +515,7 @@ val test by tasks.existing {
 tasks.ensureGitTags.configure {
     val snapshotOnlyValue = snapshotOnly()
     val currentVersionValue = semanticVersion.artifactVersion  // Use artifactVersion instead of toString()
-    
+
     version.set(currentVersionValue)
     snapshotOnly.set(snapshotOnlyValue)
 }
@@ -528,17 +528,17 @@ val ensureTags by tasks.registering {
     val snapshotOnlyValue = snapshotOnly()
     val currentVersionValue = semanticVersion.artifactVersion  // Extract just the version string
     val allowPublicationValue = allowPublication()  // Extract boolean value
-    
+
     if (!allowPublicationValue) {
         logger.lifecycle("[xdk] Skipping publication task, snapshotOnly=${snapshotOnlyValue} for version: '$currentVersionValue")
     }
     onlyIf {
         allowPublicationValue
     }
-    
+
     // Simply depend on the configured git tagging task
     dependsOn(tasks.ensureGitTags)
-    
+
     doLast {
         logger.lifecycle("""
             [xdk] Git tagging completed via ensureGitTags task.

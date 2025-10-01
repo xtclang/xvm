@@ -815,7 +815,7 @@ public class Frame
                     return hDest.getVarSupport().setReferent(this, hDest, hValue);
                 }
 
-                if (info.isFixedType()) {
+                if (ASSERTS_ENABLED && info.isFixedType()) {
                     checkType(hValue, info);
                 }
             }
@@ -855,9 +855,6 @@ public class Frame
     private void checkType(ObjectHandle hValueFrom, VarInfo infoTo) {
         TypeConstant typeFrom = hValueFrom.getUnsafeType();
         if (typeFrom.getPosition() != infoTo.m_nTypeId) { // quick check
-            // TODO GG: how to minimize the probability of getting here with "IS_A" result?
-            //          as of 5/9/22 the stats for the test suite are:
-            //          total=2460000 hits=121233 misses=2318960 weak=5329
             TypeConstant typeTo = infoTo.getType();
 
             switch (typeFrom.calculateRelation(typeTo)) {
@@ -2662,4 +2659,10 @@ public class Frame
     // ----- TEMPORARY -----------------------------------------------------------------------------
 
     static final boolean REPORT_WRAPPING = System.getProperties().containsKey("DEBUG");
+    static final boolean ASSERTS_ENABLED;
+    static {
+        boolean fEnabled = false;
+        assert  fEnabled = true;
+        ASSERTS_ENABLED  = fEnabled;
+    }
 }

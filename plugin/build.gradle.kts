@@ -27,13 +27,13 @@ private val defaultJvmArgsValue = buildList {
 val generateDefaultJvmArgs by tasks.registering {
     val outputDir = layout.buildDirectory.dir("generated/resources")
     val outputFile = outputDir.map { it.file("org/xtclang/build/internal/defaultJvmArgs.properties") }
-    
+
     // Declare properties as inputs for proper invalidation
     inputs.property("enablePreview", enablePreviewValue)
     inputs.property("enableNativeAccess", enableNativeAccessValue)
-    
+
     outputs.file(outputFile)
-    
+
     doLast {
         outputFile.get().asFile.apply {
             parentFile.mkdirs()
@@ -113,20 +113,20 @@ mavenPublishing {
 
     // Note: Plugin Portal credentials handled by standard gradle.publish.* properties
     // Validation handled by root validateCredentials task when Portal publishing enabled
-    
-    
+
+
     pom {
         name.set(pluginName)
         description.set("XTC Gradle Plugin")
         url.set("https://xtclang.org")
-        
+
         licenses {
             license {
                 name.set("The XDK License")
                 url.set("https://github.com/xtclang/xvm/tree/master/license")
             }
         }
-        
+
         developers {
             developer {
                 id.set("xtclang-workflows")
@@ -154,7 +154,7 @@ publishing {
                 }
             }
         } else {
-            logger.lifecycle("[plugin] GitHub Packages repository not configured - missing GitHubPassword/GITHUB_TOKEN")
+            logger.info("[plugin] GitHub Packages repository not configured - missing GitHubPassword/GITHUB_TOKEN")
         }
     }
 }
@@ -214,7 +214,7 @@ tasks.withType<Jar>().configureEach {
         }
         manifest {
             // Dependency on javatools handled through xdkJavaToolsJarConsumer configuration
-            
+
             val baseAttributes = mapOf(
                 "Manifest-Version" to "1.0",
                 "Xdk-Version" to semanticVersion.toString(),
@@ -228,7 +228,7 @@ tasks.withType<Jar>().configureEach {
                 "Implementation-Vendor" to "xtclang.org",
                 "Implementation-Version" to pluginVersion,
             )
-            
+
             attributes(baseAttributes)
         }
     }
