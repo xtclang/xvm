@@ -29,6 +29,7 @@ abstract class XdkPublishingCredentials @Inject constructor(
             .orElse(providers.environmentVariable("GRADLE_PUBLISH_SECRET"))
             .orElse(providers.provider { "" })
 
+<<<<<<< HEAD
     // Maven Central / Sonatype credentials
     val mavenCentralUsername: Provider<String> =
         providers.gradleProperty("mavenCentralUsername")
