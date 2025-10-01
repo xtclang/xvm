@@ -576,7 +576,6 @@ const IntLiteral(String text)
     @Override
     FloatN toFloatN() = toFPLiteral().toFloatN();
 
-    @Auto
     @Override
     FPLiteral toFPLiteral() = new FPLiteral(text);
 

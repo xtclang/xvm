@@ -1488,8 +1488,6 @@ public class LiteralConstant
                 return toIntConstant(Format.UInt128);
             } else if (typeOut.equals(pool.typeUIntN())) {
                 return toIntConstant(Format.UIntN);
-            } else if (typeOut.equals(pool.typeFPLiteral())) {
-                return pool.ensureLiteralConstant(Format.FPLiteral, getValue());
             }
 
             String sSimpleName = typeOut.getEcstasyClassName();
