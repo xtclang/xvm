@@ -24,10 +24,6 @@ data class SemanticVersion(val artifactGroup: String, val artifactId: String, va
         }
     }
 
-    fun toJson(): String {
-        return toJson(this)
-    }
-
     override fun toString(): String {
         return "$artifactGroup:$artifactId:$artifactVersion"
     }

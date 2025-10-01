@@ -14,20 +14,6 @@ import javax.inject.Inject
 import java.io.ByteArrayOutputStream
 import java.io.File
 
-// Cross-platform build check utility - configuration cache compatible version  
-fun checkCrossPlatformBuild(project: org.gradle.api.Project, targetArch: String): Boolean {
-    val hostArch = when (project.providers.systemProperty("os.arch").get()) {
-        "amd64", "x86_64" -> "amd64"
-        "aarch64", "arm64" -> "arm64"
-        else -> "unknown"
-    }
-    val allowEmulation = project.providers.systemProperty("org.xtclang.docker.allowEmulation").getOrElse("false").toBoolean()
-    if (targetArch != hostArch && !allowEmulation) {
-        return false
-    }
-    return true
-}
-
 abstract class DockerTask : DefaultTask() {
     @get:Inject
     abstract val execOperations: ExecOperations
