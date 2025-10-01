@@ -7,7 +7,7 @@ static const CaseInsensitive
     Int64 hashOf(String value) {
         Int64 hash = Int64:982_451_653;         // start with a prime number
         for (Char char : value) {
-            hash = hash * 31 + char.lowercase.toInt64();
+            hash = hash * 31 + (char.category.letter ? char.uppercase.lowercase : char).toInt64();
         }
         return hash;
     }
@@ -21,12 +21,34 @@ static const CaseInsensitive
         Iterator<Char> iter1 = value1.iterator();
         Iterator<Char> iter2 = value2.iterator();
         while (Char char1 := iter1.next(), Char char2 := iter2.next()) {
-            if (char1 != char2 && char1.lowercase != char2.lowercase) {
+            if (!charsEqual(char1, char2)) {
                 return False;
             }
         }
 
         return True;
+    }
+
+    static Boolean charsEqual(Char char1, Char char2) {
+        if (char1 == char2) {
+            return True;
+        }
+
+        if (char1.category.letter && char2.category.letter) {
+            val upper1 = char1.uppercase;
+            val upper2 = char2.uppercase;
+            if (upper1 == upper2) {
+                return True;
+            }
+
+            val lower1 = upper1.lowercase;
+            val lower2 = upper2.lowercase;
+            if (lower1 == lower2) {
+                return True;
+            }
+        }
+
+        return False;
     }
 
     /**
@@ -39,8 +61,8 @@ static const CaseInsensitive
             Char char1 = value1[offset];
             Char char2 = value2[offset];
             if (char1 != char2) {
-                char1 = char1.lowercase;
-                char2 = char2.lowercase;
+                char1 = char1.uppercase.lowercase;
+                char2 = char2.uppercase.lowercase;
                 if (char1 != char2) {
                     return char1 <=> char2;
                 }
@@ -70,7 +92,7 @@ static const CaseInsensitive
         }
 
         for (Int offset = 0; offset < length; ++offset) {
-            if (text[offset].lowercase != prefix[offset].lowercase) {
+            if (!charsEqual(text[offset], prefix[offset])) {
                 return False;
             }
         }
@@ -99,7 +121,7 @@ static const CaseInsensitive
         }
 
         for (Int offset = 0; offset < length; ++offset) {
-            if (text[textOffset + offset].lowercase != suffix[offset].lowercase) {
+            if (!charsEqual(text[textOffset + offset], suffix[offset])) {
                 return False;
             }
         }
