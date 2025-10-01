@@ -1416,7 +1416,7 @@ public abstract class Expression
         TypeConstant[] aTypes = getTypes();
         int            cTypes = aTypes.length;
         Assignable[]   aLVals = new Assignable[cTypes];
-        aLVals[0] = createTempVar(code, aTypes[0], fUsedOnce);
+        aLVals[0] = createTempVar(code, aTypes[0], false);
         for (int i = 1; i < cTypes; ++i) {
             aLVals[i] = createTempVar(code, aTypes[i], false);
         }
@@ -2007,7 +2007,7 @@ public abstract class Expression
         public Assignable(Argument argTarget, PropertyConstant constProp) {
             if (argTarget instanceof Register reg) {
                 if (reg.isPredefined()) {
-                    switch (((Register) argTarget).getIndex()) {
+                    switch (reg.getIndex()) {
                     case Op.A_THIS:
                     case Op.A_TARGET:
                     case Op.A_STRUCT:
