@@ -11,11 +11,11 @@ module test3.examples.org {
         } catch (IOException e) {
             console.print("1) IOException caught");
         } catch (Unsupported e) {
-            console.print("2) Unsupported caught 1");
+            console.print("1) Unsupported caught");
             throw e;
         } finally {
             console.print("1) Finally: ", True);
-            console.print(TRY.exception);
+            console.print(TRY.exception?.text : "no exception");
         }
 
         for (Int i : 0..2) {
@@ -25,8 +25,8 @@ module test3.examples.org {
                 console.print("2) IOException caught");
                 continue;
             } catch (Unsupported e) {
-                console.print("2) Unsupported caught 2");
-                // break;
+                console.print("2) Unsupported caught");
+                break;
 //            } finally {
 //                console.print("Done");
             }
@@ -34,8 +34,10 @@ module test3.examples.org {
 
         console.print("Done normally");
     }
-
     void testThrow(Int i) {
+        if (i < 0) {
+            return;
+        }
         if (i == 0) {
             throw new IOException("Test IO");
         } else if (i == 1) {

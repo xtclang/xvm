@@ -890,6 +890,15 @@ public class Frame
                     break;
 
                 default:
+                    if (f_hThis != null &&
+                        f_hThis.getComposition() instanceof CanonicalizedTypeComposition) {
+                        // we don't create ClassCompositions all Type<T> or Class<T> types; instead
+                        // we are using CanonicalizedTypeComposition; as a result we don't have
+                        // the type specific TypeInfo for Type<T> and the call chains may lose
+                        // some type related fidelity. Since it only concerns the code in Type.x
+                        // and Class.x, we can ignore that imprecision.
+                        break;
+                    }
                     System.err.println("WARNING: suspicious assignment at " + this +
                         " from: " + typeFrom.getValueString() + " to: " + typeTo.getValueString());
                     break;
