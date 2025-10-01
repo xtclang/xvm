@@ -12,6 +12,8 @@ private class XdkBuildAggregator(val project: Project) : Runnable {
     companion object {
         private val lifeCycleTasks =
             listOf(ASSEMBLE_TASK_NAME, BUILD_TASK_NAME, CHECK_TASK_NAME, CLEAN_TASK_NAME)
+        // Diagnostic/help tasks that should be aggregated across all included builds
+        private val diagnosticTasks = listOf("dependencies", "properties", "buildEnvironment")
     }
 
     override fun run() {
@@ -29,14 +31,15 @@ private class XdkBuildAggregator(val project: Project) : Runnable {
         }.toSet()
 
         checkStartParameterState()
-        aggregateLifeCycleTasks(ignoredIncludedBuilds)
+        aggregateTasks(lifeCycleTasks, BUILD_GROUP, "lifecycle", ignoredIncludedBuilds)
+        aggregateTasks(diagnosticTasks, "help", "diagnostic", ignoredIncludedBuilds)
     }
 
-    private fun aggregateLifeCycleTasks(ignored: Set<String>) {
-        lifeCycleTasks.forEach { taskName ->
-            logger.info("[aggregator] Creating aggregated lifecycle task: ':$taskName' in project '${project.name}'")
+    private fun aggregateTasks(taskNames: List<String>, group: String, taskType: String, ignored: Set<String>) {
+        taskNames.forEach { taskName ->
+            logger.info("[aggregator] Creating aggregated $taskType task: ':$taskName' in project '${project.name}'")
             tasks.named(taskName) {
-                group = BUILD_GROUP
+                this.group = group
                 description = "Aggregates and executes the '$taskName' task for all included builds."
                 gradle.includedBuilds.filterNot { ignored.contains(it.name) }.forEach { includedBuild ->
                     dependsOn(includedBuild.task(":$taskName"))
