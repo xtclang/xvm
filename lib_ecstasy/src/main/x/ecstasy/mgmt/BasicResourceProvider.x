@@ -19,7 +19,9 @@ service BasicResourceProvider
              implements ResourceProvider {
     @Override
     Supplier getResource(Type type, String name) {
-        import Container.Linker;
+        import ecstasy.collections.HashCollector;
+        import ecstasy.mgmt.Container.Linker;
+        import ecstasy.reflect.Injector;
 
         switch (type, name) {
         case (Console, "console"):
@@ -29,6 +31,13 @@ service BasicResourceProvider
         case (Clock, "clock"):
             @Inject Clock clock;
             return clock;
+
+        case (HashCollector, "hash"):
+            @Inject HashCollector hash;
+            return hash;
+
+        case (Injector, "injector"):
+            return &this.maskAs(Injector);
 
         case (Timer, "timer"):
             return (Inject.Options opts) -> {
