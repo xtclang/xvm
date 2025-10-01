@@ -49,6 +49,52 @@
  *
  * * * For more information, see the documentation on [equals], [hashCode], and [compare].
  *
+ * * Ecstasy objects **always** provide _reference semantics_, but certain `const` classes also
+ *   provide _value semantics_, which means that `(v1 == v2) == (&v1 == &v2)` for any two instances
+ *   `v1` and `v2` of the same class. These are known as _Superposed types_.
+ *
+ * * * A simple example is the `Int` value `4`: No matter how one creates, calculates, or otherwise
+ *     obtains the value `4`, there is only one `4` -- so it's not just that `4 == 4`, but that the
+ *     identity of `4` is _effectively_ `4` itself!
+ *
+ * * * This duality of reference and value semantics is conceptually similar to the wave/particle
+ *     duality, which in quantum physics is referred to as _quantum superposition_, from which the
+ *     Ecstasy term describing value/reference duality originates. (See also: the Schrödinger
+ *     equation, the Heisenberg picture, and the Stone–von Neumann theorem.)
+ *
+ * * * The Ecstasy rules do not attempt to guarantee that there is only one `Int 4` object in all of
+ *     memory, but instead guarantees that the system will behave as if there were only one. In
+ *     other words, the detail of whether two references refer to the same bits at the same exact
+ *     location in memory is intended to be completely invisible to the programmer. This is
+ *     accomplished by guaranteeing that for any two references to Superposed objects of the same
+ *     class that answer `True` for the `==` operator (i.e. the class'
+ *     [equals](Comparable.equals(CompileType, CompileType)) function), the system behavior will be
+ *     _identical to_ the behavior that would result from having two perfectly identical references
+ *     to the same object at the same specific location in memory.
+ *
+ * * * Requirements for Superposed types:
+ *
+ * * * * A Superposed type must be a class type of a `const` class, and can apply only to a `@Final
+ *       const` class, or to a `@Sealed const` class whose permitted subclasses (if any) are each
+ *       Superposed types that add no fields;
+ *
+ * * * * The type of each property that has a _field_ must also be a Superposed type;
+ *
+ * * * * The class must not have any [@Lazy](Lazy) or [@Transient](Transient) properties;
+ *
+ * * * * The class (including each of its superclasses) must not contain any implementation
+ *       of the [hashCode()] or [equals()] function, other than that which is defined on the root
+ *       [Object] interface;
+ *
+ * * * * A union type `T1 | T2` is a Superposed type iff `T1` and `T2` are both Superposed types;
+ *
+ * * * * Without regard to the above rules, the following `const` classes are guaranteed to be
+ *       Superposed types: [Nullable] [Null], [Boolean] [False] and [True], [Bit], [Int8], [Int16],
+ *       [Int32], [Int64], [Int128], [UInt8] aka [Byte], [UInt16], [UInt32], [UInt64], [UInt128],
+ *       [Float8e4], [Float8e5], [BFloat16], [Float16], [Float32], [Float64], [Float128], [Dec32],
+ *       [Dec64], [Dec128], [Nibble], [Char], [Time], [Date], [TimeOfDay], [TimeZone], [Duration],
+ *       and [Range<Superposed>](Range).
+ *
  * * Every `const` class automatically receives an implementation of the [estimateStringLength] and
  *   [appendTo] methods from the [Stringable] interface:
  *
