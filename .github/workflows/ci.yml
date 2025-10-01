@@ -82,14 +82,18 @@ env:
   ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
   ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
 
-  # Secrets (TODO: Verify plugin portal and maven central/sonatype credentials)
+  # Publishing credentials
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GRADLE_PUBLISH_KEY: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY }}
   GRADLE_PUBLISH_SECRET: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET }}
-  GPG_SIGNING_KEY: ${{ secrets.ORG_XTCLANG_GPG_SIGNING_KEY }}
-  GPG_SIGNING_PASSWORD: ${{ secrets.ORG_XTCLANG_GPG_SIGNING_PASSWORD }}
-  MAVEN_CENTRAL_USERNAME: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
-  MAVEN_CENTRAL_PASSWORD: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
+
+  # GPG signing credentials (used by Vanniktech Maven Publish for Maven Central + Plugin Portal)
+  ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.ORG_XTCLANG_SIGNING_IN_MEMORY_KEY }}
+  ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.ORG_XTCLANG_SIGNING_IN_MEMORY_KEY_PASSWORD }}
+
+  # Maven Central credentials (mapped to Vanniktech Maven Publish expected format)
+  ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
+  ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
 
   gradle_options: "-Dorg.gradle.vfs.verbose=false --stacktrace --console=plain ${{ github.event.inputs.extra-gradle-options }}"
 
@@ -330,6 +334,9 @@ jobs:
           ${{ env.GRADLE_CACHE_INSPECT }}
           inspect_gradle_cache "before publishing (reused from build-verify)"
           echo "Reusing build cache from build-verify job..."
+          echo "Publishing snapshot artifacts to GitHub Packages..."
+          # Note: Maven Central credentials are configured but publishing is disabled by default
+          # To enable: add -Porg.xtclang.publish.mavenCentral=true
           ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true --info
 
       - name: Clean up old XDK package versions (keep 50 newest)

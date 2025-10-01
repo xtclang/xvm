@@ -114,8 +114,3 @@ fun Project.isRelease(): Boolean {
 fun Project.snapshotOnly(): Boolean {
     return findProperty("snapshotOnly")?.toString()?.toBoolean() ?: false
 }
-
-fun Project.allowPublication(): Boolean {
-    val forbidPublication = findProperty("forbidPublication")?.toString()?.toBoolean() ?: false
-    return !forbidPublication && !(snapshotOnly() && !project.isSnapshot())
-}

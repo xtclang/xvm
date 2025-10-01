@@ -1,5 +1,4 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_JAR
-import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 
 plugins {
     id("org.xtclang.build.xdk.versioning")
@@ -67,7 +66,7 @@ private val pluginVersion = getXdkProperty("$pprefix.plugin.version", version.to
 logger.info("[plugin] Plugin (id: '$pluginId') artifact version identifier: '$pluginGroup:$pluginName:$pluginVersion'")
 
 private val shouldBundleJavaTools = getXdkPropertyBoolean("$pprefix.plugin.bundle.javatools")
-private val javaToolsContents = objects.fileCollection()
+//private val javaToolsContents = objects.fileCollection()
 
 val xdkJavaToolsJarConsumer by configurations.registering {
     isCanBeResolved = true
@@ -85,7 +84,7 @@ repositories {
 
 dependencies {
     if (shouldBundleJavaTools) {
-        @Suppress("UnstableApiUsage") xdkJavaToolsJarConsumer(libs.javatools)
+        xdkJavaToolsJarConsumer(libs.javatools)
     }
     testImplementation(libs.junit.jupiter)
 }
@@ -103,17 +102,12 @@ mavenPublishing {
     )
 
     // Maven Central publishing (disabled by default)
-    val enableMavenCentral = getXdkPropertyBoolean("org.xtclang.publish.mavenCentral", false)
-    if (enableMavenCentral) {
+    if (xdkPublishingCredentials.enableMavenCentral.get()) {
         publishToMavenCentral(automaticRelease = false)
         logger.lifecycle("[plugin] Maven Central publishing is enabled")
     } else {
         logger.info("[plugin] Maven Central publishing is disabled (use -Porg.xtclang.publish.mavenCentral=true to enable)")
     }
-
-    // Note: Plugin Portal credentials handled by standard gradle.publish.* properties
-    // Validation handled by root validateCredentials task when Portal publishing enabled
-
 
     pom {
         name.set(pluginName)
@@ -137,24 +131,23 @@ mavenPublishing {
     }
 }
 
-// Configure GitHub Packages repository (enabled when credentials are available)
+// Configure GitHub Packages repository
 publishing {
     repositories {
-        // Use centralized credential management
-        val gitHubUsername = xdkPublishingCredentials.gitHubUsername.get()
-        val gitHubPassword = xdkPublishingCredentials.gitHubPassword.get()
-
-        if (gitHubPassword.isNotEmpty()) {
+        if (xdkPublishingCredentials.enableGitHub.get()) {
             maven {
                 name = "GitHub"
                 url = uri("https://maven.pkg.github.com/xtclang/xvm")
                 credentials {
-                    username = gitHubUsername.ifEmpty { "xtclang-workflows" }
-                    password = gitHubPassword
+                    username = xdkPublishingCredentials.gitHubUsername.get().ifEmpty { "xtclang-workflows" }
+                    password = xdkPublishingCredentials.gitHubPassword.get()
                 }
             }
+<<<<<<< HEAD
         } else {
             logger.info("[plugin] GitHub Packages repository not configured - missing GitHubPassword/GITHUB_TOKEN")
+=======
+>>>>>>> e88353603 (Large simplification to the publication system falling back on existing plugin behavior. Verified snapshot publication to maven central and github. Gradle plugin portal works too, but only accepts release versions.)
         }
     }
 }

@@ -94,26 +94,117 @@ get_maven_metadata_timestamp() {
     return 1
 }
 
+list_maven_central_publications() {
+    local project="$1"
+
+    echo "[$project] Checking Maven Central snapshots..."
+
+    # Check snapshots repository
+    local snapshot_url="https://central.sonatype.com/repository/maven-snapshots/org/xtclang/$project/"
+    local snapshot_metadata_url="https://central.sonatype.com/repository/maven-snapshots/org/xtclang/$project/maven-metadata.xml"
+
+    local http_code
+    http_code=$(curl -s -o /dev/null -w "%{http_code}" "$snapshot_metadata_url" --max-time 5 2>/dev/null || echo "000")
+
+    if [[ "$http_code" == "200" ]]; then
+        # Fetch and parse maven-metadata.xml
+        local metadata
+        metadata=$(curl -s "$snapshot_metadata_url" --max-time 5 2>/dev/null || echo "")
+
+        if [[ -n "$metadata" ]]; then
+            # Extract versions (look for <version> tags)
+            local versions
+            versions=$(echo "$metadata" | grep -o '<version>[^<]*</version>' | sed 's/<[^>]*>//g' | grep SNAPSHOT | head -3)
+
+            if [[ -n "$versions" ]]; then
+                echo "[$project]   Maven Central snapshots found:"
+                while IFS= read -r version; do
+                    # Get timestamp for this version
+                    local version_metadata_url="https://central.sonatype.com/repository/maven-snapshots/org/xtclang/$project/$version/maven-metadata.xml"
+                    local version_metadata
+                    version_metadata=$(curl -s "$version_metadata_url" --max-time 5 2>/dev/null || echo "")
+
+                    if [[ -n "$version_metadata" && "$version_metadata" == *"<lastUpdated>"* ]]; then
+                        local last_updated
+                        last_updated=$(echo "$version_metadata" | grep -o '<lastUpdated>[0-9]\{14\}</lastUpdated>' | sed 's/<[^>]*>//g' || echo "")
+
+                        if [[ -n "$last_updated" && ${#last_updated} -eq 14 ]]; then
+                            local year=${last_updated:0:4}
+                            local month=${last_updated:4:2}
+                            local day=${last_updated:6:2}
+                            local hour=${last_updated:8:2}
+                            local minute=${last_updated:10:2}
+                            local second=${last_updated:12:2}
+                            echo "[$project]     $version (updated: $year-$month-$day $hour:$minute:$second)"
+                        else
+                            echo "[$project]     $version"
+                        fi
+                    else
+                        echo "[$project]     $version"
+                    fi
+                done <<< "$versions"
+                echo "[$project]   Note: Sonatype has temporarily disabled UI browsing for snapshots"
+                echo "[$project]   Artifacts can still be consumed normally via Maven/Gradle"
+            else
+                echo "[$project]   No snapshots found"
+            fi
+        else
+            echo "[$project]   Unable to fetch metadata"
+        fi
+    elif [[ "$http_code" == "404" ]]; then
+        echo "[$project]   Not published to Maven Central snapshots"
+    else
+        echo "[$project]   Maven Central check failed (HTTP $http_code)"
+    fi
+
+    # Check releases repository
+    echo "[$project] Checking Maven Central releases..."
+    local release_metadata_url="https://repo1.maven.org/maven2/org/xtclang/$project/maven-metadata.xml"
+
+    http_code=$(curl -s -o /dev/null -w "%{http_code}" "$release_metadata_url" --max-time 5 2>/dev/null || echo "000")
+
+    if [[ "$http_code" == "200" ]]; then
+        local metadata
+        metadata=$(curl -s "$release_metadata_url" --max-time 5 2>/dev/null || echo "")
+
+        if [[ -n "$metadata" ]]; then
+            local versions
+            versions=$(echo "$metadata" | grep -o '<version>[^<]*</version>' | sed 's/<[^>]*>//g' | grep -v SNAPSHOT | head -3)
+
+            if [[ -n "$versions" ]]; then
+                echo "[$project]   Maven Central releases found:"
+                while IFS= read -r version; do
+                    echo "[$project]     $version"
+                done <<< "$versions"
+            else
+                echo "[$project]   No releases found"
+            fi
+        fi
+    elif [[ "$http_code" == "404" ]]; then
+        echo "[$project]   Not published to Maven Central releases"
+    else
+        echo "[$project]   Maven Central releases check failed (HTTP $http_code)"
+    fi
+}
+
 list_remote_publications() {
     local project=${1:-}
 
-    # Check if gh CLI is available and authenticated first
-    if ! command -v gh >/dev/null 2>&1; then
-        if [[ -z "$GITHUB_TOKEN" ]]; then
-            echo "No GitHub token or gh CLI available - cannot list remote publications"
-            echo "Either install gh CLI or set GITHUB_TOKEN environment variable"
-            return 1
-        fi
-    elif ! gh auth status >/dev/null 2>&1; then
-        if [[ -z "$GITHUB_TOKEN" ]]; then
-            echo "gh CLI not authenticated and no GITHUB_TOKEN - cannot list remote publications"
-            echo "Either authenticate with 'gh auth login' or set GITHUB_TOKEN environment variable"
-            return 1
-        fi
+    # Get GitHub token from gh CLI
+    local github_token=""
+    if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+        github_token=$(gh auth token 2>/dev/null || echo "")
+    fi
+
+    if [[ -z "$github_token" ]]; then
+        echo "Unable to get GitHub token - cannot list remote publications"
+        echo "Please authenticate with 'gh auth login'"
+        return 1
     fi
 
     if [[ -n "$project" ]]; then
         echo "[$project] Project would publish to GitHub packages as org.xtclang:$project"
+        list_maven_central_publications "$project"
         return
     fi
 
@@ -178,7 +269,7 @@ list_remote_publications() {
         # For SNAPSHOT versions, get real Maven metadata timestamp (like GitHubTasks.kt did)
         if [[ "$has_snapshots" == "true" ]]; then
             local maven_timestamp
-            maven_timestamp=$(get_maven_metadata_timestamp "$package_name" "$GITHUB_TOKEN" 2>/dev/null || echo "")
+            maven_timestamp=$(get_maven_metadata_timestamp "$package_name" "$github_token" 2>/dev/null || echo "")
 
             if [[ -n "$maven_timestamp" ]]; then
                 echo "    Latest artifacts: $maven_timestamp (from Maven metadata)"
@@ -200,6 +291,13 @@ list_remote_publications() {
     done < <(echo "$packages_json" | jq -c '.[]')
 
     echo "View all packages: https://github.com/xtclang/xvm/packages"
+
+    # Check Maven Central for both projects
+    echo ""
+    echo "=== Maven Central Publications ==="
+    list_maven_central_publications "xdk"
+    echo ""
+    list_maven_central_publications "xtc-plugin"
 }
 
 # Parse command line arguments

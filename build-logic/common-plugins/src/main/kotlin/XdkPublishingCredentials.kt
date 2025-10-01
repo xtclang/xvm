@@ -1,4 +1,3 @@
-import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 import javax.inject.Inject
@@ -8,7 +7,6 @@ import javax.inject.Inject
  * publishing credentials from properties and environment variables.
  */
 abstract class XdkPublishingCredentials @Inject constructor(
-    //private val project: Project,
     private val providers: ProviderFactory
 ) {
     val gitHubUsername: Provider<String> =
@@ -32,7 +30,7 @@ abstract class XdkPublishingCredentials @Inject constructor(
             .orElse(providers.provider { "" })
 
     val enableGitHub: Provider<Boolean> =
-        getXdkPropertyBooleanProvider("org.xtclang.publish.GitHub", true)
+        getXdkPropertyBooleanProvider("org.xtclang.publish.gitHub", true)
 
     val enablePluginPortal: Provider<Boolean> =
         getXdkPropertyBooleanProvider("org.xtclang.publish.gradlePluginPortal", false)

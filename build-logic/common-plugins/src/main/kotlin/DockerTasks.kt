@@ -4,10 +4,8 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
@@ -24,7 +22,6 @@ fun checkCrossPlatformBuild(project: org.gradle.api.Project, targetArch: String)
         else -> "unknown"
     }
     val allowEmulation = project.providers.systemProperty("org.xtclang.docker.allowEmulation").getOrElse("false").toBoolean()
-    
     if (targetArch != hostArch && !allowEmulation) {
         return false
     }

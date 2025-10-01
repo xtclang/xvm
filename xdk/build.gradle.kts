@@ -7,7 +7,6 @@ import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFiles
@@ -87,7 +86,6 @@ dependencies {
     xtcModule(libs.xdk.xenia)
     xtcModule(libs.xdk.xml)
     xtcModule(libs.javatools.bridge)
-    @Suppress("UnstableApiUsage")
     xtcLauncherBinaries(project(path = ":javatools-launcher", configuration = "xtcLauncherBinaries"))
 }
 
@@ -218,8 +216,7 @@ mavenPublishing {
     }
 
     // Maven Central publishing (disabled by default)
-    val enableMavenCentral = getXdkPropertyBoolean("org.xtclang.publish.mavenCentral", false)
-    if (enableMavenCentral) {
+    if (xdkPublishingCredentials.enableMavenCentral.get()) {
         publishToMavenCentral(automaticRelease = false)
         logger.lifecycle("[xdk] Maven Central publishing is enabled")
     } else {
@@ -250,20 +247,16 @@ mavenPublishing {
     }
 }
 
-// Configure GitHub Packages repository (enabled when credentials are available)
+// Configure GitHub Packages repository
 publishing {
     repositories {
-        // Use centralized credential management
-        val gitHubUsername = xdkPublishingCredentials.gitHubUsername.get()
-        val gitHubPassword = xdkPublishingCredentials.gitHubPassword.get()
-
-        if (gitHubPassword.isNotEmpty()) {
+        if (xdkPublishingCredentials.enableGitHub.get()) {
             maven {
                 name = "GitHub"
                 url = uri("https://maven.pkg.github.com/xtclang/xvm")
                 credentials {
-                    username = gitHubUsername.ifEmpty { "xtclang-workflows" }
-                    password = gitHubPassword
+                    username = xdkPublishingCredentials.gitHubUsername.get().ifEmpty { "xtclang-workflows" }
+                    password = xdkPublishingCredentials.gitHubPassword.get()
                 }
             }
         } else {
@@ -272,22 +265,8 @@ publishing {
     }
 }
 
-// Publishing tasks are handled by root build.gradle.kts
 
-// Publication listing tasks (called by root aggregator) - now uses centralized implementation from build-logic
-
-
-
-// Publication listing tasks removed - use bin/list-publications.sh instead
-
-
-
-// Signing removed since we're not using Maven publication for XDK
-// signing {
-//     mavenCentralSigning()
-// }
-
-/**
+ /**
  * Common exclude patterns for unwanted files in distributions
  */
 private val distributionExcludes = listOf(
@@ -462,20 +441,6 @@ val clean by tasks.existing {
     dependsOn(cleanXdk)
     doLast {
         logger.info("[xdk] WARNING: Note that running 'clean' is often unnecessary with a properly configured build cache.")
-    }
-}
-
-/**
- * Set up signing tasks, only enabled if explicitly configured, or if not, only when we
- * are publishing a non-snapshot package.
- */
-tasks.withType<Sign>().configureEach {
-    val sign = getXdkPropertyBoolean("org.xtclang.signing.enabled", isRelease())
-    // TODO: Before mavenCentral access tokens are sorted, signing should never be enabled:
-    require(!sign) { "Signing is not enabled, and should not be enabled until we are sure default configs work." }
-    logger.info("[xdk] Publication will ${if (sign) "" else "NOT "}be signed.")
-    onlyIf {
-        sign
     }
 }
 

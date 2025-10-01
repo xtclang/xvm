@@ -1,8 +1,6 @@
 import org.gradle.api.GradleException
 import org.gradle.api.Project
-import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.VersionCatalogsExtension
-import org.gradle.api.provider.Provider
 import org.gradle.kotlin.dsl.findByType
 
 class XdkVersionHandler(project: Project): XdkProjectBuildLogic(project) {
@@ -13,12 +11,12 @@ class XdkVersionHandler(project: Project): XdkProjectBuildLogic(project) {
         private const val XTC_VERSION_PLUGIN_CATALOG_VERSION = "xtc-plugin"
         private const val XTC_VERSION_PLUGIN_CATALOG_GROUP = "group-xtc-plugin"
         private const val XDK_ROOT_PROJECT_NAME = "xvm"
-
+        /*
         fun <T : Dependency> semanticVersionFor(dependency: Provider<T>): SemanticVersion {
             with(dependency.get()) {
                 return SemanticVersion(group!!, name, version!!)
             }
-        }
+        }*/
     }
 
     fun assignSemanticVersionFromCatalog(): SemanticVersion {
