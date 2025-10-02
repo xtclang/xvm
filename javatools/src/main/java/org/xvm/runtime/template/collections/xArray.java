@@ -11,6 +11,7 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -138,6 +139,10 @@ public class xArray
         ClassStructure clzList = f_container.getTemplate("collections.List").getStructure();
         LIST_INDEX_OF = clzList.findMethod("indexOf", m ->
                         m.getParamCount() == 2 && m.getParam(0).getType().isA(pool.typeList()));
+
+        ClassStructure clzHashable = f_container.getTemplate("collections.Array.HashableArray").getStructure();
+        ((PropertyStructure) clzHashable.getChild("cachedHash")).markNative();
+        CALCULATE_HASH = clzHashable.findMethod("calculateHash", 0);
 
         // mark native properties and methods
         markNativeProperty("delegate");
@@ -397,6 +402,9 @@ public class xArray
         ArrayHandle hArray = (ArrayHandle) hTarget;
 
         switch (sPropName) {
+        case "cachedHash":
+            return calculateHash(frame, hArray, iReturn);
+
         case "delegate":
             return frame.assignValue(iReturn, hArray.m_hDelegate);
 
@@ -540,8 +548,7 @@ public class xArray
                 }
                 return frame.callN(LIST_INDEX_OF, hTarget,
                     Utils.ensureSize(ahArg, LIST_INDEX_OF.getMaxVars()), aiReturn);
-            }
-            }
+            }}
         }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
@@ -579,6 +586,25 @@ public class xArray
         return !hArray1.isMutable() && !hArray2.isMutable() &&
             hArray1.m_hDelegate.getTemplate().
                 compareIdentity(hArray1.m_hDelegate, hArray2.m_hDelegate);
+    }
+
+    /**
+     * Native "cachedHash.get" implementation.
+     */
+    private int calculateHash(Frame frame, ArrayHandle hTarget, int iReturn) {
+        JavaLong hHash = hTarget.m_hHash;
+        if (hHash == null) {
+            frame.call1(CALCULATE_HASH, hTarget,
+                new ObjectHandle[CALCULATE_HASH.getMaxVars()], Op.A_STACK);
+            frame.m_frameNext.addContinuation(frameCaller -> {
+                JavaLong hValue = (JavaLong) frameCaller.popStack();
+                frameCaller.assignValue(iReturn, hValue);
+                hTarget.m_hHash = hValue;
+                return Op.R_NEXT;
+            });
+            return Op.R_CALL;
+        }
+        return frame.assignValue(iReturn, hHash);
     }
 
 
@@ -965,6 +991,7 @@ public class xArray
             extends ObjectHandle {
         protected Mutability     m_mutability;
         public    DelegateHandle m_hDelegate;
+        public    JavaLong       m_hHash;
 
         protected ArrayHandle(TypeComposition clzArray, DelegateHandle hDelegate,
                               Mutability mutability) {
@@ -1026,6 +1053,7 @@ public class xArray
     private static MethodStructure CREATE_LIST_SET;
     private static MethodStructure FILL_FROM_ITERABLE;
     private static MethodStructure LIST_INDEX_OF;
+    private static MethodStructure CALCULATE_HASH;
 
     private static Map<TypeConstant, xArray> ARRAY_TEMPLATES;
 

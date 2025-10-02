@@ -3850,7 +3850,9 @@ public abstract class TypeConstant
                         log(errs, Severity.ERROR, VE_SUPER_MISSING,
                                 methodContrib.getIdentity().getPathString(),
                                 constId.getValueString());
-
+                    } else if (!methodContrib.isFunction() && fOnTop) {
+                        // ignore private methods that came from any "onTop" contribution
+                        fKeep = false;
                     }
                 } else {
                     // don't collect any abstract functions on nested structures
@@ -4000,7 +4002,8 @@ public abstract class TypeConstant
             } else {
                 // override is not specified by the tail
                 if (fSelf ||
-                        fOnTop && !methodContrib.isCapped() && !bodyContrib.isOverride()) {
+                        fOnTop && !methodContrib.isCapped() && !bodyContrib.isOverride() &&
+                                  bodyContrib.getImplementation() != Implementation.Implicit) {
                     // report "override required" if necessary
                     for (Object nid : listMatches) {
                         MethodInfo methodMatch = mapVirtMethods.get(nid);

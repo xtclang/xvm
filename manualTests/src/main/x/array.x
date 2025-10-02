@@ -243,7 +243,7 @@ module TestArray {
         assert hash1 == hash2;
 
         Bit[] bits = [0, 1, 1, 0];
-        console.print($"Array<Bit>.hashCode(bits)={Array<Bit>.hashCode(bits)}");
+        console.print($"{Array<Bit>.hashCode(bits)=}");
     }
 
     void testAggregation() {

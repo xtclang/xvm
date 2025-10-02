@@ -1141,10 +1141,19 @@ class Array<Element>
             into Array<Element>
             implements Hashable {
         @Override
-        static <CompileType extends HashableArray> Int64 hashCode(CompileType array) {
-            Int64 hash = 0;
-            for (CompileType.Element el : array) {
-                hash += CompileType.Element.hashCode(el);
+        static <CompileType extends HashableArray> Int hashCode(CompileType array) {
+            return array.mutability == Constant ? array.cachedHash : array.calculateHash();
+        }
+
+        private @Lazy Int cachedHash.calc() {
+            assert mutability == Constant;
+            return calculateHash();
+        }
+
+        private Int calculateHash() {
+            Int hash = 0;
+            for (Element el : this) {
+                hash += Element.hashCode(el);
             }
             return hash;
         }
