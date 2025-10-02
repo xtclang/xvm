@@ -113,7 +113,7 @@ Example for `lagergren/gradle-lifecycle-fixes`:
 ### Default Settings
 - Uses pre-built XDK distribution ZIP (no source cloning or compilation in Docker)
 - `DIST_ZIP_URL` - Path or URL to pre-built XDK distribution ZIP file (required)
-- `JAVA_VERSION=24` - Uses Bellsoft Liberica OpenJDK 24 Alpine for runtime
+- `JAVA_VERSION=25` - Uses Bellsoft Liberica OpenJDK 25 Alpine for runtime
 - Platform matches host architecture (linux/amd64 on x86, linux/arm64 on ARM)
 - Uses script launchers included in the distribution (xcc, xec, xtc)
 
@@ -138,7 +138,7 @@ docker buildx build --build-arg DIST_ZIP_URL=/path/to/xdk-dist.zip -t xvm:latest
 
 ### Build Argument Options
 - `DIST_ZIP_URL` (required) - Path to XDK distribution ZIP file or download URL
-- `JAVA_VERSION` (default: 24) - Java version to use for runtime
+- `JAVA_VERSION` (default: 25) - Java version to use for runtime
 
 ## Direct Docker Commands (Alternative to Gradle)
 

@@ -8,7 +8,7 @@ inputs:
     description: 'Full commit SHA for version qualification'
     required: true
   java_version:
-    description: 'Java version for Homebrew dependency (e.g., 21, 24)'
+    description: 'Java version for Homebrew dependency (e.g., 21, 25)'
     required: true
   xdk_zip_name:
     description: 'Name of the XDK zip file to upload'
