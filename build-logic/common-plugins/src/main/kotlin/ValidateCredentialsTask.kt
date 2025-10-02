@@ -10,7 +10,15 @@ import org.gradle.api.tasks.TaskAction
  * Validates GitHub, Maven Central, Gradle Plugin Portal, and signing credentials.
  * Provides detailed error messages with setup instructions when credentials are missing.
  */
+/**
+ * Task to validate all publishing credentials without actually publishing.
+ * Validates GitHub, Maven Central, Gradle Plugin Portal, and signing credentials.
+ * Provides detailed error messages with setup instructions when credentials are missing.
+ */
 abstract class ValidateCredentialsTask : DefaultTask() {
+    @get:Input
+    abstract val projectName: Property<String>
+
     @get:Input
     abstract val enableGithub: Property<Boolean>
 
@@ -64,8 +72,9 @@ abstract class ValidateCredentialsTask : DefaultTask() {
 
     @TaskAction
     fun validate() {
+        val project = projectName.get()
         logger.lifecycle("")
-        logger.lifecycle("🔐 Publishing Credentials Validation Report")
+        logger.lifecycle("🔐 Publishing Credentials Validation Report [$project]")
         logger.lifecycle("=".repeat(60))
         logger.lifecycle("")
 
