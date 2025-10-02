@@ -1,15 +1,51 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
+import javax.inject.Inject
 
 /**
- * Task to validate all publishing credentials without actually publishing.
- * Validates GitHub, Maven Central, Gradle Plugin Portal, and signing credentials.
- * Provides detailed error messages with setup instructions when credentials are missing.
+ * Centralized credential management extension that provides unified access to
+ * publishing credentials from properties, environment variables, and property files.
+ * Uses xdkProperties which automatically checks (in order):
+ *   1. Environment variables (UPPERCASE_UNDERSCORE format)
+ *   2. Gradle properties (-P or gradle.properties)
+ *   3. System properties (-D)
+ *   4. Property files (xdk.properties, version.properties, gradle.properties)
  */
+abstract class XdkPublishingCredentials @Inject constructor(xdkProperties: ProjectXdkProperties) {
+    // GitHub credentials - GITHUB_ACTOR and GITHUB_TOKEN env vars are automatically checked
+    val githubUsername: Provider<String> = xdkProperties.string("githubUsername", "").orElse(xdkProperties.string("github.actor", ""))
+    val githubPassword: Provider<String> = xdkProperties.string("githubPassword", "").orElse(xdkProperties.string("github.token", ""))
+
+    // Gradle Plugin Portal credentials
+    val gradlePublishKey: Provider<String> = xdkProperties.string("gradle.publish.key", "")
+    val gradlePublishSecret: Provider<String> = xdkProperties.string("gradle.publish.secret", "")
+
+    // Maven Central credentials
+    val mavenCentralUsername: Provider<String> = xdkProperties.string("mavenCentralUsername", "").orElse(xdkProperties.string("maven.central.username", ""))
+    val mavenCentralPassword: Provider<String> = xdkProperties.string("mavenCentralPassword", "").orElse(xdkProperties.string("maven.central.password", ""))
+
+    // Signing credentials
+    val signingKeyId: Provider<String> = xdkProperties.string("signing.keyId", "")
+    val signingPassword: Provider<String> = xdkProperties.string("signing.password", "")
+    val signingSecretKeyRingFile: Provider<String> = xdkProperties.string("signing.secretKeyRingFile", "")
+
+    // In-memory signing key with escaped newlines
+    val signingKey: Provider<String> = xdkProperties.string("signing.key", "").map { it.replace("\\n", "\n") }
+
+    // Legacy in-memory signing key (kept for compatibility)
+    val signingInMemoryKey: Provider<String> = xdkProperties.string("signingInMemoryKey", "")
+
+    // Publishing toggles
+    val enableGithub: Provider<Boolean> = xdkProperties.boolean("org.xtclang.publish.github", true)
+    val enablePluginPortal: Provider<Boolean> = xdkProperties.boolean("org.xtclang.publish.gradlePluginPortal", false)
+    val enableMavenCentral: Provider<Boolean> = xdkProperties.boolean("org.xtclang.publish.mavenCentral", false)
+}
+
 /**
  * Task to validate all publishing credentials without actually publishing.
  * Validates GitHub, Maven Central, Gradle Plugin Portal, and signing credentials.
