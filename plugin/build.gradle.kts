@@ -144,11 +144,8 @@ publishing {
                     password = xdkPublishingCredentials.githubPassword.get()
                 }
             }
-<<<<<<< HEAD
         } else {
             logger.info("[plugin] GitHub Packages repository not configured - missing GitHubPassword/GITHUB_TOKEN")
-=======
->>>>>>> e88353603 (Large simplification to the publication system falling back on existing plugin behavior. Verified snapshot publication to maven central and github. Gradle plugin portal works too, but only accepts release versions.)
         }
     }
 }
