@@ -4,6 +4,7 @@
  */
 
 pluginManagement {
+    includeBuild("build-logic/settings-plugins")
     includeBuild("build-logic/aggregator")
     includeBuild("build-logic/common-plugins")
 }

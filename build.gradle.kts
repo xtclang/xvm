@@ -118,13 +118,24 @@ publishTaskPrefixes.forEach { prefix ->
 
 val validateCredentials by tasks.registering(ValidateCredentialsTask::class) {
     group = PUBLISH_TASK_GROUP
-    description = "Validate GitHub and Plugin Portal credentials are available for publishing"
+    description = "Validate all publishing credentials (GitHub, Maven Central, Plugin Portal, Signing) without publishing"
 
     // Use centralized credential management
-    gitHubUsername.set(xdkPublishingCredentials.gitHubUsername)
-    gitHubPassword.set(xdkPublishingCredentials.gitHubPassword)
-    enableGitHub.set(xdkPublishingCredentials.enableGitHub)
+    githubUsername.set(xdkPublishingCredentials.githubUsername)
+    githubPassword.set(xdkPublishingCredentials.githubPassword)
+    enableGithub.set(xdkPublishingCredentials.enableGithub)
+
     enablePluginPortal.set(xdkPublishingCredentials.enablePluginPortal)
     gradlePublishKey.set(xdkPublishingCredentials.gradlePublishKey)
     gradlePublishSecret.set(xdkPublishingCredentials.gradlePublishSecret)
+
+    enableMavenCentral.set(xdkPublishingCredentials.enableMavenCentral)
+    mavenCentralUsername.set(xdkPublishingCredentials.mavenCentralUsername)
+    mavenCentralPassword.set(xdkPublishingCredentials.mavenCentralPassword)
+
+    signingKeyId.set(xdkPublishingCredentials.signingKeyId)
+    signingPassword.set(xdkPublishingCredentials.signingPassword)
+    signingSecretKeyRingFile.set(xdkPublishingCredentials.signingSecretKeyRingFile)
+    signingKey.set(xdkPublishingCredentials.signingKey)
+    signingInMemoryKey.set(xdkPublishingCredentials.signingInMemoryKey)
 }

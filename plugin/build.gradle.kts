@@ -91,6 +91,7 @@ dependencies {
 
 // Configure Vanniktech Maven Publish for Gradle Plugin
 mavenPublishing {
+    signAllPublications()
     coordinates(pluginGroup, pluginName, pluginVersion)
 
     // Configure as Gradle Plugin (vanniktech will handle plugin marker automatically)
@@ -134,13 +135,13 @@ mavenPublishing {
 // Configure GitHub Packages repository
 publishing {
     repositories {
-        if (xdkPublishingCredentials.enableGitHub.get()) {
+        if (xdkPublishingCredentials.enableGithub.get()) {
             maven {
-                name = "gitHub"
+                name = "github"
                 url = uri("https://maven.pkg.github.com/xtclang/xvm")
                 credentials {
-                    username = xdkPublishingCredentials.gitHubUsername.get().ifEmpty { "xtclang-workflows" }
-                    password = xdkPublishingCredentials.gitHubPassword.get()
+                    username = xdkPublishingCredentials.githubUsername.get().ifEmpty { "xtclang-workflows" }
+                    password = xdkPublishingCredentials.githubPassword.get()
                 }
             }
 <<<<<<< HEAD
