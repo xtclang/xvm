@@ -206,7 +206,7 @@ val versionOutputTest by tasks.registering(Test::class) {
     include("**/BuildInfoTest.class", "**/LauncherVersionTest.class")
     
     doFirst {
-        logger.lifecycle("[javatools] Verifying version output contains expected git and API information")
+        logger.info("[javatools] Verifying version output contains expected git and API information")
     }
 }
 

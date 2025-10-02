@@ -46,15 +46,15 @@ abstract class ValidateCredentialsTask : DefaultTask() {
                     |Please provide credentials using one of these methods:
                     |
                     |1. Local development - Set properties in ~/.gradle/gradle.properties:
-                    |   GitHubUsername=your-username
-                    |   GitHubPassword=your-personal-access-token
+                    |   gitHubUsername=your-username
+                    |   gitHubPassword=your-personal-access-token
                     |
                     |2. CI/GitHub Actions - Environment variables (automatically set):
                     |   GITHUB_ACTOR=actor-name
                     |   GITHUB_TOKEN=github-token
                     |
                     |3. Command line properties:
-                    |   ./gradlew publishRemote -PGitHubUsername=your-username -PGitHubPassword=your-token
+                    |   ./gradlew publishRemote -PgitHubUsername=your-username -PgitHubPassword=your-token
                     |
                     |Current status:
                     |  Username: ${if (username.isNotEmpty()) "✅ Available" else "❌ Missing"}

@@ -10,12 +10,12 @@ abstract class XdkPublishingCredentials @Inject constructor(
     private val providers: ProviderFactory
 ) {
     val gitHubUsername: Provider<String> =
-        providers.gradleProperty("GitHubUsername")
+        providers.gradleProperty("gitHubUsername")
             .orElse(providers.environmentVariable("GITHUB_ACTOR"))
             .orElse(providers.provider { "" })
 
     val gitHubPassword: Provider<String> =
-        providers.gradleProperty("GitHubPassword")
+        providers.gradleProperty("gitHubPassword")
             .orElse(providers.environmentVariable("GITHUB_TOKEN"))
             .orElse(providers.provider { "" })
 

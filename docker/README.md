@@ -111,57 +111,48 @@ Example for `lagergren/gradle-lifecycle-fixes`:
 ## Build Configuration
 
 ### Default Settings
-- Downloads source from GitHub using branch/commit (no local source used)
-- `GH_BRANCH=master` - Default branch to build from
-- `GH_COMMIT` - Optional specific commit SHA (defaults to latest from branch)
-- `JAVA_VERSION=24` - Uses Bellsoft Liberica OpenJDK 24 Alpine (consistent across build stages)
+- Uses pre-built XDK distribution ZIP (no source cloning or compilation in Docker)
+- `DIST_ZIP_URL` - Path or URL to pre-built XDK distribution ZIP file (required)
+- `JAVA_VERSION=24` - Uses Bellsoft Liberica OpenJDK 24 Alpine for runtime
 - Platform matches host architecture (linux/amd64 on x86, linux/arm64 on ARM)
-- Compiles native launchers from C source for target platform
-- Creates architecture-specific xcc/xec executables
+- Uses script launchers included in the distribution (xcc, xec, xtc)
 
 ### Build Scripts
-The Docker build uses several helper scripts in `docker/scripts/`:
+The Docker build uses a single helper script in `docker/scripts/`:
 
-- **`clone-xdk.sh`** - Handles efficient git cloning with smart caching and commit/branch support
-- **`build-launcher.sh`** - Compiles native C launchers for the target platform (amd64/arm64)
-- **`build-xdk.sh`** - Builds the XDK using Gradle with cache optimization and debug output
+- **`extract-distribution.sh`** - Extracts the pre-built XDK distribution ZIP file
 
 ### Build Arguments
 You can override default settings using build arguments:
 
 ```bash
-# Use different Java version
-docker buildx build --build-arg JAVA_VERSION=17 -t xvm:latest .
+# Use different Java version for runtime
+docker buildx build --build-arg JAVA_VERSION=21 --build-arg DIST_ZIP_URL=xdk-dist.zip -t xvm:latest .
 
-# Build from specific commit
-docker buildx build --build-arg GH_COMMIT=abc123 -t xvm:latest .
+# Use distribution from URL
+docker buildx build --build-arg DIST_ZIP_URL=https://example.com/xdk-dist.zip -t xvm:latest .
 
-# Build from specific branch
-docker buildx build --build-arg GH_BRANCH=feature-branch -t xvm:latest .
-
-# Build from GitHub release tag
-docker buildx build --build-arg GH_BRANCH=v1.0.0 -t xvm:latest .
+# Use local distribution file (must be in build context)
+docker buildx build --build-arg DIST_ZIP_URL=/path/to/xdk-dist.zip -t xvm:latest .
 ```
 
 ### Build Argument Options
-- `GH_BRANCH` (default: master) - Downloads specific branch or tag from GitHub
-- `GH_COMMIT` (default: latest from branch) - Downloads specific commit SHA
-- `JAVA_VERSION` (default: 24) - Java version to use for build and runtime
+- `DIST_ZIP_URL` (required) - Path to XDK distribution ZIP file or download URL
+- `JAVA_VERSION` (default: 24) - Java version to use for runtime
 
 ## Direct Docker Commands (Alternative to Gradle)
 
-If you prefer using Docker commands directly instead of Gradle tasks:
+If you prefer using Docker commands directly instead of Gradle tasks, you must first build the XDK distribution:
 
 ### Basic Builds
 ```bash
-# Native platform build
-docker buildx build -t xvm:latest .
+# First, create the distribution
+./gradlew xdk:distZip
 
-# With specific commit
-docker buildx build --build-arg GH_COMMIT=abc123 -t xvm:latest .
-
-# With specific branch
-docker buildx build --build-arg GH_BRANCH=feature-branch -t xvm:latest .
+# Then build Docker image
+cd docker
+cp ../xdk/build/distributions/xdk-*.zip xdk-dist.zip
+docker buildx build --build-arg DIST_ZIP_URL=xdk-dist.zip -t xvm:latest .
 ```
 
 ### Cross-Platform Builds
@@ -178,7 +169,7 @@ docker buildx build --platform linux/amd64,linux/arm64 -t xvm:latest --push .
 
 ### How Multi-Platform Works
 - Docker builds SEPARATE images for each architecture specified
-- Each build compiles its own native launcher (amd64 gets x86_64, arm64 gets aarch64)
+- Each platform uses the script launchers from the pre-built distribution
 - Results in a manifest with architecture-specific images
 - Docker automatically pulls the correct image for the runtime platform
 
@@ -280,7 +271,7 @@ The manifest shows available platforms (`linux/amd64` and `linux/arm64`), and Do
 
 - **No shell access**: Images use distroless base (no bash/sh for security)
 - **Small size**: ~101MB total (includes Java runtime + XDK)
-- **Native performance**: Each platform uses native launchers (no emulation)
+- **Script launchers**: Uses the script launchers from the XDK distribution
 - **Public access**: No `docker login` required for pulling images
 
 ### Docker Compose Example
@@ -410,11 +401,11 @@ Each image includes build metadata at `/opt/xdk/xvm.json`:
 
 ### Docker Build Behavior
 
-- **Source Code**: All builds download fresh source from GitHub (no local files used)
+- **Source Code**: Uses pre-built XDK distribution ZIP (no source cloning in Docker)
 - **Multi-platform**: Uses Docker buildx to create separate images per architecture
-- **Native Launchers**: Each platform gets optimized native binaries (no Java wrapper scripts)
+- **Script Launchers**: Uses the script launchers included in the distribution
 - **Caching**: Local builds use filesystem cache, CI uses GitHub Actions cache
-- **Base Image**: Uses Google's distroless Java for minimal attack surface
+- **Base Image**: Uses Bellsoft Liberica JRE for minimal footprint
 
 ### Performance
 

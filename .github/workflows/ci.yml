@@ -234,7 +234,7 @@ jobs:
           
           inspect_gradle_cache "before clean, check and distZip"
           ./gradlew ${{ env.gradle_options }} clean --info
-          ./gradlew ${{ env.gradle_options }} check --info
+          ./gradlew ${{ env.gradle_options }} check -Porg.xtclang.java.lint=true -Porg.xtclang.java.test.stdout=true --info
           ./gradlew ${{ env.gradle_options }} :xdk:distZip --info
           
           # Run manual tests inline if enabled (avoids cache rebuild)

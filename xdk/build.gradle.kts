@@ -218,7 +218,7 @@ mavenPublishing {
     // Maven Central publishing (disabled by default)
     if (xdkPublishingCredentials.enableMavenCentral.get()) {
         publishToMavenCentral(automaticRelease = false)
-        logger.lifecycle("[xdk] Maven Central publishing is enabled")
+        logger.info("[xdk] Maven Central publishing is enabled")
     } else {
         logger.info("[xdk] Maven Central publishing is disabled (use -Porg.xtclang.publish.mavenCentral=true to enable)")
     }
@@ -252,7 +252,7 @@ publishing {
     repositories {
         if (xdkPublishingCredentials.enableGitHub.get()) {
             maven {
-                name = "GitHub"
+                name = "gitHub"
                 url = uri("https://maven.pkg.github.com/xtclang/xvm")
                 credentials {
                     username = xdkPublishingCredentials.gitHubUsername.get().ifEmpty { "xtclang-workflows" }
