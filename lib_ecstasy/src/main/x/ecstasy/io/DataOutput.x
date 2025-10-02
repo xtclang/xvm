@@ -242,12 +242,9 @@ interface DataOutput
         if (value.isUTC) {
             writeByte(0);
         } else if (value.isNoTZ) {
-            writeByte(3);
-        } else if (value.rules.size > 0) {
-            writeByte(2);
-            writeString(value.name ?: throw new IllegalState("missing TimeZone name"));
-        } else {
             writeByte(1);
+        } else {
+            writeByte(2);
             writeInt64(value.picos);
         }
     }

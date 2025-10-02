@@ -14,11 +14,6 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
      * @param timezone   the timezone value
      */
     construct(Date date, TimeOfDay timeOfDay, TimeZone timezone) {
-        // it is not possible to reverse a date and time-of-day from an unresolved TimeZone, such as
-        // America/New_York, because it will have both duplicate (DST "fall back") and missing
-        // (DST "spring forward") date and time-of-day values
-        assert timezone.resolved;
-
         Int128 picos = date.epochDay.toInt128() * TimeOfDay.PicosPerDay
                      + timeOfDay.picos.toInt128()
                      - timezone.picos.toInt128();
@@ -47,8 +42,12 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
                         case '+':
                         case '-':
                             // offset timezone found
-                            zone = new TimeZone(dt.substring(tzOffset));
-                            break FindTZ;
+                            String tzString = dt.substring(tzOffset);
+                            if (zone := TimeZone.of(tzString)) {
+                                break FindTZ;
+                            } else {
+                                throw new IllegalArgument($"invalid ISO-8601 TimeZone: \"{tzString}\"");
+                            }
                         }
                     }
 
@@ -67,7 +66,8 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
         if (2 <= parts.size <= 3) {
             Date      date      = new Date(parts[0]);
             TimeOfDay timeOfDay = new TimeOfDay(parts[1]);
-            TimeZone  zone      = parts.size == 3 ? new TimeZone(parts[2]) : TimeZone.NoTZ;
+            TimeZone  zone      = parts.size == 2 ? TimeZone.NoTZ : TimeZone.of(parts[2]) ?:
+                    throw new IllegalArgument($"invalid ISO-8601 TimeZone: \"{parts[2]}\"");
             construct Time(date, timeOfDay, zone);
             return;
         }
@@ -107,9 +107,11 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
      */
     static Int128 GREGORIAN_OFFSET = Date.GREGORIAN_OFFSET * TimeOfDay.PicosPerDay;
 
-    Int128 adjustedPicos.get() {
-        return timezone.resolve(this).picos.toInt128() + epochPicos;
-    }
+    /**
+     * The time value is held internally as if it were a UTC time; this property represents the time
+     * value within its [TimeZone].
+     */
+    Int128 adjustedPicos.get() = timezone.picos.toInt128() + epochPicos;
 
     /**
      * The date portion of the date/time value.
@@ -199,9 +201,6 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
         // assume "yyyy-mm-dd hh:mm:ss tz" otherwise
 
         TimeZone tz = this.timezone;
-        if (!tz.resolved) {
-            tz = tz.resolve(this);
-        }
         Int tzSize = iso8601 || tz.picos != 0 ? (iso8601 ? 0 : 1) + tz.estimateStringLength(iso8601) : 0;
 
         Int fraction = (epochPicos % Duration.PicosPerSecond).toInt64();

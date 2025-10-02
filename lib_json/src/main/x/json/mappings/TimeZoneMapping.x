@@ -1,5 +1,3 @@
-import ecstasy.temporal.TimeZoneCache;
-
 /**
  * A mapping for TimeZone values.
  */
@@ -13,7 +11,8 @@ const TimeZoneMapping
 
     @Override
     Serializable read(ElementInput in) {
-        return TimeZoneCache.find(in.readString(""));
+        String tz = in.readString("");
+        return TimeZone.of(tz) ?: throw new IllegalJSON($"Bad timezone: \"{tz}\"");
     }
 
     @Override

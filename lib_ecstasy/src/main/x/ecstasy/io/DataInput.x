@@ -183,23 +183,12 @@ interface DataInput
      * @return  a value of type TimeZone read from the stream
      */
     TimeZone readTimeZone() {
-        switch (Byte b = readByte()) {
-        case 0:
-            return TimeZone.UTC;
-
-        case 3:
-            return TimeZone.NoTZ;
-
-        case 2:
-            String name = readString();
-            TODO Rules-based TimeZone
-
-        case 1:
-            return new TimeZone(readInt64());
-
-        default:
-            throw new IOException($"illegal timezone format indicator: {b}");
-        }
+        return switch (Byte b = readByte()) {
+        case 0: TimeZone.UTC;
+        case 1: TimeZone.NoTZ;
+        case 2: new TimeZone(readInt64());
+        default: throw new IOException($"illegal timezone format indicator: {b}");
+        };
     }
 
     /**

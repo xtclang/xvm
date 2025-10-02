@@ -190,18 +190,10 @@ public class xLocalClock
             ClassStructure  structTimeZone = f_container.getClassStructure("temporal.TimeZone");
             TypeConstant    typeTimeZone   = structTimeZone.getCanonicalType();
             TypeComposition clzTimeZone    = typeTimeZone.ensureClass(frame);
-
-            ClassStructure  structRule     = (ClassStructure) structTimeZone.getChild("Rule");
-            TypeConstant    typeRule       = structRule.getCanonicalType();
-            TypeConstant    typeRuleArray  = pool.ensureArrayType(typeRule);
-            TypeComposition clzRuleArray   = typeRuleArray.ensureClass(frame);
-
             m_hTimeZone = hTimeZone = new GenericHandle(clzTimeZone);
 
             long lOffset = 0; // TODO CP
             hTimeZone.setField(frame, "picos", xInt64.makeHandle(lOffset));
-            hTimeZone.setField(frame, "name",  xNullable.NULL);
-            hTimeZone.setField(frame, "rules", xArray.createEmptyArray(clzRuleArray, 0, Mutability.Mutable));
             hTimeZone.makeImmutable();
         }
 

@@ -1,8 +1,13 @@
+import TimeOfDay.PicosPerDay;
+import TimeOfDay.PicosPerHour;
+import TimeOfDay.PicosPerMinute;
+import TimeOfDay.PicosPerSecond;
+
 /**
  * A TimeZone contains the necessary information to convert a UTC Time value into a localized
  * Date and TimeOfDay value.
  *
- * There are five categories of TimeZones:
+ * There are four categories of TimeZones:
  * * International Atomic Time (TAI) - Raw, unadjusted time information. This would logically be an
  *   ideal internal form of the information held by `Time`, but instead the `Time` implementation
  *   uses the UTC timezone and the POSIX model for time (see
@@ -19,33 +24,20 @@
  *   data (or to any other TimeZone). (Fortunately, it is likely that leap seconds [will be done
  *   away with](https://www.cnet.com/tech/computing/tech-giants-try-banishing-the-leap-second-to-stop-internet-crashes/)).
  * * Fixed - an offset from UTC measured in terms of picoseconds, but generally measured in terms of
- *   hour, half-hour, or quarter-hour increments, and optionally associated with a timezone name.
- * * Rule-Based - Represents a complex timezone in which more than one fixed offset has been or will
- *   be used at some point in time. The most common example is Daylight Savings Time, which allows
- *   a single Rule-Based TimeZone to provide two different Fixed TimeZone instances, with the
- *   selection of the Fixed TimeZone being a function of the underlying UTC Time. Far more
- *   complex examples exist, such as "America/New_York", which has well over a dozen historical
- *   rules.
- * * The "Un"-TimeZone - a special TimeZone that specifies the absence of any TimeZone information,
- *   useful for acting like a UTC time, but whose Time values are incapable of being compared
- *   with those of any other TimeZone.
+ *   hour, half-hour, or quarter-hour increments.
+ * * The "Un"-TimeZone, or "unknown" TimeZone, aka "NoTZ" - a special TimeZone that specifies the
+ *   absence of *any* TimeZone information, useful for acting like a UTC time, but whose Time values
+ *   are incapable of being compared with those of any other TimeZone.
  */
-const TimeZone(Int64 picos, String? name = Null) {
-    /**
-     * Construct a resolved TimeZone.
-     *
-     * @param picos  the picosecond offset for the TimeZone, which is the adjustment made to a UTC
-     *               picosecond value in order to calculate a TimeZone-adjusted picosecond value
-     * @param name   the name of the TimeZone
-     */
-    construct(Int picos, String? name = Null) {
-        assert:arg picos.abs() <= TimeOfDay.PicosPerDay;
-        this.picos = picos;
-        this.name  = name;
+const TimeZone(Int64 picos) {
+    assert() {
+        // there's no hard and fast rule that a timezone shouldn't exceed 24 hours, but to date,
+        // none has come close to doing so
+        assert:arg picos.abs() <= PicosPerDay;
     }
 
     /**
-     * Construct a TimeZone from an ISO-8601 timezone indicator string of one of the following
+     * TODO Construct a TimeZone from an ISO-8601 timezone indicator string of one of the following
      * offset formats:
      *
      *     Z
@@ -53,26 +45,31 @@ const TimeZone(Int64 picos, String? name = Null) {
      *     ±hhmm
      *     ±hh
      *
-     * @param name   the name of the TimeZone
-     * @param rules  an optional Sequence of Rules to translate information from UTC to other
-     *               TimeZones
+     * @param name  the name of the TimeZone
      */
-    construct(String tz, Rule[] rules = []) {
+    static conditional TimeZone of(String tz) {
         static Int valOf(Char ch) = ch >= '0' && ch <= '9' ? ch - '0' : -999;
         static Int parseInt(String s, Int of) = valOf(s[of]) * 10 + valOf(s[of+1]);
 
-        if (tz == "Z") {
-            construct TimeZone(0);
-            return;
+        if (tz == "Z" || tz == "UTC") {
+            return True, UTC;
+        }
+
+        if (tz == "" || tz == "NoTZ") {
+            return True, NoTZ;
         }
 
         if (tz.size >= 2 && (tz[0]=='+' || tz[0]=='-')) {
-            Int hours = -1;
+            Int hours = -999;   // ridiculously out of range
             Int mins  = 0;
             if (Int colon := tz.indexOf(':')) {
                 if (colon > 1 && colon < tz.size-1) {
-                    hours = new IntLiteral(tz[1 ..< colon]);
-                    mins  = new IntLiteral(tz.substring(colon+1));
+                    if (!(hours := Int.parse(tz[1 ..< colon]))) {
+                        return False;
+                    }
+                    if (!(mins := Int.parse(tz.substring(colon+1)))) {
+                        return False;
+                    }
                 }
             } else {
                 switch (tz.size) {
@@ -85,65 +82,37 @@ const TimeZone(Int64 picos, String? name = Null) {
                 }
             }
 
-            if (0 <= hours <= 16 && 0 <= mins <= 59) {
-                Int offset = (hours * TimeOfDay.PicosPerHour + mins * TimeOfDay.PicosPerMinute);
-                construct TimeZone((tz[0]=='-' ? -1 : +1) * offset.toInt64());
-                return;
+            // as of 2025, no timezone offset is >= ±16, and historically the limit was < ±13 hours,
+            // but then countries started to compete over who-gets-to-celebrate-New-Years-day-first
+            if (0 <= hours <= 23 && 0 <= mins <= 59) {
+                Int offset = (hours * PicosPerHour + mins * PicosPerMinute);
+                // TODO
+                return True, new TimeZone((tz[0]=='-' ? -1 : +1) * offset.toInt64());
             }
         }
 
-        if (rules.size > 0) {
-            TODO
-        }
-
-        throw new IllegalArgument($"invalid ISO-8601 timezone offset: \"{tz}\"");
+        return False;
     }
 
-    /**
-     * Represents a TimeZone rule that implements the details from the "IANA Time Zone Database".
-     */
-    static const Rule {
-        // TODO
-    }
+    // ----- accessors -----------------------------------------------------------------------------
 
     /**
      * The UTC TimeZone.
      */
-    static TimeZone UTC = new TimeZone(0, "UTC") {
-        @Override
-        @RO Boolean isUTC.get() = True;
-
-        @Override
-        @RO Boolean resolved.get() = True;
-
-        @Override
-        TimeZone resolve(Time time) {
-            assert time.timezone.isUTC;
-            return this;
-        }
-
-        @Override
-        @RO Int hours.get() = 0;
-
-        @Override
-        @RO Int minutes.get() = 0;
-    };
+    static TimeZone UTC = new TimeZone(0);
 
     /**
      * The "not-a-TimeZone" TimeZone.
      */
-    static TimeZone NoTZ = new TimeZone(0, "NoTZ") {
+    static TimeZone NoTZ = new TimeZone(0) {
+        @Override
+        @RO String? name.get() = "NoTZ";
+
+        @Override
+        @RO Boolean isUTC.get() = False;
+
         @Override
         @RO Boolean isNoTZ.get() = True;
-
-        @Override
-        @RO Boolean resolved.get() = True;
-
-        @Override
-        TimeZone resolve(Time time) {
-            assert time.timezone.isNoTZ;
-            return this;
-        }
 
         @Override
         @RO Int hours.get() = 0;
@@ -160,6 +129,45 @@ const TimeZone(Int64 picos, String? name = Null) {
         }
     };
 
+    /**
+     * A cache of TimeZone information.
+     */
+    private static TimeZoneCache tzCache = new TimeZoneCache();
+
+    /**
+     * A cache of TimeZone information.
+     */
+    private static service TimeZoneCache {
+        private Map<String, TimeZone> tzByName = new HashMap();
+
+        @Lazy TimeZone utc.calc() {
+            return TimeZone.UTC;
+        }
+
+        TimeZone find(String desc) {
+            if (desc == "") {
+                return TimeZone.NoTZ;
+            }
+
+            if (desc == "Z" || desc == "UTC") {
+
+            }
+
+            if (TimeZone zone := tzByName.get(desc)) {
+                return zone;
+            }
+
+            Char start = desc[0];
+            if (start == '+' || start == '-') {
+                if (TimeZone zone := TimeZone.of(desc)) {
+                    tzByName.put(desc, zone);
+                    return zone;
+                }
+            }
+
+            throw new IllegalArgument($"unknown TimeZone: {desc}");
+        }
+    }
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -173,34 +181,19 @@ const TimeZone(Int64 picos, String? name = Null) {
      */
     @RO Boolean isNoTZ.get() = False;
 
-    /**
-    * The resolving rules for the TimeZone.
-    */
-    Rule[] rules = [];
-
-    @RO Boolean resolved.get() = rules.size == 0;
-
-    /**
-     * Using this TimeZone information, obtain a TimeZone for the given Time that
-     */
-    TimeZone! resolve(Time time) {
-        if (resolved) {
-            assert this.isNoTZ == time.timezone.isNoTZ;
-            return this;
-        }
-
-        TODO rules allow this to substitute a fixed TimeZone
-    }
-
     @RO Int hours.get() {
-        assert resolved;
-        return picos / TimeOfDay.PicosPerHour;
+        return picos / PicosPerHour;
     }
 
     @RO Int minutes.get() {
         // note: calculate the remainder (may be negative), and not the modulo
-        return (picos - hours * TimeOfDay.PicosPerHour) / TimeOfDay.PicosPerMinute;
+        return (picos - hours * PicosPerHour) / PicosPerMinute;
     }
+
+    /**
+     * The fraction of a minute, represented as picoseconds, in the range `0..59999999999999`.
+     */
+    Int picoseconds.get() = (picos % PicosPerMinute).toInt();
 
     /**
      * Given a Time value, provide back a corresponding Time value that is in this TimeZone.
@@ -223,16 +216,20 @@ const TimeZone(Int64 picos, String? name = Null) {
         return new Time(orig.epochPicos, this);
     }
 
+    /**
+     * The TimeZone name. Usually Null.
+     */
+    @RO String? name.get() = Null;
 
     // ----- operators -----------------------------------------------------------------------------
 
     @Op("+") TimeZone add(Duration duration) {
-        assert resolved && !isNoTZ;
+        assert !isNoTZ;
         return new TimeZone(normalize(this.picos.toInt128() + duration.picoseconds.toInt128()));
     }
 
     @Op("-") TimeZone sub(Duration duration) {
-        assert resolved && !isNoTZ;
+        assert !isNoTZ;
         return new TimeZone(normalize(this.picos.toInt128() - duration.picoseconds.toInt128()));
     }
 
@@ -245,21 +242,20 @@ const TimeZone(Int64 picos, String? name = Null) {
             picos = picos.abs();
         }
 
-        Int64 normalized = (picos % TimeOfDay.PicosPerDay).toInt64();
-        if (normalized > 12 * TimeOfDay.PicosPerHour) {
-            normalized -= TimeOfDay.PicosPerDay;
+        Int64 normalized = (picos % PicosPerDay).toInt64();
+        if (normalized > 12 * PicosPerHour) {
+            normalized -= PicosPerDay;
         }
 
         return negative ? -normalized : +normalized;
     }
 
     @Op("-") Duration sub(TimeZone timezone) {
-        assert this.resolved && timezone.resolved;
         assert this.isNoTZ == timezone.isNoTZ;
 
         Int difference = this.picos - timezone.picos;
         if (difference < 0) {
-            difference += TimeOfDay.PicosPerDay;
+            difference += PicosPerDay;
         }
 
         return new Duration(difference);
@@ -276,7 +272,6 @@ const TimeZone(Int64 picos, String? name = Null) {
     @Override
     Int estimateStringLength(Boolean iso8601 = False) {
         if (iso8601) {
-            assert resolved;
             if (picos == 0) {
                 return isNoTZ ? 0 : 1; // "Z"
             }
@@ -284,15 +279,14 @@ const TimeZone(Int64 picos, String? name = Null) {
             return 6;
         }
 
-        Boolean showPicos = resolved;
-        Boolean showName  = !iso8601 && name != Null;
-        Int     size      = 0;
+        String? name     = name;
+        Boolean showName = name != Null;
+        Int     size     = 0;
         if (showName) {
             size += name?.size;
-            showPicos &&= picos != 0;
         }
 
-        if (showPicos) {
+        if (!showName || picos != 0) {
             // " (...)"
             if (showName) {
                 size += 3;
@@ -301,12 +295,12 @@ const TimeZone(Int64 picos, String? name = Null) {
             // +hh:mm or -hh:mm
             size += 6;
 
-            if (picos % TimeOfDay.PicosPerMinute != 0) {
-                Int remainder = (picos - hours * TimeOfDay.PicosPerHour - minutes * TimeOfDay.PicosPerMinute).abs();
-                Int seconds   = remainder / TimeOfDay.PicosPerSecond;
+            if (picos % PicosPerMinute != 0) {
+                Int remainder = (picos - hours * PicosPerHour - minutes * PicosPerMinute).abs();
+                Int seconds   = remainder / PicosPerSecond;
                 size += 3;
 
-                remainder -= seconds * TimeOfDay.PicosPerSecond;
+                remainder -= seconds * PicosPerSecond;
                 if (remainder > 0) {
                     size += 1 + Duration.picosFractionalLength(remainder);
                 }
@@ -318,21 +312,17 @@ const TimeZone(Int64 picos, String? name = Null) {
 
     @Override
     Appender<Char> appendTo(Appender<Char> buf, Boolean iso8601 = False) {
-        if (iso8601) {
-            assert resolved;
-            if (picos == 0) {
-                return isNoTZ ? buf : buf.add('Z');
-            }
+        if (iso8601 && picos == 0) {
+            return isNoTZ ? buf : buf.add('Z');
         }
 
-        Boolean showPicos = resolved;
-        Boolean showName  = !iso8601 && name != Null;
+        String? name     = name;
+        Boolean showName = !iso8601 && name != Null;
         if (showName) {
             name?.appendTo(buf);
-            showPicos &&= picos != 0;
         }
 
-        if (showPicos) {
+        if (!showName || picos != 0) {
             if (showName) {
                 " (".appendTo(buf);
             }
@@ -350,17 +340,17 @@ const TimeZone(Int64 picos, String? name = Null) {
             }
             minutes.appendTo(buf);
 
-            if (picos % TimeOfDay.PicosPerMinute != 0) {
+            if (picos % PicosPerMinute != 0 && !iso8601) {
                 assert !iso8601;
 
-                Int remainder = (picos - hours * TimeOfDay.PicosPerHour - minutes * TimeOfDay.PicosPerMinute).abs();
-                Int seconds   = remainder / TimeOfDay.PicosPerSecond;
+                Int remainder = (picos - hours * PicosPerHour - minutes * PicosPerMinute).abs();
+                Int seconds   = remainder / PicosPerSecond;
                 buf.add(':');
                 if (seconds < 10) {
                     buf.add('0');
                 }
                 seconds.appendTo(buf);
-                Duration.appendPicosFractional(buf, remainder - seconds * TimeOfDay.PicosPerSecond);
+                Duration.appendPicosFractional(buf, remainder - seconds * PicosPerSecond);
             }
 
             if (showName) {

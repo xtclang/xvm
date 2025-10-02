@@ -11,9 +11,7 @@ service LocalClock
     @RO TimeZone timezone;
 
     @Override
-    Duration resolution.get() {
-        return Duration.Millisec;
-    }
+    Duration resolution.get() = Duration.Millisec;
 
     @Override
     Boolean monotonic.get() = False;
