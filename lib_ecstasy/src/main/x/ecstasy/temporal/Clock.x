@@ -12,7 +12,24 @@
  *   15.625ms, for example, while a CPU time-stamp count (TSC) on a multi-gigahertz chip will have a
  *   resolution in the hundreds of picoseconds.
  *
- * To measure elapsed time, use a Timer.
+ * There are three [Clock]s named "`clock`", "`utcClock`", and "`localClock`" that are expected to
+ * be available via injection; for example:
+ *
+ *     @Inject Clock clock;         // the default clock, which may be in the UTC time zone
+ *     @Inject Clock utcClock;      // a clock in the UTC time zone
+ *     @Inject Clock localClock;    // a clock in the local time zone
+ *
+ * Note that the [Time] returned from the `localClock` is likely to include [TimeZone] information
+ * when formatted as a `String`. To suppress the `TimeZone` information, adopt the `Time` into the
+ * special ["no TimeZone" TimeZone](TimeZone.NoTZ):
+ *
+ *     @Inject Clock localClock;    // a clock in the local time zone
+ *     Time time = localClock.now;
+ *     @Inject Console console;
+ *     console.print($"Current time={time}");             // may include timezone information
+ *     console.print($"Current time={TimeZone.NoTZ.adopt(time)}"); // no timezone information
+ *
+ * To measure elapsed time, use a [Timer] instead of a [Clock].
  */
 interface Clock {
     /**

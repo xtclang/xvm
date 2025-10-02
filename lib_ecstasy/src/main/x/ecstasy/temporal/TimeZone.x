@@ -30,6 +30,15 @@ import TimeOfDay.PicosPerSecond;
  *   are incapable of being compared with those of any other TimeZone.
  */
 const TimeZone(Int64 picos) {
+
+    /**
+     * Internal constructor for the special "NoTZ" timezone.
+     */
+    private construct() {
+        construct TimeZone(0);
+        isNoTZ = True;
+    }
+
     assert() {
         // there's no hard and fast rule that a timezone shouldn't exceed 24 hours, but to date,
         // none has come close to doing so
@@ -37,7 +46,19 @@ const TimeZone(Int64 picos) {
     }
 
     /**
-     * TODO Construct a TimeZone from an ISO-8601 timezone indicator string of one of the following
+     * Obtain a [TimeZone] for the specified picosecond offset.
+     *
+     * @param picosOffset  the number of picoseconds difference from UTC that the TimeZone
+     *                     represents
+     *
+     * @return the [TimeZone]
+     */
+    static TimeZone of(Int picosOffset) {
+        return Zones.get(picosOffset) ?: new TimeZone(picosOffset);
+    }
+
+    /**
+     * Obtain a [TimeZone] from an ISO-8601 timezone indicator string of one of the following
      * offset formats:
      *
      *     Z
@@ -45,7 +66,10 @@ const TimeZone(Int64 picos) {
      *     ±hhmm
      *     ±hh
      *
-     * @param name  the name of the TimeZone
+     * @param tz  an ISO-8601 timezone indicator string
+     *
+     * @return `True` iff the ISO-8601 timezone indicator was valid
+     * @return (conditional) the specified [TimeZone]
      */
     static conditional TimeZone of(String tz) {
         static Int valOf(Char ch) = ch >= '0' && ch <= '9' ? ch - '0' : -999;
@@ -85,9 +109,8 @@ const TimeZone(Int64 picos) {
             // as of 2025, no timezone offset is >= ±16, and historically the limit was < ±13 hours,
             // but then countries started to compete over who-gets-to-celebrate-New-Years-day-first
             if (0 <= hours <= 23 && 0 <= mins <= 59) {
-                Int offset = (hours * PicosPerHour + mins * PicosPerMinute);
-                // TODO
-                return True, new TimeZone((tz[0]=='-' ? -1 : +1) * offset.toInt64());
+                Int offset = (tz[0]=='-' ? -1 : +1) * (hours * PicosPerHour + mins * PicosPerMinute);
+                return True, TimeZone.of(offset);
             }
         }
 
@@ -104,91 +127,38 @@ const TimeZone(Int64 picos) {
     /**
      * The "not-a-TimeZone" TimeZone.
      */
-    static TimeZone NoTZ = new TimeZone(0) {
-        @Override
-        @RO String? name.get() = "NoTZ";
+    static TimeZone NoTZ = new TimeZone();
 
-        @Override
-        @RO Boolean isUTC.get() = False;
-
-        @Override
-        @RO Boolean isNoTZ.get() = True;
-
-        @Override
-        @RO Int hours.get() = 0;
-
-        @Override
-        @RO Int minutes.get() = 0;
-
-        @Override
-        Time adopt(Time orig) {
-            // strip off the timezone, but leave the date and time-of-day reflecting what the
-            // original TimeZone would have calculated
-            // note: this only supports dates on or after 1582-10-15 on the Gregorian calendar
-            return orig.timezone.isNoTZ ? orig : new Time(orig.date, orig.timeOfDay, this);
+    /**
+     * A cache of expected TimeZones.
+     */
+    private static HashMap<Int, TimeZone> Zones = {
+        HashMap<Int, TimeZone> map = new HashMap();
+        for (Int hour : -12..13) {
+            Int picos = hour * PicosPerHour;
+            map.put(picos, new TimeZone(picos));
+            picos += 30 * PicosPerMinute;
+            map.put(picos, new TimeZone(picos));
         }
+        return map.freeze(inPlace=True); // TODO GG this needs to error if it's not frozen (or better yet, auto freeze it)
     };
-
-    /**
-     * A cache of TimeZone information.
-     */
-    private static TimeZoneCache tzCache = new TimeZoneCache();
-
-    /**
-     * A cache of TimeZone information.
-     */
-    private static service TimeZoneCache {
-        private Map<String, TimeZone> tzByName = new HashMap();
-
-        @Lazy TimeZone utc.calc() {
-            return TimeZone.UTC;
-        }
-
-        TimeZone find(String desc) {
-            if (desc == "") {
-                return TimeZone.NoTZ;
-            }
-
-            if (desc == "Z" || desc == "UTC") {
-
-            }
-
-            if (TimeZone zone := tzByName.get(desc)) {
-                return zone;
-            }
-
-            Char start = desc[0];
-            if (start == '+' || start == '-') {
-                if (TimeZone zone := TimeZone.of(desc)) {
-                    tzByName.put(desc, zone);
-                    return zone;
-                }
-            }
-
-            throw new IllegalArgument($"unknown TimeZone: {desc}");
-        }
-    }
 
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
-     * Determine if this TimeZone is Universal Coordinated Time (UTC).
+     * Determine if this TimeZone is Universal Coordinated Time (UTC), aka "Z" or "Zulu" time.
      */
-    @RO Boolean isUTC.get() = False;
+    Boolean isUTC.get() = picos == 0 && !isNoTZ;
 
     /**
      * Determine if this TimeZone is a special TimeZone that represents the lack of a TimeZone.
      */
-    @RO Boolean isNoTZ.get() = False;
+    Boolean isNoTZ;
 
-    @RO Int hours.get() {
-        return picos / PicosPerHour;
-    }
+    Int hours.get() = picos / PicosPerHour;
 
-    @RO Int minutes.get() {
-        // note: calculate the remainder (may be negative), and not the modulo
-        return (picos - hours * PicosPerHour) / PicosPerMinute;
-    }
+    // note: calculate the remainder (may be negative), and not the modulo
+    Int minutes.get() = (picos - hours * PicosPerHour) / PicosPerMinute;
 
     /**
      * The fraction of a minute, represented as picoseconds, in the range `0..59999999999999`.
@@ -207,9 +177,12 @@ const TimeZone(Int64 picos) {
             return orig;
         }
 
-        if (orig.timezone.isNoTZ) {
-            // transplant the date and time-of-day from the timezoneless Time into a Time
-            // using this TimeZone
+        // if this is the `NoTZ` TimeZone then strip the TimeZone off the passed Time value, but
+        // leave the date and time-of-day reflecting what the original TimeZone would have
+        // calculated (this only supports dates on or after 1582-10-15 on the Gregorian calendar);
+        // otherwise, if the Time value is from the `NoTZ` TimeZone, then transplant the Date and
+        // TimeOfDay from the `NoTZ` Time into a Time using this TimeZone
+        if (isNoTZ || orig.timezone.isNoTZ) {
             return new Time(orig.date, orig.timeOfDay, this);
         }
 
@@ -219,7 +192,7 @@ const TimeZone(Int64 picos) {
     /**
      * The TimeZone name. Usually Null.
      */
-    @RO String? name.get() = Null;
+    String? name.get() = picos == 0 ? (isNoTZ ? "NoTZ" : "UTC") : Null;
 
     // ----- operators -----------------------------------------------------------------------------
 
@@ -261,7 +234,6 @@ const TimeZone(Int64 picos) {
         return new Duration(difference);
     }
 
-
     // ----- Stringable ----------------------------------------------------------------------------
 
     @Override
@@ -275,7 +247,6 @@ const TimeZone(Int64 picos) {
             if (picos == 0) {
                 return isNoTZ ? 0 : 1; // "Z"
             }
-
             return 6;
         }
 

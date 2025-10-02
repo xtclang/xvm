@@ -184,10 +184,10 @@ interface DataInput
      */
     TimeZone readTimeZone() {
         return switch (Byte b = readByte()) {
-        case 0: TimeZone.UTC;
-        case 1: TimeZone.NoTZ;
-        case 2: new TimeZone(readInt64());
-        default: throw new IOException($"illegal timezone format indicator: {b}");
+            case 0: TimeZone.UTC;
+            case 1: TimeZone.NoTZ;
+            case 2: new TimeZone(readInt64());
+            default: throw new IOException($"illegal timezone format indicator: {b}");
         };
     }
 

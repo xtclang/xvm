@@ -1,11 +1,11 @@
 package org.xvm.runtime.template._native.temporal;
 
 
+import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -15,6 +15,7 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -22,16 +23,12 @@ import org.xvm.runtime.WeakCallback;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
-import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 
-import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
 import org.xvm.runtime.template.numbers.LongLong;
 import org.xvm.runtime.template.numbers.xInt64;
-import org.xvm.runtime.template.numbers.xInt128;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
@@ -54,8 +51,8 @@ public class xLocalClock
 
     @Override
     public void initNative() {
-        markNativeProperty("now");
-        markNativeProperty("timezone");
+        markNativeProperty("epochMillis");
+        markNativeProperty("timezoneMillis");
 
         // LocalClock has two "schedule" methods and while one is a trivial default implementation,
         // it would execute on the LocalClock service that belongs to the native container.
@@ -78,11 +75,11 @@ public class xLocalClock
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         switch (sPropName) {
-        case "now":
-            return frame.assignValue(iReturn, timeNow(frame));
+        case "epochMillis":
+            return frame.assignValue(iReturn, epochMillis(frame));
 
-        case "timezone":
-            return frame.assignValue(iReturn, timezone(frame));
+        case "timezoneMillis":
+            return frame.assignValue(iReturn, timezoneMillis(frame));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -146,58 +143,44 @@ public class xLocalClock
     /**
      * Injection support.
      */
-    public ObjectHandle ensureLocalClock(Frame frame, ObjectHandle hOpts) {
-        ObjectHandle hClock = m_hLocalClock;
+    public ServiceHandle ensureLocalClock(Frame frame, ObjectHandle hOpts) {
+        ServiceHandle hClock = m_hLocalClock;
         if (hClock == null) {
             m_hLocalClock = hClock = createServiceHandle(
                 f_container.createServiceContext("LocalClock"),
                     getCanonicalClass(), getCanonicalType());
+            hClock.setField(frame, "utc", xBoolean.FALSE);
         }
 
         return hClock;
     }
 
-    public ObjectHandle ensureDefaultClock(Frame frame, ObjectHandle hOpts) {
-        // TODO
-        return ensureLocalClock(frame, hOpts);
+    public ServiceHandle ensureDefaultClock(Frame frame, ObjectHandle hOpts) {
+        // for now the default clock is just the local clock
+        return ensureUTCClock(frame, hOpts);
     }
 
-    public ObjectHandle ensureUTCClock(Frame frame, ObjectHandle hOpts) {
-        // TODO
-        return ensureLocalClock(frame, hOpts);
+    public ServiceHandle ensureUTCClock(Frame frame, ObjectHandle hOpts) {
+        ServiceHandle hClock = m_hUTCClock;
+        if (hClock == null) {
+            m_hUTCClock = hClock = createServiceHandle(
+                f_container.createServiceContext("LocalClock"),
+                getCanonicalClass(), getCanonicalType());
+            hClock.setField(frame, "utc", xBoolean.TRUE);
+        }
+
+        return hClock;
     }
 
 
     // -----  helpers ------------------------------------------------------------------------------
 
-    protected GenericHandle timeNow(Frame frame) {
-        TypeComposition clzTime = ensureTimeClass();
-        GenericHandle   hTime   = new GenericHandle(clzTime);
-
-        LongLong llNow = new LongLong(frame.f_context.f_container.currentTimeMillis()).
-                            mul(xNanosTimer.PICOS_PER_MILLI_LL);
-        hTime.setField(frame, "epochPicos", xInt128.INSTANCE.makeHandle(llNow));
-        hTime.setField(frame, "timezone", timezone(frame));
-        hTime.makeImmutable();
-
-        return hTime;
+    protected JavaLong epochMillis(Frame frame) {
+        return xInt64.INSTANCE.makeHandle(System.currentTimeMillis());
     }
 
-    protected GenericHandle timezone(Frame frame) {
-        GenericHandle hTimeZone = m_hTimeZone;
-        if (hTimeZone == null) {
-            ConstantPool    pool           = pool();
-            ClassStructure  structTimeZone = f_container.getClassStructure("temporal.TimeZone");
-            TypeConstant    typeTimeZone   = structTimeZone.getCanonicalType();
-            TypeComposition clzTimeZone    = typeTimeZone.ensureClass(frame);
-            m_hTimeZone = hTimeZone = new GenericHandle(clzTimeZone);
-
-            long lOffset = 0; // TODO CP
-            hTimeZone.setField(frame, "picos", xInt64.makeHandle(lOffset));
-            hTimeZone.makeImmutable();
-        }
-
-        return hTimeZone;
+    protected JavaLong timezoneMillis(Frame frame) {
+        return xInt64.INSTANCE.makeHandle(TimeZone.getDefault().getOffset(System.currentTimeMillis()));
     }
 
     protected TypeComposition ensureTimeClass() {
@@ -314,12 +297,12 @@ public class xLocalClock
     private TypeComposition m_clzTime;
 
     /**
-     * Cached TimeZone handle.
-     */
-    private GenericHandle m_hTimeZone;
-
-    /**
      * Cached LocalClock handle.
      */
-    private ObjectHandle m_hLocalClock;
+    private ServiceHandle m_hLocalClock;
+
+    /**
+     * Cached UTCClock handle.
+     */
+    private ServiceHandle m_hUTCClock;
 }
