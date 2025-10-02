@@ -107,7 +107,7 @@ env:
 
   # java_version will be set dynamically from xdk.properties in each job
   java_distribution: temurin
-  gradle_version: 9.0.0
+  gradle_version: 9.1.0
 
   # Docker build variables - computed once, used everywhere
   GH_COMMIT: ${{ github.sha }}
