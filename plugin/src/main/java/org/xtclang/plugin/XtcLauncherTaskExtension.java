@@ -12,43 +12,43 @@ import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
 public interface XtcLauncherTaskExtension extends Named {
-    Property<Boolean> getFork();
+    Property<@NotNull Boolean> getFork();
 
-    Property<Boolean> getShowVersion();
+    Property<@NotNull Boolean> getShowVersion();
 
-    Property<Boolean> getUseNativeLauncher();
+    Property<@NotNull Boolean> getUseNativeLauncher();
 
-    Property<Boolean> getVerbose();
+    Property<@NotNull Boolean> getVerbose();
 
-    ListProperty<String> getJvmArgs();
+    ListProperty<@NotNull String> getJvmArgs();
 
-    Property<InputStream> getStdin();
+    Property<@NotNull InputStream> getStdin();
 
-    Property<OutputStream> getStdout();
+    Property<@NotNull OutputStream> getStdout();
 
-    Property<OutputStream> getStderr();
+    Property<@NotNull OutputStream> getStderr();
 
-    Property<Boolean> getDebug();
+    Property<@NotNull Boolean> getDebug();
 
-    Property<Integer> getDebugPort();
+    Property<@NotNull Integer> getDebugPort();
 
-    Property<Boolean> getDebugSuspend();
+    Property<@NotNull Boolean> getDebugSuspend();
 
     default void jvmArg(final String arg) {
         jvmArgs(arg);
     }
 
-    void jvmArg(Provider<? extends String> arg);
+    void jvmArg(Provider<? extends @NotNull String> arg);
 
     void jvmArgs(String... args);
 
     void jvmArgs(Iterable<? extends String> args);
 
-    void jvmArgs(Provider<? extends Iterable<? extends String>> provider);
+    void jvmArgs(Provider<? extends @NotNull Iterable<? extends String>> provider);
 
     void setJvmArgs(Iterable<? extends String> elements);
 
-    void setJvmArgs(Provider<? extends Iterable<? extends String>> provider);
+    void setJvmArgs(Provider<? extends @NotNull Iterable<? extends String>> provider);
 
     @Override
     default @NotNull String getName() {

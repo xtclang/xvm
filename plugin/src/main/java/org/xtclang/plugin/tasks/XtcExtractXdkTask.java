@@ -26,6 +26,8 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xtclang.plugin.XtcProjectDelegate;
 
 @CacheableTask
@@ -34,12 +36,13 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
     
     // Configuration cache compatible collections resolved at construction time
     private final FileCollection xdkArchiveConfigs;
-    private final Provider<Directory> xdkOutputDir;
+    private final Provider<@NotNull Directory> xdkOutputDir;
     
     // Injected services for configuration cache compatibility
     private final FileSystemOperations fileSystemOperations;
     private final ArchiveOperations archiveOperations;
 
+    @SuppressWarnings("ConstructorNotProtectedInAbstractClass")
     @Inject
     public XtcExtractXdkTask(final Project project, final FileSystemOperations fileSystemOperations, final ArchiveOperations archiveOperations) {
         super(project);
@@ -69,13 +72,13 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
     }
 
     @OutputDirectory
-    Provider<Directory> getOutputXtcModules() {
+    Provider<@NotNull Directory> getOutputXtcModules() {
         return xdkOutputDir;
     }
 
     @TaskAction
     public void extractXdk() {
-        super.executeTask();
+        executeTask();
 
         // The task is configured at this point. We should indeed have found a zip archive from some xdkDistributionProvider somewhere.
         final var archives = xdkArchiveConfigs.filter(XtcExtractXdkTask::isXdkArchive);

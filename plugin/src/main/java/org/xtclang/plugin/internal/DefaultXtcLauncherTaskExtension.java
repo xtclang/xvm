@@ -17,7 +17,8 @@ import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 
-import org.xtclang.plugin.ProjectDelegate;
+import org.jetbrains.annotations.NotNull;
+
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcPluginUtils;
 
@@ -29,17 +30,17 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     protected final Logger logger;
     protected final List<String> defaultJvmArgs;
 
-    protected final ListProperty<String> jvmArgs;
-    protected final Property<Boolean> debug;
-    protected final Property<Integer> debugPort;
-    protected final Property<Boolean> debugSuspend;
-    protected final Property<Boolean> verbose;
-    protected final Property<Boolean> fork;
-    protected final Property<Boolean> showVersion;
-    protected final Property<Boolean> useNativeLauncher;
-    protected final Property<InputStream> stdin;
-    protected final Property<OutputStream> stdout;
-    protected final Property<OutputStream> stderr;
+    protected final ListProperty<@NotNull String> jvmArgs;
+    protected final Property<@NotNull Boolean> debug;
+    protected final Property<@NotNull Integer> debugPort;
+    protected final Property<@NotNull Boolean> debugSuspend;
+    protected final Property<@NotNull Boolean> verbose;
+    protected final Property<@NotNull Boolean> fork;
+    protected final Property<@NotNull Boolean> showVersion;
+    protected final Property<@NotNull Boolean> useNativeLauncher;
+    protected final Property<@NotNull InputStream> stdin;
+    protected final Property<@NotNull OutputStream> stdout;
+    protected final Property<@NotNull OutputStream> stderr;
 
     protected DefaultXtcLauncherTaskExtension(final Project project) {
         this.objects = project.getObjects();
@@ -69,62 +70,62 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     // TODO: Sort public methods in alphabetical order for all these files, remove where just inheritance that has
     //  been added to the superclass already if any are left, and put public methods first.
     @Override
-    public Property<InputStream> getStdin() {
+    public Property<@NotNull InputStream> getStdin() {
         return stdin;
     }
 
     @Override
-    public Property<OutputStream> getStdout() {
+    public Property<@NotNull OutputStream> getStdout() {
         return stdout;
     }
 
     @Override
-    public Property<OutputStream> getStderr() {
+    public Property<@NotNull OutputStream> getStderr() {
         return stderr;
     }
 
     @Override
-    public Property<Boolean> getFork() {
+    public Property<@NotNull Boolean> getFork() {
         return fork;
     }
 
     @Override
-    public Property<Boolean> getShowVersion() {
+    public Property<@NotNull Boolean> getShowVersion() {
         return showVersion;
     }
 
     @Override
-    public Property<Boolean> getUseNativeLauncher() {
+    public Property<@NotNull Boolean> getUseNativeLauncher() {
         return useNativeLauncher;
     }
 
     @Override
-    public Property<Boolean> getVerbose() {
+    public Property<@NotNull Boolean> getVerbose() {
         return verbose;
     }
 
     @Override
-    public Property<Boolean> getDebug() {
+    public Property<@NotNull Boolean> getDebug() {
         return debug;
     }
 
     @Override
-    public Property<Integer> getDebugPort() {
+    public Property<@NotNull Integer> getDebugPort() {
         return debugPort;
     }
 
     @Override
-    public Property<Boolean> getDebugSuspend() {
+    public Property<@NotNull Boolean> getDebugSuspend() {
         return debugSuspend;
     }
 
     @Override
-    public ListProperty<String> getJvmArgs() {
+    public ListProperty<@NotNull String> getJvmArgs() {
         return jvmArgs;
     }
 
     @Override
-    public void jvmArg(final Provider<? extends String> arg) {
+    public void jvmArg(final Provider<? extends @NotNull String> arg) {
         // Use objects factory instead of Project to create provider
         jvmArgs(objects.listProperty(String.class).value(arg.map(Collections::singletonList)));
     }
@@ -140,7 +141,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     }
 
     @Override
-    public void jvmArgs(final Provider<? extends Iterable<? extends String>> provider) {
+    public void jvmArgs(final Provider<? extends @NotNull Iterable<? extends String>> provider) {
         jvmArgs.addAll(provider);
     }
 
@@ -153,7 +154,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     }
 
     @Override
-    public void setJvmArgs(final Provider<? extends Iterable<? extends String>> provider) {
+    public void setJvmArgs(final Provider<? extends @NotNull Iterable<? extends String>> provider) {
         // Always preserve default JVM args and add user args
         jvmArgs.set(provider.map(userArgs -> {
             final var combinedArgs = new java.util.ArrayList<>(defaultJvmArgs);
@@ -162,22 +163,16 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         }));
     }
 
-    public boolean hasModifiedJvmArgs(final List<String> jvmArgs) {
-        // Check if args contain more than just the defaults
-        return jvmArgs.size() != defaultJvmArgs.size() || !jvmArgs.equals(defaultJvmArgs);
-    }
-
     private static List<String> loadDefaultJvmArgs() {
         try (final var inputStream = DefaultXtcLauncherTaskExtension.class.getResourceAsStream(XDK_CONFIG_DEFAULT_JVM_ARGS_RESOURCE_PATH)) {
             final var props = new java.util.Properties();
             props.load(inputStream);
             return List.of(props.getProperty("defaultJvmArgs").split(","));
-        } catch (Exception e) {
+        } catch (final Exception e) {
             // Log warning and use fallback
             return DEFAULT_JVM_ARGS;
         }
     }
-
 
     public static boolean areJvmArgsModified(final List<String> jvmArgs) {
         return !loadDefaultJvmArgs().equals(jvmArgs);

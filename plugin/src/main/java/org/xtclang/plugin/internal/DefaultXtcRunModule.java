@@ -14,15 +14,17 @@ import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xtclang.plugin.XtcPluginUtils;
 import org.xtclang.plugin.XtcRunModule;
 
 public class DefaultXtcRunModule implements XtcRunModule {
     private static final String DEFAULT_METHOD_NAME = "run";
 
-    protected final Property<String> moduleName; // mandatory
-    protected final Property<String> methodName; // optional but always has a modifiable convention value
-    protected final ListProperty<String> moduleArgs; // optional but always has a modifiable, initially empty, set of arguments
+    protected final Property<@NotNull String> moduleName; // mandatory
+    protected final Property<@NotNull String> methodName; // optional but always has a modifiable convention value
+    protected final ListProperty<@NotNull String> moduleArgs; // optional but always has a modifiable, initially empty, set of arguments
 
     // Project field removed to avoid configuration cache serialization issues
     private final ObjectFactory objects;
@@ -53,22 +55,22 @@ public class DefaultXtcRunModule implements XtcRunModule {
     }
 
     @Override
-    public Property<String> getModuleName() {
+    public Property<@NotNull String> getModuleName() {
         return moduleName;
     }
 
     @Override
-    public Property<String> getMethodName() {
+    public Property<@NotNull String> getMethodName() {
         return methodName;
     }
 
     @Override
-    public ListProperty<String> getModuleArgs() {
+    public ListProperty<@NotNull String> getModuleArgs() {
         return moduleArgs;
     }
 
     @Override
-    public void moduleArg(final Provider<? extends String> arg) {
+    public void moduleArg(final Provider<? extends @NotNull String> arg) {
         // Use objects factory instead of Project to create provider
         moduleArgs(objects.listProperty(String.class).value(arg.map(java.util.Collections::singletonList)));
     }
@@ -84,7 +86,7 @@ public class DefaultXtcRunModule implements XtcRunModule {
     }
 
     @Override
-    public void moduleArgs(final Provider<? extends Iterable<? extends String>> provider) {
+    public void moduleArgs(final Provider<? extends @NotNull Iterable<? extends String>> provider) {
         moduleArgs.addAll(provider);
     }
 
@@ -94,7 +96,7 @@ public class DefaultXtcRunModule implements XtcRunModule {
     }
 
     @Override
-    public void setModuleArgs(final Provider<? extends Iterable<? extends String>> provider) {
+    public void setModuleArgs(final Provider<? extends @NotNull Iterable<? extends String>> provider) {
         moduleArgs.set(provider);
     }
 

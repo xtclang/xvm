@@ -48,7 +48,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     }
 
     @Inject
-    protected Factory<PatternSet> getPatternSetFactory() {
+    protected Factory<@NotNull PatternSet> getPatternSetFactory() {
         throw new UnsupportedOperationException("XtcSourceTask.getPatternSetFactory()");
     }
 
@@ -126,7 +126,6 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
         return this;
     }
 
-    @SuppressWarnings("rawtypes")
     @Override
     public @NotNull XtcSourceTask include(final @NotNull Closure includeSpec) {
         patternSet.include(includeSpec);
@@ -151,7 +150,6 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
         return this;
     }
 
-    @SuppressWarnings("rawtypes")
     @Override
     public @NotNull XtcSourceTask exclude(final @NotNull Closure excludeSpec) {
         patternSet.exclude(excludeSpec);
@@ -191,6 +189,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
         return file.isFile() && hasFileExtension(file, XTC_SOURCE_FILE_EXTENSION);
     }
 
+    @SuppressWarnings("unused")
     protected boolean isTopLevelXtcSourceFile(final SourceSet sourceSet, final File file) {
         return !file.isDirectory() && isXtcSourceFile(file) && isTopLevelSource(sourceSet, file);
     }

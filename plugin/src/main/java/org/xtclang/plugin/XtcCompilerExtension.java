@@ -2,16 +2,18 @@ package org.xtclang.plugin;
 
 import org.gradle.api.provider.Property;
 
+import org.jetbrains.annotations.NotNull;
+
 public interface XtcCompilerExtension extends XtcLauncherTaskExtension {
-    Property<Boolean> getDisableWarnings();
+    Property<@NotNull Boolean> getDisableWarnings();
 
-    Property<Boolean> getStrict();
+    Property<@NotNull Boolean> getStrict();
 
-    Property<Boolean> getQualifiedOutputName();
+    Property<@NotNull Boolean> getQualifiedOutputName();
 
-    Property<Boolean> getVersionedOutputName();
+    Property<@NotNull Boolean> getVersionedOutputName();
 
-    Property<String> getXtcVersion();
+    Property<@NotNull String> getXtcVersion();
 
-    Property<Boolean> getRebuild();
+    Property<@NotNull Boolean> getRebuild();
 }

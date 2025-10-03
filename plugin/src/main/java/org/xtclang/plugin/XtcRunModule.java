@@ -4,28 +4,32 @@ import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 
+import org.jetbrains.annotations.NotNull;
+
 public interface XtcRunModule extends Comparable<XtcRunModule> {
-    Property<String> getModuleName();
+    Property<@NotNull String> getModuleName();
 
-    Property<String> getMethodName();
+    Property<@NotNull String> getMethodName();
 
-    ListProperty<String> getModuleArgs();
+    ListProperty<@NotNull String> getModuleArgs();
 
     default void moduleArg(final String arg) {
         moduleArgs(arg);
     }
 
-    void moduleArg(Provider<? extends String> provider);
+    void moduleArg(Provider<? extends @NotNull String> provider);
 
     void moduleArgs(String... args);
 
     void moduleArgs(Iterable<? extends String> args);
 
-    void moduleArgs(Provider<? extends Iterable<? extends String>> provider);
+    void moduleArgs(Provider<? extends @NotNull Iterable<? extends String>> provider);
 
+    @SuppressWarnings("unused")
     void setModuleArgs(Iterable<? extends String> args);
 
-    void setModuleArgs(Provider<? extends Iterable<? extends String>> provider);
+    @SuppressWarnings("unused")
+    void setModuleArgs(Provider<? extends @NotNull Iterable<? extends String>> provider);
 
     boolean hasDefaultMethodName();
 

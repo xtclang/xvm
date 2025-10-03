@@ -1,12 +1,9 @@
 package org.xtclang.plugin;
 
-import java.io.Serial;
-
 import java.util.Arrays;
 
+@SuppressWarnings("serial")
 public class XtcBuildException extends Exception {
-    @Serial
-    private static final long serialVersionUID = 1L;
 
     @SuppressWarnings("unused")
     XtcBuildException(final String msg) {

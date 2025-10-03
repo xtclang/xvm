@@ -2,7 +2,6 @@ package org.xtclang.plugin.launchers;
 
 import static org.xtclang.plugin.launchers.XtcExecResult.XtcExecResultBuilder;
 
-import org.gradle.api.Project;
 import org.gradle.api.logging.Logger;
 import org.gradle.process.BaseExecSpec;
 import org.gradle.process.ExecResult;
@@ -15,18 +14,11 @@ public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends 
     protected final String taskName;
     protected final Logger logger;
 
-    protected XtcLauncher(final Project project, final T task) {
-        this.task = task;
-        this.taskName = task.getName();
-        this.logger = project.getLogger();
-    }
-
     protected XtcLauncher(final T task, final Logger logger) {
         this.task = task;
         this.taskName = task.getName();
         this.logger = logger;
     }
-    
     
     // Abstract method that subclasses must implement
     public abstract ExecResult apply(final CommandLine cmd);
@@ -45,7 +37,7 @@ public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends 
         return task.getUseNativeLauncher().get();
     }
 
-    protected void redirectIo(final XtcExecResultBuilder builder, final BaseExecSpec spec) {
+    protected void redirectIo(final BaseExecSpec spec) {
         // TODO, simplify, just send a stream setter for the various streams or our own class based on the existing ExecResult.contentsOfOutput* or something.
         if (task.hasStdinRedirect()) {
             spec.setStandardInput(task.getStdin().get());
