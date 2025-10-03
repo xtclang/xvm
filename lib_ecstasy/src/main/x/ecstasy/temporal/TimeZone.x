@@ -140,7 +140,7 @@ const TimeZone(Int64 picos) {
             picos += 30 * PicosPerMinute;
             map.put(picos, new TimeZone(picos));
         }
-        return map.freeze(inPlace=True); // TODO GG this needs to error if it's not frozen (or better yet, auto freeze it)
+        return map;
     };
 
     // ----- accessors -----------------------------------------------------------------------------

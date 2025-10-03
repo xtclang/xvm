@@ -254,7 +254,6 @@ public class xConst
                 if (listFreezable != null) {
                     ObjectHandle[] ahFreezable = listFreezable.toArray(Utils.OBJECTS_NONE);
                     FieldInfo[]    aFieldInfo  = listInfo.toArray(NO_FIELDS);
-                    TypeConstant[] atype       = listTypes.toArray(TypeConstant.NO_TYPES);
                     ArrayHandle    haValues    =
                         xArray.makeObjectArrayHandle(ahFreezable, Mutability.Fixed);
 

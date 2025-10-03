@@ -32,6 +32,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle.WrapperException;
 import org.xvm.runtime.ServiceContext.Synchronicity;
 
 import org.xvm.runtime.template.xBoolean;
@@ -673,24 +674,15 @@ public abstract class Utils {
      * Translate a Throwable thrown by {@link CompletableFuture#get} to an ExceptionHandle.
      */
     public static ExceptionHandle translate(Throwable e) {
-        if (e == null) {
-            return null;
-        }
-        if (e instanceof ExceptionHandle.WrapperException we) {
-            return we.getExceptionHandle();
-        }
-        if (e instanceof ExecutionException ||
-            e instanceof CompletionException) {
-            return translate(e.getCause());
-        }
-        if (e instanceof CancellationException) {
-            return xException.makeHandle(null, "cancelled");
-        }
-        if (e instanceof InterruptedException) {
-            return xException.makeHandle(null, "interrupted");
-        }
-
-        return xException.makeHandle(null, "Unexpected native exception: " + e.getMessage());
+        return switch (e) {
+            case null                               -> null;
+            case WrapperException      we -> we.getExceptionHandle();
+            case ExecutionException    _,
+                 CompletionException   _ -> translate(e.getCause());
+            case CancellationException _ -> xException.makeHandle(null, "cancelled");
+            case InterruptedException  _ -> xException.makeHandle(null, "interrupted");
+            default -> xException.makeHandle(null, "Unexpected native exception: " + e.getMessage());
+        };
     }
 
     /**
@@ -891,7 +883,29 @@ public abstract class Utils {
             }
 
             ObjectHandle[] ahVar = ensureSize(OBJECTS_NONE, methodInit.getMaxVars());
-            return frame.call1(methodInit, null, ahVar, Op.A_STACK);
+            switch (frame.call1(methodInit, null, ahVar, Op.A_STACK)) {
+            case Op.R_CALL:
+                frame.m_frameNext.addContinuation(frameCaller -> {
+                    ObjectHandle hVal = frameCaller.peekStack();
+                    if (!hVal.isPassThrough()) {
+                        frameCaller.popStack();
+                        if (hVal.getType().isA(frameCaller.poolContext().typeFreezable())) {
+                            return callFreeze(frameCaller, hVal, true, _ -> Op.R_NEXT);
+                        } else {
+                            return frameCaller.raiseException(xException.notFreezableProperty(
+                                frameCaller, idProp.getName(), idProp.getType()));
+                        }
+                    }
+                    return Op.R_NEXT;
+                });
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
         return frame.pushDeferredValue(frame.getConstHandle(constVal));
