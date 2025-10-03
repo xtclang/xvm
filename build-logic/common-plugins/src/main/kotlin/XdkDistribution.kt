@@ -1,102 +1,12 @@
-import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.publish.PublishingExtension
-import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.internal.os.OperatingSystem
-import org.gradle.kotlin.dsl.assign
-import org.gradle.kotlin.dsl.withType
-import org.gradle.plugins.signing.Sign
-import org.gradle.plugins.signing.SigningExtension
 import java.io.File
-
-/**
- * Configure all maven publications with some mandatory and helpful information.
- *
- * TODO: Add some generic XML point out more information about the build, like maybe
- *   SHA commit etc.
- */
-fun PublishingExtension.configureMavenPublications(project: Project) = project.run {
-    publications.withType<MavenPublication>().configureEach {
-        logger.info("[build-logic] Configuring publication '$name' for project '${project.name}'.")
-        pom {
-            licenses {
-                license {
-                    name = "The XDK License"
-                    url = "https://github.com/xtclang/xvm/tree/master/license"
-                }
-            }
-            developers {
-                developer {
-                    name = "The XTC Language Organization"
-                    email = "info@xtclang.org"
-                    organization = "xtclang.org"
-                    organizationUrl = "https://xtclang.org"
-                }
-            }
-            // see https://central.sonatype.org/publish/requirements/#scm-information
-            scm {
-                connection = "scm:git:git://github.com/xtclang/xvm.git"
-                developerConnection = "scm:git:ssh://github.com/xtclang/xvm.git"
-                url = "https://github.com/xtclang/xvm/tree/master"
-            }
-        }
-    }
-}
-
-fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
-    fun readKeyFile(): String {
-        val file = File(gradle.gradleUserHomeDir, XdkDistribution.GPGKEY_FILENAME)
-        if (!file.exists()) return ""
-        return file.readText().trim()
-    }
-
-    fun resolveGpgSecret(): Boolean {
-        val sign = getXdkPropertyBoolean("org.xtclang.signing.enabled", isRelease())
-        if (!sign) {
-            logger.info("[build-logic] Signing is disabled. Will not try to resolve any keys.")
-            return false
-        }
-        
-        val password = (project.findProperty("signing.password") ?: project.providers.environmentVariable("GPG_SIGNING_PASSWORD").getOrElse("")) as String
-        val key = (project.findProperty("signing.key") ?: project.providers.environmentVariable("GPG_SIGNING_KEY").getOrElse("") ?: readKeyFile()) as String
-        
-        if (key.isEmpty() || password.isEmpty()) {
-            logger.warn("[build-logic] WARNING: Could not resolve a GPG signing key or a passphrase.")
-            if (XdkDistribution.isCiEnabled(project)) {
-                throw GradleException("[distribution] No GPG signing key or password found in CI build, and no manual way to set them.")
-            }
-            return false
-        }
-        
-        logger.info("[build-logic] Signature: In-memory GPG keys successfully configured.")
-        assert(key.isNotEmpty() && password.isNotEmpty())
-        useInMemoryPgpKeys(key, password)
-        return true
-    }
-
-    resolveGpgSecret()
-    val publishing = project.extensions.getByType(PublishingExtension::class.java)
-    val publications = publishing.publications
-    return sign(publications).also {
-        if (publications.isEmpty()) {
-            logger.warn("[build-logic] WARNING: No publications found, but signature are still enabled.")
-        } else {
-            logger.info("[build-logic] Signature: Configured sign tasks publications in '${project.name}', publications: ${publications.map { it.name }}.")
-        }
-    }
-}
-
-
-// TODO: Add sonatype repository for mavenCentral once we have recovered the credentials (tokens) and
-//  have manually verified that we can publish artifacts there.
-
 
 class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     companion object {
         const val DISTRIBUTION_TASK_GROUP = "distribution"
         const val JAVATOOLS_PREFIX_PATTERN = "**/javatools*"
-        const val GPGKEY_FILENAME = "xtclang-gpgkey.asc"
 
         private const val CI = "CI"
 
@@ -111,8 +21,6 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
             "withNativeLaunchersDistZip"
         )
         val binaryLauncherNames = listOf("xcc", "xec", "xtc")
-
-        // Removed delegateForPlatform - now handled by templates
 
         fun isDistributionArchiveTask(task: Task): Boolean {
             return task.group == DISTRIBUTION_TASK_GROUP && task.name in distributionTasks
@@ -134,19 +42,6 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
             else -> throw UnsupportedOperationException("Unsupported OS: $currentOs")
         }
 
-        // Get all supported OS×Architecture combinations (Docker platform naming)
-        fun getSupportedPlatforms(): List<Pair<String, String>> = listOf(
-            "linux" to "amd64",
-            "linux" to "arm64",
-            "macos" to "arm64",   // Apple Silicon
-            "macos" to "amd64",   // Intel Mac (if needed)
-            "windows" to "amd64"
-        )
-
-        // Check if a platform combination is supported
-        fun isPlatformSupported(os: String, arch: String): Boolean = 
-            getSupportedPlatforms().contains(os to arch)
-
         /**
          * Required XTC modules that must be in the module path for launchers to work.
          * This matches the native launcher's module path setup.
@@ -158,7 +53,22 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         )
 
         /**
-         * Script template strings for platform-specific launcher modifications
+         * Generate launcher arguments with module paths from REQUIRED_XTC_MODULES.
+         */
+        private fun generateLauncherArgs(isWindows: Boolean): String {
+            val pathSep = if (isWindows) "\\" else "/"
+            val varPrefix = if (isWindows) "%APP_HOME%" else "${'$'}APP_HOME"
+            val modulePaths = REQUIRED_XTC_MODULES.joinToString(" ") { module ->
+                "-L \"$varPrefix$pathSep${module.toPath(isWindows)}\""
+            }
+            val appBaseName = if (isWindows) "%APP_BASE_NAME%" else "${'$'}APP_BASE_NAME"
+            return "org.xvm.tool.Launcher $appBaseName $modulePaths"
+        }
+
+        /**
+         * Script template strings for platform-specific launcher modifications.
+         * Note: Dollar signs are intentionally escaped for shell script generation.
+         * IntelliJ warnings about string templates are intentional - do not simplify!
          */
         val SCRIPT_TEMPLATES = mapOf(
             "windows" to mapOf(
@@ -190,7 +100,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
                         |
                         |@rem Execute xec
                         |""".trimMargin(),
-                "launcher_args" to """org.xvm.tool.Launcher %APP_BASE_NAME% -L "%APP_HOME%\lib" -L "%APP_HOME%\javatools\javatools_turtle.xtc" -L "%APP_HOME%\javatools\javatools_bridge.xtc""""
+                "launcher_args" to generateLauncherArgs(isWindows = true)
             ),
             "unix" to mapOf(
                 "xdk_home_delegation" to """
@@ -222,7 +132,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
                         |    APP_HOME="${'$'}XDK_HOME"
                         |fi
                         |""".trimMargin(),
-                "launcher_args" to """org.xvm.tool.Launcher ${'$'}APP_BASE_NAME -L "${'$'}APP_HOME/lib" -L "${'$'}APP_HOME/javatools/javatools_turtle.xtc" -L "${'$'}APP_HOME/javatools/javatools_bridge.xtc""""
+                "launcher_args" to generateLauncherArgs(isWindows = false)
             )
         )
 

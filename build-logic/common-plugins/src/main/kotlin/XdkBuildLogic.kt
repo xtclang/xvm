@@ -25,7 +25,7 @@ class XdkBuildLogic(project: Project) : XdkProjectBuildLogic(project) {
     }
 
     private val xdkProperties: XdkProperties by lazy {
-        logger.info("[build-logic] Created lazy XDK Properties for project ${project.name}")
+        logger.debug("[build-logic] Created lazy XDK Properties for project ${project.name}")
         XdkPropertiesImpl(project)
     }
 
@@ -86,7 +86,7 @@ fun Project.getXdkProperty(key: String, defaultValue: String? = null): String {
 
 private fun <T> registerXdkPropertyInput(task: Task, key: String, value: T): T {
     with(task) {
-        logger.info("[build-logic] Task tunneling property for $key to project. Can be set as input provider.")
+        logger.debug("[build-logic] Task tunneling property for $key to project. Can be set as input provider.")
     }
     return value
 }
@@ -113,9 +113,4 @@ fun Project.isRelease(): Boolean {
 
 fun Project.snapshotOnly(): Boolean {
     return findProperty("snapshotOnly")?.toString()?.toBoolean() ?: false
-}
-
-fun Project.allowPublication(): Boolean {
-    val forbidPublication = findProperty("forbidPublication")?.toString()?.toBoolean() ?: false
-    return !forbidPublication && !(snapshotOnly() && !project.isSnapshot())
 }

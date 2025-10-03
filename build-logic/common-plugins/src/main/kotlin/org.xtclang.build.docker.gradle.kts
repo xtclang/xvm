@@ -49,11 +49,7 @@ fun createDockerBuildTask(
 
         // Configuration cache compatible input properties
         hostArch.set(providers.systemProperty("os.arch").map { arch ->
-            when (arch) {
-                "amd64", "x86_64" -> "amd64"
-                "aarch64", "arm64" -> "arm64"
-                else -> "unknown"
-            }
+            XdkDistribution.normalizeArchitecture(arch)
         })
         allowEmulation.set(providers.systemProperty("org.xtclang.docker.allowEmulation").map { it.toBoolean() }.orElse(false))
         dockerProgress.set(providers.environmentVariable("DOCKER_BUILDX_PROGRESS").orElse("plain"))

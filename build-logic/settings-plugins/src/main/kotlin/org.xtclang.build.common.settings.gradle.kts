@@ -11,7 +11,7 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
-fun compositeRootRelativeFile(path: String): File? {
+fun compositeRootRelativeFile(path: String): File {
     var dir = file(".")
     var file = File(dir, path)
     while (!file.exists()) {
@@ -21,8 +21,8 @@ fun compositeRootRelativeFile(path: String): File? {
     return file
 }
 
-val libsVersionCatalog = compositeRootRelativeFile("gradle/libs.versions.toml")!!
-val versionPropertiesFile = compositeRootRelativeFile("version.properties")!!
+val libsVersionCatalog = compositeRootRelativeFile("gradle/libs.versions.toml")
+val versionPropertiesFile = compositeRootRelativeFile("version.properties")
 
 // Read version.properties file for single source of truth
 val versionProps = java.util.Properties().apply { 

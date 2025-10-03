@@ -1,12 +1,11 @@
 /**
- * This is the build script for the precompile script build-logic plugin.
+ * Unified build script for all build-logic convention plugins.
  */
 
 plugins {
     `kotlin-dsl`
 }
 
-// Prevents Kotlin Gradle Plugin "Gradle 8.0" JVM Toolchain warning
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(JavaVersion.current().majorVersion.toInt()))
@@ -16,6 +15,10 @@ java {
 repositories {
     mavenCentral()
     gradlePluginPortal()
+}
+
+dependencies {
+    implementation("org.gradle.toolchains.foojay-resolver-convention:org.gradle.toolchains.foojay-resolver-convention.gradle.plugin:1.0.0")
 }
 
 logger.info("[${project.name}] Gradle version: v${gradle.gradleVersion} (embedded Kotlin: v$embeddedKotlinVersion).")

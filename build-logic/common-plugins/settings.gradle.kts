@@ -2,5 +2,8 @@ pluginManagement {
     includeBuild("../settings-plugins")
 }
 
+plugins {
+    id("org.xtclang.build.common")
+}
+
 rootProject.name = "common-plugins"
-rootProject.buildFileName = "common-plugins.gradle.kts"

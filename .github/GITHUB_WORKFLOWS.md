@@ -64,7 +64,7 @@ The **build-verify** job runs on a configurable matrix:
 - **Default**: Ubuntu Latest + Windows Latest
 - **Configurable**: Single platform or full matrix via `single_platform` input
 - **Java Version**: Dynamically determined from `xdk.properties`
-- **Gradle Version**: 9.0.0 (defined in environment)
+- **Gradle Version**: 9.1.0 (defined in environment)
 
 ### Environment Configuration
 
@@ -74,7 +74,7 @@ Key environment variables and settings:
 # Build Configuration
 gradle_options: "--stacktrace --warning-mode=all"  # Additional Gradle CLI options (does not override gradle.properties)
 java_distribution: temurin
-gradle_version: 9.0.0
+gradle_version: 9.1.0
 
 # Project Configuration  
 ORG_GRADLE_PROJECT_includeBuildManualTests: true

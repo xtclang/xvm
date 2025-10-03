@@ -7,7 +7,6 @@ import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFiles
@@ -23,7 +22,6 @@ import java.io.File
 
 plugins {
     id("org.xtclang.build.xdk.versioning")
-    id("org.xtclang.build.git")  // For git tagging functionality only
     alias(libs.plugins.vanniktech.maven.publish)
     alias(libs.plugins.xtc)
     application
@@ -88,7 +86,6 @@ dependencies {
     xtcModule(libs.xdk.xenia)
     xtcModule(libs.xdk.xml)
     xtcModule(libs.javatools.bridge)
-    @Suppress("UnstableApiUsage")
     xtcLauncherBinaries(project(path = ":javatools-launcher", configuration = "xtcLauncherBinaries"))
 }
 
@@ -197,6 +194,7 @@ private val publicationVersion = project.version.toString()
 
 // Configure Vanniktech Maven Publish for configuration cache compatibility
 mavenPublishing {
+    signAllPublications()
     coordinates(publicationGroupId, publicationArtifactId, publicationVersion)
 
     // Configure as Generic publication to handle custom ZIP artifact
@@ -219,10 +217,9 @@ mavenPublishing {
     }
 
     // Maven Central publishing (disabled by default)
-    val enableMavenCentral = getXdkPropertyBoolean("org.xtclang.publish.mavenCentral", false)
-    if (enableMavenCentral) {
+    if (xdkPublishingCredentials.enableMavenCentral.get()) {
         publishToMavenCentral(automaticRelease = false)
-        logger.lifecycle("[xdk] Maven Central publishing is enabled")
+        logger.info("[xdk] Maven Central publishing is enabled")
     } else {
         logger.info("[xdk] Maven Central publishing is disabled (use -Porg.xtclang.publish.mavenCentral=true to enable)")
     }
@@ -251,20 +248,16 @@ mavenPublishing {
     }
 }
 
-// Configure GitHub Packages repository (enabled when credentials are available)
+// Configure GitHub Packages repository
 publishing {
     repositories {
-        // Use centralized credential management
-        val gitHubUsername = xdkPublishingCredentials.gitHubUsername.get()
-        val gitHubPassword = xdkPublishingCredentials.gitHubPassword.get()
-
-        if (gitHubPassword.isNotEmpty()) {
+        if (xdkPublishingCredentials.enableGithub.get()) {
             maven {
-                name = "GitHub"
+                name = "github"
                 url = uri("https://maven.pkg.github.com/xtclang/xvm")
                 credentials {
-                    username = gitHubUsername.ifEmpty { "xtclang-workflows" }
-                    password = gitHubPassword
+                    username = xdkPublishingCredentials.githubUsername.get().ifEmpty { "xtclang-workflows" }
+                    password = xdkPublishingCredentials.githubPassword.get()
                 }
             }
         } else {
@@ -273,22 +266,8 @@ publishing {
     }
 }
 
-// Publishing tasks are handled by root build.gradle.kts
 
-// Publication listing tasks (called by root aggregator) - now uses centralized implementation from build-logic
-
-
-
-// Publication listing tasks removed - use bin/list-publications.sh instead
-
-
-
-// Signing removed since we're not using Maven publication for XDK
-// signing {
-//     mavenCentralSigning()
-// }
-
-/**
+ /**
  * Common exclude patterns for unwanted files in distributions
  */
 private val distributionExcludes = listOf(
@@ -466,20 +445,6 @@ val clean by tasks.existing {
     }
 }
 
-/**
- * Set up signing tasks, only enabled if explicitly configured, or if not, only when we
- * are publishing a non-snapshot package.
- */
-tasks.withType<Sign>().configureEach {
-    val sign = getXdkPropertyBoolean("org.xtclang.signing.enabled", isRelease())
-    // TODO: Before mavenCentral access tokens are sorted, signing should never be enabled:
-    require(!sign) { "Signing is not enabled, and should not be enabled until we are sure default configs work." }
-    logger.info("[xdk] Publication will ${if (sign) "" else "NOT "}be signed.")
-    onlyIf {
-        sign
-    }
-}
-
 // Restore the proper distribution task dependencies using the existing utility
 tasks.filter { XdkDistribution.isDistributionArchiveTask(it) }.forEach {
     it.dependsOn(tasks.named("processXtcResources"))
@@ -498,53 +463,6 @@ tasks.withType<Tar>().configureEach {
 val test by tasks.existing {
     doLast {
         TODO("Implement response to the check lifecycle, probably some kind of aggregate XUnit.")
-    }
-}
-
-
-/**
- * Ensure that tags are correct. First we fetch remote tags, clobbering any locals ones,
- * the remote is always the single source of truth.
- *
- * For a snapshot release, we delete any existing tag for this version, and place a new
- * tag with hte same contents at the latest commit.
- *
- * For a normal release, we fail if there already is a tag for this version.
- */
-// Configure the central git tagging task with XDK-specific values
-tasks.ensureGitTags.configure {
-    val snapshotOnlyValue = snapshotOnly()
-    val currentVersionValue = semanticVersion.artifactVersion  // Use artifactVersion instead of toString()
-
-    version.set(currentVersionValue)
-    snapshotOnly.set(snapshotOnlyValue)
-}
-
-val ensureTags by tasks.registering {
-    group = PUBLISH_TASK_GROUP
-    description = "Ensure that the current commit is tagged with the current version."
-
-    // Capture values during configuration phase to avoid runtime project access
-    val snapshotOnlyValue = snapshotOnly()
-    val currentVersionValue = semanticVersion.artifactVersion  // Extract just the version string
-    val allowPublicationValue = allowPublication()  // Extract boolean value
-
-    if (!allowPublicationValue) {
-        logger.lifecycle("[xdk] Skipping publication task, snapshotOnly=${snapshotOnlyValue} for version: '$currentVersionValue")
-    }
-    onlyIf {
-        allowPublicationValue
-    }
-
-    // Simply depend on the configured git tagging task
-    dependsOn(tasks.ensureGitTags)
-
-    doLast {
-        logger.lifecycle("""
-            [xdk] Git tagging completed via ensureGitTags task.
-            [xdk]     version: $currentVersionValue
-            [xdk]     snapshotOnly: $snapshotOnlyValue
-        """.trimIndent())
     }
 }
 

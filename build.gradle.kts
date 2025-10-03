@@ -1,6 +1,5 @@
 import XdkDistribution.Companion.DISTRIBUTION_TASK_GROUP
 import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
-import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 
 /*
  * Main build file for the XVM project, producing the XDK.
@@ -11,8 +10,6 @@ plugins {
     alias(libs.plugins.xdk.build.aggregator)
     id("org.xtclang.build.publishing")
 }
-
-// Use the centralized credential management from the publishing convention
 
 /**
  * Installation and distribution tasks that aggregate publishable/distributable included
@@ -34,24 +31,30 @@ val installWithNativeLaunchersDist by tasks.registering {
     dependsOn(xdk.task(":$name"))
 }
 
+private val xdk = gradle.includedBuild("xdk")
+private val plugin = gradle.includedBuild("plugin")
+private val includedBuildsWithPublications = listOf(xdk, plugin)
+
 val publishRemote by tasks.registering {
     group = PUBLISH_TASK_GROUP
-    description = "Publish XDK and plugin artifacts to remote repositories (GitHub Packages, Gradle Plugin Portal)."
+    description = "Publish XDK and plugin artifacts to remote repositories (GitHub Packages, Maven Central, Gradle Plugin Portal)."
     dependsOn(validateCredentials)
-    dependsOn(
-        plugin.task(":publishAllPublicationsToGitHubRepository"),
-        xdk.task(":publishMavenPublicationToGitHubRepository")
-    )
+
+    // Publish to all enabled remote repositories for all included builds with publications
+    // The :publish task will publish to all repositories enabled via properties
+    includedBuildsWithPublications.forEach { build ->
+        dependsOn(build.task(":publish"))
+    }
 }
 
 val publishLocal by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Publish XDK and plugin artifacts to local Maven repository."
-    // Publish to local Maven repository for both projects
-    dependsOn(
-        plugin.task(":publishToMavenLocal"),
-        xdk.task(":publishToMavenLocal")
-    )
+
+    // Publish to local Maven repository for all included builds with publications
+    includedBuildsWithPublications.forEach { build ->
+        dependsOn(build.task(":publishToMavenLocal"))
+    }
 }
 
 /**
@@ -63,12 +66,8 @@ val publish by tasks.registering {
     description = "Task that aggregates publish tasks for builds with publications."
     dependsOn(publishLocal, publishRemote)
 }
-
-private val xdk = gradle.includedBuild("xdk")
-private val plugin = gradle.includedBuild("plugin")
-private val includedBuildsWithPublications = listOf(xdk, plugin)
 private val publishTaskPrefixes = listOf("list", "delete")
-private val publishTaskSuffixesRemote = listOf("RemotePublications")
+
 private val publishTaskSuffixesLocal = listOf("LocalPublications")
 
 
@@ -117,20 +116,26 @@ publishTaskPrefixes.forEach { prefix ->
     }
 }
 
-
-// Validate credentials are available for publishing (GitHub + optional Plugin Portal)
 val validateCredentials by tasks.registering(ValidateCredentialsTask::class) {
     group = PUBLISH_TASK_GROUP
-    description = "Validate GitHub and Plugin Portal credentials are available for publishing"
+    description = "Validate all publishing credentials (GitHub, Maven Central, Plugin Portal, Signing) without publishing"
 
     // Use centralized credential management
-    gitHubUsername.set(xdkPublishingCredentials.gitHubUsername)
-    gitHubPassword.set(xdkPublishingCredentials.gitHubPassword)
-    enableGitHub.set(xdkPublishingCredentials.enableGitHub)
+    githubUsername.set(xdkPublishingCredentials.githubUsername)
+    githubPassword.set(xdkPublishingCredentials.githubPassword)
+    enableGithub.set(xdkPublishingCredentials.enableGithub)
+
     enablePluginPortal.set(xdkPublishingCredentials.enablePluginPortal)
     gradlePublishKey.set(xdkPublishingCredentials.gradlePublishKey)
     gradlePublishSecret.set(xdkPublishingCredentials.gradlePublishSecret)
+
+    enableMavenCentral.set(xdkPublishingCredentials.enableMavenCentral)
+    mavenCentralUsername.set(xdkPublishingCredentials.mavenCentralUsername)
+    mavenCentralPassword.set(xdkPublishingCredentials.mavenCentralPassword)
+
+    signingKeyId.set(xdkPublishingCredentials.signingKeyId)
+    signingPassword.set(xdkPublishingCredentials.signingPassword)
+    signingSecretKeyRingFile.set(xdkPublishingCredentials.signingSecretKeyRingFile)
+    signingKey.set(xdkPublishingCredentials.signingKey)
+    signingInMemoryKey.set(xdkPublishingCredentials.signingInMemoryKey)
 }
-
-// Publication listing tasks removed - use bin/list-publications.sh instead
-

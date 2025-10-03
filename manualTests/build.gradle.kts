@@ -33,7 +33,7 @@ import org.xtclang.plugin.tasks.XtcRunTask
  * PLUGIN SECTION.
  *
  * These are resolved through the Gradle version catalog mechanism. A version catalog
- * is a single source of truth for dependent artifacts for a Gradle oroject. For the XVM repo,
+ * is a single source of truth for dependent artifacts for a Gradle project. For the XVM repo,
  * there is a "global" version catalog under $compositeBuildRootDirectory/gradle/libs/libs.versions.html.
  * This makes it possible to alias artifacts to type safe (compile time knowable) hierarchical names.
  * For example, "libs.plugins.xtc" will resolve to "org.xtclang:xtc-plugin:<xvm version>".
@@ -45,7 +45,7 @@ import org.xtclang.plugin.tasks.XtcRunTask
  * }
  *
  * in your project settings, or defined in the build file (if you can, it is recommended to keep it in
- * settings (for a best-practise example, please see the xtc-template-app project), the build will look
+ * settings (for a best-practise example, please see the xtc-template-app project)), the build will look
  * for the artifact in any local caches, and if not found, then ask the mavenCentral artifact repo
  * to if it knows about it and downloads/caches it. Basically, for any artifact on which you depend,
  * you need to know group, id and version, to fully resolve it. Sometimes you are only interested in
@@ -74,8 +74,8 @@ plugins {
  * The xdk cam be retrieved with the "xdk" consumer configuration, which will look for a file/dir
  * hierarchy that contains the modules from the javatools and lib directories of an XTC installation.
  * We currently publish XDK releases as zipped artifacts in our GitHub Maven
- * repositoru (and soon also on mavenCentral after the next official release). If you want to use
- * a zipped XDK artifact, use the "xdkDistribution" depeendency instead. Again, we recommend you
+ * repository (and soon also on mavenCentral after the next official release). If you want to use
+ * a zipped XDK artifact, use the "xdkDistribution" dependency instead. Again, we recommend you
  * look at the XTC platform repository, or the XTC template app, that is a simple Hello World, to
  * understand how to build a project with XTC and Gradle.
  */
@@ -86,7 +86,7 @@ dependencies {
 /**
  * SOURCE SETS SECTION
  *
- * This configures source sets, which makes the compiler build all of the included modules.
+ * This configures source sets, which makes the compiler build all the included modules.
  * in that source set, in tasks containing that source set name (except for Main which is
  * a blank string in its tasks), e.g. compileXtc compiles the main source set, compileTestXtc
  * compiles the test source set and so on.
@@ -127,7 +127,7 @@ sourceSets {
  * are the only ones that may be necessary to care about, if you are working an XTC project build.
  * The "xtcCompile" extension contains common configuration for all XTC compilation tasks in
  * the current project. The "xtcRun" extensions contains common configuration for all XTC runner tasks
- * in a project. Every XtcCompleTask and XtcRunTask will inherit these configurations, but it's possible
+ * in a project. Every XtcCompileTask and XtcRunTask will inherit these configurations, but it's possible
  * to override any value in the extension on a per-task basis in the task configuration.
  *
  * Applying the XTC plugin to a Gradle project creates a few tasks by default. This is the pattern used
@@ -165,8 +165,8 @@ sourceSets {
  * of the XDK (./gradlew installDist), this is the only task you should need to code. If any
  * of its dependencies are gone, or have changed so that their inputs and outputs now differ,
  * it will be re-run, but otherwise, its build data will just be retrieved from the build cache.
- * "./gradlew clean" amd then "./gradlew build" is an anti-pattern, and if your build requires
- * these to work properly, that is a bug that should be reporoted to the build script author.
+ * "./gradlew clean" amd then "./gradlew build" is an antipattern, and if your build requires
+ * these to work properly, that is a bug that should be reported to the build script author.
  *
  * To see more information on why a task is re-run, skipped or retrieved from the build cache,
  * you can run Gradle with the --info flag.
@@ -187,7 +187,7 @@ xtcCompile {
     /*
      * Use the debug = true flag, either here, or on a per-task level, to suspend and allow you to attach a debugger
      * after launcher has been spawned in a child process. You can also use the system variable XTC_DEBUG=true
-     * (and optionally, XTC_DEBUG_PORT=<int>"
+     * (and optionally, XTC_DEBUG_PORT=<int>")
      */
     debug = false
 
@@ -285,7 +285,7 @@ val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
     group = "application"
 
     // The default debugger settings are debug = false, debugPort = 4711 and debugSuspend = true
-    // If you run with debugSuspend = false, you can attacha devbugger to the debugPort at any time.
+    // If you run with debugSuspend = false, you can attach a debugger to the debugPort at any time.
     //debug = true
     //debugPort = 5005
     //debugSuspend = false
@@ -303,7 +303,7 @@ val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
 val runOne by tasks.registering(XtcRunTask::class) {
     group = "application"
     description = "Runs one test as given by the property 'testName', or a default test if not set."
-    // Override debug flag from xtcRun extension here to suspend the process launched for this task, and allow attach.
+    // Override debug flag from xtcRun extension here to suspend the process launched for this task, and allow to attach.
     //debug = true
     module {
         moduleName = resolveTestNameProperty() // this syntax also has the moduleName("...") shorthand
@@ -379,7 +379,7 @@ fun resolveTestNameProperty(defaultTestName: String = "EchoTest"): String {
  * see this if you exclude manual tests from the composite build lifecycle (see root/gradle.properties) and
  * just execute ./gradlew manualTests:runParallel. Only when we are ready to launch the runner, is the
  * cascade of operations leading the source set output occur. We also know exactly which source sets
- * we have, so we don't have to maintain a list of module names, which we don't now if they exist or not.
+ * we have, so we don't have to maintain a list of module names, which we don't know if they exist or not.
  * This is also brittle, because the runner may in turn trigger the compiler, after searching through
  * the directory space for something corresponding to the module name.
  */

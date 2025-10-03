@@ -154,7 +154,7 @@ class XdkPropertiesImpl(project: Project, private val providers: ProviderFactory
             resolveExternalDirs().forEach { mergeFromDir(ext, it) }
             ext.keys.map { it.toString() }.forEach(secrets::add)
         }
-        logger.info("[properties] Internals; loaded properties (${all.size} internal, ${ext.size} external).")
+        logger.debug("[properties] Internals; loaded properties (${all.size} internal, ${ext.size} external).")
         return merge(all, ext)
     }
 
@@ -218,7 +218,7 @@ class XdkPropertiesImpl(project: Project, private val providers: ProviderFactory
         for (f in files) {
             assert(f.exists() && f.isFile)
             FileInputStream(f).use { local.load(it) }
-            logger.info("[properties] Loaded ${local.size} properties from ${f.absolutePath}")
+            logger.debug("[properties] Loaded ${local.size} properties from ${f.absolutePath}")
         }
         return merge(to, local)
     }
