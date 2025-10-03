@@ -218,7 +218,7 @@ class XdkPropertiesImpl(project: Project, private val providers: ProviderFactory
         for (f in files) {
             assert(f.exists() && f.isFile)
             FileInputStream(f).use { local.load(it) }
-            logger.info("[properties] Loaded ${local.size} properties from ${f.absolutePath}")
+            logger.debug("[properties] Loaded ${local.size} properties from ${f.absolutePath}")
         }
         return merge(to, local)
     }
