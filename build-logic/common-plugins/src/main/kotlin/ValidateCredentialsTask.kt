@@ -125,65 +125,7 @@ abstract class ValidateCredentialsTask : DefaultTask() {
             logger.lifecycle("   Status: ⏭️  Disabled (use -Porg.xtclang.publish.mavenCentral=true to enable)")
         }
 
-        // 3. Validate Signing credentials
-        logger.lifecycle("")
-        logger.lifecycle("✍️  Artifact Signing")
-
-        val keyId = signingKeyId.getOrElse("")
-        val password = signingPassword.getOrElse("")
-        val keyRingFile = signingSecretKeyRingFile.getOrElse("")
-        val key = signingKey.getOrElse("")
-        val inMemoryKey = signingInMemoryKey.getOrElse("")
-
-        logger.lifecycle("   Key ID:           ${if (keyId.isNotEmpty()) "✅ Available" else "❌ Missing"}")
-        logger.lifecycle("   Password:         ${if (password.isNotEmpty()) "✅ Available" else "❌ Missing"}")
-        logger.lifecycle("   Key Ring File:    ${if (keyRingFile.isNotEmpty()) "✅ Available ($keyRingFile)" else "⚠️  Not set"}")
-        logger.lifecycle("   In-Memory Key:    ${if (key.isNotEmpty()) "✅ Available (signing.key)" else if (inMemoryKey.isNotEmpty()) "✅ Available (signingInMemoryKey)" else "⚠️  Not set (OK for local)"}")
-
-        val hasKeyRing = keyRingFile.isNotEmpty()
-        val hasInMemoryKey = key.isNotEmpty() || inMemoryKey.isNotEmpty()
-        val signingConfigured = keyId.isNotEmpty() && password.isNotEmpty() && (hasKeyRing || hasInMemoryKey)
-
-        // Determine which repositories require signing
-        val repositoriesRequiringSigning = mutableListOf<String>()
-        if (mavenCentralEnabled) repositoriesRequiringSigning.add("Maven Central")
-        if (githubEnabled) repositoriesRequiringSigning.add("GitHub Packages (recommended)")
-
-        if (!signingConfigured) {
-            logger.lifecycle("   ⚠️  Signing not fully configured - artifacts won't be signed")
-            if (repositoriesRequiringSigning.isNotEmpty()) {
-                logger.lifecycle("   Required for: ${repositoriesRequiringSigning.joinToString(", ")}")
-            }
-
-            // Only error if Maven Central is enabled (strict requirement)
-            if (mavenCentralEnabled) {
-                hasErrors = true
-                errors.add("""
-                    |Signing credentials incomplete (REQUIRED for Maven Central)!
-                    |
-                    |Option 1 - Key Ring File (local development):
-                    |  signing.keyId=your-key-id (8-char short ID or full fingerprint)
-                    |  signing.password=your-key-password
-                    |  signing.secretKeyRingFile=/path/to/secring.gpg
-                    |
-                    |Option 2 - In-Memory Key (recommended for local/CI):
-                    |  Export: gpg --export-secret-keys --armor KEYID > signing-key.asc
-                    |  Then set in ~/.gradle/gradle.properties with escaped newlines:
-                    |  signing.keyId=your-key-id
-                    |  signing.password=your-key-password
-                    |  signing.key=-----BEGIN PGP PRIVATE KEY BLOCK-----\n...\n-----END PGP PRIVATE KEY BLOCK-----
-                    |
-                    |Note: GitHub Packages also recommends signing for security.
-                    """.trimMargin())
-            } else if (githubEnabled) {
-                logger.lifecycle("   ℹ️  Signing recommended for GitHub Packages but not required")
-            }
-        } else {
-            logger.lifecycle("   ✅ Signing fully configured")
-            logger.lifecycle("   Will sign artifacts for: ${if (repositoriesRequiringSigning.isEmpty()) "Maven Local" else repositoriesRequiringSigning.joinToString(", ")}")
-        }
-
-        // 4. Validate Gradle Plugin Portal credentials
+        // 3. Validate Gradle Plugin Portal credentials
         logger.lifecycle("")
         logger.lifecycle("🔌 Gradle Plugin Portal")
         val portalEnabled = enablePluginPortal.get()
@@ -206,11 +148,84 @@ abstract class ValidateCredentialsTask : DefaultTask() {
             logger.lifecycle("   Status: ⏭️  Disabled (use -Porg.xtclang.publish.gradlePluginPortal=true to enable)")
         }
 
-        // 5. Maven Local (always available, no credentials needed)
+        // 4. Maven Local (always available, no credentials needed)
         logger.lifecycle("")
         logger.lifecycle("💾 Maven Local")
         logger.lifecycle("   Status: ✅ Always available (no credentials needed)")
         logger.lifecycle("   Path:   ~/.m2/repository")
+
+        // 5. Validate Signing credentials (at the end, after publishing locations)
+        logger.lifecycle("")
+        logger.lifecycle("✍️  Artifact Signing")
+
+        val keyId = signingKeyId.getOrElse("")
+        val password = signingPassword.getOrElse("")
+        val keyRingFile = signingSecretKeyRingFile.getOrElse("")
+        val key = signingKey.getOrElse("")
+        val inMemoryKey = signingInMemoryKey.getOrElse("")
+
+        logger.lifecycle("   Key ID:           ${if (keyId.isNotEmpty()) "✅ Available" else "⚠️  Not set"}")
+        logger.lifecycle("   Password:         ${if (password.isNotEmpty()) "✅ Available" else "⚠️  Not set"}")
+        logger.lifecycle("   Key Ring File:    ${if (keyRingFile.isNotEmpty()) "✅ Available ($keyRingFile)" else "⚠️  Not set"}")
+        logger.lifecycle("   In-Memory Key:    ${if (key.isNotEmpty()) "✅ Available (signing.key)" else if (inMemoryKey.isNotEmpty()) "✅ Available (signingInMemoryKey)" else "⚠️  Not set"}")
+
+        val hasKeyRing = keyRingFile.isNotEmpty()
+        val hasInMemoryKey = key.isNotEmpty() || inMemoryKey.isNotEmpty()
+        val hasKeySource = hasKeyRing || hasInMemoryKey
+        // Password can be empty for passwordless keys (common with in-memory keys in CI)
+        // We just need keyId and a key source (keyRingFile or in-memory key)
+        val signingConfigured = keyId.isNotEmpty() && hasKeySource
+
+        // Determine which repositories require signing
+        val repositoriesRequiringSigning = mutableListOf<String>()
+        if (mavenCentralEnabled) repositoriesRequiringSigning.add("Maven Central")
+        if (githubEnabled) repositoriesRequiringSigning.add("GitHub Packages (recommended)")
+
+        if (!signingConfigured) {
+            // Determine what's missing
+            val missingParts = mutableListOf<String>()
+            if (keyId.isEmpty()) missingParts.add("keyId")
+            if (!hasKeySource) missingParts.add("key source (keyRingFile or in-memory key)")
+            // Note: password is optional for passwordless keys
+
+            logger.lifecycle("   ⚠️  Signing not fully configured - missing: ${missingParts.joinToString(", ")}")
+            if (password.isEmpty() && hasKeySource) {
+                logger.lifecycle("   ℹ️  Password not set (OK if using passwordless key)")
+            }
+            if (repositoriesRequiringSigning.isNotEmpty()) {
+                logger.lifecycle("   Recommended for: ${repositoriesRequiringSigning.joinToString(", ")}")
+            }
+
+            // Only error if Maven Central is enabled (strict requirement)
+            if (mavenCentralEnabled) {
+                hasErrors = true
+                errors.add("""
+                    |❌ Signing credentials required for Maven Central but incomplete!
+                    |   Missing: ${missingParts.joinToString(", ")}
+                    |
+                    |Option 1 - Key Ring File (local development):
+                    |  signing.keyId=your-key-id (8-char short ID or full fingerprint)
+                    |  signing.password=your-key-password
+                    |  signing.secretKeyRingFile=/path/to/secring.gpg
+                    |
+                    |Option 2 - In-Memory Key (recommended for CI):
+                    |  Export: gpg --export-secret-keys --armor KEYID > signing-key.asc
+                    |  Then set in ~/.gradle/gradle.properties with escaped newlines:
+                    |  signing.keyId=your-key-id
+                    |  signing.password=your-key-password
+                    |  signing.key=-----BEGIN PGP PRIVATE KEY BLOCK-----\n...\n-----END PGP PRIVATE KEY BLOCK-----
+                    """.trimMargin())
+            } else if (githubEnabled) {
+                logger.lifecycle("   ℹ️  Signing recommended for GitHub Packages but not strictly required")
+            } else {
+                logger.lifecycle("   ℹ️  Signing not required for currently enabled repositories")
+            }
+        } else {
+            logger.lifecycle("   ✅ Signing fully configured")
+            if (repositoriesRequiringSigning.isNotEmpty()) {
+                logger.lifecycle("   Will sign artifacts for enabled publishers: ${repositoriesRequiringSigning.joinToString(", ")}")
+            }
+        }
 
         // Final summary
         logger.lifecycle("")
