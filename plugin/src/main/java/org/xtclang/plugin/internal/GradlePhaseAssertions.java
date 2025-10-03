@@ -77,21 +77,19 @@ public final class GradlePhaseAssertions {
      * @param dataDescription description of the data for error messages
      */
     public static void validateConfigurationTimeCapture(final Object data, final String dataDescription) {
-        if (data == null) {
-            throw new IllegalStateException("Configuration-time captured data is null: " + dataDescription + 
-                ". This may indicate improper configuration cache setup.");
-        }
-        
+        switch (data) {
+        case null ->
+                throw new IllegalStateException("Configuration-time captured data is null: " + dataDescription + ". This may indicate improper configuration cache setup.");
+
         // Ensure data is of a serializable type for configuration cache
-        if (data instanceof Project) {
-            throw new IllegalStateException("Project instance captured at configuration time: " + dataDescription + 
-                ". This will break configuration cache. Use Provider patterns instead.");
-        }
-        
+        case final Project _ ->
+                throw new IllegalStateException("Project instance captured at configuration time: " + dataDescription + ". This will break configuration cache. Use Provider patterns instead.");
+
         // Add more checks for common non-serializable types
-        if (data instanceof org.gradle.api.logging.Logger) {
-            throw new IllegalStateException("Logger instance captured at configuration time: " + dataDescription + 
-                ". This will break configuration cache. Use task.getLogger() during execution instead.");
+        case final org.gradle.api.logging.Logger _ ->
+                throw new IllegalStateException("Logger instance captured at configuration time: " + dataDescription + ". This will break configuration cache. Use task.getLogger() during execution instead.");
+        default -> {
+        }
         }
     }
 }

@@ -1,6 +1,5 @@
 package org.xtclang.plugin;
 
-import static org.xtclang.plugin.XtcBuildException.resolveEllipsis;
 import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_VERBOSE_LOGGING_OVERRIDE;
 
 import java.net.URL;
@@ -23,8 +22,7 @@ import org.gradle.api.plugins.ExtraPropertiesExtension;
 import org.gradle.api.tasks.TaskContainer;
 
 public abstract class ProjectDelegate<T, R> {
-    // Project reference marked transient to avoid configuration cache serialization
-    protected final transient Project project;
+    protected final Project project;
     protected final String projectName;
     protected final ObjectFactory objects;
     protected final Logger logger;
@@ -37,19 +35,14 @@ public abstract class ProjectDelegate<T, R> {
     protected final ProjectLayout layout;
     protected final DirectoryProperty buildDir;
     protected final ExtraPropertiesExtension extra;
-    protected final transient ExtensionContainer extensions;
+    protected final ExtensionContainer extensions;
     protected final VersionCatalogsExtension versionCatalogExtension;
 
     @SuppressWarnings("unused")
     protected ProjectDelegate(final Project project) {
         this(project, null);
     }
-
-    protected ProjectDelegate(final Project project, final String taskName) {
-        this(project, taskName, null);
-    }
-
-    protected ProjectDelegate(final Project project, final String taskName, final AdhocComponentWithVariants component) {
+    protected ProjectDelegate(final Project project, final AdhocComponentWithVariants component) {
         this.project = project;
         this.projectName = project.getName();
         this.objects = project.getObjects();
@@ -66,9 +59,6 @@ public abstract class ProjectDelegate<T, R> {
         this.versionCatalogExtension = extensions.findByType(VersionCatalogsExtension.class);
         this.component = component;
         this.pluginUrl = getClass().getProtectionDomain().getCodeSource().getLocation();
-
-        // add a property to the existing environment, project.setProperty assumes the property exists already
-        // Removed logPrefix property - using hardcoded [plugin] instead
     }
 
     @SuppressWarnings("UnusedReturnValue")
@@ -103,7 +93,6 @@ public abstract class ProjectDelegate<T, R> {
     public boolean showStackTraces() {
         return startParameter.getShowStacktrace() != ShowStacktrace.INTERNAL_EXCEPTIONS;
     }
-
 
     public ObjectFactory getObjects() {
         return objects;

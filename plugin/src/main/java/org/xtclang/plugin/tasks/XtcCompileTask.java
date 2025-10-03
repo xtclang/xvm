@@ -2,7 +2,6 @@ package org.xtclang.plugin.tasks;
 
 import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_CLASS_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_LAUNCHER_NAME;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILE_MAIN_TASK_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.FileUtils.isValidXtcModuleSafe;
 
 import java.io.File;
@@ -22,7 +21,6 @@ import org.gradle.api.file.FileTree;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
-import org.gradle.api.provider.SetProperty;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
@@ -34,30 +32,31 @@ import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskAction;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xtclang.plugin.XtcCompilerExtension;
-import org.xtclang.plugin.XtcPluginUtils.FileUtils;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.launchers.CommandLine;
 
 @CacheableTask
 public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtension {
     // Default values for inputs and outputs below are inherited from extension, can be reset per task
-    protected final Property<Boolean> disableWarnings;
-    protected final Property<Boolean> strict;
-    protected final Property<Boolean> hasQualifiedOutputName;
-    protected final Property<Boolean> hasVersionedOutputName;
-    protected final Property<String> xtcVersion;
-    protected final Property<Boolean> rebuild;
+    protected final Property<@NotNull Boolean> disableWarnings;
+    protected final Property<@NotNull Boolean> strict;
+    protected final Property<@NotNull Boolean> hasQualifiedOutputName;
+    protected final Property<@NotNull Boolean> hasVersionedOutputName;
+    protected final Property<@NotNull String> xtcVersion;
+    protected final Property<@NotNull Boolean> rebuild;
 
     // Per-task configuration properties only.
-    private final ListProperty<String> outputFilenames;
+    private final ListProperty<@NotNull String> outputFilenames;
     
     // Configuration-time captured data to avoid Project references during execution
-    private final Provider<Directory> projectDirectory;
-    private volatile String cachedCompileSourceSetName;
-    private volatile Directory cachedResourceDirectory;
-    private volatile Directory cachedOutputDirectory;
-    private volatile Set<File> cachedSourceDirectories;
+    private final Provider<@NotNull Directory> projectDirectory;
+    private final String cachedCompileSourceSetName;
+    private final Directory cachedResourceDirectory;
+    private final Directory cachedOutputDirectory;
+    private final Set<File> cachedSourceDirectories;
 
     /**
      * Create an XTC Compile task. This goes through the Gradle build script, and task creation through
@@ -69,6 +68,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
      * so that Gradle will correctly instantiate the task with build script reference (which is what happens
      * when you instantiate it from the ObjectFactory in a project):
      */
+    @SuppressWarnings("ConstructorNotProtectedInAbstractClass")
     @Inject
     public XtcCompileTask(final Project project, final SourceSet sourceSet) {
         // the compile task name should be determined by its source set
@@ -94,20 +94,6 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         this.hasVersionedOutputName = objects.property(Boolean.class).convention(ext.getVersionedOutputName());
         this.rebuild = objects.property(Boolean.class).convention(ext.getRebuild());
         this.xtcVersion = objects.property(String.class).convention(ext.getXtcVersion());
-    }
-
-
-    private static String calculateSourceSetName(final String taskName) {
-        if (XTC_COMPILE_MAIN_TASK_NAME.equals(taskName)) {
-            return SourceSet.MAIN_SOURCE_SET_NAME;
-        }
-        final int compileIndex = taskName.indexOf("compile");
-        final int xtcIndex = taskName.indexOf("Xtc");
-        if (compileIndex == -1 || xtcIndex == -1) {
-            throw new GradleException("Failed to resolve source set name from compile task '" + taskName + "'");
-        }
-        final String sourceSetName = taskName.substring(compileIndex + "compile".length(), xtcIndex);
-        return sourceSetName.toLowerCase();
     }
 
     private String getCompileSourceSetName() {
@@ -152,56 +138,56 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
 
     @SuppressWarnings("unused") // No, IntelliJ. It's not.
-    public void outputFilename(final Provider<String> from, final Provider<String> to) {
+    public void outputFilename(final Provider<@NotNull String> from, final Provider<@NotNull String> to) {
         outputFilenames.add(from);
         outputFilenames.add(to);
     }
 
     @Input
-    ListProperty<String> getOutputFilenames() {
+    ListProperty<@NotNull String> getOutputFilenames() {
         return outputFilenames;
     }
 
     @Input
     @Override
-    public Property<Boolean> getQualifiedOutputName() {
+    public Property<@NotNull Boolean> getQualifiedOutputName() {
         return hasQualifiedOutputName;
     }
 
     @Input
     @Override
-    public Property<Boolean> getVersionedOutputName() {
+    public Property<@NotNull Boolean> getVersionedOutputName() {
         return hasVersionedOutputName;
     }
 
     @Optional
     @Input
     @Override
-    public Property<String> getXtcVersion() {
+    public Property<@NotNull String> getXtcVersion() {
         return xtcVersion;
     }
 
     @Input
     @Override
-    public Property<Boolean> getStrict() {
+    public Property<@NotNull Boolean> getStrict() {
         return strict;
     }
 
     @Input
     @Override
-    public Property<Boolean> getRebuild() {
+    public Property<@NotNull Boolean> getRebuild() {
         return rebuild;
     }
 
     @Input
     @Override
-    public Property<Boolean> getDisableWarnings() {
+    public Property<@NotNull Boolean> getDisableWarnings() {
         return disableWarnings;
     }
 
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
-    Provider<Directory> getResourceDirectory() {
+    Provider<@NotNull Directory> getResourceDirectory() {
         // TODO: This is wrong. The compile task should not be the one depending on resources src, but resources build.
         //   But that is java behavior, so make sure at least we get the resource input dependency.
         return objects.directoryProperty().value(getResourceDirectoryInternal());
@@ -212,7 +198,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
 
     @OutputDirectory
-    Provider<Directory> getOutputDirectory() {
+    Provider<@NotNull Directory> getOutputDirectory() {
         // TODO We can make this configurable later.
         return objects.directoryProperty().value(getOutputDirectoryInternal());
     }
@@ -225,7 +211,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
      * Returns all XTC source files (including subdirectory files) for incremental build tracking.
      * This ensures Gradle detects changes in subdirectory .x files that are part of the module
      * compilation unit, even though only top-level module files are passed to the XTC compiler.
-     * 
+     * <p>
      * This method fixes the incremental build issue where changes to subdirectory .x files 
      * (like xenia/BundlePool.x) were not triggering recompilation of the parent module.
      */
@@ -323,7 +309,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
 
     private Set<File> resolveXtcSourceFiles() {
-        final var resolvedSources = getSource().filter(file -> isTopLevelXtcSourceFile(file)).getFiles();
+        final var resolvedSources = getSource().filter(this::isTopLevelXtcSourceFile).getFiles();
         logger.info("[plugin] Resolved top level sources (should be module definitions, or XTC will fail later): {}", resolvedSources);
         return resolvedSources;
     }

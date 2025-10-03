@@ -2,13 +2,10 @@ package org.xtclang.plugin;
 
 import static org.xtclang.plugin.XtcBuildException.resolveEllipsis;
 
-import java.io.Serial;
-
 import org.gradle.api.GradleException;
 
+@SuppressWarnings("serial")
 public class XtcBuildRuntimeException extends GradleException {
-    @Serial
-    private static final long serialVersionUID = 1L;
 
     @SuppressWarnings("unused")
     XtcBuildRuntimeException(final String msg) {

@@ -83,7 +83,7 @@ env:
   ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
 
   # Publishing credentials
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}k1ry key
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GRADLE_PUBLISH_KEY: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY }}
   GRADLE_PUBLISH_SECRET: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET }}
 
@@ -236,7 +236,7 @@ jobs:
           inspect_gradle_cache "before clean, check and distZip"
           ./gradlew ${{ env.gradle_options }} clean --info
           ./gradlew ${{ env.gradle_options }} check -Porg.xtclang.java.lint=true -Porg.xtclang.java.warningsAsErrors=false -Porg.xtclang.java.test.stdout=true
-          ./gradlew ${{ env.gradle_options }} :xdk:distZip --info
+          ./gradlew ${{ env.gradle_options }} :xdk:distZip
           
           # Run manual tests inline if enabled (avoids cache rebuild)
           if [ "${{ env.run_manual_tests }}" != "true" ]; then
