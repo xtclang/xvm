@@ -1,1 +1,1 @@
-rootProject.name = "common-plugins"
+// No rootProject.name needed - use directory name
