@@ -2,12 +2,17 @@ module test3.examples.org {
 
     import ecstasy.io.IOException;
 
-    void run() {
-        @Inject Console console;
+    @Inject Console console;
 
+    void run() {
+        testTry1();
+        console.print(testTry2());
+    }
+
+    void testTry1() {
         TRY:
         try {
-            testThrow(1);
+            testThrow(0);
         } catch (IOException e) {
             console.print("1) IOException caught");
         } catch (Unsupported e) {
@@ -17,23 +22,33 @@ module test3.examples.org {
             console.print("1) Finally: ", True);
             console.print(TRY.exception?.text : "no exception");
         }
-
-        for (Int i : 0..2) {
-            try {
-                testThrow(i);
-            } catch (IOException e) {
-                console.print("2) IOException caught");
-                continue;
-            } catch (Unsupported e) {
-                console.print("2) Unsupported caught");
-                break;
-//            } finally {
-//                console.print("Done");
-            }
-        }
-
-        console.print("Done normally");
     }
+
+    Int testTry2() {
+        try {
+            for (Int i : 0..2) {
+                try {
+                    testThrow(i);
+                } catch (IOException e) {
+                    console.print("2) IOException caught");
+                    continue;
+                } catch (Unsupported e) {
+                    console.print("2) Unsupported caught");
+                    return i + 10;
+                } finally {
+                    console.print("2) Finally: ", True);
+                    console.print(i);
+                    if (i == 2) {
+                        return i + 40;
+                    }
+                }
+            }
+            return -1;
+        } finally {
+            console.print("2) Done");
+        }
+    }
+
     void testThrow(Int i) {
         if (i < 0) {
             return;

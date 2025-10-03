@@ -123,7 +123,7 @@ public class FinallyStart
         java.lang.classfile.Label labelCatch = code.newLabel();
         code.exceptionCatch(scopeGuarded.startLabel, scopeGuarded.endLabel, labelCatch, CD_Throwable);
 
-        int slotRethrow = bctx.scope.getSynthetic("$rethrow");
+        int    slotRethrow = bctx.scope.getRethrow();
         assert slotRethrow >= 0;
         code.labelBinding(labelCatch)
             .astore(slotRethrow)
@@ -134,7 +134,7 @@ public class FinallyStart
 
         // initialize "try.exception" synthetic variable
         // (TODO: we only need it if the m_nVar variable is used)
-        Slot slotEx = bctx.introduceVar(code, m_nVar, bctx.typeSystem.pool().typeException१(), "");
+        Slot slotEx = bctx.introduceVar(code, m_nVar, bctx.pool().typeException१(), "");
 
         java.lang.classfile.Label labelNull = code.newLabel();
         java.lang.classfile.Label labelEnd  = code.newLabel();

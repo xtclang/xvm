@@ -178,7 +178,7 @@ public class BuildContext {
     /**
      * Prepare the compilation.
      */
-    public void enterMethod(CodeBuilder code) {
+    public void enterMethod(CodeBuilder code, int synthSlots) {
         lineNumber = 1; // XVM ops are 0 based; Java is 1-based
         scope      = new Scope(this, code);
         code
@@ -207,7 +207,7 @@ public class BuildContext {
             int          slot      = code.parameterSlot(extraArgs + i); // compensate for implicits
 
             code.localVariable(slot, name, paramDesc.cd, scope.startLabel, scope.endLabel);
-            scope.topVar = Math.max(scope.topVar, varIndex);
+            scope.topVar = Math.max(scope.topVar, varIndex + 1);
 
             switch (paramDesc.flavor) {
             case Specific, Widened, Primitive, SpecificWithDefault, WidenedWithDefault:
@@ -224,11 +224,9 @@ public class BuildContext {
             }
         }
 
-        // compute the tailSlot
-        // TODO: this will be done using a pass over all the ops to compute the total number
-        //       of Java slots used by the numbered XTC registers
-        // For now, we don't mind to overshoot... ("this", "$ctx", ...)
-        tailSlot = (isFunction ? 0 : 1) + extraArgs + methodStruct.getMaxVars() * 2;
+        // compute the tailSlot; we don't mind to overshoot by assuming the worst case - two slots
+        // per var plus ("this", "$ctx", ...) and synthetics
+        tailSlot = (isFunction ? 0 : 1) + extraArgs + methodStruct.getMaxVars() * 2 + synthSlots;
     }
 
     /**
@@ -255,7 +253,7 @@ public class BuildContext {
         scope = prevScope.exit();
 
         // clear up the old scope's entries
-        slots.entrySet().removeIf(entry -> entry.getKey() > scope.topVar);
+        slots.entrySet().removeIf(entry -> entry.getKey() >= scope.topVar);
         return prevScope;
     }
 

@@ -117,8 +117,36 @@ public class Jump
 
     // ----- JIT support ---------------------------------------------------------------------------
 
+    /**
+     * @return true iff this Jump op needs to go first to the finally block
+     */
+    public boolean shouldCallFinally() {
+        return m_fCallFinally;
+    }
+
+    /**
+     * Replace the address of the jump with an address of "finally" block and return the original
+     * jump address.
+     */
+    public int exchangeJump(BuildContext bctx, CodeBuilder code, int nFinAddr) {
+        assert m_fCallFinally;
+
+        int nOrigJumpAddr = getAddress() + m_ofJmp;
+
+        m_ofJmp = nFinAddr - getAddress();
+
+        return m_nOrigJump = nOrigJumpAddr;
+    }
+
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
+        if (m_fCallFinally) {
+            // $jumpN = true;
+            int slotJump = bctx.scope.getSynthetic("$jump" + m_nOrigJump, true);
+            assert slotJump != -1;
+            code.iconst_1()
+                .istore(slotJump);
+        }
         if (m_ofJmp > 1) {
             code.goto_(bctx.ensureLabel(code, getAddress() + m_ofJmp));
         } else {
@@ -133,4 +161,5 @@ public class Jump
     protected transient int     m_ixBaseGuard;
     protected transient int     m_nJumpToScope;
     protected transient int     m_cPopGuards;
+    protected transient int     m_nOrigJump;
 }

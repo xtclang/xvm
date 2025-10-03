@@ -1,5 +1,7 @@
 package org.xvm.javajit.builders;
 
+import java.lang.StringBuilder;
+
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.CodeBuilder;
@@ -10,8 +12,10 @@ import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 import java.lang.constant.MethodTypeDesc;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +29,7 @@ import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpReturn;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
@@ -37,6 +42,11 @@ import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+
+import org.xvm.asm.op.FinallyEnd;
+import org.xvm.asm.op.FinallyStart;
+import org.xvm.asm.op.GuardAll;
+import org.xvm.asm.op.Jump;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.BuildContext.Slot;
@@ -1244,19 +1254,21 @@ public class CommonBuilder
     protected void generateCode(String className, MethodTypeDesc md, BuildContext bctx,
                                 CodeBuilder code) {
 
-        bctx.enterMethod(code);
-
         String moduleName = thisId.getModuleConstant().getName();
         if (Arrays.stream(TEST_SET).anyMatch(name ->
                     className.contains(name) || moduleName.contains(name))) {
             Op[] ops = bctx.methodStruct.getOps();
+
+            int synthSlots = preprocess(bctx, ops, code);
+
+            bctx.enterMethod(code, synthSlots);
 
             for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
                 try {
                     ops[iPC].build(bctx, code);
                 } catch (Throwable e) {
                     MethodStructure struct = bctx.methodStruct;
-                    java.lang.StringBuilder sb = new java.lang.StringBuilder();
+                    StringBuilder sb = new StringBuilder();
                     sb.append(className)
                       .append('.')
                       .append(struct.getIdentityConstant().getName())
@@ -1275,6 +1287,7 @@ public class CommonBuilder
                         "op=" + Op.toName(ops[iPC].getOpCode()) + "\n" + sb, e);
                 }
             }
+            bctx.exitMethod(code);
         } else {
             if (SKIP_SET.add(className)) {
                 System.err.println("*** Skipping code gen for " + className);
@@ -1282,7 +1295,169 @@ public class CommonBuilder
             defaultLoad(code, md.returnType());
             addReturn(code, md.returnType());
         }
-        bctx.exitMethod(code);
+    }
+
+    /**
+     * Preprocess the ops and collect all necessary information to produce the code for "finally"
+     * blocks.
+     *
+     * For every GUARD_ALL - FINALLY - E_FINALLY block we create synthetic variables to generate
+     * conditional jumps as necessary. As an example, for a block:
+     * <pre><code>
+     *  Loop:
+     *    while (True) {
+     *      try {
+     *          return foo();
+     *      } catch (Exception1 e1) {
+     *          bar1();
+     *          continue;
+     *      } catch (ExceptionN eN) {
+     *          barN();
+     *          break;
+     *      } finally {
+     *          fin();
+     *      }
+     *   }
+     * </code></pre>
+     *
+     * we produce the bytecode that look like the following pseudo code:
+     *
+     *  <pre><code>
+     *     Throwable $rethrow  = null;
+     *     boolean   $jump1    = false;
+     *     boolean   $jump2    = false;
+     *     boolean   $doReturn = false;
+     *     R1        $r1;
+     *     try {
+     *         try {
+     *             $r1 = foo();
+     *             $doReturn = true;
+     *             GOTO Fin:
+     *         } catch (Exception1 e1) {
+     *             $rethrow = e1;
+     *             bar1();
+     *             $jump1 = true;
+     *             GOTO Fin:
+     *         } catch (ExceptionN eN) {
+     *             $rethrow = eN;
+     *             barn();
+     *             $jump2 = true;
+     *             GOTO Fin:
+     *         }
+     *     } catch (Throwable $t) {
+     *         $rethrow = $t;
+     *     }
+     *
+     *  Fin:
+     *     fin();
+     *
+     *     if ($rethrow != null) throw $rethrow
+     *     if ($jump1) GOTO Loop.Continue
+     *     if ($jump2) GOTO Loop.Exit
+     *     if ($doReturn) return $r1
+     * </code></pre>
+     *
+     * @return the max number of the synthetic Java slots that the code generation could use
+     */
+    private int preprocess(BuildContext bctx, Op[] ops, CodeBuilder code) {
+        Deque<Integer>       guardStack    = null;
+        Deque<List<Integer>> jumpAddrStack = null;
+        Deque<List<Integer>> jumpDestStack = null;
+
+        int            guard      = -1;
+        List<Integer>  jumpsAddr  = null; // the addresses of Jump ops
+        List<Integer>  jumpsDest  = null; // the addresses of jump destinations
+        boolean        doReturn   = false;
+        int            synthSlots = 0;
+        for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
+            switch (ops[iPC]) {
+            case GuardAll _:
+                if (guard < 0) {
+                    guardStack    = new ArrayDeque<>();
+                    jumpAddrStack = new ArrayDeque<>();
+                    jumpDestStack = new ArrayDeque<>();
+                } else {
+                    guardStack.push(guard);
+                    jumpAddrStack.push(jumpsAddr);
+                    jumpDestStack.push(jumpsDest);
+                }
+                jumpsAddr = new ArrayList<>();
+                jumpsDest = new ArrayList<>();
+                guard     = iPC;
+
+                synthSlots++; // "$rethrow" allocation
+                break;
+
+            case Jump jump:
+                if (jump.shouldCallFinally()) {
+                    jumpsAddr.add(iPC);
+                }
+                break;
+
+            case OpReturn ret:
+                if (ret.shouldCallFinally()) {
+                    jumpsAddr.add(iPC);
+                }
+                break;
+
+            case FinallyStart _:
+                if (!jumpsAddr.isEmpty()) {
+                    for (int jumpAddr : jumpsAddr) {
+                        switch (ops[jumpAddr]) {
+                        case Jump jump:
+                            jumpsDest.add(jump.exchangeJump(bctx, code, iPC));
+                            break;
+                        case OpReturn ret:
+                            ret.registerJump(iPC);
+                            doReturn = true;
+                            break;
+                        default:
+                             throw new IllegalStateException();
+                        }
+                    }
+                // all the jump ops within the finally block are handled by the parent "finally"
+                jumpsAddr = jumpAddrStack.isEmpty()
+                        ? new ArrayList<>()
+                        : jumpAddrStack.pop();
+                }
+                break;
+
+            case FinallyEnd finallyEnd:
+                GuardAll guardAll = (GuardAll) ops[guard];
+                guard = guardStack.isEmpty()
+                        ? -1
+                        : guardStack.pop();
+
+                // we use a synthetic boolean per jump, a boolean for "$doReturn" and
+                // all the necessary slots for the return values
+                synthSlots += jumpsDest.size();
+
+                // only the very top GuardAll allocates the return values
+                guardAll.registerJumps(jumpsDest, doReturn && guard == -1);
+
+                jumpsDest = jumpDestStack.isEmpty()
+                        ? new ArrayList<>()
+                        : jumpDestStack.pop();
+                if (guard == -1) {
+                    doReturn = false;
+                }
+
+                if (iPC == ops.length - 1 || !ops[iPC + 1].isReachable()) {
+                    finallyEnd.setCompletes(false);
+                }
+                break;
+
+            default:
+                break;
+            }
+        }
+        if (doReturn) {
+            JitMethodDesc jmd = bctx.jmd;
+            synthSlots += 2 + (jmd.isOptimized
+                        ? jmd.optimizedReturns.length * 2 // assume the worst case - two slots per
+                        : jmd.standardReturns.length);
+        }
+        return synthSlots;
     }
 
     private final static String[] TEST_SET = new String[] {
