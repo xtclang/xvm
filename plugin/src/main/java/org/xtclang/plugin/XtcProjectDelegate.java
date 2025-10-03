@@ -607,10 +607,10 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
     private void createResolutionStrategy() {
         configs.all(config -> {
-            logger.info("[plugin] Config '{}'; evaluating dependency resolutions", config.getName());
+            logger.debug("[plugin] Config '{}'; evaluating dependency resolutions", config.getName());
             config.getResolutionStrategy().eachDependency(dependency -> {
                 final var request = dependency.getRequested();
-                logger.info("[plugin] Config '{}'    Requests dependency (artifact: {}, moduleId: {})",
+                logger.debug("[plugin] Config '{}'    Requests dependency (artifact: {}, moduleId: {})",
                     config.getName(), requestToNotation(request), request.getModule());
             });
         });

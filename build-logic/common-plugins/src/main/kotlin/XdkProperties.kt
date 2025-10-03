@@ -154,7 +154,7 @@ class XdkPropertiesImpl(project: Project, private val providers: ProviderFactory
             resolveExternalDirs().forEach { mergeFromDir(ext, it) }
             ext.keys.map { it.toString() }.forEach(secrets::add)
         }
-        logger.info("[properties] Internals; loaded properties (${all.size} internal, ${ext.size} external).")
+        logger.debug("[properties] Internals; loaded properties (${all.size} internal, ${ext.size} external).")
         return merge(all, ext)
     }
 

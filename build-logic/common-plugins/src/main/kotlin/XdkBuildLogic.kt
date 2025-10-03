@@ -25,7 +25,7 @@ class XdkBuildLogic(project: Project) : XdkProjectBuildLogic(project) {
     }
 
     private val xdkProperties: XdkProperties by lazy {
-        logger.info("[build-logic] Created lazy XDK Properties for project ${project.name}")
+        logger.debug("[build-logic] Created lazy XDK Properties for project ${project.name}")
         XdkPropertiesImpl(project)
     }
 
