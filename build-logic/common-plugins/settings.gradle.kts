@@ -1,1 +1,9 @@
-// No rootProject.name needed - use directory name
+pluginManagement {
+    includeBuild("../settings-plugins")
+}
+
+plugins {
+    id("org.xtclang.build.common")
+}
+
+rootProject.name = "common-plugins"
