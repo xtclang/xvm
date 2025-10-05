@@ -394,6 +394,7 @@ public class ForStatement
                 if (init.isEmpty() && cConds == 0 && cUpdates == 0 &&
                         block.getStatements().isEmpty()) {
                     log(errs, Severity.ERROR, Compiler.INFINITE_LOOP);
+                    errs.merge();
                     return null;
                 }
                 ctx = ctx.enterInfiniteLoop();
