@@ -18,9 +18,7 @@
 xdk = "0.0.0-PLACEHOLDER"
 xtc-plugin = "0.0.0-PLACEHOLDER"
 group-xdk = "org.xtclang"
-group-xtc-plugin = "org.xtclang"
 
-kotlin = "2.1.20"  # Kotlin 2.1.20+ required for Java 23 support
 download = "5.6.0"
 gradle-portal-publish = "2.0.0"
 sonatype-publish = "2.0.0"

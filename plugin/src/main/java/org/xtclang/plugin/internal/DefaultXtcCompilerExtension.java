@@ -7,6 +7,7 @@ import org.gradle.api.provider.Property;
 
 import org.jetbrains.annotations.NotNull;
 
+import org.xtclang.plugin.ProjectDelegate;
 import org.xtclang.plugin.XtcCompilerExtension;
 
 public class DefaultXtcCompilerExtension extends DefaultXtcLauncherTaskExtension implements XtcCompilerExtension {
@@ -38,7 +39,10 @@ public class DefaultXtcCompilerExtension extends DefaultXtcLauncherTaskExtension
         this.strict = objects.property(Boolean.class).convention(false);
         this.hasQualifiedOutputName = objects.property(Boolean.class).convention(false);
         this.hasVersionedOutputName = objects.property(Boolean.class).convention(false);
-        this.stamp = objects.property(String.class);
+
+        // Set default xtcVersion from plugin-build-info.properties
+        final var defaultXdkVersion = ProjectDelegate.readXdkVersion();
+        this.stamp = objects.property(String.class).convention(defaultXdkVersion);
     }
 
     @Override

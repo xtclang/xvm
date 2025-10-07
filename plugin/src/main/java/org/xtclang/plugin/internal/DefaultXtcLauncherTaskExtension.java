@@ -1,6 +1,6 @@
 package org.xtclang.plugin.internal;
 
-import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_DEFAULT_JVM_ARGS_RESOURCE_PATH;
+import static org.xtclang.plugin.XtcPluginConstants.PLUGIN_BUILD_INFO_RESOURCE_PATH;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -164,7 +164,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     }
 
     private static List<String> loadDefaultJvmArgs() {
-        try (final var inputStream = DefaultXtcLauncherTaskExtension.class.getResourceAsStream(XDK_CONFIG_DEFAULT_JVM_ARGS_RESOURCE_PATH)) {
+        try (final var inputStream = DefaultXtcLauncherTaskExtension.class.getResourceAsStream(PLUGIN_BUILD_INFO_RESOURCE_PATH)) {
             final var props = new java.util.Properties();
             props.load(inputStream);
             return List.of(props.getProperty("defaultJvmArgs").split(","));

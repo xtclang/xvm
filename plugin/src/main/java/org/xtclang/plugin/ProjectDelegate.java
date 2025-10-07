@@ -1,10 +1,14 @@
 package org.xtclang.plugin;
 
+import static org.xtclang.plugin.XtcPluginConstants.PLUGIN_BUILD_INFO_FILENAME;
+import static org.xtclang.plugin.XtcPluginConstants.PLUGIN_BUILD_INFO_RESOURCE_PATH;
 import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_VERBOSE_LOGGING_OVERRIDE;
 
 import java.net.URL;
+import java.util.Properties;
 
 import org.gradle.StartParameter;
+import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.ConfigurationContainer;
@@ -38,6 +42,10 @@ public abstract class ProjectDelegate<T, R> {
     protected final ExtensionContainer extensions;
     protected final VersionCatalogsExtension versionCatalogExtension;
 
+    // Cached XDK version and semantic version read from plugin-build-info.properties (read once at construction)
+    private final String xdkVersion;
+    private final String xdkSemanticVersion;
+
     @SuppressWarnings("unused")
     protected ProjectDelegate(final Project project) {
         this(project, null);
@@ -59,6 +67,10 @@ public abstract class ProjectDelegate<T, R> {
         this.versionCatalogExtension = extensions.findByType(VersionCatalogsExtension.class);
         this.component = component;
         this.pluginUrl = getClass().getProtectionDomain().getCodeSource().getLocation();
+
+        // Read XDK version once at construction time and compute semantic version
+        this.xdkVersion = readXdkVersionFromBuildInfo();
+        this.xdkSemanticVersion = "org.xtclang:" + projectName + ':' + xdkVersion;
     }
 
     @SuppressWarnings("UnusedReturnValue")
@@ -137,5 +149,78 @@ public abstract class ProjectDelegate<T, R> {
             return exts.create(name, clazz, project);
         }
         return exts.getByType(clazz);
+    }
+
+    /**
+     * Get the cached XDK version read from plugin-build-info.properties.
+     * This is read once at construction time and cached for the lifetime of the delegate.
+     *
+     * @return the XDK version
+     */
+    public String getXdkVersion() {
+        return xdkVersion;
+    }
+
+    /**
+     * Get the cached semantic version for this project.
+     * Format: org.xtclang:&lt;projectName&gt;:&lt;xdkVersion&gt;
+     * This is computed once at construction time and cached for the lifetime of the delegate.
+     *
+     * @return the semantic version string
+     */
+    public String getXdkSemanticVersion() {
+        return xdkSemanticVersion;
+    }
+
+    /**
+     * Read the XDK version from the plugin's build-info.properties resource.
+     * This is called once at construction time - use getXdkVersion() to access the cached value.
+     *
+     * @return the XDK version
+     * @throws GradleException if the version cannot be read
+     */
+    private String readXdkVersionFromBuildInfo() {
+        final var version = readXdkVersion();
+        logger.info("[plugin] Read XDK version from {}: {}", PLUGIN_BUILD_INFO_FILENAME, version);
+        return version;
+    }
+
+    /**
+     * Static utility to read the XDK version from the plugin's build-info.properties.
+     * This reads directly from the classpath resource without needing a ProjectDelegate instance.
+     *
+     * @return the XDK version
+     * @throws GradleException if the version cannot be read
+     */
+    public static String readXdkVersion() {
+        try (final var resourceStream = ProjectDelegate.class.getResourceAsStream(PLUGIN_BUILD_INFO_RESOURCE_PATH)) {
+            if (resourceStream == null) {
+                throw new IllegalStateException("Cannot find " + PLUGIN_BUILD_INFO_FILENAME + " in plugin JAR");
+            }
+
+            final var props = new Properties();
+            props.load(resourceStream);
+            final var version = props.getProperty("xdk.version");
+
+            if (version == null || version.isBlank()) {
+                throw new IllegalStateException("xdk.version not found in " + PLUGIN_BUILD_INFO_FILENAME);
+            }
+
+            return version;
+        } catch (final Exception e) {
+            throw new GradleException("[plugin] FATAL: Plugin build is broken - cannot read XDK version: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Get the semantic version string for a project using the XDK version from build-info.properties.
+     * Format: org.xtclang:&lt;projectName&gt;:&lt;xdkVersion&gt;
+     *
+     * @param projectName the name of the project
+     * @return the semantic version string
+     * @throws GradleException if the XDK version cannot be read
+     */
+    public static String getSemanticVersion(final String projectName) {
+        return "org.xtclang:" + projectName + ':' + readXdkVersion();
     }
 }

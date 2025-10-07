@@ -62,8 +62,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
 
         if (task.hasVerboseLogging()) {
             final var launchLine = cmd.toString(javaToolsJar);
-            logger.lifecycle("[plugin] JavaExec command (launcher {}):", getClass().getSimpleName());
-            logger.lifecycle("[plugin]     {}", launchLine);
+            logger.lifecycle("[plugin] JavaExec command (launcher {}): {}", getClass().getSimpleName(), launchLine);
         }
 
         final var builder = resultBuilder(cmd);

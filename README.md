@@ -813,10 +813,9 @@ To see the list of available tasks for the XDK build, use:
 
 #### Versioning and Publishing XDK artifacts
 
-* Use `publishLocal`to publish an XDK build to the local Maven repository and a build specific repository directory.
-* Use `publishRemote`to publish and XDK build to the xtclang organization package repo on GitHub (a GitHub token with
-  permissions is required).
-* Use `publish` to run both of the above tasks.
+* Use `publishLocal` to publish an XDK build to the local Maven repository only.
+* Use `publish` to publish to both local Maven and remote repositories (GitHub Packages, optionally Maven Central and Gradle Plugin Portal). A GitHub token with permissions is required for remote publishing.
+* For release versions (without -SNAPSHOT suffix), you must use `publish -PallowRelease=true` to prevent accidental releases.
 
 *Note*: Some publish tasks may have race conditions due to parallel execution. If you encounter publishing errors:
 

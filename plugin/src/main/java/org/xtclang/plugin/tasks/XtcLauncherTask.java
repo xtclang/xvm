@@ -2,7 +2,6 @@ package org.xtclang.plugin.tasks;
 
 import static java.util.Objects.requireNonNull;
 
-import static org.xtclang.plugin.XtcPluginConstants.EMPTY_FILE_COLLECTION;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_CONTENTS;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_MODULE_DEPENDENCY;
@@ -471,7 +470,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     }
 
     public static Set<File> resolveFiles(final FileCollection files) {
-        return files.isEmpty() ? EMPTY_FILE_COLLECTION : files.getAsFileTree().getFiles();
+        return files.isEmpty() ? Collections.emptySet() : files.getAsFileTree().getFiles();
     }
 
     public static Set<File> resolveDirectories(final Set<File> files) {

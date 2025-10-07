@@ -127,6 +127,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     }
 
     @Override
+    @SuppressWarnings("rawtypes")
     public @NotNull XtcSourceTask include(final @NotNull Closure includeSpec) {
         patternSet.include(includeSpec);
         return this;
@@ -151,6 +152,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     }
 
     @Override
+    @SuppressWarnings("rawtypes")
     public @NotNull XtcSourceTask exclude(final @NotNull Closure excludeSpec) {
         patternSet.exclude(excludeSpec);
         return this;

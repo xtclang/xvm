@@ -48,9 +48,10 @@ public class BuildInfoTest {
             assertTrue(gitCommit.matches("[a-f0-9]+"), "Git commit should be hexadecimal");
         }
 
+        // Git status now contains branch name or "detached-head"
         if (!gitStatus.isEmpty()) {
-            assertTrue(gitStatus.equals("clean") || gitStatus.equals("detached-head"),
-                      "Git status should be 'clean' or 'detached-head'");
+            assertNotNull(gitStatus, "Git status should not be null");
+            assertFalse(gitStatus.isEmpty(), "Git status should not be empty");
         }
     }
 

@@ -1,51 +1,22 @@
 import org.gradle.api.Project
-import org.gradle.api.Task
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.invocation.Gradle
-import java.io.File
 
-abstract class XdkProjectBuildLogic(protected val project: Project) {
-    protected val logger = project.logger
+/**
+ * Centralized constants and utilities for XDK build logic.
+ * Simplified to remove unnecessary layers - use xdkProperties for version info.
+ */
+object XdkBuildLogic {
+    /** Artifact type for XDK distribution archives (tar/zip) */
+    const val XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE = "xdk-distribution-archive"
 
-    override fun toString(): String {
-        return this::class.simpleName?.let { "$it('${project.name}')" } ?: throw IllegalStateException("Unknown class: ${this::class}")
-    }
-}
+    /** Artifact type for javatools fat jar */
+    const val XDK_ARTIFACT_NAME_JAVATOOLS_JAR = "javatools-jar"
 
-class XdkBuildLogic(project: Project) : XdkProjectBuildLogic(project) {
-
-    private val xdkVersions: XdkVersionHandler by lazy {
-        XdkVersionHandler(project)
-    }
-
-    private val xdkDistributions: XdkDistribution by lazy {
-        XdkDistribution(project)
-    }
-
-    private val xdkProperties: XdkProperties by lazy {
-        logger.debug("[build-logic] Created lazy XDK Properties for project ${project.name}")
-        XdkPropertiesImpl(project)
-    }
-
-    fun props(): XdkProperties {
-        return xdkProperties
-    }
-
-    fun versions(): XdkVersionHandler {
-        return xdkVersions
-    }
-
-    fun distro(): XdkDistribution {
-        return xdkDistributions
-    }
-
-    companion object {
-        const val XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE = "xdk-distribution-archive"
-        const val XDK_ARTIFACT_NAME_JAVATOOLS_JAR = "javatools-jar"
-        const val XDK_ARTIFACT_NAME_MACK_DIR = "mack-dir"
-    }
+    /** Artifact type for Mack directory */
+    const val XDK_ARTIFACT_NAME_MACK_DIR = "mack-dir"
 }
 
 // TODO: Can we move these guys to the versions handler?
@@ -64,53 +35,28 @@ val Project.compositeRootProjectDirectory: Directory get() = gradle.rootLayout.p
 
 val Project.compositeRootBuildDirectory: DirectoryProperty get() = gradle.rootLayout.buildDirectory
 
-val Project.userInitScriptDirectory: File get() = File(gradle.gradleUserHomeDir, "init.d")
+/**
+ * Typed extension accessor for ProjectXdkProperties.
+ * Use this in build scripts to access properties with Provider API.
+ * Example: val jdk = xdkProperties.int("org.xtclang.java.jdk")
+ */
+val Project.xdkProperties: ProjectXdkProperties
+    get() = extensions.getByType(ProjectXdkProperties::class.java)
 
-val Project.xdkBuildLogic: XdkBuildLogic get() = XdkBuildLogic(this)
+/**
+ * Semantic version accessor (group:name:version).
+ * Projects must apply versioning plugin first.
+ */
+val Project.semanticVersion: String
+    get() = "$group:$name:$version"
 
-fun Project.isXdkPropertySet(key: String): Boolean {
-    return xdkBuildLogic.props().has(key)
-}
+/**
+ * Helper to create XdkDistribution for distribution tasks.
+ * Configuration-cache compatible - extracts values immediately.
+ */
+fun Project.xdkDistribution(): XdkDistribution = XdkDistribution(
+    distributionName = name,
+    distributionVersion = version.toString(),
+    targetArch = XdkDistribution.getCurrentArch(this)
+)
 
-fun Project.getXdkPropertyBoolean(key: String, defaultValue: Boolean? = null): Boolean {
-    return xdkBuildLogic.props().get(key, defaultValue)
-}
-
-fun Project.getXdkPropertyInt(key: String, defaultValue: Int? = null): Int {
-    return xdkBuildLogic.props().get(key, defaultValue)
-}
-
-fun Project.getXdkProperty(key: String, defaultValue: String? = null): String {
-    return xdkBuildLogic.props().get(key, defaultValue)
-}
-
-private fun <T> registerXdkPropertyInput(task: Task, key: String, value: T): T {
-    with(task) {
-        logger.debug("[build-logic] Task tunneling property for $key to project. Can be set as input provider.")
-    }
-    return value
-}
-
-fun Task.getXdkPropertyBoolean(key: String, defaultValue: Boolean? = null): Boolean {
-    return registerXdkPropertyInput(this, key, project.getXdkPropertyBoolean(key, defaultValue))
-}
-
-fun Task.getXdkPropertyInt(key: String, defaultValue: Int? = null): Int {
-    return registerXdkPropertyInput(this, key, project.getXdkPropertyInt(key, defaultValue))
-}
-
-fun Task.getXdkProperty(key: String, defaultValue: String? = null): String {
-    return registerXdkPropertyInput(this, key, project.getXdkProperty(key, defaultValue))
-}
-
-fun Project.isSnapshot(): Boolean {
-    return project.version.toString().endsWith("-SNAPSHOT")
-}
-
-fun Project.isRelease(): Boolean {
-    return !isSnapshot()
-}
-
-fun Project.snapshotOnly(): Boolean {
-    return findProperty("snapshotOnly")?.toString()?.toBoolean() ?: false
-}

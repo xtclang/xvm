@@ -4,7 +4,6 @@ import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING_ZIP;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_ID;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_SUFFIX;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_PATH;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_MODULE_FILE_EXTENSION;
 import static org.xtclang.plugin.XtcPluginUtils.FileUtils.getFileExtension;
 
@@ -97,8 +96,7 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
             config.from(archiveOperations.zipTree(archiveFile));
             config.include(
                     "**/*." + XTC_MODULE_FILE_EXTENSION,
-                    "**/" + XDK_JAVATOOLS_ARTIFACT_ID + '*' + XDK_JAVATOOLS_ARTIFACT_SUFFIX,
-                    XDK_VERSION_PATH);
+                    "**/" + XDK_JAVATOOLS_ARTIFACT_ID + '*' + XDK_JAVATOOLS_ARTIFACT_SUFFIX);
             config.eachFile(fileCopyDetails -> fileCopyDetails.setRelativePath(new RelativePath(true, fileCopyDetails.getName())));
             config.setIncludeEmptyDirs(false);
             config.into(getOutputXtcModules());

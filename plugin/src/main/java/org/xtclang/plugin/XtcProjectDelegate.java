@@ -16,9 +16,7 @@ import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_OU
 import static org.xtclang.plugin.XtcPluginConstants.XDK_EXTRACT_TASK_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_LIBRARY_ELEMENT_TYPE;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_LIBRARY_ELEMENT_TYPE_XDK_CONTENTS;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_FILE_TASK_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_GROUP_NAME;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_PATH;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_TASK_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_OUTGOING;
@@ -30,11 +28,7 @@ import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_FILE_EXTENSION;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_SET_DIRECTORY_ROOT_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.capitalize;
 
-import java.io.IOException;
-
 import java.net.URL;
-
-import java.nio.file.Files;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -75,6 +69,7 @@ import org.xtclang.plugin.internal.DefaultXtcSourceDirectorySet;
 import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcExtractXdkTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
+import org.xtclang.plugin.tasks.XtcVersionTask;
 
 /**
  * Base class for the Gradle XTC Plugin in a project context.
@@ -132,7 +127,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
         resolveHiddenTaskNames(tasks).forEach(this::hideAndDisableTask);
         if (hasVerboseLogging()) {
-            logger.info("[plugin] XTC plugin executing from location: '{}'", getPluginUrl());
+            logger.lifecycle("[plugin] XTC plugin executing from location: '{}'", getPluginUrl());
         }
     }
 
@@ -363,46 +358,26 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         logger.info("[plugin] Created task: '{}'", runTask.getName());
     }
 
-    private String getSemanticVersion() {
-        final var group = project.getGroup().toString();
-        final var version = project.getVersion().toString();
-        if (group.isEmpty() || Project.DEFAULT_VERSION.equals(version)) {
-            logger.error("[plugin] Has not been properly versioned (group={}, version={})", group, version);
-        }
-        return group + ':' + projectName + ':' + version;
+    private void createVersioningTasks() {
+        registerVersionTask(tasks, getXdkVersion(), getXdkSemanticVersion(), hasVerboseLogging());
     }
 
-    private void createVersioningTasks() {
-        // Capture version information at configuration time for configuration cache compatibility
-        final var projectVersion = project.provider(() -> project.getVersion().toString());
-        final var semanticVersionValue = getSemanticVersion(); // Resolve at construction time to avoid capturing 'this'
-        final var semanticVersion = project.provider(() -> semanticVersionValue);
-        
-        tasks.register(XDK_VERSION_TASK_NAME, task -> {
+    /**
+     * Static method to register the version task without capturing any instance state.
+     * This ensures configuration cache compatibility by preventing lambda capture of non-serializable objects.
+     *
+     * @param tasks the task container
+     * @param xdkVersion the XDK version string
+     * @param semanticVersion the semantic version string
+     * @param verboseLogging whether verbose logging is enabled
+     */
+    private static void registerVersionTask(final TaskContainer tasks, final String xdkVersion, final String semanticVersion, final boolean verboseLogging) {
+        tasks.register(XDK_VERSION_TASK_NAME, XtcVersionTask.class, task -> {
             task.setGroup(XDK_VERSION_GROUP_NAME);
             task.setDescription("Display XTC version for project, and sanity check its application.");
-            task.doLast(_ -> logger.info("[plugin] XTC (version '{}'); Semantic Version: '{}'",
-                projectVersion.get(), semanticVersion.get()));
-        });
-
-        tasks.register(XDK_VERSION_FILE_TASK_NAME, task -> {
-            task.setGroup(XDK_VERSION_GROUP_NAME);
-            task.setDescription("Generate a file containing the XDK/XTC semantic version under the build tree.");
-            
-            // Capture values at configuration time to avoid configuration cache serialization issues
-            // Use the already resolved value
-            final var versionFileAtConfigurationTime = buildDir.file(XDK_VERSION_PATH);
-            
-            task.getOutputs().file(versionFileAtConfigurationTime);
-            task.doLast(t -> {
-                final var file = versionFileAtConfigurationTime.get().getAsFile();
-                t.getLogger().info("[plugin] Writing version information: '{}' to '{}'", semanticVersionValue, file.getAbsolutePath());
-                try {
-                    Files.writeString(file.toPath(), semanticVersionValue + System.lineSeparator());
-                } catch (final IOException e) {
-                    throw new GradleException("I/O error when writing VERSION file: '" + e.getMessage() + "'.", e);
-                }
-            });
+            task.getXdkVersion().set(xdkVersion);
+            task.getSemanticVersion().set(semanticVersion);
+            task.getVerboseLogging().set(verboseLogging);
         });
     }
 

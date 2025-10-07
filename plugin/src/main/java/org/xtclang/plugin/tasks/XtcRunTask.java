@@ -115,14 +115,12 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @InputFiles // should really be enough with an "input directories" but that doesn't exist in gradle.
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputModulesCompiledByProject() {
-        FileCollection fc = objects.fileCollection();
-        for (final String sourceSetName : sourceSetNamesAtConfigurationTime) {
-            final Provider<@NotNull Directory> outputDir = sourceSetOutputDirsAtConfigurationTime.get(sourceSetName);
-            if (outputDir != null) {
-                fc = fc.plus(objects.fileCollection().from(outputDir));
-            }
-        }
-        return fc;
+        final var result = objects.fileCollection();
+        sourceSetNamesAtConfigurationTime.stream()
+            .map(sourceSetOutputDirsAtConfigurationTime::get)
+            .filter(outputDir -> outputDir != null)
+            .forEach(result::from);
+        return result;
     }
 
     // TODO: We may need to keep track of all input, even though we only resolve one out of three possible run configurations.
@@ -222,12 +220,9 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     protected List<XtcRunModule> resolveModulesToRunFromModulePath(final List<File> resolvedModulePath) {
         checkIsBeingExecuted();
 
-        logger.lifecycle("[plugin] Resolving modules to run from module path: '{}'", resolvedModulePath);
-        // Using hardcoded [plugin] instead of prefix variable
-
+        logger.info("[plugin] Resolving modules to run from module path: '{}'", resolvedModulePath);
         if (isEmpty()) {
-            logger.warn("[plugin] Task extension '{}' and/or local task configuration do not declare any modules to run for '{}'. Skipping task.",
-                ext.getName(), getName());
+            logger.warn("[plugin] Task extension '{}' and/or local task configuration do not declare any modules to run for '{}'. Skipping task.", ext.getName(), getName());
             return emptyList();
         }
 

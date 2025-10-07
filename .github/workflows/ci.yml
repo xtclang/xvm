@@ -105,7 +105,7 @@ env:
   run_manual_tests: ${{ github.event.inputs.test != 'false' }}
   run_manual_tests_parallel: ${{ github.event.inputs.parallel-test == 'true' }}
 
-  # java_version will be set dynamically from xdk.properties in each job
+  # java_version will be set dynamically from version.properties in each job
   java_distribution: temurin
   gradle_version: 9.1.0
 

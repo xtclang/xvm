@@ -1,7 +1,14 @@
 /**
  * Docker convention plugin for XVM project.
  * Provides configuration cache compatible Docker build tasks.
+ *
+ * Requires palantir-git-version plugin to be applied in the consuming project
+ * for git info (applied via docker/build.gradle.kts).
  */
+
+plugins {
+    id("org.xtclang.build.xdk.properties")
+}
 
 // Helper function to create docker tasks
 fun createDockerBuildTask(
@@ -38,12 +45,31 @@ fun createDockerBuildTask(
         this.platforms.set(platforms)
         this.action.set(action)
 
-        this.jdkVersion.set(providers.provider { project.extra["jdkVersion"] as Int })
+        this.jdkVersion.set(project.xdkProperties.int("org.xtclang.java.jdk"))
         this.architectureCheck.set(architectureCheck ?: "")
 
-        // Wire git information: prefer environment variables (from CI), fall back to git commands at execution time
-        this.gitCommit.set(providers.environmentVariable("GH_COMMIT").orElse("auto-detect"))
-        this.gitBranch.set(providers.environmentVariable("GH_BRANCH").orElse("auto-detect"))
+        // Wire git information from Palantir plugin (available for local builds) or CI env vars
+        // CI sets GH_COMMIT/GH_BRANCH, local builds use Palantir versionDetails
+        // Helper to get Palantir versionDetails property using reflection (avoids compile-time dependency)
+        fun getVersionDetailsProperty(methodName: String, fallback: String): String? {
+            return try {
+                @Suppress("UNCHECKED_CAST")
+                val versionDetails = (project.extensions.extraProperties["versionDetails"] as groovy.lang.Closure<*>).call()
+                versionDetails::class.java.getMethod(methodName).invoke(versionDetails) as? String ?: fallback
+            } catch (e: Exception) {
+                logger.warn("Failed to get $methodName from Palantir plugin: ${e.message}")
+                fallback
+            }
+        }
+
+        this.gitCommit.set(
+            providers.environmentVariable("GH_COMMIT")
+                .orElse(providers.provider { getVersionDetailsProperty("getGitHashFull", "unknown") })
+        )
+        this.gitBranch.set(
+            providers.environmentVariable("GH_BRANCH")
+                .orElse(providers.provider { getVersionDetailsProperty("getBranchName", "detached-head") })
+        )
 
         this.projectVersion.set(providers.provider { project.version.toString() })
 
@@ -51,11 +77,15 @@ fun createDockerBuildTask(
         hostArch.set(providers.systemProperty("os.arch").map { arch ->
             XdkDistribution.normalizeArchitecture(arch)
         })
-        allowEmulation.set(providers.systemProperty("org.xtclang.docker.allowEmulation").map { it.toBoolean() }.orElse(false))
+        allowEmulation.set(project.xdkProperties.boolean("org.xtclang.docker.allowEmulation", false))
         dockerProgress.set(providers.environmentVariable("DOCKER_BUILDX_PROGRESS").orElse("plain"))
         ciMode.set(providers.environmentVariable("CI").map { it == "true" }.orElse(false))
         userHome.set(providers.systemProperty("user.home"))
+        dockerCommand.set(project.xdkProperties.string("org.xtclang.docker.command", "docker"))
         dockerDir.set(layout.projectDirectory)
+
+        // Output marker file for caching
+        buildMarkerFile.set(layout.buildDirectory.file("docker/${taskName}.marker"))
 
         // Tags will be computed at execution time in the task action
         tags.set(emptyList()) // Dummy value to satisfy the property
@@ -69,7 +99,7 @@ fun createDockerBuildTask(
     createDockerBuildTask("pushArm64", listOf("linux/arm64"), "push", "arm64") 
     createDockerBuildTask("pushAll", listOf("linux/amd64", "linux/arm64"), "push")
     
-    // Create the Docker cleanup task
+    // Create the Docker cleanup taskg
     val cleanImages by tasks.registering(DockerCleanupTask::class) {
         group = "docker"
         description = "Clean up old Docker package versions (default: keep 10 most recent, protect master images)"
