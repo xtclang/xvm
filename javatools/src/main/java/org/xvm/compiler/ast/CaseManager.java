@@ -10,7 +10,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 
 import org.xvm.asm.Argument;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
