@@ -4,15 +4,26 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
 
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.Builder;
+
 import org.xvm.runtime.Frame;
 
 import org.xvm.runtime.template.xNullable;
+
+import static java.lang.constant.ConstantDescs.CD_Throwable;
+
+import static org.xvm.javajit.Builder.CD_Exception;
+import static org.xvm.javajit.Builder.CD_xException;
 
 
 /**
@@ -95,5 +106,49 @@ public class FinallyStart
 
         // super call allocates a var for the exception
         super.simulate(scope);
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        org.xvm.javajit.Scope scopeGuarded = bctx.exitScope(code);
+        assert scopeGuarded.parent == bctx.scope;
+
+        // this op can only be reached normally
+        java.lang.classfile.Label labelFin = code.newLabel();
+        code.goto_(labelFin);
+
+        // add to the exception table
+        java.lang.classfile.Label labelCatch = code.newLabel();
+        code.exceptionCatch(scopeGuarded.startLabel, scopeGuarded.endLabel, labelCatch, CD_Throwable);
+
+        int    slotRethrow = bctx.scope.getRethrow();
+        assert slotRethrow >= 0;
+        code.labelBinding(labelCatch)
+            .astore(slotRethrow)
+            .labelBinding(labelFin);
+
+        // enter the "finally {}" scope
+        bctx.enterScope(code);
+
+        // initialize "try.exception" synthetic variable
+        // (TODO: we only need it if the m_nVar variable is used)
+        Slot slotEx = bctx.introduceVar(code, m_nVar, bctx.pool().typeException१(), "");
+
+        java.lang.classfile.Label labelNull = code.newLabel();
+        java.lang.classfile.Label labelEnd  = code.newLabel();
+        code.aload(slotRethrow)
+            .dup()
+            .ifnull(labelNull)
+            .checkcast(CD_xException)
+            .getfield(CD_xException, "exception", CD_Exception);
+        bctx.storeValue(code, slotEx);
+        code.goto_(labelEnd)
+            .labelBinding(labelNull)
+            .pop();
+        Builder.loadNull(code);
+        bctx.storeValue(code, slotEx);
+        code.labelBinding(labelEnd);
     }
 }

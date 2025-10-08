@@ -14,7 +14,6 @@ import org.xvm.asm.Register;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.BuildContext.Slot;
-import org.xvm.javajit.Builder;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -86,6 +85,9 @@ public class Move
         Slot slotFrom = bctx.loadArgument(code, m_nFromValue);
         Slot slotTo   = bctx.ensureSlot(m_nToValue, slotFrom.type(), slotFrom.cd(), "");
 
+        if (!slotFrom.type().isA(slotTo.type())) {
+            code.checkcast(slotTo.type().ensureClassDesc(bctx.typeSystem));
+        }
         bctx.storeValue(code, slotTo);
     }
 }

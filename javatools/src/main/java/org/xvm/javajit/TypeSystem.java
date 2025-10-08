@@ -10,12 +10,10 @@ import java.lang.constant.ClassDesc;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -27,10 +25,17 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.builders.CommonBuilder;
+import org.xvm.javajit.builders.EnumBuilder;
+import org.xvm.javajit.builders.EnumValueBuilder;
+import org.xvm.javajit.builders.EnumerationBuilder;
+import org.xvm.javajit.builders.ExceptionBuilder;
 import org.xvm.javajit.builders.FunctionBuilder;
 import org.xvm.javajit.builders.ModuleBuilder;
 
 import org.xvm.util.ListMap;
+
+import static org.xvm.javajit.Builder.ENUMERATION;
+import static org.xvm.javajit.Builder.MODULE;
 
 import static org.xvm.util.Handy.require;
 
@@ -214,6 +219,13 @@ public class TypeSystem {
         IdentityConstant id     = type.getSingleUnderlyingClass(true);
         ModuleConstant   module = id.getModuleConstant();
 
+        // it's possible that the type is a parameterized shared type, e.g. Array<Person>
+        for (ModuleLoader loader : shared) {
+            if (loader.module.getIdentityConstant().equals(module)) {
+                return loader;
+            }
+        }
+
         for (ModuleLoader loader : owned) {
             if (loader.module.getIdentityConstant().equals(module)) {
                 return loader;
@@ -278,7 +290,24 @@ public class TypeSystem {
                     new FunctionBuilder(this, fnType).assemblePure(className, classBuilder));
         }
 
-        Artifact art = deduceArtifact(moduleLoader.module, name);
+        ModuleStructure module = moduleLoader.module;
+        if (name.endsWith(ENUMERATION)) {
+            String         enumName   = name.substring(0, name.length() - ENUMERATION.length());
+            ClassStructure enumStruct = (ClassStructure) module.getChildByPath(enumName.replace('$', '.'));
+            assert enumStruct != null;
+            TypeConstant enumerationType = enumStruct.getIdentityConstant().getValueType(pool(), null);
+
+            ClassFile classFile = ClassFile.of(
+                ClassFile.ClassHierarchyResolverOption.of(
+                    ClassHierarchyResolver.ofClassLoading(loader))
+            );
+
+            Builder builder = new EnumerationBuilder(this, enumerationType);
+            return classFile.build(ClassDesc.of(className), classBuilder ->
+                    builder.assembleImpl(className, classBuilder));
+        }
+
+        Artifact art = deduceArtifact(module, name);
         if (art != null) {
             if (art.id.getComponent() instanceof ClassStructure clz) {
                 TypeConstant type      = clz.getCanonicalType();
@@ -290,13 +319,17 @@ public class TypeSystem {
                             builder.assembleImpl(className, classBuilder);
                             break;
 
+                        case Exception:
+                            ((ExceptionBuilder) builder).
+                                assembleJavaException(className, classBuilder);
+                            break;
+
                         default:
                             throw new UnsupportedOperationException();
                     }
                 };
 
                 // There are other options that can be useful:
-                //     StackMapsOption.GENERATE_STACK_MAPS
                 //     DeadCodeOption.PATCH_DEAD_CODE
                 //     DebugElementsOption.DROP_DEBUG
                 //     LineNumbersOption.DROP_LINE_NUMBERS
@@ -304,7 +337,8 @@ public class TypeSystem {
                 ClassFile classFile = ClassFile.of(
                     ClassFile.ClassHierarchyResolverOption.of(
                         ClassHierarchyResolver.ofClassLoading(loader)),
-                    ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS
+                    ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
+                    ClassFile.StackMapsOption.GENERATE_STACK_MAPS
                 );
 
                 return classFile.build(ClassDesc.of(className), handler);
@@ -323,6 +357,30 @@ public class TypeSystem {
             assert !type.equals(pool.typeModule());
             return new ModuleBuilder(this, type);
         }
+
+        if (type.isEnum()) {
+            return new EnumBuilder(this, type);
+        }
+
+        if (type.isEnumValue()) {
+            return new EnumValueBuilder(this, type);
+        }
+
+        if (type.isA(pool.typeException())) {
+            // the root Exception class is handled by the NativeTypeSystem
+            assert !type.equals(pool.typeException());
+            return new ExceptionBuilder(this, type);
+        }
+
+        if (type.isA(pool.typeClass())) {
+            TypeConstant publicType = type.getParamType(0);
+            if (publicType.isEnumValue()) {
+                return new EnumerationBuilder(this, type);
+            } else {
+                System.err.println("Missing class builder " + type.getValueString());
+            }
+        }
+
         return new CommonBuilder(this, type);
     }
 
@@ -330,12 +388,13 @@ public class TypeSystem {
      * Jit class shapes.
      */
     public enum ClassfileShape {
-        Pure  ("i$"),
-        Proxy ("p$"),
-        Duck  ("d$"),
-        Mask  ("m$"),
-        Future("f$"),
-        Impl  (""), // needs to be last
+        Pure     ("i$"),
+        Proxy    ("p$"),
+        Duck     ("d$"),
+        Mask     ("m$"),
+        Future   ("f$"),
+        Exception("e$"),
+        Impl     (""), // needs to be last
         ;
 
         ClassfileShape(String prefix) {
@@ -348,40 +407,22 @@ public class TypeSystem {
     public record Artifact(IdentityConstant id, ClassfileShape shape) {}
 
     public Artifact deduceArtifact(ModuleStructure module, String name) {
-        if (name.equals("$module")) {
+        if (name.equals(MODULE)) {
             return new Artifact(module.getIdentityConstant(), ClassfileShape.Impl);
         }
 
         for (ClassfileShape shape : ClassfileShape.values()) {
-            if (name.startsWith(shape.prefix)) {
+            int shapeOffset = name.indexOf(shape.prefix);
+            if (shapeOffset >= 0) {
                 if (shape != ClassfileShape.Impl) {
-                    name = name.substring(2); // all other suffixes are of the length 2
+                    // all other suffixes are of the length 2
+                    name = name.substring(0, shapeOffset) + name.substring(shapeOffset + 2);
                 }
                 if (module.getChildByPath(name.replace('$', '.')) instanceof ClassStructure struct) {
                     return new Artifact(struct.getIdentityConstant(), shape);
                 }
             }
         }
-        return null;
-    }
-
-    public Artifact deduceArtifact(ModuleStructure module, String prefix, String name) {
-        // TODO
-        return null;
-    }
-
-    public Set<ClassfileShape> expectedClassfileShape(Component component) {
-        // TODO
-        return null;
-    }
-
-    public ModuleLoader loaderForComponent(IdentityConstant id) {
-        // TODO
-        return null;
-    }
-
-    public String classfileNameForComponent(IdentityConstant id, ClassfileShape shape) {
-        // TODO
         return null;
     }
 
@@ -402,15 +443,6 @@ public class TypeSystem {
                     return Builder.N_xFunction + '$' + suffix;
                 });
                 return name;
-            }
-
-            ConstantPool pool = pool();
-            if (type.isTypeOfType()) {
-                return pool.typeType().ensureJitClassName(this);
-            }
-
-            if (type.isA(pool.typeClass())) {
-                return pool.typeClass().ensureJitClassName(this);
             }
 
             ClassStructure structure = (ClassStructure)

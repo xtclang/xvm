@@ -9,11 +9,15 @@ import java.lang.classfile.MethodModel;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import java.util.List;
+
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.TypeSystem;
+
+import static java.lang.constant.ConstantDescs.INIT_NAME;
 
 /**
  * The builder for native types that uses an existing Java class to augment with the Ecstasy natural
@@ -49,6 +53,22 @@ public class AugmentingBuilder extends CommonBuilder {
 
         // implemented interfaces may not be native; add them if necessary
         assembleImplInterfaces(classBuilder);
+
+        // if there is any native Exception, we need to generate the "$createJavaException" method
+        TypeConstant type        = typeInfo.getType();
+        TypeConstant T_EXCEPTION = type.getConstantPool().typeException();
+        if (type.isA(T_EXCEPTION) && !type.removeAccess().equals(T_EXCEPTION)) {
+            new ExceptionBuilder(typeSystem, type).assembleCreateException(className, classBuilder);
+        }
+    }
+
+    @Override
+    protected void assembleInitializer(String className, ClassBuilder classBuilder,
+                                       List<PropertyInfo> props) {
+        MethodModel mm = findMethod(INIT_NAME, MD_Initializer, false);
+        if (mm == null) {
+            super.assembleInitializer(className, classBuilder, props);
+        }
     }
 
     @Override

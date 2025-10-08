@@ -4,10 +4,22 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.TypeKind;
+
+import java.lang.constant.ClassDesc;
+
+import java.util.List;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpJump;
 import org.xvm.asm.Scope;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitMethodDesc;
+import org.xvm.javajit.JitParamDesc;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.Frame.AllGuard;
@@ -74,7 +86,71 @@ public class GuardAll
         return true;
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    /**
+     * Store the information about the jump destination and whether or not return is reqiured.
+     */
+    public void registerJumps(List<Integer> jumps, boolean fDoReturn) {
+        m_jumps     = jumps;
+        m_fDoReturn = fDoReturn;
+    }
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        // the GuardAll introduces two scopes:
+        //  - outer with synthetic vars: $rethrow, $contLoop, $breakLoop
+        //  - inner loop that is guarded by "FinallyStart" op
+        org.xvm.javajit.Scope scopeOuter = bctx.enterScope(code);
+
+        // $rethrow = null;
+        scopeOuter.allocateRethrow(code);
+
+        // $jump1 = false; $jump2 = false; ...
+        scopeOuter.allocateJumps(code, m_jumps);
+        if (m_fDoReturn) {
+            JitMethodDesc jmd        = bctx.jmd;
+            boolean       fOptimized = bctx.isOptimized;
+            int           cRets      = jmd.standardReturns.length;
+
+            String sRet    = "$doReturn";
+            String sRetVal = "$ret";
+
+            // $retN = false;
+            int slotRet = scopeOuter.allocateSynthetic(sRet, TypeKind.BOOLEAN);
+            assert slotRet != -1;
+            code.iconst_0()
+                .istore(slotRet);
+
+            for (int i = 0; i < cRets; i++) {
+                int          iOpt  = fOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
+                JitParamDesc pdRet = fOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
+                ClassDesc    cd    = pdRet.cd;
+
+                // $retN = 0 or null
+                int slotR = scopeOuter.allocateSynthetic(sRetVal + i, Builder.toTypeKind(cd));
+                Builder.defaultLoad(code, cd);
+                Builder.store(code, cd, slotR);
+
+                switch (pdRet.flavor) {
+                case MultiSlotPrimitive:
+                    int slotEx = scopeOuter.allocateSynthetic(sRetVal + (i + 1), TypeKind.BOOLEAN);
+                    code.iconst_0()
+                        .istore(slotEx);
+                    break;
+                }
+            }
+        }
+
+        bctx.enterScope(code); // guarded by FinallyStart
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
+
     private int m_nNextVar;
 
     private transient AllGuard m_guard; // cached struct
+
+    private transient List<Integer> m_jumps;
+    private transient boolean       m_fDoReturn;
 }

@@ -4,10 +4,14 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpJump;
 import org.xvm.asm.Scope;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 
@@ -63,5 +67,17 @@ public class GuardEnd
     public void simulate(Scope scope) {
         scope.exitGuard();
         scope.exit(this);
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        bctx.exitScope(code);
+        if (m_ofJmp > 1) {
+            code.goto_(bctx.ensureLabel(code, getAddress() + m_ofJmp));
+        } else {
+            assert m_ofJmp == 1;
+        }
     }
 }

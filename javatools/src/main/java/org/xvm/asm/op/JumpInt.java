@@ -5,12 +5,20 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
+import java.lang.classfile.instruction.SwitchCase;
+
+import java.util.ArrayList;
 import java.util.List;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpJump;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Slot;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -192,6 +200,38 @@ public class JumpInt
 
         return sb.toString();
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        Slot slotArg = bctx.loadArgument(code, m_nArg);
+
+        switch (slotArg.cd().descriptorString()) {
+        case "I", "S", "B", "C", "Z":
+            break;
+
+        case "J":
+            code.l2i();
+            break;
+
+        default:
+            throw new IllegalStateException();
+        }
+
+        int[] aofCase = m_aofCase;
+        int   cCases  = aofCase.length;
+        int   nThis   = getAddress();
+
+        Label            labelDflt = bctx.ensureLabel(code, nThis + m_ofDefault);
+        List<SwitchCase> listCases = new ArrayList<>();
+        for (int iVal = 0; iVal < cCases; iVal++) {
+            listCases.add(SwitchCase.of(iVal, bctx.ensureLabel(code, nThis + aofCase[iVal])));
+        }
+        code.tableswitch(0, cCases - 1, labelDflt, listCases);
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     protected int   m_nArg;
     protected int[] m_aofCase;

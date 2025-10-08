@@ -31,6 +31,10 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.asm.op.CatchStart;
+import org.xvm.asm.op.FinallyStart;
+import org.xvm.asm.op.Guarded;
+
 import static java.lang.constant.ConstantDescs.CD_boolean;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
@@ -105,7 +109,7 @@ public class BuildContext {
     /**
      * The current scope.
      */
-    private Scope scope;
+    public Scope scope;
 
     /**
      * The Java slot past the last one used by the numbered XTC registers. The slots from this point
@@ -174,7 +178,7 @@ public class BuildContext {
     /**
      * Prepare the compilation.
      */
-    public void enterMethod(CodeBuilder code) {
+    public void enterMethod(CodeBuilder code, int synthSlots) {
         lineNumber = 1; // XVM ops are 0 based; Java is 1-based
         scope      = new Scope(this, code);
         code
@@ -203,6 +207,7 @@ public class BuildContext {
             int          slot      = code.parameterSlot(extraArgs + i); // compensate for implicits
 
             code.localVariable(slot, name, paramDesc.cd, scope.startLabel, scope.endLabel);
+            scope.topVar = Math.max(scope.topVar, varIndex + 1);
 
             switch (paramDesc.flavor) {
             case Specific, Widened, Primitive, SpecificWithDefault, WidenedWithDefault:
@@ -219,11 +224,9 @@ public class BuildContext {
             }
         }
 
-        // compute the tailSlot
-        // TODO: this will be done using a pass over all the ops to compute the total number
-        //       of Java slots used by the numbered XTC registers
-        // For now, we don't mind to overshoot... ("this", "$ctx", ...)
-        tailSlot = (isFunction ? 0 : 1) + extraArgs + methodStruct.getMaxVars() * 2;
+        // compute the tailSlot; we don't mind to overshoot by assuming the worst case - two slots
+        // per var plus ("this", "$ctx", ...) and synthetics
+        tailSlot = (isFunction ? 0 : 1) + extraArgs + methodStruct.getMaxVars() * 2 + synthSlots;
     }
 
     /**
@@ -233,15 +236,25 @@ public class BuildContext {
         code.labelBinding(scope.endLabel);
     }
 
-    public void enterScope(CodeBuilder code) {
+    /**
+     * @return the newly entered scope
+     */
+    public Scope enterScope(CodeBuilder code) {
         scope = scope.enter();
+        code.labelBinding(scope.startLabel);
+        return scope;
     }
 
-    public void exitScope(CodeBuilder code) {
-        scope = scope.exit();
+    /**
+     * @return the exited scope
+     */
+    public Scope exitScope(CodeBuilder code) {
+        Scope prevScope = scope;
+        scope = prevScope.exit();
 
         // clear up the old scope's entries
-        slots.entrySet().removeIf(entry -> entry.getKey() > scope.topVar);
+        slots.entrySet().removeIf(entry -> entry.getKey() >= scope.topVar);
+        return prevScope;
     }
 
     /**
@@ -261,6 +274,26 @@ public class BuildContext {
         xvmLabel.append(op);
         ops[opAddress] = xvmLabel;
         return javaLabel;
+    }
+
+    /**
+     * Add a {@link Guarded} label to the specified {@link CatchStart} or {@link FinallyStart} op.
+     */
+    public void ensureGuarded(int opAddress) {
+        Op[] ops = methodStruct.getOps();
+        Op   op  = ops[opAddress];
+        if (op instanceof Guarded) {
+            throw new IllegalStateException("Already guarded");
+        }
+
+        if (op instanceof CatchStart catchOp) {
+            Guarded xvmLabel = new Guarded(scope);
+            xvmLabel.append(catchOp);
+            ops[opAddress] = xvmLabel;
+        }
+        else {
+            throw new IllegalStateException("Only CatchStart can be guarded");
+        }
     }
 
     /**
@@ -331,7 +364,6 @@ public class BuildContext {
         return argId <= Op.CONSTANT_OFFSET
                 ? loadConstant(code, argId)
                 : loadPredefineArgument(code, argId);
-
     }
 
     /**
@@ -546,7 +578,7 @@ public class BuildContext {
             int          iArg = anArgValue[i];
             JitParamDesc pd   = isOptimized ? jmd.getOptimizedParam(i) : jmd.standardParams[i];
             switch (pd.flavor) {
-            case SpecificWithDefault:
+            case SpecificWithDefault, WidenedWithDefault:
                 if (iArg == Op.A_DEFAULT) {
                     code.aconst_null();
                     continue;
@@ -778,6 +810,8 @@ public class BuildContext {
         code.storeLocal(Builder.toTypeKind(cd), slot.slot());
     }
 
+    // ----- Slot classes --------------------------------------------------------------------------
+
     public interface Slot {
         int          slot(); // Java slot index
         TypeConstant type();
@@ -809,5 +843,4 @@ public class BuildContext {
             return false;
         }
     }
-
 }

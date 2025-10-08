@@ -12,7 +12,7 @@ import org.xvm.javajit.Ctx;
 public abstract class xFunction implements Function {
 
     @Override
-    public Tuple invoke(Ctx $ctx, Tuple args) {
+    public Tuple invoke(Ctx ctx, Tuple args) {
         // almost *never* called - reflection based
         // TODO
         return null;
@@ -29,8 +29,8 @@ public abstract class xFunction implements Function {
         abstract void $call(Ctx ctx);
 
         @Override
-        public Tuple invoke(Ctx $ctx, Tuple args) {
-            $call($ctx);
+        public Tuple invoke(Ctx ctx, Tuple args) {
+            $call(ctx);
             return xTuple.Empty;
         }
     }

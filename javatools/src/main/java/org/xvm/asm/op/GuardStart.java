@@ -5,12 +5,16 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import java.util.List;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.Frame.MultiGuard;
@@ -169,6 +173,20 @@ public class GuardStart
         }
         return true;
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        // the GuardStart-GuardEnd are the scope boundary ops as well
+        bctx.enterScope(code);
+
+        for (int ofCatch : m_aofCatch) {
+            bctx.ensureGuarded(getAddress() + ofCatch);
+        }
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int[] m_anTypeId;
     private int[] m_anNameId;

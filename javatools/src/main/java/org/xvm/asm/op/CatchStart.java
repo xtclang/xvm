@@ -4,6 +4,10 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
+import java.lang.constant.ClassDesc;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpVar;
@@ -11,8 +15,17 @@ import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
 
 import org.xvm.asm.constants.StringConstant;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.TypeSystem;
+import org.xvm.javajit.TypeSystem.ClassfileShape;
 
 import org.xvm.runtime.Frame;
+
+import static org.xvm.javajit.Builder.CD_Exception;
 
 
 /**
@@ -122,6 +135,32 @@ public class CatchStart
     public String getName(Constant[] aconst) {
         return getName(aconst, m_constName, m_nNameId);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    /**
+     * Called by the {@link Guarded} "label" op,
+     *
+     * @param scopeGuarded  the guarded scope (not the current one)
+     */
+    public void build(BuildContext bctx, CodeBuilder code, org.xvm.javajit.Scope scopeGuarded) {
+        org.xvm.javajit.Scope scopeThis = bctx.enterScope(code);
+
+        TypeSystem   ts         = bctx.typeSystem;
+        Slot         slotEx     = bctx.introduceVar(code, m_nVar, m_nType, m_nNameId);
+        TypeConstant typeEx     = slotEx.type();
+        assert typeEx.isA(ts.pool().typeException());
+
+        ClassDesc cdEx = Builder.getShapeDesc(typeEx.ensureJitClassName(ts), ClassfileShape.Exception);
+
+        code.getfield(cdEx, "exception", CD_Exception);
+        bctx.storeValue(code, slotEx);
+
+        // add to the exception table
+        code.exceptionCatch(scopeGuarded.startLabel, scopeGuarded.endLabel, scopeThis.startLabel, cdEx);
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int m_nNameId;
 

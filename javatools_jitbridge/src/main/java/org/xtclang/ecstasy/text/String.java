@@ -289,6 +289,10 @@ public class String
         return (int) (data[(int) (index >>> 3)] >>> (8 * (~index & 0b111))) & 0xFF;
     }
 
+    public @Override String toString(Ctx ctx) {
+        return this;
+    }
+
     public @Override java.lang.String toString() {
         long len = size();
         if (len == 0) {

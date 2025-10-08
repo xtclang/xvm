@@ -1,10 +1,8 @@
 package org.xtclang._native.io;
 
-import java.io.IOException;
-
 import org.xtclang.ecstasy.io.Console;
+import org.xtclang.ecstasy.io.IOException;
 
-import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.xObj;
 import org.xtclang.ecstasy.xService;
 import org.xtclang.ecstasy.xType;
@@ -34,14 +32,15 @@ public class TerminalConsole
     /**
      * {@code void print(Object object = "", Boolean suppressNewline = False)}
      */
-    public void print$p(Ctx $ctx, xObj object, boolean suppressNewline, boolean dfltSuppressNewline) {
+    public void print$p(Ctx ctx, xObj object, boolean suppressNewline, boolean dfltSuppressNewline) {
         if (object == null) {
             object = String.EmptyString;
         }
         if (dfltSuppressNewline) {
             suppressNewline = false;
         }
-        xTerminalConsole.CONSOLE_OUT.print(object.toString()); // TODO: toString($ctx)
+
+        xTerminalConsole.CONSOLE_OUT.print(object.toString(ctx));
         if (!suppressNewline) {
             xTerminalConsole.CONSOLE_OUT.println();
         }
@@ -51,7 +50,7 @@ public class TerminalConsole
     /**
      * {@code String readLine(String prompt = "", Boolean suppressEcho = False)}
      */
-    public String readLine$p(Ctx $ctx, String prompt, boolean suppressEcho, boolean dfltSuppressEcho) {
+    public String readLine$p(Ctx ctx, String prompt, boolean suppressEcho, boolean dfltSuppressEcho) {
         if (prompt == null) {
             prompt = String.EmptyString;
         }
@@ -65,13 +64,13 @@ public class TerminalConsole
 
         try {
             if (suppressEcho) {
-                return new String($ctx,  xTerminalConsole.CONSOLE_IN.readLine());
+                return String.of(ctx,  xTerminalConsole.CONSOLE_IN.readLine());
             } else {
                 char[] achLine = xTerminalConsole.CONSOLE.readPassword();
-                return new String($ctx, new java.lang.String(achLine));
+                return String.of(ctx, new java.lang.String(achLine));
             }
-        } catch (IOException e) {
-            throw new Exception(e); // TODO: IOException
+        } catch (java.io.IOException e) {
+            throw new IOException(ctx).$init(ctx, e.getMessage(), e);
         }
     }
 

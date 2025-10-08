@@ -5,6 +5,20 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
+import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
+
+import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitMethodDesc;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -179,6 +193,111 @@ public abstract class OpGeneral
           .append(Argument.toIdString(m_argReturn, m_nRetValue));
         return sb.toString();
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        Slot slotTarget = bctx.loadArgument(code, m_nTarget);
+
+        if (!slotTarget.isSingle()) {
+            throw new UnsupportedOperationException("'+' operation on multi-slot");
+        }
+
+        ClassDesc    cdTarget = slotTarget.cd();
+        TypeConstant typeRet  = slotTarget.type();
+
+        if (isBinaryOp()) {
+            if (cdTarget.isPrimitive()) {
+                Slot slotArg = bctx.loadArgument(code, m_nArgValue);
+
+                if (!slotArg.cd().equals(cdTarget)) {
+                    throw new UnsupportedOperationException("Convert " +
+                        slotArg.type().getValueString() + " to " + slotTarget.type().getValueString());
+                }
+
+                buildOptimizedBinary(bctx, code, cdTarget);
+            } else {
+                // TODO: there could be multiple op methods; need to use the arg type
+                String sName;
+                String sOp;
+                switch (getOpCode()) {
+                    case OP_GP_ADD     -> {sName = "add";           sOp = "+";   }
+                    case OP_GP_SUB     -> {sName = "sub";           sOp = "-";   }
+                    case OP_GP_MUL     -> {sName = "mul";           sOp = "*";   }
+                    case OP_GP_DIV     -> {sName = "div";           sOp = "/";   }
+                    case OP_GP_MOD     -> {sName = "mod";           sOp = "%";   }
+                    case OP_GP_SHL     -> {sName = "shiftLeft";     sOp = "<<";  }
+                    case OP_GP_SHR     -> {sName = "shiftRight";    sOp = ">>";  }
+                    case OP_GP_USHR    -> {sName = "shiftAllRight"; sOp = ">>";  }
+                    case OP_GP_AND     -> {sName = "and";           sOp = "&";   }
+                    case OP_GP_OR      -> {sName = "or";            sOp = "|";   }
+                    case OP_GP_XOR     -> {sName = "xor";           sOp = "^";   }
+                    case OP_GP_DIVREM  -> {sName = "divrem";        sOp = "/%";  }
+                    case OP_GP_IRANGEI -> {sName = "to";            sOp = "..";  }
+                    case OP_GP_ERANGEI -> {sName = "exTo";          sOp = ">.."; }
+                    case OP_GP_IRANGEE -> {sName = "toEx";          sOp = "..<"; }
+                    case OP_GP_ERANGEE -> {sName = "exToEx";        sOp = ">..<";}
+
+                    default -> throw new UnsupportedOperationException(toName(getOpCode()));
+                }
+                TypeInfo      info     = slotTarget.type().ensureTypeInfo();
+                MethodInfo    method   = info.findOpMethod(sName, sOp, 1);
+                String        sJitName = method.getIdentity().ensureJitMethodName(bctx.typeSystem);
+                JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem);
+
+                MethodTypeDesc md;
+                if (jmd.isOptimized) {
+                    md        = jmd.optimizedMD;
+                    sJitName += Builder.OPT;
+                } else {
+                    md = jmd.standardMD;
+                }
+
+                bctx.loadCtx(code);
+                bctx.loadArgument(code, m_nArgValue);
+                code.invokevirtual(slotTarget.cd(), sJitName, md);
+            }
+            bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, typeRet));
+        } else { // unary op
+            if (cdTarget.isPrimitive()) {
+                buildOptimizedUnary(bctx, code, cdTarget);
+            } else {
+                String sName;
+                String sOp;
+                switch (getOpCode()) {
+                    case OP_GP_NEG   -> {sName = "neg"; sOp = null;}
+                    case OP_GP_COMPL -> {sName = "not"; sOp = "~"; }
+                    default -> throw new UnsupportedOperationException(toName(getOpCode()));
+                }
+                TypeInfo      info     = slotTarget.type().ensureTypeInfo();
+                MethodInfo    method   = info.findOpMethod(sName, sOp, 0);
+                String        sJitName = method.getIdentity().ensureJitMethodName(bctx.typeSystem);
+                JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem);
+
+                MethodTypeDesc md;
+                if (jmd.isOptimized) {
+                    md        = jmd.optimizedMD;
+                    sJitName += Builder.OPT;
+                } else {
+                    md = jmd.standardMD;
+                }
+
+                bctx.loadCtx(code);
+                code.invokevirtual(slotTarget.cd(), sJitName, md);
+            }
+            bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, typeRet));
+        }
+    }
+
+    protected void buildOptimizedUnary(BuildContext bctx, CodeBuilder code, ClassDesc cdTarget) {
+        throw new UnsupportedOperationException();
+    }
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, ClassDesc cdTarget) {
+        throw new UnsupportedOperationException();
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     protected int m_nTarget;
     protected int m_nArgValue;

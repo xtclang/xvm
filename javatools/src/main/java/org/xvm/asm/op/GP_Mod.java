@@ -12,10 +12,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -56,42 +53,19 @@ public class GP_Mod
     protected int completeBinary(Frame frame, ObjectHandle hTarget, ObjectHandle hArg) {
         return hTarget.getOpSupport().invokeMod(frame, hTarget, hArg, m_nRetValue);
     }
+
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
-        Slot slotTarget = bctx.loadArgument(code, m_nTarget);
-        Slot slotArg    = bctx.loadArgument(code, m_nArgValue);
-
-        if (!slotTarget.isSingle() || !slotArg.isSingle()) {
-            throw new UnsupportedOperationException("'%' operation on multi-slot");
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, ClassDesc cdTarget) {
+        // TODO: convert remainder to a modulo
+        switch (cdTarget.descriptorString()) {
+            case "I", "S", "B", "C", "Z"
+                     -> code.irem();
+            case "J" -> code.lrem();
+            case "F" -> code.frem();
+            case "D" -> code.drem();
+            default  -> throw new IllegalStateException();
         }
-
-        ClassDesc    cdTarget = slotTarget.cd();
-        TypeConstant typeRet  = slotTarget.type();
-
-        if (cdTarget.isPrimitive()) {
-            switch (cdTarget.descriptorString()) {
-                case "I", "S", "B", "C", "Z":
-                    code.irem();
-                    break;
-                case "J":
-                    code.lrem();
-                    break;
-                default:
-                    throw new IllegalStateException();
-            }
-            // TODO: for signed types we need to do this:
-//            if (f_fSigned && lMod != 0 && (lMod < 0) != (l2 < 0)) {
-//                lMod += l2;
-//                assert (lMod < 0) == (l2 < 0);
-//            }
-
-        } else {
-            throw new UnsupportedOperationException("TODO: " +
-                slotTarget.type().getValueString() + " % " + slotArg.type().getValueString());
-        }
-        bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, typeRet));
     }
-
 }
