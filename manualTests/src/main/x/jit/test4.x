@@ -15,6 +15,8 @@ module test4.examples.org {
 
         console.print(testSwitch3(33));
         console.print(testSwitch3(-Int32.MaxValue+1));
+
+        console.print(testSwitch4(Green));
     }
 
     void testSwitch1(Int i) {
@@ -57,13 +59,13 @@ module test4.examples.org {
         };
     }
 
-//    String testSwitch4(Color color) {
-//        return switch (color) {
-//            case Red:   "Rojo";
-//            case Green: "Verde";
-//            case Blue:  "Azul";
-//        };
-//    }
+    String testSwitch4(Color color) {
+        return switch (color) {
+            case Red:   "Rojo";
+            case Green: "Verde";
+            case Blue:  "Azul";
+        };
+    }
 
     enum Color {Red, Green, Blue}
 }
