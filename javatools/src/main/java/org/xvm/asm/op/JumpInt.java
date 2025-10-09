@@ -225,8 +225,8 @@ public class JumpInt
 
         Label            labelDflt = bctx.ensureLabel(code, nThis + m_ofDefault);
         List<SwitchCase> listCases = new ArrayList<>();
-        for (int iVal = 0; iVal < cCases; iVal++) {
-            listCases.add(SwitchCase.of(iVal, bctx.ensureLabel(code, nThis + aofCase[iVal])));
+        for (int iCase = 0; iCase < cCases; iCase++) {
+            listCases.add(SwitchCase.of(iCase, bctx.ensureLabel(code, nThis + aofCase[iCase])));
         }
         code.tableswitch(0, cCases - 1, labelDflt, listCases);
     }
