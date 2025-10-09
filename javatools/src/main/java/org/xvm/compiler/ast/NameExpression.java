@@ -354,16 +354,6 @@ public class NameExpression
     }
 
     /**
-     * @return true iff the expression is explicitly non-de-referencing, as with the '&' pre-fix on
-     *         a class, property, or method name, or if the left expression is a name expression, and
-     *         it has any suppressed dereference
-     */
-    public boolean hasAnySuppressDeref() {
-        return isSuppressDeref() ||
-            left instanceof NameExpression exprName && exprName.hasAnySuppressDeref();
-    }
-
-    /**
      * @return the name token
      */
     public Token getNameToken() {
@@ -1309,7 +1299,13 @@ public class NameExpression
                     }
                     Argument argLeft = left.generateArgument(ctx, code, false, true, errs);
                     if (idProp.isFuture()) {
-                        regTemp = code.createRegister(idProp.getRefType(argLeft.getType()));
+                        TypeConstant typeLeft = argLeft.getType();
+                        if (typeLeft instanceof AnnotatedTypeConstant typeAnno &&
+                                typeAnno.getAnnotationClass().equals(pool().clzFuture())) {
+                            // typeLeft is a "@Future<Var<T>>" itself
+                            typeLeft = typeAnno.getUnderlyingType().getParamType(0);
+                        }
+                        regTemp = code.createRegister(idProp.getRefType(typeLeft));
                         code.add(new Var_D(regTemp));
                     }
                     code.add(new P_Get(idProp, argLeft, regTemp));
