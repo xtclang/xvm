@@ -32,6 +32,7 @@ import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.DeferredSingletonHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.NativeFutureHandle;
 import org.xvm.runtime.ServiceContext.Synchronicity;
@@ -890,8 +891,10 @@ public class Frame
                     break;
 
                 default:
-                    if (f_hThis != null &&
-                        f_hThis.getComposition() instanceof CanonicalizedTypeComposition) {
+                    if (f_hThis instanceof GenericHandle hThis &&
+                        (hThis.getComposition() instanceof CanonicalizedTypeComposition ||
+                         hThis.getField(this, GenericHandle.OUTER) instanceof GenericHandle hOuter &&
+                             hOuter.getComposition() instanceof CanonicalizedTypeComposition)) {
                         // we don't create ClassCompositions all Type<T> or Class<T> types; instead
                         // we are using CanonicalizedTypeComposition; as a result we don't have
                         // the type specific TypeInfo for Type<T> and the call chains may lose
