@@ -10,6 +10,8 @@ import java.lang.classfile.Label;
 
 import java.lang.classfile.instruction.SwitchCase;
 
+import java.lang.constant.MethodTypeDesc;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,6 +43,10 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
+
+import static java.lang.constant.ConstantDescs.CD_long;
+
+import static org.xvm.javajit.Builder.CD_Ctx;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -438,7 +444,7 @@ public class JumpVal
         }
 
         Label labelDflt = bctx.ensureLabel(code, nThis + m_ofDefault);
-        code.tableswitch(iMin, iMax - iMin + 1, labelDflt, listCases);
+        code.tableswitch(iMin, iMax, labelDflt, listCases);
     }
 
     private void buildCharSwitch(BuildContext bctx, CodeBuilder code, Slot slotArg) {
@@ -560,7 +566,45 @@ public class JumpVal
     }
 
     private void buildEnumSwitch(BuildContext bctx, CodeBuilder code, Slot slotArg) {
-        throw new UnsupportedOperationException();
+        assert slotArg.type().isEnum();
+
+        int[] aofCase = m_aofCase;
+        int   cRows   = aofCase.length;
+        int   nThis   = getAddress();
+        int   iMin    = Integer.MAX_VALUE;
+        int   iMax    = Integer.MIN_VALUE;
+
+        List<SwitchCase> listCases = new ArrayList<>();
+        for (int iRow = 0; iRow < cRows; iRow++) {
+            Constant constant = bctx.getConstant(m_anConstCase[iRow]);
+            Label    label    = bctx.ensureLabel(code, nThis + aofCase[iRow]);
+            if (constant instanceof RangeConstant range) {
+                int iFirst = ((EnumValueConstant) range.getEffectiveFirst()).getPresumedOrdinal();
+                int iLast  = ((EnumValueConstant) range.getEffectiveLast()).getPresumedOrdinal();
+
+                iMin = Math.min(iMin, iFirst);
+                iMax = Math.max(iMax, iLast);
+
+                for (int iVal = iFirst; iVal <= iLast; iVal++) {
+                    listCases.add(SwitchCase.of(iVal, label));
+                }
+            } else {
+                int iVal = ((EnumValueConstant) constant).getPresumedOrdinal();
+
+                iMin = Math.min(iMin, iVal);
+                iMax = Math.max(iMax, iVal);
+
+                listCases.add(SwitchCase.of(iVal, label));
+            }
+        }
+
+        // enumValue -> enumValue.ordinal;
+        bctx.loadCtx(code);
+        code.invokevirtual(slotArg.cd(), "ordinal$get$p", MethodTypeDesc.of(CD_long, CD_Ctx))
+            .l2i();
+
+        Label labelDflt = bctx.ensureLabel(code, nThis + m_ofDefault);
+        code.tableswitch(iMin, iMax, labelDflt, listCases);
     }
 
     private void buildIfLadder(BuildContext bctx, CodeBuilder code, Slot slotArg) {

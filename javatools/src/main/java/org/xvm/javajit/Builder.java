@@ -112,24 +112,24 @@ public abstract class Builder {
             }
             break;
 
-        case EnumValueConstant enumConstant:
-            ConstantPool pool = constant.getConstantPool();
-            if (enumConstant.getType().isOnlyNullable()) {
-                Builder.loadNull(code);
-                return new SingleSlot(Op.A_STACK, pool.typeNullable(), CD_Nullable, "");
-            }
-            else if (enumConstant.getType().isA(pool.typeBoolean())) {
-                if (enumConstant.getIntValue().getInt() == 0) {
-                    code.iconst_0();
-                }
-                else {
-                    code.iconst_1();
-                }
-                return new SingleSlot(Op.A_STACK, pool.typeBoolean(), CD_boolean, "");
-            }
-            break;
-
         case SingletonConstant singleton:
+            if (singleton instanceof EnumValueConstant enumConstant) {
+                ConstantPool pool = constant.getConstantPool();
+                if (enumConstant.getType().isOnlyNullable()) {
+                    Builder.loadNull(code);
+                    return new SingleSlot(Op.A_STACK, pool.typeNullable(), CD_Nullable, "");
+                }
+                else if (enumConstant.getType().isA(pool.typeBoolean())) {
+                    if (enumConstant.getIntValue().getInt() == 0) {
+                        code.iconst_0();
+                    }
+                    else {
+                        code.iconst_1();
+                    }
+                    return new SingleSlot(Op.A_STACK, pool.typeBoolean(), CD_boolean, "");
+                }
+            }
+
             TypeConstant type = singleton.getType();
             JitTypeDesc  jtd  = type.getJitDesc(typeSystem);
             assert jtd.flavor == JitFlavor.Specific;
