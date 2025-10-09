@@ -11,6 +11,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.ByteConstant;
 import org.xvm.asm.constants.EnumValueConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.LiteralConstant;
@@ -83,35 +84,24 @@ public abstract class Builder {
     public Slot loadConstant(CodeBuilder code, Constant constant) {
         // see NativeContainer#getConstType()
 
-        if (constant instanceof StringConstant stringConst) {
+        switch (constant) {
+        case StringConstant stringConst:
             MethodTypeDesc MD_of = MethodTypeDesc.of(CD_String, CD_Ctx, CD_JavaString);
             // String.of(s)
             code.aload(code.parameterSlot(0)) // $ctx
                 .ldc(stringConst.getValue())
                 .invokestatic(CD_String, "of", MD_of);
             return new SingleSlot(Op.A_STACK, constant.getType(), CD_String, "");
-        }
-        if (constant instanceof IntConstant intConstant) {
-            // TODO: support all Int/UInt types
-            code
-                .ldc(intConstant.getValue().getLong());
+
+        case IntConstant intConstant:// TODO: support all Int/UInt types
+            code.ldc(intConstant.getValue().getLong());
             return new SingleSlot(Op.A_STACK, constant.getType(), CD_long, "");
-        }
-        if (constant instanceof EnumValueConstant enumConstant) {
-            ConstantPool pool = constant.getConstantPool();
-            if (enumConstant.getType().isOnlyNullable()) {
-                Builder.loadNull(code);
-                return new SingleSlot(Op.A_STACK, pool.typeNullable(), CD_Nullable, "");
-            } else if (enumConstant.getType().isA(pool.typeBoolean())) {
-                if (enumConstant.getIntValue().getInt() == 0) {
-                    code.iconst_0();
-                } else {
-                    code.iconst_1();
-                }
-            return new SingleSlot(Op.A_STACK, pool.typeBoolean(), CD_boolean, "");
-            }
-        }
-        if (constant instanceof LiteralConstant litConstant) {
+
+        case ByteConstant byteConstant:
+            code.ldc(byteConstant.getValue().intValue());
+            return new SingleSlot(Op.A_STACK, constant.getType(), CD_int, "");
+
+        case LiteralConstant litConstant:
             switch (litConstant.getFormat()) {
             case IntLiteral:
                 // TODO: delegate to IntN
@@ -120,8 +110,26 @@ public abstract class Builder {
                 // TODO: delegate to FloatN
                 break;
             }
-        }
-        if (constant instanceof SingletonConstant singleton) {
+            break;
+
+        case EnumValueConstant enumConstant:
+            ConstantPool pool = constant.getConstantPool();
+            if (enumConstant.getType().isOnlyNullable()) {
+                Builder.loadNull(code);
+                return new SingleSlot(Op.A_STACK, pool.typeNullable(), CD_Nullable, "");
+            }
+            else if (enumConstant.getType().isA(pool.typeBoolean())) {
+                if (enumConstant.getIntValue().getInt() == 0) {
+                    code.iconst_0();
+                }
+                else {
+                    code.iconst_1();
+                }
+                return new SingleSlot(Op.A_STACK, pool.typeBoolean(), CD_boolean, "");
+            }
+            break;
+
+        case SingletonConstant singleton:
             TypeConstant type = singleton.getType();
             JitTypeDesc  jtd  = type.getJitDesc(typeSystem);
             assert jtd.flavor == JitFlavor.Specific;
@@ -130,13 +138,16 @@ public abstract class Builder {
             ClassDesc cd = jtd.cd;
             code.getstatic(cd, Instance, cd);
             return new SingleSlot(Op.A_STACK, type, cd, "");
-        }
-        if (constant instanceof NamedCondition cond) {
+
+        case NamedCondition cond:
             code.loadConstant(cond.getName());
             return new SingleSlot(Op.A_STACK, cond.getConstantPool().typeString(), CD_String, "");
+
+        default:
+            break;
         }
+
         throw new UnsupportedOperationException(constant.toString());
-        // return code;
     }
 
     /**
