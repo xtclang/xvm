@@ -5,12 +5,14 @@ import java.util.List;
 import org.gradle.api.Action;
 import org.gradle.api.provider.ListProperty;
 
+import org.jetbrains.annotations.NotNull;
+
 /**
  * This is the "xtcRun" extension. It can be used to set up common runtime
  * behavior on a per-project level, similar to e.g. the "application" configuration
  * in the Gradle built-in plugins. If you want a project to use the default run task
  * semantics, and run a specific sequence of modules, this is where they are specified.
- *
+ * <p>
  * As with every other extension, by convention, it should be possible to change, extend
  * or override parts of it on individual run task level, so you should be able to create
  * a specialized run task with, e.g. verbose mode on, even though it's not on for
@@ -30,16 +32,16 @@ public interface XtcRuntimeExtension extends XtcLauncherTaskExtension {
      * launcher that performs the execution. The arguments, as per Gradle convention,
      * should be possible to be configured lazily as a provider, so they can be calculated
      * at the time of execution, and not at the time of configuration.
-     *
+     * <p>
      * TODO: This is not supported everywhere yet, but please feel free to add DSL logic
      *   for that, where you find it missing, and unit tests to make sure it works.
      *
-     * @param action
-     * @return
+     * @param action Build DSL run module configuration
+     * @return XtcRunModule instance
      */
-    XtcRunModule module(Action<XtcRunModule> action);
+    XtcRunModule module(Action<@NotNull XtcRunModule> action);
 
-    ListProperty<XtcRunModule> getModules();
+    ListProperty<@NotNull XtcRunModule> getModules();
 
     void moduleName(String name);
 
@@ -56,8 +58,8 @@ public interface XtcRuntimeExtension extends XtcLauncherTaskExtension {
     int size();
 
     /**
-     * Does this extension declare any modules to be don?
-     * @return
+     * Does this extension declare any modules to be resolved and executed?
+     * @return true if module is empty, with nothing declared, false otherwise.
      */
     default boolean isEmpty() {
         return size() == 0;

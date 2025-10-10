@@ -22,37 +22,51 @@ fun compositeRootRelativeFile(path: String): File {
 }
 
 val libsVersionCatalog = compositeRootRelativeFile("gradle/libs.versions.toml")
-val versionPropertiesFile = compositeRootRelativeFile("version.properties")
 
-// Read version.properties file for single source of truth
-val versionProps = java.util.Properties().apply { 
-    load(versionPropertiesFile.inputStream()) 
+// Load properties from files into a plain Map for the build service
+val props = java.util.Properties().apply {
+    listOf("gradle.properties", "xdk.properties", "version.properties")
+        .map(::compositeRootRelativeFile)
+        .filter { it.isFile }
+        .forEach { it.inputStream().use(::load) }
 }
-val xvmVersion = versionProps.getProperty("xdk.version")
+
+// Register build service with plain string map (no Providers, configuration-cache safe)
+gradle.sharedServices.registerIfAbsent(
+    "xdkPropertiesService",
+    XdkPropertiesService::class.java
+) {
+    parameters.entries.set(props.stringPropertyNames().associateWith(props::getProperty))
+}
+
+// Extract version info from the already-loaded properties (no redundant file reads)
+val xvmVersion = props.getProperty("xdk.version")
     ?: error("xdk.version not found in version.properties file")
-val xvmGroup = versionProps.getProperty("xdk.group")
+val xvmGroup = props.getProperty("xdk.group")
     ?: error("xdk.group not found in version.properties file")
 
 // Standard dependency resolution with dynamic version injection
+@Suppress("UnstableApiUsage")
 dependencyResolutionManagement {
-    @Suppress("UnstableApiUsage")
     repositories {
         mavenCentral()
     }
 
     versionCatalogs {
-        val libs by creating {
+        // Create libs catalog for included builds (root handles this separately)
+        create("libs") {
             from(files(libsVersionCatalog))
-            // Override versions from version.properties file to maintain single source of truth
             version("xdk", xvmVersion)
             version("xtc-plugin", xvmVersion)
             version("group-xdk", xvmGroup)
-            version("group-xtc-plugin", xvmGroup)
         }
     }
 }
 
 // Optional: Log version info for debugging
-logger.info("[settings] Using version catalog from: $libsVersionCatalog")
-logger.info("[settings] XVM version from version.properties file: $xvmVersion")
-logger.info("[settings] XVM group from version.properties file: $xvmGroup")
+logger.info("""
+    [settings] Using version catalog from: $libsVersionCatalog
+    [settings] XVM version from version.properties file: $xvmVersion
+    [settings] XVM group from version.properties file: $xvmGroup
+    [settings] Loaded ${props.size} properties from property files
+""".trimIndent())

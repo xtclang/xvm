@@ -6,19 +6,14 @@ plugins {
     `kotlin-dsl`
 }
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(JavaVersion.current().majorVersion.toInt()))
-    }
-}
-
 repositories {
     mavenCentral()
     gradlePluginPortal()
 }
 
 dependencies {
-    implementation("org.gradle.toolchains.foojay-resolver-convention:org.gradle.toolchains.foojay-resolver-convention.gradle.plugin:1.0.0")
-}
+    implementation("org.xtclang.build:settings-plugins")
 
-logger.info("[${project.name}] Gradle version: v${gradle.gradleVersion} (embedded Kotlin: v$embeddedKotlinVersion).")
+    // Publishing plugin dependencies - versions from libs.versions.toml
+    implementation("com.vanniktech:gradle-maven-publish-plugin:${libs.versions.vanniktech.maven.publish.get()}")
+}

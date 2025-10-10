@@ -19,16 +19,11 @@ public class XtcPlugin implements Plugin<Project> {
         JavaBasePlugin.class,
         XtcProjectPlugin.class
     );
-    
-    private static final Set<String> REQUIRED_PLUGIN_IDS = Set.of(
-        "org.xtclang.build.java"  // Apply XDK Java build plugin for toolchain support
-    );
 
     @Override
     public void apply(final Project project) {
         final var plugins = project.getPluginManager();
         REQUIRED_PLUGINS.forEach(plugins::apply);
-        REQUIRED_PLUGIN_IDS.forEach(plugins::apply);
     }
 
     /**

@@ -8,7 +8,6 @@ import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.tasks.Internal;
 
 import org.xtclang.plugin.ProjectDelegate;
-import org.xtclang.plugin.XtcProjectDelegate;
 
 // TODO: This is intended a common superclass to avoid the messy delegate pattern.
 //   We also put XTC launcher common logic in here, like e.g. fork, jvmArgs and such.
@@ -24,7 +23,6 @@ public abstract class XtcDefaultTask extends DefaultTask {
      */
 
     // TODO gradually remove the delegate and distribute the logic to its correct places in the "normal" Gradle plugin and DSL APIs and implementations.
-    // Project field and ConfigurationContainer removed to avoid configuration cache serialization issues
     protected final String projectName;
     protected final ObjectFactory objects;
     protected final Logger logger;

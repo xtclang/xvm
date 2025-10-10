@@ -1,4 +1,4 @@
-import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_JAR
+import XdkBuildLogic.XDK_ARTIFACT_NAME_JAVATOOLS_JAR
 import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 import org.gradle.api.tasks.PathSensitivity
 import java.util.Properties
@@ -8,11 +8,12 @@ import java.util.Properties
  */
 
 plugins {
+    id("org.xtclang.build.xdk.versioning")
     alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.palantir.git.version)
 }
 
-private val semanticVersion: SemanticVersion by extra
+// semanticVersion is now a Project extension property
 
 // Using Palantir git plugin - no custom git tasks needed
 
@@ -60,14 +61,6 @@ val copyEcstasyResources by tasks.registering(Copy::class) {
     // Remove onlyIf condition - let Gradle handle incremental builds with proper inputs/outputs
 }
 
-// Build-info.properties is now generated directly in the jar task
-
-
-// Get Palantir providers once (config time), but DO NOT read values yet
-val versionDetails: groovy.lang.Closure<com.palantir.gradle.gitversion.VersionDetails> by extra
-val gitHashFullProvider = providers.provider { versionDetails().gitHashFull }
-val gitIsCleanTagProvider = providers.provider { versionDetails().isCleanTag } // boolean
-
 // Path to your static base properties
 val versionPropsFile = compositeRootProjectDirectory.file("version.properties")
 
@@ -77,25 +70,25 @@ abstract class GenerateBuildInfo : DefaultTask() {
     abstract val baseProps: RegularFileProperty
 
     @get:Input
-    abstract val gitHashFull: Property<String>
+    abstract val gitCommit: Property<String>
 
     @get:Input
-    abstract val gitIsCleanTag: Property<Boolean>
+    abstract val gitStatus: Property<String>
 
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
 
     @TaskAction
     fun run() {
-        val gitCommit = gitHashFull.get()
-        val gitStatus = if (gitIsCleanTag.get()) "clean" else "detached-head"
+        val commit = gitCommit.get()
+        val status = gitStatus.get()
 
-        logger.lifecycle("[javatools] Generating build-info.properties with git commit: $gitCommit ($gitStatus)")
+        logger.lifecycle("[javatools] Generating build-info.properties with git commit: $commit ($status)")
 
         val buildInfo = Properties().apply {
             baseProps.get().asFile.inputStream().use { load(it) }
-            setProperty("git.commit", gitCommit)
-            setProperty("git.status", gitStatus)
+            setProperty("git.commit", commit)
+            setProperty("git.status", status)
         }
 
         val content = buildString {
@@ -118,8 +111,16 @@ abstract class GenerateBuildInfo : DefaultTask() {
 val generateBuildInfo by tasks.registering(GenerateBuildInfo::class) {
     description = "Generate build-info.properties deterministically (config-cache safe)"
     baseProps.set(versionPropsFile)
-    gitHashFull.set(gitHashFullProvider)          // wire Providers — no reading yet
-    gitIsCleanTag.set(gitIsCleanTagProvider)
+
+    // Use Providers to defer resolution to task execution time, avoiding CC issues with Groovy closure
+    val versionDetailsProvider = providers.provider {
+        @Suppress("UNCHECKED_CAST")
+        (project.extensions.extraProperties["versionDetails"] as groovy.lang.Closure<com.palantir.gradle.gitversion.VersionDetails>).call()
+    }
+
+    gitCommit.set(versionDetailsProvider.map { it.gitHashFull })
+
+    gitStatus.set(versionDetailsProvider.map { it.branchName ?: "detached-head" })
 
     // Put it under build/, so Gradle owns it
     outputFile.set(layout.buildDirectory.file("generated/resources/main/build-info.properties"))
@@ -167,7 +168,7 @@ val jar by tasks.existing(Jar::class) {
     // Declare inputs that affect jar content
     inputs.files(configurations.compileClasspath)
     inputs.files(xdkEcstasyResourcesConsumer)
-    inputs.property("manifestSemanticVersion", semanticVersion.toString())
+    inputs.property("manifestSemanticVersion", semanticVersion)
     inputs.property("manifestVersion", version.toString())
 
     // Build your fat-jar content lazily
@@ -189,7 +190,7 @@ val jar by tasks.existing(Jar::class) {
             "Implementation-Version" to version,
             "Implementation-Vendor" to "xtclang.org",
             "Sealed" to "true",
-            "Xdk-Version" to semanticVersion.toString(),
+            "Xdk-Version" to semanticVersion,
             "Add-Opens" to "java.base/java.lang=ALL-UNNAMED",
             "Enable-Native-Access" to "ALL-UNNAMED",
         )
@@ -209,5 +210,3 @@ val versionOutputTest by tasks.registering(Test::class) {
         logger.info("[javatools] Verifying version output contains expected git and API information")
     }
 }
-
-// "assemble" already depends on jar by default in the Java build life cycle

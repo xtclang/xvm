@@ -4,22 +4,25 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import javax.inject.Inject
 import java.io.ByteArrayOutputStream
 import java.io.File
 
+@CacheableTask
 abstract class DockerTask : DefaultTask() {
     @get:Inject
     abstract val execOperations: ExecOperations
-    
-    // Git info no longer needed for Docker builds
-    
+
     @get:Input
     abstract val platforms: ListProperty<String>
     
@@ -32,6 +35,7 @@ abstract class DockerTask : DefaultTask() {
 
     @get:InputFiles
     @get:Optional
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val xdkDistributionFiles: ConfigurableFileCollection
 
     @get:Input
@@ -45,11 +49,9 @@ abstract class DockerTask : DefaultTask() {
     abstract val tags: ListProperty<String>
 
     @get:Input
-    @get:Optional
     abstract val gitCommit: Property<String>
 
     @get:Input
-    @get:Optional
     abstract val gitBranch: Property<String>
 
     @get:Input
@@ -71,9 +73,16 @@ abstract class DockerTask : DefaultTask() {
     @get:Input
     abstract val userHome: Property<String>
 
+    @get:Input
+    abstract val dockerCommand: Property<String>
+
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val dockerDir: DirectoryProperty
-    
+
+    @get:OutputFile
+    abstract val buildMarkerFile: org.gradle.api.file.RegularFileProperty
+
     @TaskAction
     fun buildDockerImage() {
         // Architecture check at execution time
@@ -110,52 +119,39 @@ abstract class DockerTask : DefaultTask() {
             val platformArg = platforms.get().joinToString(",")
             val baseImage = "ghcr.io/xtclang/xvm"
 
-            // Compute tags similar to CI compute-docker-tags action
-            // Auto-detect git info if not provided via environment variables
-            val commit = if (gitCommit.orNull == "auto-detect") {
-                try {
-                    val output = ByteArrayOutputStream()
-                    execOperations.exec {
-                        commandLine("git", "rev-parse", "HEAD")
-                        standardOutput = output
-                    }
-                    output.toString().trim().takeIf { it.isNotEmpty() } ?: "latest"
-                } catch (e: Exception) {
-                    logger.warn("Failed to detect git commit: ${e.message}")
-                    "latest"
-                }
-            } else {
-                gitCommit.orNull ?: "latest"
-            }
-
-            val branch = if (gitBranch.orNull == "auto-detect") {
-                try {
-                    val output = ByteArrayOutputStream()
-                    execOperations.exec {
-                        commandLine("git", "branch", "--show-current")
-                        standardOutput = output
-                    }
-                    output.toString().trim().takeIf { it.isNotEmpty() } ?: "master"
-                } catch (e: Exception) {
-                    logger.warn("Failed to detect git branch: ${e.message}")
-                    "master"
-                }
-            } else {
-                gitBranch.orNull ?: "master"
-            }
-
-            val version = projectVersion.orNull ?: "unknown"
+            // Git info provided via Palantir plugin (local) or CI env vars (GH_COMMIT/GH_BRANCH)
+            val commit = gitCommit.get()
+            val branch = gitBranch.get()
+            val version = projectVersion.get()
 
             // Sanitize branch name for Docker tags (same as CI)
             val branchTag = branch.replace(Regex(".*/"), "")
                                   .replace(Regex("[^a-zA-Z0-9._-]"), "_")
 
-            val computedTags = if (branch == "master") listOf("latest", version, commit) else listOf(branchTag, commit)
+            // Determine if this is a CI build (load vs push action indicates local vs CI)
+            val isLocalBuild = action.get() == "load"
 
-            logger.lifecycle("Computing Docker tags: branch=$branch, version=$version, commit=${commit.take(7)}")
+            // Tag strategy (unified with CI - see .github/actions/compute-docker-tags):
+            // - CI/Local master: latest, version, commit (full hash)
+            // - CI/Local branch: branch-tag, commit (full hash)
+            // - Local suffix: all tags get "-local" suffix for local builds
+            val baseTags = if (branch == "master") {
+                listOf("latest", version, commit)
+            } else {
+                listOf(branchTag, commit)
+            }
+
+            val computedTags = if (isLocalBuild) {
+                baseTags.map { "$it-local" }
+            } else {
+                baseTags
+            }
+
+            logger.lifecycle("Computing Docker tags: branch=$branch, version=$version, commit=$commit")
             logger.lifecycle("Generated tags: ${computedTags.joinToString(", ")}")
 
-            val cmd = listOf("docker", "buildx", "build", "--platform", platformArg) +
+            val dockerCmd = dockerCommand.get()
+            val cmd = listOf(dockerCmd, "buildx", "build", "--platform", platformArg) +
                       listOf("--progress=${dockerProgress.get()}") +
                       listOf("--build-arg", "JAVA_VERSION=${jdkVersion.get()}") +
                       listOf("--build-arg", "DIST_ZIP_URL=xdk-dist.zip") +
@@ -171,6 +167,11 @@ abstract class DockerTask : DefaultTask() {
                 commandLine(cmd)
                 workingDir(dockerDir.get().asFile)
             }
+
+            // Write marker file to track successful build
+            val markerFile = buildMarkerFile.get().asFile
+            markerFile.parentFile.mkdirs()
+            markerFile.writeText("Docker image built successfully at ${java.time.Instant.now()}\nTags: ${computedTags.joinToString(", ")}\n")
         } finally {
             // Clean up the copied distribution ZIP
             if (contextDistZip.exists()) {

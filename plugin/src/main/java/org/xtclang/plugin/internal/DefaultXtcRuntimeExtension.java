@@ -11,6 +11,8 @@ import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.provider.ListProperty;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.XtcRuntimeExtension;
 
@@ -45,7 +47,7 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension 
      * contain one implementation of the interface that implements the current stdout/stdin
      * mode, that is the only way to talk to the XTC debugger ATM.
      */
-    private final ListProperty<XtcRunModule> modules;
+    private final ListProperty<@NotNull XtcRunModule> modules;
 
     @Inject
     public DefaultXtcRuntimeExtension(final Project project) {
@@ -54,9 +56,9 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension 
         // Check for a command line module as
     }
 
-    public static XtcRunModule createModule(final Project project, final String moduleName) {
-        return new DefaultXtcRunModule(project, moduleName);
-    }
+    //public static XtcRunModule createModule(final Project project, final String moduleName) {
+    //    return new DefaultXtcRunModule(project, moduleName);
+    //}
 
     private XtcRunModule createModule(final String moduleName) {
         // Use objects factory instead of Project - create instance then set module name
@@ -72,7 +74,7 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension 
     }
 
     @Override
-    public XtcRunModule module(final Action<XtcRunModule> action) {
+    public XtcRunModule module(final Action<@NotNull XtcRunModule> action) {
         final var runModule = objects.newInstance(DefaultXtcRunModule.class);
         action.execute(runModule);
         logger.info("[plugin] Resolved xtcRunModule configuration: {}", runModule);
@@ -90,7 +92,7 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension 
     }
 
     @Override
-    public ListProperty<XtcRunModule> getModules() {
+    public ListProperty<@NotNull XtcRunModule> getModules() {
         return modules;
     }
 

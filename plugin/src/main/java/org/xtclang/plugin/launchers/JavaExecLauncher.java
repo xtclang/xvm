@@ -11,18 +11,17 @@ import java.io.IOException;
 import java.util.zip.ZipFile;
 
 import org.gradle.api.GradleException;
-import org.gradle.api.Project;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.FileTree;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.provider.Provider;
-import org.gradle.jvm.toolchain.JavaLauncher;
 import org.gradle.process.ExecOperations;
 import org.gradle.process.ExecResult;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcPluginUtils.FileUtils;
-import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 
 // TODO: Add more info to the LauncherException, and if we can reflect it out for the "javatools bundled with
@@ -34,40 +33,14 @@ import org.xtclang.plugin.tasks.XtcLauncherTask;
  */
 public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends XtcLauncher<E, T> {
     private final ExecOperations execOperations;
-    private final Provider<String> toolchainExecutable;
-    private final Provider<String> projectVersion;
-    private final Provider<FileTree> xdkFileTree;
-    private final Provider<FileCollection> javaToolsConfig;
-    
-    public JavaExecLauncher(final Project project, final T task, final ExecOperations execOperations) {
-        super(project, task);
-        this.execOperations = execOperations;
-        
-        // Resolve toolchain at configuration time, not execution time
-        this.toolchainExecutable = project.provider(() -> {
-            final var javaExtension = project.getExtensions().findByType(org.gradle.api.plugins.JavaPluginExtension.class);
-            if (javaExtension != null) {
-                final var toolchains = project.getExtensions().getByType(org.gradle.jvm.toolchain.JavaToolchainService.class);
-                final var launcher = toolchains.launcherFor(javaExtension.getToolchain());
-                return launcher.get().getExecutablePath().toString();
-            }
-            return null;
-        });
-        
-        // Resolve project version at configuration time, not execution time
-        this.projectVersion = project.provider(() -> project.getVersion().toString());
-        
-        // Resolve XDK file tree at configuration time, not execution time
-        this.xdkFileTree = XtcProjectDelegate.getXdkContentsDir(project).map(project::fileTree);
-        
-        // Resolve JavaTools configuration at configuration time, not execution time
-        this.javaToolsConfig = project.provider(() -> 
-            project.files(project.getConfigurations().getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING)));
-    }
-    
+    private final Provider<@NotNull String> toolchainExecutable;
+    private final Provider<@NotNull String> projectVersion;
+    private final Provider<@NotNull FileTree> xdkFileTree;
+    private final Provider<@NotNull FileCollection> javaToolsConfig;
+
     public JavaExecLauncher(final T task, final Logger logger, final ExecOperations execOperations,
-                           final Provider<String> toolchainExecutable, final Provider<String> projectVersion,
-                           final Provider<FileTree> xdkFileTree, final Provider<FileCollection> javaToolsConfig) {
+                            final Provider<@NotNull String> toolchainExecutable, final Provider<@NotNull String> projectVersion,
+                            final Provider<@NotNull FileTree> xdkFileTree, final Provider<@NotNull FileCollection> javaToolsConfig) {
         super(task, logger);
         this.execOperations = execOperations;
         this.toolchainExecutable = toolchainExecutable;
@@ -89,13 +62,12 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
 
         if (task.hasVerboseLogging()) {
             final var launchLine = cmd.toString(javaToolsJar);
-            logger.lifecycle("[plugin] JavaExec command (launcher {}):", getClass().getSimpleName());
-            logger.lifecycle("[plugin]     {}", launchLine);
+            logger.lifecycle("[plugin] JavaExec command (launcher {}): {}", getClass().getSimpleName(), launchLine);
         }
 
         final var builder = resultBuilder(cmd);
         return createExecResult(builder.execResult(execOperations.javaexec(spec -> {
-            redirectIo(builder, spec);
+            redirectIo(spec);
             spec.classpath(javaToolsJar);
             spec.getMainClass().set(cmd.getMainClassName());
             spec.args(cmd.toList());
@@ -181,7 +153,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
         return processJar(resolvedFromXdk);
     }
 
-    private boolean areIdenticalFiles(final File f1, final File f2) {
+    private static boolean areIdenticalFiles(final File f1, final File f2) {
         try {
             return FileUtils.areIdenticalFiles(f1, f2);
         } catch (final IOException e) {
@@ -190,7 +162,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
     }
 
     @SuppressWarnings("UnusedReturnValue")
-    private boolean checkIsJarFile(final File file) {
+    private static boolean checkIsJarFile(final File file) {
         try (var zip = new ZipFile(file)) {
             return zip.getEntry(JAR_MANIFEST_PATH) != null;
         } catch (final IOException e) {
@@ -198,7 +170,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
         }
     }
 
-    protected File processJar(final File file) {
+    protected static File processJar(final File file) {
         assert file.exists();
         checkIsJarFile(file);
         return file;

@@ -3,7 +3,15 @@ import org.gradle.api.Task
 import org.gradle.internal.os.OperatingSystem
 import java.io.File
 
-class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
+/**
+ * XDK distribution configuration helper.
+ * Configuration-cache compatible - extracts values at construction time without holding project references.
+ */
+class XdkDistribution(
+    val distributionName: String,
+    val distributionVersion: String,
+    private val targetArch: String
+) {
     companion object {
         const val DISTRIBUTION_TASK_GROUP = "distribution"
         const val JAVATOOLS_PREFIX_PATTERN = "**/javatools*"
@@ -11,7 +19,6 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         private const val CI = "CI"
 
         // These need to be computed at execution time to be configuration cache compatible
-        fun isCiEnabled(project: Project): Boolean = project.providers.environmentVariable(CI).getOrElse("") == "true"
         val currentOs: OperatingSystem = OperatingSystem.current()
         fun getCurrentArch(project: Project): String = normalizeArchitecture(project.providers.systemProperty("os.arch").get())
         val distributionTasks = listOf(
@@ -142,7 +149,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
          * Configuration cache compatible - no script context references.
          */
         fun stripVersionFromJarName(jarName: String, version: String): String {
-            return jarName.replace(Regex("(.*)\\-${Regex.escape(version)}\\.jar"), "$1.jar")
+            return jarName.replace(Regex("(.*)-${Regex.escape(version)}\\.jar"), "$1.jar")
         }
 
         /**
@@ -162,7 +169,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
 
             val lineEnd = content.indexOf('\n', insertPoint)
             val endOfLine = if (lineEnd >= 0) lineEnd + 1 else content.length
-            val before = content.substring(0, endOfLine)
+            val before = content.take(endOfLine)
             val after = content.substring(endOfLine)
             return before + textToInsert + after
         }
@@ -225,36 +232,12 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         }
     }
 
-    init {
-        logger.info("""
-            [build-logic] Configuring XVM distribution: '$this'
-            [build-logic]   Name        : '$distributionName'
-            [build-logic]   Version     : '$distributionVersion'
-            [build-logic]   Target OS   : '${getOsName()}'
-            [build-logic]   Target Arch : '${getCurrentArch(project)}'
-            [build-logic]   Platform    : '${getOsName()}_${getCurrentArch(project)}'
-            [build-logic]   Environment:
-            [build-logic]       CI             : '${isCiEnabled(project)}' (CI property can be overwritten)
-            [build-logic]       GITHUB_ACTIONS : '${project.providers.environmentVariable("GITHUB_ACTIONS").getOrElse("[not set]")}'
-        """.trimIndent())
-    }
-
-    @Suppress("MemberVisibilityCanBePrivate") // No it can't, IntelliJ
-    val distributionName: String get() = project.name // Default: "xdk"
-
-    @Suppress("MemberVisibilityCanBePrivate") // No it can't, IntelliJ
-    val distributionVersion: String get() = project.version.toString()
-
-    @Suppress("MemberVisibilityCanBePrivate")
-    fun launcherFileName(os: String = getOsName(), arch: String = getCurrentArch(project)): String {
+    fun launcherFileName(os: String = getOsName(), arch: String = targetArch): String {
         val extension = if (os == "windows") ".exe" else ""
         return "${os}_launcher_$arch$extension"
     }
 
-    /*
-     * Helper for jreleaser etc.
-     */
-    fun osClassifier(os: String = getOsName(), arch: String = getCurrentArch(project)): String = "${os}_$arch"
+    fun osClassifier(os: String = getOsName(), arch: String = targetArch): String = "${os}_$arch"
 
     override fun toString(): String = "$distributionName-$distributionVersion"
 

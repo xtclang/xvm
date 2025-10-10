@@ -36,6 +36,8 @@ import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.process.ExecResult;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.XtcRuntimeExtension;
@@ -70,7 +72,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     private static final String XEC_ARG_RUN_METHOD = "--method";
 
     private final Map<XtcRunModule, ExecResult> executedModules; // TODO we can cache output here to if we want.
-    private final Property<DefaultXtcRuntimeExtension> taskLocalModules;
+    private final Property<@NotNull DefaultXtcRuntimeExtension> taskLocalModules;
 
     /**
      * Create an XTC run task, currently delegating instead of inheriting the plugin project
@@ -104,30 +106,28 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     // XTC modules needed to resolve module path (the contents of the XDK required to build and run this project)
     @InputDirectory
     @PathSensitive(PathSensitivity.RELATIVE)
-    Provider<Directory> getInputXdkModules() {
+    Provider<@NotNull Directory> getInputXdkModules() {
         return xdkContentsDirAtConfigurationTime; // Modules in the XDK directory, captured at configuration time.
     }
 
     // XTC modules needed to resolve module path (the ones in the output of the project source set, that the compileXtc tasks create)
     @Optional
-    @InputFiles // should really be enough with an "inputdirectories" but that doesn't exist in gradle.
+    @InputFiles // should really be enough with an "input directories" but that doesn't exist in gradle.
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputModulesCompiledByProject() {
-        FileCollection fc = objects.fileCollection();
-        for (final String sourceSetName : sourceSetNamesAtConfigurationTime) {
-            final Provider<Directory> outputDir = sourceSetOutputDirsAtConfigurationTime.get(sourceSetName);
-            if (outputDir != null) {
-                fc = fc.plus(objects.fileCollection().from(outputDir));
-            }
-        }
-        return fc;
+        final var result = objects.fileCollection();
+        sourceSetNamesAtConfigurationTime.stream()
+            .map(sourceSetOutputDirsAtConfigurationTime::get)
+            .filter(outputDir -> outputDir != null)
+            .forEach(result::from);
+        return result;
     }
 
     // TODO: We may need to keep track of all input, even though we only resolve one out of three possible run configurations.
     //   XTC Modules declared in run configurations in project, or overridden in task, that we want to run.
     @Input
     @Override
-    public ListProperty<XtcRunModule> getModules() {
+    public ListProperty<@NotNull XtcRunModule> getModules() {
         if (taskLocalModules.get().isEmpty()) {
             return getExtension().getModules();
         }
@@ -135,7 +135,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     }
 
     @Override
-    public XtcRunModule module(final Action<XtcRunModule> action) {
+    public XtcRunModule module(final Action<@NotNull XtcRunModule> action) {
         return taskLocalModules.get().module(action);
     }
 
@@ -197,7 +197,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         // the standard build lifecycle model.
         cmd.addBoolean("--no-recompile", true);
 
-        // Create module path from xtcModule dependenciex, XDK contents and output of our source set.
+        // Create module path from xtcModule dependencies, XDK contents and output of our source set.
         final var modulePath = resolveFullModulePath();
         cmd.addRepeated("-L", modulePath);
 
@@ -220,12 +220,9 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     protected List<XtcRunModule> resolveModulesToRunFromModulePath(final List<File> resolvedModulePath) {
         checkIsBeingExecuted();
 
-        logger.lifecycle("[plugin] Resolving modules to run from module path: '{}'", resolvedModulePath);
-        // Using hardcoded [plugin] instead of prefix variable
-
+        logger.info("[plugin] Resolving modules to run from module path: '{}'", resolvedModulePath);
         if (isEmpty()) {
-            logger.warn("[plugin] Task extension '{}' and/or local task configuration do not declare any modules to run for '{}'. Skipping task.",
-                ext.getName(), getName());
+            logger.warn("[plugin] Task extension '{}' and/or local task configuration do not declare any modules to run for '{}'. Skipping task.", ext.getName(), getName());
             return emptyList();
         }
 
@@ -244,14 +241,14 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         logger.info("[plugin] Found {} modules(s) in task and extension specification.", size());
         selectedModules.forEach(module -> logger.info("[plugin]    ***** Module to run: {}", module));
 
-        return selectedModules.stream().map(this::validatedModule).sorted().toList();
+        return selectedModules.stream().map(XtcRunTask::validatedModule).sorted().toList();
     }
 
     /**
      * Check if there are module { ... } declarations without names. TODO: Can use mandatory flag
      * NOTE: This function expects that the configuration phase is finished and everything resolves.
      */
-    private XtcRunModule validatedModule(final XtcRunModule module) {
+    private static XtcRunModule validatedModule(final XtcRunModule module) {
         if (!module.validate()) {
             throw new GradleException("[plugin] ERROR: XtcRunModule was declared without a valid moduleName property: " + module);
         }

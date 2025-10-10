@@ -22,17 +22,12 @@ public final class XtcPluginConstants {
     public static final String XTC_EXTENSION_NAME_COMPILER = "xtcCompile";
     public static final String XTC_COMPILER_CLASS_NAME = "org.xvm.tool.Compiler";
     public static final String XTC_COMPILER_LAUNCHER_NAME = "xcc";
-    @SuppressWarnings("unused") // TODO: This will be added to facilitate publication of single XTC project artifacts.
-    public static final String XTC_COMPONENT_VARIANT_COMPILE = "compile";
-    public static final String XTC_COMPILE_MAIN_TASK_NAME = "compileXtc";
 
     // XTC Runtime constants:
     public static final String XTC_EXTENSION_NAME_RUNTIME = "xtcRun";
     public static final String XTC_DEFAULT_RUN_METHOD_NAME_PREFIX = "run";
     public static final String XTC_RUNNER_CLASS_NAME = "org.xvm.tool.Runner";
     public static final String XTC_RUNNER_LAUNCHER_NAME = "xec";
-    @SuppressWarnings("unused") // TODO: This will be added to facilitate publication of single XTC project artifacts.
-    public static final String XTC_COMPONENT_VARIANT_RUNTIME = "runtime";
 
     // XDK Distribution constants:
     public static final String XDK_CONFIG_NAME_INCOMING = "xdk";
@@ -41,10 +36,8 @@ public final class XtcPluginConstants {
     public static final String XDK_LIBRARY_ELEMENT_TYPE_XDK_CONTENTS = "xdk-contents";
     public static final String XDK_LIBRARY_ELEMENT_TYPE = "xdk-distribution-archive";
     public static final String XDK_EXTRACT_TASK_NAME = "extractXdk";
-    public static final String XDK_VERSION_FILE_TASK_NAME = "xtcVersionFile";
     public static final String XDK_VERSION_TASK_NAME = "xtcVersion";
     public static final String XDK_VERSION_GROUP_NAME = "version";
-    public static final String XDK_VERSION_PATH = "VERSION";
 
     // Library (mostly Java tools) constants:
     public static final String XDK_JAVATOOLS_ARTIFACT_ID = "javatools";
@@ -52,13 +45,12 @@ public final class XtcPluginConstants {
     public static final String XDK_CONFIG_NAME_JAVATOOLS_INCOMING = "xdkJavaTools";
     public static final String XDK_CONFIG_NAME_JAVATOOLS_OUTGOING = XDK_CONFIG_NAME_JAVATOOLS_INCOMING + "Provider";
 
-    public static final String XDK_CONFIG_DEFAULT_JVM_ARGS_RESOURCE_PATH = "/org/xtclang/build/internal/defaultJvmArgs.properties";
+    public static final String PLUGIN_BUILD_INFO_FILENAME = "plugin-build-info.properties";
+    public static final String PLUGIN_BUILD_INFO_RESOURCE_PATH = "/org/xtclang/build/internal/" + PLUGIN_BUILD_INFO_FILENAME;
 
     // Config artifacts from the XDK build
     public static final String XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_JAR = "javatools-jar";
 
-    // Default "empty" values for collections and Gradle API classes.
-    public static final Set<File> EMPTY_FILE_COLLECTION = Collections.emptySet();
     public static final String UNSPECIFIED = Project.DEFAULT_VERSION;
 
     // JavaTools (launcher native code)
@@ -66,7 +58,6 @@ public final class XtcPluginConstants {
     public static final String JAVATOOLS_JAR_NAME = "javatools.jar";
 
     // XTC Magic Number, for future verification of XTC module binaries, and for parts of language server support.
-    @SuppressWarnings("unused")
     public static final long XTC_MAGIC = 0xEC57_A5EEL;
 
     // Project property names

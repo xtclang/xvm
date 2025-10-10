@@ -4,7 +4,7 @@ public final class Usage {
     private Usage() {
     }
 
-    public static void main(final String[] args) {
+    static void main(final String[] ignoredArgs) {
         throw new UnsupportedOperationException("ERROR: The XTC Gradle plugin is not intended to be run as a standalone application.");
     }
 }

@@ -6,10 +6,15 @@ import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
  */
 
 plugins {
-    alias(libs.plugins.xdk.build.versioning)
     alias(libs.plugins.xdk.build.aggregator)
-    id("org.xtclang.build.publishing")
+    id("org.xtclang.build.xdk.properties")
 }
+
+// Root aggregator: set version directly from xdkProperties (special case, not using versioning plugin)
+group = xdkProperties.stringValue("xdk.group")
+version = xdkProperties.stringValue("xdk.version")
+
+logger.info("[xvm] Root aggregator version: $group:$name:$version")
 
 /**
  * Installation and distribution tasks that aggregate publishable/distributable included
@@ -35,18 +40,6 @@ private val xdk = gradle.includedBuild("xdk")
 private val plugin = gradle.includedBuild("plugin")
 private val includedBuildsWithPublications = listOf(xdk, plugin)
 
-val publishRemote by tasks.registering {
-    group = PUBLISH_TASK_GROUP
-    description = "Publish XDK and plugin artifacts to remote repositories (GitHub Packages, Maven Central, Gradle Plugin Portal)."
-    dependsOn(validateCredentials)
-
-    // Publish to all enabled remote repositories for all included builds with publications
-    // The :publish task will publish to all repositories enabled via properties
-    includedBuildsWithPublications.forEach { build ->
-        dependsOn(build.task(":publish"))
-    }
-}
-
 val publishLocal by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Publish XDK and plugin artifacts to local Maven repository."
@@ -58,18 +51,72 @@ val publishLocal by tasks.registering {
 }
 
 /**
- * Publish both local (mavenLocal) and remote (GitHub, and potentially mavenCentral, gradlePluginPortal)
- * packages for the current code.
+ * Publish XDK and plugin artifacts to both local Maven and remote repositories.
+ *
+ * Publishes to both local Maven and enabled remote repositories
+ * (GitHub Packages, Maven Central, Gradle Plugin Portal).
+ *
+ * Options:
+ * - Use -PallowRelease=true to allow publishing release versions (required for non-SNAPSHOT versions)
  */
 val publish by tasks.registering {
     group = PUBLISH_TASK_GROUP
-    description = "Task that aggregates publish tasks for builds with publications."
-    dependsOn(publishLocal, publishRemote)
+    description = "Publish XDK and plugin artifacts to both local Maven and remote repositories."
+
+    // Capture version and allowRelease as Providers for configuration cache compatibility
+    val versionProvider = xdkProperties.string("xdk.version")
+    val allowReleaseProvider = xdkProperties.boolean("allowRelease", false)
+
+    doFirst {
+        // Safety check: prevent accidental release publishing
+        val currentVersion = versionProvider.get()
+        val isSnapshot = currentVersion.endsWith("-SNAPSHOT")
+        val allowRelease = allowReleaseProvider.getOrElse(false)
+
+        if (!isSnapshot && !allowRelease) {
+            throw GradleException(
+                """
+                |❌ Cannot publish release version without explicit approval!
+                |
+                |Current version: $currentVersion
+                |
+                |This is a RELEASE version (no -SNAPSHOT suffix).
+                |To publish a release, you must explicitly set -PallowRelease=true
+                |
+                |Example: ./gradlew publish -PallowRelease=true
+                |
+                |This safety check prevents accidental release publishing.
+                """.trimMargin()
+            )
+        }
+        logger.lifecycle("${if (isSnapshot) "📦" else "⚠️ "} Publishing ${if (isSnapshot) "SNAPSHOT" else "RELEASE"} version: $currentVersion (allowRelease=$allowRelease)")
+    }
+
+    // Validate credentials before attempting remote publishing (use xdk's validateCredentials task)
+    dependsOn(xdk.task(":validateCredentials"))
+
+    // Always publish to both local and remote
+    dependsOn(publishLocal)
+
+    // Publish to all enabled remote repositories for all included builds with publications
+    // The :publish task will publish to all repositories enabled via properties
+    includedBuildsWithPublications.forEach { build ->
+        dependsOn(build.task(":publish"))
+    }
 }
-private val publishTaskPrefixes = listOf("list", "delete")
 
-private val publishTaskSuffixesLocal = listOf("LocalPublications")
+/**
+ * Aggregate validateCredentials task that runs validation in all publishable projects.
+ */
+val validateCredentials by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "Validate all publishing credentials across all projects without publishing"
 
+    // Run validateCredentials in all projects with publications
+    includedBuildsWithPublications.forEach { build ->
+        dependsOn(build.task(":validateCredentials"))
+    }
+}
 
 /**
  * Docker tasks - forwarded to docker subproject
@@ -79,7 +126,7 @@ private val publishTaskSuffixesLocal = listOf("LocalPublications")
 private val dockerSubproject = gradle.includedBuild("docker")
 private val dockerTaskNames = listOf(
     "dockerBuildAmd64", "dockerBuildArm64", "dockerBuild",
-    "dockerBuildMultiPlatform", "dockerPushMultiPlatform", 
+    "dockerBuildMultiPlatform", "dockerPushMultiPlatform",
     "dockerPushAmd64", "dockerPushArm64", "dockerPushAll",
     "dockerBuildAndPush", "dockerBuildAndPushMultiPlatform",
     "dockerCreateManifest", "dockerBuildPushAndManifest"
@@ -91,51 +138,10 @@ dockerTaskNames.forEach { taskName ->
         group = "docker"
         description = "Forward to docker subproject task: $taskName"
         dependsOn(dockerSubproject.task(":$taskName"))
-        
+
         // Ensure XDK is built first for tasks that need it
         if (taskName.contains("Build") || taskName.contains("Push")) {
             dependsOn(installDist)
         }
     }
-}
-
-// Task classes are now extracted to separate files in build-logic/common-plugins/src/main/kotlin/
-
-
-// list|deleteLocalPublicatiopns/remotePublications.
-publishTaskPrefixes.forEach { prefix ->
-    publishTaskSuffixesLocal.forEach { suffix ->
-        val taskName = "$prefix$suffix"
-        tasks.register(taskName) {
-            group = PUBLISH_TASK_GROUP
-            description = "Task that aggregates '$taskName' tasks for builds with publications."
-            includedBuildsWithPublications.forEach { it ->
-                dependsOn(it.task(":$taskName"))
-            }
-        }
-    }
-}
-
-val validateCredentials by tasks.registering(ValidateCredentialsTask::class) {
-    group = PUBLISH_TASK_GROUP
-    description = "Validate all publishing credentials (GitHub, Maven Central, Plugin Portal, Signing) without publishing"
-
-    // Use centralized credential management
-    githubUsername.set(xdkPublishingCredentials.githubUsername)
-    githubPassword.set(xdkPublishingCredentials.githubPassword)
-    enableGithub.set(xdkPublishingCredentials.enableGithub)
-
-    enablePluginPortal.set(xdkPublishingCredentials.enablePluginPortal)
-    gradlePublishKey.set(xdkPublishingCredentials.gradlePublishKey)
-    gradlePublishSecret.set(xdkPublishingCredentials.gradlePublishSecret)
-
-    enableMavenCentral.set(xdkPublishingCredentials.enableMavenCentral)
-    mavenCentralUsername.set(xdkPublishingCredentials.mavenCentralUsername)
-    mavenCentralPassword.set(xdkPublishingCredentials.mavenCentralPassword)
-
-    signingKeyId.set(xdkPublishingCredentials.signingKeyId)
-    signingPassword.set(xdkPublishingCredentials.signingPassword)
-    signingSecretKeyRingFile.set(xdkPublishingCredentials.signingSecretKeyRingFile)
-    signingKey.set(xdkPublishingCredentials.signingKey)
-    signingInMemoryKey.set(xdkPublishingCredentials.signingInMemoryKey)
 }

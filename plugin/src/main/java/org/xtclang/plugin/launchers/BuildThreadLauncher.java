@@ -14,7 +14,6 @@ import java.net.URLClassLoader;
 import java.util.Objects;
 
 import org.gradle.api.GradleException;
-import org.gradle.api.Project;
 import org.gradle.api.logging.Logger;
 import org.gradle.process.ExecResult;
 
@@ -33,17 +32,10 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
 
     private final Method main;
 
-    public BuildThreadLauncher(final Project project, final T task) {
-        super(project, task);
-        this.main = resolveMethod(task);
-    }
-
     public BuildThreadLauncher(final T task, final Logger logger) {
         super(task, logger);
         this.main = resolveMethod(task);
     }
-
-
 
     @Override
     protected boolean validateCommandLine(final CommandLine cmd) {
@@ -123,9 +115,9 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
             builder.failure(cause);
         }
     }
-
     @SuppressWarnings("unused")
-    private Class<?> dynamicallyLoadJar(final File jar, final String className) throws IOException {
+    private static Class<?> dynamicallyLoadJar(final File jar, final String className) throws IOException {
+        // TODO: Keep this around for experimental purposes with thread local launchers and a dynamic javatools.jar classpath.
         try (var classLoader = new URLClassLoader(new URL[]{jar.toURI().toURL()})) {
             return classLoader.loadClass(className);
         } catch (final ClassNotFoundException e) {

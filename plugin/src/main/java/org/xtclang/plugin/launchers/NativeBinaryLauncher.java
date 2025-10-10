@@ -6,28 +6,19 @@ import java.util.Objects;
 import java.util.StringTokenizer;
 
 import org.gradle.api.GradleException;
-import org.gradle.api.Project;
 import org.gradle.api.logging.Logger;
 import org.gradle.process.ExecOperations;
 import org.gradle.process.ExecResult;
-import org.gradle.process.ExecSpec;
 
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.internal.DefaultXtcLauncherTaskExtension;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 
-@SuppressWarnings("unused")
 public class NativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends XtcLauncher<E, T> {
 
     private final String commandName;
     private final ExecOperations execOperations;
 
-    public NativeBinaryLauncher(final Project project, final T task, final ExecOperations execOperations) {
-        super(project, task);
-        this.commandName = task.getNativeLauncherCommandName();
-        this.execOperations = execOperations;
-    }
-    
     public NativeBinaryLauncher(final T task, final Logger logger, final ExecOperations execOperations) {
         super(task, logger);
         this.commandName = task.getNativeLauncherCommandName();
@@ -58,7 +49,6 @@ public class NativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends 
         throw new GradleException("[plugin] Could not resolve " + commandName + " from system path: " + path);
     }
 
-    @SuppressWarnings("deprecation")
     @Override
     public ExecResult apply(final CommandLine cmd) {
         logger.info("[plugin] Launching task: {}}", this);
@@ -68,7 +58,7 @@ public class NativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends 
         }
         final var builder = resultBuilder(cmd);
         final var execResult = execOperations.exec(spec -> {
-            redirectIo(builder, spec);
+            redirectIo(spec);
             spec.setExecutable(findOnPath(commandName));
             spec.setArgs(cmd.toList());
             spec.setIgnoreExitValue(true);

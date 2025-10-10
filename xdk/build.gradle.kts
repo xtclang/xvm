@@ -1,4 +1,4 @@
-import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE
+import XdkBuildLogic.XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE
 import XdkDistribution.Companion.JAVATOOLS_PREFIX_PATTERN
 import org.gradle.api.DefaultTask
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
@@ -22,12 +22,13 @@ import java.io.File
 
 plugins {
     id("org.xtclang.build.xdk.versioning")
-    alias(libs.plugins.vanniktech.maven.publish)
     alias(libs.plugins.xtc)
     application
     distribution
     id("org.xtclang.build.publishing")
 }
+
+// Access xdkProperties extension (provided by Java convention plugin)
 
 val xtcLauncherBinaries by configurations.registering {
     isCanBeResolved = true
@@ -89,17 +90,16 @@ dependencies {
     xtcLauncherBinaries(project(path = ":javatools-launcher", configuration = "xtcLauncherBinaries"))
 }
 
-private val semanticVersion: SemanticVersion by extra
-
-private val xdkDist = xdkBuildLogic.distro()
+// semanticVersion is now a Project extension property
+private val xdkDist = xdkDistribution()
 
 // Configuration cache compatibility: Extract just the version string to avoid holding project references
-val artifactVersion = semanticVersion.artifactVersion
+val artifactVersion = version.toString()
 
 
-// Resolve XDK properties once at script level to avoid configuration cache issues
-val enablePreview = getXdkPropertyBoolean("org.xtclang.java.enablePreview", false)
-val enableNativeAccess = getXdkPropertyBoolean("org.xtclang.java.enableNativeAccess", false)
+// Resolve XDK properties at configuration time (acceptable - static launcher configuration)
+val enablePreview = xdkProperties.booleanValue("org.xtclang.java.enablePreview", false)
+val enableNativeAccess = xdkProperties.booleanValue("org.xtclang.java.enableNativeAccess", false)
 
 // Configure application plugin to create multiple scripts instead of default single script
 application {
@@ -108,6 +108,7 @@ application {
 }
 
 // Configure the application plugin to generate scripts using custom templates
+// TODO: This should also use the java convention default jvm args.
 tasks.startScripts {
     applicationName = "xec"
     classpath = configurations.xdkJavaTools.get()
@@ -116,11 +117,9 @@ tasks.startScripts {
         add("-ea")
         if (enablePreview) {
             add("--enable-preview")
-            logger.info("[xdk] You have enabled preview features for XTC launchers")
         }
         if (enableNativeAccess) {
             add("--enable-native-access=ALL-UNNAMED")
-            logger.info("[xdk] You have enabled native access for XTC launchers")
         }
     }
 }
@@ -162,7 +161,6 @@ val modifyScripts by tasks.registering(ModifyScriptsTask::class) {
     })
 }
 
-// Copy scripts to distribution location
 val prepareDistributionScripts by tasks.registering(Copy::class) {
     dependsOn(modifyScripts)
     from(tasks.startScripts.map { it.outputDir!! }) {
@@ -179,25 +177,21 @@ val prepareDistributionScripts by tasks.registering(Copy::class) {
 subprojects {
     tasks.withType<XtcCompileTask>().configureEach {
         /*
-         * Add version stamp to XDK module from the XDK build global semantic version single source of truth.
+         * Add version stamp to XDK module from the XDK build global version single source of truth.
          */
-        assert(version == semanticVersion.artifactVersion)
-        xtcVersion = semanticVersion.artifactVersion
+        xtcVersion = version.toString()
     }
 }
 
 
-// Extract publication values during configuration to avoid capturing project references
-private val publicationGroupId = project.group.toString()
-private val publicationArtifactId = project.name
-private val publicationVersion = project.version.toString()
+// Configure project-specific publishing metadata
+xdkPublishing {
+    pomName.set("xdk")
+    pomDescription.set("XTC Language Software Development Kit (XDK) Distribution Archive")
+}
 
-// Configure Vanniktech Maven Publish for configuration cache compatibility
+// Configure publication type as JavaLibrary to handle custom ZIP artifact
 mavenPublishing {
-    signAllPublications()
-    coordinates(publicationGroupId, publicationArtifactId, publicationVersion)
-
-    // Configure as Generic publication to handle custom ZIP artifact
     configure(
         com.vanniktech.maven.publish.JavaLibrary(
             javadocJar = com.vanniktech.maven.publish.JavadocJar.None(),
@@ -214,55 +208,16 @@ mavenPublishing {
                 extension = "zip"
             }
         }
-    }
 
-    // Maven Central publishing (disabled by default)
-    if (xdkPublishingCredentials.enableMavenCentral.get()) {
-        publishToMavenCentral(automaticRelease = false)
-        logger.info("[xdk] Maven Central publishing is enabled")
-    } else {
-        logger.info("[xdk] Maven Central publishing is disabled (use -Porg.xtclang.publish.mavenCentral=true to enable)")
+        // Disable Gradle Module Metadata generation - the XDK is a simple ZIP distribution
+        // that doesn't need variant-aware dependency resolution
+        tasks.withType<GenerateModuleMetadata>().configureEach {
+            enabled = false
+        }
     }
-
 
     pom {
-        name.set("xdk")
-        description.set("XTC Language Software Development Kit (XDK) Distribution Archive")
-        url.set("https://xtclang.org")
         packaging = "zip"  // Specify ZIP packaging
-
-        licenses {
-            license {
-                name.set("The XDK License")
-                url.set("https://github.com/xtclang/xvm/tree/master/license")
-            }
-        }
-
-        developers {
-            developer {
-                id.set("xtclang-workflows")
-                name.set("XTC Team")
-                email.set("noreply@xtclang.org")
-            }
-        }
-    }
-}
-
-// Configure GitHub Packages repository
-publishing {
-    repositories {
-        if (xdkPublishingCredentials.enableGithub.get()) {
-            maven {
-                name = "github"
-                url = uri("https://maven.pkg.github.com/xtclang/xvm")
-                credentials {
-                    username = xdkPublishingCredentials.githubUsername.get().ifEmpty { "xtclang-workflows" }
-                    password = xdkPublishingCredentials.githubPassword.get()
-                }
-            }
-        } else {
-            logger.info("[xdk] GitHub Packages repository not configured - missing GitHubPassword/GITHUB_TOKEN")
-        }
     }
 }
 
@@ -299,7 +254,6 @@ distributions {
 
             // Core XDK content
             val xdkTemplate = tasks.processResources.map {
-                logger.info("[xdk] Resolving processResources output (this should be during the execution phase).")
                 File(it.outputs.files.singleFile, "xdk")
             }
             from(xdkTemplate) {
@@ -330,9 +284,6 @@ distributions {
                 rename(XdkDistribution.createRenameTransformer(artifactVersion))
                 into("javatools")
             }
-
-            // Version file
-            from(tasks.xtcVersionFile)
 
             // Include launcher scripts directly in bin/
             from(prepareDistributionScripts.map { it.destinationDir }) {
@@ -360,7 +311,6 @@ distributions {
 
             // Core XDK content (same as main distribution)
             val xdkTemplate = tasks.processResources.map {
-                logger.info("[xdk] Resolving processResources output (this should be during the execution phase).")
                 File(it.outputs.files.singleFile, "xdk")
             }
             from(xdkTemplate) {
@@ -391,9 +341,6 @@ distributions {
                 rename(XdkDistribution.createRenameTransformer(artifactVersion))
                 into("javatools")
             }
-
-            // Version file
-            from(tasks.xtcVersionFile)
 
             // Install platform-specific binary launchers that work on the host system
             XdkDistribution.binaryLauncherNames.forEach {
@@ -447,12 +394,12 @@ val clean by tasks.existing {
 
 // Restore the proper distribution task dependencies using the existing utility
 tasks.filter { XdkDistribution.isDistributionArchiveTask(it) }.forEach {
-    it.dependsOn(tasks.named("processXtcResources"))
+    it.dependsOn(tasks.named<Copy>("processXtcResources"))
 }
 
 // Also ensure install tasks depend on processXtcResources (install tasks use the same content)
 tasks.matching { it.group == "distribution" && it.name.contains("install") }.configureEach {
-    dependsOn(tasks.named("processXtcResources"))
+    dependsOn(tasks.named<Copy>("processXtcResources"))
 }
 
 tasks.withType<Tar>().configureEach {

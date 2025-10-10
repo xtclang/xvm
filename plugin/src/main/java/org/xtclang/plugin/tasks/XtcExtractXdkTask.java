@@ -4,7 +4,6 @@ import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING_ZIP;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_ID;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_SUFFIX;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_PATH;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_MODULE_FILE_EXTENSION;
 import static org.xtclang.plugin.XtcPluginUtils.FileUtils.getFileExtension;
 
@@ -26,6 +25,8 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xtclang.plugin.XtcProjectDelegate;
 
 @CacheableTask
@@ -34,12 +35,13 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
     
     // Configuration cache compatible collections resolved at construction time
     private final FileCollection xdkArchiveConfigs;
-    private final Provider<Directory> xdkOutputDir;
+    private final Provider<@NotNull Directory> xdkOutputDir;
     
     // Injected services for configuration cache compatibility
     private final FileSystemOperations fileSystemOperations;
     private final ArchiveOperations archiveOperations;
 
+    @SuppressWarnings("ConstructorNotProtectedInAbstractClass")
     @Inject
     public XtcExtractXdkTask(final Project project, final FileSystemOperations fileSystemOperations, final ArchiveOperations archiveOperations) {
         super(project);
@@ -69,13 +71,13 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
     }
 
     @OutputDirectory
-    Provider<Directory> getOutputXtcModules() {
+    Provider<@NotNull Directory> getOutputXtcModules() {
         return xdkOutputDir;
     }
 
     @TaskAction
     public void extractXdk() {
-        super.executeTask();
+        executeTask();
 
         // The task is configured at this point. We should indeed have found a zip archive from some xdkDistributionProvider somewhere.
         final var archives = xdkArchiveConfigs.filter(XtcExtractXdkTask::isXdkArchive);
@@ -94,8 +96,7 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
             config.from(archiveOperations.zipTree(archiveFile));
             config.include(
                     "**/*." + XTC_MODULE_FILE_EXTENSION,
-                    "**/" + XDK_JAVATOOLS_ARTIFACT_ID + '*' + XDK_JAVATOOLS_ARTIFACT_SUFFIX,
-                    XDK_VERSION_PATH);
+                    "**/" + XDK_JAVATOOLS_ARTIFACT_ID + '*' + XDK_JAVATOOLS_ARTIFACT_SUFFIX);
             config.eachFile(fileCopyDetails -> fileCopyDetails.setRelativePath(new RelativePath(true, fileCopyDetails.getName())));
             config.setIncludeEmptyDirs(false);
             config.into(getOutputXtcModules());

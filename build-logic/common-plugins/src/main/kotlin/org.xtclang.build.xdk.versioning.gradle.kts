@@ -1,15 +1,32 @@
+import org.gradle.api.artifacts.VersionCatalogsExtension
+
 /**
- * This is a featherweight precompiled script plugin that helps us set the semantic version
- * of all XDK components/subprojects. The plugin itself should not do any manipulation of
- * versions, since it can be applied from arbitrary third party code.
- *
- * Any XTC project will have an extension with its resolved SemanticVersion
+ * Lightweight versioning plugin that assigns group and version from version catalog.
+ * The version catalog is patched by settings plugin with values from version.properties.
  */
 
-val semanticVersion by extra {
-    xdkBuildLogic.versions().assignSemanticVersionFromCatalog()
+// Ensure project hasn't been versioned yet
+require(project.version == Project.DEFAULT_VERSION) {
+    "Project '${project.name}' is already versioned as ${project.version}. " +
+    "The versioning plugin should only be applied once."
 }
 
-val jdkVersion by extra {
-    getXdkPropertyInt("org.xtclang.java.jdk")
+// Get version catalog (patched by settings plugin with xdk.version and xdk.group)
+val libsCatalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
+
+val resolvedGroup = libsCatalog.findVersion("group-xdk").get().requiredVersion
+val resolvedVersion = libsCatalog.findVersion("xdk").get().requiredVersion
+
+// Validate versions are not placeholders
+require(!resolvedVersion.contains("PLACEHOLDER")) {
+    "Version catalog not patched: xdk='$resolvedVersion'. Ensure common settings plugin is applied."
 }
+require(!resolvedGroup.contains("PLACEHOLDER")) {
+    "Version catalog not patched: group-xdk='$resolvedGroup'. Ensure common settings plugin is applied."
+}
+
+// Assign to project
+project.group = resolvedGroup
+project.version = resolvedVersion
+
+logger.info("[versioning] Versioned '${project.name}' as $resolvedGroup:${project.name}:$resolvedVersion")

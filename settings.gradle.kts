@@ -60,7 +60,7 @@ gradle.taskGraph.whenReady {
  * it will be completely undetectable.
  *
  * Regardless of configuration, the manual tests can be run with ./gradlew manualTests:<task> from the command
- * line, but they may not show up in the IDE and they will not be auto included in the build lifecycle for
+ * line, but they may not show up in the IDE, and they will not be auto included in the build lifecycle for
  * the composite.
  */
 private fun includeManualTests(): Boolean {
@@ -86,3 +86,7 @@ if (includeManualTests()) {
 }
 
 rootProject.name = "xvm"
+
+// Note: Root build doesn't use common settings plugin to avoid version catalog conflicts
+// Version catalog is automatically loaded from gradle/libs.versions.toml
+// XdkPropertiesService registration happens via versioning plugin in build.gradle.kts

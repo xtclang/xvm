@@ -5,6 +5,9 @@ import javax.inject.Inject;
 import org.gradle.api.Project;
 import org.gradle.api.provider.Property;
 
+import org.jetbrains.annotations.NotNull;
+
+import org.xtclang.plugin.ProjectDelegate;
 import org.xtclang.plugin.XtcCompilerExtension;
 
 public class DefaultXtcCompilerExtension extends DefaultXtcLauncherTaskExtension implements XtcCompilerExtension {
@@ -13,12 +16,12 @@ public class DefaultXtcCompilerExtension extends DefaultXtcLauncherTaskExtension
     // Even though we have getters, these need to be protected for subclasses to be able to use them in the build DSL
     // We still have to have getters, or the plugin validation fails, and we might as well put the input properties on
     // those for readability.
-    protected final Property<Boolean> disableWarnings;
-    protected final Property<Boolean> strict;
-    protected final Property<Boolean> hasQualifiedOutputName;
-    protected final Property<Boolean> hasVersionedOutputName;
-    protected final Property<String> stamp;
-    protected final Property<Boolean> rebuild;
+    protected final Property<@NotNull Boolean> disableWarnings;
+    protected final Property<@NotNull Boolean> strict;
+    protected final Property<@NotNull Boolean> hasQualifiedOutputName;
+    protected final Property<@NotNull Boolean> hasVersionedOutputName;
+    protected final Property<@NotNull String> stamp;
+    protected final Property<@NotNull Boolean> rebuild;
 
     @Inject
     public DefaultXtcCompilerExtension(final Project project) {
@@ -36,36 +39,39 @@ public class DefaultXtcCompilerExtension extends DefaultXtcLauncherTaskExtension
         this.strict = objects.property(Boolean.class).convention(false);
         this.hasQualifiedOutputName = objects.property(Boolean.class).convention(false);
         this.hasVersionedOutputName = objects.property(Boolean.class).convention(false);
-        this.stamp = objects.property(String.class);
+
+        // Set default xtcVersion from plugin-build-info.properties
+        final var defaultXdkVersion = ProjectDelegate.readXdkVersion();
+        this.stamp = objects.property(String.class).convention(defaultXdkVersion);
     }
 
     @Override
-    public Property<Boolean> getDisableWarnings() {
+    public Property<@NotNull Boolean> getDisableWarnings() {
         return disableWarnings;
     }
 
     @Override
-    public Property<Boolean> getStrict() {
+    public Property<@NotNull Boolean> getStrict() {
         return strict;
     }
 
     @Override
-    public Property<Boolean> getQualifiedOutputName() {
+    public Property<@NotNull Boolean> getQualifiedOutputName() {
         return hasQualifiedOutputName;
     }
 
     @Override
-    public Property<Boolean> getVersionedOutputName() {
+    public Property<@NotNull Boolean> getVersionedOutputName() {
         return hasVersionedOutputName;
     }
 
     @Override
-    public Property<String> getXtcVersion() {
+    public Property<@NotNull String> getXtcVersion() {
         return stamp;
     }
 
     @Override
-    public Property<Boolean> getRebuild() {
+    public Property<@NotNull Boolean> getRebuild() {
         return rebuild;
     }
 }

@@ -4,7 +4,6 @@ package org.xvm.util;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 
 
 /**
@@ -20,8 +19,15 @@ public class LinkedIterator<E>
      *
      * @param aIter  the Iterators containing the elements to iterate over
      */
-    public LinkedIterator(Iterator<E>... aIter) {
-        f_aIter = Objects.requireNonNullElse(aIter, NO_ITERATORS);
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public LinkedIterator(final Iterator<E>... aIter) {
+        f_aIter = aIter != null ? aIter : emptyIteratorArray();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E> Iterator<E>[] emptyIteratorArray() {
+        return (Iterator<E>[]) NO_ITERATORS;
     }
 
 
@@ -148,5 +154,5 @@ public class LinkedIterator<E>
     /**
      * Empty array of Iterators (to avoid unnecessary allocation).
      */
-    private static final Iterator[] NO_ITERATORS = new Iterator[0];
+    private static final Iterator<?>[] NO_ITERATORS = new Iterator<?>[0];
 }

@@ -1,5 +1,5 @@
 name: 'Get Java Version'
-description: 'Gets the Java version from XDK properties'
+description: 'Gets the Java version from version.properties (platform version constraint)'
 outputs:
   java_version:
     description: 'Java version (e.g., 21, 25)'
@@ -8,12 +8,12 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - name: Extract Java version from XDK properties
+    - name: Extract Java version from version properties
       id: get-version
       shell: bash
       run: |
-        # Extract Java version from xdk.properties
-        JAVA_VERSION=$(grep '^org\.xtclang\.java\.jdk=' xdk.properties | cut -d'=' -f2)
+        # Extract Java version from version.properties (platform version constraint)
+        JAVA_VERSION=$(grep '^org\.xtclang\.java\.jdk=' version.properties | cut -d'=' -f2)
         echo "java_version=$JAVA_VERSION" >> $GITHUB_OUTPUT
         echo "✅ Detected Java version: $JAVA_VERSION"
 

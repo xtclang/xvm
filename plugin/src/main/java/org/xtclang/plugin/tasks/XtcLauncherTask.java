@@ -2,16 +2,13 @@ package org.xtclang.plugin.tasks;
 
 import static java.util.Objects.requireNonNull;
 
-import static org.xtclang.plugin.XtcPluginConstants.EMPTY_FILE_COLLECTION;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_CONTENTS;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_MODULE_DEPENDENCY;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_LANGUAGE_NAME;
-import static org.xtclang.plugin.XtcPluginUtils.FileUtils.isValidXtcModule;
 import static org.xtclang.plugin.XtcPluginUtils.FileUtils.isValidXtcModuleSafe;
 import static org.xtclang.plugin.XtcPluginUtils.argumentArrayToList;
 import static org.xtclang.plugin.XtcPluginUtils.capitalize;
-import static org.xtclang.plugin.XtcPluginUtils.singleArgumentIterableProvider;
 
 import java.io.File;
 import java.io.InputStream;
@@ -30,7 +27,6 @@ import javax.inject.Inject;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
-import org.gradle.api.logging.Logger;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
@@ -45,6 +41,8 @@ import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.process.ExecOperations;
 import org.gradle.process.ExecResult;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
@@ -61,40 +59,39 @@ import org.xtclang.plugin.launchers.XtcLauncher;
 public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extends XtcDefaultTask implements XtcLauncherTaskExtension {
 
     // All inherited from launcher task extension and turned into input
-    protected final Property<InputStream> stdin;
-    protected final Property<OutputStream> stdout;
-    protected final Property<OutputStream> stderr;
-    protected final ListProperty<String> jvmArgs;
-    protected final Property<Boolean> debug;
-    protected final Property<Integer> debugPort;
-    protected final Property<Boolean> debugSuspend;
-    protected final Property<Boolean> verbose;
-    protected final Property<Boolean> fork;
-    protected final Property<Boolean> showVersion;
-    protected final Property<Boolean> useNativeLauncher;
+    protected final Property<@NotNull InputStream> stdin;
+    protected final Property<@NotNull OutputStream> stdout;
+    protected final Property<@NotNull OutputStream> stderr;
+    protected final ListProperty<@NotNull String> jvmArgs;
+    protected final Property<@NotNull Boolean> debug;
+    protected final Property<@NotNull Integer> debugPort;
+    protected final Property<@NotNull Boolean> debugSuspend;
+    protected final Property<@NotNull Boolean> verbose;
+    protected final Property<@NotNull Boolean> fork;
+    protected final Property<@NotNull Boolean> showVersion;
+    protected final Property<@NotNull Boolean> useNativeLauncher;
 
     protected final E ext;
     
     // Configuration-time captured data to avoid Project references during execution
     // These are captured at configuration time to be serializable with configuration cache
-    protected final Provider<Directory> xdkContentsDirAtConfigurationTime;
-    protected final Map<String, Provider<Directory>> sourceSetOutputDirsAtConfigurationTime;
+    protected final Provider<@NotNull Directory> xdkContentsDirAtConfigurationTime;
+    protected final Map<String, Provider<@NotNull Directory>> sourceSetOutputDirsAtConfigurationTime;
     
     // Source set names captured at configuration time to avoid Project access during execution
     protected final List<String> sourceSetNamesAtConfigurationTime;
     
     // Configuration inputs captured as Providers at task creation time - Gradle handles resolution and missing configs
-    private final Provider<FileCollection> javaToolsConfigAtConfigurationTime;
-    private final Provider<FileCollection> xtcModuleDependenciesAtConfigurationTime;
+    private final Provider<@NotNull FileCollection> javaToolsConfigAtConfigurationTime;
+    private final Provider<@NotNull FileCollection> xtcModuleDependenciesAtConfigurationTime;
     // Launcher configuration captured at configuration time to avoid Project access during execution  
     private final boolean useNativeLauncherAtConfigurationTime;
     private final boolean forkAtConfigurationTime;
     
     // JavaExecLauncher configuration captured at configuration time
-    private final Provider<String> toolchainExecutableAtConfigurationTime;
-    private final Provider<String> projectVersionAtConfigurationTime;
-    private final Provider<org.gradle.api.file.FileTree> xdkFileTreeAtConfigurationTime;
-    
+    private final Provider<@NotNull String> toolchainExecutableAtConfigurationTime;
+    private final Provider<@NotNull String> projectVersionAtConfigurationTime;
+    private final Provider<org.gradle.api.file.@NotNull FileTree> xdkFileTreeAtConfigurationTime;
 
     @SuppressWarnings("this-escape") // Suppressed because launchers need task reference in constructor
     protected XtcLauncherTask(final Project project, final E ext) {
@@ -111,8 +108,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         final var sourceSets = XtcProjectDelegate.getSourceSets(project);
         this.sourceSetNamesAtConfigurationTime = sourceSets.stream().map(SourceSet::getName).toList();
         this.sourceSetOutputDirsAtConfigurationTime = sourceSets.stream()
-            .collect(Collectors.toMap(
-                sourceSet -> sourceSet.getName(),
+            .collect(Collectors.toMap(SourceSet::getName,
                 sourceSet -> XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet)
             ));
 
@@ -230,39 +226,39 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @Input
     @Override
-    public Property<Boolean> getDebug() {
+    public Property<@NotNull Boolean> getDebug() {
         return debug;
     }
 
     @Input
     @Override
-    public Property<Integer> getDebugPort() {
+    public Property<@NotNull Integer> getDebugPort() {
         return debugPort;
     }
 
     @Input
     @Override
-    public Property<Boolean> getDebugSuspend() {
+    public Property<@NotNull Boolean> getDebugSuspend() {
         return debugSuspend;
     }
 
     @Internal  // Streams are not serializable for configuration cache
-    public Property<InputStream> getStdin() {
+    public Property<@NotNull InputStream> getStdin() {
         return stdin;
     }
 
     @Internal  // Streams are not serializable for configuration cache
-    public Property<OutputStream> getStdout() {
+    public Property<@NotNull OutputStream> getStdout() {
         return stdout;
     }
 
     @Internal  // Streams are not serializable for configuration cache
-    public Property<OutputStream> getStderr() {
+    public Property<@NotNull OutputStream> getStderr() {
         return stderr;
     }
 
     @Override
-    public void jvmArg(final Provider<? extends String> arg) {
+    public void jvmArg(final Provider<? extends @NotNull String> arg) {
         // Use objects factory instead of Project to create provider
         jvmArgs(objects.listProperty(String.class).value(arg.map(Collections::singletonList)));
     }
@@ -278,7 +274,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     }
 
     @Override
-    public void jvmArgs(final Provider<? extends Iterable<? extends String>> provider) {
+    public void jvmArgs(final Provider<? extends @NotNull Iterable<? extends String>> provider) {
         jvmArgs.addAll(provider);
     }
 
@@ -288,33 +284,33 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     }
 
     @Override
-    public void setJvmArgs(final Provider<? extends Iterable<? extends String>> provider) {
+    public void setJvmArgs(final Provider<? extends @NotNull Iterable<? extends String>> provider) {
         jvmArgs.set(provider);
     }
 
     @Input
-    public Property<Boolean> getVerbose() {
+    public Property<@NotNull Boolean> getVerbose() {
         return verbose;
     }
 
     @Input
-    public Property<Boolean> getFork() {
+    public Property<@NotNull Boolean> getFork() {
         return fork;
     }
 
     @Input
-    public Property<Boolean> getShowVersion() {
+    public Property<@NotNull Boolean> getShowVersion() {
         return showVersion;
     }
 
     @Input
-    public Property<Boolean> getUseNativeLauncher() {
+    public Property<@NotNull Boolean> getUseNativeLauncher() {
         return useNativeLauncher;
     }
 
     @Optional
     @Input
-    public ListProperty<String> getJvmArgs() {
+    public ListProperty<@NotNull String> getJvmArgs() {
         return jvmArgs;
     }
 
@@ -388,7 +384,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
         for (final var entry : sourceSetOutputDirsAtConfigurationTime.entrySet()) {
             final String sourceSetName = entry.getKey();
-            final Provider<Directory> outputDir = entry.getValue();
+            final Provider<@NotNull Directory> outputDir = entry.getValue();
             final Set<File> sourceSetOutput = resolveDirectories(outputDir);
             map.put(XTC_LANGUAGE_NAME + capitalize(sourceSetName), sourceSetOutput);
         }
@@ -400,7 +396,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @InputDirectory
     @PathSensitive(PathSensitivity.RELATIVE)
-    Provider<Directory> getInputXdkContents() {
+    Provider<@NotNull Directory> getInputXdkContents() {
         return xdkContentsDirAtConfigurationTime;
     }
 
@@ -419,7 +415,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     }
 
     protected List<File> verifiedModulePath(final Map<String, Set<File>> map) {
-        logger.info("[plugin] ModulePathMap: [{} keys and {} values]", map.keySet().size(), map.values().stream().mapToInt(Set::size).sum());
+        logger.info("[plugin] ModulePathMap: [{} keys and {} values]", map.size(), map.values().stream().mapToInt(Set::size).sum());
 
         final var modulePathList = new ArrayList<File>();
         map.forEach((provider, files) -> {
@@ -457,7 +453,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return modulePathSet.stream().sorted().toList();
     }
 
-    private void checkDuplicatesInModulePaths(final Set<File> modulePathSet) {
+    private static void checkDuplicatesInModulePaths(final Set<File> modulePathSet) {
         for (final File module : modulePathSet) {
             // find modules with the same name (or TODO: with the same identity)
             if (module.isDirectory()) {
@@ -474,7 +470,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     }
 
     public static Set<File> resolveFiles(final FileCollection files) {
-        return files.isEmpty() ? EMPTY_FILE_COLLECTION : files.getAsFileTree().getFiles();
+        return files.isEmpty() ? Collections.emptySet() : files.getAsFileTree().getFiles();
     }
 
     public static Set<File> resolveDirectories(final Set<File> files) {
@@ -482,11 +478,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     }
 
     @SuppressWarnings("unused")
-    protected Set<File> resolveFiles(final Provider<Directory> dirProvider) {
+    protected Set<File> resolveFiles(final Provider<@NotNull Directory> dirProvider) {
         return resolveFiles(objects.fileCollection().from(dirProvider));
     }
 
-    protected Set<File> resolveDirectories(final Provider<Directory> dirProvider) {
+    protected Set<File> resolveDirectories(final Provider<@NotNull Directory> dirProvider) {
         return resolveDirectories(resolveFiles(objects.fileCollection().from(dirProvider)));
     }
 

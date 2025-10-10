@@ -8,12 +8,14 @@
 
 import de.undercouch.gradle.tasks.download.Download
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
-import org.gradle.process.ExecOperations
 
 plugins {
+    id("org.xtclang.build.xdk.versioning")
     alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.download)
 }
+
+// Access xdkProperties extension (provided by Java convention plugin)
 
 dependencies {
     implementation(libs.bundles.unicode)
@@ -35,7 +37,7 @@ val downloadUcdFlatZip by tasks.registering(Download::class) {
     onlyIf {
         System.err.println("Check rebuildunicode spec: should be executing: ${state.executing}")
         assert(state.executing)
-        getXdkPropertyBoolean("org.xtclang.unicode.rebuild", false) // TODO inputproperty
+        xdkProperties.booleanValue("org.xtclang.unicode.rebuild", false)
     }
     src(unicodeUcdUrl)
     overwrite(false)
@@ -65,7 +67,7 @@ val rebuildUnicodeTables by tasks.registering {
     group = BUILD_GROUP
     description = "If the unicode files should be regenerated, generate them from the build tool, and place them under the build resources."
 
-    val rebuildUnicode = getXdkPropertyBoolean("org.xtclang.unicode.rebuild", false)
+    val rebuildUnicode = xdkProperties.booleanValue("org.xtclang.unicode.rebuild", false)
     // Note: moved logger usage to task action for configuration cache compatibility
 
     dependsOn(jar)
@@ -89,5 +91,4 @@ val rebuildUnicodeTables by tasks.registering {
             }
         }
     }
-
 }

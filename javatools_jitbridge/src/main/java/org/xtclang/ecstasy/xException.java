@@ -4,7 +4,7 @@ package org.xtclang.ecstasy;
  * Native support for `ecstasy.Exception`.
  */
 public class xException extends RuntimeException {
-    public xException(Throwable cause, Exception exception) {
+    public xException(final Throwable cause, final Exception exception) {
         super(cause);
 
         this.exception = exception;

@@ -1,155 +1,174 @@
-import org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_OUT
-import org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_ERROR
-import org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED
-import org.gradle.api.tasks.testing.logging.TestLogEvent.STARTED
-import org.gradle.api.tasks.testing.logging.TestLogEvent.PASSED
-import org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED
-
+import org.gradle.api.artifacts.VersionCatalogsExtension
+import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.api.tasks.testing.Test
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.process.CommandLineArgumentProvider
 import java.nio.charset.StandardCharsets.UTF_8
 
 plugins {
-    id("org.xtclang.build.xdk.versioning")
+    id("org.xtclang.build.xdk.properties")
     java
 }
 
-private val pprefix = "org.xtclang.java"
-private val lintProperty = "$pprefix.lint"
+private class DefaultJvmArgsProvider(
+    private val args: Provider<List<String>>
+) : CommandLineArgumentProvider {
+    @get:Input
+    val snapshot: List<String> get() = args.get()
+    override fun asArguments(): Iterable<String> = snapshot
+}
 
-private val jdkVersion: Provider<Int> = provider {
-    // For build-logic projects, use the current JVM to avoid chicken-and-egg problems with toolchain provisioning
-    val isBuildLogic = project.rootDir.absolutePath.contains("build-logic")
-    logger.debug("[java] Project '${project.path}' at '${project.rootDir.absolutePath}' - isBuildLogic: $isBuildLogic")
-    if (isBuildLogic) {
-        JavaVersion.current().majorVersion.toInt()
-    } else {
-        getXdkPropertyInt("$pprefix.jdk")
+private class JavaCompilerArgsProvider(
+    private val lintProv: Provider<Boolean>,
+    private val enablePreviewProv: Provider<Boolean>,
+    private val maxErrorsProv: Provider<Int>,
+    private val maxWarningsProv: Provider<Int>,
+    private val warningsAsErrorsProv: Provider<Boolean>,
+) : CommandLineArgumentProvider {
+
+    @get:Input
+    val lintSnapshot: Boolean get() = lintProv.get()
+
+    @get:Input
+    val previewSnapshot: Boolean get() = enablePreviewProv.get()
+
+    @get:Input
+    val maxErrorsSnapshot: Int get() = maxErrorsProv.get()
+
+    @get:Input
+    val maxWarningsSnapshot: Int get() = maxWarningsProv.get()
+
+    @get:Input
+    val werrorSnapshot: Boolean get() = warningsAsErrorsProv.get()
+
+    override fun asArguments(): Iterable<String> = buildList {
+        add("-Xlint:${if (lintSnapshot) "all" else "none"}")
+        if (previewSnapshot) {
+            add("--enable-preview")
+            if (lintSnapshot) add("-Xlint:preview")
+        }
+        if (maxErrorsSnapshot > 0) addAll(listOf("-Xmaxerrs", maxErrorsSnapshot.toString()))
+        if (maxWarningsSnapshot > 0) addAll(listOf("-Xmaxwarns", maxWarningsSnapshot.toString()))
+        if (werrorSnapshot) add("-Werror")
     }
 }
 
-// Compute default JVM args early for reuse everywhere
-private val enablePreview = getXdkPropertyBoolean("$pprefix.enablePreview", false)
-private val enableNativeAccess = getXdkPropertyBoolean("$pprefix.enableNativeAccess", false)
-private val defaultJvmArgs = buildList {
-    add("-ea")
-    if (enablePreview) {
-        add("--enable-preview")
-    }
-    if (enableNativeAccess) {
-        add("--enable-native-access=ALL-UNNAMED")
+/** Top-level typed Action for Test logging (no script capture). */
+private class ConfigureTestLoggingAction(
+    private val showStdout: Provider<Boolean>
+) : Action<Test> {
+    override fun execute(t: Test) {
+        val on = showStdout.get()
+        t.testLogging.showStandardStreams = on
+        if (on) {
+            t.testLogging.events(
+                TestLogEvent.STANDARD_OUT,
+                TestLogEvent.STANDARD_ERROR,
+                TestLogEvent.SKIPPED,
+                TestLogEvent.STARTED,
+                TestLogEvent.PASSED,
+                TestLogEvent.FAILED
+            )
+        }
     }
 }
+
+/* ── Properties (Providers) ───────────────────────────────────────────────── */
+
+val pprefix = "org.xtclang.java"
+
+val jdkVersion         = xdkProperties.int("$pprefix.jdk")
+val enablePreview      = xdkProperties.boolean("$pprefix.enablePreview", false)
+val enableNativeAccess = xdkProperties.boolean("$pprefix.enableNativeAccess", false)
+val lint               = xdkProperties.boolean("$pprefix.lint", false)
+val maxErrors          = xdkProperties.int("$pprefix.maxErrors", 0)
+val maxWarnings        = xdkProperties.int("$pprefix.maxWarnings", 0)
+val warningsAsErrors   = xdkProperties.boolean("$pprefix.warningsAsErrors", true)
+val showTestStdout     = xdkProperties.boolean("$pprefix.test.stdout", false)
+
+/* JVM args composed lazily */
+val defaultJvmArgs: Provider<List<String>> =
+    enablePreview.zip(enableNativeAccess) { preview, native ->
+        buildList {
+            add("-ea")
+            if (preview) add("--enable-preview")
+            if (native) add("--enable-native-access=ALL-UNNAMED")
+        }
+    }
+
+// Expose defaultJvmArgs as a typed project property for other build scripts to use
+project.extensions.add(typeOf<Provider<List<String>>>(), "defaultJvmArgs", defaultJvmArgs)
+
+/* ── Java toolchain ───────────────────────────────────────────────────────── */
 
 java {
-    toolchain {
-        val xdkJavaVersion = JavaLanguageVersion.of(jdkVersion.get())
-        val buildProcessJavaVersion = JavaLanguageVersion.of(JavaVersion.current().majorVersion.toInt())
-        if (!buildProcessJavaVersion.canCompileOrRun(xdkJavaVersion)) {
-            logger.warn("NOTE: We are using a more modern Java tool chain than the build process. $buildProcessJavaVersion < $xdkJavaVersion")
-        }
-        logger.info("[java] Java Toolchain config; binary format version: 'JDK $xdkJavaVersion' (build process version: 'JDK $buildProcessJavaVersion')")
-        languageVersion.set(xdkJavaVersion)
-    }
+    toolchain.languageVersion.set(jdkVersion.map { JavaLanguageVersion.of(it) })
 }
+
+/* ── Testing with the consumer’s version catalog (no hard-coded versions) ─── */
+
+val libsCatalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
+val junitBom = libsCatalog.findLibrary("junit.bom")
+val junitJupiter = libsCatalog.findLibrary("junit.jupiter")
 
 testing {
     suites {
-        @Suppress("UnstableApiUsage") val test by getting(JvmTestSuite::class) {
+        @Suppress("UnstableApiUsage", "unused")
+        val test by getting(JvmTestSuite::class) {
             useJUnitJupiter()
             dependencies {
-                implementation(platform("org.junit:junit-bom:5.13.1"))
-                implementation("org.junit.jupiter:junit-jupiter")
+                // Resolving catalog entries at configuration time is fine (static coords).
+                implementation(platform(junitBom.get()))
+                implementation(junitJupiter.get())
             }
         }
     }
 }
+
+/* ── Tasks (lazy + CC-safe) ───────────────────────────────────────────────── */
 
 tasks.withType<JavaExec>().configureEach {
     inputs.property("jdkVersion", jdkVersion)
-    logger.info("[java] Configuring JavaExec task $name from toolchain (Java version: ${java.toolchain.languageVersion})")
+    inputs.property("defaultJvmArgs", defaultJvmArgs)
     javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
-    jvmArgs(defaultJvmArgs)
-    doLast {
-        logger.info("[java] JVM arguments: $jvmArgs")
-    }
-}
-
-val checkWarnings by tasks.registering {
-    if (!getXdkPropertyBoolean(lintProperty, false)) {
-        val lintPropertyHasValue = isXdkPropertySet(lintProperty)
-        logger.info("[java] Java warnings are ${if (lintPropertyHasValue) "explicitly" else ""} disabled for project.")
-    }
-}
-
-val assemble by tasks.existing {
-    dependsOn(checkWarnings)
+    jvmArgumentProviders.add(DefaultJvmArgsProvider(defaultJvmArgs))
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    // Declare toolchain and XDK properties as inputs for proper invalidation
     inputs.property("jdkVersion", jdkVersion)
-    inputs.property("enablePreview", enablePreview)
-    inputs.property("enableNativeAccess", enableNativeAccess)
-    val lint = getXdkPropertyBoolean(lintProperty, false)
+    inputs.property("enablePreview", enablePreview)   // javac cares about preview, not just java
     inputs.property("lint", lint)
-    val maxErrors = getXdkPropertyInt("$pprefix.maxErrors", 0)
     inputs.property("maxErrors", maxErrors)
-    val maxWarnings = getXdkPropertyInt("$pprefix.maxWarnings", 0)
     inputs.property("maxWarnings", maxWarnings)
-    val warningsAsErrors = getXdkPropertyBoolean("$pprefix.warningsAsErrors", true)
     inputs.property("warningsAsErrors", warningsAsErrors)
-    if (!warningsAsErrors) {
-        logger.warn("[java] WARNING: Task '$name' XTC Java convention warnings are not treated as errors, which is best practice (Enable -Werror).")
-    }
 
-    val args = buildList {
-        add("-Xlint:${if (lint) "all" else "none"}")
+    // target bytecode = toolchain language level
+    options.release.set(jdkVersion)
 
-        if (enablePreview) {
-            add("--enable-preview")
-            if (lint) {
-                add("-Xlint:preview")
-            }
-        }
+    // all compile flags via provider-backed arg provider
+    options.compilerArgumentProviders.add(
+        JavaCompilerArgsProvider(
+            lint,
+            enablePreview,
+            maxErrors,
+            maxWarnings,
+            warningsAsErrors
+        )
+    )
 
-        if (maxErrors > 0) {
-            add("-Xmaxerrs")
-            add("$maxErrors")
-        }
-
-        if (maxWarnings > 0) {
-            add("-Xmaxwarns")
-            add("$maxWarnings")
-        }
-
-        if (warningsAsErrors) {
-            add("-Werror")
-        }
-    }
-
-    with(options) {
-        compilerArgs.addAll(args)
-        isDeprecation = lint
-        isWarnings = lint
-        encoding = UTF_8.toString()
-        //isFork = false
+    // non-provider knobs at execution time
+    doFirst {
+        options.encoding = UTF_8.toString()
     }
 }
 
+// Test: JVM args provider + typed Action for logging (no doFirst lambda)
+tasks.withType<Test>().configureEach(ConfigureTestLoggingAction(showTestStdout))
 tasks.withType<Test>().configureEach {
-    jvmArgs(defaultJvmArgs)
-    testLogging {
-        showStandardStreams = getXdkPropertyBoolean("$pprefix.test.stdout")
-        if (showStandardStreams) {
-            events(STANDARD_OUT, STANDARD_ERROR, SKIPPED, STARTED, PASSED, FAILED)
-        }
-    }
+    jvmArgumentProviders.add(DefaultJvmArgsProvider(defaultJvmArgs))
+    inputs.property("defaultJvmArgs", defaultJvmArgs)
+    inputs.property("showTestStdout", showTestStdout)
 }
-
-if (enablePreview) {
-    logger.info("[java] WARNING: Project has Java preview features enabled.")
-}
-if (enableNativeAccess) {
-    logger.info("[java] WARNING: Project has native access enabled.")
-}
-
-logger.info("[java] Default JVM args will be generated: $defaultJvmArgs")
