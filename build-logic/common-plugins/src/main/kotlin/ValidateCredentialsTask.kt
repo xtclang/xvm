@@ -18,16 +18,29 @@ import javax.inject.Inject
  */
 abstract class XdkPublishingCredentials @Inject constructor(xdkProperties: ProjectXdkProperties) {
     // GitHub credentials - GITHUB_ACTOR and GITHUB_TOKEN env vars are automatically checked
-    val githubUsername: Provider<String> = xdkProperties.string("githubUsername", "").orElse(xdkProperties.string("github.actor", ""))
-    val githubPassword: Provider<String> = xdkProperties.string("githubPassword", "").orElse(xdkProperties.string("github.token", ""))
+    // Use zip to evaluate both providers and return first non-empty value
+    val githubUsername: Provider<String> = xdkProperties.string("githubUsername", "")
+        .zip(xdkProperties.string("github.actor", "")) { username, actor ->
+            username.ifEmpty { actor }
+        }
+    val githubPassword: Provider<String> = xdkProperties.string("githubPassword", "")
+        .zip(xdkProperties.string("github.token", "")) { password, token ->
+            password.ifEmpty { token }
+        }
 
     // Gradle Plugin Portal credentials
     val gradlePublishKey: Provider<String> = xdkProperties.string("gradle.publish.key", "")
     val gradlePublishSecret: Provider<String> = xdkProperties.string("gradle.publish.secret", "")
 
     // Maven Central credentials
-    val mavenCentralUsername: Provider<String> = xdkProperties.string("mavenCentralUsername", "").orElse(xdkProperties.string("maven.central.username", ""))
-    val mavenCentralPassword: Provider<String> = xdkProperties.string("mavenCentralPassword", "").orElse(xdkProperties.string("maven.central.password", ""))
+    val mavenCentralUsername: Provider<String> = xdkProperties.string("mavenCentralUsername", "")
+        .zip(xdkProperties.string("maven.central.username", "")) { username, fallback ->
+            username.ifEmpty { fallback }
+        }
+    val mavenCentralPassword: Provider<String> = xdkProperties.string("mavenCentralPassword", "")
+        .zip(xdkProperties.string("maven.central.password", "")) { password, fallback ->
+            password.ifEmpty { fallback }
+        }
 
     // Signing credentials
     val signingKeyId: Provider<String> = xdkProperties.string("signing.keyId", "")

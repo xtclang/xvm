@@ -87,13 +87,14 @@ extensions.configure<MavenPublishBaseExtension> {
     }
 }
 
-// Configure GitHub Packages repository - resolve credentials at configuration time
+// Configure GitHub Packages repository - credentials resolved at configuration time (configuration cache safe)
 extensions.configure<PublishingExtension> {
     repositories {
         if (xdkPublishingCredentials.enableGithub.get()) {
             maven {
                 name = "github"
                 url = uri("https://maven.pkg.github.com/xtclang/xvm")
+                // Credentials are configuration cache inputs and evaluated at configuration time
                 credentials {
                     username = xdkPublishingCredentials.githubUsername.get().ifEmpty { "xtclang" }
                     password = xdkPublishingCredentials.githubPassword.get()
