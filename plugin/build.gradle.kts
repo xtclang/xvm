@@ -23,7 +23,6 @@ val generatePluginResources by tasks.registering {
     doLast {
         val jvmArgs = defaultJvmArgs.get()
         val xdkVersion = xdkVersionProvider.get()
-
         // Generate buildInfo.properties with all build-time configuration
         buildInfoFile.get().asFile.apply {
             parentFile.mkdirs()
