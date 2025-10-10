@@ -45,7 +45,6 @@ val Project.xdkProperties: ProjectXdkProperties
 
 /**
  * Semantic version accessor (group:name:version).
- * Projects must apply versioning plugin first.
  */
 val Project.semanticVersion: String
     get() = "$group:$name:$version"

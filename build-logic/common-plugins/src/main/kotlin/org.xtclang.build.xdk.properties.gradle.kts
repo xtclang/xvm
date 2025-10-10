@@ -33,3 +33,39 @@ val xdkProperties = extensions.create<ProjectXdkProperties>(
     providers,
     xdkPropertiesService
 )
+
+// Automatically set group and version from properties
+project.group = xdkProperties.stringValue("xdk.group")
+project.version = xdkProperties.stringValue("xdk.version")
+
+/**
+ * Task to print version information for this project and all subprojects.
+ * Only create if it doesn't already exist (aggregator may have created it in root build).
+ */
+if ("versions" !in tasks.names) {
+    val versions by tasks.registering {
+        group = "help"
+        description = "Print group:name:version for this project and all subprojects"
+
+        // Capture values during configuration for configuration cache compatibility
+        val projectName = project.name
+        val projectGroup = project.group
+        val projectVersion = project.version
+        val subprojectVersions = project.subprojects
+            .sortedBy { it.name }
+            .map { Triple(it.group, it.name, it.version) }
+
+        doLast {
+            logger.lifecycle("\n📦 Build: $projectName")
+            logger.lifecycle("   $projectGroup:$projectName:$projectVersion")
+
+            if (subprojectVersions.isNotEmpty()) {
+                logger.lifecycle("\n   Subprojects:")
+                subprojectVersions.forEach { (group, name, version) ->
+                    logger.lifecycle("   ├─ $group:$name:$version")
+                }
+            }
+            logger.lifecycle("")
+        }
+    }
+}

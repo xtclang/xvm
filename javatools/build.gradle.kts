@@ -8,7 +8,6 @@ import java.util.Properties
  */
 
 plugins {
-    id("org.xtclang.build.xdk.versioning")
     alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.palantir.git.version)
 }

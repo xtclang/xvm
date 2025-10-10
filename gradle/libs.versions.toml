@@ -13,65 +13,64 @@
 # libs.versions.xdkVersion version number.
 #
 [versions]
-# XDK versions are dynamically injected from VERSION file (single source of truth)
-# These placeholders are overridden by the settings plugin reading VERSION file
-xdk = "0.0.0-PLACEHOLDER"
-xtc-plugin = "0.0.0-PLACEHOLDER"
-group-xdk = "org.xtclang"
-
+# Third party dependency versions
 download = "5.6.0"
 gradle-portal-publish = "2.0.0"
-sonatype-publish = "2.0.0"
 vanniktech-maven-publish = "0.34.0"
 jakarta = "2.3.3"
+jetbrains-annotations = "24.1.0"
 jline = "3.30.5"
 ktlint = "13.1.0"
 palantir-git-version = "4.0.0"
 junit = "6.0.0"
 
 [plugins]
-xtc = { id = "org.xtclang.xtc-plugin", version.ref = "xtc-plugin" }
-xdk-build-aggregator = { id = "org.xtclang.build.aggregator", version.ref = "xdk" }
-xdk-build-java = { id = "org.xtclang.build.java", version.ref = "xdk" }
-xdk-build-publish = { id = "org.xtclang.build.publish", version.ref = "xdk" }
-xdk-build-versioning = { id = "org.xtclang.build.xdk.versioning", version.ref = "xdk" }
+# Included build plugins - no version (resolved from source)
+xtc = { id = "org.xtclang.xtc-plugin" }
+xdk-build-aggregator = { id = "org.xtclang.build.aggregator" }
+xdk-build-docker = { id = "org.xtclang.build.docker" }
+xdk-build-java = { id = "org.xtclang.build.java" }
+xdk-build-properties = { id = "org.xtclang.build.xdk.properties" }
+xdk-build-publishing = { id = "org.xtclang.build.publishing" }
 
+# Third-party published plugins - with versions
 download = { id = "de.undercouch.download", version.ref = "download" }
 gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-portal-publish" }
-sonatype-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "sonatype-publish" }
 vanniktech-maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-maven-publish" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 palantir-git-version = { id = "com.palantir.git-version", version.ref = "palantir-git-version" }
 
 [libraries]
-xdk = { group = "org.xtclang", name = "xdk", version.ref = "xdk" }
-xdk-ecstasy = { group = "org.xtclang", name = "lib-ecstasy", version.ref = "xdk" }
-xdk-aggregate = { group = "org.xtclang", name = "lib-aggregate", version.ref = "xdk" }
-xdk-cli = { group = "org.xtclang", name = "lib-cli", version.ref = "xdk" }
-xdk-collections = { group = "org.xtclang", name = "lib-collections", version.ref = "xdk" }
-xdk-convert = { group = "org.xtclang", name = "lib-convert", version.ref = "xdk" }
-xdk-crypto = { group = "org.xtclang", name = "lib-crypto", version.ref = "xdk" }
-xdk-json = { group = "org.xtclang", name = "lib-json", version.ref = "xdk" }
-xdk-jsondb = { group = "org.xtclang", name = "lib-jsondb", version.ref = "xdk" }
-xdk-net = { group = "org.xtclang", name = "lib-net", version.ref = "xdk" }
-xdk-oodb = { group = "org.xtclang", name = "lib-oodb", version.ref = "xdk" }
-xdk-sec = { group = "org.xtclang", name = "lib-sec", version.ref = "xdk" }
-xdk-web = { group = "org.xtclang", name = "lib-web", version.ref = "xdk" }
-xdk-webauth = { group = "org.xtclang", name = "lib-webauth", version.ref = "xdk" }
-xdk-webcli = { group = "org.xtclang", name = "lib-webcli", version.ref = "xdk" }
-xdk-xenia = { group = "org.xtclang", name = "lib-xenia", version.ref = "xdk" }
-xdk-xml = { group = "org.xtclang", name = "lib-xml", version.ref = "xdk" }
+# Self-built artifacts (included builds) - no version needed, Gradle substitutes by group:name
+xdk = { group = "org.xtclang", name = "xdk" }
+xdk-ecstasy = { group = "org.xtclang", name = "lib-ecstasy" }
+xdk-aggregate = { group = "org.xtclang", name = "lib-aggregate" }
+xdk-cli = { group = "org.xtclang", name = "lib-cli" }
+xdk-collections = { group = "org.xtclang", name = "lib-collections" }
+xdk-convert = { group = "org.xtclang", name = "lib-convert" }
+xdk-crypto = { group = "org.xtclang", name = "lib-crypto" }
+xdk-json = { group = "org.xtclang", name = "lib-json" }
+xdk-jsondb = { group = "org.xtclang", name = "lib-jsondb" }
+xdk-net = { group = "org.xtclang", name = "lib-net" }
+xdk-oodb = { group = "org.xtclang", name = "lib-oodb" }
+xdk-sec = { group = "org.xtclang", name = "lib-sec" }
+xdk-web = { group = "org.xtclang", name = "lib-web" }
+xdk-webauth = { group = "org.xtclang", name = "lib-webauth" }
+xdk-webcli = { group = "org.xtclang", name = "lib-webcli" }
+xdk-xenia = { group = "org.xtclang", name = "lib-xenia" }
+xdk-xml = { group = "org.xtclang", name = "lib-xml" }
 
-javatools = { group = "org.xtclang", name = "javatools", version.ref = "xdk" }
-javatools-unicode = { group = "org.xtclang", name = "javatools-unicode", version.ref = "xdk" }
-javatools-utils = { group = "org.xtclang", name = "javatools-utils", version.ref = "xdk" }
-javatools-turtle = { group = "org.xtclang", name = "javatools-turtle", version.ref = "xdk" }
-javatools-bridge = { group = "org.xtclang", name = "javatools-bridge", version.ref = "xdk" }
-javatools-jitbridge = { group = "org.xtclang", name = "javatools-jitbridge", version.ref = "xdk" }
+javatools = { group = "org.xtclang", name = "javatools" }
+javatools-unicode = { group = "org.xtclang", name = "javatools-unicode" }
+javatools-utils = { group = "org.xtclang", name = "javatools-utils" }
+javatools-turtle = { group = "org.xtclang", name = "javatools-turtle" }
+javatools-bridge = { group = "org.xtclang", name = "javatools-bridge" }
+javatools-jitbridge = { group = "org.xtclang", name = "javatools-jitbridge" }
 
 javax-activation = { module = "com.sun.activation:javax.activation", version = "1.2.0" }
 jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version.ref = "jakarta" }
 jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jakarta" }
+jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
 jline = { module = "org.jline:jline", version.ref = "jline" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }

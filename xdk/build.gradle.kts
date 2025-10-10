@@ -21,11 +21,10 @@ import java.io.File
  */
 
 plugins {
-    id("org.xtclang.build.xdk.versioning")
     alias(libs.plugins.xtc)
+    alias(libs.plugins.xdk.build.publishing)
     application
     distribution
-    id("org.xtclang.build.publishing")
 }
 
 // Access xdkProperties extension (provided by Java convention plugin)
@@ -170,11 +169,14 @@ val prepareDistributionScripts by tasks.registering(Copy::class) {
 }
 
 /**
- * Propagate the "version" part of the semanticVersion to all XTC compilers in all subprojects (the XDK modules
- * will get stamped with the Gradle project version, as defined in VERSION in the repo root).
+ * Propagate group and version to all subprojects (the XDK modules will get stamped with the Gradle project
+ * version, as defined in VERSION in the repo root).
  */
 
 subprojects {
+    group = rootProject.group
+    version = rootProject.version
+
     tasks.withType<XtcCompileTask>().configureEach {
         /*
          * Add version stamp to XDK module from the XDK build global version single source of truth.

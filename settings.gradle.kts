@@ -89,4 +89,4 @@ rootProject.name = "xvm"
 
 // Note: Root build doesn't use common settings plugin to avoid version catalog conflicts
 // Version catalog is automatically loaded from gradle/libs.versions.toml
-// XdkPropertiesService registration happens via versioning plugin in build.gradle.kts
+// XdkPropertiesService registration happens via properties plugin in build.gradle.kts

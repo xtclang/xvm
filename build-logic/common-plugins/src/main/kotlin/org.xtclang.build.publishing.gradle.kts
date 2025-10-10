@@ -45,11 +45,8 @@ abstract class XdkPublishingExtension {
 
 val xdkPublishing = extensions.create<XdkPublishingExtension>("xdkPublishing")
 
-// Access version catalog to get coordinates
-val libsCatalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
-
-// Get coordinates from version catalog and project
-val publicationGroupId = libsCatalog.findVersion("group-xdk").get().requiredVersion
+// Get coordinates from project (automatically set by properties plugin)
+val publicationGroupId = project.group.toString()
 val publicationArtifactId = project.name
 val publicationVersion = project.version.toString()
 

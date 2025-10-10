@@ -122,7 +122,6 @@ abstract class ValidateCredentialsTask : DefaultTask() {
     @TaskAction
     fun validate() {
         val project = projectName.get()
-        logger.lifecycle("")
         logger.lifecycle("🔐 Publishing Credentials Validation Report [$project]")
         logger.lifecycle("=".repeat(60))
         logger.lifecycle("")
@@ -157,7 +156,6 @@ abstract class ValidateCredentialsTask : DefaultTask() {
         }
 
         // 2. Validate Maven Central credentials
-        logger.lifecycle("")
         logger.lifecycle("🏛️  Maven Central")
         val mavenCentralEnabled = enableMavenCentral.get()
         if (!mavenCentralEnabled) {
@@ -184,7 +182,6 @@ abstract class ValidateCredentialsTask : DefaultTask() {
         }
 
         // 3. Validate Gradle Plugin Portal credentials
-        logger.lifecycle("")
         logger.lifecycle("🔌 Gradle Plugin Portal")
         val portalEnabled = enablePluginPortal.get()
         if (!portalEnabled) {
@@ -206,8 +203,7 @@ abstract class ValidateCredentialsTask : DefaultTask() {
             }
         }
 
-        // 4. Maven Local (always available, no credentials needed)
-        logger.lifecycle("")
+        // 4. Maven Local (always available, no credentials needed)s
         logger.lifecycle("💾 Maven Local")
         logger.lifecycle("   Status: ✅ Always available (no credentials needed)")
         logger.lifecycle("   Path:   ~/.m2/repository")
