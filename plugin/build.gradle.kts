@@ -17,9 +17,7 @@ val generatePluginResources by tasks.registering {
     val xdkVersionProvider = libs.versions.xdk
     inputs.property("defaultJvmArgs", defaultJvmArgs)
     inputs.property("xdkVersion", xdkVersionProvider)
-
     outputs.file(buildInfoFile)
-
     doLast {
         val jvmArgs = defaultJvmArgs.get()
         val xdkVersion = xdkVersionProvider.get()
@@ -46,15 +44,6 @@ private val pprefix = "org.xtclang"
 // Plugin metadata - resolved at configuration time (acceptable for static plugin metadata)
 private val pluginIdValue: String = xdkProperties.string("$pprefix.plugin.id").get()
 private val pluginVersionValue: String = xdkProperties.string("$pprefix.plugin.version", version.toString()).get()
-
-val xdkJavaToolsJarConsumer by configurations.registering {
-    isCanBeResolved = true
-    isCanBeConsumed = false
-    attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
-        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(XDK_ARTIFACT_NAME_JAVATOOLS_JAR))
-    }
-}
 
 repositories {
     mavenCentral()
