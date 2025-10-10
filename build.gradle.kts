@@ -65,7 +65,7 @@ val publish by tasks.registering {
 
     // Capture version and allowRelease as Providers for configuration cache compatibility
     val versionProvider = xdkProperties.string("xdk.version")
-    val allowReleaseProvider = providers.gradleProperty("allowRelease").map { it.toBoolean() }
+    val allowReleaseProvider = xdkProperties.boolean("allowRelease", false)
 
     doFirst {
         // Safety check: prevent accidental release publishing
@@ -89,12 +89,7 @@ val publish by tasks.registering {
                 """.trimMargin()
             )
         }
-
-        if (!isSnapshot) {
-            logger.lifecycle("⚠️  Publishing RELEASE version: $currentVersion (allowRelease=true)")
-        } else {
-            logger.lifecycle("📦 Publishing SNAPSHOT version: $currentVersion")
-        }
+        logger.lifecycle("${if (isSnapshot) "📦" else "⚠️ "} Publishing ${if (isSnapshot) "SNAPSHOT" else "RELEASE"} version: $currentVersion (allowRelease=$allowRelease)")
     }
 
     // Validate credentials before attempting remote publishing (use xdk's validateCredentials task)

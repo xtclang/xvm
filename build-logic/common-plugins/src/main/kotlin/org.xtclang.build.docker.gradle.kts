@@ -104,8 +104,8 @@ fun createDockerBuildTask(
         group = "docker"
         description = "Clean up old Docker package versions (default: keep 10 most recent, protect master images)"
 
-        keepCount.set(providers.gradleProperty("keepCount").orElse("10").map { it.toInt() })
-        dryRun.set(providers.gradleProperty("dryRun").orElse("false").map { it.toBoolean() })
-        forced.set(providers.gradleProperty("force").orElse("false").map { it.toBoolean() })
+        keepCount.set(xdkProperties.int("keepCount", 10))
+        dryRun.set(xdkProperties.boolean("dryRun", false))
+        forced.set(xdkProperties.boolean("force", false))
         packageName.set("xvm")
     }
