@@ -29,4 +29,4 @@ require(!resolvedGroup.contains("PLACEHOLDER")) {
 project.group = resolvedGroup
 project.version = resolvedVersion
 
-logger.lifecycle("[versioning] Versioned '${project.name}' as $resolvedGroup:${project.name}:$resolvedVersion")
+logger.info("[versioning] Versioned '${project.name}' as $resolvedGroup:${project.name}:$resolvedVersion")

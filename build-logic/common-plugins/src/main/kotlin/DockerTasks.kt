@@ -22,9 +22,7 @@ import java.io.File
 abstract class DockerTask : DefaultTask() {
     @get:Inject
     abstract val execOperations: ExecOperations
-    
-    // Git info no longer needed for Docker builds
-    
+
     @get:Input
     abstract val platforms: ListProperty<String>
     

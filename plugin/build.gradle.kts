@@ -46,9 +46,7 @@ private val pprefix = "org.xtclang"
 
 // Plugin metadata - resolved at configuration time (acceptable for static plugin metadata)
 private val pluginIdValue: String = xdkProperties.string("$pprefix.plugin.id").get()
-private val pluginGroupValue: String = xdkProperties.string("$pprefix.plugin.group", group.toString()).get()
 private val pluginVersionValue: String = xdkProperties.string("$pprefix.plugin.version", version.toString()).get()
-private val shouldBundleJavaTools: Provider<Boolean> = xdkProperties.boolean("$pprefix.plugin.bundle.javatools")
 
 val xdkJavaToolsJarConsumer by configurations.registering {
     isCanBeResolved = true
@@ -64,13 +62,7 @@ repositories {
     gradlePluginPortal()
 }
 
-// Resolve bundling decision at configuration time (acceptable - static build configuration)
-private val shouldBundleJavaToolsValue = shouldBundleJavaTools.get()
-
 dependencies {
-    if (shouldBundleJavaToolsValue) {
-        xdkJavaToolsJarConsumer(libs.javatools)
-    }
     testImplementation(libs.junit.jupiter)
 }
 
@@ -122,39 +114,25 @@ tasks.withType<Javadoc>().configureEach {
 
 tasks.withType<Jar>().configureEach {
     val taskName = name
+    val baseAttributes = mapOf(
+        "Manifest-Version" to "1.0",
+        "Xdk-Version" to semanticVersion,
+        "Main-Class" to "$pprefix.plugin.Usage",
+        "Name" to "/org/xtclang/plugin/",
+        "Sealed" to "true",
+        "Specification-Title" to "XTC Gradle and Maven Plugin",
+        "Specification-Vendor" to "xtclang.org",
+        "Specification-Version" to pluginVersionValue,
+        "Implementation-Title" to "xtc-plugin",
+        "Implementation-Vendor" to "xtclang.org",
+        "Implementation-Version" to pluginVersionValue,
+    )
+    logger.info("[plugin] Configuring Jar task: $taskName")
+    // TODO: skip the javadocJar and sourceJar; they do need manifests. (Why?)
     if (taskName == "jar") {
-        if (shouldBundleJavaToolsValue) {
-            /*
-             * It's important that this is a provider/lazy, because xdkJavaToolsJarConsumer kickstarts an
-             * entire javatools fatjar build when you resolve it, and that's what we have to do if we want
-             * it in the plugin, even though we are just configuring here. We will lift out the manualTests
-             * "use the plugin as an external party" test from the build source line to make sure dependencies
-             * are preserved correctly, and also add a dry-run/vs real diff test to see that our build caching
-             * does not break.
-             */
-            // TODO with the right categories we could just, instead of grabbing the JAR, ask for the classes as outgoing config for javatools
-            inputs.files(xdkJavaToolsJarConsumer)
-            val jarFiles = { zipTree(xdkJavaToolsJarConsumer.get().singleFile) }
-            from(jarFiles)
-        }
         manifest {
-            // Dependency on javatools handled through xdkJavaToolsJarConsumer configuration
-
-            val baseAttributes = mapOf(
-                "Manifest-Version" to "1.0",
-                "Xdk-Version" to semanticVersion,
-                "Main-Class" to "$pprefix.plugin.Usage",
-                "Name" to "/org/xtclang/plugin/",
-                "Sealed" to "true",
-                "Specification-Title" to "XTC Gradle and Maven Plugin",
-                "Specification-Vendor" to "xtclang.org",
-                "Specification-Version" to pluginVersionValue,
-                "Implementation-Title" to "xtc-plugin",
-                "Implementation-Vendor" to "xtclang.org",
-                "Implementation-Version" to pluginVersionValue,
-            )
-
             attributes(baseAttributes)
         }
+        logger.info("[plugin] Configured '$taskName' manifest with attributes: $baseAttributes")
     }
 }

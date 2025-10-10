@@ -59,4 +59,3 @@ fun Project.xdkDistribution(): XdkDistribution = XdkDistribution(
     distributionVersion = version.toString(),
     targetArch = XdkDistribution.getCurrentArch(this)
 )
-

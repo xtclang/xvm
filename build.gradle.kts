@@ -14,8 +14,7 @@ plugins {
 group = xdkProperties.string("xdk.group").get()
 version = xdkProperties.string("xdk.version").get()
 
-// Log root build version information
-logger.lifecycle("[xvm] Root aggregator: $group:$name:$version")
+logger.info("[xvm] Root aggregator version: $group:$name:$version")
 
 /**
  * Installation and distribution tasks that aggregate publishable/distributable included

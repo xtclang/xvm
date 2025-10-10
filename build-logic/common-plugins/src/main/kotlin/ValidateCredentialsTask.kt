@@ -120,7 +120,9 @@ abstract class ValidateCredentialsTask : DefaultTask() {
         // 1. Validate GitHub Packages credentials
         logger.lifecycle("📦 GitHub Packages")
         val githubEnabled = enableGithub.get()
-        if (githubEnabled) {
+        if (!githubEnabled) {
+            logger.lifecycle("   Status: ⏭️  Disabled (use -Porg.xtclang.publish.github=true to enable)")
+        } else {
             val username = githubUsername.get()
             val password = githubPassword.get()
 
@@ -139,15 +141,15 @@ abstract class ValidateCredentialsTask : DefaultTask() {
                     """.trimMargin()
                 )
             }
-        } else {
-            logger.lifecycle("   Status: ⏭️  Disabled (use -Porg.xtclang.publish.github=true to enable)")
         }
 
         // 2. Validate Maven Central credentials
         logger.lifecycle("")
         logger.lifecycle("🏛️  Maven Central")
         val mavenCentralEnabled = enableMavenCentral.get()
-        if (mavenCentralEnabled) {
+        if (!mavenCentralEnabled) {
+            logger.lifecycle("   Status: ⏭️  Disabled (use -Porg.xtclang.publish.mavenCentral=true to enable)")
+        } else {
             val mcUsername = mavenCentralUsername.getOrElse("")
             val mcPassword = mavenCentralPassword.getOrElse("")
 
@@ -166,15 +168,15 @@ abstract class ValidateCredentialsTask : DefaultTask() {
                     """.trimMargin()
                 )
             }
-        } else {
-            logger.lifecycle("   Status: ⏭️  Disabled (use -Porg.xtclang.publish.mavenCentral=true to enable)")
         }
 
         // 3. Validate Gradle Plugin Portal credentials
         logger.lifecycle("")
         logger.lifecycle("🔌 Gradle Plugin Portal")
         val portalEnabled = enablePluginPortal.get()
-        if (portalEnabled) {
+        if (!portalEnabled) {
+            logger.lifecycle("   Status: ⏭️  Disabled (use -Porg.xtclang.publish.gradlePluginPortal=true to enable)")
+        } else {
             val portalKey = gradlePublishKey.getOrElse("")
             val portalSecret = gradlePublishSecret.getOrElse("")
             logger.lifecycle("   API Key:  ${if (portalKey.isNotEmpty()) "✅ Available" else "❌ Missing"}")
@@ -189,8 +191,6 @@ abstract class ValidateCredentialsTask : DefaultTask() {
                     |Get from: https://plugins.gradle.org/ -> "My API Keys"
                     """.trimMargin())
             }
-        } else {
-            logger.lifecycle("   Status: ⏭️  Disabled (use -Porg.xtclang.publish.gradlePluginPortal=true to enable)")
         }
 
         // 4. Maven Local (always available, no credentials needed)
