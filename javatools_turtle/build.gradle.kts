@@ -4,8 +4,7 @@ import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 
 plugins {
-    id("org.xtclang.build.xdk.versioning")
-    id("org.xtclang.xtc-plugin")
+    alias(libs.plugins.xtc)
 }
 
 val xdkTurtleProvider by configurations.registering {

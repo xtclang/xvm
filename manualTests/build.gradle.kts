@@ -63,8 +63,9 @@ import org.xtclang.plugin.tasks.XtcRunTask
  * still resolve the artifacts for any configured repository, without changing a line of code.
  *
  */
+
 plugins {
-    alias(libs.plugins.xdk.build.versioning)
+    alias(libs.plugins.xdk.build.properties)
     alias(libs.plugins.xtc)
 }
 

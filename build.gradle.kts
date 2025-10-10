@@ -10,11 +10,29 @@ plugins {
     id("org.xtclang.build.xdk.properties")
 }
 
-// Root aggregator: set version directly from xdkProperties (special case, not using versioning plugin)
+// Root aggregator: version set automatically by properties plugin
 group = xdkProperties.stringValue("xdk.group")
 version = xdkProperties.stringValue("xdk.version")
 
 logger.info("[xvm] Root aggregator version: $group:$name:$version")
+
+/**
+ * Print version information for the root aggregator and all included builds.
+ * The aggregator plugin creates this task and adds dependencies to all included builds.
+ * We configure it here to also print the root aggregator's version.
+ */
+val versions by tasks.existing {
+    // Capture values during configuration for configuration cache compatibility
+    val projectName = project.name
+    val projectGroup = project.group
+    val projectVersion = project.version
+
+    doFirst {
+        logger.lifecycle("\n📦 Root Aggregator: $projectName")
+        logger.lifecycle("   $projectGroup:$projectName:$projectVersion")
+        logger.lifecycle("")
+    }
+}
 
 /**
  * Installation and distribution tasks that aggregate publishable/distributable included

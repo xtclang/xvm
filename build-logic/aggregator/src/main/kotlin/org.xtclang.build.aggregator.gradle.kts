@@ -13,7 +13,7 @@ private class XdkBuildAggregator(val project: Project) : Runnable {
         private val lifeCycleTasks =
             listOf(ASSEMBLE_TASK_NAME, BUILD_TASK_NAME, CHECK_TASK_NAME, CLEAN_TASK_NAME)
         // Diagnostic/help tasks that should be aggregated across all included builds
-        private val diagnosticTasks = listOf("dependencies", "properties", "buildEnvironment")
+        private val diagnosticTasks = listOf("dependencies", "properties", "buildEnvironment", "versions")
     }
 
     override fun run() {
@@ -38,12 +38,27 @@ private class XdkBuildAggregator(val project: Project) : Runnable {
     private fun aggregateTasks(taskNames: List<String>, group: String, taskType: String, ignored: Set<String>) {
         taskNames.forEach { taskName ->
             logger.info("[aggregator] Creating aggregated $taskType task: ':$taskName' in project '${project.name}'")
-            tasks.named(taskName) {
+            // Use findByName first, then create or configure
+            val task = tasks.findByName(taskName) ?: tasks.register(taskName).get()
+            task.apply {
                 this.group = group
                 description = "Aggregates and executes the '$taskName' task for all included builds."
-                gradle.includedBuilds.filterNot { ignored.contains(it.name) }.forEach { includedBuild ->
-                    dependsOn(includedBuild.task(":$taskName"))
-                    logger.info("[aggregator]     Attaching: dependsOn(':$name' <- ':${includedBuild.name}:$name')")
+
+                // Filter included builds: exclude explicitly ignored builds and all build-logic projects
+                val buildsToAggregate = gradle.includedBuilds
+                    .filterNot { ignored.contains(it.name) }
+                    .filterNot {
+                        // Never aggregate build-logic projects - they're infrastructure, not application code
+                        it.projectDir.absolutePath.contains("/build-logic/")
+                    }
+
+                buildsToAggregate.forEach { includedBuild ->
+                    try {
+                        dependsOn(includedBuild.task(":$taskName"))
+                        logger.info("[aggregator]     Attaching: dependsOn(':$taskName' <- ':${includedBuild.name}:$taskName')")
+                    } catch (e: Exception) {
+                        logger.info("[aggregator]     Skipping: '${includedBuild.name}' doesn't have ':$taskName'")
+                    }
                 }
             }
         }

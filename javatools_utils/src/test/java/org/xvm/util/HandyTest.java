@@ -11,11 +11,13 @@ import java.io.OutputStream;
 
 import java.util.Arrays;
 
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.xvm.util.Handy.appendByteArrayAsHex;
 import static org.xvm.util.Handy.appendByteAsHex;
@@ -53,38 +55,38 @@ public class HandyTest {
     @Test
     public void testNibbleToChar() {
         // TODO: These are in the wrong order. The "actual" value should always be the first parameter for reports to make sense.
-        assertEquals(nibbleToChar(0x00), '0');
-        assertEquals(nibbleToChar(0x01), '1');
-        assertEquals(nibbleToChar(0x02), '2');
-        assertEquals(nibbleToChar(0x03), '3');
-        assertEquals(nibbleToChar(0x04), '4');
-        assertEquals(nibbleToChar(0x05), '5');
-        assertEquals(nibbleToChar(0x06), '6');
-        assertEquals(nibbleToChar(0x07), '7');
-        assertEquals(nibbleToChar(0x08), '8');
-        assertEquals(nibbleToChar(0x09), '9');
-        assertEquals(nibbleToChar(0x0A), 'a');
-        assertEquals(nibbleToChar(0x0B), 'b');
-        assertEquals(nibbleToChar(0x0C), 'c');
-        assertEquals(nibbleToChar(0x0D), 'd');
-        assertEquals(nibbleToChar(0x0E), 'e');
-        assertEquals(nibbleToChar(0x0F), 'f');
-        assertEquals(nibbleToChar(0x10), '0');
-        assertEquals(nibbleToChar(0x21), '1');
-        assertEquals(nibbleToChar(0x32), '2');
-        assertEquals(nibbleToChar(0x43), '3');
-        assertEquals(nibbleToChar(0x54), '4');
-        assertEquals(nibbleToChar(0x65), '5');
-        assertEquals(nibbleToChar(0x76), '6');
-        assertEquals(nibbleToChar(0x87), '7');
-        assertEquals(nibbleToChar(0x98), '8');
-        assertEquals(nibbleToChar(0xA9), '9');
-        assertEquals(nibbleToChar(0xBA), 'a');
-        assertEquals(nibbleToChar(0xCB), 'b');
-        assertEquals(nibbleToChar(0xDC), 'c');
-        assertEquals(nibbleToChar(0xED), 'd');
-        assertEquals(nibbleToChar(0xFE), 'e');
-        assertEquals(nibbleToChar(0xFF), 'f');
+        assertEquals('0', nibbleToChar(0x00));
+        assertEquals('1', nibbleToChar(0x01));
+        assertEquals('2', nibbleToChar(0x02));
+        assertEquals('3', nibbleToChar(0x03));
+        assertEquals('4', nibbleToChar(0x04));
+        assertEquals('5', nibbleToChar(0x05));
+        assertEquals('6', nibbleToChar(0x06));
+        assertEquals('7', nibbleToChar(0x07));
+        assertEquals('8', nibbleToChar(0x08));
+        assertEquals('9', nibbleToChar(0x09));
+        assertEquals('a', nibbleToChar(0x0A));
+        assertEquals('b', nibbleToChar(0x0B));
+        assertEquals('c', nibbleToChar(0x0C));
+        assertEquals('d', nibbleToChar(0x0D));
+        assertEquals('e', nibbleToChar(0x0E));
+        assertEquals('f', nibbleToChar(0x0F));
+        assertEquals('0', nibbleToChar(0x10));
+        assertEquals('1', nibbleToChar(0x21));
+        assertEquals('2', nibbleToChar(0x32));
+        assertEquals('3', nibbleToChar(0x43));
+        assertEquals('4', nibbleToChar(0x54));
+        assertEquals('5', nibbleToChar(0x65));
+        assertEquals('6', nibbleToChar(0x76));
+        assertEquals('7', nibbleToChar(0x87));
+        assertEquals('8', nibbleToChar(0x98));
+        assertEquals('9', nibbleToChar(0xA9));
+        assertEquals('a', nibbleToChar(0xBA));
+        assertEquals('b', nibbleToChar(0xCB));
+        assertEquals('c', nibbleToChar(0xDC));
+        assertEquals('d', nibbleToChar(0xED));
+        assertEquals('e', nibbleToChar(0xFE));
+        assertEquals('f', nibbleToChar(0xFF));
     }
 
     @Test
@@ -92,43 +94,43 @@ public class HandyTest {
         StringBuilder sb = new StringBuilder();
 
         sb.append("0x");
-        assertEquals(sb, appendByteAsHex(sb, 0x12345678));
-        assertEquals(sb.toString(), "0x78");
+        assertSame(sb, appendByteAsHex(sb, 0x12345678));
+        assertEquals("0x78", sb.toString());
     }
 
     @Test
     public void testByteToHexString() {
-        assertEquals(byteToHexString(0), "0x00");
-        assertEquals(byteToHexString(0x12345678), "0x78");
-        assertEquals(byteToHexString(0xFF), "0xff");
+        assertEquals("0x00", byteToHexString(0));
+        assertEquals("0x78", byteToHexString(0x12345678));
+        assertEquals("0xff", byteToHexString(0xFF));
     }
 
     @Test
     public void testAppendByteArrayAsHex() {
         StringBuilder sb = new StringBuilder();
-        assertEquals(sb, appendByteArrayAsHex(sb,
+        assertSame(sb, appendByteArrayAsHex(sb,
                 new byte[] {0x01, (byte) 0xFF, 0x78, 0x5A}));
-        assertEquals(sb.toString(), "01ff785a");
+        assertEquals("01ff785a", sb.toString());
     }
 
     @Test
     public void testAppendByteArrayAsHex2() {
         StringBuilder sb = new StringBuilder();
-        assertEquals(sb, appendByteArrayAsHex(sb, new byte[] {0x01, (byte) 0xFF, 0x78, 0x5A}, 1, 2));
-        assertEquals(sb.toString(), "ff78");
+        assertSame(sb, appendByteArrayAsHex(sb, new byte[] {0x01, (byte) 0xFF, 0x78, 0x5A}, 1, 2));
+        assertEquals("ff78", sb.toString());
     }
 
     @Test
     public void testByteArrayToHexString() {
-        assertEquals(byteArrayToHexString(new byte[] {}), "0x");
-        assertEquals(byteArrayToHexString(new byte[] {0x01, (byte) 0xFF, 0x78, 0x5A}), "0x01ff785a");
-        assertEquals(byteArrayToHexString(new byte[] {0x01, (byte) 0xFF, 0x78, 0x5A}, 1, 2), "0xff78");
+        assertEquals("0x", byteArrayToHexString(new byte[] {}));
+        assertEquals("0x01ff785a", byteArrayToHexString(new byte[] {0x01, (byte) 0xFF, 0x78, 0x5A}));
+        assertEquals("0xff78", byteArrayToHexString(new byte[] {0x01, (byte) 0xFF, 0x78, 0x5A}, 1, 2));
     }
 
     @Test
     public void testHexStringToByteArray() {
-        assertArrayEquals(hexStringToByteArray("01FF785A"), new byte[]{0x01, (byte) 0xFF, 0x78, 0x5A});
-        assertArrayEquals(hexStringToByteArray("0x01FF785A"), new byte[]{0x01, (byte) 0xFF, 0x78, 0x5A});
+        assertArrayEquals(new byte[]{0x01, (byte) 0xFF, 0x78, 0x5A}, hexStringToByteArray("01FF785A"));
+        assertArrayEquals(new byte[]{0x01, (byte) 0xFF, 0x78, 0x5A}, hexStringToByteArray("0x01FF785A"));
     }
 
     @Test
@@ -165,23 +167,23 @@ public class HandyTest {
     public void testAppendIntAsHex() {
         StringBuilder sb = new StringBuilder();
 
-        assertEquals(sb, appendIntAsHex(sb, 0x12345678));
-        assertEquals(sb.toString(), "12345678");
+        assertSame(sb, appendIntAsHex(sb, 0x12345678));
+        assertEquals("12345678", sb.toString());
     }
 
     @Test
     public void testAppendIntAsHex2() {
         StringBuilder sb = new StringBuilder();
 
-        assertEquals(sb, appendIntAsHex(sb, 0x12345678, 4));
-        assertEquals(sb.toString(), "5678");
+        assertSame(sb, appendIntAsHex(sb, 0x12345678, 4));
+        assertEquals("5678", sb.toString());
     }
 
     @Test
     public void testIntToHexString() {
-        assertEquals(intToHexString(0), "0x00000000");
-        assertEquals(intToHexString(0x12345678), "0x12345678");
-        assertEquals(intToHexString(-1), "0xffffffff");
+        assertEquals("0x00000000", intToHexString(0));
+        assertEquals("0x12345678", intToHexString(0x12345678));
+        assertEquals("0xffffffff", intToHexString(-1));
     }
 
     @Test
@@ -208,16 +210,16 @@ public class HandyTest {
     public void testAppendLongAsHex() {
         StringBuilder sb = new StringBuilder();
 
-        assertEquals(sb, appendLongAsHex(sb, 0x123456789ABCDEF0L));
-        assertEquals(sb.toString(), "123456789abcdef0");
+        assertSame(sb, appendLongAsHex(sb, 0x123456789ABCDEF0L));
+        assertEquals("123456789abcdef0", sb.toString());
     }
 
     @Test
     public void testAppendLongAsHex2() {
         StringBuilder sb = new StringBuilder();
 
-        assertEquals(sb, appendLongAsHex(sb, 0x123456789ABCDEF0L, 9));
-        assertEquals(sb.toString(), "89abcdef0");
+        assertSame(sb, appendLongAsHex(sb, 0x123456789ABCDEF0L, 9));
+        assertEquals("89abcdef0", sb.toString());
     }
 
     @Test
@@ -408,10 +410,10 @@ public class HandyTest {
     @Test
     public void testAppendChar() {
         StringBuilder sb = new StringBuilder();
-        assertEquals(sb, appendChar(sb, 'x'));
-        assertEquals(sb, appendChar(sb, '\t'));
-        assertEquals(sb, appendChar(sb, '\n'));
-        assertEquals(sb, appendChar(sb, (char) 0x7f));
+        assertSame(sb, appendChar(sb, 'x'));
+        assertSame(sb, appendChar(sb, '\t'));
+        assertSame(sb, appendChar(sb, '\n'));
+        assertSame(sb, appendChar(sb, (char) 0x7f));
         assertEquals("x\\t\\n\\d", sb.toString());
     }
 
@@ -426,7 +428,7 @@ public class HandyTest {
     @Test
     public void testAppendString() {
         StringBuilder sb = new StringBuilder();
-        assertEquals(sb, appendString(sb, "hello\nworld"));
+        assertSame(sb, appendString(sb, "hello\nworld"));
         assertEquals("hello\\nworld", sb.toString());
     }
 
@@ -438,15 +440,14 @@ public class HandyTest {
     @Test
     public void testReadAndWriteUtf8String()
             throws IOException {
-        String[] as = new String[] {
+        String[] as = {
             "",
             "hello world!",
             "this\nis\ta test of the \nemergency broadcasting system! eèêeėēeęįœøō",
         };
 
-        for (int i = 0, c = as.length; i < c; ++i) {
-            String s = as[i];
-            StringBuilder sb = new StringBuilder();
+        for (final String s : as) {
+            var sb = new StringBuilder();
             writeUtf8String(dos(sb), s);
             assertEquals(s, readUtf8String(dis(sb.toString())));
         }
@@ -455,24 +456,24 @@ public class HandyTest {
 
     // ----- helpers -------------------------------------------------------------------------------
 
-    static DataInput dis(String s) {
+    static DataInput dis(final String s) {
         return new DataInputStream(new ByteArrayInputStream(hexStringToByteArray(s)));
     }
 
-    static DataOutput dos(StringBuilder sb) {
+    static @NotNull DataOutput dos(final @NotNull StringBuilder sb) {
         return new DataOutputStream(new OutputStream() {
             @Override
-            public void write(int b) {
+            public void write(final int b) {
                 appendByteAsHex(sb, b);
             }
 
             @Override
-            public void write(byte[] b) {
+            public void write(final @NotNull byte[] b) {
                 appendByteArrayAsHex(sb, b);
             }
 
             @Override
-            public void write(byte[] b, int off, int len) {
+            public void write(final @NotNull byte[] b, final int off, final int len) {
                 appendByteArrayAsHex(sb, b, off, len);
             }
         });
