@@ -124,10 +124,9 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         //   to semantically conform to what XTC does should not be hard, but we
         //   haven't had the cycles to figure out why the changed build graph
         //   from doing that isn't 100% compatible with our builds.
-
         resolveHiddenTaskNames(tasks).forEach(this::hideAndDisableTask);
         if (hasVerboseLogging()) {
-            logger.lifecycle("[plugin] XTC plugin executing from location: '{}'", getPluginUrl());
+            logger.info("[plugin] XTC plugin executing from location: '{}'", getPluginUrl());
         }
     }
 

@@ -30,6 +30,8 @@ import org.junit.jupiter.api.io.TempDir;
  */
 public class XdkPluginBuildInfoTest {
 
+    private static final String[] GRADLE_FLAGS = {"--stacktrace", "--info", "--configuration-cache"};
+
     @TempDir
     Path testProjectDir;
 
@@ -40,6 +42,13 @@ public class XdkPluginBuildInfoTest {
     void setUp() {
         buildFile = testProjectDir.resolve("build.gradle.kts").toFile();
         settingsFile = testProjectDir.resolve("settings.gradle.kts").toFile();
+    }
+
+    private static String[] buildArgs(String taskName) {
+        final var args = new String[GRADLE_FLAGS.length + 1];
+        args[0] = taskName;
+        System.arraycopy(GRADLE_FLAGS, 0, args, 1, GRADLE_FLAGS.length);
+        return args;
     }
 
     @Test
@@ -123,7 +132,7 @@ public class XdkPluginBuildInfoTest {
         // Run the task using TestKit - this loads the plugin from the JAR under test
         final var result = GradleRunner.create()
             .withProjectDir(testProjectDir.toFile())
-            .withArguments("printXtcVersion", "--stacktrace", "--info")
+            .withArguments(buildArgs("printXtcVersion"))
             .withPluginClasspath()  // This makes the plugin load from JAR, not build directory
             .build();
 
@@ -195,7 +204,7 @@ public class XdkPluginBuildInfoTest {
 
         final var result = GradleRunner.create()
             .withProjectDir(testProjectDir.toFile())
-            .withArguments("checkOverride", "--stacktrace")
+            .withArguments(buildArgs("checkOverride"))
             .withPluginClasspath()
             .build();
 
@@ -218,12 +227,15 @@ public class XdkPluginBuildInfoTest {
                 id("org.xtclang.xtc-plugin")
             }
 
+            // Capture the jvmArgs provider at configuration time
+            val runTaskProvider = tasks.named("runXtc", org.xtclang.plugin.tasks.XtcRunTask::class)
+            val jvmArgsProvider = runTaskProvider.flatMap { it.jvmArgs }
+
             // Print the jvmArgs that the plugin configured
             tasks.register("printJvmArgs") {
+                val args = jvmArgsProvider
                 doLast {
-                    val runTask = tasks.named("runXtc", org.xtclang.plugin.tasks.XtcRunTask::class).get()
-                    val args = runTask.jvmArgs.get()
-                    println("JVM_ARGS_TEST_OUTPUT: " + args.joinToString(","))
+                    println("JVM_ARGS_TEST_OUTPUT: " + args.get().joinToString(","))
                 }
             }
             """);
@@ -231,7 +243,7 @@ public class XdkPluginBuildInfoTest {
         // Run the task using TestKit
         final var result = GradleRunner.create()
             .withProjectDir(testProjectDir.toFile())
-            .withArguments("printJvmArgs", "--info")
+            .withArguments(buildArgs("printJvmArgs"))
             .withPluginClasspath()
             .build();
 
