@@ -42,8 +42,8 @@ tasks.processResources {
 private val pprefix = "org.xtclang"
 
 // Plugin metadata - resolved at configuration time (acceptable for static plugin metadata)
-private val pluginIdValue: String = xdkProperties.string("$pprefix.plugin.id").get()
-private val pluginVersionValue: String = xdkProperties.string("$pprefix.plugin.version", version.toString()).get()
+private val pluginIdValue: String = xdkProperties.stringValue("$pprefix.plugin.id")
+private val pluginVersionValue: String = xdkProperties.stringValue("$pprefix.plugin.version", version.toString())
 
 repositories {
     mavenCentral()
@@ -71,11 +71,11 @@ mavenPublishing {
 }
 
 // Type-safe plugin configuration - resolve during configuration for gradlePlugin DSL
-private val vcsUrlValue: String = xdkProperties.string("$pprefix.plugin.vcs.url").get()
-private val websiteValue: String = xdkProperties.string("$pprefix.plugin.website").get()
-private val pluginImplementationClassValue: String = xdkProperties.string("$pprefix.plugin.implementation.class").get()
-private val pluginDisplayNameValue: String = xdkProperties.string("$pprefix.plugin.display.name").get()
-private val pluginDescriptionValue: String = xdkProperties.string("$pprefix.plugin.description").get()
+private val vcsUrlValue: String = xdkProperties.stringValue("$pprefix.plugin.vcs.url")
+private val websiteValue: String = xdkProperties.stringValue("$pprefix.plugin.website")
+private val pluginImplementationClassValue: String = xdkProperties.stringValue("$pprefix.plugin.implementation.class")
+private val pluginDisplayNameValue: String = xdkProperties.stringValue("$pprefix.plugin.display.name")
+private val pluginDescriptionValue: String = xdkProperties.stringValue("$pprefix.plugin.description")
 
 // Gradle plugin configuration for both vanniktech and plugin portal
 gradlePlugin {

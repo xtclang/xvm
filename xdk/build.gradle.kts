@@ -98,8 +98,8 @@ val artifactVersion = version.toString()
 
 
 // Resolve XDK properties at configuration time (acceptable - static launcher configuration)
-val enablePreview = xdkProperties.boolean("org.xtclang.java.enablePreview", false).get()
-val enableNativeAccess = xdkProperties.boolean("org.xtclang.java.enableNativeAccess", false).get()
+val enablePreview = xdkProperties.booleanValue("org.xtclang.java.enablePreview", false)
+val enableNativeAccess = xdkProperties.booleanValue("org.xtclang.java.enableNativeAccess", false)
 
 // Configure application plugin to create multiple scripts instead of default single script
 application {

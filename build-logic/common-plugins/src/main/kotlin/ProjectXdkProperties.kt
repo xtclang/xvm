@@ -28,6 +28,18 @@ abstract class ProjectXdkProperties @Inject constructor(
     fun boolean(key: String, default: Boolean): Provider<Boolean> =
         string(key, default.toString()).map(String::toBoolean)
 
+    fun stringValue(key: String): String = string(key).get()
+
+    fun stringValue(key: String, default: String): String = string(key, default).get()
+
+    fun intValue(key: String): Int = int(key).get()
+
+    fun intValue(key: String, default: Int): Int = int(key, default).get()
+
+    fun booleanValue(key: String): Boolean = boolean(key).get()
+
+    fun booleanValue(key: String, default: Boolean): Boolean = boolean(key, default).get()
+
     fun has(key: String): Boolean = resolve(key) != null
 
     fun hasProvider(key: String): Provider<Boolean> = providers.provider { resolve(key) != null }

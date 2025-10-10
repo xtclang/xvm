@@ -11,8 +11,8 @@ plugins {
 }
 
 // Root aggregator: set version directly from xdkProperties (special case, not using versioning plugin)
-group = xdkProperties.string("xdk.group").get()
-version = xdkProperties.string("xdk.version").get()
+group = xdkProperties.stringValue("xdk.group")
+version = xdkProperties.stringValue("xdk.version")
 
 logger.info("[xvm] Root aggregator version: $group:$name:$version")
 
