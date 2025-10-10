@@ -25,7 +25,7 @@ public class Boolean
     public static Boolean False = new Boolean(false, 0, String.of(null, "False"));
     public static Boolean True  = new Boolean(true, 1, String.of(null, "True"));
 
-    public Enumeration enumeration$get() {
+    public Enumeration enumeration$get(Ctx ctx) {
         return Boolean$Enumeration.$INSTANCE;
     }
 

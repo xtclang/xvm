@@ -1,6 +1,9 @@
 package org.xtclang.ecstasy.text;
 
+import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.xConst;
+
+import org.xtclang.ecstasy.reflect.Type;
 
 import org.xvm.javajit.Ctx;
 
@@ -209,23 +212,91 @@ public class String
      */
     public static final String EmptyString = new String(null, new long[0], true, 0, 0, 0, null);
 
-    // ----- xStr API ------------------------------------------------------------------------------
+    // ----- String API ----------------------------------------------------------------------------
 
     /**
      * @return `true` iff the string contains no characters
      */
-    public boolean empty() {
+    public boolean empty(Ctx ctx) {
         return start == end;
     }
 
     /**
      * @return the length of the string in characters
      */
-    public long size() {
-        return end - start + (next == null ? 0 : next.size());
+    public long size(Ctx ctx) {
+        return end - start + (next == null ? 0 : next.size(ctx));
     }
 
-    public long utf16Size() {
+    /**
+     * Get the codepoint located at the specified index within the string.
+     *
+     * @param index  the zero-based index
+     *
+     * @return the codepoint of the character at the specified index in the string
+     */
+    public int get(Ctx ctx, long index) {
+        if (index < 0) {
+            oob(ctx, index);
+        }
+        return getContinued(ctx, 0, index);
+    }
+
+
+    /**
+     * (Internal) Get the codepoint located at the specified index within the string.
+     *
+     * @param skipped  the count of indexes that precede this string, in a linked list of strings
+     * @param index    the zero-based index into this string
+     *
+     * @return the codepoint of the character at the specified index in the string
+     */
+    private int getContinued(Ctx ctx, long skipped, long index) {
+        int len = end - start;
+        if (index > len) {
+            if (next == null) {
+                oob(ctx, skipped + index);
+            }
+            return next.getContinued(ctx, skipped + len, index - len);
+        }
+
+        index += start;
+        if (unicode) {
+            index *= 0x55555556L; // frdc algorithm: https://arxiv.org/abs/1902.01961
+            long tri = data[(int) (index >>> 32)];
+            return ((int) (tri >>> (21 * (2 - ((int) (((index & 0xFFFFFFFFL) * 3) >>> 32)))))) & 0x1FFFFF;
+        }
+
+        return (int) (data[(int) (index >>> 3)] >>> (8 * (~index & 0b111))) & 0xFF;
+    }
+
+
+    public static boolean equals$p(Ctx ctx, Type type, String s1, String s2) {
+        return false;
+    }
+
+    @Override
+    public String toString(Ctx ctx) {
+        return this;
+    }
+
+    @Override
+    public java.lang.String toString() {
+        long len = size(null);
+        if (len == 0) {
+            return "";
+        }
+
+        // way-too-big strings are obvious problems
+        if (len > Integer.MAX_VALUE - 8) {
+            oob(null, len);
+        }
+
+        // one-byte (ISO 8859-1) format is simple
+        return toStringContinued(new StringBuilder((int) utf16Size())).toString();
+    }
+
+    private long utf16Size() {
         long localSize;
         localSize = end - start;
         if (unicode && localSize > 0) {
@@ -245,67 +316,6 @@ public class String
             }
         }
         return localSize + (next == null ? 0 : next.utf16Size());
-    }
-
-    /**
-     * Get the codepoint located at the specified index within the string.
-     *
-     * @param index  the zero-based index
-     *
-     * @return the codepoint of the character at the specified index in the string
-     */
-    public int get(long index) {
-        if (index < 0) {
-            oob(index);
-        }
-        return getContinued(0, index);
-    }
-
-
-    /**
-     * (Internal) Get the codepoint located at the specified index within the string.
-     *
-     * @param skipped  the count of indexes that precede this string, in a linked list of strings
-     * @param index    the zero-based index into this string
-     *
-     * @return the codepoint of the character at the specified index in the string
-     */
-    private int getContinued(long skipped, long index) {
-        int len = end - start;
-        if (index > len) {
-            if (next == null) {
-                oob(skipped + index);
-            }
-            return next.getContinued(skipped + len, index - len);
-        }
-
-        index += start;
-        if (unicode) {
-            index *= 0x55555556L; // frdc algorithm: https://arxiv.org/abs/1902.01961
-            long tri = data[(int) (index >>> 32)];
-            return ((int) (tri >>> (21 * (2 - ((int) (((index & 0xFFFFFFFFL) * 3) >>> 32)))))) & 0x1FFFFF;
-        }
-
-        return (int) (data[(int) (index >>> 3)] >>> (8 * (~index & 0b111))) & 0xFF;
-    }
-
-    public @Override String toString(Ctx ctx) {
-        return this;
-    }
-
-    public @Override java.lang.String toString() {
-        long len = size();
-        if (len == 0) {
-            return "";
-        }
-
-        // way-too-big strings are obvious problems
-        if (len > Integer.MAX_VALUE - 8) {
-            oob(len);
-        }
-
-        // one-byte (ISO 8859-1) format is simple
-        return toStringContinued(new StringBuilder((int) utf16Size())).toString();
     }
 
     /**
@@ -352,12 +362,9 @@ public class String
     /**
      * @param index an illegal index
      *
-     * @throws StringIndexOutOfBoundsException
+     * @throws OutOfBounds
      */
-    private boolean oob(long index) {
-        if (index >= Integer.MIN_VALUE && index <= Integer.MAX_VALUE) {
-            throw new StringIndexOutOfBoundsException((int) index);
-        }
-        throw new StringIndexOutOfBoundsException(java.lang.String.valueOf(index));
+    private boolean oob(Ctx ctx, long index) {
+        throw Exception.$oob(ctx, "String index out of range: " + index);
     }
 }

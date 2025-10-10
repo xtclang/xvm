@@ -1,6 +1,8 @@
 package org.xtclang.ecstasy;
 
 import org.xtclang.ecstasy.reflect.Enumeration;
+import org.xtclang.ecstasy.reflect.Type;
+
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
@@ -18,9 +20,13 @@ public abstract class xEnum extends xConst implements Object {
         return null; // TODO
     }
 
-    abstract public Enumeration enumeration$get();
+    abstract public Enumeration enumeration$get(Ctx ctx);
     abstract public String name$get(Ctx ctx);
     abstract public long ordinal$get$p(Ctx ctx);
+
+    static boolean equals$p(Ctx ctx, Type CompileType, xEnum o1, xEnum o2) {
+        return o1.ordinal$get$p(ctx) == o2.ordinal$get$p(ctx);
+    }
 
     @Override
     public String toString(Ctx ctx) {
