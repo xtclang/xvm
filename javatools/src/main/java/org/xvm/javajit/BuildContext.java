@@ -23,6 +23,7 @@ import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.MethodBody;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
@@ -657,6 +658,41 @@ public class BuildContext {
             throw new UnsupportedOperationException("Multislot L_Set");
         }
         code.invokevirtual(targetSlot.cd(), setterName, md);
+    }
+
+    /**
+     * Call the constructor.
+     */
+    public ClassDesc buildNew(CodeBuilder code, TypeConstant typeTarget,
+                              MethodConstant idCtor, int[] anArgValue) {
+        TypeInfo   infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+        MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
+
+        if (infoCtor == null) {
+            throw new RuntimeException("Unresolvable constructor \"" +
+                idCtor.getValueString() + "\" for " + typeTarget.getValueString());
+        }
+        String        sJitTarget = typeTarget.ensureJitClassName(typeSystem);
+        ClassDesc     cdTarget   = ClassDesc.of(sJitTarget);
+        JitMethodDesc jmdNew     =
+            Builder.convertConstructToNew(infoTarget, sJitTarget, infoCtor.getJitDesc(typeSystem));
+
+        boolean fOptimized = jmdNew.isOptimized;
+        String  sJitNew    = idCtor.ensureJitMethodName(typeSystem).replace("construct", Builder.NEW);
+        MethodTypeDesc md;
+        if (fOptimized) {
+            md       = jmdNew.optimizedMD;
+            sJitNew += Builder.OPT;
+        }
+        else {
+            md = jmdNew.standardMD;
+        }
+
+        loadCtx(code);
+        loadArguments(code, jmdNew, anArgValue);
+
+        code.invokestatic(cdTarget, sJitNew, md);
+        return cdTarget;
     }
 
     /**

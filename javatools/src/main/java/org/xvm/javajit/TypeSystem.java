@@ -310,17 +310,17 @@ public class TypeSystem {
         Artifact art = deduceArtifact(module, name);
         if (art != null) {
             if (art.id.getComponent() instanceof ClassStructure clz) {
-                TypeConstant type      = clz.getCanonicalType();
-                Builder      builder   = ensureBuilder(type);
+                TypeConstant type       = clz.getCanonicalType();
+                Builder      jitBuilder = ensureBuilder(type);
                 Consumer<? super ClassBuilder> handler = classBuilder -> {
-                    classBuilder.with(SourceFileAttribute.of(clz.getSourceFileName()));
                     switch (art.shape) {
                         case Impl:
-                            builder.assembleImpl(className, classBuilder);
+                            classBuilder.with(SourceFileAttribute.of(clz.getSourceFileName()));
+                            jitBuilder.assembleImpl(className, classBuilder);
                             break;
 
                         case Exception:
-                            ((ExceptionBuilder) builder).
+                            ((ExceptionBuilder) jitBuilder).
                                 assembleJavaException(className, classBuilder);
                             break;
 

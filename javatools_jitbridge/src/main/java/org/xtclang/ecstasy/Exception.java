@@ -66,7 +66,7 @@ public class Exception extends xConst {
         sb.append(": ")
           .append(text == Nullable.Null ? "" : text.toString($ctx()));
         for (StackTraceElement el : $exception.getStackTrace()) {
-            if (el.getFileName().endsWith(".x")) {
+            if (el.getFileName().endsWith(".x") && !el.getMethodName().startsWith("$")) {
                 sb.append("\n    at ")
                   .append(el);
             }
