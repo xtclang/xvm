@@ -50,12 +50,11 @@ jobs:
             is-master: ${{ steps.compute.outputs.is-master }}
 
         steps:
-            - name: Fetch Sources
-              uses: actions/checkout@v5
-
-            - name: Get versions
+            - name: Setup XVM Project
               id: versions
-              uses: ./.github/actions/get-versions
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: false  # Only need version info for tag computation
 
             - name: Compute tags
               id: compute
@@ -97,20 +96,12 @@ jobs:
                       runner: ubuntu-24.04-arm
 
         steps:
-            - name: Fetch Sources
-              uses: actions/checkout@v5
-
-            - name: Get versions
+            - name: Setup XVM Project
               id: versions
-              uses: ./.github/actions/get-versions
-
-            - name: Setup XVM Build Environment
-              uses: ./.github/actions/setup-xvm-build
+              uses: ./.github/actions/setup-xvm-project
               with:
-                  java-version: ${{ steps.versions.outputs.java-version }}
-                  java-distribution: ${{ steps.versions.outputs.java-distribution }}
-                  gradle-version: ${{ steps.versions.outputs.gradle-version }}
-                  cache-read-only: true
+                  setup-build: true
+                  cache-read-only: true  # Reuse cache from CI build
                   enable-debug: false
 
             - name: Set up Docker Buildx
@@ -271,20 +262,12 @@ jobs:
         if: ${{ success() && github.event.inputs.cleanup != 'false' }}
 
         steps:
-            - name: Fetch Sources
-              uses: actions/checkout@v5
-
-            - name: Get versions
+            - name: Setup XVM Project
               id: versions
-              uses: ./.github/actions/get-versions
-
-            - name: Setup XVM Build Environment
-              uses: ./.github/actions/setup-xvm-build
+              uses: ./.github/actions/setup-xvm-project
               with:
-                  java-version: ${{ steps.versions.outputs.java-version }}
-                  java-distribution: ${{ steps.versions.outputs.java-distribution }}
-                  gradle-version: ${{ steps.versions.outputs.gradle-version }}
-                  cache-read-only: true
+                  setup-build: true
+                  cache-read-only: true  # Reuse cache from CI build
                   enable-debug: false
 
             - name: Clean up Docker packages

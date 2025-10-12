@@ -28,19 +28,11 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
         steps:
-            - name: Fetch Sources
-              uses: actions/checkout@v5
-
-            - name: Get versions
+            - name: Setup XVM Project
               id: versions
-              uses: ./.github/actions/get-versions
-
-            - name: Setup XVM Build Environment
-              uses: ./.github/actions/setup-xvm-build
+              uses: ./.github/actions/setup-xvm-project
               with:
-                  java-version: ${{ steps.versions.outputs.java-version }}
-                  java-distribution: ${{ steps.versions.outputs.java-distribution }}
-                  gradle-version: ${{ steps.versions.outputs.gradle-version }}
+                  setup-build: true
                   cache-read-only: true  # Read-only since CI build already populated cache
                   enable-debug: false
 

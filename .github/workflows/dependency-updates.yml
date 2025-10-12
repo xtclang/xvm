@@ -45,23 +45,13 @@ jobs:
                   echo "Actor: ${{ github.actor }}"
                   echo "Is Dependabot: $IS_DEPENDABOT"
 
-            - name: Fetch Sources
-              uses: actions/checkout@v5
-              with:
-                  # Fetch both base and head for proper diff analysis
-                  fetch-depth: 0
-
-            - name: Get versions
+            - name: Setup XVM Project
               id: versions
-              uses: ./.github/actions/get-versions
-
-            - name: Setup XVM Build Environment
-              uses: ./.github/actions/setup-xvm-build
+              uses: ./.github/actions/setup-xvm-project
               with:
-                  java-version: ${{ steps.versions.outputs.java-version }}
-                  java-distribution: ${{ steps.versions.outputs.java-distribution }}
-                  gradle-version: ${{ steps.versions.outputs.gradle-version }}
+                  setup-build: true
                   cache-read-only: false
+                  checkout-depth: 0  # Full history for proper diff analysis
                   enable-debug: false
 
             - name: Analyze dependency changes
