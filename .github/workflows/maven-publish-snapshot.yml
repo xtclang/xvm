@@ -1,0 +1,95 @@
+#
+# GitHub workflow for publishing Maven snapshot artifacts
+#
+# This workflow publishes Maven snapshots to GitHub Packages.
+# It triggers automatically on master after CI completes, or can be manually triggered.
+#
+name: Publish Maven Snapshot
+
+permissions:
+    contents: read
+    packages: write
+    actions: read
+
+on:
+    # Automatic trigger after CI completes on master
+    workflow_run:
+        workflows: ["VerifyCommit"]
+        types: [completed]
+        branches: [master]
+
+    # Manual trigger from any branch
+    workflow_dispatch:
+
+env:
+    # Build configuration pulled from get-versions action
+
+jobs:
+    publish-maven:
+        name: Publish Maven artifacts
+        runs-on: ubuntu-latest
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
+        steps:
+            - name: Fetch Sources
+              uses: actions/checkout@v5
+
+            - name: Get versions
+              id: versions
+              uses: ./.github/actions/get-versions
+
+            - name: Setup XVM Build Environment
+              uses: ./.github/actions/setup-xvm-build
+              with:
+                  java-version: ${{ steps.versions.outputs.java-version }}
+                  java-distribution: ${{ steps.versions.outputs.java-distribution }}
+                  gradle-version: ${{ steps.versions.outputs.gradle-version }}
+                  cache-read-only: false
+                  enable-debug: false
+
+            - name: Publish Maven snapshots
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  echo "📦 Publishing Maven snapshot artifacts to GitHub Packages..."
+                  ./gradlew ${{ steps.versions.outputs.gradle-options }} publish --info
+                  echo "✅ Maven snapshots published"
+
+            - name: Clean up old package versions
+              if: success()
+              continue-on-error: true
+              run: |
+                  echo "🧹 Cleaning up old package versions (keeping 50 newest)..."
+
+                  # Clean XDK packages
+                  gh api --method DELETE \
+                      "/orgs/xtclang/packages/maven/org.xtclang.xdk/versions" \
+                      --field package_type=maven \
+                      --field min_versions_to_keep=50 \
+                      || echo "XDK cleanup skipped"
+
+                  # Clean Plugin packages
+                  gh api --method DELETE \
+                      "/orgs/xtclang/packages/maven/org.xtclang.xtc-plugin/versions" \
+                      --field package_type=maven \
+                      --field min_versions_to_keep=50 \
+                      || echo "Plugin cleanup skipped"
+
+                  echo "✅ Package cleanup completed"
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Summary
+              if: success()
+              run: |
+                  echo "### ✅ Maven Snapshots Published" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "Published to GitHub Packages:" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Version:** ${{ steps.versions.outputs.xdk-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Published artifacts:**" >> $GITHUB_STEP_SUMMARY
+                  echo "- XDK distribution" >> $GITHUB_STEP_SUMMARY
+                  echo "- javatools JAR" >> $GITHUB_STEP_SUMMARY
+                  echo "- Gradle plugin" >> $GITHUB_STEP_SUMMARY

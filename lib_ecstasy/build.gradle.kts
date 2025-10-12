@@ -1,4 +1,4 @@
-import XdkBuildLogic.XDK_ARTIFACT_NAME_MACK_DIR
+import XdkDistribution.Companion.XDK_ARTIFACT_NAME_MACK_DIR
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE

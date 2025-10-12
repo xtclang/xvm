@@ -1,3 +1,4 @@
+import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 import javax.inject.Inject
@@ -46,3 +47,17 @@ abstract class ProjectXdkProperties @Inject constructor(
 
     private fun toEnvKey(key: String) = key.replace('.', '_').uppercase()
 }
+
+/**
+ * Typed extension accessor for ProjectXdkProperties.
+ * Use this in build scripts to access properties with Provider API.
+ * Example: val jdk = xdkProperties.int("org.xtclang.java.jdk")
+ */
+val Project.xdkProperties: ProjectXdkProperties
+    get() = extensions.getByType(ProjectXdkProperties::class.java)
+
+/**
+ * Semantic version accessor (group:name:version).
+ */
+val Project.semanticVersion: String
+    get() = "$group:$name:$version"

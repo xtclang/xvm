@@ -2,64 +2,64 @@
 
 version: 2
 updates:
-  # Enable version updates for GitHub Actions
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "saturday"
-      time: "06:00"
-    open-pull-requests-limit: 5
-    reviewers:
-      - "maintainers"
-    assignees:
-      - "maintainers"
-    commit-message:
-      prefix: "ci"
-      include: "scope"
+    # Enable version updates for GitHub Actions
+    - package-ecosystem: "github-actions"
+      directory: "/"
+      schedule:
+          interval: "weekly"
+          day: "saturday"
+          time: "06:00"
+      open-pull-requests-limit: 5
+      reviewers:
+          - "maintainers"
+      assignees:
+          - "maintainers"
+      commit-message:
+          prefix: "ci"
+          include: "scope"
 
-  # Enable version updates for Docker
-  - package-ecosystem: "docker"
-    directory: "/docker"
-    schedule:
-      interval: "weekly"
-      day: "saturday"
-      time: "06:00"
-    open-pull-requests-limit: 5
-    reviewers:
-      - "maintainers"
-    assignees:
-      - "maintainers"
-    commit-message:
-      prefix: "docker"
-      include: "scope"
+    # Enable version updates for Docker
+    - package-ecosystem: "docker"
+      directory: "/docker"
+      schedule:
+          interval: "weekly"
+          day: "saturday"
+          time: "06:00"
+      open-pull-requests-limit: 5
+      reviewers:
+          - "maintainers"
+      assignees:
+          - "maintainers"
+      commit-message:
+          prefix: "docker"
+          include: "scope"
 
-  # Enable version updates for Gradle dependencies
-  #
-  # NOTE: This repository uses dynamic version resolution for XDK-related dependencies.
-  # The libs.versions.toml file contains placeholder versions (0.0.0-PLACEHOLDER) that
-  # are dynamically replaced at build time from the version.properties file.
-  # Dependabot will see these placeholders but they are not real versions to update.
-  #
-  - package-ecosystem: "gradle"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "saturday"
-      time: "06:00"
-    open-pull-requests-limit: 10
-    reviewers:
-      - "maintainers"
-    assignees:
-      - "maintainers"
-    commit-message:
-      prefix: "deps"
-      include: "scope"
-    ignore:
-      # Ignore XDK internal dependencies which use dynamic versioning
-      - dependency-name: "org.xtclang.*"
-      # Ignore patch updates for build plugins (too noisy)
-      - dependency-name: "*"
-        update-types: ["version-update:semver-patch"]
-        # But allow security updates even for patches
-        # (GitHub automatically overrides this for security updates)
+    # Enable version updates for Gradle dependencies
+    #
+    # NOTE: This repository uses dynamic version resolution for XDK-related dependencies.
+    # The libs.versions.toml file contains placeholder versions (0.0.0-PLACEHOLDER) that
+    # are dynamically replaced at build time from the version.properties file.
+    # Dependabot will see these placeholders, but they are not real versions to update.
+    #
+    - package-ecosystem: "gradle"
+      directory: "/"
+      schedule:
+          interval: "weekly"
+          day: "saturday"
+          time: "06:00"
+      open-pull-requests-limit: 10
+      reviewers:
+          - "maintainers"
+      assignees:
+          - "maintainers"
+      commit-message:
+          prefix: "deps"
+          include: "scope"
+      ignore:
+          # Ignore XDK internal dependencies which use dynamic versioning
+          - dependency-name: "org.xtclang.*"
+          # Ignore patch updates for build plugins (too noisy)
+          - dependency-name: "*"
+            update-types: ["version-update:semver-patch"]
+            # But allow security updates even for patches
+            # (GitHub automatically overrides this for security updates)

@@ -7,7 +7,7 @@ import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 
 plugins {
     alias(libs.plugins.xdk.build.aggregator)
-    id("org.xtclang.build.xdk.properties")
+    alias(libs.plugins.xdk.build.properties)
 }
 
 // Root aggregator: version set automatically by properties plugin
@@ -42,6 +42,13 @@ val versions by tasks.existing {
  * of the root build.gradle.kts, we have installed convention plugins, resolved version catalogs
  * and similar things.
  */
+
+val distZip by tasks.registering {
+    group = DISTRIBUTION_TASK_GROUP
+    description = "Build the XDK distribution zip in the xdk/build/distributions directory."
+    dependsOn(xdk.task(":$name"))
+}
+
 val installDist by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Install the XDK distribution in the xdk/build/distributions and xdk/build/install directories."
@@ -56,14 +63,14 @@ val installWithNativeLaunchersDist by tasks.registering {
 
 private val xdk = gradle.includedBuild("xdk")
 private val plugin = gradle.includedBuild("plugin")
-private val includedBuildsWithPublications = listOf(xdk, plugin)
+private val publishedBuilds = listOf(xdk, plugin)
 
 val publishLocal by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Publish XDK and plugin artifacts to local Maven repository."
 
     // Publish to local Maven repository for all included builds with publications
-    includedBuildsWithPublications.forEach { build ->
+    publishedBuilds.forEach { build ->
         dependsOn(build.task(":publishToMavenLocal"))
     }
 }
@@ -118,7 +125,7 @@ val publish by tasks.registering {
 
     // Publish to all enabled remote repositories for all included builds with publications
     // The :publish task will publish to all repositories enabled via properties
-    includedBuildsWithPublications.forEach { build ->
+    publishedBuilds.forEach { build ->
         dependsOn(build.task(":publish"))
     }
 }
@@ -131,7 +138,7 @@ val validateCredentials by tasks.registering {
     description = "Validate all publishing credentials across all projects without publishing"
 
     // Run validateCredentials in all projects with publications
-    includedBuildsWithPublications.forEach { build ->
+    publishedBuilds.forEach { build ->
         dependsOn(build.task(":validateCredentials"))
     }
 }
