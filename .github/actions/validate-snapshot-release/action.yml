@@ -1,0 +1,78 @@
+#
+# Validates that a downloaded snapshot release matches the expected commit SHA
+#
+# This action prevents race conditions where overlapping CI runs update the
+# snapshot release while workflows are queued, causing workflows to use
+# artifacts from the wrong commit.
+#
+name: 'Validate Snapshot Release'
+description: 'Validates that snapshot release artifacts match the expected commit SHA'
+
+inputs:
+    expected-commit:
+        description: 'The expected commit SHA that should match the snapshot release'
+        required: true
+    repo:
+        description: 'Repository in format owner/repo'
+        required: true
+    github-token:
+        description: 'GitHub token for API access'
+        required: true
+    release-tag:
+        description: 'Release tag to validate'
+        required: false
+        default: 'xdk-latest-snapshot'
+
+outputs:
+    validation-result:
+        description: 'Result of validation: matched, warning, or error'
+        value: ${{ steps.validate.outputs.result }}
+
+runs:
+    using: 'composite'
+    steps:
+        - name: Validate snapshot release commit
+          id: validate
+          shell: bash
+          env:
+              GH_TOKEN: ${{ inputs.github-token }}
+          run: |
+              EXPECTED_COMMIT="${{ inputs.expected-commit }}"
+              RELEASE_TAG="${{ inputs.release-tag }}"
+              REPO="${{ inputs.repo }}"
+
+              echo "🔍 Validating snapshot release matches expected commit..."
+              echo "  Expected commit: $EXPECTED_COMMIT"
+              echo "  Release tag: $RELEASE_TAG"
+
+              # Fetch release information
+              RELEASE_INFO=$(gh release view "$RELEASE_TAG" --repo "$REPO" --json body,tagName)
+
+              # Extract commit from release notes (format: **Commit:** <sha>)
+              RELEASE_COMMIT=$(echo "$RELEASE_INFO" | jq -r '.body' | grep -oP '(?<=\*\*Commit:\*\* )[a-f0-9]{40}' || echo "")
+
+              if [ -z "$RELEASE_COMMIT" ]; then
+                  echo "⚠️  WARNING: Could not extract commit from release notes"
+                  echo "⚠️  Snapshot may not match expected commit $EXPECTED_COMMIT"
+                  echo "⚠️  Proceeding anyway (manual trigger or old release format)"
+                  echo "result=warning" >> $GITHUB_OUTPUT
+                  exit 0
+              fi
+
+              echo "  Release commit: $RELEASE_COMMIT"
+
+              if [ "$RELEASE_COMMIT" != "$EXPECTED_COMMIT" ]; then
+                  echo ""
+                  echo "❌ ERROR: Snapshot commit mismatch!"
+                  echo "   Expected: $EXPECTED_COMMIT"
+                  echo "   Got:      $RELEASE_COMMIT"
+                  echo ""
+                  echo "This usually means another CI run updated the snapshot while this workflow was queued."
+                  echo "The snapshot release should match the commit that triggered this workflow."
+                  echo ""
+                  echo "result=error" >> $GITHUB_OUTPUT
+                  exit 1
+              fi
+
+              echo "✅ Snapshot commit matches: $RELEASE_COMMIT"
+              echo "result=matched" >> $GITHUB_OUTPUT

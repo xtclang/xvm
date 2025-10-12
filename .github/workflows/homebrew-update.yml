@@ -51,11 +51,10 @@ jobs:
                   fi
                   echo "xdk-version=$VERSION" >> $GITHUB_OUTPUT
 
-            - name: Download XDK from snapshot release
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Determine expected commit
+              id: expected-commit
+              shell: bash
               run: |
-                  # Determine the commit we're building for
                   if [ "${{ github.event_name }}" = "workflow_run" ]; then
                       EXPECTED_COMMIT="${{ github.event.workflow_run.head_sha }}"
                       echo "📌 Building for commit from workflow_run: $EXPECTED_COMMIT"
@@ -63,7 +62,12 @@ jobs:
                       EXPECTED_COMMIT="${{ github.sha }}"
                       echo "📌 Building for commit from manual trigger: $EXPECTED_COMMIT"
                   fi
+                  echo "commit=$EXPECTED_COMMIT" >> $GITHUB_OUTPUT
 
+            - name: Download XDK from snapshot release
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
                   echo "📥 Downloading XDK from snapshot release..."
                   gh release download xdk-latest-snapshot --pattern "xdk-*.zip" --repo ${{ github.repository }}
                   XDK_ZIP=$(find . -name "xdk-*.zip" | head -1)
@@ -73,26 +77,12 @@ jobs:
                   fi
                   echo "✅ Downloaded: $(basename "$XDK_ZIP")"
 
-                  # Validate snapshot matches expected commit
-                  echo "🔍 Validating snapshot release matches expected commit..."
-                  RELEASE_INFO=$(gh release view xdk-latest-snapshot --repo ${{ github.repository }} --json body,tagName)
-                  RELEASE_COMMIT=$(echo "$RELEASE_INFO" | jq -r '.body' | grep -oP '(?<=\*\*Commit:\*\* )[a-f0-9]{40}' || echo "")
-
-                  if [ -z "$RELEASE_COMMIT" ]; then
-                      echo "⚠️  WARNING: Could not extract commit from release notes"
-                      echo "⚠️  Snapshot may not match expected commit $EXPECTED_COMMIT"
-                      echo "⚠️  Proceeding anyway (manual trigger or old release format)"
-                  elif [ "$RELEASE_COMMIT" != "$EXPECTED_COMMIT" ]; then
-                      echo "❌ ERROR: Snapshot commit mismatch!"
-                      echo "   Expected: $EXPECTED_COMMIT"
-                      echo "   Got:      $RELEASE_COMMIT"
-                      echo ""
-                      echo "This usually means another CI run updated the snapshot while this workflow was queued."
-                      echo "The snapshot release should match the commit that triggered this workflow."
-                      exit 1
-                  else
-                      echo "✅ Snapshot commit matches: $RELEASE_COMMIT"
-                  fi
+            - name: Validate snapshot release matches expected commit
+              uses: ./.github/actions/validate-snapshot-release
+              with:
+                  expected-commit: ${{ steps.expected-commit.outputs.commit }}
+                  repo: ${{ github.repository }}
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Update Homebrew formula
               env:
