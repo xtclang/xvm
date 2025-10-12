@@ -167,9 +167,9 @@ jobs:
               if: success() && matrix.os == 'ubuntu-latest'
               uses: actions/upload-artifact@v4
               with:
-              name: xdk-dist-${{ github.sha }}
-              path: xdk/build/distributions/xdk-*.zip
-              retention-days: 30
+                  name: xdk-dist-${{ github.sha }}
+                  path: xdk/build/distributions/xdk-*.zip
+                  retention-days: 30
 
             - name: Summary
               if: success()
