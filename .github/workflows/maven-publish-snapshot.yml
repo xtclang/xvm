@@ -63,29 +63,32 @@ jobs:
                   ./gradlew ${{ steps.versions.outputs.gradle-options }} publish --info
                   echo "✅ Maven snapshots published"
 
-            - name: Clean up old package versions
+            - name: Clean up old XDK package versions (keep 50 newest)
               if: success()
-              continue-on-error: true
-              run: |
-                  echo "🧹 Cleaning up old package versions (keeping 50 newest)..."
+              uses: actions/delete-package-versions@v5
+              with:
+                  package-name: 'org.xtclang.xdk'
+                  package-type: 'maven'
+                  min-versions-to-keep: 50
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
-                  # Clean XDK packages
-                  gh api --method DELETE \
-                      "/orgs/xtclang/packages/maven/org.xtclang.xdk/versions" \
-                      --field package_type=maven \
-                      --field min_versions_to_keep=50 \
-                      || echo "XDK cleanup skipped"
+            - name: Clean up old Plugin package versions (keep 50 newest)
+              if: success()
+              uses: actions/delete-package-versions@v5
+              with:
+                  package-name: 'org.xtclang.xtc-plugin'
+                  package-type: 'maven'
+                  min-versions-to-keep: 50
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
-                  # Clean Plugin packages
-                  gh api --method DELETE \
-                      "/orgs/xtclang/packages/maven/org.xtclang.xtc-plugin/versions" \
-                      --field package_type=maven \
-                      --field min_versions_to_keep=50 \
-                      || echo "Plugin cleanup skipped"
-
-                  echo "✅ Package cleanup completed"
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Clean up old Plugin Marker package versions (keep 50 newest)
+              if: success()
+              uses: actions/delete-package-versions@v5
+              with:
+                  package-name: 'org.xtclang.xtc-plugin.org.xtclang.xtc-plugin.gradle.plugin'
+                  package-type: 'maven'
+                  min-versions-to-keep: 50
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Summary
               if: success()
