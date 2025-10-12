@@ -41,7 +41,7 @@ jobs:
                   java-version: ${{ steps.versions.outputs.java-version }}
                   java-distribution: ${{ steps.versions.outputs.java-distribution }}
                   gradle-version: ${{ steps.versions.outputs.gradle-version }}
-                  cache-read-only: false
+                  cache-read-only: true  # Read-only since CI build already populated cache
                   enable-debug: false
 
             - name: Publish Maven snapshots
