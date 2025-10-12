@@ -63,8 +63,35 @@ if ("versions" !in tasks.names) {
 
             if (subprojectVersions.isNotEmpty()) {
                 logger.lifecycle("\n   Subprojects:")
+
+                // Validate all subproject versions match the project version
+                val versionMismatches = mutableListOf<String>()
+
                 subprojectVersions.forEach { (group, name, version) ->
                     logger.lifecycle("   ├─ $group:$name:$version")
+
+                    if (version.toString() != projectVersion.toString()) {
+                        versionMismatches.add("   ❌ $group:$name:$version (expected: $projectVersion)")
+                    }
+                }
+
+                // Fail if any version mismatches found
+                if (versionMismatches.isNotEmpty()) {
+                    logger.lifecycle("")
+                    logger.lifecycle("❌ VERSION VALIDATION FAILED")
+                    logger.lifecycle("")
+                    logger.lifecycle("All subprojects must have the same version as the parent project.")
+                    logger.lifecycle("")
+                    logger.lifecycle("Mismatches found:")
+                    versionMismatches.forEach { logger.lifecycle(it) }
+                    logger.lifecycle("")
+                    logger.lifecycle("Expected version: $projectVersion")
+                    logger.lifecycle("")
+
+                    throw GradleException(
+                        "Version validation failed: ${versionMismatches.size} " +
+                        "subproject(s) have different versions. All projects must use version $projectVersion"
+                    )
                 }
             }
             logger.lifecycle("")

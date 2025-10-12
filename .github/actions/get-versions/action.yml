@@ -59,11 +59,11 @@ runs:
               GRADLE_OPTIONS="-Dorg.gradle.vfs.verbose=false --stacktrace --console=plain"
               GRADLE_JVM_OPTS="-Xmx4g -XX:+UseStringDeduplication"
 
-              echo "📋 Java Version: $JAVA_VERSION"
-              echo "📋 XDK Version: $XDK_VERSION"
-              echo "📋 Gradle Version: $GRADLE_VERSION"
-              echo "📋 Java Distribution: $JAVA_DISTRIBUTION"
-              echo "📋 Gradle Options: $GRADLE_OPTIONS"
+              echo "📋 Java Version      : $JAVA_VERSION"
+              echo "📋 XDK Version       : $XDK_VERSION"
+              echo "📋 Gradle Version    : $GRADLE_VERSION"
+              echo "📋 Java Distribution : $JAVA_DISTRIBUTION"
+              echo "📋 Gradle Options    : $GRADLE_OPTIONS"
               echo "📋 Gradle JVM Options: $GRADLE_JVM_OPTS"
 
               echo "java-version=$JAVA_VERSION" >> $GITHUB_OUTPUT
