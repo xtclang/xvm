@@ -25,9 +25,6 @@ on:
                 required: false
                 default: false
 
-env:
-    # Use same Java and Gradle settings as main CI (pulled from get-versions action)
-
 jobs:
     validate-dependencies:
         name: Validate dependency updates

@@ -24,9 +24,6 @@ on:
                 description: 'XDK version to publish (leave empty to use latest from version.properties)'
                 required: false
 
-env:
-    # Build configuration pulled from get-versions action
-
 jobs:
     update-homebrew:
         name: Update Homebrew tap

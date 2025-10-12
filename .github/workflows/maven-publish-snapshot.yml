@@ -21,9 +21,6 @@ on:
     # Manual trigger from any branch
     workflow_dispatch:
 
-env:
-    # Build configuration pulled from get-versions action
-
 jobs:
     publish-maven:
         name: Publish Maven artifacts
