@@ -189,27 +189,18 @@ jobs:
         if: ${{ success() && github.ref == 'refs/heads/master' }}
 
         steps:
+            - name: Fetch Sources
+              uses: actions/checkout@v5
+
+            - name: Get versions
+              id: versions
+              uses: ./.github/actions/get-versions
+
             - name: Download XDK artifact
               uses: actions/download-artifact@v4
               with:
                   name: xdk-dist-${{ github.sha }}
                   path: .
-
-            - name: Get versions
-              id: versions
-              uses: actions/checkout@v5
-              with:
-                  sparse-checkout: |
-                      version.properties
-                  sparse-checkout-cone-mode: false
-
-            - name: Extract version
-              id: version
-              shell: bash
-              run: |
-                  XDK_VERSION=$(grep "^xdk.version=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
-                  echo "xdk-version=$XDK_VERSION" >> $GITHUB_OUTPUT
-                  echo "📋 XDK Version: $XDK_VERSION"
 
             - name: Delete old snapshot release
               continue-on-error: true
@@ -233,10 +224,10 @@ jobs:
                   gh release create xdk-latest-snapshot \
                       "$XDK_ZIP" \
                       --repo ${{ github.repository }} \
-                      --title "XDK Latest Snapshot (${{ steps.version.outputs.xdk-version }})" \
+                      --title "XDK Latest Snapshot (${{ steps.versions.outputs.xdk-version }})" \
                       --notes "**Automated snapshot release from master branch**
 
-                  **Version:** ${{ steps.version.outputs.xdk-version }}
+                  **Version:** ${{ steps.versions.outputs.xdk-version }}
                   **Commit:** ${{ github.sha }}
                   **Branch:** ${{ github.ref_name }}
                   **Built:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
