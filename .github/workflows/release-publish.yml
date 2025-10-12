@@ -1,0 +1,409 @@
+#
+# GitHub workflow for publishing XDK releases
+#
+# This workflow handles release publication to multiple repositories:
+# - GitHub Releases (draft, requires manual publish)
+# - Maven Central (staged, requires manual release via Sonatype)
+# - Gradle Plugin Portal (requires separate manual confirmation)
+#
+# The workflow strips -SNAPSHOT from versions and creates staged/draft publications
+# that require manual approval before becoming publicly available.
+#
+name: Publish Release
+
+permissions:
+    contents: write
+    packages: write
+    actions: read
+
+on:
+    # Manual trigger only - releases are never automatic
+    workflow_dispatch:
+        inputs:
+            version-override:
+                description: 'Version to release (leave empty to use version.properties, -SNAPSHOT will be stripped)'
+                required: false
+            skip-tests:
+                description: 'Skip test execution (not recommended for releases)'
+                type: boolean
+                required: false
+                default: false
+            publish-to-gradle-plugin-portal:
+                description: 'Publish to Gradle Plugin Portal (cannot be staged - will be immediate)'
+                type: boolean
+                required: false
+                default: false
+            close-maven-staging:
+                description: 'Automatically close Maven staging repository (still requires manual release)'
+                type: boolean
+                required: false
+                default: true
+
+env:
+    # Publishing credentials
+    GITHUB_ACTOR: ${{ github.actor }}
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    GRADLE_PUBLISH_KEY: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY }}
+    GRADLE_PUBLISH_SECRET: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET }}
+    ORG_GRADLE_PROJECT_github_actor: ${{ github.actor }}
+    ORG_GRADLE_PROJECT_github_token: ${{ secrets.GITHUB_TOKEN }}
+    SIGNING_KEY: ${{ secrets.ORG_XTCLANG_SIGNING_KEY }}
+    SIGNING_KEYID: ${{ secrets.ORG_XTCLANG_SIGNING_KEY_ID }}
+    SIGNING_PASSWORD: ${{ secrets.ORG_XTCLANG_SIGNING_PASSWORD }}
+    ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
+    ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
+
+jobs:
+    prepare-release:
+        name: Prepare release version
+        runs-on: ubuntu-latest
+        outputs:
+            release-version: ${{ steps.version.outputs.release-version }}
+            next-snapshot-version: ${{ steps.version.outputs.next-snapshot-version }}
+            is-snapshot: ${{ steps.version.outputs.is-snapshot }}
+
+        steps:
+            - name: Setup XVM Project
+              id: versions
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: false
+
+            - name: Determine release version
+              id: version
+              shell: bash
+              run: |
+                  # Get version from input or version.properties
+                  if [ -n "${{ github.event.inputs.version-override }}" ]; then
+                      VERSION="${{ github.event.inputs.version-override }}"
+                      echo "Using version override: $VERSION"
+                  else
+                      VERSION="${{ steps.versions.outputs.xdk-version }}"
+                      echo "Using version from version.properties: $VERSION"
+                  fi
+
+                  # Check if it's a snapshot
+                  IS_SNAPSHOT="false"
+                  if [[ "$VERSION" == *-SNAPSHOT ]]; then
+                      IS_SNAPSHOT="true"
+                      RELEASE_VERSION="${VERSION%-SNAPSHOT}"
+                      echo "Stripped -SNAPSHOT: $VERSION → $RELEASE_VERSION"
+                  else
+                      RELEASE_VERSION="$VERSION"
+                      echo "Version is already a release version: $RELEASE_VERSION"
+                  fi
+
+                  # Validate version format (semantic versioning)
+                  if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                      echo "❌ Invalid version format: $RELEASE_VERSION"
+                      echo "Version must follow semantic versioning: MAJOR.MINOR.PATCH"
+                      exit 1
+                  fi
+
+                  # Calculate next snapshot version (bump patch)
+                  IFS='.' read -r MAJOR MINOR PATCH <<< "$RELEASE_VERSION"
+                  NEXT_PATCH=$((PATCH + 1))
+                  NEXT_SNAPSHOT_VERSION="$MAJOR.$MINOR.$NEXT_PATCH-SNAPSHOT"
+
+                  echo "release-version=$RELEASE_VERSION" >> $GITHUB_OUTPUT
+                  echo "next-snapshot-version=$NEXT_SNAPSHOT_VERSION" >> $GITHUB_OUTPUT
+                  echo "is-snapshot=$IS_SNAPSHOT" >> $GITHUB_OUTPUT
+
+                  echo ""
+                  echo "📋 Release Plan:"
+                  echo "  Current version: $VERSION"
+                  echo "  Release version: $RELEASE_VERSION"
+                  echo "  Next snapshot: $NEXT_SNAPSHOT_VERSION"
+                  echo ""
+
+    build-and-test:
+        name: Build and test release
+        needs: prepare-release
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Setup XVM Project
+              id: versions
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: true
+                  cache-read-only: false
+                  enable-debug: false
+
+            - name: Override version for release
+              shell: bash
+              run: |
+                  RELEASE_VERSION="${{ needs.prepare-release.outputs.release-version }}"
+                  echo "Setting release version: $RELEASE_VERSION"
+
+                  # Update version.properties
+                  sed -i.bak "s/^xdk.version=.*/xdk.version=$RELEASE_VERSION/" version.properties
+                  rm version.properties.bak
+
+                  echo "Updated version.properties:"
+                  grep "^xdk.version=" version.properties
+
+            - name: Build XDK distribution
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  echo "🔨 Building XDK release ${{ needs.prepare-release.outputs.release-version }}..."
+                  ./gradlew ${{ steps.versions.outputs.gradle-options }} clean
+                  ./gradlew ${{ steps.versions.outputs.gradle-options }} :xdk:distZip
+
+            - name: Run tests
+              if: ${{ github.event.inputs.skip-tests != 'true' }}
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  echo "🧪 Running tests..."
+                  ./gradlew ${{ steps.versions.outputs.gradle-options }} check
+
+            - name: Upload XDK distribution
+              uses: actions/upload-artifact@v4
+              with:
+                  name: xdk-release-${{ needs.prepare-release.outputs.release-version }}
+                  path: xdk/build/distributions/xdk-*.zip
+                  retention-days: 90
+
+            - name: Summary
+              run: |
+                  echo "### ✅ Release Build Completed" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Release Version:** ${{ needs.prepare-release.outputs.release-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Tests:** ${{ github.event.inputs.skip-tests != 'true' && 'Passed ✅' || 'Skipped ⚠️' }}" >> $GITHUB_STEP_SUMMARY
+
+    publish-github-draft:
+        name: Create draft GitHub release
+        needs: [prepare-release, build-and-test]
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Setup XVM Project
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: false
+
+            - name: Download XDK distribution
+              uses: actions/download-artifact@v4
+              with:
+                  name: xdk-release-${{ needs.prepare-release.outputs.release-version }}
+                  path: .
+
+            - name: Create draft GitHub release
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  RELEASE_VERSION="${{ needs.prepare-release.outputs.release-version }}"
+                  TAG="v$RELEASE_VERSION"
+
+                  echo "📦 Creating draft GitHub release: $TAG"
+
+                  XDK_ZIP=$(find . -name "xdk-*.zip" | head -1)
+                  if [ -z "$XDK_ZIP" ]; then
+                      echo "❌ XDK distribution not found"
+                      exit 1
+                  fi
+
+                  # Create release notes
+                  cat > release-notes.md <<EOF
+                  # XDK Release $RELEASE_VERSION
+
+                  **This is a DRAFT release - review and manually publish when ready.**
+
+                  ## What's Changed
+
+                  <!-- TODO: Fill in release notes before publishing -->
+                  - TODO: Add release notes
+                  - TODO: Highlight major changes
+                  - TODO: Document breaking changes (if any)
+
+                  ## Installation
+
+                  ### Homebrew
+                  \`\`\`sh
+                  brew tap xtclang/xvm
+                  brew install xdk
+                  \`\`\`
+
+                  ### Maven
+                  \`\`\`xml
+                  <dependency>
+                      <groupId>org.xtclang</groupId>
+                      <artifactId>xdk</artifactId>
+                      <version>$RELEASE_VERSION</version>
+                  </dependency>
+                  \`\`\`
+
+                  ### Direct Download
+                  Download the XDK distribution zip file attached to this release.
+
+                  ---
+
+                  **Commit:** ${{ github.sha }}
+                  **Built:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+                  🤖 Generated with [Claude Code](https://claude.com/claude-code)
+                  EOF
+
+                  # Check if release already exists
+                  if gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
+                      echo "⚠️  Release $TAG already exists, deleting..."
+                      gh release delete "$TAG" --yes --repo ${{ github.repository }}
+                  fi
+
+                  # Create draft release
+                  gh release create "$TAG" \
+                      "$XDK_ZIP" \
+                      --repo ${{ github.repository }} \
+                      --title "XDK $RELEASE_VERSION" \
+                      --notes-file release-notes.md \
+                      --draft \
+                      --target ${{ github.sha }}
+
+                  echo "✅ Draft release created: $TAG"
+                  echo ""
+                  echo "🔗 View release: https://github.com/${{ github.repository }}/releases/tag/$TAG"
+                  echo ""
+                  echo "⚠️  IMPORTANT: This is a DRAFT release"
+                  echo "   1. Review the release notes and edit as needed"
+                  echo "   2. After Maven Central and Plugin Portal are published, manually publish this release"
+
+    publish-maven-staging:
+        name: Publish to Maven Central staging
+        needs: [prepare-release, build-and-test]
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Setup XVM Project
+              id: versions
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: true
+                  cache-read-only: false
+                  enable-debug: false
+
+            - name: Override version for release
+              shell: bash
+              run: |
+                  RELEASE_VERSION="${{ needs.prepare-release.outputs.release-version }}"
+                  echo "Setting release version: $RELEASE_VERSION"
+                  sed -i.bak "s/^xdk.version=.*/xdk.version=$RELEASE_VERSION/" version.properties
+                  rm version.properties.bak
+
+            - name: Publish to Maven Central staging repository
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  echo "📦 Publishing to Maven Central staging repository..."
+
+                  # Add staging-specific properties
+                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
+
+                  # Vanniktech Maven Publish plugin supports automatic staging
+                  # Set closeAndReleaseRepository based on user input
+                  CLOSE_STAGING="${{ github.event.inputs.close-maven-staging }}"
+
+                  if [ "$CLOSE_STAGING" = "true" ]; then
+                      echo "Will automatically close staging repository (manual release still required)"
+                      GRADLE_OPTIONS="$GRADLE_OPTIONS -PcloseAndReleaseRepository=false"
+                  else
+                      echo "Will leave staging repository open for manual close/release"
+                      GRADLE_OPTIONS="$GRADLE_OPTIONS -PcloseAndReleaseRepository=false"
+                  fi
+
+                  ./gradlew $GRADLE_OPTIONS publish --info
+
+                  echo "✅ Published to Maven Central staging repository"
+                  echo ""
+                  echo "📋 Next steps:"
+                  echo "   1. Log in to https://oss.sonatype.org/"
+                  echo "   2. Go to 'Staging Repositories'"
+                  echo "   3. Find repository 'orgxtclang-XXXX'"
+                  echo "   4. Review staged artifacts"
+                  echo "   5. Close the repository (if not automatically closed)"
+                  echo "   6. Release the repository to Maven Central"
+                  echo ""
+                  echo "⏱️  Maven Central sync takes ~10-30 minutes after release"
+
+    publish-gradle-plugin-portal:
+        name: Publish to Gradle Plugin Portal
+        needs: [prepare-release, build-and-test]
+        runs-on: ubuntu-latest
+        if: ${{ github.event.inputs.publish-to-gradle-plugin-portal == 'true' }}
+
+        steps:
+            - name: Setup XVM Project
+              id: versions
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: true
+                  cache-read-only: false
+                  enable-debug: false
+
+            - name: Override version for release
+              shell: bash
+              run: |
+                  RELEASE_VERSION="${{ needs.prepare-release.outputs.release-version }}"
+                  echo "Setting release version: $RELEASE_VERSION"
+                  sed -i.bak "s/^xdk.version=.*/xdk.version=$RELEASE_VERSION/" version.properties
+                  rm version.properties.bak
+
+            - name: Publish to Gradle Plugin Portal
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  echo "📦 Publishing to Gradle Plugin Portal..."
+                  echo ""
+                  echo "⚠️  WARNING: Gradle Plugin Portal does not support staging"
+                  echo "   This publication is IMMEDIATE and CANNOT be undone"
+                  echo ""
+
+                  ./gradlew ${{ steps.versions.outputs.gradle-options }} :plugin:publishPlugins --info
+
+                  echo "✅ Published to Gradle Plugin Portal"
+                  echo ""
+                  echo "🔗 Plugin page: https://plugins.gradle.org/plugin/org.xtclang.xtc-plugin"
+                  echo ""
+                  echo "⏱️  Plugin may take a few minutes to appear in search"
+
+    summary:
+        name: Release summary
+        needs: [prepare-release, build-and-test, publish-github-draft, publish-maven-staging]
+        runs-on: ubuntu-latest
+        if: always()
+
+        steps:
+            - name: Generate release summary
+              run: |
+                  echo "### 🚀 Release Publication Summary" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Release Version:** ${{ needs.prepare-release.outputs.release-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "**Next Snapshot:** ${{ needs.prepare-release.outputs.next-snapshot-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "## Publication Status" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ **Build:** Completed" >> $GITHUB_STEP_SUMMARY
+                  echo "- 📝 **GitHub Release:** Created as DRAFT" >> $GITHUB_STEP_SUMMARY
+                  echo "- 🏗️ **Maven Central:** Published to STAGING" >> $GITHUB_STEP_SUMMARY
+                  echo "- ${{ github.event.inputs.publish-to-gradle-plugin-portal == 'true' && '✅' || '⏭️' }} **Gradle Plugin Portal:** ${{ github.event.inputs.publish-to-gradle-plugin-portal == 'true' && 'Published' || 'Skipped' }}" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "## Required Manual Steps" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "### 1. Review and Release Maven Central Staging" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Log in to https://oss.sonatype.org/" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Review staged artifacts in 'Staging Repositories'" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Close and Release the repository" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "### 2. Publish GitHub Draft Release" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Go to https://github.com/${{ github.repository }}/releases" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Edit draft release v${{ needs.prepare-release.outputs.release-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Update release notes with actual changes" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Click 'Publish release'" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "### 3. Bump Version to Next Snapshot" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Update version.properties to ${{ needs.prepare-release.outputs.next-snapshot-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Commit and push to master" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Or use the 'Bump Version After Release' workflow" >> $GITHUB_STEP_SUMMARY

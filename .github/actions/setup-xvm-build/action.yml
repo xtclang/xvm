@@ -4,7 +4,7 @@ inputs:
     java-version:
         description: 'Java version to set up'
         required: false
-        default: '24'
+        default: '25'
     java-distribution:
         description: 'Java distribution to use'
         required: false
@@ -33,7 +33,7 @@ outputs:
 runs:
     using: 'composite'
     steps:
-        - name: Setup Java 24 for Kotlin toolchain
+        - name: Setup Java 24 for legacy Kotlin toolchain
           uses: actions/setup-java@v4
           with:
               distribution: ${{ inputs.java-distribution }}

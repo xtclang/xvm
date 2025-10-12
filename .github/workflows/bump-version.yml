@@ -1,0 +1,113 @@
+#
+# GitHub workflow for bumping version after release
+#
+# This workflow updates version.properties to the next snapshot version
+# after a release has been published. It should be run manually after
+# publishing a release via the release-publish workflow.
+#
+name: Bump Version After Release
+
+permissions:
+    contents: write
+
+on:
+    workflow_dispatch:
+        inputs:
+            next-version:
+                description: 'Next snapshot version (e.g., 0.4.5-SNAPSHOT)'
+                required: true
+            commit-message:
+                description: 'Commit message'
+                required: false
+                default: 'Bump version to {VERSION} after release'
+
+jobs:
+    bump-version:
+        name: Bump version to next snapshot
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Setup XVM Project
+              id: versions
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: false
+
+            - name: Validate new version
+              shell: bash
+              run: |
+                  NEW_VERSION="${{ github.event.inputs.next-version }}"
+                  CURRENT_VERSION="${{ steps.versions.outputs.xdk-version }}"
+
+                  echo "Current version: $CURRENT_VERSION"
+                  echo "New version: $NEW_VERSION"
+
+                  # Validate format
+                  if ! [[ "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT$ ]]; then
+                      echo "❌ Invalid version format: $NEW_VERSION"
+                      echo "Version must be: MAJOR.MINOR.PATCH-SNAPSHOT"
+                      exit 1
+                  fi
+
+                  # Extract base versions for comparison
+                  CURRENT_BASE="${CURRENT_VERSION%-SNAPSHOT}"
+                  NEW_BASE="${NEW_VERSION%-SNAPSHOT}"
+
+                  echo "Comparing: $CURRENT_BASE → $NEW_BASE"
+
+                  # Version comparison (ensure new > current)
+                  if [[ "$NEW_BASE" < "$CURRENT_BASE" ]] || [[ "$NEW_BASE" == "$CURRENT_BASE" ]]; then
+                      echo "⚠️  WARNING: New version ($NEW_BASE) is not greater than current ($CURRENT_BASE)"
+                      echo "   This might be intentional if you're on a release branch"
+                  fi
+
+                  echo "✅ Version format valid"
+
+            - name: Update version.properties
+              shell: bash
+              run: |
+                  NEW_VERSION="${{ github.event.inputs.next-version }}"
+
+                  echo "Updating version.properties..."
+                  sed -i.bak "s/^xdk.version=.*/xdk.version=$NEW_VERSION/" version.properties
+                  rm version.properties.bak
+
+                  echo "Updated version:"
+                  grep "^xdk.version=" version.properties
+
+                  # Show diff
+                  git diff version.properties
+
+            - name: Commit and push changes
+              run: |
+                  NEW_VERSION="${{ github.event.inputs.next-version }}"
+                  COMMIT_MSG="${{ github.event.inputs.commit-message }}"
+                  COMMIT_MSG="${COMMIT_MSG/\{VERSION\}/$NEW_VERSION}"
+
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+
+                  git add version.properties
+                  git commit -m "$COMMIT_MSG
+
+                  🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+                  Co-Authored-By: Claude <noreply@anthropic.com>"
+
+                  git push
+
+                  echo "✅ Version bumped and pushed"
+                  echo ""
+                  echo "Commit: $(git rev-parse HEAD)"
+
+            - name: Summary
+              run: |
+                  echo "### ✅ Version Bumped" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "- **New Version:** ${{ github.event.inputs.next-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Commit:** $(git rev-parse HEAD)" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Next steps:**" >> $GITHUB_STEP_SUMMARY
+                  echo "- Development can continue with new snapshot version" >> $GITHUB_STEP_SUMMARY
+                  echo "- Snapshot artifacts will use ${{ github.event.inputs.next-version }}" >> $GITHUB_STEP_SUMMARY
