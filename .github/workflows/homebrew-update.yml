@@ -31,12 +31,11 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
         steps:
-            - name: Fetch Sources
-              uses: actions/checkout@v5
-
-            - name: Get versions
+            - name: Setup XVM Project
               id: versions
-              uses: ./.github/actions/get-versions
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: false  # Only need version info, no Java/Gradle needed
 
             - name: Determine XDK version
               id: version
