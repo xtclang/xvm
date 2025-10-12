@@ -89,7 +89,7 @@ jobs:
                   echo "  SHA256: $SHA256"
 
                   # Clone homebrew tap
-                  git clone https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/xtclang/homebrew-xdk.git homebrew-tap
+                  git clone https://oauth2:${HOMEBREW_TAP_TOKEN}@github.com/xtclang/homebrew-xvm.git homebrew-tap
                   cd homebrew-tap
 
                   # Update formula
@@ -133,6 +133,6 @@ jobs:
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "Users can now install with:" >> $GITHUB_STEP_SUMMARY
                   echo '```bash' >> $GITHUB_STEP_SUMMARY
-                  echo "brew tap xtclang/xdk" >> $GITHUB_STEP_SUMMARY
+                  echo "brew tap xtclang/xvm" >> $GITHUB_STEP_SUMMARY
                   echo "brew install xdk" >> $GITHUB_STEP_SUMMARY
                   echo '```' >> $GITHUB_STEP_SUMMARY
