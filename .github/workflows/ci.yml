@@ -1,740 +1,248 @@
 #
 # GitHub runner workflow for building, verifying and testing the XVM repo.
 #
+# This is the main CI workflow that runs on every push. It builds the XDK,
+# runs tests, and uploads build artifacts. Other workflows (snapshot-release,
+# maven-publish-snapshot, docker-build, homebrew-update) depend on this workflow
+# and are triggered automatically on master branch or manually from any branch.
+#
 # PLATFORM NOTES:
 # - Ubuntu: ubuntu-latest (currently Ubuntu 22.04)
-# - Windows: windows-2025 (Windows Server 2025) - updated from windows-latest to avoid 
-#   September 2025 migration and deprecation warnings
+# - Windows: windows-latest
 #
-# IMPORTANT: If you manually enable 'snapshot-maven', you MUST also enable 
-# 'homebrew' to keep the Homebrew formula synchronized with the 
-# snapshot release. Failing to do so will result in inconsistent package versions.
-#
-name: XVM Verification and Package Updates
+name: VerifyCommit
 
-# Grant additional permissions needed for Docker package management  
 permissions:
-  contents: write
-  packages: write
-  actions: read
-  # Note: GitHub Actions doesn't support packages: delete in permissions
-  # Docker cleanup uses PACKAGE_DELETE_TOKEN (org PAT) if available, otherwise shows warnings
+    contents: write
+    actions: read
 
 on:
-  push:
-  workflow_dispatch:
-    inputs:
-      snapshot-maven:
-        description: 'Always publish Maven artifact snapshot regardless of branch'
-        type: boolean
-        required: false
-        default: false
-      docker-image:
-        description: 'Always build Docker images regardless of branch'
-        type: boolean
-        required: false
-        default: false
-      docker-clean:
-        description: 'Always run Docker cleanup regardless of branch'
-        type: boolean
-        required: false
-        default: false
-      homebrew:
-        description: 'Always update Homebrew tap regardless of branch'
-        type: boolean
-        required: false
-        default: false
-      master-semantics:
-        description: 'Run branch as if it were master (enables all publish/build/update flags)'
-        type: boolean
-        required: false
-        default: false
-      platforms:
-        description: 'Run only single platform (ubuntu-latest, windows-latest, or all platforms)'
-        type: choice
-        required: false
-        default: 'all'
-        options:
-          - 'all'
-          - 'ubuntu-latest'
-          - 'windows-latest'
-      extra-gradle-options:
-        description: 'Extra Gradle options to pass to the build'
-        required: false
-      test:
-        description: 'Run manual tests'
-        type: boolean
-        required: false
-        default: true
-      parallel-test:
-        description: 'Run manual tests in parallel mode'
-        type: boolean
-        required: false
-        default: false
+    push:
+    pull_request:
+    workflow_dispatch:
+        inputs:
+            platforms:
+                description: 'Run only single platform (ubuntu-latest, windows-latest, or all platforms)'
+                type: choice
+                required: false
+                default: 'all'
+                options:
+                    - 'all'
+                    - 'ubuntu-latest'
+                    - 'windows-latest'
+            extra-gradle-options:
+                description: 'Extra Gradle options to pass to the build'
+                required: false
+            test:
+                description: 'Run manual tests'
+                type: boolean
+                required: false
+                default: true
+            parallel-test:
+                description: 'Run manual tests in parallel mode'
+                type: boolean
+                required: false
+                default: false
 
 env:
-  # TODO: Default should be disabled; we only want to be bothered by tagging and publishing for the master branch.
-  always_publish_maven_artifact_snapshot: ${{ github.event.inputs.snapshot-maven == 'true' || github.event.inputs.master-semantics == 'true' }}
-  always_update_homebrew_tap: ${{ github.event.inputs.homebrew == 'true' || github.event.inputs.master-semantics == 'true' }}
+    # Add manual tests as an included build to the composite build configuration
+    ORG_GRADLE_PROJECT_includeBuildManualTests: true
+    ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
+    ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
 
-  # Add manual tests as an included build to the composite build configuration, and also build them.
-  ORG_GRADLE_PROJECT_includeBuildManualTests: true
-  ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
-  ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
+    # Optional flags to control manual tests
+    run_manual_tests: ${{ github.event.inputs.test != 'false' }}
+    run_manual_tests_parallel: ${{ github.event.inputs.parallel-test == 'true' }}
 
-  # 1. Publishing credentials
-  # 2. GPG signing credentials (standard Gradle signing plugin properties)
-  # 3. Maven Central credentials (mapped to Vanniktech Maven Publish expected format)
-  GITHUB_ACTOR: ${{ github.actor }}
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  GRADLE_PUBLISH_KEY: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY }}
-  GRADLE_PUBLISH_SECRET: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET }}
+    # Gradle cache inspection function
+    GRADLE_CACHE_INSPECT: |
+        inspect_gradle_cache() {
+            local label="${1:-}"
+            local gradle_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
+            echo "🔍 Gradle Cache Inspection${label:+ ($label)}:"
+            echo "  Cache location: $gradle_home"
+            if [ ! -d "$gradle_home" ]; then
+                echo "  Cache exists: ❌"
+                return 0
+            fi
+            echo "  Cache exists: ✅"
+            local total_size=$(du -sh "$gradle_home" 2>/dev/null | cut -f1 || echo "unknown")
+            echo "  Cache size: $total_size"
+            for dir in caches wrapper build-cache; do
+                if [ -d "$gradle_home/$dir" ]; then
+                    local dir_size=$(du -sh "$gradle_home/$dir" 2>/dev/null | cut -f1 || echo "unknown")
+                    echo "    $dir: $dir_size"
+                fi
+            done
+        }
 
-  ORG_GRADLE_PROJECT_github_actor: ${{ github.actor }}
-  ORG_GRADLE_PROJECT_github_token: ${{ secrets.GITHUB_TOKEN }}
-  SIGNING_KEY: ${{ secrets.ORG_XTCLANG_SIGNING_KEY }}
-  SIGNING_KEYID: ${{ secrets.ORG_XTCLANG_SIGNING_KEY_ID }}
-  SIGNING_PASSWORD: ${{ secrets.ORG_XTCLANG_SIGNING_PASSWORD }}
-  ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
-  ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
-
-  gradle_options: "-Dorg.gradle.vfs.verbose=false --stacktrace --console=plain ${{ github.event.inputs.extra-gradle-options }}"
-
-  # CI-specific JVM options that extend gradle.properties settings
-  GRADLE_OPTS: "-Xmx4g -XX:+UseG1GC -XX:ParallelGCThreads=2 -XX:ConcGCThreads=1 -XX:+UseStringDeduplication"
-
-  # Optional flags to control manual tests
-  run_manual_tests: ${{ github.event.inputs.test != 'false' }}
-  run_manual_tests_parallel: ${{ github.event.inputs.parallel-test == 'true' }}
-
-  # java_version will be set dynamically from version.properties in each job
-  java_distribution: temurin
-  gradle_version: 9.1.0
-
-  # Docker build variables - computed once, used everywhere
-  GH_COMMIT: ${{ github.sha }}
-  GH_BRANCH: ${{ github.ref_name }}
-  DOCKER_BASE_IMAGE: ghcr.io/xtclang/xvm
-
-  # Gradle cache inspection function
-  GRADLE_CACHE_INSPECT: |
-    inspect_gradle_cache() {
-      local label="${1:-}"
-      local gradle_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
-      echo "🔍 Gradle Cache Inspection${label:+ ($label)}:"
-      echo "  Cache location: $gradle_home"
-      if [ ! -d "$gradle_home" ]; then
-        echo "  Cache exists: ❌"
-        return 0
-      fi
-      echo "  Cache exists: ✅"
-      local total_size=$(du -sh "$gradle_home" 2>/dev/null | cut -f1 || echo "unknown")
-      local total_bytes=$(du -sb "$gradle_home" 2>/dev/null | cut -f1 || echo "unknown")
-      echo "  Cache size: $total_size ($total_bytes bytes)"
-      for dir in caches wrapper build-cache; do
-        if [ -d "$gradle_home/$dir" ]; then
-          local dir_size=$(du -sh "$gradle_home/$dir" 2>/dev/null | cut -f1 || echo "unknown")
-          echo "    $dir: $dir_size"
-        fi
-      done
-    }
-
-  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: false
-
-# Concurrency settings: group by workflow and ref, cancel intermediate builds, but only if it's a pull request build.
+# Concurrency settings: group by workflow and ref, cancel intermediate builds except on master
 concurrency:
-  group: "${{ github.workflow }}-${{ github.ref }}"
-  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+    group: "${{ github.workflow }}-${{ github.ref }}"
+    cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
-  build-verify:
-    strategy:
-      matrix:
-        os: ${{ github.event.inputs.platforms == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.platforms == 'windows-latest' && fromJSON('["windows-latest"]') || fromJSON('["ubuntu-latest", "windows-latest"]') }}
+    build-and-test:
+        strategy:
+            matrix:
+                os: ${{ github.event.inputs.platforms == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.platforms == 'windows-latest' && fromJSON('["windows-latest"]') || fromJSON('["ubuntu-latest", "windows-latest"]') }}
 
-    runs-on: ${{ matrix.os }}
-    
-    steps:
-      - name: Fetch Sources
-        uses: actions/checkout@v5
-        with:
-          show-progress: true
+        runs-on: ${{ matrix.os }}
 
-      - name: Get Java version from XDK properties
-        id: java_version
-        uses: ./.github/actions/get-java-version
+        steps:
+            - name: Fetch Sources
+              uses: actions/checkout@v5
+              with:
+                  show-progress: true
 
-      - name: Setup XVM Build Environment
-        uses: ./.github/actions/setup-xvm-build
-        with:
-          java-version: ${{ steps.java_version.outputs.java_version }}
-          java-distribution: ${{ env.java_distribution }}
-          gradle-version: ${{ env.gradle_version }}
-          cache-read-only: false
-          enable-debug: true
+            - name: Get versions
+              id: versions
+              uses: ./.github/actions/get-versions
 
-      - name: Debug Environment (Windows)
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          echo "=== Windows Debug Information ==="
-          echo "OS: $RUNNER_OS"
-          echo "Operating System: $(uname -a 2>/dev/null || echo 'N/A')"
-          echo "PowerShell version:"
-          pwsh --version 2>/dev/null || echo "PowerShell not available"
-          echo "Git version:"
-          git --version 2>/dev/null || echo "Git not available"
-          echo "Java version:"
-          java -version 2>&1 || echo "Java not available"
-          echo "Current working directory: $(pwd)"
-          echo "Directory contents:"
-          ls -la . || dir
-          echo "Environment variables:"
-          env | grep -E '^(GRADLE|JAVA|PATH|GH_|GITHUB_)' | sort
-          echo "=== End Debug Information ==="
+            - name: Setup XVM Build Environment
+              uses: ./.github/actions/setup-xvm-build
+              with:
+                  java-version: ${{ steps.versions.outputs.java-version }}
+                  java-distribution: ${{ steps.versions.outputs.java-distribution }}
+                  gradle-version: ${{ steps.versions.outputs.gradle-version }}
+                  cache-read-only: false
+                  enable-debug: true
 
-      - name: Dump environment info
-        shell: bash
-        run: |
-          echo "*** Branch (github.ref)    : ${{ github.ref }}"
-          echo "*** Commit (github.sha)    : ${{ github.sha }}"
-          echo "*** Runner OS              : ${{ runner.os }}"
-          echo "*** Workflow dispatch inputs:"
-          echo "    snapshot-maven: '${{ github.event.inputs.snapshot-maven }}'"
-          echo "    docker-image: '${{ github.event.inputs.docker-image }}'"
-          echo "    docker-clean: '${{ github.event.inputs.docker-clean }}'"
-          echo "    homebrew: '${{ github.event.inputs.homebrew }}'"
-          echo "    master-semantics: '${{ github.event.inputs.master-semantics }}'"
-          echo "    platforms: '${{ github.event.inputs.platforms }}'"
-          echo "    test: '${{ github.event.inputs.test }}'"
-          echo "    parallel-test: '${{ github.event.inputs.parallel-test }}'"
-          echo "    extra-gradle-options: '${{ github.event.inputs.extra-gradle-options }}'"
-          echo "*** Environment variables:"
-          echo "    always_publish_maven_artifact_snapshot: '${{ env.always_publish_maven_artifact_snapshot }}'"
-          echo "    run_manual_tests: '${{ env.run_manual_tests }}'"
-          echo "    run_manual_tests_parallel: '${{ env.run_manual_tests_parallel }}'"
-          echo "*** Java system properties :" 
-          java -XshowSettings:properties --version
+            - name: Debug Environment (Windows)
+              if: runner.os == 'Windows'
+              shell: bash
+              run: |
+                  echo "=== Windows Debug Information ==="
+                  echo "OS: $RUNNER_OS"
+                  echo "Operating System: $(uname -a 2>/dev/null || echo 'N/A')"
+                  echo "Java version:"
+                  java -version 2>&1 || echo "Java not available"
+                  echo "=== End Debug Information ==="
 
-      - name: Build the XDK and create a distribution layout
-        shell: bash
-        # No JAVA_OPTS needed for general builds
-        run: |
-          ${{ env.GRADLE_CACHE_INSPECT }}
-          
-          cwd_path=$(pwd)
-          echo "Executing Gradle 'clean', 'check', and 'distZip' tasks from path: '$cwd_path'"
-          echo "Running clean to validate dependency graph integrity and catch missing dependencies"
-          echo "Running check to execute all tests before creating distribution"
-          ls -la build/ 2>/dev/null && echo "Build directory exists - will be cleaned" || echo "✅ Confirmed: No previous build outputs"
-          
-          echo "🔧 JVM Configuration:"
-          echo "  No special JAVA_OPTS for general builds"
-          
-          # Print JVM flags for debugging  
-          echo "🔍 JVM Flag Information:"
-          java -XX:+PrintFlagsFinal -version 2>&1 || echo "  Flag printing failed (non-fatal)"
-          
-          inspect_gradle_cache "before clean, check and distZip"
-          ./gradlew ${{ env.gradle_options }} clean --info
-          ./gradlew ${{ env.gradle_options }} check -Porg.xtclang.java.lint=true -Porg.xtclang.java.warningsAsErrors=false -Porg.xtclang.java.test.stdout=true
-          ./gradlew ${{ env.gradle_options }} :xdk:distZip
-          
-          # Run manual tests inline if enabled (avoids cache rebuild)
-          if [ "${{ env.run_manual_tests }}" != "true" ]; then
-            echo "⏭️ Manual tests skipped (disabled)"
-            exit 0
-          fi
-          echo "🧪 Running manual tests inline (cache still hot)..."
-          inspect_gradle_cache "before manual tests (inline)"
-          ./gradlew ${{ env.gradle_options }} manualTests:runXtc
-          ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc
-          ./gradlew ${{ env.gradle_options }} manualTests:runTwoTestsInSequence            
-          MANUAL_TASK=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runAllTestTasks" )
-          echo "Running manual tests with given configuration: $MANUAL_TASK"
-          ./gradlew ${{ env.gradle_options }} manualTests:$MANUAL_TASK            
-          inspect_gradle_cache "after manual tests (inline)"
-          echo "✅ Manual tests completed inline"
+            - name: Dump environment info
+              shell: bash
+              run: |
+                  echo "*** Branch (github.ref)    : ${{ github.ref }}"
+                  echo "*** Commit (github.sha)    : ${{ github.sha }}"
+                  echo "*** Runner OS              : ${{ runner.os }}"
+                  echo "*** XDK Version            : ${{ steps.versions.outputs.xdk-version }}"
+                  echo "*** Java Version           : ${{ steps.versions.outputs.java-version }}"
 
-      - name: Prepare Snapshot Release
-        if: ${{ success() && matrix.os == 'ubuntu-latest' && ((github.event.inputs.homebrew == 'true') || (github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
-        id: get_version
-        uses: ./.github/actions/get-xdk-version
+            - name: Build the XDK and create a distribution
+              shell: bash
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  ${{ env.GRADLE_CACHE_INSPECT }}
 
-      - name: Create Snapshot Release (directly from build)
-        if: ${{ success() && matrix.os == 'ubuntu-latest' && ((github.event.inputs.homebrew == 'true') || (github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
-        shell: bash
-        run: |
-          # Copy the built zip to current directory for the action to find
-          cp xdk/build/distributions/xdk-*.zip ./          
-          XDK_ZIP=$(find . -name "xdk-*.zip" | head -1)
-          XDK_ZIP=$(basename "$XDK_ZIP")          
-          echo "Found XDK zip: $XDK_ZIP"
-          
-        # Now call the create-snapshot-release action
-      - name: Upload Snapshot Release to GitHub
-        if: ${{ success() && matrix.os == 'ubuntu-latest' && ((github.event.inputs.homebrew == 'true') || (github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
-        uses: ./.github/actions/create-snapshot-release
-        with:
-          xdk_version: ${{ steps.get_version.outputs.version }}
-          commit_sha: ${{ github.sha }}
-          xdk_zip_name: "xdk-${{ steps.get_version.outputs.version }}.zip"
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+                    # Combine standard options with optional extra options
+                    GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }} ${{ github.event.inputs.extra-gradle-options }}"
 
+                    cwd_path=$(pwd)
+                  echo "Executing Gradle 'clean', 'check', and 'distZip' tasks from: '$cwd_path'"
+                    ls -la build/ 2>/dev/null && echo "Build directory exists - will be cleaned" || echo "✅ No previous build outputs"
 
-  publish-maven-artifact-snapshot:
-    name: Publish Maven artifacts to GitHub packages iff snapshot + non-redundant build platform + branch is master
-    # Only run if ALL build-verify matrix jobs succeed (depends on platforms setting)
-    needs: build-verify
-    runs-on: ubuntu-latest
-    if: ${{ !cancelled() && !failure() && ((github.event.inputs.snapshot-maven == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
-    steps:
-      # Check out current repository
-      - name: Fetch Sources
-        uses: actions/checkout@v5
+                    inspect_gradle_cache "before build"
+                    ./gradlew $GRADLE_OPTIONS clean --info
+                    ./gradlew $GRADLE_OPTIONS check -Porg.xtclang.java.lint=true -Porg.xtclang.java.warningsAsErrors=false -Porg.xtclang.java.test.stdout=true
+                  ./gradlew $GRADLE_OPTIONS :xdk:distZip
 
-      - name: Get Java version from XDK properties
-        id: java_version
-        uses: ./.github/actions/get-java-version
+                    # Run manual tests inline if enabled (avoids cache rebuild)
+                    if [ "${{ env.run_manual_tests }}" != "true" ]; then
+                        echo "⏭️ Manual tests skipped (disabled)"
+                        exit 0
+                    fi
+                    echo "🧪 Running manual tests inline (cache still hot)..."
+                    inspect_gradle_cache "before manual tests"
+                  ./gradlew $GRADLE_OPTIONS manualTests:runXtc
+                  ./gradlew $GRADLE_OPTIONS manualTests:runOne -PtestName=TestMisc
+                  ./gradlew $GRADLE_OPTIONS manualTests:runTwoTestsInSequence
+                    MANUAL_TASK=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runAllTestTasks" )
+                  echo "Running manual tests: $MANUAL_TASK"
+                  ./gradlew $GRADLE_OPTIONS manualTests:$MANUAL_TASK
+                    inspect_gradle_cache "after manual tests"
+                    echo "✅ Manual tests completed"
 
-      - name: Setup XVM Build Environment
-        uses: ./.github/actions/setup-xvm-build
-        with:
-          java-version: ${{ steps.java_version.outputs.java_version }}
-          java-distribution: ${{ env.java_distribution }}
-          gradle-version: ${{ env.gradle_version }}
-          cache-read-only: true  # Read-only since build-verify already populated cache
-          enable-debug: false
+            - name: Upload XDK distribution artifact
+              if: success() && matrix.os == 'ubuntu-latest'
+              uses: actions/upload-artifact@v4
+              with:
+              name: xdk-dist-${{ github.sha }}
+              path: xdk/build/distributions/xdk-*.zip
+              retention-days: 30
 
-      - name: Debug publish conditions and verify all tests passed
-        run: |
-          echo "🐛 Debug publish job conditions:"
-          echo "  snapshot-maven input: '${{ github.event.inputs.snapshot-maven }}'"
-          echo "  github.ref: '${{ github.ref }}'"
-          echo "  Condition should be: snapshot-maven == 'true' OR github.ref == 'refs/heads/master'"
-          echo "  This job should NOT run on non-master branch without explicit flag!"
-          echo ""
-          echo "✅ All build-verify matrix jobs (Ubuntu + Windows) completed successfully"
-          echo "✅ All tests passed - proceeding with publication"
+            - name: Summary
+              if: success()
+              shell: bash
+              run: |
+                  echo "### ✅ Build and Test Completed" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Version:** ${{ steps.versions.outputs.xdk-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Java Version:** ${{ steps.versions.outputs.java-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
 
-      - name: Dump environment info
-        shell: bash
-        run: |
-          echo "*** Branch (github.ref)    : ${{ github.ref }}"
-          echo "*** Commit (github.sha)    : ${{ github.sha }}"
-          echo "*** Runner OS              : ${{ runner.os }}"
-          echo "*** Workflow inputs:"
-          echo "    snapshot-maven (raw): '${{ github.event.inputs.snapshot-maven }}'"
-          echo "    always_publish_maven_artifact_snapshot (env): '${{ env.always_publish_maven_artifact_snapshot }}'"
-          echo "*** Java system properties :" 
-          java -XshowSettings:properties --version
+    create-snapshot-release:
+        name: Create snapshot release
+        needs: build-and-test
+        runs-on: ubuntu-latest
+        if: ${{ success() && github.ref == 'refs/heads/master' }}
 
-      - name: Create or Update Maven Artifact Snapshot (if pushed to 'master', or env.snapshot-maven is true)
-        id: publish-maven-snapshot
-        if: ${{ (github.event.inputs.snapshot-maven == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master') }}
-        shell: bash
-        run: |
-          ${{ env.GRADLE_CACHE_INSPECT }}
-          inspect_gradle_cache "before publishing (reused from build-verify)"
-          echo "Reusing build cache from build-verify job..."
-          echo "Publishing snapshot artifacts to GitHub Packages..."
-          ./gradlew ${{ env.gradle_options }} publish --info
+        steps:
+            - name: Download XDK artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: xdk-dist-${{ github.sha }}
+                  path: .
 
-      - name: Clean up old XDK package versions (keep 50 newest)
-        if: steps.publish-maven-snapshot.outcome == 'success'
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: 'org.xtclang.xdk'
-          package-type: 'maven'
-          min-versions-to-keep: 50
-          token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Get versions
+              id: versions
+              uses: actions/checkout@v5
+              with:
+                  sparse-checkout: |
+                      version.properties
+                  sparse-checkout-cone-mode: false
 
-      - name: Clean up old Plugin package versions (keep 50 newest)
-        if: steps.publish-maven-snapshot.outcome == 'success'
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: 'org.xtclang.xtc-plugin'
-          package-type: 'maven'
-          min-versions-to-keep: 50
-          token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Extract version
+              id: version
+              shell: bash
+              run: |
+                  XDK_VERSION=$(grep "^xdk.version=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
+                  echo "xdk-version=$XDK_VERSION" >> $GITHUB_OUTPUT
+                  echo "📋 XDK Version: $XDK_VERSION"
 
-      - name: Clean up old Plugin Marker package versions (keep 50 newest)
-        if: steps.publish-maven-snapshot.outcome == 'success'
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: 'org.xtclang.xtc-plugin.org.xtclang.xtc-plugin.gradle.plugin'
-          package-type: 'maven'
-          min-versions-to-keep: 50
-          token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Delete old snapshot release
+              continue-on-error: true
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  echo "🗑️ Deleting old snapshot release..."
+                  gh release delete xdk-latest-snapshot --yes --repo ${{ github.repository }} || echo "No previous snapshot release found"
 
-  compute-docker-tags:
-    name: Compute Docker tags and metadata
-    needs: build-verify
-    runs-on: ubuntu-latest
-    if: ${{ !cancelled() && !failure() && ((github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
-    outputs:
-      version: ${{ steps.compute.outputs.version }}
-      branch-tag: ${{ steps.compute.outputs.branch-tag }}
-      tags-json: ${{ steps.generate.outputs.tags-json }}
-      is-master: ${{ steps.generate.outputs.is-master }}
-    steps:
-      - name: Fetch Sources
-        uses: actions/checkout@v5
+            - name: Create new snapshot release
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  echo "📦 Creating new snapshot release..."
+                  XDK_ZIP=$(find . -name "xdk-*.zip" | head -1)
+                  if [ -z "$XDK_ZIP" ]; then
+                      echo "❌ No XDK distribution ZIP found"
+                      exit 1
+                  fi
 
-      - name: Compute tags and metadata
-        id: compute
-        uses: ./.github/actions/compute-docker-tags
-        with:
-          base-image: ${{ env.DOCKER_BASE_IMAGE }}
-          branch: ${{ env.GH_BRANCH }}
-          commit: ${{ github.sha }}
-      
-      - name: Generate Docker tags and metadata
-        id: generate
-        shell: bash
-        run: |
-          # Determine if master branch
-          IS_MASTER=${{ github.ref == 'refs/heads/master' }}
-          echo "is-master=$IS_MASTER" >> $GITHUB_OUTPUT
-          
-          # Get version and branch tag from compute action
-          VERSION="${{ steps.compute.outputs.version }}"
-          BRANCH_TAG="${{ steps.compute.outputs.branch-tag }}"
-          
-          # Generate base tags
-          BASE_TAGS=$( [ "$IS_MASTER" = "true" ] && echo '["latest","'$VERSION'","'${{ env.GH_COMMIT }}'"]' || echo '["'$BRANCH_TAG'","'${{ env.GH_COMMIT }}'"]' )
-          
-          echo "tags-json=$BASE_TAGS" >> $GITHUB_OUTPUT
-          
-          echo "🏷️ Computed Docker metadata:"
-          echo "  Version: $VERSION"
-          echo "  Branch tag: $BRANCH_TAG"
-          echo "  Is master: $IS_MASTER"
-          echo "  Base tags: $BASE_TAGS"
+                  gh release create xdk-latest-snapshot \
+                      "$XDK_ZIP" \
+                      --repo ${{ github.repository }} \
+                      --title "XDK Latest Snapshot (${{ steps.version.outputs.xdk-version }})" \
+                      --notes "**Automated snapshot release from master branch**
 
-  docker-build:
-    name: Build and push Docker images
-    needs: [compute-docker-tags, build-verify]  # Depends on build-verify creating snapshot release
-    runs-on: ${{ matrix.runner }}
-    if: ${{ success() && ((github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
-    outputs:
-      image-digest: ${{ steps.build.outputs.digest }}
-    strategy:
-      matrix:
-        include:
-          - platform: linux/amd64
-            arch: amd64
-            runner: ubuntu-latest
-          - platform: linux/arm64
-            arch: arm64
-            runner: ubuntu-24.04-arm
-    steps:
-      - name: Fetch Sources
-        uses: actions/checkout@v5
+                  **Version:** ${{ steps.version.outputs.xdk-version }}
+                  **Commit:** ${{ github.sha }}
+                  **Branch:** ${{ github.ref_name }}
+                  **Built:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 
-      - name: Get Java version from XDK properties
-        id: java_version
-        uses: ./.github/actions/get-java-version
+                  This is an automated snapshot release that is continuously updated. Other workflows (Docker, Maven, Homebrew) depend on this release." \
+                      --prerelease \
+                      --latest=false
 
-      # Set up Java and Gradle to warm cache for Docker build
-      - name: Setup XVM Build Environment
-        uses: ./.github/actions/setup-xvm-build
-        with:
-          java-version: ${{ steps.java_version.outputs.java_version }}
-          java-distribution: ${{ env.java_distribution }}
-          gradle-version: ${{ env.gradle_version }}
-          cache-read-only: true  # Read-only since build-verify already populated cache
-          enable-debug: false
-
-      # Note: Dockerfile is self-contained and downloads source itself
-      # But now Docker build can benefit from Gradle cache via GitHub Actions cache
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download XDK from Snapshot Release
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "📥 Downloading XDK from snapshot release created by build-verify..."
-          gh release download xdk-latest-snapshot --pattern "xdk-*.zip"
-          XDK_ZIP=$(find . -name "xdk-*.zip" | head -1)
-          if [ -z "$XDK_ZIP" ]; then
-            echo "❌ Failed to download XDK from snapshot release"
-            exit 1
-          fi
-          echo "✅ Downloaded XDK: $(basename "$XDK_ZIP")"
-
-      - name: Build and push Docker image with pre-built artifacts (${{ matrix.arch }})
-        id: build
-        shell: bash
-        working-directory: docker
-        run: |
-          set -euo pipefail
-          echo "Building and pushing ${{ matrix.arch }} Docker image with pre-built artifacts..."
-          # Use computed metadata from previous job (single source of truth)
-          VERSION="${{ needs.compute-docker-tags.outputs.version }}"
-          BRANCH_TAG="${{ needs.compute-docker-tags.outputs.branch-tag }}"
-          BASE_TAGS='${{ needs.compute-docker-tags.outputs.tags-json }}'
-          # Generate architecture-specific tags
-          TAGS=$(echo "$BASE_TAGS" | jq -r --arg base "${{ env.DOCKER_BASE_IMAGE }}" --arg arch "${{ matrix.arch }}" '.[] | $base + ":" + . + "-" + $arch')
-          TAG_ARGS=""
-          for tag in $TAGS; do
-            TAG_ARGS="$TAG_ARGS --tag $tag"
-          done
-          
-          echo "🏷️ Architecture-specific tags for ${{ matrix.arch }}:"
-          echo "$TAGS" | while read tag; do echo "  $tag"; done
-          
-          # Validate downloaded snapshot release exists
-          echo "📋 Snapshot release validation:"
-          echo "  Downloaded files in parent directory:"
-          ls -la ../ | grep -E '(xdk|zip)' || echo "No XDK files found"
-          
-          # Platform safety check
-          echo "🔍 Platform safety validation:"
-          echo "  Target platform: ${{ matrix.platform }}"
-          echo "  Target arch: ${{ matrix.arch }}"
-          echo "  Runner arch: $(uname -m)"
-          
-          # Build with snapshot release ZIP (fast path - no Gradle execution in container)
-          # Find the XDK distribution ZIP from snapshot release
-          DIST_ZIP_FILE=$(find ../ -name "xdk-*.zip" | head -1)
-          if [ -z "$DIST_ZIP_FILE" ]; then
-            echo "❌ No XDK distribution ZIP found in artifacts"
-            echo "Available files in parent directory:"
-            ls -la ../ || echo "No files"
-            exit 1
-          fi
-          
-          # Copy ZIP to Docker build context with expected name
-          cp "$DIST_ZIP_FILE" xdk-dist.zip
-          echo "📦 Copied distribution to Docker context: $DIST_ZIP_FILE → xdk-dist.zip"
-          
-          docker buildx build \
-            --platform ${{ matrix.platform }} \
-            --progress=plain \
-            $TAG_ARGS \
-            --build-arg JAVA_VERSION=${{ steps.java_version.outputs.java_version }} \
-            --build-arg DIST_ZIP_URL="xdk-dist.zip" \
-            --label org.opencontainers.image.created=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
-            --label org.opencontainers.image.revision=${{ env.GH_COMMIT }} \
-            --label org.opencontainers.image.version="$VERSION" \
-            --label org.opencontainers.image.source=https://github.com/xtclang/xvm/tree/${{ env.GH_BRANCH }} \
-            --cache-from type=gha,scope=${{ matrix.arch }} \
-            --cache-to type=gha,mode=max,scope=${{ matrix.arch }} \
-            --provenance=false \
-            --output type=registry \
-            .
-          
-          echo ""
-          echo "🐳 Docker images built and pushed for ${{ matrix.arch }} architecture!"
-          echo ""
-          echo "📋 Usage examples:"
-          
-          # Show primary tag usage (will be available after manifest creation)
-          PRIMARY_TAG="${{ needs.compute-docker-tags.outputs.latest-tag }}"
-          echo "# Primary tag (multi-platform, available after manifest creation):"
-          echo "docker run --rm -v \$(pwd):/workspace ${{ env.DOCKER_BASE_IMAGE }}:$PRIMARY_TAG xcc /workspace/MyModule.x"
-          echo "docker run --rm -v \$(pwd):/workspace ${{ env.DOCKER_BASE_IMAGE }}:$PRIMARY_TAG xec /workspace/MyModule"
-          echo "docker run -it --rm -v \$(pwd):/workspace ${{ env.DOCKER_BASE_IMAGE }}:$PRIMARY_TAG bash"
-          echo ""
-          
-          # Show architecture-specific tags (available immediately)
-          echo "# Architecture-specific tags (available immediately):"
-          echo "$TAGS" | while read tag; do
-            echo "docker run --rm --platform=${{ matrix.platform }} -v \$(pwd):/workspace $tag xcc /workspace/MyModule.x"
-            # TODO: Uncomment this break to limit everything to one example per architecture:
-            #break
-          done
-          echo ""
-
-      - name: Verify images pushed to registry
-        shell: bash
-        run: |
-          set -euo pipefail
-          
-          # Use computed metadata from previous job
-          BASE_TAGS='${{ needs.compute-docker-tags.outputs.tags-json }}'
-          
-          # Generate architecture-specific tags
-          TAGS=$(echo "$BASE_TAGS" | jq -r --arg base "${{ env.DOCKER_BASE_IMAGE }}" --arg arch "${{ matrix.arch }}" '.[] | $base + ":" + . + "-" + $arch')
-          
-          echo "Verifying ${{ matrix.arch }} images exist in registry..."
-          echo "$TAGS" | while read tag; do
-            echo "Checking: $tag"
-            if ! docker manifest inspect "$tag" > /dev/null 2>&1; then
-              echo "❌ ERROR: Image $tag not found in registry!"
-              echo "❌ Push failed for ${{ matrix.arch }} architecture!"
-              exit 1
-            fi
-            echo "✅ Confirmed: $tag"
-          done
-
-  docker-manifest:
-    name: Create multi-platform manifest
-    needs: [compute-docker-tags, docker-build]
-    runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
-    steps:
-      - name: Fetch Sources
-        uses: actions/checkout@v5
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Verify all architecture images exist
-        shell: bash  
-        run: |
-          set -euo pipefail
-          
-          # Use computed metadata from compute-docker-tags job
-          BASE_TAGS='${{ needs.compute-docker-tags.outputs.tags-json }}'
-          
-          echo "Verifying all architecture-specific images exist before creating manifests..."
-          echo "$BASE_TAGS" | jq -r '.[]' | while read base_tag; do
-            for arch in amd64 arm64; do
-              arch_tag="${{ env.DOCKER_BASE_IMAGE }}:$base_tag-$arch"
-              echo "Checking: $arch_tag"
-              if ! docker manifest inspect "$arch_tag" > /dev/null 2>&1; then
-                echo "❌ ERROR: Image $arch_tag not found in registry!"
-                echo "❌ Cannot create multi-platform manifest without all architectures!"
-                exit 1
-              fi
-              echo "✅ Confirmed: $arch_tag"
-            done
-          done
-
-      - name: Create and push multi-platform manifests
-        shell: bash
-        run: |
-          set -euo pipefail
-          
-          echo "Creating multi-platform manifests from pre-built images..."
-          
-          # Use computed metadata from compute-docker-tags job
-          BASE_TAGS='${{ needs.compute-docker-tags.outputs.tags-json }}'
-          
-          # Create and push manifest for each tag
-          echo "$BASE_TAGS" | jq -r '.[]' | while read base_tag; do
-            manifest_tag="${{ env.DOCKER_BASE_IMAGE }}:$base_tag"
-            echo "Creating manifest for: $manifest_tag"
-            
-            # Create manifest from architecture-specific images
-            docker manifest create $manifest_tag \
-              $manifest_tag-amd64 \
-              $manifest_tag-arm64
-            
-            # Push the manifest
-            docker manifest push $manifest_tag
-            
-            echo "✅ Created and pushed manifest: $manifest_tag"
-          done
-          
-          echo "🎉 All multi-platform manifests created successfully!"
-
-  docker-test:
-    name: Test Docker image functionality
-    needs: [compute-docker-tags, docker-manifest]
-    runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
-    steps:
-      - name: Fetch Sources
-        uses: actions/checkout@v5
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Test Docker image functionality with compilation and execution
-        shell: bash
-        run: |
-          IMAGE="${{ env.DOCKER_BASE_IMAGE }}:${{ github.sha }}"
-          BRANCH_IMAGE="${{ env.DOCKER_BASE_IMAGE }}:${{ needs.compute-docker-tags.outputs.is-master == 'true' && 'latest' || needs.compute-docker-tags.outputs.branch-tag }}"          
-          ./.github/scripts/test-docker-image.sh \
-            "$IMAGE" \
-            "${{ github.sha }}" \
-            "${{ github.ref_name }}" \
-            "$BRANCH_IMAGE" \
-            "${{ needs.compute-docker-tags.outputs.is-master }}"
-
-  docker-cleanup:
-    name: Clean up old Docker package versions
-    needs: docker-test
-    runs-on: ubuntu-latest
-    if: ${{ success() && ((github.event.inputs.docker-image == 'true') || (github.event.inputs.docker-clean == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
-    steps:
-      - name: Fetch Sources
-        uses: actions/checkout@v5
-
-      - name: Get Java version from XDK properties
-        id: java_version
-        uses: ./.github/actions/get-java-version
-
-      - name: Setup XVM Build Environment
-        uses: ./.github/actions/setup-xvm-build
-        with:
-          java-version: ${{ steps.java_version.outputs.java_version }}
-          java-distribution: ${{ env.java_distribution }}
-          gradle-version: ${{ env.gradle_version }}
-          cache-read-only: true
-
-      - name: Clean up Docker package versions with master protection
-        run: |
-          echo "🧹 Running Docker package cleanup with master image protection..."
-          echo "This uses our custom Gradle task with enhanced safety features:"
-          echo "  • Always protects at least one master image"
-          echo "  • Keeps 10 most recent versions overall (configurable)"
-          echo "  • Verifies deletions actually worked"
-          echo "  • Running without daemon for cleaner process isolation"
-          echo ""
-          
-          # Run cleanup in force mode (no interactive prompts in CI)
-          # Use --no-daemon for cleaner process isolation and network handling
-          ./gradlew docker:cleanImages -Pforce=true --no-daemon
-        env:
-          # Use organization-level PAT with delete:packages scope if available, fallback to default token
-          GITHUB_TOKEN: ${{ secrets.PACKAGE_DELETE_TOKEN || secrets.GITHUB_TOKEN }}
-
-  update-homebrew-tap:
-    name: Update Homebrew tap with latest XDK
-    needs: build-verify
-    runs-on: ubuntu-latest
-    # IMPORTANT: Always run if snapshot release was created to prevent package skew
-    if: ${{ !cancelled() && !failure() && ((github.event.inputs.homebrew == 'true') || (github.event.inputs.docker-image == 'true') || (github.event.inputs.master-semantics == 'true') || (github.ref == 'refs/heads/master')) }}
-    steps:
-      - name: Checkout XVM repository
-        uses: actions/checkout@v5
-
-      - name: Get XDK version
-        id: version
-        uses: ./.github/actions/get-xdk-version
-
-      - name: Get Java version
-        id: java_version
-        uses: ./.github/actions/get-java-version
-
-      - name: Update Homebrew Tap
-        uses: ./.github/actions/update-homebrew-tap
-        with:
-          xdk_version: ${{ steps.version.outputs.version }}
-          commit_sha: ${{ github.sha }}
-          java_version: ${{ steps.java_version.outputs.java_version }}
-          xdk_zip_name: "xdk-${{ steps.version.outputs.version }}.zip"
-          homebrew_tap_token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          homebrew_tap_branch: ${{ vars.HOMEBREW_TAP_BRANCH || 'master' }}
+                  echo "✅ Snapshot release created: xdk-latest-snapshot"

@@ -16,6 +16,11 @@ class XdkDistribution(
         const val DISTRIBUTION_TASK_GROUP = "distribution"
         const val JAVATOOLS_PREFIX_PATTERN = "**/javatools*"
 
+        // Artifact type constants for Gradle configurations
+        const val XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE = "xdk-distribution-archive"
+        const val XDK_ARTIFACT_NAME_JAVATOOLS_JAR = "javatools-jar"
+        const val XDK_ARTIFACT_NAME_MACK_DIR = "mack-dir"
+
         private const val CI = "CI"
 
         // These need to be computed at execution time to be configuration cache compatible
@@ -28,6 +33,16 @@ class XdkDistribution(
             "withNativeLaunchersDistZip"
         )
         val binaryLauncherNames = listOf("xcc", "xec", "xtc")
+
+        /**
+         * Helper to create XdkDistribution for distribution tasks.
+         * Configuration-cache compatible - extracts values immediately.
+         */
+        fun create(project: Project) = XdkDistribution(
+            distributionName = project.name,
+            distributionVersion = project.version.toString(),
+            targetArch = getCurrentArch(project)
+        )
 
         fun isDistributionArchiveTask(task: Task): Boolean {
             return task.group == DISTRIBUTION_TASK_GROUP && task.name in distributionTasks

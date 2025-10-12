@@ -14,13 +14,14 @@
  *   val jdk = xdkProperties.int("org.xtclang.java.jdk")
  */
 
-// Get or register build service, loading properties if needed (for root build)
+// Get or register build service, loading properties if needed
+// Use shared utility to find files relative to composite root (works for included builds)
 val xdkPropertiesService = gradle.sharedServices
     .registerIfAbsent("xdkPropertiesService", XdkPropertiesService::class.java) {
-        // Load properties if service is being created (happens for root build)
+        // Load properties from composite root (not just rootProject, which may be an included build)
         val props = java.util.Properties().apply {
             listOf("gradle.properties", "xdk.properties", "version.properties")
-                .map { project.rootProject.file(it) }
+                .map { XdkPropertiesService.compositeRootRelativeFile(project.rootProject.projectDir, it) }
                 .filter { it.isFile }
                 .forEach { it.inputStream().use(::load) }
         }
@@ -37,6 +38,7 @@ val xdkProperties = extensions.create<ProjectXdkProperties>(
 // Automatically set group and version from properties
 project.group = xdkProperties.stringValue("xdk.group")
 project.version = xdkProperties.stringValue("xdk.version")
+logger.info("[properties] Versioned '${project.name}': group=${project.group}, version=${project.version}")
 
 /**
  * Task to print version information for this project and all subprojects.

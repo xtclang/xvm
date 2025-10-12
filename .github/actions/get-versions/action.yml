@@ -1,0 +1,78 @@
+name: 'Get Build Versions'
+description: 'Gets Java version, XDK version, Gradle version, and standard build configuration'
+
+outputs:
+    java-version:
+        description: 'Java version from version.properties'
+        value: ${{ steps.get-versions.outputs.java-version }}
+    xdk-version:
+        description: 'XDK version from version.properties'
+        value: ${{ steps.get-versions.outputs.xdk-version }}
+    gradle-version:
+        description: 'Gradle version from gradle-wrapper.properties'
+        value: ${{ steps.get-versions.outputs.gradle-version }}
+    java-distribution:
+        description: 'Standard Java distribution to use for builds'
+        value: ${{ steps.get-versions.outputs.java-distribution }}
+    gradle-options:
+        description: 'Standard Gradle command line options'
+        value: ${{ steps.get-versions.outputs.gradle-options }}
+    gradle-jvm-opts:
+        description: 'Standard Gradle JVM options (GRADLE_OPTS)'
+        value: ${{ steps.get-versions.outputs.gradle-jvm-opts }}
+
+runs:
+    using: 'composite'
+    steps:
+        - name: Get versions from properties files
+          id: get-versions
+          shell: bash
+          run: |
+              if [ ! -f "version.properties" ]; then
+                  echo "❌ version.properties not found"
+                  exit 1
+              fi
+              if [ ! -f "gradle/wrapper/gradle-wrapper.properties" ]; then
+                  echo "❌ gradle/wrapper/gradle-wrapper.properties not found"
+                  exit 1
+              fi
+
+              JAVA_VERSION=$(grep "^org.xtclang.java.jdk=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
+              XDK_VERSION=$(grep "^xdk.version=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
+              GRADLE_VERSION=$(grep "^distributionUrl=" gradle/wrapper/gradle-wrapper.properties | sed 's/.*gradle-\(.*\)-bin.zip/\1/')
+
+              if [ -z "$JAVA_VERSION" ]; then
+                  echo "❌ org.xtclang.java.jdk not found in version.properties"
+                  exit 1
+              fi
+              if [ -z "$XDK_VERSION" ]; then
+                  echo "❌ xdk.version not found in version.properties"
+                  exit 1
+              fi
+              if [ -z "$GRADLE_VERSION" ]; then
+                  echo "❌ Could not extract Gradle version from gradle-wrapper.properties"
+                  exit 1
+              fi
+
+              # Standard build configuration
+              JAVA_DISTRIBUTION="temurin"
+              GRADLE_OPTIONS="-Dorg.gradle.vfs.verbose=false --stacktrace --console=plain"
+              GRADLE_JVM_OPTS="-Xmx4g -XX:+UseStringDeduplication"
+
+              echo "📋 Java Version: $JAVA_VERSION"
+              echo "📋 XDK Version: $XDK_VERSION"
+              echo "📋 Gradle Version: $GRADLE_VERSION"
+              echo "📋 Java Distribution: $JAVA_DISTRIBUTION"
+              echo "📋 Gradle Options: $GRADLE_OPTIONS"
+              echo "📋 Gradle JVM Options: $GRADLE_JVM_OPTS"
+
+              echo "java-version=$JAVA_VERSION" >> $GITHUB_OUTPUT
+              echo "xdk-version=$XDK_VERSION" >> $GITHUB_OUTPUT
+              echo "gradle-version=$GRADLE_VERSION" >> $GITHUB_OUTPUT
+              echo "java-distribution=$JAVA_DISTRIBUTION" >> $GITHUB_OUTPUT
+              echo "gradle-options=$GRADLE_OPTIONS" >> $GITHUB_OUTPUT
+              echo "gradle-jvm-opts=$GRADLE_JVM_OPTS" >> $GITHUB_OUTPUT
+
+branding:
+    icon: 'info'
+    color: 'blue'
