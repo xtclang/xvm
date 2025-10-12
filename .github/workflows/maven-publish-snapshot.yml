@@ -46,7 +46,17 @@ jobs:
 
             - name: Publish Maven snapshots
               env:
+                  GITHUB_ACTOR: ${{ github.actor }}
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  GRADLE_PUBLISH_KEY: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY }}
+                  GRADLE_PUBLISH_SECRET: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET }}
+                  ORG_GRADLE_PROJECT_github_actor: ${{ github.actor }}
+                  ORG_GRADLE_PROJECT_github_token: ${{ secrets.GITHUB_TOKEN }}
+                  SIGNING_KEY: ${{ secrets.ORG_XTCLANG_SIGNING_KEY }}
+                  SIGNING_KEYID: ${{ secrets.ORG_XTCLANG_SIGNING_KEY_ID }}
+                  SIGNING_PASSWORD: ${{ secrets.ORG_XTCLANG_SIGNING_PASSWORD }}
+                  ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
+                  ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
               run: |
                   echo "📦 Publishing Maven snapshot artifacts to GitHub Packages..."
