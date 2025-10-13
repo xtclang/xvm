@@ -22,22 +22,28 @@ inputs:
 outputs:
     java-version:
         description: 'Java version from version.properties'
-        value: ${{ steps.versions.outputs.java-version }}
+        value: ${{ steps.get-versions.outputs.java-version }}
     xdk-version:
-        description: 'XDK version from version.properties'
-        value: ${{ steps.versions.outputs.xdk-version }}
+        description: 'XDK version from version.properties (e.g., 0.4.4-SNAPSHOT)'
+        value: ${{ steps.get-versions.outputs.xdk-version }}
+    xdk-version-release:
+        description: 'XDK release version with -SNAPSHOT stripped (e.g., 0.4.4)'
+        value: ${{ steps.get-versions.outputs.xdk-version-release }}
+    xdk-version-next-snapshot:
+        description: 'Next XDK snapshot version with patch bumped (e.g., 0.4.5-SNAPSHOT)'
+        value: ${{ steps.get-versions.outputs.xdk-version-next-snapshot }}
     gradle-version:
         description: 'Gradle version from gradle-wrapper.properties'
-        value: ${{ steps.versions.outputs.gradle-version }}
+        value: ${{ steps.get-versions.outputs.gradle-version }}
     java-distribution:
         description: 'Java distribution to use (temurin)'
-        value: ${{ steps.versions.outputs.java-distribution }}
+        value: ${{ steps.get-versions.outputs.java-distribution }}
     gradle-options:
         description: 'Standard Gradle command line options'
-        value: ${{ steps.versions.outputs.gradle-options }}
+        value: ${{ steps.get-versions.outputs.gradle-options }}
     gradle-jvm-opts:
         description: 'Standard Gradle JVM options (GRADLE_OPTS)'
-        value: ${{ steps.versions.outputs.gradle-jvm-opts }}
+        value: ${{ steps.get-versions.outputs.gradle-jvm-opts }}
 
 runs:
     using: 'composite'
@@ -47,19 +53,107 @@ runs:
           with:
               fetch-depth: ${{ inputs.checkout-depth }}
 
-        - name: Get versions
-          id: versions
-          uses: ./.github/actions/get-versions
+        - name: Get versions from properties files
+          id: get-versions
+          shell: bash
+          run: |
+              if [ ! -f "version.properties" ]; then
+                  echo "❌ version.properties not found"
+                  exit 1
+              fi
+              if [ ! -f "gradle/wrapper/gradle-wrapper.properties" ]; then
+                  echo "❌ gradle/wrapper/gradle-wrapper.properties not found"
+                  exit 1
+              fi
 
-        - name: Setup XVM Build Environment
+              JAVA_VERSION=$(grep "^org.xtclang.java.jdk=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
+              XDK_VERSION=$(grep "^xdk.version=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
+              GRADLE_VERSION=$(grep "^distributionUrl=" gradle/wrapper/gradle-wrapper.properties | sed 's/.*gradle-\(.*\)-bin.zip/\1/')
+
+              if [ -z "$JAVA_VERSION" ]; then
+                  echo "❌ org.xtclang.java.jdk not found in version.properties"
+                  exit 1
+              fi
+              if [ -z "$XDK_VERSION" ]; then
+                  echo "❌ xdk.version not found in version.properties"
+                  exit 1
+              fi
+              if [ -z "$GRADLE_VERSION" ]; then
+                  echo "❌ Could not extract Gradle version from gradle-wrapper.properties"
+                  exit 1
+              fi
+
+              # Compute release and next snapshot versions
+              if [[ "$XDK_VERSION" == *-SNAPSHOT ]]; then
+                  XDK_VERSION_RELEASE="${XDK_VERSION%-SNAPSHOT}"
+              else
+                  XDK_VERSION_RELEASE="$XDK_VERSION"
+              fi
+
+              # Validate semantic versioning format
+              if ! [[ "$XDK_VERSION_RELEASE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                  echo "⚠️  WARNING: Version does not follow semantic versioning: $XDK_VERSION_RELEASE"
+                  echo "⚠️  Next snapshot calculation may be incorrect"
+                  XDK_VERSION_NEXT_SNAPSHOT="$XDK_VERSION_RELEASE-SNAPSHOT"
+              else
+                  # Parse semantic version and bump patch
+                  IFS='.' read -r MAJOR MINOR PATCH <<< "$XDK_VERSION_RELEASE"
+                  NEXT_PATCH=$((PATCH + 1))
+                  XDK_VERSION_NEXT_SNAPSHOT="$MAJOR.$MINOR.$NEXT_PATCH-SNAPSHOT"
+              fi
+
+              # Standard build configuration
+              JAVA_DISTRIBUTION="temurin"
+              GRADLE_OPTIONS="-Dorg.gradle.vfs.verbose=false --stacktrace --console=plain"
+              GRADLE_JVM_OPTS="-Xmx4g -XX:+UseStringDeduplication"
+
+              echo "📋 Java Version             : $JAVA_VERSION"
+              echo "📋 XDK Version              : $XDK_VERSION"
+              echo "📋 XDK Version (Release)    : $XDK_VERSION_RELEASE"
+              echo "📋 XDK Version (Next)       : $XDK_VERSION_NEXT_SNAPSHOT"
+              echo "📋 Gradle Version           : $GRADLE_VERSION"
+              echo "📋 Java Distribution        : $JAVA_DISTRIBUTION"
+              echo "📋 Gradle Options           : $GRADLE_OPTIONS"
+              echo "📋 Gradle JVM Options       : $GRADLE_JVM_OPTS"
+
+              echo "java-version=$JAVA_VERSION" >> $GITHUB_OUTPUT
+              echo "xdk-version=$XDK_VERSION" >> $GITHUB_OUTPUT
+              echo "xdk-version-release=$XDK_VERSION_RELEASE" >> $GITHUB_OUTPUT
+              echo "xdk-version-next-snapshot=$XDK_VERSION_NEXT_SNAPSHOT" >> $GITHUB_OUTPUT
+              echo "gradle-version=$GRADLE_VERSION" >> $GITHUB_OUTPUT
+              echo "java-distribution=$JAVA_DISTRIBUTION" >> $GITHUB_OUTPUT
+              echo "gradle-options=$GRADLE_OPTIONS" >> $GITHUB_OUTPUT
+              echo "gradle-jvm-opts=$GRADLE_JVM_OPTS" >> $GITHUB_OUTPUT
+
+        - name: Setup Java 24 for legacy Kotlin toolchain
           if: ${{ inputs.setup-build == 'true' }}
-          uses: ./.github/actions/setup-xvm-build
+          uses: actions/setup-java@v4
           with:
-              java-version: ${{ steps.versions.outputs.java-version }}
-              java-distribution: ${{ steps.versions.outputs.java-distribution }}
-              gradle-version: ${{ steps.versions.outputs.gradle-version }}
+              distribution: ${{ steps.get-versions.outputs.java-distribution }}
+              java-version: '24'
+
+        - name: Setup Java (main)
+          if: ${{ inputs.setup-build == 'true' }}
+          id: setup-java
+          uses: actions/setup-java@v4
+          with:
+              distribution: ${{ steps.get-versions.outputs.java-distribution }}
+              java-version: ${{ steps.get-versions.outputs.java-version }}
+
+        - name: Setup Gradle
+          if: ${{ inputs.setup-build == 'true' }}
+          uses: gradle/actions/setup-gradle@v4
+          with:
+              cache-disabled: false
               cache-read-only: ${{ inputs.cache-read-only }}
-              enable-debug: ${{ inputs.enable-debug }}
+              gradle-version: ${{ steps.get-versions.outputs.gradle-version }}
+          env:
+              GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: ${{ inputs.enable-debug }}
+              ACTIONS_STEP_DEBUG: ${{ inputs.enable-debug }}
+
+        - name: Validate Gradle Wrapper
+          if: ${{ inputs.setup-build == 'true' }}
+          uses: gradle/actions/wrapper-validation@v4
 
 branding:
     icon: 'package'
