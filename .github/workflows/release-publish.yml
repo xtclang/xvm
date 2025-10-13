@@ -170,93 +170,30 @@ jobs:
               uses: actions/download-artifact@v4
               with:
                   name: xdk-release-${{ needs.build-and-test.outputs.release-version }}
-                  path: .
+                  path: ./artifacts
 
-            - name: Create draft GitHub release
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Find artifact path
+              id: artifact
+              shell: bash
               run: |
-                  RELEASE_VERSION="${{ needs.build-and-test.outputs.release-version }}"
-                  TAG="v$RELEASE_VERSION"
-
-                  echo "📦 Creating draft GitHub release: $TAG"
-
-                  XDK_ZIP=$(find . -name "xdk-*.zip" | head -1)
+                  XDK_ZIP=$(find ./artifacts -name "xdk-*.zip" | head -1)
                   if [ -z "$XDK_ZIP" ]; then
                       echo "❌ XDK distribution not found"
                       exit 1
                   fi
+                  echo "artifact-path=$XDK_ZIP" >> $GITHUB_OUTPUT
+                  echo "Found artifact: $XDK_ZIP"
 
-                  # Create release notes
-                  cat > release-notes.md <<EOF
-                  # XDK Release $RELEASE_VERSION
-
-                  **This is a DRAFT release - review and manually publish when ready.**
-
-                  ## What's Changed
-
-                  <!-- TODO: Fill in release notes before publishing -->
-                  - TODO: Add release notes
-                  - TODO: Highlight major changes
-                  - TODO: Document breaking changes (if any)
-
-                  ## Installation
-
-                  ### Homebrew
-                  \`\`\`sh
-                  brew tap xtclang/xvm
-                  brew install xdk
-                  \`\`\`
-
-                  ### Maven
-                  \`\`\`xml
-                  <dependency>
-                      <groupId>org.xtclang</groupId>
-                      <artifactId>xdk</artifactId>
-                      <version>$RELEASE_VERSION</version>
-                  </dependency>
-                  \`\`\`
-
-                  ### Gradle Plugin
-                  \`\`\`kotlin
-                  plugins {
-                      id("org.xtclang.xtc-plugin") version "$RELEASE_VERSION"
-                  }
-                  \`\`\`
-
-                  ### Direct Download
-                  Download the XDK distribution zip file attached to this release.
-
-                  ---
-
-                  **Commit:** ${{ github.sha }}
-                  **Built:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-
-                  🤖 Generated with [Claude Code](https://claude.com/claude-code)
-                  EOF
-
-                  # Check if release already exists
-                  if gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
-                      echo "⚠️  Release $TAG already exists, deleting..."
-                      gh release delete "$TAG" --yes --repo ${{ github.repository }}
-                  fi
-
-                  # Create draft release (automatically creates Git tag)
-                  gh release create "$TAG" \
-                      "$XDK_ZIP" \
-                      --repo ${{ github.repository }} \
-                      --title "XDK $RELEASE_VERSION" \
-                      --notes-file release-notes.md \
-                      --draft \
-                      --target ${{ github.sha }}
-
-                  echo "✅ Draft release created: $TAG"
-                  echo ""
-                  echo "🔗 View release: https://github.com/${{ github.repository }}/releases/tag/$TAG"
-                  echo ""
-                  echo "⚠️  IMPORTANT: This is a DRAFT release"
-                  echo "   1. Review the release notes and edit as needed"
-                  echo "   2. After Maven Central is released, manually publish this GitHub release"
+            - name: Create draft GitHub release
+              uses: ./.github/actions/publish-github-release
+              with:
+                  artifact-path: ${{ steps.artifact.outputs.artifact-path }}
+                  xdk-version: ${{ needs.build-and-test.outputs.release-version }}
+                  commit: ${{ github.sha }}
+                  repo: ${{ github.repository }}
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  release-type: release
+                  release-tag: v${{ needs.build-and-test.outputs.release-version }}
 
     publish-maven-staging:
         name: Publish to Maven Central staging

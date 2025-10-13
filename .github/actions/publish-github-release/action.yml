@@ -24,36 +24,50 @@ inputs:
         description: 'GitHub token with contents:write permission'
         required: true
     release-type:
-        description: 'Type of release: "snapshot" (overwrites) or "release" (tagged draft)'
+        description: 'Type of release: "snapshot" (overwrites) or "release" (tagged)'
         required: true
     release-tag:
-        description: 'Release tag (defaults: "xdk-snapshots" for snapshot, "v${VERSION}" for release)'
+        description: 'Release tag to create/update (e.g., "xdk-snapshots" or "v0.4.4")'
         required: false
 
 outputs:
     release-url:
         description: 'URL of the published release'
-        value: ${{ steps.output-snapshot.outputs.release-url || steps.output-release.outputs.release-url }}
+        value: ${{ steps.publish.outputs.release-url }}
     asset-name:
         description: 'Name of the published asset'
-        value: ${{ steps.prepare.outputs.asset-name }}
+        value: ${{ steps.publish.outputs.asset-name }}
 
 runs:
     using: 'composite'
     steps:
-        - name: Prepare release asset
-          id: prepare
+        - name: Publish to GitHub Release
+          id: publish
           shell: bash
+          env:
+              GH_TOKEN: ${{ inputs.github-token }}
           run: |
               ARTIFACT_PATH="${{ inputs.artifact-path }}"
               VERSION="${{ inputs.xdk-version }}"
               COMMIT="${{ inputs.commit }}"
+              REPO="${{ inputs.repo }}"
               RELEASE_TYPE="${{ inputs.release-type }}"
 
-              echo "📦 Preparing GitHub Release"
+              # Determine release tag
+              if [ -n "${{ inputs.release-tag }}" ]; then
+                  RELEASE_TAG="${{ inputs.release-tag }}"
+              elif [ "$RELEASE_TYPE" = "snapshot" ]; then
+                  RELEASE_TAG="xdk-snapshots"
+              else
+                  RELEASE_TAG="v${VERSION}"
+              fi
+
+              echo "📦 Publishing XDK to GitHub Release"
               echo "  Type:    $RELEASE_TYPE"
+              echo "  Tag:     $RELEASE_TAG"
               echo "  Version: $VERSION"
               echo "  Commit:  $COMMIT"
+              echo ""
 
               # Verify artifact exists
               if [ ! -f "$ARTIFACT_PATH" ]; then
@@ -66,166 +80,70 @@ runs:
               cp "$ARTIFACT_PATH" "$ASSET_NAME"
               echo "📝 Created: $ASSET_NAME (from $(basename "$ARTIFACT_PATH"))"
               ls -lh "$ASSET_NAME"
+              echo ""
 
-              echo "asset-name=$ASSET_NAME" >> $GITHUB_OUTPUT
-
-        - name: Publish snapshot release
-          if: inputs.release-type == 'snapshot'
-          id: publish-snapshot
-          shell: bash
-          env:
-              GH_TOKEN: ${{ inputs.github-token }}
-          run: |
-              ASSET_NAME="${{ steps.prepare.outputs.asset-name }}"
-              VERSION="${{ inputs.xdk-version }}"
-              COMMIT="${{ inputs.commit }}"
-              REPO="${{ inputs.repo }}"
-              RELEASE_TAG="${{ inputs.release-tag }}"
-
-              # Default to xdk-snapshots if not specified
-              if [ -z "$RELEASE_TAG" ]; then
-                  RELEASE_TAG="xdk-snapshots"
-              fi
-
-              echo "📥 Publishing snapshot to: $RELEASE_TAG"
-
-              # Create or update snapshot release
-              if gh release view "$RELEASE_TAG" --repo "$REPO" >/dev/null 2>&1; then
-                  echo "Uploading to existing snapshot release..."
-                  gh release upload "$RELEASE_TAG" "$ASSET_NAME" \
-                      --repo "$REPO" \
-                      --clobber
-              else
-                  echo "Creating new snapshot release..."
-                  gh release create "$RELEASE_TAG" \
-                      "$ASSET_NAME" \
-                      --repo "$REPO" \
-                      --title "XDK Snapshot Builds" \
-                      --notes "**Automated snapshot builds from master branch**
+              # Create or update release
+              if [ "$RELEASE_TYPE" = "snapshot" ]; then
+                  # Snapshot: update existing release or create new one
+                  if gh release view "$RELEASE_TAG" --repo "$REPO" >/dev/null 2>&1; then
+                      echo "📥 Uploading to existing snapshot release: $RELEASE_TAG"
+                      gh release upload "$RELEASE_TAG" "$ASSET_NAME" \
+                          --repo "$REPO" \
+                          --clobber
+                      RELEASE_URL=$(gh release view "$RELEASE_TAG" --repo "$REPO" --json url --jq '.url')
+                  else
+                      echo "🆕 Creating new snapshot release: $RELEASE_TAG"
+                      gh release create "$RELEASE_TAG" \
+                          "$ASSET_NAME" \
+                          --repo "$REPO" \
+                          --title "XDK Snapshot Builds" \
+                          --notes "**Automated snapshot builds from master branch**
 
               Latest snapshot version: **${VERSION}**
               Build commit: \`${COMMIT}\`
 
               Download the \`xdk-${VERSION}.zip\` asset below for the most recent snapshot build." \
-                      --prerelease \
-                      --latest=false
-              fi
+                          --prerelease \
+                          --latest=false
+                      RELEASE_URL=$(gh release view "$RELEASE_TAG" --repo "$REPO" --json url --jq '.url')
+                  fi
+              else
+                  # Release: create new tagged release
+                  echo "🎉 Creating release: $RELEASE_TAG"
 
-              echo "✅ Snapshot published: $ASSET_NAME"
-
-        - name: Get snapshot release URL
-          if: inputs.release-type == 'snapshot'
-          id: output-snapshot
-          shell: bash
-          env:
-              GH_TOKEN: ${{ inputs.github-token }}
-          run: |
-              RELEASE_TAG="${{ inputs.release-tag }}"
-              if [ -z "$RELEASE_TAG" ]; then
-                  RELEASE_TAG="xdk-snapshots"
-              fi
-              RELEASE_URL=$(gh release view "$RELEASE_TAG" --repo "${{ inputs.repo }}" --json url --jq '.url')
-              echo "🔗 Release: $RELEASE_URL"
-              echo "release-url=$RELEASE_URL" >> $GITHUB_OUTPUT
-
-        - name: Publish draft release
-          if: inputs.release-type == 'release'
-          id: publish-release
-          shell: bash
-          env:
-              GH_TOKEN: ${{ inputs.github-token }}
-          run: |
-              ASSET_NAME="${{ steps.prepare.outputs.asset-name }}"
-              VERSION="${{ inputs.xdk-version }}"
-              COMMIT="${{ inputs.commit }}"
-              REPO="${{ inputs.repo }}"
-              RELEASE_TAG="${{ inputs.release-tag }}"
-
-              # Default to v${VERSION} if not specified
-              if [ -z "$RELEASE_TAG" ]; then
-                  RELEASE_TAG="v${VERSION}"
-              fi
-
-              echo "🎉 Creating draft release: $RELEASE_TAG"
-
-              # Check if release already exists and delete it
-              if gh release view "$RELEASE_TAG" --repo "$REPO" >/dev/null 2>&1; then
-                  echo "⚠️  Release $RELEASE_TAG already exists, deleting..."
-                  gh release delete "$RELEASE_TAG" --yes --repo "$REPO"
-              fi
-
-              # Create draft release with Git tag
-              gh release create "$RELEASE_TAG" \
-                  "$ASSET_NAME" \
-                  --repo "$REPO" \
-                  --title "XDK ${VERSION}" \
-                  --notes "# XDK Release ${VERSION}
+                  # Check if release already exists
+                  if gh release view "$RELEASE_TAG" --repo "$REPO" >/dev/null 2>&1; then
+                      echo "⚠️  Release $RELEASE_TAG already exists"
+                      RELEASE_URL=$(gh release view "$RELEASE_TAG" --repo "$REPO" --json url --jq '.url')
+                  else
+                      gh release create "$RELEASE_TAG" \
+                          "$ASSET_NAME" \
+                          --repo "$REPO" \
+                          --title "XDK ${VERSION}" \
+                          --notes "# XDK Release ${VERSION}
 
               **This is a DRAFT release - review and manually publish when ready.**
 
-              ## What's Changed
-
-              <!-- TODO: Fill in release notes before publishing -->
-              - TODO: Add release notes
-              - TODO: Highlight major changes
-              - TODO: Document breaking changes (if any)
-
               ## Installation
 
-              ### Homebrew
-              \`\`\`sh
-              brew tap xtclang/xvm
-              brew install xdk
-              \`\`\`
-
-              ### Maven
-              \`\`\`xml
-              <dependency>
-                  <groupId>org.xtclang</groupId>
-                  <artifactId>xdk</artifactId>
-                  <version>${VERSION}</version>
-              </dependency>
-              \`\`\`
-
-              ### Gradle Plugin
-              \`\`\`kotlin
-              plugins {
-                  id(\"org.xtclang.xtc-plugin\") version \"${VERSION}\"
-              }
-              \`\`\`
-
-              ### Direct Download
-              Download the \`xdk-${VERSION}.zip\` asset below.
+              Download \`xdk-${VERSION}.zip\` from the assets below.
 
               ---
 
               **Commit:** ${COMMIT}
-              **Built:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-
-              🤖 Generated with [Claude Code](https://claude.com/claude-code)" \
-                  --draft \
-                  --target "$COMMIT"
-
-              echo "✅ Draft release created: $RELEASE_TAG"
-
-        - name: Get release URL
-          if: inputs.release-type == 'release'
-          id: output-release
-          shell: bash
-          env:
-              GH_TOKEN: ${{ inputs.github-token }}
-          run: |
-              RELEASE_TAG="${{ inputs.release-tag }}"
-              VERSION="${{ inputs.xdk-version }}"
-              if [ -z "$RELEASE_TAG" ]; then
-                  RELEASE_TAG="v${VERSION}"
+              **Built:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" \
+                          --draft \
+                          --target "$COMMIT"
+                      RELEASE_URL=$(gh release view "$RELEASE_TAG" --repo "$REPO" --json url --jq '.url')
+                  fi
               fi
-              RELEASE_URL=$(gh release view "$RELEASE_TAG" --repo "${{ inputs.repo }}" --json url --jq '.url')
+
+              echo ""
+              echo "✅ Published: $ASSET_NAME"
               echo "🔗 Release: $RELEASE_URL"
-              echo "⚠️  IMPORTANT: This is a DRAFT release"
-              echo "   1. Review the release notes and edit as needed"
-              echo "   2. After Maven Central is released, manually publish this GitHub release"
+
               echo "release-url=$RELEASE_URL" >> $GITHUB_OUTPUT
+              echo "asset-name=$ASSET_NAME" >> $GITHUB_OUTPUT
 
 branding:
     icon: 'upload-cloud'

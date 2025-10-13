@@ -50,27 +50,31 @@ jobs:
                   fi
                   echo "xdk-version=$VERSION" >> $GITHUB_OUTPUT
 
-            - name: Determine commit to download
+            - name: Determine commit and run ID
               id: commit
               shell: bash
               run: |
                   # Use workflow_run commit if triggered automatically, otherwise current commit
                   if [ "${{ github.event_name }}" = "workflow_run" ]; then
                       COMMIT="${{ github.event.workflow_run.head_sha }}"
-                      echo "📌 Using commit from workflow_run: $COMMIT"
+                      RUN_ID="${{ github.event.workflow_run.id }}"
+                      echo "📌 Using commit from workflow_run: $COMMIT (run: $RUN_ID)"
                   else
                       COMMIT="${{ github.sha }}"
-                      echo "📌 Using commit from manual trigger: $COMMIT"
+                      RUN_ID="${{ github.run_id }}"
+                      echo "📌 Using commit from manual trigger: $COMMIT (run: $RUN_ID)"
                   fi
                   echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+                  echo "run-id=$RUN_ID" >> $GITHUB_OUTPUT
 
-            - name: Download commit-specific XDK snapshot
-              uses: ./.github/actions/download-snapshot
+            - name: Download XDK build artifact
+              uses: actions/download-artifact@v4
               with:
-                  commit: ${{ steps.commit.outputs.commit }}
-                  xdk-version: ${{ steps.version.outputs.xdk-version }}
-                  repo: ${{ github.repository }}
+                  name: xdk-dist-${{ steps.commit.outputs.commit }}
+                  path: ./artifacts
                   github-token: ${{ secrets.GITHUB_TOKEN }}
+                  repository: ${{ github.repository }}
+                  run-id: ${{ steps.commit.outputs.run-id }}
 
             - name: Update Homebrew formula
               env:
@@ -84,12 +88,18 @@ jobs:
                       exit 1
                   fi
 
-                  # Get download URL for the snapshot release asset
-                  XDK_ZIP=$(find . -name "xdk-*.zip" | head -1)
-                  XDK_ZIP_NAME=$(basename "$XDK_ZIP")
+                  # Get SHA256 from build artifact
+                  XDK_ZIP=$(find ./artifacts -name "xdk-*.zip" | head -1)
+                  if [ -z "$XDK_ZIP" ]; then
+                      echo "❌ No XDK artifact found"
+                      exit 1
+                  fi
                   SHA256=$(shasum -a 256 "$XDK_ZIP" | cut -d' ' -f1)
 
-                  DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/xdk-snapshots/$XDK_ZIP_NAME"
+                  # Use version-based filename for release URL
+                  VERSION="${{ steps.version.outputs.xdk-version }}"
+                  RELEASE_NAME="xdk-${VERSION}.zip"
+                  DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/xdk-snapshots/$RELEASE_NAME"
 
                   echo "Formula details:"
                   echo "  Version: ${{ steps.version.outputs.xdk-version }}"

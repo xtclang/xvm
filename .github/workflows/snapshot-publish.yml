@@ -1,13 +1,16 @@
 #
-# GitHub workflow for publishing Maven snapshot artifacts
+# GitHub workflow for publishing snapshot artifacts
 #
-# This workflow publishes Maven snapshots to GitHub Packages.
+# This workflow publishes snapshots to:
+# - GitHub Packages (Maven artifacts)
+# - GitHub Releases (XDK snapshot release)
+#
 # It triggers automatically on master after CI completes, or can be manually triggered.
 #
-name: Publish Maven Snapshot
+name: Publish Snapshots
 
 permissions:
-    contents: read
+    contents: write
     packages: write
     actions: read
 
@@ -22,8 +25,8 @@ on:
     workflow_dispatch:
 
 jobs:
-    publish-maven:
-        name: Publish Maven artifacts
+    publish-snapshots:
+        name: Publish snapshot artifacts
         runs-on: ubuntu-latest
         if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
@@ -35,6 +38,36 @@ jobs:
                   setup-build: true
                   cache-read-only: true  # Read-only since CI build already populated cache
                   enable-debug: false
+
+            - name: Determine commit and run ID
+              id: commit
+              shell: bash
+              run: |
+                  # Use workflow_run commit if triggered automatically, otherwise current commit
+                  if [ "${{ github.event_name }}" = "workflow_run" ]; then
+                      COMMIT="${{ github.event.workflow_run.head_sha }}"
+                      RUN_ID="${{ github.event.workflow_run.id }}"
+                      echo "📌 Using commit from workflow_run: $COMMIT (run: $RUN_ID)"
+                      echo "has-artifact=true" >> $GITHUB_OUTPUT
+                  else
+                      COMMIT="${{ github.sha }}"
+                      echo "📌 Manual trigger - commit: $COMMIT"
+                      echo "⚠️  Artifact download not available for manual triggers"
+                      echo "⚠️  Will publish Maven snapshots but skip GitHub release"
+                      echo "has-artifact=false" >> $GITHUB_OUTPUT
+                  fi
+                  echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+                  echo "run-id=$RUN_ID" >> $GITHUB_OUTPUT
+
+            - name: Download XDK artifact from CI
+              if: steps.commit.outputs.has-artifact == 'true'
+              uses: actions/download-artifact@v4
+              with:
+                  name: xdk-dist-${{ steps.commit.outputs.commit }}
+                  path: ./artifacts
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  repository: ${{ github.repository }}
+                  run-id: ${{ steps.commit.outputs.run-id }}
 
             - name: Publish Maven snapshots
               env:
@@ -82,16 +115,48 @@ jobs:
                   min-versions-to-keep: 50
                   token: ${{ secrets.GITHUB_TOKEN }}
 
+            - name: Find artifact path
+              if: success() && steps.commit.outputs.has-artifact == 'true'
+              id: artifact
+              shell: bash
+              run: |
+                  XDK_ZIP=$(find ./artifacts -name "xdk-*.zip" | head -1)
+                  if [ -z "$XDK_ZIP" ]; then
+                      echo "❌ No XDK distribution ZIP found in artifacts"
+                      exit 1
+                  fi
+                  echo "artifact-path=$XDK_ZIP" >> $GITHUB_OUTPUT
+                  echo "Found artifact: $XDK_ZIP"
+
+            - name: Publish to GitHub snapshot release
+              if: success() && steps.commit.outputs.has-artifact == 'true'
+              uses: ./.github/actions/publish-github-release
+              with:
+                  artifact-path: ${{ steps.artifact.outputs.artifact-path }}
+                  xdk-version: ${{ steps.versions.outputs.xdk-version }}
+                  commit: ${{ steps.commit.outputs.commit }}
+                  repo: ${{ github.repository }}
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  release-type: snapshot
+
             - name: Summary
               if: success()
+              shell: bash
               run: |
-                  echo "### ✅ Maven Snapshots Published" >> $GITHUB_STEP_SUMMARY
+                  echo "### ✅ Snapshots Published" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "Published to GitHub Packages:" >> $GITHUB_STEP_SUMMARY
                   echo "- **Version:** ${{ steps.versions.outputs.xdk-version }}" >> $GITHUB_STEP_SUMMARY
-                  echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Commit:** ${{ steps.commit.outputs.commit }}" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "**Published artifacts:**" >> $GITHUB_STEP_SUMMARY
+                  echo "**Published to:**" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ GitHub Packages (Maven artifacts)" >> $GITHUB_STEP_SUMMARY
+                  if [ "${{ steps.commit.outputs.has-artifact }}" = "true" ]; then
+                      echo "- ✅ GitHub Releases (xdk-snapshots)" >> $GITHUB_STEP_SUMMARY
+                  else
+                      echo "- ⏭️ GitHub Releases (skipped - manual trigger)" >> $GITHUB_STEP_SUMMARY
+                  fi
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Maven artifacts:**" >> $GITHUB_STEP_SUMMARY
                   echo "- XDK distribution" >> $GITHUB_STEP_SUMMARY
                   echo "- javatools JAR" >> $GITHUB_STEP_SUMMARY
                   echo "- Gradle plugin" >> $GITHUB_STEP_SUMMARY
