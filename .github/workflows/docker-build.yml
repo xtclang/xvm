@@ -114,44 +114,27 @@ jobs:
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Download commit-specific XDK snapshot
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Determine commit to download
+              id: commit
+              shell: bash
               run: |
-                  # Determine commit to download
+                  # Use workflow_run commit if triggered automatically, otherwise current commit
                   if [ "${{ github.event_name }}" = "workflow_run" ]; then
                       COMMIT="${{ github.event.workflow_run.head_sha }}"
-                      echo "📌 Downloading snapshot for commit from workflow_run: $COMMIT"
+                      echo "📌 Using commit from workflow_run: $COMMIT"
                   else
                       COMMIT="${{ github.sha }}"
-                      echo "📌 Downloading snapshot for commit from manual trigger: $COMMIT"
+                      echo "📌 Using commit from manual trigger: $COMMIT"
                   fi
+                  echo "commit=$COMMIT" >> $GITHUB_OUTPUT
 
-                  VERSION="${{ needs.compute-tags.outputs.version }}"
-                  SNAPSHOT_NAME="xdk-${VERSION}-${COMMIT}.zip"
-
-                  echo "📥 Downloading: $SNAPSHOT_NAME"
-                  echo "   From release: xdk-snapshots"
-
-                  if ! gh release download xdk-snapshots \
-                      --pattern "$SNAPSHOT_NAME" \
-                      --repo ${{ github.repository }}; then
-                      echo ""
-                      echo "❌ Failed to download $SNAPSHOT_NAME"
-                      echo ""
-                      echo "This snapshot may not exist yet. Possible reasons:"
-                      echo "  - CI build for commit $COMMIT hasn't completed"
-                      echo "  - CI build failed"
-                      echo "  - Wrong commit reference"
-                      echo ""
-                      echo "Available snapshots:"
-                      gh release view xdk-snapshots --repo ${{ github.repository }} --json assets \
-                          --jq '.assets[].name' | grep "^xdk-" | tail -10 || echo "  None found"
-                      exit 1
-                  fi
-
-                  echo "✅ Downloaded: $SNAPSHOT_NAME"
-                  ls -lh "$SNAPSHOT_NAME"
+            - name: Download commit-specific XDK snapshot
+              uses: ./.github/actions/validate-snapshot-release
+              with:
+                  commit: ${{ steps.commit.outputs.commit }}
+                  xdk-version: ${{ needs.compute-tags.outputs.version }}
+                  repo: ${{ github.repository }}
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Build and push Docker image (${{ matrix.arch }})
               shell: bash
