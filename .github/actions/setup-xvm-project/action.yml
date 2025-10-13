@@ -107,7 +107,11 @@ runs:
               GRADLE_OPTIONS="-Dorg.gradle.vfs.verbose=false --stacktrace --console=plain"
               GRADLE_JVM_OPTS="-Xmx4g -XX:+UseStringDeduplication"
 
+              # Compute Kotlin toolchain Java version (main version - 1)
+              KOTLIN_JAVA_VERSION=$((JAVA_VERSION - 1))
+
               echo "📋 Java Version             : $JAVA_VERSION"
+              echo "📋 Java Version (Kotlin)    : $KOTLIN_JAVA_VERSION"
               echo "📋 XDK Version              : $XDK_VERSION"
               echo "📋 XDK Version (Release)    : $XDK_VERSION_RELEASE"
               echo "📋 XDK Version (Next)       : $XDK_VERSION_NEXT_SNAPSHOT"
@@ -124,13 +128,14 @@ runs:
               echo "java-distribution=$JAVA_DISTRIBUTION" >> $GITHUB_OUTPUT
               echo "gradle-options=$GRADLE_OPTIONS" >> $GITHUB_OUTPUT
               echo "gradle-jvm-opts=$GRADLE_JVM_OPTS" >> $GITHUB_OUTPUT
+              echo "kotlin-java-version=$KOTLIN_JAVA_VERSION" >> $GITHUB_OUTPUT
 
-        - name: Setup Java 24 for legacy Kotlin toolchain
+        - name: Setup Java for Kotlin toolchain
           if: ${{ inputs.setup-build == 'true' }}
           uses: actions/setup-java@v4
           with:
               distribution: ${{ steps.get-versions.outputs.java-distribution }}
-              java-version: '24'
+              java-version: ${{ steps.get-versions.outputs.kotlin-java-version }}
 
         - name: Setup Java (main)
           if: ${{ inputs.setup-build == 'true' }}
