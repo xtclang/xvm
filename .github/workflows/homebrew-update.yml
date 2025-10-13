@@ -126,14 +126,16 @@ jobs:
                       -e "s|{{JAVA_VERSION}}|${{ steps.versions.outputs.java-version }}|g" \
                       Formula/xdk-latest.rb
                   rm Formula/xdk-latest.rb.bak
+                  echo "Wrote new brew formula:"
+                  cat Formula/xdk-latest.rb
 
                   # Commit and push
+                  echo "Committing and pushing changes to homebrew tap repo..."
                   git config user.name "GitHub Actions"
                   git config user.email "actions@github.com"
                   git add Formula/xdk-latest.rb
                   git commit -m "Update XDK to $DYNAMIC_VERSION (commit: $COMMIT)"
                   git push
-
                   echo "✅ Homebrew tap updated to $DYNAMIC_VERSION"
 
             - name: Summary
