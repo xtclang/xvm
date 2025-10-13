@@ -14,8 +14,8 @@ on:
     workflow_dispatch:
         inputs:
             next-version:
-                description: 'Next snapshot version (e.g., 0.4.5-SNAPSHOT)'
-                required: true
+                description: 'Next snapshot version (leave empty to auto-compute from current version)'
+                required: false
             commit-message:
                 description: 'Commit message'
                 required: false
@@ -33,14 +33,25 @@ jobs:
               with:
                   setup-build: false
 
-            - name: Validate new version
+            - name: Determine and validate new version
+              id: new-version
               shell: bash
               run: |
-                  NEW_VERSION="${{ github.event.inputs.next-version }}"
                   CURRENT_VERSION="${{ steps.versions.outputs.xdk-version }}"
+                  COMPUTED_NEXT="${{ steps.versions.outputs.xdk-version-next-snapshot }}"
 
-                  echo "Current version: $CURRENT_VERSION"
-                  echo "New version: $NEW_VERSION"
+                  # Use input if provided, otherwise use computed version
+                  if [ -n "${{ github.event.inputs.next-version }}" ]; then
+                      NEW_VERSION="${{ github.event.inputs.next-version }}"
+                      echo "Using provided version: $NEW_VERSION"
+                  else
+                      NEW_VERSION="$COMPUTED_NEXT"
+                      echo "Using computed next version: $NEW_VERSION"
+                  fi
+
+                  echo "Current version : $CURRENT_VERSION"
+                  echo "New version     : $NEW_VERSION"
+                  echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
                   # Validate format
                   if ! [[ "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT$ ]]; then
@@ -66,7 +77,7 @@ jobs:
             - name: Update version.properties
               shell: bash
               run: |
-                  NEW_VERSION="${{ github.event.inputs.next-version }}"
+                  NEW_VERSION="${{ steps.new-version.outputs.new-version }}"
 
                   echo "Updating version.properties..."
                   sed -i.bak "s/^xdk.version=.*/xdk.version=$NEW_VERSION/" version.properties
@@ -80,7 +91,7 @@ jobs:
 
             - name: Commit and push changes
               run: |
-                  NEW_VERSION="${{ github.event.inputs.next-version }}"
+                  NEW_VERSION="${{ steps.new-version.outputs.new-version }}"
                   COMMIT_MSG="${{ github.event.inputs.commit-message }}"
                   COMMIT_MSG="${COMMIT_MSG/\{VERSION\}/$NEW_VERSION}"
 
@@ -104,10 +115,11 @@ jobs:
               run: |
                   echo "### ✅ Version Bumped" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "- **New Version:** ${{ github.event.inputs.next-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Old Version:** ${{ steps.versions.outputs.xdk-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **New Version:** ${{ steps.new-version.outputs.new-version }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Commit:** $(git rev-parse HEAD)" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "**Next steps:**" >> $GITHUB_STEP_SUMMARY
                   echo "- Development can continue with new snapshot version" >> $GITHUB_STEP_SUMMARY
-                  echo "- Snapshot artifacts will use ${{ github.event.inputs.next-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- Snapshot artifacts will use ${{ steps.new-version.outputs.new-version }}" >> $GITHUB_STEP_SUMMARY
