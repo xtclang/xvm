@@ -129,7 +129,7 @@ jobs:
                   echo "commit=$COMMIT" >> $GITHUB_OUTPUT
 
             - name: Download commit-specific XDK snapshot
-              uses: ./.github/actions/validate-snapshot-release
+              uses: ./.github/actions/download-snapshot
               with:
                   commit: ${{ steps.commit.outputs.commit }}
                   xdk-version: ${{ needs.compute-tags.outputs.version }}
