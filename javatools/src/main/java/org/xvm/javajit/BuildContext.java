@@ -616,6 +616,7 @@ public class BuildContext {
         }
         PropertyConstant propId     = (PropertyConstant) getConstant(propIdIndex);
         PropertyInfo     propInfo   = propId.getPropertyInfo();
+        ClassDesc        cdOwner    = propInfo.getJitIdentity().getNamespace().ensureClassDesc(typeSystem);
         JitMethodDesc    jmd        = propInfo.getGetterJitDesc(typeSystem);
         String           getterName = propInfo.getGetterId().ensureJitMethodName(typeSystem);
 
@@ -628,7 +629,7 @@ public class BuildContext {
         }
 
         loadCtx(code);
-        code.invokevirtual(targetSlot.cd(), getterName, md);
+        code.invokevirtual(cdOwner, getterName, md);
         assignReturns(code, jmd, 1, new int[] {retIndex});
     }
 
@@ -641,6 +642,7 @@ public class BuildContext {
         }
         PropertyConstant propId     = (PropertyConstant) getConstant(propIdIndex);
         PropertyInfo     propInfo   = propId.getPropertyInfo();
+        ClassDesc        cdOwner    = propInfo.getJitIdentity().getNamespace().ensureClassDesc(typeSystem);
         JitMethodDesc    jmd        = propInfo.getSetterJitDesc(typeSystem);
         String           setterName = propInfo.getSetterId().ensureJitMethodName(typeSystem);
 
@@ -657,7 +659,7 @@ public class BuildContext {
         if (!valueSlot.isSingle()) {
             throw new UnsupportedOperationException("Multislot L_Set");
         }
-        code.invokevirtual(targetSlot.cd(), setterName, md);
+        code.invokevirtual(cdOwner, setterName, md);
     }
 
     /**

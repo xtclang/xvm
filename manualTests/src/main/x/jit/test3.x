@@ -66,10 +66,10 @@ module test3.examples.org {
 
     void testAssert1(Boolean flag) {
         try {
-            assert flag;
+            assert flag as "Flag is not set";
         } catch (IllegalState e) {
             console.print("Assert: ", True);
-            console.print(e);
+            console.print(e.text);
         }
     }
 }

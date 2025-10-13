@@ -1328,6 +1328,13 @@ public class PropertyInfo
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
+     * @return the identity of the property to be used by the JIT compiler
+     */
+    public PropertyConstant getJitIdentity() {
+        return getTail().getIdentity();
+    }
+
+    /**
      * @return the JitMethodDesc for the property getter
      */
     public JitMethodDesc getGetterJitDesc(TypeSystem ts) {
