@@ -1331,7 +1331,15 @@ public class PropertyInfo
      * @return the identity of the property to be used by the JIT compiler
      */
     public PropertyConstant getJitIdentity() {
-        return getTail().getIdentity();
+        // get the lowest explicit in the chain
+        PropertyConstant id = null;
+        for (PropertyBody body : m_aBody) {
+            if (id == null ||
+                    body.getImplementation() == Implementation.Explicit) {
+                id = body.getIdentity();
+            }
+        }
+        return id;
     }
 
     /**

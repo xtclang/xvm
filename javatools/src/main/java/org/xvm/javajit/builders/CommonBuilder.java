@@ -1236,6 +1236,11 @@ public class CommonBuilder
             flags |= ClassFile.ACC_ABSTRACT;
         }
         if (method.isFunction() || method.isConstructor()) {
+            if (classStruct.getFormat() == Component.Format.INTERFACE) {
+                // this must be a funky interface method; just ignore
+                return;
+            }
+
             flags |= ClassFile.ACC_STATIC;
         }
 

@@ -199,10 +199,12 @@ public class NativeTypeSystem
         ConstantPool pool = pool();
 
         // only rebased types need to be registered
-        nativeByType.put(pool.typeModule(),  Builder.N_xModule);
-        nativeByType.put(pool.typeObject(),  Builder.N_xObj);
-        nativeByType.put(pool.typeService(), Builder.N_xService);
-        nativeByType.put(pool.typeType(),    Builder.N_xType);
+        nativeByType.put(pool.clzEnum().getType(), Builder.N_xEnum);
+        nativeByType.put(pool.typeEnumValue(),     Builder.N_xEnum);
+        nativeByType.put(pool.typeModule(),        Builder.N_xModule);
+        nativeByType.put(pool.typeObject(),        Builder.N_xObj);
+        nativeByType.put(pool.typeService(),       Builder.N_xService);
+        nativeByType.put(pool.typeType(),          Builder.N_xType);
 
         for (Map.Entry<TypeConstant, String > entry : nativeByType.entrySet()) {
             nativeByName.put(entry.getValue(), entry.getKey());
