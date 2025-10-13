@@ -1,0 +1,172 @@
+#
+# GitHub workflow for updating Homebrew tap
+#
+# This workflow updates the Homebrew formula with the latest XDK snapshot release.
+# It triggers automatically on master after CI completes, or can be manually triggered.
+#
+name: Update Homebrew
+
+permissions:
+    contents: read
+    actions: read
+
+on:
+    # AUTOMATIC TRIGGERS DISABLED FOR TESTING
+    # Uncomment the following lines to enable automatic publishing after CI:
+    # workflow_run:
+    #     workflows: ["VerifyCommit"]
+    #     types: [completed]
+
+    # Manual trigger from any branch
+    workflow_dispatch:
+        inputs:
+            ci-run-id:
+                description: 'CI run ID to download artifact from (required for manual trigger)'
+                required: true
+            xdk-version:
+                description: 'XDK version to publish (leave empty to use latest from version.properties)'
+                required: false
+
+jobs:
+    update-homebrew:
+        name: Update Homebrew tap
+        runs-on: ubuntu-latest
+        # Only run if:
+        # - Manual trigger, OR
+        # - CI succeeded AND (master branch OR manually dispatched CI with test-publishing=true)
+        if: |
+            github.event_name == 'workflow_dispatch' ||
+            (github.event.workflow_run.conclusion == 'success' &&
+             (github.event.workflow_run.head_branch == 'master' ||
+              (github.event.workflow_run.event == 'workflow_dispatch' &&
+               github.event.workflow_run.inputs.test-publishing == 'true')))
+
+        steps:
+            - name: Fetch Sources
+              uses: actions/checkout@v5
+              with:
+                  fetch-depth: 1
+                  show-progress: true
+
+            - name: Setup XVM Project
+              id: versions
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: false  # Only need version info, no Java/Gradle needed
+
+            - name: Determine XDK version
+              id: version
+              shell: bash
+              run: |
+                  if [ -n "${{ github.event.inputs.xdk-version }}" ]; then
+                      VERSION="${{ github.event.inputs.xdk-version }}"
+                      echo "Using manual version: $VERSION"
+                  else
+                      VERSION="${{ steps.versions.outputs.xdk-version }}"
+                      echo "Using version from version.properties: $VERSION"
+                  fi
+                  echo "xdk-version=$VERSION" >> $GITHUB_OUTPUT
+
+            - name: Determine commit and run ID
+              id: commit
+              shell: bash
+              run: |
+                  # Use workflow_run commit if triggered automatically
+                  if [ "${{ github.event_name }}" = "workflow_run" ]; then
+                      GH_COMMIT="${{ github.event.workflow_run.head_sha }}"
+                      RUN_ID="${{ github.event.workflow_run.id }}"
+                      echo "📌 Using commit from workflow_run: $GH_COMMIT (run: $RUN_ID)"
+                  # Use manual input (required for manual trigger)
+                  else
+                      RUN_ID="${{ github.event.inputs.ci-run-id }}"
+                      # Get commit from the specified run
+                      GH_COMMIT=$(gh api /repos/${{ github.repository }}/actions/runs/$RUN_ID --jq '.head_sha')
+                      echo "📌 Using CI run from input: $RUN_ID (commit: $GH_COMMIT)"
+                  fi
+                  echo "commit=$GH_COMMIT" >> $GITHUB_OUTPUT
+                  echo "run-id=$RUN_ID" >> $GITHUB_OUTPUT
+
+            - name: Download XDK build artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: xdk-dist-${{ steps.commit.outputs.commit }}
+                  path: ./artifacts
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  repository: ${{ github.repository }}
+                  run-id: ${{ steps.commit.outputs.run-id }}
+
+            - name: Update Homebrew formula
+              env:
+                  HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+              run: |
+                  echo "🍺 Updating Homebrew tap..."
+
+                  if [ -z "$HOMEBREW_TAP_TOKEN" ]; then
+                      echo "❌ HOMEBREW_TAP_TOKEN secret not configured"
+                      echo "⚠️ Cannot update Homebrew tap without token"
+                      exit 1
+                  fi
+
+                  # Get SHA256 from build artifact
+                  XDK_ZIP=$(find ./artifacts -name "xdk-*.zip" | head -1)
+                  if [ -z "$XDK_ZIP" ]; then
+                      echo "❌ No XDK artifact found"
+                      exit 1
+                  fi
+                  SHA256=$(sha256sum "$XDK_ZIP" | cut -d' ' -f1)
+
+                  # Build release URL and dynamic version
+                  VERSION="${{ steps.version.outputs.xdk-version }}"
+                  RELEASE_NAME="xdk-${VERSION}.zip"
+                  RELEASE_URL="https://github.com/${{ github.repository }}/releases/download/xdk-snapshots/$RELEASE_NAME"
+
+                  # Use timestamp for dynamic versioning - ensures brew upgrade works correctly
+                  BUILD_TIMESTAMP=$(date -u +%Y%m%d%H%M%S)
+                  DYNAMIC_VERSION="$VERSION.$BUILD_TIMESTAMP"
+                  GH_COMMIT="${{ steps.commit.outputs.commit }}"
+
+                  echo "Formula details:"
+                  echo "  Version:  $VERSION"
+                  echo "  Dynamic:  $DYNAMIC_VERSION"
+                  echo "  Commit:   $GH_COMMIT"
+                  echo "  URL:      $RELEASE_URL"
+                  echo "  SHA256:   $SHA256"
+
+                  # Clone homebrew tap
+                  git clone https://oauth2:${HOMEBREW_TAP_TOKEN}@github.com/xtclang/homebrew-xvm.git homebrew-tap
+                  cd homebrew-tap
+
+                  # Update formula using template
+                  cp ../.github/scripts/xdk-latest.rb.template Formula/xdk-latest.rb
+                  sed -i.bak \
+                      -e "s|{{RELEASE_URL}}|$RELEASE_URL|g" \
+                      -e "s|{{DYNAMIC_VERSION}}|$DYNAMIC_VERSION|g" \
+                      -e "s|{{SHA256}}|$SHA256|g" \
+                      -e "s|{{JAVA_VERSION}}|${{ steps.versions.outputs.java-version }}|g" \
+                      Formula/xdk-latest.rb
+                  rm Formula/xdk-latest.rb.bak
+                  echo "Wrote new brew formula:"
+                  cat Formula/xdk-latest.rb
+
+                  # Commit and push
+                  echo "Committing and pushing changes to homebrew tap repo..."
+                  git config user.name "GitHub Actions"
+                  git config user.email "actions@github.com"
+                  git add Formula/xdk-latest.rb
+                  git commit -m "Update XDK to $DYNAMIC_VERSION (commit: $GH_COMMIT)"
+                  git push
+                  echo "✅ Homebrew tap updated to $DYNAMIC_VERSION"
+
+            - name: Summary
+              if: success()
+              run: |
+                  echo "### ✅ Homebrew Tap Updated" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Version:** ${{ steps.version.outputs.xdk-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "Users can now install with:" >> $GITHUB_STEP_SUMMARY
+                  echo '```bash' >> $GITHUB_STEP_SUMMARY
+                  echo "brew tap xtclang/xvm" >> $GITHUB_STEP_SUMMARY
+                  echo "brew install xdk" >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY
