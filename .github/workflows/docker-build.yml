@@ -114,27 +114,31 @@ jobs:
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Determine commit to download
+            - name: Determine commit and run ID
               id: commit
               shell: bash
               run: |
                   # Use workflow_run commit if triggered automatically, otherwise current commit
                   if [ "${{ github.event_name }}" = "workflow_run" ]; then
                       COMMIT="${{ github.event.workflow_run.head_sha }}"
-                      echo "📌 Using commit from workflow_run: $COMMIT"
+                      RUN_ID="${{ github.event.workflow_run.id }}"
+                      echo "📌 Using commit from workflow_run: $COMMIT (run: $RUN_ID)"
                   else
                       COMMIT="${{ github.sha }}"
-                      echo "📌 Using commit from manual trigger: $COMMIT"
+                      RUN_ID="${{ github.run_id }}"
+                      echo "📌 Using commit from manual trigger: $COMMIT (run: $RUN_ID)"
                   fi
                   echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+                  echo "run-id=$RUN_ID" >> $GITHUB_OUTPUT
 
-            - name: Download commit-specific XDK snapshot
-              uses: ./.github/actions/download-snapshot
+            - name: Download XDK build artifact
+              uses: actions/download-artifact@v4
               with:
-                  commit: ${{ steps.commit.outputs.commit }}
-                  xdk-version: ${{ needs.compute-tags.outputs.version }}
-                  repo: ${{ github.repository }}
+                  name: xdk-dist-${{ steps.commit.outputs.commit }}
+                  path: ./artifacts
                   github-token: ${{ secrets.GITHUB_TOKEN }}
+                  repository: ${{ github.repository }}
+                  run-id: ${{ steps.commit.outputs.run-id }}
 
             - name: Build and push Docker image (${{ matrix.arch }})
               shell: bash
@@ -156,7 +160,7 @@ jobs:
                   echo "$TAGS"
 
                   # Copy XDK ZIP to Docker context
-                  DIST_ZIP_FILE=$(find ../ -name "xdk-*.zip" | head -1)
+                  DIST_ZIP_FILE=$(find ../artifacts -name "xdk-*.zip" | head -1)
                   cp "$DIST_ZIP_FILE" xdk-dist.zip
                   echo "📦 Copied: $(basename "$DIST_ZIP_FILE") → xdk-dist.zip"
 
