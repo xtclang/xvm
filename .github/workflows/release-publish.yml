@@ -279,10 +279,8 @@ jobs:
                   ./gradlew $GRADLE_OPTIONS :plugin:publishPlugins --info
 
                   echo "✅ Published to Gradle Plugin Portal"
-                  echo ""
-                  echo "🔗 Plugin page: https://plugins.gradle.org/plugin/org.xtclang.xtc-plugin"
-                  echo ""
-                  echo "⏱️  Plugin may take a few minutes to appear in search"
+                  echo "🔗    Plugin page: https://plugins.gradle.org/plugin/org.xtclang.xtc-plugin"
+                  echo "⏱️    Plugin may take a few minutes to appear in search"
 
     summary:
         name: Release summary
