@@ -191,38 +191,49 @@ jobs:
                   name: xdk-dist-${{ github.sha }}
                   path: .
 
-            - name: Delete old snapshot release
-              continue-on-error: true
+            - name: Upload commit-specific snapshot to release
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                  echo "🗑️ Deleting old snapshot release..."
-                  gh release delete xdk-latest-snapshot --yes --repo ${{ github.repository }} || echo "No previous snapshot release found"
-
-            - name: Create new snapshot release
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: |
-                  echo "📦 Creating new snapshot release..."
+                  echo "📦 Uploading commit-specific snapshot..."
                   XDK_ZIP=$(find . -name "xdk-*.zip" | head -1)
                   if [ -z "$XDK_ZIP" ]; then
                       echo "❌ No XDK distribution ZIP found"
                       exit 1
                   fi
 
-                  gh release create xdk-latest-snapshot \
-                      "$XDK_ZIP" \
-                      --repo ${{ github.repository }} \
-                      --title "XDK Latest Snapshot (${{ steps.versions.outputs.xdk-version }})" \
-                      --notes "**Automated snapshot release from master branch**
+                  # Create commit-specific filename
+                  COMMIT="${{ github.sha }}"
+                  VERSION="${{ steps.versions.outputs.xdk-version }}"
+                  SNAPSHOT_NAME="xdk-${VERSION}-${COMMIT}.zip"
 
-                  **Version:** ${{ steps.versions.outputs.xdk-version }}
-                  **Commit:** ${{ github.sha }}
-                  **Branch:** ${{ github.ref_name }}
-                  **Built:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+                  echo "Creating snapshot: $SNAPSHOT_NAME"
+                  echo "  From: $(basename "$XDK_ZIP")"
+                  echo "  Commit: $COMMIT"
+                  cp "$XDK_ZIP" "$SNAPSHOT_NAME"
 
-                  This is an automated snapshot release that is continuously updated. Other workflows (Docker, Maven, Homebrew) depend on this release." \
-                      --prerelease \
-                      --latest=false
+                  # Create or update release with commit-specific asset
+                  if gh release view xdk-snapshots --repo ${{ github.repository }} >/dev/null 2>&1; then
+                      echo "Uploading to existing xdk-snapshots release..."
+                      gh release upload xdk-snapshots "$SNAPSHOT_NAME" \
+                          --repo ${{ github.repository }} \
+                          --clobber
+                  else
+                      echo "Creating new xdk-snapshots release..."
+                      gh release create xdk-snapshots \
+                          "$SNAPSHOT_NAME" \
+                          --repo ${{ github.repository }} \
+                          --title "XDK Snapshot Builds" \
+                          --notes "**Automated snapshot builds from master branch**
 
-                  echo "✅ Snapshot release created: xdk-latest-snapshot"
+                  Each build is tagged with its commit hash for traceability.
+                  Download format: \`xdk-VERSION-COMMIT.zip\`
+
+                  Other workflows (Docker, Maven, Homebrew) download specific commits by filename.
+
+                  **Latest:** Download the most recent snapshot from the assets below." \
+                          --prerelease \
+                          --latest=false
+                  fi
+
+                  echo "✅ Snapshot uploaded: $SNAPSHOT_NAME"

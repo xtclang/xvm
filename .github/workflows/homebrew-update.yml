@@ -50,38 +50,44 @@ jobs:
                   fi
                   echo "xdk-version=$VERSION" >> $GITHUB_OUTPUT
 
-            - name: Determine expected commit
-              id: expected-commit
-              shell: bash
-              run: |
-                  if [ "${{ github.event_name }}" = "workflow_run" ]; then
-                      EXPECTED_COMMIT="${{ github.event.workflow_run.head_sha }}"
-                      echo "📌 Building for commit from workflow_run: $EXPECTED_COMMIT"
-                  else
-                      EXPECTED_COMMIT="${{ github.sha }}"
-                      echo "📌 Building for commit from manual trigger: $EXPECTED_COMMIT"
-                  fi
-                  echo "commit=$EXPECTED_COMMIT" >> $GITHUB_OUTPUT
-
-            - name: Download XDK from snapshot release
+            - name: Download commit-specific XDK snapshot
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                  echo "📥 Downloading XDK from snapshot release..."
-                  gh release download xdk-latest-snapshot --pattern "xdk-*.zip" --repo ${{ github.repository }}
-                  XDK_ZIP=$(find . -name "xdk-*.zip" | head -1)
-                  if [ -z "$XDK_ZIP" ]; then
-                      echo "❌ Failed to download XDK from snapshot release"
+                  # Determine commit to download
+                  if [ "${{ github.event_name }}" = "workflow_run" ]; then
+                      COMMIT="${{ github.event.workflow_run.head_sha }}"
+                      echo "📌 Downloading snapshot for commit from workflow_run: $COMMIT"
+                  else
+                      COMMIT="${{ github.sha }}"
+                      echo "📌 Downloading snapshot for commit from manual trigger: $COMMIT"
+                  fi
+
+                  VERSION="${{ steps.version.outputs.xdk-version }}"
+                  SNAPSHOT_NAME="xdk-${VERSION}-${COMMIT}.zip"
+
+                  echo "📥 Downloading: $SNAPSHOT_NAME"
+                  echo "   From release: xdk-snapshots"
+
+                  if ! gh release download xdk-snapshots \
+                      --pattern "$SNAPSHOT_NAME" \
+                      --repo ${{ github.repository }}; then
+                      echo ""
+                      echo "❌ Failed to download $SNAPSHOT_NAME"
+                      echo ""
+                      echo "This snapshot may not exist yet. Possible reasons:"
+                      echo "  - CI build for commit $COMMIT hasn't completed"
+                      echo "  - CI build failed"
+                      echo "  - Wrong commit reference"
+                      echo ""
+                      echo "Available snapshots:"
+                      gh release view xdk-snapshots --repo ${{ github.repository }} --json assets \
+                          --jq '.assets[].name' | grep "^xdk-" | tail -10 || echo "  None found"
                       exit 1
                   fi
-                  echo "✅ Downloaded: $(basename "$XDK_ZIP")"
 
-            - name: Validate snapshot release matches expected commit
-              uses: ./.github/actions/validate-snapshot-release
-              with:
-                  expected-commit: ${{ steps.expected-commit.outputs.commit }}
-                  repo: ${{ github.repository }}
-                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  echo "✅ Downloaded: $SNAPSHOT_NAME"
+                  ls -lh "$SNAPSHOT_NAME"
 
             - name: Update Homebrew formula
               env:
@@ -100,7 +106,7 @@ jobs:
                   XDK_ZIP_NAME=$(basename "$XDK_ZIP")
                   SHA256=$(shasum -a 256 "$XDK_ZIP" | cut -d' ' -f1)
 
-                  DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/xdk-latest-snapshot/$XDK_ZIP_NAME"
+                  DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/xdk-snapshots/$XDK_ZIP_NAME"
 
                   echo "Formula details:"
                   echo "  Version: ${{ steps.version.outputs.xdk-version }}"
