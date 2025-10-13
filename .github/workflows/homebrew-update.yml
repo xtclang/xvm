@@ -94,52 +94,47 @@ jobs:
                       echo "❌ No XDK artifact found"
                       exit 1
                   fi
-                  SHA256=$(shasum -a 256 "$XDK_ZIP" | cut -d' ' -f1)
+                  SHA256=$(sha256sum "$XDK_ZIP" | cut -d' ' -f1)
 
-                  # Use version-based filename for release URL
+                  # Build release URL and dynamic version
                   VERSION="${{ steps.version.outputs.xdk-version }}"
                   RELEASE_NAME="xdk-${VERSION}.zip"
-                  DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/xdk-snapshots/$RELEASE_NAME"
+                  RELEASE_URL="https://github.com/${{ github.repository }}/releases/download/xdk-snapshots/$RELEASE_NAME"
+
+                  # Use timestamp for dynamic versioning - ensures brew upgrade works correctly
+                  BUILD_TIMESTAMP=$(date -u +%Y%m%d%H%M%S)
+                  DYNAMIC_VERSION="$VERSION.$BUILD_TIMESTAMP"
+                  COMMIT="${{ steps.commit.outputs.commit }}"
 
                   echo "Formula details:"
-                  echo "  Version: ${{ steps.version.outputs.xdk-version }}"
-                  echo "  URL: $DOWNLOAD_URL"
-                  echo "  SHA256: $SHA256"
+                  echo "  Version:  $VERSION"
+                  echo "  Dynamic:  $DYNAMIC_VERSION"
+                  echo "  Commit:   $COMMIT"
+                  echo "  URL:      $RELEASE_URL"
+                  echo "  SHA256:   $SHA256"
 
                   # Clone homebrew tap
                   git clone https://oauth2:${HOMEBREW_TAP_TOKEN}@github.com/xtclang/homebrew-xvm.git homebrew-tap
                   cd homebrew-tap
 
-                  # Update formula
-                  cat > Formula/xdk.rb <<EOF
-                  class Xdk < Formula
-                    desc "Ecstasy language XDK (XTC Development Kit)"
-                    homepage "https://xtclang.org"
-                    url "$DOWNLOAD_URL"
-                    sha256 "$SHA256"
-                    version "${{ steps.version.outputs.xdk-version }}"
-
-                    def install
-                      libexec.install Dir["*"]
-                      bin.install_symlink libexec/"bin/xec"
-                      bin.install_symlink libexec/"bin/xcc"
-                      bin.install_symlink libexec/"bin/xtc"
-                    end
-
-                    test do
-                      assert_match version.to_s, shell_output("#{bin}/xec --version")
-                    end
-                  end
-                  EOF
+                  # Update formula using template
+                  cp ../.github/scripts/xdk-latest.rb.template Formula/xdk-latest.rb
+                  sed -i.bak \
+                      -e "s|{{RELEASE_URL}}|$RELEASE_URL|g" \
+                      -e "s|{{DYNAMIC_VERSION}}|$DYNAMIC_VERSION|g" \
+                      -e "s|{{SHA256}}|$SHA256|g" \
+                      -e "s|{{JAVA_VERSION}}|${{ steps.versions.outputs.java-version }}|g" \
+                      Formula/xdk-latest.rb
+                  rm Formula/xdk-latest.rb.bak
 
                   # Commit and push
                   git config user.name "GitHub Actions"
                   git config user.email "actions@github.com"
-                  git add Formula/xdk.rb
-                  git commit -m "Update XDK to version ${{ steps.version.outputs.xdk-version }}"
+                  git add Formula/xdk-latest.rb
+                  git commit -m "Update XDK to $DYNAMIC_VERSION (commit: $COMMIT)"
                   git push
 
-                  echo "✅ Homebrew tap updated"
+                  echo "✅ Homebrew tap updated to $DYNAMIC_VERSION"
 
             - name: Summary
               if: success()
