@@ -15,22 +15,41 @@ permissions:
     actions: read
 
 on:
-    # Automatic trigger after CI completes on master
+    # Automatic trigger after CI completes
+    # - VerifyCommit on master: Automatic publishing
+    # - VerifyCommit via workflow_dispatch: Testing on any branch
     workflow_run:
         workflows: ["VerifyCommit"]
         types: [completed]
-        branches: [master]
 
     # Manual trigger from any branch
     workflow_dispatch:
+        inputs:
+            ci-run-id:
+                description: 'CI run ID to download artifact from (leave empty to skip artifact download)'
+                required: false
 
 jobs:
     publish-snapshots:
         name: Publish snapshot artifacts
         runs-on: ubuntu-latest
-        if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+        # Only run if:
+        # - Manual trigger, OR
+        # - CI succeeded AND (master branch OR manually dispatched CI with test-publishing=true)
+        if: |
+            github.event_name == 'workflow_dispatch' ||
+            (github.event.workflow_run.conclusion == 'success' &&
+             (github.event.workflow_run.head_branch == 'master' ||
+              (github.event.workflow_run.event == 'workflow_dispatch' &&
+               github.event.workflow_run.inputs.test-publishing == 'true')))
 
         steps:
+            - name: Fetch Sources
+              uses: actions/checkout@v5
+              with:
+                  fetch-depth: 1
+                  show-progress: true
+
             - name: Setup XVM Project
               id: versions
               uses: ./.github/actions/setup-xvm-project
@@ -59,20 +78,28 @@ jobs:
               id: commit
               shell: bash
               run: |
-                  # Use workflow_run commit if triggered automatically, otherwise current commit
+                  # Use workflow_run commit if triggered automatically
                   if [ "${{ github.event_name }}" = "workflow_run" ]; then
-                      COMMIT="${{ github.event.workflow_run.head_sha }}"
+                      GH_COMMIT="${{ github.event.workflow_run.head_sha }}"
                       RUN_ID="${{ github.event.workflow_run.id }}"
-                      echo "📌 Using commit from workflow_run: $COMMIT (run: $RUN_ID)"
+                      echo "📌 Using commit from workflow_run: $GH_COMMIT (run: $RUN_ID)"
                       echo "has-artifact=true" >> $GITHUB_OUTPUT
+                  # Use manual input if provided
+                  elif [ -n "${{ github.event.inputs.ci-run-id }}" ]; then
+                      RUN_ID="${{ github.event.inputs.ci-run-id }}"
+                      # Get commit from the specified run
+                      GH_COMMIT=$(gh api /repos/${{ github.repository }}/actions/runs/$RUN_ID --jq '.head_sha')
+                      echo "📌 Using CI run from input: $RUN_ID (commit: $GH_COMMIT)"
+                      echo "has-artifact=true" >> $GITHUB_OUTPUT
+                  # Manual trigger without run-id
                   else
-                      COMMIT="${{ github.sha }}"
-                      echo "📌 Manual trigger - commit: $COMMIT"
-                      echo "⚠️  Artifact download not available for manual triggers"
+                      GH_COMMIT="${{ github.sha }}"
+                      echo "📌 Manual trigger - commit: $GH_COMMIT"
+                      echo "⚠️  No CI run-id provided"
                       echo "⚠️  Will publish Maven snapshots but skip GitHub release"
                       echo "has-artifact=false" >> $GITHUB_OUTPUT
                   fi
-                  echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+                  echo "commit=$GH_COMMIT" >> $GITHUB_OUTPUT
                   echo "run-id=$RUN_ID" >> $GITHUB_OUTPUT
 
             - name: Download XDK artifact from CI

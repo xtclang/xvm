@@ -325,18 +325,18 @@ The CI workflow accepts these input parameters:
 
 ```bash
 # Build Docker images on any branch
-gh workflow run ci.yml --ref your-branch-name --raw-field docker-image=true
+gh workflow run commit.yml --ref your-branch-name --raw-field docker-image=true
 
 # Test cleanup functionality only
-gh workflow run ci.yml --ref your-branch-name --raw-field docker-clean=true --raw-field platforms=ubuntu-latest
+gh workflow run commit.yml --ref your-branch-name --raw-field docker-clean=true --raw-field platforms=ubuntu-latest
 
 # Full build with single platform for faster testing
-gh workflow run ci.yml --ref your-branch-name --raw-field docker-image=true --raw-field platforms=ubuntu-latest
+gh workflow run commit.yml --ref your-branch-name --raw-field docker-image=true --raw-field platforms=ubuntu-latest
 ```
 
 ### CI Process
 
-The GitHub Actions workflow (`.github/workflows/ci.yml`) performs:
+The GitHub Actions workflow (`.github/workflows/commit.yml`) performs:
 
 1. **Build Verification**: Runs on Ubuntu + Windows matrix
    - Uses `setup-xvm-build` action for consistent environment setup

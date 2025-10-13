@@ -9,9 +9,10 @@ This document describes the XVM project's CI/CD pipeline, workflow architecture,
 3. [Master Push Flow](#master-push-flow)
 4. [Workflows Reference](#workflows-reference)
 5. [Actions Reference](#actions-reference)
-6. [Manual Testing](#manual-testing)
-7. [Version Gating](#version-gating)
-8. [Troubleshooting](#troubleshooting)
+6. [Testing Publishing on Non-Master Branches](#testing-publishing-on-non-master-branches)
+7. [Manual Testing](#manual-testing)
+8. [Version Gating](#version-gating)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -27,7 +28,7 @@ The XVM CI/CD pipeline follows a clear separation between internal build artifac
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  ci.yml (VerifyCommit)                                          │
+│  commit.yml (VerifyCommit)                                          │
 │  ├─ Build XDK                                                   │
 │  ├─ Run tests (including manual tests)                          │
 │  └─ Upload artifact: xdk-dist-{COMMIT}                          │
@@ -63,7 +64,7 @@ The XVM CI/CD pipeline follows a clear separation between internal build artifac
 
 ### Flow Summary
 
-1. **CI Build** (`ci.yml`) runs on every push to any branch
+1. **CI Build** (`commit.yml`) runs on every push to any branch
    - Builds, tests, uploads temporary build artifact
    - Artifact named: `xdk-dist-{40-char-commit-hash}`
 
@@ -138,7 +139,7 @@ xdk.version=0.4.4-SNAPSHOT
 
 **Sequence**:
 
-1. **ci.yml** starts immediately
+1. **commit.yml** starts immediately
    ```
    ├─ Checkout code
    ├─ Setup Java & Gradle
@@ -188,7 +189,7 @@ All workflows support `workflow_dispatch` for manual testing from any branch.
 
 ## Workflows Reference
 
-### ci.yml (VerifyCommit)
+### commit.yml (VerifyCommit)
 
 **Trigger**: Every push, every pull request, manual
 
@@ -204,6 +205,9 @@ All workflows support `workflow_dispatch` for manual testing from any branch.
 5. Generate summary
 
 **Manual Trigger Inputs**:
+- `test-publishing`: Trigger publishing workflows after build (default: false)
+  - Set `true` to test full publishing pipeline on non-master branches
+  - Publishing workflows: snapshot, docker, homebrew
 - `platforms`: Run on specific platform(s) or all
   - Options: `all`, `ubuntu-latest`, `windows-latest`
   - Default: `all`
@@ -218,11 +222,18 @@ All workflows support `workflow_dispatch` for manual testing from any branch.
 
 **Example Manual Trigger**:
 ```bash
-gh workflow run ci.yml \
+# Build and test only (no publishing)
+gh workflow run commit.yml \
   --ref your-branch \
   -f platforms=ubuntu-latest \
   -f test=true \
   -f parallel-test=false
+
+# Build, test, AND trigger publishing workflows
+gh workflow run commit.yml \
+  --ref your-branch \
+  -f test-publishing=true \
+  -f platforms=ubuntu-latest
 ```
 
 **Artifact Output**:
@@ -236,7 +247,7 @@ gh workflow run ci.yml \
 ### publish-snapshot.yml (Publish Snapshots)
 
 **Trigger**:
-- Automatic: After ci.yml completes on master
+- Automatic: After commit.yml completes on master
 - Manual: Any branch via workflow_dispatch
 
 **Purpose**: Publish snapshot artifacts to Maven and GitHub Releases
@@ -274,7 +285,7 @@ gh workflow run publish-snapshot.yml --ref master
 ### publish-docker.yml (Build Docker Images)
 
 **Trigger**:
-- Automatic: After ci.yml completes on master
+- Automatic: After commit.yml completes on master
 - Manual: Any branch via workflow_dispatch
 
 **Purpose**: Build and publish multi-platform Docker images
@@ -331,7 +342,7 @@ docker run --rm ghcr.io/xtclang/xvm:latest xec --version
 ### homebrew-update.yml (Update Homebrew)
 
 **Trigger**:
-- Automatic: After ci.yml completes on master
+- Automatic: After commit.yml completes on master
 - Manual: Any branch via workflow_dispatch
 
 **Purpose**: Update Homebrew tap with latest snapshot
@@ -585,6 +596,200 @@ gh workflow run dependency-updates.yml
 
 ---
 
+## Testing Publishing on Non-Master Branches
+
+### Overview
+
+To test the complete publishing pipeline (snapshot, Docker, Homebrew) from a non-master branch **without** merging to master, manually dispatch the **VerifyCommit** workflow. When manually triggered, VerifyCommit automatically triggers all three publishing workflows after successful completion.
+
+### Single Command to Test Publishing
+
+```bash
+gh workflow run commit.yml --ref your-branch-name -f test-publishing=true
+```
+
+This command will:
+1. Build and test your branch
+2. Upload build artifact
+3. Automatically trigger publish-snapshot.yml
+4. Automatically trigger publish-docker.yml
+5. Automatically trigger homebrew-update.yml
+
+**Without** `-f test-publishing=true`, only the build and test run (no publishing).
+
+### How It Works
+
+**Trigger Mechanism**:
+- Publishing workflows listen for `workflow_run` events from "VerifyCommit"
+- They check: `github.event.workflow_run.inputs.test-publishing == 'true'`
+- When VerifyCommit is manually dispatched with `test-publishing=true`, this condition is TRUE
+- Therefore, publishing workflows run even on non-master branches
+
+**Automatic vs Manual Triggering**:
+
+| Trigger Type | Branch | test-publishing | Publishing Runs? |
+|--------------|--------|-----------------|------------------|
+| Push (automatic) | master | N/A | ✅ YES (automatic on master) |
+| Push (automatic) | feature-branch | N/A | ❌ NO (branch not master) |
+| Manual dispatch | master | false | ❌ NO (flag not set) |
+| Manual dispatch | master | true | ✅ YES (flag enabled) |
+| Manual dispatch | feature-branch | false | ❌ NO (flag not set) |
+| Manual dispatch | feature-branch | true | ✅ YES (flag enabled) |
+
+### Step-by-Step Testing Guide
+
+**1. Make changes to your branch**:
+```bash
+git checkout -b feature/update-publishing
+vim .github/workflows/publish-snapshot.yml
+git commit -am "Update snapshot publishing"
+git push origin feature/update-publishing
+```
+
+**2. Trigger VerifyCommit (builds + triggers publishing)**:
+```bash
+gh workflow run commit.yml --ref feature/update-publishing -f test-publishing=true
+```
+
+**3. Monitor workflow runs**:
+```bash
+# List recent runs
+gh run list --branch feature/update-publishing --limit 10
+
+# Watch specific run
+gh run watch
+```
+
+**4. Check triggered publishing workflows**:
+- Go to Actions tab in GitHub
+- Look for these workflows that started after VerifyCommit completed:
+  - "Publish Snapshots"
+  - "Build Docker Images"
+  - "Update Homebrew"
+
+### What Gets Published
+
+When you manually trigger VerifyCommit from a non-master branch:
+
+**✅ Maven Snapshots**: Published to GitHub Packages
+- Requires version contains `-SNAPSHOT`
+- Safe for testing (snapshots are ephemeral)
+
+**✅ GitHub Release**: Updates `xdk-snapshots` prerelease
+- Overwrites previous snapshot
+- Safe for testing
+
+**✅ Docker Images**: Published to GHCR
+- Tagged with branch name (e.g., `ghcr.io/xtclang/xvm:feature-update-publishing`)
+- Tagged with commit SHA
+- Safe for testing (branch-specific tags)
+
+**✅ Homebrew Formula**: Updates `homebrew-xvm` tap
+- ⚠️  **Creates real commit in tap repo**
+- ⚠️  **Affects users running `brew upgrade`**
+- Consider if you need to test this
+
+### Optional: Build Without Publishing
+
+```bash
+# Just build and test (no publishing)
+gh workflow run commit.yml --ref your-branch
+
+# With publishing enabled
+gh workflow run commit.yml --ref your-branch -f test-publishing=true
+
+# Skip manual tests (faster CI, no publishing)
+gh workflow run commit.yml \
+  --ref your-branch \
+  -f test=false
+
+# Run only Ubuntu with publishing
+gh workflow run commit.yml \
+  --ref your-branch \
+  -f platforms=ubuntu-latest \
+  -f test-publishing=true
+```
+
+### Full Example Workflow
+
+```bash
+# 1. Create and checkout feature branch
+git checkout -b feature/docker-improvements
+git push origin feature/docker-improvements
+
+# 2. Make changes
+vim .github/workflows/publish-docker.yml
+git commit -am "Optimize Docker builds"
+git push
+
+# 3. Test the complete pipeline with ONE command (includes publishing)
+gh workflow run commit.yml --ref feature/docker-improvements -f test-publishing=true
+
+# 4. Monitor progress (watch until complete)
+gh run watch
+
+# 5. Verify all three publishing workflows succeeded
+gh run list --branch feature/docker-improvements --limit 10
+
+# 6. If issues found, fix and re-test
+vim .github/workflows/publish-docker.yml
+git commit -am "Fix Docker build issue"
+git push
+gh workflow run commit.yml --ref feature/docker-improvements -f test-publishing=true
+
+# 7. Once working, merge to master
+gh pr create --title "Optimize Docker builds"
+```
+
+### Monitoring Progress in GitHub UI
+
+1. Go to: `https://github.com/xtclang/xvm/actions`
+2. Click on the running "VerifyCommit" workflow
+3. Wait for it to complete (shows green checkmark)
+4. Look for triggered workflows below:
+   - **Publish Snapshots** - Check it completed successfully
+   - **Build Docker Images** - Verify both amd64 and arm64 built
+   - **Update Homebrew** - Confirm formula was updated
+
+### Multiple Test Runs
+
+You can run multiple times on the same commit:
+- Each run is isolated (separate artifact namespace via `run-id`)
+- No conflicts between runs
+- Each publishing workflow downloads from its triggering CI run
+- Artifacts retained for 10 days
+
+### Important Notes
+
+**Snapshot Version Required**:
+- `publish-snapshot.yml` validates version contains `-SNAPSHOT`
+- If your `version.properties` has a non-SNAPSHOT version, snapshot publishing will fail
+- Docker and Homebrew will still run successfully
+
+**Real Publishing**:
+- This triggers REAL publishing (not a dry-run)
+- Maven snapshots → Real GitHub Packages
+- Docker images → Real GHCR registry
+- Homebrew formula → Real tap repository commit
+- GitHub Release → Real `xdk-snapshots` release update
+
+**When NOT to Use This**:
+- If you only want to test the **build** (not publishing), just push and let CI run automatically
+- If you want to test **release publishing** (non-SNAPSHOT), use `publish-release.yml` directly
+
+### Troubleshooting
+
+**Problem**: Publishing workflows don't trigger
+**Solution**: Check VerifyCommit completed successfully. Publishing only triggers on success.
+
+**Problem**: "Artifact not found" error in publishing workflows
+**Solution**: VerifyCommit must complete fully and upload artifact. Check the VerifyCommit run succeeded.
+
+**Problem**: Snapshot publishing fails with "not a SNAPSHOT version"
+**Solution**: Your `version.properties` must contain `-SNAPSHOT`. Update it or skip snapshot testing.
+
+---
+
 ## Manual Testing
 
 ### Running Manual Tests via CI Workflow
@@ -601,7 +806,7 @@ gh workflow run dependency-updates.yml
 
 **Method 2: Via GitHub CLI**
 ```bash
-gh workflow run ci.yml \
+gh workflow run commit.yml \
   --ref your-branch \
   -f platforms=ubuntu-latest \
   -f test=true \
