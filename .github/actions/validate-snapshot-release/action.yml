@@ -1,78 +1,79 @@
 #
-# Validates that a downloaded snapshot release matches the expected commit SHA
+# Downloads commit-specific XDK snapshot from the xdk-snapshots release
 #
-# This action prevents race conditions where overlapping CI runs update the
-# snapshot release while workflows are queued, causing workflows to use
-# artifacts from the wrong commit.
+# This action downloads the exact snapshot built for a specific commit,
+# ensuring workflows use artifacts from the correct commit. The download
+# fails automatically if the commit-specific snapshot doesn't exist.
 #
-name: 'Validate Snapshot Release'
-description: 'Validates that snapshot release artifacts match the expected commit SHA'
+name: 'Download Snapshot Release'
+description: 'Downloads commit-specific XDK snapshot and validates it exists'
 
 inputs:
-    expected-commit:
-        description: 'The expected commit SHA that should match the snapshot release'
+    commit:
+        description: 'The commit SHA to download snapshot for'
+        required: true
+    xdk-version:
+        description: 'XDK version (e.g., 0.4.4-SNAPSHOT)'
         required: true
     repo:
         description: 'Repository in format owner/repo'
         required: true
     github-token:
-        description: 'GitHub token for API access'
+        description: 'GitHub token for download access'
         required: true
-    release-tag:
-        description: 'Release tag to validate'
-        required: false
-        default: 'xdk-latest-snapshot'
 
 outputs:
-    validation-result:
-        description: 'Result of validation: matched, warning, or error'
-        value: ${{ steps.validate.outputs.result }}
+    snapshot-file:
+        description: 'Path to downloaded snapshot file'
+        value: ${{ steps.download.outputs.snapshot-file }}
+    snapshot-name:
+        description: 'Name of downloaded snapshot file'
+        value: ${{ steps.download.outputs.snapshot-name }}
 
 runs:
     using: 'composite'
     steps:
-        - name: Validate snapshot release commit
-          id: validate
+        - name: Download commit-specific snapshot
+          id: download
           shell: bash
           env:
               GH_TOKEN: ${{ inputs.github-token }}
           run: |
-              EXPECTED_COMMIT="${{ inputs.expected-commit }}"
-              RELEASE_TAG="${{ inputs.release-tag }}"
+              COMMIT="${{ inputs.commit }}"
+              VERSION="${{ inputs.xdk-version }}"
               REPO="${{ inputs.repo }}"
+              SNAPSHOT_NAME="xdk-${VERSION}-${COMMIT}.zip"
 
-              echo "🔍 Validating snapshot release matches expected commit..."
-              echo "  Expected commit: $EXPECTED_COMMIT"
-              echo "  Release tag: $RELEASE_TAG"
+              echo "📥 Downloading commit-specific XDK snapshot"
+              echo "  Commit:  $COMMIT"
+              echo "  Version: $VERSION"
+              echo "  File:    $SNAPSHOT_NAME"
+              echo ""
 
-              # Fetch release information
-              RELEASE_INFO=$(gh release view "$RELEASE_TAG" --repo "$REPO" --json body,tagName)
-
-              # Extract commit from release notes (format: **Commit:** <sha>)
-              RELEASE_COMMIT=$(echo "$RELEASE_INFO" | jq -r '.body' | grep -oP '(?<=\*\*Commit:\*\* )[a-f0-9]{40}' || echo "")
-
-              if [ -z "$RELEASE_COMMIT" ]; then
-                  echo "⚠️  WARNING: Could not extract commit from release notes"
-                  echo "⚠️  Snapshot may not match expected commit $EXPECTED_COMMIT"
-                  echo "⚠️  Proceeding anyway (manual trigger or old release format)"
-                  echo "result=warning" >> $GITHUB_OUTPUT
-                  exit 0
-              fi
-
-              echo "  Release commit: $RELEASE_COMMIT"
-
-              if [ "$RELEASE_COMMIT" != "$EXPECTED_COMMIT" ]; then
+              if ! gh release download xdk-snapshots \
+                  --pattern "$SNAPSHOT_NAME" \
+                  --repo "$REPO"; then
                   echo ""
-                  echo "❌ ERROR: Snapshot commit mismatch!"
-                  echo "   Expected: $EXPECTED_COMMIT"
-                  echo "   Got:      $RELEASE_COMMIT"
+                  echo "❌ Failed to download $SNAPSHOT_NAME"
                   echo ""
-                  echo "This usually means another CI run updated the snapshot while this workflow was queued."
-                  echo "The snapshot release should match the commit that triggered this workflow."
+                  echo "This snapshot may not exist yet. Possible reasons:"
+                  echo "  - CI build for commit $COMMIT hasn't completed"
+                  echo "  - CI build failed"
+                  echo "  - Wrong commit reference"
                   echo ""
-                  echo "result=error" >> $GITHUB_OUTPUT
+                  echo "Available snapshots (last 10):"
+                  gh release view xdk-snapshots --repo "$REPO" --json assets \
+                      --jq '.assets[].name' | grep "^xdk-" | tail -10 || echo "  None found"
                   exit 1
               fi
 
-              echo "✅ Snapshot commit matches: $RELEASE_COMMIT"
-              echo "result=matched" >> $GITHUB_OUTPUT
+              echo ""
+              echo "✅ Downloaded: $SNAPSHOT_NAME"
+              ls -lh "$SNAPSHOT_NAME"
+
+              echo "snapshot-file=$SNAPSHOT_NAME" >> $GITHUB_OUTPUT
+              echo "snapshot-name=$SNAPSHOT_NAME" >> $GITHUB_OUTPUT
+
+branding:
+    icon: 'download'
+    color: 'blue'
