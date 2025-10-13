@@ -12,18 +12,15 @@ permissions:
     actions: read
 
 on:
-    # AUTOMATIC TRIGGERS DISABLED FOR TESTING
-    # Uncomment the following lines to enable automatic publishing after CI:
-    # workflow_run:
-    #     workflows: ["VerifyCommit"]
-    #     types: [completed]
+    # Automatic trigger after CI completes on master
+    workflow_run:
+        workflows: ["VerifyCommit"]
+        types: [completed]
+        branches: [master]
 
     # Manual trigger from any branch
     workflow_dispatch:
         inputs:
-            ci-run-id:
-                description: 'CI run ID to download artifact from (required for manual trigger)'
-                required: true
             skip-tests:
                 description: 'Skip Docker image tests'
                 type: boolean
@@ -45,15 +42,7 @@ jobs:
     compute-tags:
         name: Compute Docker tags
         runs-on: ubuntu-latest
-        # Only run if:
-        # - Manual trigger, OR
-        # - CI succeeded AND (master branch OR manually dispatched CI with test-publishing=true)
-        if: |
-            github.event_name == 'workflow_dispatch' ||
-            (github.event.workflow_run.conclusion == 'success' &&
-             (github.event.workflow_run.head_branch == 'master' ||
-              (github.event.workflow_run.event == 'workflow_dispatch' &&
-               github.event.workflow_run.inputs.test-publishing == 'true')))
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
         outputs:
             version: ${{ steps.versions.outputs.xdk-version }}
             branch-tag: ${{ steps.compute.outputs.branch-tag }}
@@ -61,12 +50,6 @@ jobs:
             is-master: ${{ steps.compute.outputs.is-master }}
 
         steps:
-            - name: Fetch Sources
-              uses: actions/checkout@v5
-              with:
-                  fetch-depth: 1
-                  show-progress: true
-
             - name: Setup XVM Project
               id: versions
               uses: ./.github/actions/setup-xvm-project
@@ -113,12 +96,6 @@ jobs:
                       runner: ubuntu-24.04-arm
 
         steps:
-            - name: Fetch Sources
-              uses: actions/checkout@v5
-              with:
-                  fetch-depth: 1
-                  show-progress: true
-
             - name: Setup XVM Project
               id: versions
               uses: ./.github/actions/setup-xvm-project
@@ -141,19 +118,17 @@ jobs:
               id: commit
               shell: bash
               run: |
-                  # Use workflow_run commit if triggered automatically
+                  # Use workflow_run commit if triggered automatically, otherwise current commit
                   if [ "${{ github.event_name }}" = "workflow_run" ]; then
-                      GH_COMMIT="${{ github.event.workflow_run.head_sha }}"
+                      COMMIT="${{ github.event.workflow_run.head_sha }}"
                       RUN_ID="${{ github.event.workflow_run.id }}"
-                      echo "📌 Using commit from workflow_run: $GH_COMMIT (run: $RUN_ID)"
-                  # Use manual input (required for manual trigger)
+                      echo "📌 Using commit from workflow_run: $COMMIT (run: $RUN_ID)"
                   else
-                      RUN_ID="${{ github.event.inputs.ci-run-id }}"
-                      # Get commit from the specified run
-                      GH_COMMIT=$(gh api /repos/${{ github.repository }}/actions/runs/$RUN_ID --jq '.head_sha')
-                      echo "📌 Using CI run from input: $RUN_ID (commit: $GH_COMMIT)"
+                      COMMIT="${{ github.sha }}"
+                      RUN_ID="${{ github.run_id }}"
+                      echo "📌 Using commit from manual trigger: $COMMIT (run: $RUN_ID)"
                   fi
-                  echo "commit=$GH_COMMIT" >> $GITHUB_OUTPUT
+                  echo "commit=$COMMIT" >> $GITHUB_OUTPUT
                   echo "run-id=$RUN_ID" >> $GITHUB_OUTPUT
 
             - name: Download XDK build artifact
@@ -245,9 +220,6 @@ jobs:
         steps:
             - name: Fetch Sources
               uses: actions/checkout@v5
-              with:
-                  fetch-depth: 1
-                  show-progress: true
 
             - name: Log in to GitHub Container Registry
               uses: docker/login-action@v3
@@ -276,14 +248,19 @@ jobs:
         if: ${{ success() && github.event.inputs.cleanup != 'false' }}
 
         steps:
-            - name: Clean up old Docker image versions (keep 10 newest, preserve latest/master)
-              uses: actions/delete-package-versions@v5
+            - name: Setup XVM Project
+              id: versions
+              uses: ./.github/actions/setup-xvm-project
               with:
-                  package-name: 'xvm'
-                  package-type: 'container'
-                  min-versions-to-keep: 10
-                  ignore-versions: '^(latest|[0-9]+\.[0-9]+\.[0-9]+.*)(-(amd64|arm64))?$'
-                  token: ${{ secrets.GITHUB_TOKEN }}
+                  setup-build: true
+                  cache-read-only: true  # Reuse cache from CI build
+                  enable-debug: false
+
+            - name: Clean up Docker packages
+              run: |
+                  echo "🧹 Running Docker package cleanup..."
+                  ./gradlew ${{ steps.versions.outputs.gradle-options }} cleanImages -PkeepCount=10
+                  echo "✅ Cleanup completed"
 
     summary:
         name: Workflow summary
