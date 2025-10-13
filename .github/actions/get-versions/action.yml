@@ -6,8 +6,14 @@ outputs:
         description: 'Java version from version.properties'
         value: ${{ steps.get-versions.outputs.java-version }}
     xdk-version:
-        description: 'XDK version from version.properties'
+        description: 'XDK version from version.properties (e.g., 0.4.4-SNAPSHOT)'
         value: ${{ steps.get-versions.outputs.xdk-version }}
+    xdk-version-release:
+        description: 'XDK release version with -SNAPSHOT stripped (e.g., 0.4.4)'
+        value: ${{ steps.get-versions.outputs.xdk-version-release }}
+    xdk-version-next-snapshot:
+        description: 'Next XDK snapshot version with patch bumped (e.g., 0.4.5-SNAPSHOT)'
+        value: ${{ steps.get-versions.outputs.xdk-version-next-snapshot }}
     gradle-version:
         description: 'Gradle version from gradle-wrapper.properties'
         value: ${{ steps.get-versions.outputs.gradle-version }}
@@ -54,20 +60,43 @@ runs:
                   exit 1
               fi
 
+              # Compute release and next snapshot versions
+              if [[ "$XDK_VERSION" == *-SNAPSHOT ]]; then
+                  XDK_VERSION_RELEASE="${XDK_VERSION%-SNAPSHOT}"
+              else
+                  XDK_VERSION_RELEASE="$XDK_VERSION"
+              fi
+
+              # Validate semantic versioning format
+              if ! [[ "$XDK_VERSION_RELEASE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                  echo "⚠️  WARNING: Version does not follow semantic versioning: $XDK_VERSION_RELEASE"
+                  echo "⚠️  Next snapshot calculation may be incorrect"
+                  XDK_VERSION_NEXT_SNAPSHOT="$XDK_VERSION_RELEASE-SNAPSHOT"
+              else
+                  # Parse semantic version and bump patch
+                  IFS='.' read -r MAJOR MINOR PATCH <<< "$XDK_VERSION_RELEASE"
+                  NEXT_PATCH=$((PATCH + 1))
+                  XDK_VERSION_NEXT_SNAPSHOT="$MAJOR.$MINOR.$NEXT_PATCH-SNAPSHOT"
+              fi
+
               # Standard build configuration
               JAVA_DISTRIBUTION="temurin"
               GRADLE_OPTIONS="-Dorg.gradle.vfs.verbose=false --stacktrace --console=plain"
               GRADLE_JVM_OPTS="-Xmx4g -XX:+UseStringDeduplication"
 
-              echo "📋 Java Version      : $JAVA_VERSION"
-              echo "📋 XDK Version       : $XDK_VERSION"
-              echo "📋 Gradle Version    : $GRADLE_VERSION"
-              echo "📋 Java Distribution : $JAVA_DISTRIBUTION"
-              echo "📋 Gradle Options    : $GRADLE_OPTIONS"
-              echo "📋 Gradle JVM Options: $GRADLE_JVM_OPTS"
+              echo "📋 Java Version             : $JAVA_VERSION"
+              echo "📋 XDK Version              : $XDK_VERSION"
+              echo "📋 XDK Version (Release)    : $XDK_VERSION_RELEASE"
+              echo "📋 XDK Version (Next)       : $XDK_VERSION_NEXT_SNAPSHOT"
+              echo "📋 Gradle Version           : $GRADLE_VERSION"
+              echo "📋 Java Distribution        : $JAVA_DISTRIBUTION"
+              echo "📋 Gradle Options           : $GRADLE_OPTIONS"
+              echo "📋 Gradle JVM Options       : $GRADLE_JVM_OPTS"
 
               echo "java-version=$JAVA_VERSION" >> $GITHUB_OUTPUT
               echo "xdk-version=$XDK_VERSION" >> $GITHUB_OUTPUT
+              echo "xdk-version-release=$XDK_VERSION_RELEASE" >> $GITHUB_OUTPUT
+              echo "xdk-version-next-snapshot=$XDK_VERSION_NEXT_SNAPSHOT" >> $GITHUB_OUTPUT
               echo "gradle-version=$GRADLE_VERSION" >> $GITHUB_OUTPUT
               echo "java-distribution=$JAVA_DISTRIBUTION" >> $GITHUB_OUTPUT
               echo "gradle-options=$GRADLE_OPTIONS" >> $GITHUB_OUTPUT

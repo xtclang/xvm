@@ -58,9 +58,10 @@ jobs:
         name: Prepare release version
         runs-on: ubuntu-latest
         outputs:
-            release-version: ${{ steps.version.outputs.release-version }}
-            next-snapshot-version: ${{ steps.version.outputs.next-snapshot-version }}
-            is-snapshot: ${{ steps.version.outputs.is-snapshot }}
+            current-version: ${{ steps.versions.outputs.xdk-version }}
+            release-version: ${{ steps.resolve.outputs.release-version }}
+            next-snapshot-version: ${{ steps.resolve.outputs.next-snapshot-version }}
+            is-snapshot: ${{ steps.resolve.outputs.is-snapshot }}
 
         steps:
             - name: Setup XVM Project
@@ -69,41 +70,47 @@ jobs:
               with:
                   setup-build: false
 
-            - name: Determine release version
-              id: version
+            - name: Resolve release version
+              id: resolve
               shell: bash
               run: |
-                  # Get version from input or version.properties
+                  # Handle version override if provided
                   if [ -n "${{ github.event.inputs.version-override }}" ]; then
-                      VERSION="${{ github.event.inputs.version-override }}"
-                      echo "Using version override: $VERSION"
+                      OVERRIDE="${{ github.event.inputs.version-override }}"
+                      echo "🔧 Version override provided: $OVERRIDE"
+
+                      # Strip -SNAPSHOT from override if present
+                      if [[ "$OVERRIDE" == *-SNAPSHOT ]]; then
+                          RELEASE_VERSION="${OVERRIDE%-SNAPSHOT}"
+                          echo "   Stripped -SNAPSHOT: $OVERRIDE → $RELEASE_VERSION"
+                      else
+                          RELEASE_VERSION="$OVERRIDE"
+                      fi
+
+                      # Validate override format
+                      if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                          echo "❌ Invalid version override format: $RELEASE_VERSION"
+                          echo "   Version must follow semantic versioning: MAJOR.MINOR.PATCH"
+                          exit 1
+                      fi
+
+                      # Calculate next snapshot from override
+                      IFS='.' read -r MAJOR MINOR PATCH <<< "$RELEASE_VERSION"
+                      NEXT_PATCH=$((PATCH + 1))
+                      NEXT_SNAPSHOT_VERSION="$MAJOR.$MINOR.$NEXT_PATCH-SNAPSHOT"
+
+                      IS_SNAPSHOT="false"
+                      [[ "$OVERRIDE" == *-SNAPSHOT ]] && IS_SNAPSHOT="true"
                   else
-                      VERSION="${{ steps.versions.outputs.xdk-version }}"
-                      echo "Using version from version.properties: $VERSION"
-                  fi
+                      # Use pre-computed versions from get-versions action
+                      RELEASE_VERSION="${{ steps.versions.outputs.xdk-version-release }}"
+                      NEXT_SNAPSHOT_VERSION="${{ steps.versions.outputs.xdk-version-next-snapshot }}"
 
-                  # Check if it's a snapshot
-                  IS_SNAPSHOT="false"
-                  if [[ "$VERSION" == *-SNAPSHOT ]]; then
-                      IS_SNAPSHOT="true"
-                      RELEASE_VERSION="${VERSION%-SNAPSHOT}"
-                      echo "Stripped -SNAPSHOT: $VERSION → $RELEASE_VERSION"
-                  else
-                      RELEASE_VERSION="$VERSION"
-                      echo "Version is already a release version: $RELEASE_VERSION"
-                  fi
+                      IS_SNAPSHOT="false"
+                      [[ "${{ steps.versions.outputs.xdk-version }}" == *-SNAPSHOT ]] && IS_SNAPSHOT="true"
 
-                  # Validate version format (semantic versioning)
-                  if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-                      echo "❌ Invalid version format: $RELEASE_VERSION"
-                      echo "Version must follow semantic versioning: MAJOR.MINOR.PATCH"
-                      exit 1
+                      echo "📋 Using computed versions from version.properties"
                   fi
-
-                  # Calculate next snapshot version (bump patch)
-                  IFS='.' read -r MAJOR MINOR PATCH <<< "$RELEASE_VERSION"
-                  NEXT_PATCH=$((PATCH + 1))
-                  NEXT_SNAPSHOT_VERSION="$MAJOR.$MINOR.$NEXT_PATCH-SNAPSHOT"
 
                   echo "release-version=$RELEASE_VERSION" >> $GITHUB_OUTPUT
                   echo "next-snapshot-version=$NEXT_SNAPSHOT_VERSION" >> $GITHUB_OUTPUT
@@ -111,9 +118,10 @@ jobs:
 
                   echo ""
                   echo "📋 Release Plan:"
-                  echo "  Current version: $VERSION"
-                  echo "  Release version: $RELEASE_VERSION"
-                  echo "  Next snapshot: $NEXT_SNAPSHOT_VERSION"
+                  echo "  Current version    : ${{ steps.versions.outputs.xdk-version }}"
+                  echo "  Release version    : $RELEASE_VERSION"
+                  echo "  Next snapshot      : $NEXT_SNAPSHOT_VERSION"
+                  echo "  Was snapshot       : $IS_SNAPSHOT"
                   echo ""
 
     build-and-test:
