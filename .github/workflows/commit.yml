@@ -17,11 +17,8 @@ permissions:
     actions: read
 
 on:
-    # AUTOMATIC TRIGGERS DISABLED FOR TESTING
-    # Uncomment the following lines to enable automatic CI on push/PR:
-    # push:
-    # pull_request:
-
+    push:
+    pull_request:
     # Manual trigger - optionally triggers publishing workflows after successful completion
     # This allows testing the full publishing pipeline (snapshot, docker, homebrew) from any branch
     # without pushing to master. Set test-publishing=true to trigger publishing workflows.

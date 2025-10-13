@@ -37,6 +37,12 @@ jobs:
             dependency-count: ${{ steps.analyze.outputs.dependency-count }}
 
         steps:
+            - name: Fetch Sources
+              uses: actions/checkout@v5
+              with:
+                  fetch-depth: 0  # Full history for proper diff analysis
+                  show-progress: true
+
             - name: Check if this is a dependabot PR
               id: check
               run: |
@@ -51,7 +57,6 @@ jobs:
               with:
                   setup-build: true
                   cache-read-only: false
-                  checkout-depth: 0  # Full history for proper diff analysis
                   enable-debug: false
 
             - name: Analyze dependency changes

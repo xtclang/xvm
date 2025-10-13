@@ -1,5 +1,5 @@
 name: 'Setup XVM Project'
-description: 'Complete XVM project setup: checkout sources, extract versions, and optionally setup build environment'
+description: 'Complete XVM project setup: extract versions from properties and optionally setup build environment (requires sources already checked out)'
 
 inputs:
     setup-build:
@@ -10,10 +10,6 @@ inputs:
         description: 'Set Gradle cache to read-only mode (only used if setup-build is true)'
         required: false
         default: 'false'
-    checkout-depth:
-        description: 'Checkout depth (1 for shallow clone, 0 for full history)'
-        required: false
-        default: '1'
     enable-debug:
         description: 'Enable debug logging for Gradle and setup actions'
         required: false
@@ -48,11 +44,6 @@ outputs:
 runs:
     using: 'composite'
     steps:
-        - name: Fetch Sources
-          uses: actions/checkout@v5
-          with:
-              fetch-depth: ${{ inputs.checkout-depth }}
-
         - name: Get versions from properties files
           id: get-versions
           shell: bash
@@ -129,6 +120,55 @@ runs:
               echo "gradle-options=$GRADLE_OPTIONS" >> $GITHUB_OUTPUT
               echo "gradle-jvm-opts=$GRADLE_JVM_OPTS" >> $GITHUB_OUTPUT
               echo "kotlin-java-version=$KOTLIN_JAVA_VERSION" >> $GITHUB_OUTPUT
+
+        - name: Display workflow context
+          shell: bash
+          run: |
+              echo ""
+              echo "=================================================="
+
+              # Determine branch name and context
+              BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+              IS_MASTER="false"
+              [ "$BRANCH_NAME" = "master" ] && IS_MASTER="true"
+              IS_MANUAL="false"
+              [ "${{ github.event_name }}" = "workflow_dispatch" ] && IS_MANUAL="true"
+
+              # Master + Manual dispatch
+              if [ "$IS_MASTER" = "true" ] && [ "$IS_MANUAL" = "true" ]; then
+                  echo "🔵 MASTER - MANUAL DISPATCH"
+                  echo "   CI Build: ✅  Publishing: ✅"
+                  echo "=================================================="
+                  echo ""
+                  exit 0
+              fi
+
+              # Master + Automatic
+              if [ "$IS_MASTER" = "true" ]; then
+                  echo "🟢 MASTER - PUSH/PR"
+                  echo "   CI Build: ✅  Publishing: ✅"
+                  echo "=================================================="
+                  echo ""
+                  exit 0
+              fi
+
+              # Non-master + Manual dispatch (testing)
+              if [ "$IS_MANUAL" = "true" ]; then
+                  echo "🟠 BRANCH - MANUAL DISPATCH (TESTING MODE)"
+                  echo "   CI Build: ✅  Publishing: ✅ ⚠️"
+                  echo "   Branch: $BRANCH_NAME"
+                  echo "   Testing full publishing pipeline without merging to master"
+                  echo "=================================================="
+                  echo ""
+                  exit 0
+              fi
+
+              # Non-master + Automatic (default case)
+              echo "⚪ BRANCH - PUSH/PR"
+              echo "   CI Build: ✅  Publishing: ❌"
+              echo "   Branch: $BRANCH_NAME"
+              echo "=================================================="
+              echo ""
 
         - name: Setup Java for Kotlin toolchain
           if: ${{ inputs.setup-build == 'true' }}

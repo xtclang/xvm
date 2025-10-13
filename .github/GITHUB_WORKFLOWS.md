@@ -15,7 +15,7 @@ This directory contains GitHub-specific configuration files, workflows, and auto
 
 ### Overview
 
-The XVM project uses a comprehensive CI/CD pipeline defined in [`workflows/ci.yml`](workflows/ci.yml) that handles building, testing, packaging, and publishing across multiple platforms. The pipeline is designed to ensure code quality, platform compatibility, and automated deployment.
+The XVM project uses a comprehensive CI/CD pipeline defined in [`workflows/commit.yml`](workflows/commit.yml) that handles building, testing, packaging, and publishing across multiple platforms. The pipeline is designed to ensure code quality, platform compatibility, and automated deployment.
 
 ### Workflow Structure
 
@@ -149,7 +149,7 @@ Docker builds support multiple architectures:
 git push origin your-branch
 
 # Manual trigger with defaults
-gh workflow run ci.yml
+gh workflow run commit.yml
 ```
 
 #### Parameter Syntax Options
@@ -162,10 +162,10 @@ GitHub CLI provides two ways to pass workflow inputs:
 **For workflow dispatch inputs, both work identically:**
 ```bash
 # These are equivalent:
-gh workflow run ci.yml -f platforms=ubuntu-latest
-gh workflow run ci.yml --raw-field platforms=ubuntu-latest  
-gh workflow run ci.yml -F platforms=ubuntu-latest
-gh workflow run ci.yml --field platforms=ubuntu-latest
+gh workflow run commit.yml -f platforms=ubuntu-latest
+gh workflow run commit.yml --raw-field platforms=ubuntu-latest  
+gh workflow run commit.yml -F platforms=ubuntu-latest
+gh workflow run commit.yml --field platforms=ubuntu-latest
 ```
 
 **Use `-f` for simplicity** unless you need advanced features like reading values from files.
@@ -173,25 +173,25 @@ gh workflow run ci.yml --field platforms=ubuntu-latest
 #### Manual Control Examples
 ```bash
 # Test only on Ubuntu (faster iteration)
-gh workflow run ci.yml -f platforms=ubuntu-latest
+gh workflow run commit.yml -f platforms=ubuntu-latest
 
 # Force publish Maven artifact snapshot from feature branch
-gh workflow run ci.yml -f snapshot-maven=true
+gh workflow run commit.yml -f snapshot-maven=true
 
 # Run as if master branch (enables all publishing)
-gh workflow run ci.yml -f master-semantics=true
+gh workflow run commit.yml -f master-semantics=true
 
 # Build with extra Gradle options
-gh workflow run ci.yml -f extra-gradle-options="--debug --scan"
+gh workflow run commit.yml -f extra-gradle-options="--debug --scan"
 
 # Disable manual tests for faster builds
-gh workflow run ci.yml -f test=false
+gh workflow run commit.yml -f test=false
 ```
 
 #### Monitoring Builds
 ```bash
 # List recent workflow runs
-gh run list --workflow=ci.yml
+gh run list --workflow=commit.yml
 
 # Watch a specific run
 gh run watch <run-id>
@@ -450,7 +450,7 @@ Dependabot can also be managed via repository settings:
 
 ### Workflow Integration
 
-Dependabot works alongside the existing CI pipeline defined in [`workflows/ci.yml`](workflows/ci.yml):
+Dependabot works alongside the existing CI pipeline defined in [`workflows/commit.yml`](workflows/commit.yml):
 - All Dependabot PRs trigger the full CI suite
 - Tests must pass before merging dependency updates
 - Gradle build validation ensures compatibility

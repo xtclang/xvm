@@ -61,6 +61,12 @@ jobs:
             release-version: ${{ steps.version.outputs.release-version }}
 
         steps:
+            - name: Fetch Sources
+              uses: actions/checkout@v5
+              with:
+                  fetch-depth: 1
+                  show-progress: true
+
             - name: Setup XVM Project
               id: versions
               uses: ./.github/actions/setup-xvm-project
@@ -161,6 +167,12 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
+            - name: Fetch Sources
+              uses: actions/checkout@v5
+              with:
+                  fetch-depth: 1
+                  show-progress: true
+
             - name: Setup XVM Project
               uses: ./.github/actions/setup-xvm-project
               with:
@@ -201,6 +213,12 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
+            - name: Fetch Sources
+              uses: actions/checkout@v5
+              with:
+                  fetch-depth: 1
+                  show-progress: true
+
             - name: Setup XVM Project
               id: versions
               uses: ./.github/actions/setup-xvm-project
@@ -250,6 +268,12 @@ jobs:
         if: ${{ github.event.inputs.publish-to-gradle-plugin-portal == 'true' }}
 
         steps:
+            - name: Fetch Sources
+              uses: actions/checkout@v5
+              with:
+                  fetch-depth: 1
+                  show-progress: true
+
             - name: Setup XVM Project
               id: versions
               uses: ./.github/actions/setup-xvm-project
