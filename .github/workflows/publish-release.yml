@@ -1,0 +1,346 @@
+#
+# GitHub workflow for publishing XDK releases
+#
+# This workflow handles release publication to multiple repositories:
+# - GitHub Releases (draft, requires manual publish)
+# - Maven Central (staged, requires manual release via Sonatype)
+# - Gradle Plugin Portal (optional, immediate publication)
+#
+# IMPORTANT: This workflow requires a release version (no -SNAPSHOT suffix)
+# Either update version.properties to a release version, or provide a version override.
+#
+name: Publish Release
+
+permissions:
+    contents: write
+    packages: write
+    actions: read
+
+on:
+    # Manual trigger only - releases are never automatic
+    workflow_dispatch:
+        inputs:
+            version-override:
+                description: 'Release version override (e.g., 0.4.4) - must not contain -SNAPSHOT'
+                required: false
+            skip-tests:
+                description: 'Skip test execution (not recommended for releases)'
+                type: boolean
+                required: false
+                default: false
+            publish-to-gradle-plugin-portal:
+                description: 'Publish to Gradle Plugin Portal (immediate, cannot be staged)'
+                type: boolean
+                required: false
+                default: false
+            close-maven-staging:
+                description: 'Automatically close Maven staging repository'
+                type: boolean
+                required: false
+                default: true
+
+env:
+    # Publishing credentials
+    GITHUB_ACTOR: ${{ github.actor }}
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    GRADLE_PUBLISH_KEY: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY }}
+    GRADLE_PUBLISH_SECRET: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET }}
+    ORG_GRADLE_PROJECT_github_actor: ${{ github.actor }}
+    ORG_GRADLE_PROJECT_github_token: ${{ secrets.GITHUB_TOKEN }}
+    SIGNING_KEY: ${{ secrets.ORG_XTCLANG_SIGNING_KEY }}
+    SIGNING_KEYID: ${{ secrets.ORG_XTCLANG_SIGNING_KEY_ID }}
+    SIGNING_PASSWORD: ${{ secrets.ORG_XTCLANG_SIGNING_PASSWORD }}
+    ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
+    ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
+
+jobs:
+    build-and-test:
+        name: Build and test release
+        runs-on: ubuntu-latest
+        outputs:
+            release-version: ${{ steps.version.outputs.release-version }}
+
+        steps:
+            - name: Fetch Sources
+              uses: actions/checkout@v5
+              with:
+                  fetch-depth: 1
+                  show-progress: true
+
+            - name: Setup XVM Project
+              id: versions
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: true
+                  cache-read-only: false
+                  enable-debug: false
+
+            - name: Validate and determine release version
+              id: version
+              shell: bash
+              run: |
+                  # Determine which version to use
+                  if [ -n "${{ github.event.inputs.version-override }}" ]; then
+                      RELEASE_VERSION="${{ github.event.inputs.version-override }}"
+                      echo "📋 Using version override: $RELEASE_VERSION"
+                  else
+                      RELEASE_VERSION="${{ steps.versions.outputs.xdk-version }}"
+                      echo "📋 Using version from version.properties: $RELEASE_VERSION"
+                  fi
+
+                  # Fail if version contains -SNAPSHOT
+                  if [[ "$RELEASE_VERSION" == *-SNAPSHOT ]]; then
+                      echo "❌ ERROR: Cannot publish release with -SNAPSHOT version"
+                      echo ""
+                      echo "Current version: $RELEASE_VERSION"
+                      echo ""
+                      echo "To publish a release, either:"
+                      echo "  1. Update version.properties to a release version (e.g., 0.4.4)"
+                      echo "  2. Provide a version override without -SNAPSHOT"
+                      echo ""
+                      exit 1
+                  fi
+
+                  # Validate semantic versioning format
+                  if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                      echo "❌ ERROR: Invalid version format: $RELEASE_VERSION"
+                      echo "Version must follow semantic versioning: MAJOR.MINOR.PATCH"
+                      exit 1
+                  fi
+
+                  echo "release-version=$RELEASE_VERSION" >> $GITHUB_OUTPUT
+                  echo ""
+                  echo "✅ Validated release version: $RELEASE_VERSION"
+                  echo ""
+
+            - name: Build XDK distribution
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+                  # Override version if provided
+                  VERSION_OVERRIDE: ${{ github.event.inputs.version-override }}
+              run: |
+                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
+
+                  # Add version override if provided
+                  if [ -n "$VERSION_OVERRIDE" ]; then
+                      GRADLE_OPTIONS="$GRADLE_OPTIONS -Pversion=$VERSION_OVERRIDE"
+                      echo "🔧 Building with version override: $VERSION_OVERRIDE"
+                  fi
+
+                  echo "🔨 Building XDK release ${{ steps.version.outputs.release-version }}..."
+                  ./gradlew $GRADLE_OPTIONS clean
+                  ./gradlew $GRADLE_OPTIONS :xdk:distZip
+
+            - name: Run tests
+              if: ${{ github.event.inputs.skip-tests != 'true' }}
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+                  VERSION_OVERRIDE: ${{ github.event.inputs.version-override }}
+              run: |
+                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
+                  if [ -n "$VERSION_OVERRIDE" ]; then
+                      GRADLE_OPTIONS="$GRADLE_OPTIONS -Pversion=$VERSION_OVERRIDE"
+                  fi
+
+                  echo "🧪 Running tests..."
+                  ./gradlew $GRADLE_OPTIONS check
+
+            - name: Upload XDK distribution
+              uses: actions/upload-artifact@v4
+              with:
+                  name: xdk-release-${{ steps.version.outputs.release-version }}
+                  path: xdk/build/distributions/xdk-*.zip
+                  retention-days: 90
+
+            - name: Summary
+              run: |
+                  echo "### ✅ Release Build Completed" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Release Version:** ${{ steps.version.outputs.release-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Tests:** ${{ github.event.inputs.skip-tests != 'true' && 'Passed ✅' || 'Skipped ⚠️' }}" >> $GITHUB_STEP_SUMMARY
+
+    publish-github-draft:
+        name: Create draft GitHub release
+        needs: build-and-test
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Fetch Sources
+              uses: actions/checkout@v5
+              with:
+                  fetch-depth: 1
+                  show-progress: true
+
+            - name: Setup XVM Project
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: false
+
+            - name: Download XDK distribution
+              uses: actions/download-artifact@v4
+              with:
+                  name: xdk-release-${{ needs.build-and-test.outputs.release-version }}
+                  path: ./artifacts
+
+            - name: Find artifact path
+              id: artifact
+              shell: bash
+              run: |
+                  XDK_ZIP=$(find ./artifacts -name "xdk-*.zip" | head -1)
+                  if [ -z "$XDK_ZIP" ]; then
+                      echo "❌ XDK distribution not found"
+                      exit 1
+                  fi
+                  echo "artifact-path=$XDK_ZIP" >> $GITHUB_OUTPUT
+                  echo "Found artifact: $XDK_ZIP"
+
+            - name: Create draft GitHub release
+              uses: ./.github/actions/publish-github-release
+              with:
+                  artifact-path: ${{ steps.artifact.outputs.artifact-path }}
+                  xdk-version: ${{ needs.build-and-test.outputs.release-version }}
+                  commit: ${{ github.sha }}
+                  repo: ${{ github.repository }}
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  release-type: release
+                  release-tag: v${{ needs.build-and-test.outputs.release-version }}
+
+    publish-maven-staging:
+        name: Publish to Maven Central staging
+        needs: build-and-test
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Fetch Sources
+              uses: actions/checkout@v5
+              with:
+                  fetch-depth: 1
+                  show-progress: true
+
+            - name: Setup XVM Project
+              id: versions
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: true
+                  cache-read-only: false
+                  enable-debug: false
+
+            - name: Publish to Maven Central staging repository
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+                  VERSION_OVERRIDE: ${{ github.event.inputs.version-override }}
+              run: |
+                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
+
+                  # Add version override if provided
+                  if [ -n "$VERSION_OVERRIDE" ]; then
+                      GRADLE_OPTIONS="$GRADLE_OPTIONS -Pversion=$VERSION_OVERRIDE"
+                  fi
+
+                  echo "📦 Publishing to Maven Central staging repository..."
+                  echo "   Version: ${{ needs.build-and-test.outputs.release-version }}"
+
+                  ./gradlew $GRADLE_OPTIONS publish --info
+
+                  echo "✅ Published to Maven Central staging repository"
+                  echo ""
+                  echo "📋 Next steps:"
+                  echo "   1. Log in to https://oss.sonatype.org/"
+                  echo "   2. Go to 'Staging Repositories'"
+                  echo "   3. Find repository 'orgxtclang-XXXX'"
+                  echo "   4. Review staged artifacts"
+                  if [ "${{ github.event.inputs.close-maven-staging }}" = "true" ]; then
+                      echo "   5. Repository should be auto-closed (check status)"
+                      echo "   6. Release the repository to Maven Central"
+                  else
+                      echo "   5. Close the repository"
+                      echo "   6. Release the repository to Maven Central"
+                  fi
+                  echo ""
+                  echo "⏱️  Maven Central sync takes ~10-30 minutes after release"
+
+    publish-gradle-plugin-portal:
+        name: Publish to Gradle Plugin Portal
+        needs: build-and-test
+        runs-on: ubuntu-latest
+        if: ${{ github.event.inputs.publish-to-gradle-plugin-portal == 'true' }}
+
+        steps:
+            - name: Fetch Sources
+              uses: actions/checkout@v5
+              with:
+                  fetch-depth: 1
+                  show-progress: true
+
+            - name: Setup XVM Project
+              id: versions
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: true
+                  cache-read-only: false
+                  enable-debug: false
+
+            - name: Publish to Gradle Plugin Portal
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+                  VERSION_OVERRIDE: ${{ github.event.inputs.version-override }}
+              run: |
+                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
+
+                  # Add version override if provided
+                  if [ -n "$VERSION_OVERRIDE" ]; then
+                      GRADLE_OPTIONS="$GRADLE_OPTIONS -Pversion=$VERSION_OVERRIDE"
+                  fi
+
+                  echo "📦 Publishing to Gradle Plugin Portal..."
+                  echo ""
+                  echo "⚠️  WARNING: Gradle Plugin Portal does not support staging"
+                  echo "   This publication is IMMEDIATE and CANNOT be undone"
+                  echo ""
+
+                  ./gradlew $GRADLE_OPTIONS :plugin:publishPlugins --info
+
+                  echo "✅ Published to Gradle Plugin Portal"
+                  echo "🔗    Plugin page: https://plugins.gradle.org/plugin/org.xtclang.xtc-plugin"
+                  echo "⏱️    Plugin may take a few minutes to appear in search"
+
+    summary:
+        name: Release summary
+        needs: [build-and-test, publish-github-draft, publish-maven-staging]
+        runs-on: ubuntu-latest
+        if: always()
+
+        steps:
+            - name: Generate release summary
+              run: |
+                  echo "### 🚀 Release Publication Summary" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Release Version:** ${{ needs.build-and-test.outputs.release-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "## Publication Status" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ **Build:** Completed" >> $GITHUB_STEP_SUMMARY
+                  echo "- 📝 **GitHub Release:** Created as DRAFT" >> $GITHUB_STEP_SUMMARY
+                  echo "- 🏗️ **Maven Central:** Published to STAGING" >> $GITHUB_STEP_SUMMARY
+                  echo "- ${{ github.event.inputs.publish-to-gradle-plugin-portal == 'true' && '✅' || '⏭️' }} **Gradle Plugin Portal:** ${{ github.event.inputs.publish-to-gradle-plugin-portal == 'true' && 'Published' || 'Skipped' }}" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "## Required Manual Steps" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "### 1. Review and Release Maven Central Staging" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Log in to https://oss.sonatype.org/" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Review staged artifacts in 'Staging Repositories'" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Close and Release the repository" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "### 2. Publish GitHub Draft Release" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Go to https://github.com/${{ github.repository }}/releases" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Edit draft release v${{ needs.build-and-test.outputs.release-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Update release notes with actual changes" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Click 'Publish release'" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "### 3. Update version.properties for Next Development" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Manually update version.properties to next snapshot version" >> $GITHUB_STEP_SUMMARY
+                  echo "   - For example: ${{ needs.build-and-test.outputs.release-version }} → bump patch and add -SNAPSHOT" >> $GITHUB_STEP_SUMMARY
+                  echo "   - Commit and push to continue development" >> $GITHUB_STEP_SUMMARY
