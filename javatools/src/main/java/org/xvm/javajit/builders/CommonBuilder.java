@@ -733,7 +733,7 @@ public class CommonBuilder
      */
     protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
         for (MethodInfo method : typeInfo.getMethods().values()) {
-            if (!method.getIdentity().getNamespace().equals(thisId)) {
+            if (method.isNative() || !method.getIdentity().getNamespace().equals(thisId)) {
                 continue; // not our responsibility
             }
 
@@ -748,7 +748,7 @@ public class CommonBuilder
         boolean cap    = method.isCapped();
         boolean router = false;
 
-        String jitName = method.getIdentity().ensureJitMethodName(typeSystem);
+        String jitName = method.getJitIdentity().ensureJitMethodName(typeSystem);
 
         if (!cap) {
             MethodBody[] chain = method.ensureOptimizedMethodChain(typeInfo);
@@ -1464,6 +1464,7 @@ public class CommonBuilder
     private final static String[] TEST_SET = new String[] {
         "Test", "test",
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
+        "Ordered",
         "TerminalConsole",
     };
     private final static HashSet<String> SKIP_SET = new HashSet<>();

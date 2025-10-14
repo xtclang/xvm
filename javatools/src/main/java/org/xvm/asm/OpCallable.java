@@ -593,7 +593,7 @@ public abstract class OpCallable extends Op {
             throw new UnsupportedOperationException("function call " + slotFn.type());
         }
 
-        String methodName = sigCall.getName();
+        String methodName = sigCall.getName(); // function names don't have to be unique
         if (jmdCall.isOptimized) {
             mdCall      = jmdCall.optimizedMD;
             methodName += Builder.OPT;

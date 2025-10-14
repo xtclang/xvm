@@ -243,7 +243,7 @@ public abstract class OpGeneral
                 }
                 TypeInfo      info     = slotTarget.type().ensureTypeInfo();
                 MethodInfo    method   = info.findOpMethod(sName, sOp, 1);
-                String        sJitName = method.getIdentity().ensureJitMethodName(bctx.typeSystem);
+                String        sJitName = method.getJitIdentity().ensureJitMethodName(bctx.typeSystem);
                 JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem);
 
                 MethodTypeDesc md;
@@ -272,7 +272,7 @@ public abstract class OpGeneral
                 }
                 TypeInfo      info     = slotTarget.type().ensureTypeInfo();
                 MethodInfo    method   = info.findOpMethod(sName, sOp, 0);
-                String        sJitName = method.getIdentity().ensureJitMethodName(bctx.typeSystem);
+                String        sJitName = method.getJitIdentity().ensureJitMethodName(bctx.typeSystem);
                 JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem);
 
                 MethodTypeDesc md;

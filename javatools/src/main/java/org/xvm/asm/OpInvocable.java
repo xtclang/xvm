@@ -312,7 +312,7 @@ public abstract class OpInvocable extends Op {
         MethodConstant idMethod   = (MethodConstant) bctx.getConstant(m_nMethodId);
         MethodInfo     infoMethod = targetSlot.type().ensureTypeInfo().getMethodById(idMethod);
         JitMethodDesc  jmd        = infoMethod.getJitDesc(bctx.typeSystem);
-        String         methodName = idMethod.ensureJitMethodName(bctx.typeSystem);
+        String         methodName = infoMethod.getJitIdentity().ensureJitMethodName(bctx.typeSystem);
         boolean        fOptimized = jmd.isOptimized;
         MethodTypeDesc md;
 
