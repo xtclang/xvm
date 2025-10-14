@@ -10,15 +10,13 @@ module test2.examples.org {
         console.print(c.rgb);
         console.print(c);
 
-        Ordered order = Greater;
-        console.print(order);
-
-//        console.print(c < Green);
+        assert c != Green;
+        assert c > Green;
 
         Boolean b = True;
         console.print(b);
         console.print(b.not());
-        console.print(b.toInt64());
+        console.print(b.toInt64()); // this won't work correctly until we compile Boolean
     }
 
     enum Color(String text, Int rgb) {

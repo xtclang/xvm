@@ -570,6 +570,7 @@ public abstract class Builder {
     public static final String N_Int64        = "org.xtclang.ecstasy.numbers.Int64";
     public static final String N_Nullable     = "org.xtclang.ecstasy.Nullable";
     public static final String N_Object       = "org.xtclang.ecstasy.Object";
+    public static final String N_Ordered      = "org.xtclang.ecstasy.Ordered";
     public static final String N_String       = "org.xtclang.ecstasy.text.String";
 
     public static final String N_xClass       = "org.xtclang.ecstasy.xClass";
@@ -609,6 +610,7 @@ public abstract class Builder {
     public static final ClassDesc CD_Int64         = ClassDesc.of(N_Int64);
     public static final ClassDesc CD_Nullable      = ClassDesc.of(N_Nullable);
     public static final ClassDesc CD_Object        = ClassDesc.of(N_Object);
+    public static final ClassDesc CD_Ordered       = ClassDesc.of(N_Ordered);
     public static final ClassDesc CD_String        = ClassDesc.of(N_String);
 
     public static final ClassDesc CD_xClass        = ClassDesc.of(N_xClass);

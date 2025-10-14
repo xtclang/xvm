@@ -39,7 +39,6 @@ import org.xvm.asm.op.Guarded;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.toTypeKind;
 
@@ -323,6 +322,27 @@ public class BuildContext {
         Slot slot = slots.get(Op.A_THIS);
         code.aload(slot.slot());
         return slot;
+    }
+
+    /**
+     * Obtain the type of the specified argument.
+     */
+    public TypeConstant getArgumentType(int argId) {
+        if (argId >= 0) {
+            Slot slot = getSlot(argId);
+            assert slot != null;
+            return slot.type();
+        }
+
+        if (argId <= Op.CONSTANT_OFFSET) {
+            return getConstant(argId).getType();
+        }
+
+        return switch (argId) {
+            case Op.A_STACK -> tailStack.peek().type();
+            case Op.A_THIS  -> slots.get(Op.A_THIS).type();
+            default -> throw new UnsupportedOperationException("id=" + argId);
+        };
     }
 
     /**

@@ -332,6 +332,7 @@ public class Linker {
         require("module", module);
         if (!isBad()) {
             // TODO various checks? e.g. duplicate?
+            module.synthesizeChildren();
             modules.add(module);
         }
         return this;

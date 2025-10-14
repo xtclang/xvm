@@ -2,8 +2,7 @@ package org.xtclang.ecstasy.text;
 
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.xConst;
-
-import org.xtclang.ecstasy.reflect.Type;
+import org.xtclang.ecstasy.xType;
 
 import org.xvm.javajit.Ctx;
 
@@ -271,7 +270,7 @@ public class String
     }
 
 
-    public static boolean equals$p(Ctx ctx, Type type, String s1, String s2) {
+    public static boolean equals$p(Ctx ctx, xType type, String s1, String s2) {
         return false;
     }
 

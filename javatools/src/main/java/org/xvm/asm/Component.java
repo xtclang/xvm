@@ -2024,7 +2024,7 @@ public abstract class Component
      * This method is used during the load and link stage to allow components to create synthetic
      * children necessary for the runtime.
      */
-    protected void synthesizeChildren() {
+    public void synthesizeChildren() {
         for (Component child : children()) {
             child.synthesizeChildren();
         }

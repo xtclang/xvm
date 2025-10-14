@@ -1,7 +1,5 @@
 package org.xtclang.ecstasy;
 
-import org.xtclang.ecstasy.reflect.Type;
-
 import org.xvm.javajit.Container;
 import org.xvm.javajit.Ctx;
 import org.xvm.javajit.Xvm;
@@ -78,7 +76,7 @@ public abstract class xObj implements Object {
     /**
      * {@code static <CompileType extends Object> Boolean equals(CompileType o1, CompileType o2)}
      */
-    static boolean equals$p(Ctx ctx, Type CompileType, Object o1, Object o2) {
+    static boolean equals$p(Ctx ctx, xType CompileType, xObj o1, xObj o2) {
         return o1 == o2; // TODO CP: check unwrap
     }
 
