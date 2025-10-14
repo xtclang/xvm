@@ -552,14 +552,11 @@ public class BuildContext {
 
                 slots.put(varIndex, slot);
 
-                int typeIndex = typeSystem.registerConstant(resourceType);
-                loadCtx(code)
-                    .dup()
-                    .loadConstant(typeIndex)
-                    .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
-                    .checkcast(CD_TypeConstant)                               // <- type
-                    .ldc(resourceName)
-                    .aconst_null()                                            // opts
+                loadCtx(code);
+                code.dup();
+                Builder.loadTypeConstant(code, typeSystem, resourceType);
+                code.ldc(resourceName)
+                    .aconst_null() // opts
                     .invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
                     .astore(slot.slot())
                     .labelBinding(varStart);

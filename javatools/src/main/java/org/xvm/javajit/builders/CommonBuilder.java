@@ -672,8 +672,6 @@ public class CommonBuilder
         }
 
         classBuilder.withMethodBody(jitName, md, flags, code -> {
-            int typeIndex = typeSystem.registerConstant(resourceType);
-
             // generate the following:
             // T value = this.prop;
             // if (value == null} { value = this.prop = ctx$.inject(type, name, opts);}
@@ -707,12 +705,10 @@ public class CommonBuilder
                     .astore(valueSlot)
                     .ifnonnull(endLbl)
                     .aload(1) // ctx$
-                    .dup()
-                    .loadConstant(typeIndex)
-                    .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
-                    .checkcast(CD_TypeConstant)                               // <- type
-                    .ldc(resourceName)
-                    .aconst_null()                                            // opts
+                    .dup();
+                Builder.loadTypeConstant(code, typeSystem, resourceType);
+                code.ldc(resourceName)
+                    .aconst_null() // opts
                     .invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
                     .checkcast(pdStd.cd)
                     .dup()

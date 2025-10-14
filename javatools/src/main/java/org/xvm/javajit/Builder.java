@@ -236,6 +236,32 @@ public abstract class Builder {
     }
 
     /**
+     * Generate a "load" for the specified TypeConstant.
+     * In:  Ctx
+     * Out: TypeConstant
+     */
+    public static void loadTypeConstant(CodeBuilder code, TypeSystem ts, TypeConstant type) {
+        code.loadConstant(ts.registerConstant(type))
+            .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
+            .checkcast(CD_TypeConstant);                              // <- type
+    }
+
+    /**
+     * Generate a "get" for an xType.
+     * In:  Ctx
+     * Out: xType instance
+     */
+    public static void loadType(CodeBuilder code, TypeSystem ts, TypeConstant type) {
+        code.dup(); // ctx
+        loadTypeConstant(code, ts, type);
+        code.swap() // [ctx, type] -> [type, ctx]
+            .getfield(CD_Ctx, "container", CD_Container)
+            .invokevirtual(CD_TypeConstant, "ensureXType",
+                    MethodTypeDesc.of(CD_JavaObject, CD_Container))
+            .checkcast(CD_xType);
+    }
+
+    /**
      * Generate a default return for the specified Java class assuming the corresponding value
      * is already on java stack.
      */
@@ -546,6 +572,7 @@ public abstract class Builder {
     public static final String N_Object       = "org.xtclang.ecstasy.Object";
     public static final String N_String       = "org.xtclang.ecstasy.text.String";
 
+    public static final String N_xClass       = "org.xtclang.ecstasy.xClass";
     public static final String N_xConst       = "org.xtclang.ecstasy.xConst";
     public static final String N_xEnum        = "org.xtclang.ecstasy.xEnum";
     public static final String N_xEnumeration = "org.xtclang.ecstasy.reflect.Enumeration";
@@ -567,7 +594,6 @@ public abstract class Builder {
 
     // ----- well-known class descriptors ----------------------------------------------------------
 
-    public static final ClassDesc CD_xConst        = ClassDesc.of(N_xConst);
     public static final ClassDesc CD_Exception     = ClassDesc.of(N_Exception);
     public static final ClassDesc CD_xFunction     = ClassDesc.of(N_xFunction);
     public static final ClassDesc CD_xModule       = ClassDesc.of(N_xModule);
@@ -576,6 +602,7 @@ public abstract class Builder {
     public static final ClassDesc CD_xEnumeration  = ClassDesc.of(N_xEnumeration);
     public static final ClassDesc CD_xException    = ClassDesc.of(N_xException);
     public static final ClassDesc CD_xObj          = ClassDesc.of(N_xObj);
+    public static final ClassDesc CD_xType         = ClassDesc.of(N_xType);
 
     public static final ClassDesc CD_Boolean       = ClassDesc.of(N_Boolean);
     public static final ClassDesc CD_Char          = ClassDesc.of(N_Char);
@@ -584,6 +611,8 @@ public abstract class Builder {
     public static final ClassDesc CD_Object        = ClassDesc.of(N_Object);
     public static final ClassDesc CD_String        = ClassDesc.of(N_String);
 
+    public static final ClassDesc CD_xClass        = ClassDesc.of(N_xClass);
+    public static final ClassDesc CD_xConst        = ClassDesc.of(N_xConst);
     public static final ClassDesc CD_Container     = ClassDesc.of(Container.class.getName());
     public static final ClassDesc CD_Ctx           = ClassDesc.of(Ctx.class.getName());
     public static final ClassDesc CD_CtorCtx       = ClassDesc.of(Ctx.CtorCtx.class.getName());

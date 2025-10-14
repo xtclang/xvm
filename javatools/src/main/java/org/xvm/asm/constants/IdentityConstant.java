@@ -680,9 +680,9 @@ public abstract class IdentityConstant
                 throw new IllegalStateException("unexpected parent constant: " + idParent);
         };
 
-        return getParentConstant().buildJitName(ts)
-                .append(chDelim)
-                .append(getName());
+        return idParent.buildJitName(ts)
+               .append(chDelim)
+               .append(getName());
     }
 
 
