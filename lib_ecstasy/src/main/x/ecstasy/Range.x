@@ -58,30 +58,22 @@ const Range<Element extends Orderable>
     /**
      * The starting bound of the range.
      */
-    Element first.get() {
-        return descending ? upperBound : lowerBound;
-    }
+    Element first.get() = descending ? upperBound : lowerBound;
 
     /**
      * True iff the starting bound of the range is exclusive.
      */
-    Boolean firstExclusive.get() {
-        return descending ? upperExclusive : lowerExclusive;
-    }
+    Boolean firstExclusive.get() = descending ? upperExclusive : lowerExclusive;
 
     /**
      * The ending bound of the range.
      */
-    Element last.get() {
-        return descending ? lowerBound : upperBound;
-    }
+    Element last.get() = descending ? lowerBound : upperBound;
 
     /**
      * True iff the ending bound of the range is exclusive.
      */
-    Boolean lastExclusive.get() {
-        return descending ? lowerExclusive : upperExclusive;
-    }
+    Boolean lastExclusive.get() = descending ? lowerExclusive : upperExclusive;
 
     /**
      * The lower bound of the range.
@@ -113,33 +105,19 @@ const Range<Element extends Orderable>
      *
      * @return the range in ascending order
      */
-    Range! asAscending() {
-        return descending
-                ? this.reversed()
-                : this;
-    }
+    Range! asAscending() = descending ? this.reversed() : this;
 
     /**
      * If the range is ascending, reverse it.
      *
      * @return the range in descending order
      */
-    Range! asDescending() {
-        return descending
-                ? this
-                : this.reversed();
-    }
+    Range! asDescending() = descending ? this : this.reversed();
 
     /**
      * Create a new range in the reverse order of this range.
      */
-    Range! reversed() {
-        return new Range(lowerBound,
-                         lowerExclusive,
-                         upperBound,
-                         upperExclusive,
-                         !descending);
-    }
+    Range! reversed() = new Range(lowerBound, lowerExclusive, upperBound, upperExclusive, !descending);
 
     /**
      * Determine if the specified value exists within this range.
@@ -173,9 +151,7 @@ const Range<Element extends Orderable>
     /**
      * That range contains this range iff every value within this range is also in that range.
      */
-    Boolean isCoveredBy(Range that) {
-        return that.covers(this);
-    }
+    Boolean isCoveredBy(Range that) = that.covers(this);
 
     /**
      * @return True if `this` and `that` intersect
