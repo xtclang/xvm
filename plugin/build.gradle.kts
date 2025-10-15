@@ -121,3 +121,31 @@ tasks.withType<Jar>().configureEach {
         logger.info("[plugin] Configured '$taskName' manifest with attributes: $baseAttributes")
     }
 }
+
+// Configure publishPlugins task to skip SNAPSHOT versions
+// Gradle Plugin Portal does not accept SNAPSHOT versions
+tasks.named("publishPlugins") {
+    onlyIf {
+        val currentVersion = version.toString()
+        val isSnapshot = currentVersion.contains("SNAPSHOT", ignoreCase = true)
+        val isEnabled = xdkProperties.booleanValue("$pprefix.publish.gradlePluginPortal", false)
+
+        when {
+            isSnapshot -> {
+                logger.warn("⏭️  Skipping Gradle Plugin Portal publication for SNAPSHOT version: $currentVersion")
+                logger.warn("   Gradle Plugin Portal does not accept SNAPSHOT versions")
+                logger.warn("   Maven Central and GitHub Packages will still receive snapshot artifacts")
+                false
+            }
+            !isEnabled -> {
+                logger.info("⏭️  Gradle Plugin Portal publication disabled via property")
+                logger.info("   Set -Porg.xtclang.publish.gradlePluginPortal=true to enable")
+                false
+            }
+            else -> {
+                logger.lifecycle("✅ Publishing to Gradle Plugin Portal: $currentVersion")
+                true
+            }
+        }
+    }
+}

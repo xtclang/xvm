@@ -1,0 +1,434 @@
+#
+# GitHub workflow for promoting a staged release to production
+#
+# This workflow runs automatically when a release PR (from release/* branch) is merged to master.
+# It promotes all staged artifacts to production:
+# 1. Maven Central: Closes and releases staging repository
+# 2. GitHub Release: Publishes the draft release
+# 3. Gradle Plugin Portal: Publishes plugin (unless skipped)
+#
+# CONTROL VIA PR LABELS:
+# - Default: Publishes to ALL targets (Maven Central, GitHub Release, Gradle Plugin Portal)
+# - skip-maven-central: Skip Maven Central promotion
+# - skip-github-release: Skip GitHub release publication
+# - skip-gradle-plugin-portal: Skip Gradle Plugin Portal publication (default behavior)
+#
+# MANUAL PROMOTION:
+# Can be triggered manually via workflow_dispatch for re-promotion or selective publishing.
+#
+# IMPORTANT: This workflow makes releases PUBLIC and cannot be undone!
+#
+name: Promote Release
+
+permissions:
+    contents: write
+    packages: write
+    actions: read
+
+on:
+    # Automatic trigger when release PR is merged
+    pull_request:
+        types: [closed]
+        branches:
+            - master
+
+    # Manual trigger for re-promotion or selective publishing
+    workflow_dispatch:
+        inputs:
+            release-version:
+                description: 'Release version to promote (e.g., 0.4.4)'
+                required: true
+            promote-maven-central:
+                description: 'Promote Maven Central staging to production'
+                type: boolean
+                required: false
+                default: true
+            publish-github-release:
+                description: 'Publish GitHub draft release'
+                type: boolean
+                required: false
+                default: true
+            publish-gradle-plugin-portal:
+                description: 'Publish to Gradle Plugin Portal'
+                type: boolean
+                required: false
+                default: false
+
+jobs:
+    promote-release:
+        name: Promote staged release
+        # Only run if:
+        # 1. PR was merged (not just closed)
+        # 2. PR came from a release/* branch
+        if: |
+            github.event.pull_request.merged == true &&
+            startsWith(github.event.pull_request.head.ref, 'release/')
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Extract version and determine trigger type
+              id: version
+              run: |
+                  if [ "${{ github.event_name }}" = "pull_request" ]; then
+                      # Automatic trigger from PR merge
+                      BRANCH="${{ github.event.pull_request.head.ref }}"
+                      VERSION="${BRANCH#release/}"
+                      echo "trigger=pr-merge" >> $GITHUB_OUTPUT
+                  else
+                      # Manual workflow_dispatch trigger
+                      VERSION="${{ github.event.inputs.release-version }}"
+                      echo "trigger=manual" >> $GITHUB_OUTPUT
+                  fi
+
+                  echo "version=$VERSION" >> $GITHUB_OUTPUT
+                  echo "🎯 Promoting release $VERSION to production"
+
+            - name: Determine promotion targets
+              id: targets
+              run: |
+                  echo "📋 Determining which targets to promote..."
+
+                  # Determine targets based on trigger type
+                  if [ "${{ steps.version.outputs.trigger }}" = "pr-merge" ]; then
+                      echo "🔄 Automatic promotion via PR merge"
+                      echo "   Using PR labels to control targets"
+
+                      # Check PR labels
+                      # Maven Central and GitHub Release: default ON, use skip-* to turn OFF
+                      MAVEN_CENTRAL=${{ !contains(github.event.pull_request.labels.*.name, 'skip-maven-central') && 'true' || 'false' }}
+                      GITHUB_RELEASE=${{ !contains(github.event.pull_request.labels.*.name, 'skip-github-release') && 'true' || 'false' }}
+
+                      # Plugin Portal: default OFF, needs 'publish-gradle-plugin' label to enable
+                      # Can be disabled with 'skip-gradle-plugin-portal' even if enabled in prepare-release
+                      if [ "${{ contains(github.event.pull_request.labels.*.name, 'publish-gradle-plugin') }}" = "true" ] && \
+                         [ "${{ contains(github.event.pull_request.labels.*.name, 'skip-gradle-plugin-portal') }}" = "false" ]; then
+                          PLUGIN_PORTAL="true"
+                      else
+                          PLUGIN_PORTAL="false"
+                      fi
+
+                  else
+                      echo "🎛️  Manual promotion via workflow_dispatch"
+                      echo "   Using workflow inputs to control targets"
+
+                      # Use workflow inputs
+                      MAVEN_CENTRAL="${{ github.event.inputs.promote-maven-central }}"
+                      GITHUB_RELEASE="${{ github.event.inputs.publish-github-release }}"
+                      PLUGIN_PORTAL="${{ github.event.inputs.publish-gradle-plugin-portal }}"
+                  fi
+
+                  echo "maven-central=$MAVEN_CENTRAL" >> $GITHUB_OUTPUT
+                  echo "github-release=$GITHUB_RELEASE" >> $GITHUB_OUTPUT
+                  echo "plugin-portal=$PLUGIN_PORTAL" >> $GITHUB_OUTPUT
+
+                  echo ""
+                  echo "Promotion plan:"
+                  echo "  - Maven Central:         $([ "$MAVEN_CENTRAL" = "true" ] && echo "✅ Promote" || echo "⏭️  Skip")"
+                  echo "  - GitHub Release:        $([ "$GITHUB_RELEASE" = "true" ] && echo "✅ Publish" || echo "⏭️  Skip")"
+                  echo "  - Gradle Plugin Portal:  $([ "$PLUGIN_PORTAL" = "true" ] && echo "✅ Publish" || echo "⏭️  Skip")"
+
+            - name: Validate version format
+              run: |
+                  VERSION="${{ steps.version.outputs.version }}"
+
+                  if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                      echo "❌ ERROR: Invalid version format: $VERSION"
+                      exit 1
+                  fi
+
+                  echo "✅ Valid version: $VERSION"
+
+            - name: Checkout release tag
+              uses: actions/checkout@v5
+              with:
+                  ref: v${{ steps.version.outputs.version }}
+                  fetch-depth: 1
+
+            - name: Setup XVM Project
+              id: versions
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: true
+                  cache-read-only: false
+
+            - name: Promote Maven Central staging to production
+              if: ${{ steps.targets.outputs.maven-central == 'true' }}
+              env:
+                  NEXUS_USERNAME: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
+                  NEXUS_PASSWORD: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
+              run: |
+                  VERSION="${{ steps.version.outputs.version }}"
+
+                  echo "🏛️ Promoting Maven Central staging repository..."
+                  echo ""
+
+                  # Find staging repository containing this version
+                  echo "📋 Searching for staging repository with version $VERSION..."
+                  STAGING_REPO=$(curl -s -u "$NEXUS_USERNAME:$NEXUS_PASSWORD" \
+                      "https://oss.sonatype.org/service/local/staging/profile_repositories" \
+                      | jq -r ".data[] | select(.description | contains(\"$VERSION\")) | .repositoryId" \
+                      | head -1)
+
+                  if [ -z "$STAGING_REPO" ]; then
+                      echo "❌ ERROR: No staging repository found for version $VERSION"
+                      echo ""
+                      echo "This could mean:"
+                      echo "  1. Staging repository was already released"
+                      echo "  2. Staging repository was dropped"
+                      echo "  3. Version mismatch in repository description"
+                      echo ""
+                      echo "Check manually at: https://oss.sonatype.org/"
+                      exit 1
+                  fi
+
+                  echo "✅ Found staging repository: $STAGING_REPO"
+                  echo ""
+
+                  # Check if already closed
+                  REPO_STATUS=$(curl -s -u "$NEXUS_USERNAME:$NEXUS_PASSWORD" \
+                      "https://oss.sonatype.org/service/local/staging/repository/$STAGING_REPO" \
+                      | jq -r '.type')
+
+                  if [ "$REPO_STATUS" != "open" ]; then
+                      echo "📋 Repository already closed (status: $REPO_STATUS)"
+                  else
+                      echo "📋 Closing staging repository..."
+                      curl -s -X POST -u "$NEXUS_USERNAME:$NEXUS_PASSWORD" \
+                          -H "Content-Type: application/json" \
+                          "https://oss.sonatype.org/service/local/staging/bulk/close" \
+                          -d "{\"data\":{\"stagedRepositoryIds\":[\"$STAGING_REPO\"]}}"
+
+                      echo "⏳ Waiting for repository to close (30 seconds)..."
+                      sleep 30
+                  fi
+
+                  # Release staging repository
+                  echo "🚀 Releasing staging repository to Maven Central..."
+                  RELEASE_RESPONSE=$(curl -s -w "\nHTTP_CODE:%{http_code}" -X POST \
+                      -u "$NEXUS_USERNAME:$NEXUS_PASSWORD" \
+                      -H "Content-Type: application/json" \
+                      "https://oss.sonatype.org/service/local/staging/bulk/promote" \
+                      -d "{\"data\":{\"stagedRepositoryIds\":[\"$STAGING_REPO\"],\"autoDropAfterRelease\":true}}")
+
+                  HTTP_CODE=$(echo "$RELEASE_RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
+
+                  if [ "$HTTP_CODE" != "201" ]; then
+                      echo "❌ ERROR: Failed to release staging repository (HTTP $HTTP_CODE)"
+                      echo "$RELEASE_RESPONSE"
+                      exit 1
+                  fi
+
+                  echo "✅ Maven Central staging repository released"
+                  echo "⏱️  Artifacts will sync to Maven Central in 10-30 minutes"
+                  echo "🔗 Check status: https://central.sonatype.com/artifact/org.xtclang/xdk/$VERSION"
+
+            - name: Publish GitHub release
+              if: ${{ steps.targets.outputs.github-release == 'true' }}
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  VERSION="${{ steps.version.outputs.version }}"
+
+                  echo "📦 Publishing GitHub release v$VERSION..."
+
+                  # Check if release exists and is draft
+                  RELEASE_STATE=$(gh release view "v$VERSION" --repo ${{ github.repository }} --json isDraft --jq '.isDraft')
+
+                  if [ "$RELEASE_STATE" != "true" ]; then
+                      echo "⚠️  Release v$VERSION is not a draft (already published?)"
+                      echo "   Skipping GitHub release publication"
+                  else
+                      # Publish the draft release
+                      gh release edit "v$VERSION" \
+                          --repo ${{ github.repository }} \
+                          --draft=false
+
+                      echo "✅ GitHub release v$VERSION published"
+                      echo "🔗 https://github.com/${{ github.repository }}/releases/tag/v$VERSION"
+                  fi
+
+            - name: Publish to Gradle Plugin Portal
+              if: ${{ steps.targets.outputs.plugin-portal == 'true' }}
+              env:
+                  GRADLE_PUBLISH_KEY: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY }}
+                  GRADLE_PUBLISH_SECRET: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET }}
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  VERSION="${{ steps.version.outputs.version }}"
+                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
+
+                  echo "🔌 Publishing to Gradle Plugin Portal..."
+                  echo ""
+                  echo "⚠️  WARNING: This publication is IMMEDIATE and CANNOT be undone"
+                  echo ""
+
+                  # Publish ONLY to Gradle Plugin Portal
+                  ./gradlew $GRADLE_OPTIONS \
+                      -Pversion=$VERSION \
+                      -Porg.xtclang.publish.github=false \
+                      -Porg.xtclang.publish.mavenCentral=false \
+                      -Porg.xtclang.publish.gradlePluginPortal=true \
+                      :plugin:publishPlugins \
+                      --info
+
+                  echo "✅ Published to Gradle Plugin Portal"
+                  echo "🔗 https://plugins.gradle.org/plugin/org.xtclang.xtc-plugin"
+                  echo "⏱️  Plugin may take a few minutes to appear in search"
+
+            - name: Verify release artifacts
+              run: |
+                  VERSION="${{ steps.version.outputs.version }}"
+
+                  echo "🔍 Verifying release artifacts are accessible..."
+                  echo ""
+
+                  # Check GitHub release
+                  echo "📦 Checking GitHub Release..."
+                  if gh release view "v$VERSION" --repo ${{ github.repository }} >/dev/null 2>&1; then
+                      echo "   ✅ GitHub release v$VERSION is published"
+                  else
+                      echo "   ❌ GitHub release not found"
+                  fi
+
+                  # Note: Maven Central sync takes time, so we just provide the link
+                  echo ""
+                  echo "🏛️ Maven Central:"
+                  echo "   ⏳ Syncing to Maven Central (takes 10-30 minutes)"
+                  echo "   🔗 Check: https://central.sonatype.com/artifact/org.xtclang/xdk/$VERSION"
+
+                  if [ "${{ contains(github.event.pull_request.labels.*.name, 'publish-gradle-plugin') }}" = "true" ]; then
+                      echo ""
+                      echo "🔌 Gradle Plugin Portal:"
+                      echo "   ⏳ Processing (takes a few minutes)"
+                      echo "   🔗 Check: https://plugins.gradle.org/plugin/org.xtclang.xtc-plugin"
+                  fi
+
+            - name: Summary
+              run: |
+                  VERSION="${{ steps.version.outputs.version }}"
+                  MAVEN="${{ steps.targets.outputs.maven-central }}"
+                  GITHUB="${{ steps.targets.outputs.github-release }}"
+                  PLUGIN="${{ steps.targets.outputs.plugin-portal }}"
+                  TRIGGER="${{ steps.version.outputs.trigger }}"
+
+                  echo "### 🚀 Release $VERSION Promoted" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+
+                  if [ "$TRIGGER" = "manual" ]; then
+                      echo "**Trigger:** 🎛️ Manual workflow_dispatch" >> $GITHUB_STEP_SUMMARY
+                  else
+                      echo "**Trigger:** 🔄 Automatic (PR merge)" >> $GITHUB_STEP_SUMMARY
+                  fi
+
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Publication Status:**" >> $GITHUB_STEP_SUMMARY
+
+                  if [ "$MAVEN" = "true" ]; then
+                      echo "- ✅ **Maven Central:** Released (syncing in 10-30 min)" >> $GITHUB_STEP_SUMMARY
+                  else
+                      echo "- ⏭️ **Maven Central:** Skipped" >> $GITHUB_STEP_SUMMARY
+                  fi
+
+                  echo "- ✅ **GitHub Packages:** Available" >> $GITHUB_STEP_SUMMARY
+
+                  if [ "$GITHUB" = "true" ]; then
+                      echo "- ✅ **GitHub Release:** Published" >> $GITHUB_STEP_SUMMARY
+                  else
+                      echo "- ⏭️ **GitHub Release:** Skipped" >> $GITHUB_STEP_SUMMARY
+                  fi
+
+                  if [ "$PLUGIN" = "true" ]; then
+                      echo "- ✅ **Gradle Plugin Portal:** Published" >> $GITHUB_STEP_SUMMARY
+                  else
+                      echo "- ⏭️ **Gradle Plugin Portal:** Skipped" >> $GITHUB_STEP_SUMMARY
+                  fi
+
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Links:**" >> $GITHUB_STEP_SUMMARY
+
+                  if [ "$GITHUB" = "true" ]; then
+                      echo "- 🔗 [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/v$VERSION)" >> $GITHUB_STEP_SUMMARY
+                  fi
+
+                  if [ "$MAVEN" = "true" ]; then
+                      echo "- 🔗 [Maven Central](https://central.sonatype.com/artifact/org.xtclang/xdk/$VERSION)" >> $GITHUB_STEP_SUMMARY
+                  fi
+
+                  if [ "$PLUGIN" = "true" ]; then
+                      echo "- 🔗 [Gradle Plugin Portal](https://plugins.gradle.org/plugin/org.xtclang.xtc-plugin)" >> $GITHUB_STEP_SUMMARY
+                  fi
+
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
+
+                  if [ "$MAVEN" = "true" ]; then
+                      echo "1. ⏳ Wait 10-30 minutes for Maven Central sync" >> $GITHUB_STEP_SUMMARY
+                      echo "2. 🔍 Verify artifacts: https://central.sonatype.com/artifact/org.xtclang/xdk/$VERSION" >> $GITHUB_STEP_SUMMARY
+                  fi
+
+                  echo "3. 📢 Announce the release" >> $GITHUB_STEP_SUMMARY
+                  echo "4. 🎉 Celebrate! 🎊" >> $GITHUB_STEP_SUMMARY
+
+            - name: Post release comment
+              # Only post comment if triggered by PR merge
+              if: ${{ steps.version.outputs.trigger == 'pr-merge' }}
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  VERSION="${{ steps.version.outputs.version }}"
+                  PR_NUMBER="${{ github.event.pull_request.number }}"
+                  MAVEN="${{ steps.targets.outputs.maven-central }}"
+                  GITHUB="${{ steps.targets.outputs.github-release }}"
+                  PLUGIN="${{ steps.targets.outputs.plugin-portal }}"
+
+                  COMMENT="## 🚀 Release $VERSION Promoted to Production
+
+                  ### Published Artifacts
+                  "
+
+                  if [ "$MAVEN" = "true" ]; then
+                      COMMENT="$COMMENT
+                  - ✅ **Maven Central**: Released (syncing in 10-30 min)
+                    - https://central.sonatype.com/artifact/org.xtclang/xdk/$VERSION"
+                  fi
+
+                  if [ "$GITHUB" = "true" ]; then
+                      COMMENT="$COMMENT
+                  - ✅ **GitHub Release**: Published
+                    - https://github.com/${{ github.repository }}/releases/tag/v$VERSION"
+                  fi
+
+                  if [ "$PLUGIN" = "true" ]; then
+                      COMMENT="$COMMENT
+                  - ✅ **Gradle Plugin Portal**: Published
+                    - https://plugins.gradle.org/plugin/org.xtclang.xtc-plugin"
+                  fi
+
+                  COMMENT="$COMMENT
+
+                  ### Usage
+
+                  Maven:
+                  \`\`\`xml
+                  <dependency>
+                      <groupId>org.xtclang</groupId>
+                      <artifactId>xdk</artifactId>
+                      <version>$VERSION</version>
+                  </dependency>
+                  \`\`\`
+
+                  Gradle:
+                  \`\`\`kotlin
+                  dependencies {
+                      implementation(\"org.xtclang:xdk:$VERSION\")
+                  }
+                  \`\`\`
+
+                  Download:
+                  \`\`\`bash
+                  curl -LO https://github.com/${{ github.repository }}/releases/download/v$VERSION/xdk-$VERSION.zip
+                  \`\`\`
+
+                  🎉 **Release complete!**"
+
+                  gh pr comment "$PR_NUMBER" --body "$COMMENT"
