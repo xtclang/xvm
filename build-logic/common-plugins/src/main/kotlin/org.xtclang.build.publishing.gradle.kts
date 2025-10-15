@@ -55,10 +55,8 @@ extensions.configure<MavenPublishBaseExtension> {
     signAllPublications()
     coordinates(publicationGroupId, publicationArtifactId, publicationVersion)
 
-    // Maven Central publishing (disabled by default) - resolve at configuration time
-    if (xdkPublishingCredentials.enableMavenCentral.get()) {
-        publishToMavenCentral(automaticRelease = false)
-    }
+    // Always register Maven Central repository (will be skipped at task level if disabled)
+    publishToMavenCentral(automaticRelease = false)
 
     // Common POM configuration
     pom {
@@ -84,18 +82,16 @@ extensions.configure<MavenPublishBaseExtension> {
     }
 }
 
-// Configure GitHub Packages repository - credentials resolved at configuration time (configuration cache safe)
+// Always register GitHub Packages repository (will be skipped at task level if disabled)
 extensions.configure<PublishingExtension> {
     repositories {
-        if (xdkPublishingCredentials.enableGithub.get()) {
-            maven {
-                name = "github"
-                url = uri("https://maven.pkg.github.com/xtclang/xvm")
-                // Credentials are configuration cache inputs and evaluated at configuration time
-                credentials {
-                    username = xdkPublishingCredentials.githubUsername.get().ifEmpty { "xtclang" }
-                    password = xdkPublishingCredentials.githubPassword.get()
-                }
+        maven {
+            name = "github"
+            url = uri("https://maven.pkg.github.com/xtclang/xvm")
+            // Credentials are configuration cache inputs and evaluated at configuration time
+            credentials {
+                username = xdkPublishingCredentials.githubUsername.get().ifEmpty { "xtclang" }
+                password = xdkPublishingCredentials.githubPassword.get()
             }
         }
     }
@@ -134,27 +130,57 @@ plugins.withType<SigningPlugin> {
     }
 }
 
+// Evaluate publishing flags at configuration time to avoid capturing extension in doFirst
+val githubEnabled = xdkPublishingCredentials.enableGithub.get()
+val mavenCentralEnabled = xdkPublishingCredentials.enableMavenCentral.get()
+val pluginPortalEnabled = xdkPublishingCredentials.enablePluginPortal.get()
+
+// Disable publish tasks for disabled repositories at configuration time
+tasks.withType<PublishToMavenRepository>().configureEach {
+    val repoName = name.substringAfter("To").substringBefore("Repository")
+    logger.lifecycle("[publishing] Configuring task $name for repository: $repoName")
+    when {
+        repoName.equals("Github", ignoreCase = true) && !githubEnabled -> {
+            enabled = false
+            logger.info("[publishing] Disabled task $name - GitHub Packages publishing is disabled")
+        }
+        repoName.equals("MavenCentral", ignoreCase = true) && !mavenCentralEnabled -> {
+            enabled = false
+            logger.info("[publishing] Disabled task $name - Maven Central publishing is disabled")
+        }
+    }
+}
+
+// Disable Gradle Plugin Portal task if disabled
+plugins.withId("com.gradle.plugin-publish") {
+    tasks.named("publishPlugins") {
+        if (!pluginPortalEnabled) {
+            enabled = false
+            logger.lifecycle("[publishing] Disabled task publishPlugins - Gradle Plugin Portal publishing is disabled")
+        }
+    }
+}
+
+// Log publishing configuration at configuration time
+logger.lifecycle("[publishing] GitHub Packages: ${if (githubEnabled) "ENABLED" else "DISABLED"}")
+logger.lifecycle("[publishing] Maven Central: ${if (mavenCentralEnabled) "ENABLED" else "DISABLED"}")
+logger.lifecycle("[publishing] Gradle Plugin Portal: ${if (pluginPortalEnabled) "ENABLED" else "DISABLED"}")
+
 // Register validateCredentials task for credential validation
 val validateCredentials by tasks.registering(ValidateCredentialsTask::class) {
     group = PUBLISH_TASK_GROUP
     description = "Validate all publishing credentials (GitHub, Maven Central, Plugin Portal, Signing) without publishing"
-
     // Set project name for output (configuration-cache safe)
     projectName.set(project.name)
-
-    // Use centralized credential management
+    enableGithub.set(xdkPublishingCredentials.enableGithub)
     githubUsername.set(xdkPublishingCredentials.githubUsername)
     githubPassword.set(xdkPublishingCredentials.githubPassword)
-    enableGithub.set(xdkPublishingCredentials.enableGithub)
-
     enablePluginPortal.set(xdkPublishingCredentials.enablePluginPortal)
     gradlePublishKey.set(xdkPublishingCredentials.gradlePublishKey)
     gradlePublishSecret.set(xdkPublishingCredentials.gradlePublishSecret)
-
     enableMavenCentral.set(xdkPublishingCredentials.enableMavenCentral)
     mavenCentralUsername.set(xdkPublishingCredentials.mavenCentralUsername)
     mavenCentralPassword.set(xdkPublishingCredentials.mavenCentralPassword)
-
     signingKeyId.set(xdkPublishingCredentials.signingKeyId)
     signingPassword.set(xdkPublishingCredentials.signingPassword)
     signingSecretKeyRingFile.set(xdkPublishingCredentials.signingSecretKeyRingFile)

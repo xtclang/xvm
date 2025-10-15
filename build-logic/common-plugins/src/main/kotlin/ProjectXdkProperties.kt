@@ -45,7 +45,22 @@ abstract class ProjectXdkProperties @Inject constructor(
 
     fun hasProvider(key: String): Provider<Boolean> = providers.provider { resolve(key) != null }
 
-    private fun toEnvKey(key: String) = key.replace('.', '_').uppercase()
+    /**
+     * Convert a property key to environment variable format.
+     * Examples:
+     *   org.xtclang.publish.github -> ORG_XTCLANG_PUBLISH_GITHUB
+     *   githubUsername -> GITHUB_USERNAME
+     *   mavenCentralUsername -> MAVEN_CENTRAL_USERNAME
+     */
+    private fun toEnvKey(key: String): String {
+        // First replace dots with underscores
+        val withUnderscores = key.replace('.', '_')
+        // Then insert underscores before uppercase letters in camelCase
+        val withCamelCase = withUnderscores.replace(Regex("([a-z])([A-Z])")) { matchResult ->
+            "${matchResult.groupValues[1]}_${matchResult.groupValues[2]}"
+        }
+        return withCamelCase.uppercase()
+    }
 }
 
 /**
