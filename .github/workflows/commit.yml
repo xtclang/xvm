@@ -1,4 +1,3 @@
-#
 # GitHub runner workflow for building, verifying and testing the XVM repo.
 #
 # This is the main CI workflow that runs on every push. It builds the XDK,
@@ -36,8 +35,8 @@ on:
                 default: 'ubuntu-latest'
                 options:
                     - 'ubuntu-latest'
-                    - 'all'
                     - 'windows-latest'
+                    - 'all'
             extra-gradle-options:
                 description: 'Extra Gradle options to pass to the build'
                 required: false
@@ -46,11 +45,11 @@ on:
                 type: boolean
                 required: false
                 default: true
-            parallel-test:
+            parallel-test-mode:
                 description: 'Run manual tests in parallel mode'
                 type: boolean
                 required: false
-                default: false
+                default: true
 
 env:
     # Add manual tests as an included build to the composite build configuration
@@ -59,7 +58,7 @@ env:
     ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
 
     skip_manual_tests: ${{ github.event.inputs.skip_tests == true || github.event.inputs.skip_tests == 'true' }}
-    run_manual_tests_parallel: ${{ github.event.inputs.parallel-test == true || github.event.inputs.parallel-test == 'true' }}
+    run_manual_tests_parallel: ${{ github.event.inputs.parallel-test-mode == true || github.event.inputs.parallel-test-mode == 'true' }}
     trigger_publishing: ${{ github.event.inputs.test-publishing == true || github.event.inputs.test-publishing == 'true' }}
 
     # Gradle cache inspection function
@@ -192,13 +191,11 @@ jobs:
         steps:
             - name: Check build status
               run: |
-                  if [ "${{ needs.build-and-test.result }}" = "success" ]; then
-                      echo "✅ All builds completed successfully"
-                      exit 0
-                  else
-                      echo "❌ Build failed or was cancelled"
-                      exit 1
+                  if [ "${{ needs.build-and-test.result }}" ! "success" ]; then
+                    echo "❌ Build failed or was cancelled"
+                    exit 1
                   fi
+                  echo "✅ All builds completed successfully"                      
 
     # Trigger publishing workflows when test-publishing is enabled
     # This job runs after build-and-test succeeds and explicitly triggers downstream workflows
@@ -223,10 +220,7 @@ jobs:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   echo "🚀 Triggering Publish Snapshots workflow..."
-                  gh workflow run "Publish Snapshots" \
-                      --repo ${{ github.repository }} \
-                      --ref ${{ github.ref_name }} \
-                      --field ci-run-id=${{ github.run_id }}
+                  gh workflow run "Publish Snapshots" --repo ${{ github.repository }} --ref ${{ github.ref_name }} --field ci-run-id=${{ github.run_id }}
                   echo "✅ Snapshot publishing triggered"
 
             - name: Trigger Docker publishing
@@ -234,10 +228,7 @@ jobs:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   echo "🚀 Triggering Build Docker Images workflow..."
-                  gh workflow run "Build Docker Images" \
-                      --repo ${{ github.repository }} \
-                      --ref ${{ github.ref_name }} \
-                      --field ci-run-id=${{ github.run_id }}
+                  gh workflow run "Build Docker Images" --repo ${{ github.repository }} --ref ${{ github.ref_name }} --field ci-run-id=${{ github.run_id }}
                   echo "✅ Docker publishing triggered"
 
             - name: Trigger Homebrew update
@@ -245,10 +236,7 @@ jobs:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   echo "🚀 Triggering Update Homebrew workflow..."
-                  gh workflow run "Update Homebrew" \
-                      --repo ${{ github.repository }} \
-                      --ref ${{ github.ref_name }} \
-                      --field ci-run-id=${{ github.run_id }}
+                  gh workflow run "Update Homebrew" --repo ${{ github.repository }} --ref ${{ github.ref_name }} --field ci-run-id=${{ github.run_id }}
                   echo "✅ Homebrew update triggered"
 
             - name: Summary
