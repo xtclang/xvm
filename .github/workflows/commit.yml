@@ -62,6 +62,9 @@ env:
     run_manual_tests: ${{ github.event.inputs.test != 'false' }}
     run_manual_tests_parallel: ${{ github.event.inputs.parallel-test == 'true' }}
 
+    # Normalize test-publishing to handle both boolean (UI) and string (CLI) inputs
+    trigger_publishing: ${{ github.event.inputs.test-publishing == true || github.event.inputs.test-publishing == 'true' }}
+
     # Gradle cache inspection function
     GRADLE_CACHE_INSPECT: |
         inspect_gradle_cache() {
@@ -158,12 +161,9 @@ jobs:
                     fi
                     echo "🧪 Running manual tests inline (cache still hot)..."
                     inspect_gradle_cache "before manual tests"
-                  ./gradlew $GRADLE_OPTIONS manualTests:runXtc
-                  ./gradlew $GRADLE_OPTIONS manualTests:runOne -PtestName=TestMisc
-                  ./gradlew $GRADLE_OPTIONS manualTests:runTwoTestsInSequence
-                    MANUAL_TASK=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runAllTestTasks" )
-                  echo "Running manual tests: $MANUAL_TASK"
-                  ./gradlew $GRADLE_OPTIONS manualTests:$MANUAL_TASK
+                    manual_task_main=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runAllTestTasks" )
+                    echo "Running manual tests (main task: $manual_task_main)"
+                    ./gradlew $GRADLE_OPTIONS manualTests:runXtc manualTests:runOne -PtestName=TestMisc manualTests:runTwoTestsInSequence "manualTests:$manual_task_main"
                     inspect_gradle_cache "after manual tests"
                     echo "✅ Manual tests completed"
 
@@ -177,7 +177,7 @@ jobs:
 
             - name: Summary
               if: success()
-              shell: bash
+              shell: bashConfiguring ta
               run: |
                   echo "### ✅ Build and Test Completed" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
@@ -213,8 +213,7 @@ jobs:
         runs-on: ubuntu-latest
         if: |
             success() &&
-            (github.event_name == 'workflow_dispatch' &&
-             github.event.inputs.test-publishing == true)
+            (github.event_name == 'workflow_dispatch' && env.trigger_publishing == 'true')
 
         steps:
             - name: Checkout repository
