@@ -4,7 +4,7 @@
 # This workflow builds multi-platform Docker images (amd64/arm64) and pushes them to GHCR.
 # It triggers automatically on master after CI completes, or can be manually triggered.
 #
-name: Build Docker Images
+name: publish_docker
 
 permissions:
     contents: read
@@ -13,10 +13,10 @@ permissions:
 
 on:
     # Automatic trigger after CI completes
-    # - VerifyCommit on master: Automatic publishing
-    # - VerifyCommit via workflow_dispatch: Testing on any branch
+    # - verify_commit on master: Automatic publishing
+    # - verify_commit via workflow_dispatch: Testing on any branch
     workflow_run:
-        workflows: ["VerifyCommit"]
+        workflows: ["verify_commit"]
         types: [completed]
 
     # Manual trigger from any branch
@@ -158,13 +158,14 @@ jobs:
                   echo "run-id=$RUN_ID" >> $GITHUB_OUTPUT
 
             - name: Download XDK build artifact
-              uses: actions/download-artifact@v4
+              id: artifact
+              uses: ./.github/actions/download-ci-artifact
               with:
-                  name: xdk-dist-${{ steps.commit.outputs.commit }}
-                  path: ./artifacts
+                  run-id: ${{ steps.commit.outputs.run-id }}
+                  commit: ${{ steps.commit.outputs.commit }}
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   repository: ${{ github.repository }}
-                  run-id: ${{ steps.commit.outputs.run-id }}
+                  output-path: ./artifacts
 
             - name: Build and push Docker image (${{ matrix.arch }})
               shell: bash
@@ -185,8 +186,8 @@ jobs:
                   echo "🏷️ Architecture-specific tags for ${{ matrix.arch }}:"
                   echo "$TAGS"
 
-                  # Copy XDK ZIP to Docker context
-                  DIST_ZIP_FILE=$(find ../artifacts -name "xdk-*.zip" | head -1)
+                  # Copy XDK ZIP to Docker context (artifact already validated by download-ci-artifact action)
+                  DIST_ZIP_FILE="${{ steps.artifact.outputs.artifact-path }}"
                   cp "$DIST_ZIP_FILE" xdk-dist.zip
                   echo "📦 Copied: $(basename "$DIST_ZIP_FILE") → xdk-dist.zip"
 

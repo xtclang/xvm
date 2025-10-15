@@ -3,9 +3,9 @@
 # Build XDK snapshot and optionally trigger CI to upload as GitHub artifact
 #
 # Usage:
-#   ./bin/build-and-upload-artifact.sh              # Build locally only
-#   ./bin/build-and-upload-artifact.sh --upload     # Build locally then trigger CI
-#   ./bin/build-and-upload-artifact.sh --ci-only    # Only trigger CI (no local build)
+#   ./bin/artifact.sh              # Build locally only
+#   ./bin/artifact.sh --upload     # Build locally then trigger CI
+#   ./bin/artifact.sh --ci-only    # Only trigger CI (no local build)
 #
 
 set -euo pipefail
@@ -85,7 +85,7 @@ if [ "$CHECK_STATUS" = true ]; then
     fi
 
     # Filter for runs matching current commit
-    MATCHING_RUN=$(echo "$RUN_JSON" | jq --arg commit "$COMMIT" '.[] | select(.headSha == $commit and .workflowName == "VerifyCommit") | {databaseId, status, conclusion, createdAt}' | jq -s 'sort_by(.createdAt) | reverse | .[0]')
+    MATCHING_RUN=$(echo "$RUN_JSON" | jq --arg commit "$COMMIT" '.[] | select(.headSha == $commit and .workflowName == "verify_commit") | {databaseId, status, conclusion, createdAt}' | jq -s 'sort_by(.createdAt) | reverse | .[0]')
 
     if [ "$MATCHING_RUN" = "null" ] || [ -z "$MATCHING_RUN" ]; then
         echo -e "${YELLOW}⚠️  No CI runs found for commit $SHORT_COMMIT${NC}"
@@ -199,7 +199,7 @@ if [ "$UPLOAD" = true ] || [ "$CI_ONLY" = true ]; then
     echo -e "${BLUE}Triggering CI workflow to upload artifact...${NC}"
     echo ""
     echo -e "${YELLOW}Note: GitHub artifacts can only be uploaded during workflow runs.${NC}"
-    echo -e "${YELLOW}This will trigger VerifyCommit which will build and upload.${NC}"
+    echo -e "${YELLOW}This will trigger verify_commit which will build and upload.${NC}"
     echo ""
 
     # Check if gh CLI is available

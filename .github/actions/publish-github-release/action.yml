@@ -4,7 +4,7 @@
 # This action takes a build artifact and publishes it to a GitHub Release with
 # version-based naming. Supports both snapshot (overwrites) and release (tagged) modes.
 #
-name: 'Publish GitHub Release'
+name: 'publish_github_release'
 description: 'Publishes XDK build artifact to GitHub Release with version-based naming'
 
 inputs:

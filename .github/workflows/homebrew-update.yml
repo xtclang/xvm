@@ -4,7 +4,7 @@
 # This workflow updates the Homebrew formula with the latest XDK snapshot release.
 # It triggers automatically on master after CI completes, or can be manually triggered.
 #
-name: Update Homebrew
+name: update_homebrew
 
 permissions:
     contents: read
@@ -12,10 +12,10 @@ permissions:
 
 on:
     # Automatic trigger after CI completes
-    # - VerifyCommit on master: Automatic publishing
-    # - VerifyCommit via workflow_dispatch: Testing on any branch
+    # - verify_commit on master: Automatic publishing
+    # - verify_commit via workflow_dispatch: Testing on any branch
     workflow_run:
-        workflows: ["VerifyCommit"]
+        workflows: ["verify_commit"]
         types: [completed]
 
     # Manual trigger from any branch
@@ -88,13 +88,14 @@ jobs:
                   echo "run-id=$RUN_ID" >> $GITHUB_OUTPUT
 
             - name: Download XDK build artifact
-              uses: actions/download-artifact@v4
+              id: artifact
+              uses: ./.github/actions/download-ci-artifact
               with:
-                  name: xdk-dist-${{ steps.commit.outputs.commit }}
-                  path: ./artifacts
+                  run-id: ${{ steps.commit.outputs.run-id }}
+                  commit: ${{ steps.commit.outputs.commit }}
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   repository: ${{ github.repository }}
-                  run-id: ${{ steps.commit.outputs.run-id }}
+                  output-path: ./artifacts
 
             - name: Update Homebrew formula
               env:
@@ -108,12 +109,8 @@ jobs:
                       exit 1
                   fi
 
-                  # Get SHA256 from build artifact
-                  XDK_ZIP=$(find ./artifacts -name "xdk-*.zip" | head -1)
-                  if [ -z "$XDK_ZIP" ]; then
-                      echo "❌ No XDK artifact found"
-                      exit 1
-                  fi
+                  # Get SHA256 from build artifact (artifact already validated by download-ci-artifact action)
+                  XDK_ZIP="${{ steps.artifact.outputs.artifact-path }}"
                   SHA256=$(sha256sum "$XDK_ZIP" | cut -d' ' -f1)
 
                   # Build release URL and dynamic version

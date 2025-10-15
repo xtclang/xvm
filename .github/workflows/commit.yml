@@ -10,7 +10,7 @@
 # - Ubuntu: ubuntu-latest (currently Ubuntu 22.04)
 # - Windows: windows-latest
 #
-name: VerifyCommit
+name: verify_commit
 
 permissions:
     contents: write
