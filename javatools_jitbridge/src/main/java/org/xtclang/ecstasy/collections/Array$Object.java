@@ -11,8 +11,7 @@ import org.xvm.javajit.Ctx;
 import static java.lang.Math.max;
 import static java.lang.System.arraycopy;
 
-public class Array$Object
-        extends Array {
+public class Array$Object extends Array {
 
     public Array$Object(Ctx ctx) {
         super(ctx);
@@ -31,13 +30,47 @@ public class Array$Object
     }
 
     @Override public long capacity$get$p(Ctx ctx) {
-        return $delegate == null ? $storage.length : $delegate.capacity$get$p(ctx);
+        return $delegate == null
+                ? $storage == null ? $capCfg(ctx) : $storage.length
+                : $delegate.capacity$get$p(ctx);
     }
 
     @Override public void capacity$set$p(Ctx ctx, long cap) {
         if ($delegate != null) {
             $delegate.capacity$set$p(ctx, cap);
             return;
+        }
+
+        // validate new capacity
+        if (cap < 0 || cap > $CAP_MASK) {
+            throw $oob(ctx, cap);
+        }
+
+        // before allocating storage, the desired capacity is only a plan
+        if ($storage == null) {
+            $capCfg(ctx, cap);
+            return;
+        }
+
+        // this class is only responsible for non-huge sizes; delegate the handling of huge sizes
+        if (cap > $SIZE_MASK) {
+            $growHuge(ctx, cap);
+            return;
+        }
+
+        int smallCap = (int) cap;
+        if (smallCap < $storage.length) {
+            // either the caller desires a shrink or they're just making sure we have "at least"
+            // the specified capacity
+            if (smallCap == ($sizeEtc & $SIZE_MASK)) {
+                // if the specified capacity is exactly the current size (i.e. `a.capacity=a.size`),
+                // assume that the intention is to trim to the exact amount of storage being used
+                xObj[] newArray = new xObj[smallCap];
+                arraycopy($storage, 0, newArray, 0, smallCap);
+                $storage = newArray;
+            }
+        } else if (smallCap > $storage.length) {
+            $growInPlace(ctx, smallCap);
         }
     }
 
@@ -169,6 +202,7 @@ public class Array$Object
 
     @Override public Array$Object slice$p(Ctx ctx, long n1, long n2) {
         // slice must be in-range
+        // TODO check lower bound as well
         long upper = Range$Int64.$effectiveUpperBound(ctx, n1, n2);
         if (size$p(ctx) > upper) {
             throw $oob(ctx, upper);
@@ -197,7 +231,7 @@ public class Array$Object
         assert minCap > 0 && minCap <= $SIZE_MASK+1 && ($storage == null || minCap > $storage.length);
 
         if ($storage == null) {
-            long cap = max($capCfg(), minCap);
+            long cap = max($capCfg(ctx), minCap);
             if (cap > $SIZE_MASK) {
                 $growHuge(ctx, cap);
                 return false;
