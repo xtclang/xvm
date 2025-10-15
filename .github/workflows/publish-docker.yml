@@ -130,6 +130,8 @@ jobs:
             - name: Determine commit and run ID
               id: commit
               shell: bash
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   RUN_ID="${{ github.event.inputs.ci-run-id }}"
                   # Get commit from the specified run
