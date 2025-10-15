@@ -5,7 +5,10 @@
 # - GitHub Packages (Maven artifacts)
 # - GitHub Releases (XDK snapshot release)
 #
-# It triggers automatically on master after CI completes, or can be manually triggered.
+# Triggered by verify_commit workflow when:
+# - Running on master branch (automatic)
+# - Manually run with test-publishing=true (testing)
+# Can also be triggered manually via workflow_dispatch for testing.
 #
 name: publish_snapshot_release
 
@@ -15,14 +18,8 @@ permissions:
     actions: read
 
 on:
-    # Automatic trigger after CI completes
-    # - verify_commit on master: Automatic publishing
-    # - verify_commit via workflow_dispatch: Testing on any branch
-    workflow_run:
-        workflows: ["verify_commit"]
-        types: [completed]
-
-    # Manual trigger from any branch
+    # Triggered explicitly by verify_commit workflow (on master or when test-publishing=true)
+    # Can also be manually triggered for testing
     workflow_dispatch:
         inputs:
             ci-run-id:
@@ -63,15 +60,6 @@ jobs:
     publish-snapshots:
         name: Publish snapshot artifacts
         runs-on: ubuntu-latest
-        # Only run if:
-        # - Manual trigger, OR
-        # - CI succeeded AND (master branch OR manually dispatched CI with test-publishing=true)
-        if: |
-            github.event_name == 'workflow_dispatch' ||
-            (github.event.workflow_run.conclusion == 'success' &&
-             (github.event.workflow_run.head_branch == 'master' ||
-              (github.event.workflow_run.event == 'workflow_dispatch' &&
-               github.event.workflow_run.inputs.test-publishing == 'true')))
 
         steps:
             - name: Fetch Sources
@@ -108,14 +96,8 @@ jobs:
               id: commit
               shell: bash
               run: |
-                  # Use workflow_run commit if triggered automatically
-                  if [ "${{ github.event_name }}" = "workflow_run" ]; then
-                      GH_COMMIT="${{ github.event.workflow_run.head_sha }}"
-                      RUN_ID="${{ github.event.workflow_run.id }}"
-                      echo "📌 Using commit from workflow_run: $GH_COMMIT (run: $RUN_ID)"
-                      echo "has-artifact=true" >> $GITHUB_OUTPUT
-                  # Use manual input if provided
-                  elif [ -n "${{ github.event.inputs.ci-run-id }}" ]; then
+                  # Use CI run ID from input if provided
+                  if [ -n "${{ github.event.inputs.ci-run-id }}" ]; then
                       RUN_ID="${{ github.event.inputs.ci-run-id }}"
                       # Get commit from the specified run
                       GH_COMMIT=$(gh api /repos/${{ github.repository }}/actions/runs/$RUN_ID --jq '.head_sha')

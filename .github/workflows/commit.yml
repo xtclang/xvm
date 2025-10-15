@@ -2,9 +2,9 @@
 # GitHub runner workflow for building, verifying and testing the XVM repo.
 #
 # This is the main CI workflow that runs on every push. It builds the XDK,
-# runs tests, and uploads build artifacts. Other workflows (snapshot-release,
-# maven-publish-snapshot, docker-build, homebrew-update) depend on this workflow
-# and are triggered automatically on master branch or manually from any branch.
+# runs tests, and uploads build artifacts. After a successful build, publishing
+# workflows (snapshot-release, docker-build, homebrew-update) are automatically
+# triggered on master branch or when manually run with test-publishing=true.
 #
 # PLATFORM NOTES:
 # - Ubuntu: ubuntu-latest (currently Ubuntu 22.04)
@@ -14,7 +14,7 @@ name: verify_commit
 
 permissions:
     contents: write
-    actions: read
+    actions: write
 
 on:
     push:
@@ -185,3 +185,66 @@ jobs:
                   echo "- **Java Version:** ${{ steps.versions.outputs.java-version }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+
+    # Trigger publishing workflows on master or when test-publishing is enabled
+    # This job runs after build-and-test succeeds and explicitly triggers downstream workflows
+    trigger-publishing:
+        name: Trigger publishing workflows
+        needs: build-and-test
+        runs-on: ubuntu-latest
+        if: |
+            success() &&
+            (github.ref_name == 'master' ||
+             (github.event_name == 'workflow_dispatch' &&
+              github.event.inputs.test-publishing == 'true'))
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v5
+              with:
+                  fetch-depth: 1
+
+            - name: Trigger snapshot publishing
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  echo "🚀 Triggering publish_snapshot_release workflow..."
+                  gh workflow run publish_snapshot_release \
+                      --repo ${{ github.repository }} \
+                      --ref ${{ github.ref_name }} \
+                      --field ci-run-id=${{ github.run_id }}
+                  echo "✅ Snapshot publishing triggered"
+
+            - name: Trigger Docker publishing
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  echo "🚀 Triggering publish_docker workflow..."
+                  gh workflow run publish_docker \
+                      --repo ${{ github.repository }} \
+                      --ref ${{ github.ref_name }} \
+                      --field ci-run-id=${{ github.run_id }}
+                  echo "✅ Docker publishing triggered"
+
+            - name: Trigger Homebrew update
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  echo "🚀 Triggering update_homebrew workflow..."
+                  gh workflow run update_homebrew \
+                      --repo ${{ github.repository }} \
+                      --ref ${{ github.ref_name }} \
+                      --field ci-run-id=${{ github.run_id }}
+                  echo "✅ Homebrew update triggered"
+
+            - name: Summary
+              if: success()
+              run: |
+                  echo "### 🚀 Publishing Workflows Triggered" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "The following workflows have been triggered:" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ Snapshot publishing" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ Docker publishing" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ Homebrew update" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "Check the [Actions tab](https://github.com/${{ github.repository }}/actions) for workflow status." >> $GITHUB_STEP_SUMMARY
