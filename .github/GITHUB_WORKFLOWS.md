@@ -28,7 +28,7 @@ The XVM CI/CD pipeline follows a clear separation between internal build artifac
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  commit.yml (verify_commit)                                          │
+│  commit.yml (Verify Commit)                                     │
 │  ├─ Build XDK                                                   │
 │  ├─ Run tests (including manual tests)                          │
 │  └─ Upload artifact: xdk-dist-{COMMIT}                          │
@@ -189,7 +189,7 @@ All workflows support `workflow_dispatch` for manual testing from any branch.
 
 ## Workflows Reference
 
-### commit.yml (verify_commit)
+### commit.yml (Verify Commit)
 
 **Trigger**: Every push, every pull request, manual
 
@@ -600,7 +600,7 @@ gh workflow run dependency-updates.yml
 
 ### Overview
 
-To test the complete publishing pipeline (snapshot, Docker, Homebrew) from a non-master branch **without** merging to master, manually dispatch the **verify_commit** workflow. When manually triggered, verify_commit automatically triggers all three publishing workflows after successful completion.
+To test the complete publishing pipeline (snapshot, Docker, Homebrew) from a non-master branch **without** merging to master, manually dispatch the **Verify Commit** workflow. When manually triggered, Verify Commit automatically triggers all three publishing workflows after successful completion.
 
 ### Single Command to Test Publishing
 
@@ -620,9 +620,9 @@ This command will:
 ### How It Works
 
 **Trigger Mechanism**:
-- Publishing workflows listen for `workflow_run` events from "verify_commit"
+- Publishing workflows listen for `workflow_run` events from "Verify Commit"
 - They check: `github.event.workflow_run.inputs.test-publishing == 'true'`
-- When verify_commit is manually dispatched with `test-publishing=true`, this condition is TRUE
+- When Verify Commit is manually dispatched with `test-publishing=true`, this condition is TRUE
 - Therefore, publishing workflows run even on non-master branches
 
 **Automatic vs Manual Triggering**:
@@ -646,7 +646,7 @@ git commit -am "Update snapshot publishing"
 git push origin feature/update-publishing
 ```
 
-**2. Trigger verify_commit (builds + triggers publishing)**:
+**2. Trigger Verify Commit (builds + triggers publishing)**:
 ```bash
 gh workflow run commit.yml --ref feature/update-publishing -f test-publishing=true
 ```
@@ -662,14 +662,14 @@ gh run watch
 
 **4. Check triggered publishing workflows**:
 - Go to Actions tab in GitHub
-- Look for these workflows that started after verify_commit completed:
+- Look for these workflows that started after Verify Commit completed:
   - "Publish Snapshots"
   - "Build Docker Images"
   - "Update Homebrew"
 
 ### What Gets Published
 
-When you manually trigger verify_commit from a non-master branch:
+When you manually trigger Verify Commit from a non-master branch:
 
 **✅ Maven Snapshots**: Published to GitHub Packages
 - Requires version contains `-SNAPSHOT`
@@ -744,7 +744,7 @@ gh pr create --title "Optimize Docker builds"
 ### Monitoring Progress in GitHub UI
 
 1. Go to: `https://github.com/xtclang/xvm/actions`
-2. Click on the running "verify_commit" workflow
+2. Click on the running "Verify Commit" workflow
 3. Wait for it to complete (shows green checkmark)
 4. Look for triggered workflows below:
    - **Publish Snapshots** - Check it completed successfully
@@ -780,10 +780,10 @@ You can run multiple times on the same commit:
 ### Troubleshooting
 
 **Problem**: Publishing workflows don't trigger
-**Solution**: Check verify_commit completed successfully. Publishing only triggers on success.
+**Solution**: Check Verify Commit completed successfully. Publishing only triggers on success.
 
 **Problem**: "Artifact not found" error in publishing workflows
-**Solution**: verify_commit must complete fully and upload artifact. Check the verify_commit run succeeded.
+**Solution**: Verify Commit must complete fully and upload artifact. Check the Verify Commit run succeeded.
 
 **Problem**: Snapshot publishing fails with "not a SNAPSHOT version"
 **Solution**: Your `version.properties` must contain `-SNAPSHOT`. Update it or skip snapshot testing.
@@ -795,7 +795,7 @@ You can run multiple times on the same commit:
 ### Running Manual Tests via CI Workflow
 
 **Method 1: Via GitHub UI**
-1. Go to Actions → verify_commit workflow
+1. Go to Actions → Verify Commit workflow
 2. Click "Run workflow"
 3. Select branch
 4. Configure inputs:
