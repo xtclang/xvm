@@ -213,7 +213,8 @@ jobs:
         runs-on: ubuntu-latest
         if: |
             success() &&
-            (github.event_name == 'workflow_dispatch' && env.trigger_publishing == 'true')
+            (github.event_name == 'workflow_dispatch' &&
+             (github.event.inputs.test-publishing == true || github.event.inputs.test-publishing == 'true'))
 
         steps:
             - name: Checkout repository
