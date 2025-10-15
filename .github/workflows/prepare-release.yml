@@ -208,7 +208,6 @@ jobs:
               run: |
                   VERSION="${{ needs.prepare-release.outputs.release-version }}"
                   GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
-
                   echo "🧪 Running tests..."
                   ./gradlew $GRADLE_OPTIONS -Pversion=$VERSION check
 
@@ -255,9 +254,7 @@ jobs:
                   SIGNING_PASSWORD: ${{ secrets.ORG_XTCLANG_SIGNING_PASSWORD }}
                   ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
                   ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
-                  ORG_XTCLANG_PUBLISH_GITHUB: true
-                  ORG_XTCLANG_PUBLISH_MAVEN_CENTRAL: true
-                  ORG_XTCLANG_PUBLISH_GRADLE_PLUGIN_PORTAL: false
+                  ORG_XTCLANG_ALLOW_PUBLISH: true
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
               run: |
                   VERSION="${{ needs.prepare-release.outputs.release-version }}"
