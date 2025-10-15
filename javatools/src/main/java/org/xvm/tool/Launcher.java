@@ -61,7 +61,7 @@ public abstract class Launcher
      *
      * @param asArg  command line arguments
      */
-    public static void main(String[] asArg) {
+    public static void main(final String[] asArg) {
         int argc = asArg.length;
         if (argc < 1) {
             System.err.println("Command name is missing");
@@ -104,7 +104,7 @@ public abstract class Launcher
     /**
      * @param asArgs  the Launcher's command-line arguments
      */
-    public Launcher(String[] asArgs, Console console) {
+    protected Launcher(final String[] asArgs, final Console console) {
         m_asArgs  = asArgs;
         m_console = console == null ? DefaultConsole : console;
     }
@@ -117,16 +117,16 @@ public abstract class Launcher
         Options opts = options();
 
         boolean fHelp = opts.parse(m_asArgs);
-        if (Runtime.version().version().get(0) < 21) {
-            log(Severity.INFO, "The suggested minimum JVM version is 21; this JVM version ("
-                    + Runtime.version() + ") appears to be older");
+        if (Runtime.version().version().getFirst() < 21) {
+            log(Severity.INFO, "The suggested minimum JVM version is 21; this JVM version (" + Runtime.version() + ") appears to be older");
         } else {
             log(Severity.INFO, "JVM version: " + Runtime.version());
             boolean fAssertsEnabled = false;
-            assert  fAssertsEnabled = true;
+            //noinspection AssertWithSideEffects
+            assert fAssertsEnabled = true;
+            //noinspection ConstantValue
             log(Severity.INFO, "Java assertions are " + (fAssertsEnabled ? "enabled" : "disabled"));
         }
-
 
         checkErrors(fHelp);
 
@@ -157,7 +157,7 @@ public abstract class Launcher
      * @param sev   the severity (may indicate an error)
      * @param sMsg  the message or error to display
      */
-    protected void log(Severity sev, String sMsg) {
+    protected void log(final Severity sev, final String sMsg) {
         if (errorsSuspended()) {
             return;
         }
@@ -181,8 +181,8 @@ public abstract class Launcher
      *
      * @param errs  the ErrorList
      */
-    protected void log(ErrorList errs) {
-        for (ErrorInfo err : errs.getErrors()) {
+    protected void log(final ErrorList errs) {
+        for (final ErrorInfo err : errs.getErrors()) {
             log(err.getSeverity(), err.toString());
         }
     }
@@ -197,7 +197,7 @@ public abstract class Launcher
     /**
      * Print the String value of some object to the terminal.
      */
-    public void out(Object o) {
+    public void out(final Object o) {
         m_console.out(o);
     }
 
@@ -211,13 +211,14 @@ public abstract class Launcher
     /**
      * Print the String value of some object to the terminal.
      */
-    public void err(Object o) {
+    public void err(final Object o) {
         m_console.err(o);
     }
 
     /**
      * Suspend error detection.
      */
+    @SuppressWarnings("unused")
     protected void suspendErrors() {
         ++m_cSuspended;
     }
@@ -230,8 +231,9 @@ public abstract class Launcher
     }
 
     /**
-     * Suspend error detection.
+     * Unsuspend error detection.
      */
+    @SuppressWarnings("unused")
     protected void resumeErrors() {
         if (m_cSuspended > 0) {
             --m_cSuspended;
@@ -254,7 +256,7 @@ public abstract class Launcher
      *
      * @param fHelp  true iff the help message should be displayed and the program should exit
      */
-    protected void checkErrors(boolean fHelp) {
+    protected void checkErrors(final boolean fHelp) {
         if (fHelp) {
             displayHelp();
         }
@@ -269,7 +271,7 @@ public abstract class Launcher
      *
      * @param fError  true to abort with an error status
      */
-    protected void abort(boolean fError) {
+    protected void abort(final boolean fError) {
         throw new LauncherException(fError);
     }
 
@@ -284,8 +286,7 @@ public abstract class Launcher
         Options             options   = options();
         Map<String, Option> mapOpts   = options.options();
         String[]            asName    = mapOpts.keySet().toArray(Handy.NO_ARGS);
-        int                 maxSyntax = Arrays.stream(asName).map(n ->
-                                mapOpts.get(n).syntax().length()).max(Integer::compareTo).get();
+        int                 maxSyntax = Arrays.stream(asName).map(n -> mapOpts.get(n).syntax().length()).max(Integer::compareTo).get();
         Arrays.sort(asName, (s1, s2) -> {
             if (s1.equals(s2)) {
                 return 0;
@@ -311,7 +312,7 @@ public abstract class Launcher
 
         out("Options:");
         HashSet<String> alreadyDisplayed = new HashSet<>();
-        for (String sName : asName) {
+        for (final String sName : asName) {
             Option opt = mapOpts.get(sName);
             if (opt.posixName() != null && alreadyDisplayed.contains(opt.posixName()) ||
                 opt.linuxName() != null && alreadyDisplayed.contains(opt.linuxName())) {
@@ -353,7 +354,8 @@ public abstract class Launcher
      *
      * @return a string representation of the value
      */
-    public static String stringFor(Object oVal, Form form) {
+    @SuppressWarnings("unchecked")
+    private static String stringFor(final Object oVal, final Form form) {
         switch (form) {
         case Name:
         case Boolean:
@@ -370,7 +372,7 @@ public abstract class Launcher
         case Repo:
             StringBuilder sb    = new StringBuilder();
             boolean      first = true;
-            for (File file : (List<File>) oVal) {
+            for (final File file : (List<File>) oVal) {
                 if (first) {
                     first = false;
                 } else {
@@ -388,7 +390,7 @@ public abstract class Launcher
 
     // ----- ErrorListener interface ---------------------------------------------------------------
 
-    @Override public boolean log(ErrorInfo err) {
+    @Override public boolean log(final ErrorInfo err) {
         log(err.getSeverity(), err.toString());
         return isAbortDesired();
     }
@@ -457,7 +459,7 @@ public abstract class Launcher
          * @param multi      pass true if the option can appear multiple times on the command line
          * @param desc       a human-readable description of the option, for the help display
          */
-        protected void addOption(String posixName, String linuxName, Form form, boolean multi, String desc) {
+        protected void addOption(final String posixName, final String linuxName, final Form form, final boolean multi, final String desc) {
             assert posixName != null || linuxName != null;
             assert posixName == null || posixName.length() == 1 || posixName.equals(ArgV) || posixName.equals(Trailing);
             assert !Trailing.equals(posixName) || linuxName == null;
@@ -489,7 +491,7 @@ public abstract class Launcher
          *
          * @return the form of the option, or null if the option does not exist
          */
-        public Form formOf(String name) {
+        public Form formOf(final String name) {
             Option opt = options().get(name);
             return opt == null ? null : opt.form();
         }
@@ -501,7 +503,7 @@ public abstract class Launcher
          *
          * @return the simplest form of the option name, or null if the option does not exist
          */
-        public String simplify(String name) {
+        public String simplify(final String name) {
             Option opt = options().get(name);
             return opt == null ? null : opt.simplestName();
         }
@@ -513,7 +515,7 @@ public abstract class Launcher
          *
          * @return true iff the specified option can be specified more than once
          */
-        public boolean allowMultiple(String name) {
+        public boolean allowMultiple(final String name) {
             Option opt = options().get(name);
             return opt != null && opt.isMulti();
         }
@@ -534,7 +536,7 @@ public abstract class Launcher
          *
          * @return true iff the option has already been specified
          */
-        public boolean specified(String name) {
+        public boolean specified(final String name) {
             return values().containsKey(simplify(name));
         }
 
@@ -552,9 +554,8 @@ public abstract class Launcher
                     ((fMulti = allowMultiple(name)) || !values().containsKey(name))) {
                 store(name, fMulti, "specified");
                 return true;
-            } else {
-                return false;
             }
+            return false;
         }
 
         /**
@@ -565,16 +566,15 @@ public abstract class Launcher
          *
          * @return true if the value is accepted; false if the value represents an error
          */
-        public boolean specify(String name, boolean value) {
+        public boolean specify(String name, final boolean value) {
             name = simplify(name);
             boolean fMulti;
             if (formOf(name) == Form.Boolean &&
                     ((fMulti = allowMultiple(name)) || !values().containsKey(name))) {
                 store(name, fMulti, value);
                 return true;
-            } else {
-                return false;
             }
+            return false;
         }
 
         /**
@@ -585,16 +585,15 @@ public abstract class Launcher
          *
          * @return true if the value is accepted; false if the value represents an error
          */
-        public boolean specify(String name, int value) {
+        public boolean specify(String name, final int value) {
             name = simplify(name);
             boolean multi;
             if (formOf(name) == Form.Int &&
                     ((multi = allowMultiple(name)) || !values().containsKey(name))) {
                 store(name, multi, value);
                 return true;
-            } else {
-                return false;
             }
+            return false;
         }
 
         /**
@@ -605,16 +604,15 @@ public abstract class Launcher
          *
          * @return true if the value is accepted; false if the value represents an error
          */
-        public boolean specify(String name, String value) {
+        public boolean specify(String name, final String value) {
             name = simplify(name);
             boolean multi;
             if (formOf(name) == Form.String &&
                     ((multi = allowMultiple(name)) || !values().containsKey(name))) {
                 store(name, multi, value);
                 return true;
-            } else {
-                return false;
             }
+            return false;
         }
 
         /**
@@ -625,16 +623,15 @@ public abstract class Launcher
          *
          * @return true if the value is accepted; false if the value represents an error
          */
-        public boolean specify(String name, File file) {
+        public boolean specify(String name, final File file) {
             name = simplify(name);
             boolean multi;
             if (formOf(name) == Form.File &&
                     ((multi = allowMultiple(name)) || !values().containsKey(name))) {
                 store(name, multi, file);
                 return true;
-            } else {
-                return false;
             }
+            return false;
         }
 
         /**
@@ -645,16 +642,15 @@ public abstract class Launcher
          *
          * @return true if the value is accepted; false if the value represents an error
          */
-        public boolean specify(String name, List<File> files) {
+        public boolean specify(String name, final List<File> files) {
             name = simplify(name);
             boolean multi;
             if (formOf(name) == Form.Repo &&
                     ((multi = allowMultiple(name)) || !values().containsKey(name))) {
                 store(name, multi, files);
                 return true;
-            } else {
-                return false;
             }
+            return false;
         }
 
         /**
@@ -665,7 +661,7 @@ public abstract class Launcher
          *
          * @return true if the value is accepted; false if the value represents an error
          */
-        public boolean specify(String name, Map<String,String> pairs) {
+        public boolean specify(String name, final Map<String,String> pairs) {
             name = simplify(name);
             boolean multi;
             if (formOf(name) == Form.Pair &&
@@ -674,9 +670,8 @@ public abstract class Launcher
                     store(name, multi, pairs);
                 }
                 return true;
-            } else {
-                return false;
             }
+            return false;
         }
 
         /**
@@ -700,13 +695,12 @@ public abstract class Launcher
          *
          * @return true iff help should be shown
          */
-        public boolean parse(String[] asArgs) {
-            boolean fHelp = false;
-
+        public boolean parse(final String[] asArgs) {
             if (asArgs == null) {
-                return fHelp;
+                return false;
             }
 
+            boolean             fHelp    = false;
             String              sPrev    = null;
             Map<String, Option> mapNames = options();
 
@@ -768,11 +762,13 @@ public abstract class Launcher
                                 fHelp = true;
                                 if (opt == null && !mapNames.containsKey(sOrig)) {
                                     log(Severity.ERROR, "Unknown argument: \"" + (fPosix ? "-" : "--") + sOpt + '\"');
-                                } else if (fPosix) {
-                                    log(Severity.ERROR, "Option \"-" + sOrig + "\" must use two preceding hyphens: \"--" + sOrig + "\"");
-                                } else {
-                                    log(Severity.ERROR, "Option \"--" + sOrig + "\" must use only one preceding hyphen: \"-" + sOrig + "\"");
+                                    continue NextArg;
                                 }
+                                if (fPosix) {
+                                    log(Severity.ERROR, "Option \"-" + sOrig + "\" must use two preceding hyphens: \"--" + sOrig + "\"");
+                                    continue NextArg;
+                                }
+                                log(Severity.ERROR, "Option \"--" + sOrig + "\" must use only one preceding hyphen: \"-" + sOrig + "\"");
                                 continue NextArg;
                             }
 
@@ -850,7 +846,7 @@ public abstract class Launcher
                     case Int:
                         try {
                             oVal = Integer.valueOf(sArg);
-                        } catch (NumberFormatException ignore) {}
+                        } catch (final NumberFormatException ignore) {}
                         break;
 
                     case String:
@@ -870,7 +866,7 @@ public abstract class Launcher
                             List<File> listFiles;
                             try {
                                 listFiles = resolvePath(sArg);
-                            } catch (IOException e) {
+                            } catch (final IOException e) {
                                 log(Severity.ERROR, "Exception resolving path \"" + sArg + "\": " + e);
                                 break;
                             }
@@ -880,14 +876,14 @@ public abstract class Launcher
                                 break;
 
                             case 1:
-                                oVal = listFiles.get(0);
+                                oVal = listFiles.getFirst();
                                 break;
 
                             default:
                                 if (fMulti) {
                                     oVal = listFiles;
                                 } else {
-                                    oVal = listFiles.get(0);
+                                    oVal = listFiles.getFirst();
                                     log(Severity.ERROR, "Multiple (" + listFiles.size()
                                             + ") files specified for \"" + sPrev
                                             + "\", but only one file allowed");
@@ -900,11 +896,11 @@ public abstract class Launcher
                     case Repo:
                         if (!sArg.isEmpty()) {
                             List<File> repo = new ArrayList<>();
-                            for (String sPath : parseDelimitedString(sArg, File.pathSeparatorChar)) {
+                            for (final String sPath : parseDelimitedString(sArg, File.pathSeparatorChar)) {
                                 List<File> files;
                                 try {
                                     files = resolvePath(sPath);
-                                } catch (IOException e) {
+                                } catch (final IOException e) {
                                     log(Severity.ERROR, "Exception resolving path \""
                                             + sPath + "\": " + e);
                                     continue;
@@ -913,7 +909,7 @@ public abstract class Launcher
                                 if (files.isEmpty()) {
                                     log(Severity.ERROR, "Could not resolve: \"" + sPath + "\"");
                                 } else {
-                                    for (File file : files) {
+                                    for (final File file : files) {
                                         if (file.canRead()) {
                                             repo.add(file);
                                         } else if (file.exists()) {
@@ -970,7 +966,7 @@ public abstract class Launcher
          *
          * @return the option description
          */
-        public String descriptionFor(String sName) {
+        public String descriptionFor(final String sName) {
             Option opt = options().get(sName);
             if (opt == null) {
                 return null;
@@ -986,7 +982,7 @@ public abstract class Launcher
         public String toString() {
             StringBuilder sb = new StringBuilder("Options\n    {\n");
             final String sIndent = "    ";
-            for (Entry<String, Object> entry : values().entrySet()) {
+            for (final Entry<String, Object> entry : values().entrySet()) {
                 String  sName  = entry.getKey();
                 Object  oVal   = entry.getValue();
                 Form    form   = formOf(sName);
@@ -1002,8 +998,9 @@ public abstract class Launcher
 
                 if (oVal instanceof Map) {
                     sb.append(":\n");
-                    Map<String, String> map = (Map) oVal;
-                    for (Map.Entry<String, String> e : map.entrySet()) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, String> map = (Map<String, String>) oVal;
+                    for (final Map.Entry<String, String> e : map.entrySet()) {
                         sb.append(sIndent)
                           .append("   ")
                           .append(e.getKey())
@@ -1013,9 +1010,9 @@ public abstract class Launcher
                     }
                 } else if (fMulti || oVal instanceof List) {
                     sb.append(":\n");
-                    List list = (List) oVal;
+                    List<?> list = (List<?>) oVal;
                     int i = 0;
-                    for (Object oEach : list) {
+                    for (final Object oEach : list) {
                         sb.append(sIndent)
                           .append("   [")
                           .append(i++)
@@ -1040,29 +1037,31 @@ public abstract class Launcher
          *
          * @param sName   the option name
          * @param fMulti  true if the option can have multiple value
-         * @param value   the value to store, or append to the ArrayList for that option name
+         * @param oVal    the value to store, or append to the ArrayList for that option name
          */
-        protected void store(String sName, boolean fMulti, Object value) {
-            if (value instanceof List) {
-                values().compute(sName, (k, v) -> {
-                    ArrayList list = v == null ? new ArrayList() : (ArrayList) v;
-                    list.addAll((List) value);
+        protected void store(final String sName, final boolean fMulti, final Object oVal) {
+            if (fMulti || oVal instanceof List) {
+                values().compute(sName, (_, v) -> {
+                    @SuppressWarnings("unchecked")
+                    ArrayList<Object> list = v == null ? new ArrayList<>() : (ArrayList<Object>) v;
+                    if (oVal instanceof List) {
+                        list.addAll((List<?>) oVal);
+                    } else {
+                        list.add(oVal);
+                    }
                     return list;
                 });
-            } else if (value instanceof Map) {
-                values().compute(sName, (k, v) -> {
-                    Map map = v == null ? new ListMap() : (ListMap) v;
-                    map.putAll((Map) value);
+            } else if (oVal instanceof Map) {
+                values().compute(sName, (_, v) -> {
+                    @SuppressWarnings("unchecked")
+                    Map<String, String> map = v == null ? new ListMap<>() : (Map<String, String>) v;
+                    @SuppressWarnings("unchecked")
+                    Map<String, String> source = (Map<String, String>) oVal;
+                    map.putAll(source);
                     return map;
                 });
-            } else if (fMulti) {
-                values().compute(sName, (k, v) -> {
-                    ArrayList list = v == null ? new ArrayList() : (ArrayList) v;
-                    list.add(value);
-                    return list;
-                });
             } else {
-                values().putIfAbsent(sName, value);
+                values().putIfAbsent(sName, oVal);
             }
         }
 
@@ -1082,7 +1081,7 @@ public abstract class Launcher
          *
          * @return true if an error of that severity should be displayed
          */
-        boolean isBadEnoughToPrint(Severity sev) {
+        boolean isBadEnoughToPrint(final Severity sev) {
             return verbose() || sev.compareTo(Severity.WARNING) >= 0;
         }
 
@@ -1094,7 +1093,7 @@ public abstract class Launcher
          *
          * @return true if an error of that severity should exit the program
          */
-        boolean isBadEnoughToAbort(Severity sev) {
+        boolean isBadEnoughToAbort(final Severity sev) {
             return sev.compareTo(Severity.ERROR) >= 0;
         }
 
@@ -1129,7 +1128,7 @@ public abstract class Launcher
      *
      * @return the library repository, including a build repository at the head of the repo
      */
-    protected ModuleRepository configureLibraryRepo(List<File> path) {
+    protected ModuleRepository configureLibraryRepo(final List<File> path) {
         if (path == null || path.isEmpty()) {
             // this is the easiest way to deliver an empty repository
             return makeBuildRepo();
@@ -1151,7 +1150,7 @@ public abstract class Launcher
      *
      * @return a new BuildRepository
      */
-    protected BuildRepository makeBuildRepo() {
+    protected static BuildRepository makeBuildRepo() {
         return new BuildRepository();
     }
 
@@ -1162,13 +1161,13 @@ public abstract class Launcher
      *
      * @return the BuildRepository
      */
-    protected BuildRepository extractBuildRepo(ModuleRepository repoLib) {
-        if (repoLib instanceof BuildRepository repoBuild) {
+    protected static BuildRepository extractBuildRepo(final ModuleRepository repoLib) {
+        if (repoLib instanceof final BuildRepository repoBuild) {
             return repoBuild;
         }
 
         LinkedRepository repoLinked = (LinkedRepository) repoLib;
-        return (BuildRepository) repoLinked.asList().get(0);
+        return (BuildRepository) repoLinked.asList().getFirst();
     }
 
     /**
@@ -1191,14 +1190,14 @@ public abstract class Launcher
 
     /**
      * Force load and link whatever modules are required by the compiler.
-     *
+     * <p>
      * Note: This implementation assumes that the read-through option on LinkedRepository is being
      * used.
      *
      * @param reposLib  the repository to use, as it would be returned from
      *                  {@link #configureLibraryRepo}
      */
-    protected void prelinkSystemLibraries(ModuleRepository reposLib) {
+    protected void prelinkSystemLibraries(final ModuleRepository reposLib) {
         ModuleStructure moduleEcstasy = reposLib.loadModule(Constants.ECSTASY_MODULE);
         if (moduleEcstasy == null) {
             log(Severity.FATAL, "Unable to load module: " + Constants.ECSTASY_MODULE);
@@ -1233,11 +1232,11 @@ public abstract class Launcher
      *
      * @param reposLib  the repository that contains the Ecstasy library
      */
-    protected void showSystemVersion(ModuleRepository reposLib) {
+    protected void showSystemVersion(final ModuleRepository reposLib) {
         String sVer = null;
         try {
             sVer = reposLib.loadModule(Constants.ECSTASY_MODULE).getVersionString();
-        } catch (Exception ignore) {}
+        } catch (final Exception ignore) {}
 
         // Use version from single source of truth if module version is not available
         if (sVer == null) {
@@ -1278,7 +1277,7 @@ public abstract class Launcher
      * @param binarySpec     (optional) the file or directory which represents the target of the
      *                       binary; as provided to the compiler using the "-o" command line switch
      */
-    public ModuleInfo ensureModuleInfo(File fileSpec, File[] resourceSpecs, File binarySpec) {
+    public ModuleInfo ensureModuleInfo(final File fileSpec, final File[] resourceSpecs, final File binarySpec) {
         boolean fCache = (resourceSpecs == null || resourceSpecs.length == 0) && binarySpec == null;
         if (fCache && moduleCache != null) {
             ModuleInfo info = moduleCache.get(fileSpec);
@@ -1302,10 +1301,10 @@ public abstract class Launcher
     /**
      * Validate that the contents of the path are existent directories and/or .xtc files.
      *
-     * @param listPath
+     * @param listPath module path directories to validate
      */
-    public void validateModulePath(List<File> listPath) throws LauncherException {
-        for (File file : listPath) {
+    public void validateModulePath(final List<File> listPath) throws LauncherException {
+        for (final File file : listPath) {
             String sMsg = "File or directory";
             if (file.isDirectory()) {
                 sMsg = "Directory";
@@ -1330,7 +1329,7 @@ public abstract class Launcher
      *
      * @return the validated file or directory to read source code from
      */
-    public File validateSourceInput(File file) {
+    public File validateSourceInput(final File file) {
         // this is expected to be the name of a file to compile
         if (!file.exists() || file.isDirectory()) {
             try {
@@ -1339,7 +1338,7 @@ public abstract class Launcher
                 if (srcFile == null || !srcFile.exists()) {
                     log(Severity.ERROR, "Failed to locate the module source code for: " + file);
                 }
-            } catch (RuntimeException e) {
+            } catch (final RuntimeException e) {
                 log(Severity.ERROR, "Failed to identify the module for: " + file + " (" + e + ")");
             }
         } else if (!file.canRead()) {
@@ -1358,7 +1357,7 @@ public abstract class Launcher
      *                default)
      * @param fMulti  true indicates that multiple modules will be written
      */
-    public void validateModuleOutput(File file, boolean fMulti) {
+    public void validateModuleOutput(final File file, final boolean fMulti) {
         if (file == null) {
             return;
         }
@@ -1374,6 +1373,7 @@ public abstract class Launcher
         if (dir != null && !dir.exists()) {
             log(Severity.INFO, "Creating directory " + dir);
             // ignore any errors here; errors would end up being reported further down
+            //noinspection ResultOfMethodCallIgnored
             dir.mkdirs();
         }
 
@@ -1437,11 +1437,11 @@ public abstract class Launcher
      *
      * @return a list of "module files", each representing a module's source code
      */
-    protected List<ModuleInfo> selectTargets(List<File> listSources, File[] resourceSpecs, File outputSpec) {
+    protected List<ModuleInfo> selectTargets(final List<File> listSources, final File[] resourceSpecs, final File outputSpec) {
         ListMap<File, ModuleInfo> mapResults = new ListMap<>();
 
         Set<File> setDups = null;
-        for (File file : listSources) {
+        for (final File file : listSources) {
             ModuleInfo info    = null;
             File       srcFile = null;
             try {
@@ -1449,7 +1449,7 @@ public abstract class Launcher
                 if (info != null) {
                     srcFile = info.getSourceFile();
                 }
-            } catch (IllegalStateException | IllegalArgumentException e) {
+            } catch (final IllegalStateException | IllegalArgumentException e) {
                 String msg = e.getMessage();
                 log(Severity.ERROR, "Could not find module information for " + toPathString(file)
                         + " (" + (msg == null ? "Reason unknown" : msg) + ")");
@@ -1477,9 +1477,9 @@ public abstract class Launcher
      *
      * @param nodes  the nodes to flush
      */
-    protected void flushAndCheckErrors(Node[] nodes) {
+    protected void flushAndCheckErrors(final Node[] nodes) {
         if (nodes != null) {
-            for (Node node : nodes) {
+            for (final Node node : nodes) {
                 if (node != null) {
                     node.logErrors(this);
                 }
@@ -1514,7 +1514,7 @@ public abstract class Launcher
         /**
          * Print the String value of some object to the terminal.
          */
-        default void out(Object o) {
+        default void out(final Object o) {
             System.out.println(o);
         }
 
@@ -1528,7 +1528,7 @@ public abstract class Launcher
         /**
          * Print the String value of some object to the terminal.
          */
-        default void err(Object o) {
+        default void err(final Object o) {
             System.err.println(o);
         }
 
@@ -1538,7 +1538,7 @@ public abstract class Launcher
          * @param sev   the severity (may indicate an error)
          * @param sMsg  the message or error to display
          */
-        default void log(Severity sev, String sMsg) {
+        default void log(final Severity sev, final String sMsg) {
             out(sev.desc() + ": " + sMsg);
         }
     }
@@ -1615,7 +1615,7 @@ public abstract class Launcher
             this(null);
         }
 
-        Form(String desc) {
+        Form(final String desc) {
             DESC = desc;
         }
 
@@ -1649,7 +1649,7 @@ public abstract class Launcher
      * Represents a single available command line option.
      */
     public static class Option {
-        public Option(String sPosix, String sLinux, Form form, boolean fMulti, String sDesc) {
+        public Option(final String sPosix, final String sLinux, final Form form, final boolean fMulti, final String sDesc) {
             assert sPosix != null || sLinux != null;
             assert (sPosix == null || !sPosix.isEmpty()) && (sLinux == null || !sLinux.isEmpty());
             assert form != null;
@@ -1702,12 +1702,13 @@ public abstract class Launcher
             return syntax() + " : " + m_form + (m_fMulti ? "*" : "");
         }
 
-        private final     String  m_sPosix;
-        private final     String  m_sLinux;
-        private transient String  m_sSyntax;
-        private final     Form    m_form;
-        private final     boolean m_fMulti;
-        private final     String  m_sDesc;
+        private final String  m_sPosix;
+        private final String  m_sLinux;
+        private final Form    m_form;
+        private final boolean m_fMulti;
+        private final String  m_sDesc;
+
+        private String  m_sSyntax;
     }
 
     protected enum Stage {Init, Parsed, Named, Linked}

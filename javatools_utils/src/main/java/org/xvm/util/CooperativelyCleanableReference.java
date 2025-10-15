@@ -1,6 +1,8 @@
 package org.xvm.util;
 
 import java.io.InterruptedIOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.lang.ref.ReferenceQueue;
@@ -48,15 +50,16 @@ public class CooperativelyCleanableReference<V> extends WeakReference<V> {
     /**
      * Queues of unreachable references with unreachable referents.
      */
-    @SuppressWarnings("unchecked")
-    private static final ReferenceQueue<Object>[] QUEUE = new ReferenceQueue[
-            Integer.highestOneBit(Runtime.getRuntime().availableProcessors() << 1)];
+    private static final List<ReferenceQueue<Object>> QUEUE;
 
     static {
-        for (int i = 0; i < QUEUE.length; ++i) {
-            QUEUE[i] = new ReferenceQueue<>();
+        int queueCount = Integer.highestOneBit(Runtime.getRuntime().availableProcessors() << 1);
+        List<ReferenceQueue<Object>> queues = new ArrayList<>(queueCount);
+        for (int i = 0; i < queueCount; ++i) {
+            queues.add(new ReferenceQueue<>());
+        }
+        QUEUE = List.copyOf(queues);
     }
-}
 
     /**
      * A set of refs which have yet to be cleaned, this ensures the refs don't get GC'd before their referent is cleaned.
@@ -74,18 +77,19 @@ public class CooperativelyCleanableReference<V> extends WeakReference<V> {
      * @param referent the referent to manage
      * @param cleaner  the function to run once the referent is unreachable, this function must not reference the referent
      */
-    public CooperativelyCleanableReference(V referent, AutoCloseable cleaner) {
-        super(referent, clean(QUEUE[ThreadLocalRandom.current().nextInt(QUEUE.length)]));
+    @SuppressWarnings("this-escape")
+    public CooperativelyCleanableReference(final V referent, final AutoCloseable cleaner) {
+        super(referent, clean(QUEUE.get(ThreadLocalRandom.current().nextInt(QUEUE.size()))));
         this.cleaner = Objects.requireNonNull(cleaner, "null cleaner");
         KEEP_ALIVE.add(this);
-}
+    }
 
     /**
      * Perform cleanup for at least some unreachable referents in the specified queue.
      *
      * @return the queue
      */
-    private static ReferenceQueue<Object> clean(ReferenceQueue<Object> queue) {
+    private static ReferenceQueue<Object> clean(final ReferenceQueue<Object> queue) {
         long startMillis = System.currentTimeMillis();
         boolean restoreInterrupt = Thread.interrupted();
         try {
@@ -98,7 +102,7 @@ public class CooperativelyCleanableReference<V> extends WeakReference<V> {
                     if (KEEP_ALIVE.remove(ref)) {
                         ref.cleaner.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                     LOGGER.log(Level.INFO, "ignoring exception during cooperative cleanup", e);
                     Throwable t = e;
                     while (!restoreInterrupt && t != null) {

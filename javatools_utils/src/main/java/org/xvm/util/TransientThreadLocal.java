@@ -16,8 +16,7 @@ import java.util.function.Supplier;
  *
  * @param <T> the value type
  */
-public class TransientThreadLocal<T>
-        extends ThreadLocal<T> {
+public class TransientThreadLocal<T> extends ThreadLocal<T> {
     /**
      * Creates a thread local variable. The initial value of the variable is determined by invoking
      * the {@code get} method on the {@code Supplier}.
@@ -27,7 +26,8 @@ public class TransientThreadLocal<T>
      *
      * @return a new thread local variable
      */
-    public static <S> TransientThreadLocal<S> withInitial(Supplier<? extends S> supplier) {
+    @SuppressWarnings("unused")
+    public static <S> TransientThreadLocal<S> withInitial(final Supplier<? extends S> supplier) {
         Objects.requireNonNull(supplier, "null supplier");
         return new TransientThreadLocal<>() {
             @Override
@@ -40,7 +40,7 @@ public class TransientThreadLocal<T>
     @Override
     public T get() {
         var map   = TRANSIENT_MAP.get();
-        T   value = (T) map.get(this);
+        T   value = getFromMap(map);
 
         if (value == null) {
             map.put(this, value = initialValue());
@@ -50,7 +50,7 @@ public class TransientThreadLocal<T>
     }
 
     @Override
-    public void set(T value) {
+    public void set(final T value) {
         TRANSIENT_MAP.get().put(this, value);
     }
 
@@ -67,9 +67,9 @@ public class TransientThreadLocal<T>
      *
      * @return the new value
      */
-    public T compute(Function<? super T, ? extends T> fn) {
+    public T compute(final Function<? super T, ? extends T> fn) {
         var map      = TRANSIENT_MAP.get();
-        T   valueOld = (T) map.get(this);
+        T   valueOld = getFromMap(map);
         T   valueNew = fn.apply(valueOld == null ? initialValue() : valueOld);
 
         if (valueNew == null) {
@@ -89,9 +89,9 @@ public class TransientThreadLocal<T>
      *
      * @return the new value
      */
-    public T computeIfAbsent(Supplier<? extends T> fn) {
+    public T computeIfAbsent(final Supplier<? extends T> fn) {
         var map      = TRANSIENT_MAP.get();
-        T   valueOld = (T) map.get(this);
+        T   valueOld = getFromMap(map);
 
         if (valueOld == null) {
             T valueNew = fn.get();
@@ -112,9 +112,9 @@ public class TransientThreadLocal<T>
      *
      * @return a {@link AutoCloseable} which when closed will restore the prior value
      */
-    public Sentry<T> push(T value) {
+    public Sentry<T> push(final T value) {
         var map          = TRANSIENT_MAP.get();
-        T   valuePrev    = (T) map.put(this, value);
+        T   valuePrev    = putToMap(map, value);
         T   valueRestore = valuePrev == null ? initialValue() : valuePrev;
 
         return valueRestore == null
@@ -130,6 +130,31 @@ public class TransientThreadLocal<T>
                         map.put(TransientThreadLocal.this, valueRestore);
                     }
                 };
+    }
+
+    /**
+     * Safely retrieve the value from the map with proper type casting.
+     *
+     * @param map  the transient map
+     *
+     * @return the value of type T, or null if not present
+     */
+    @SuppressWarnings("unchecked")
+    private T getFromMap(final Map<TransientThreadLocal<?>, Object> map) {
+        return (T) map.get(this);
+    }
+
+    /**
+     * Safely put a value into the map and return the previous value with proper type casting.
+     *
+     * @param map    the transient map
+     * @param value  the value to put
+     *
+     * @return the previous value of type T, or null if not present
+     */
+    @SuppressWarnings("unchecked")
+    private T putToMap(final Map<TransientThreadLocal<?>, Object> map, final T value) {
+        return (T) map.put(this, value);
     }
 
     /**

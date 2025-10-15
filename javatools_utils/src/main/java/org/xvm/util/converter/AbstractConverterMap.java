@@ -35,7 +35,8 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
      *
      * @param storage the backing store
      */
-    protected AbstractConverterMap(Map<SK, SV> storage) {
+    @SuppressWarnings("this-escape")
+    protected AbstractConverterMap(final Map<SK, SV> storage) {
         this.storage = storage;
         keys = newKeySet();
         values = newValues();
@@ -97,7 +98,7 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
      * @return the supplied object
      */
     @SuppressWarnings("unchecked")
-    protected <X, Y extends X> Y unchecked(X x) {
+    protected static <X, Y extends X> Y unchecked(final X x) {
         return (Y) x;
     }
 
@@ -116,7 +117,7 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
     }
 
     /**
-     * @return a new  ntrySet
+     * @return a new entrySet
      */
     protected Set<Entry<K, V>> newEntrySet() {
         return new EntrySet();
@@ -133,34 +134,34 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
     }
 
     @Override
-    public boolean containsKey(Object key) {
+    public boolean containsKey(final Object key) {
         return read().containsKey(keyDown(unchecked(key)));
     }
 
     @Override
-    public boolean containsValue(Object value) {
+    public boolean containsValue(final Object value) {
         return read().containsValue(valueDown(unchecked(value)));
     }
 
     @Override
-    public V get(Object key) {
+    public V get(final Object key) {
         return valueUp(read().get(keyDown(unchecked(key))));
     }
 
     @Override
-    public V put(K key, V value) {
+    public V put(final K key, final V value) {
         return valueUp(write().put(keyDown(key), valueDown(value)));
     }
 
     @Override
-    public V remove(Object key) {
+    public V remove(final Object key) {
         return valueUp(write().remove(keyDown(unchecked(key))));
     }
 
     @Override
-    public void putAll(Map<? extends K, ? extends V> m) {
+    public void putAll(final Map<? extends K, ? extends V> m) {
         Map<SK, SV> storage = write();
-        for (var entry : m.entrySet()) {
+        for (final var entry : m.entrySet()) {
             storage.put(keyDown(entry.getKey()), valueDown(entry.getValue()));
         }
     }
@@ -186,47 +187,47 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
     }
 
     @Override
-    public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
+    public void replaceAll(final BiFunction<? super K, ? super V, ? extends V> function) {
         write().replaceAll((k, v) -> valueDown(function.apply(keyUp(k), valueUp(v))));
     }
 
     @Override
-    public V putIfAbsent(K key, V value) {
+    public V putIfAbsent(final K key, final V value) {
         return valueUp(write().putIfAbsent(keyDown(key), valueDown(value)));
     }
 
     @Override
-    public boolean remove(Object key, Object value) {
+    public boolean remove(final Object key, final Object value) {
         return write().remove(keyDown(unchecked(key)), valueDown(unchecked(value)));
     }
 
     @Override
-    public boolean replace(K key, V oldValue, V newValue) {
+    public boolean replace(final K key, final V oldValue, final V newValue) {
         return write().replace(keyDown(key), valueDown(oldValue), valueDown(newValue));
     }
 
     @Override
-    public V replace(K key, V value) {
+    public V replace(final K key, final V value) {
         return valueUp(write().replace(keyDown(key), valueDown(value)));
     }
 
     @Override
-    public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
-        return valueUp(write().computeIfAbsent(keyDown(key), k -> valueDown(mappingFunction.apply(key))));
+    public V computeIfAbsent(final K key, final Function<? super K, ? extends V> mappingFunction) {
+        return valueUp(write().computeIfAbsent(keyDown(key), _ -> valueDown(mappingFunction.apply(key))));
     }
 
     @Override
-    public V computeIfPresent(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
-        return valueUp(write().computeIfPresent(keyDown(key), (k, v) -> valueDown(remappingFunction.apply(key, valueUp(v)))));
+    public V computeIfPresent(final K key, final BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+        return valueUp(write().computeIfPresent(keyDown(key), (_, v) -> valueDown(remappingFunction.apply(key, valueUp(v)))));
     }
 
     @Override
-    public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
-        return valueUp(write().compute(keyDown(key), (k, v) -> valueDown(remappingFunction.apply(key, valueUp(v)))));
+    public V compute(final K key, final BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+        return valueUp(write().compute(keyDown(key), (_, v) -> valueDown(remappingFunction.apply(key, valueUp(v)))));
     }
 
     @Override
-    public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
+    public V merge(final K key, final V value, final BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
         return valueUp(write().merge(keyDown(key), valueDown(value), (v1, v2) -> valueDown(remappingFunction.apply(valueUp(v1), valueUp(v2)))));
     }
 
@@ -251,12 +252,12 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
         }
 
         @Override
-        protected K valueUp(SK value) {
+        protected K valueUp(final SK value) {
             return AbstractConverterMap.this.keyUp(value);
         }
 
         @Override
-        protected SK valueDown(K value) {
+        protected SK valueDown(final K value) {
             return AbstractConverterMap.this.keyDown(value);
         }
     }
@@ -282,12 +283,12 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
         }
 
         @Override
-        protected V valueUp(SV value) {
+        protected V valueUp(final SV value) {
             return AbstractConverterMap.this.valueUp(value);
         }
 
         @Override
-        protected SV valueDown(V value) {
+        protected SV valueDown(final V value) {
             return AbstractConverterMap.this.valueDown(value);
         }
     }
@@ -313,40 +314,40 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
         }
 
         @Override
-        protected Entry<K, V> valueUp(Entry<SK, SV> value) {
+        protected Entry<K, V> valueUp(final Entry<SK, SV> value) {
             return new AbstractConverterEntry<>(value) {
                 @Override
-                protected K keyUp(SK key) {
+                protected K keyUp(final SK key) {
                     return AbstractConverterMap.this.keyUp(key);
                 }
 
                 @Override
-                protected SV valueDown(V value) {
+                protected SV valueDown(final V value) {
                     return AbstractConverterMap.this.valueDown(value);
                 }
 
                 @Override
-                protected V valueUp(SV value) {
+                protected V valueUp(final SV value) {
                     return AbstractConverterMap.this.valueUp(value);
                 }
             };
         }
 
         @Override
-        protected Entry<SK, SV> valueDown(Entry<K, V> value) {
+        protected Entry<SK, SV> valueDown(final Entry<K, V> value) {
             return new AbstractConverterEntry<>(value) {
                 @Override
-                protected SK keyUp(K key) {
+                protected SK keyUp(final K key) {
                     return AbstractConverterMap.this.keyDown(key);
                 }
 
                 @Override
-                protected V valueDown(SV value) {
+                protected V valueDown(final SV value) {
                     return AbstractConverterMap.this.valueUp(value);
                 }
 
                 @Override
-                protected SV valueUp(V value) {
+                protected SV valueUp(final V value) {
                     return AbstractConverterMap.this.valueDown(value);
                 }
             };

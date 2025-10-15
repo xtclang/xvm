@@ -22,7 +22,7 @@ public class HasherReference<T> implements Supplier<T> {
      * @param referent the referent
      * @param hasher   the {@link Hasher} used to determine equality
      */
-    public HasherReference(T referent, Hasher<? super T> hasher) {
+    public HasherReference(final T referent, final Hasher<? super T> hasher) {
         reset(referent, hasher);
     }
 
@@ -32,7 +32,7 @@ public class HasherReference<T> implements Supplier<T> {
      * @param referent the new referent
      * @param hasher   the hasher
      */
-    protected void reset(T referent, Hasher<? super T> hasher) {
+    protected final void reset(final T referent, final Hasher<? super T> hasher) {
         this.referent = referent;
         this.hasher = hasher;
     }
@@ -51,7 +51,7 @@ public class HasherReference<T> implements Supplier<T> {
 
     @Override
     @SuppressWarnings("unchecked")
-    public boolean equals(Object obj) {
-        return obj == this || (obj instanceof Supplier<?> that && hasher.equals(get(), (T) that.get()));
+    public boolean equals(final Object obj) {
+        return obj == this || (obj instanceof final Supplier<?> that && hasher.equals(get(), (T) that.get()));
     }
 }

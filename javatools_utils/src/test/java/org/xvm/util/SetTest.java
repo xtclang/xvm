@@ -255,19 +255,24 @@ public class SetTest {
         return new HashSet<>();
     }
 
-    @SuppressWarnings("unchecked")
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    private static <T> Set<T>[] setsOf(final Set<T>... sets) {
+        return sets;
+    }
+
     static Set<Object>[] createTestSets() {
         return fReplay
-                ? new Set[] {
+                ? setsOf(
                         new ListSet<>(),
-                        new ListSet<>().disableHashIndex(),
-                    }
-                : new Set[] {
+                        new ListSet<>().disableHashIndex()
+                  )
+                : setsOf(
                         new ListSet<>(),
                         new ListSet<>().disableHashIndex(),
                         new ListSet<>().useIdentityEquality(),
-                        new ListSet<>().disableHashIndex().useIdentityEquality(),
-                    };
+                        new ListSet<>().disableHashIndex().useIdentityEquality()
+                  );
     }
 
     @FunctionalInterface

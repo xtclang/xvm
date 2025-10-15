@@ -1,10 +1,8 @@
 package org.xvm.util;
 
-
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -29,7 +27,8 @@ public class ListMap<K,V>
      *
      * @param cInitSize  the initial capacity; negative value indicates an immutable empty map
      */
-    public ListMap(int cInitSize) {
+    @SuppressWarnings("unchecked") // Safe: EMPTY_ARRAY_LIST is empty and immutable
+    public ListMap(final int cInitSize) {
         m_list = cInitSize >= 0
             ? new ArrayList<>(cInitSize)
             : (ArrayList<SimpleEntry<K,V>>) EMPTY_ARRAY_LIST;
@@ -40,12 +39,12 @@ public class ListMap<K,V>
      *
      * @param map  the map to clone
      */
-    public ListMap(ListMap<K, V> map) {
+    public ListMap(final ListMap<K, V> map) {
         m_list = new ArrayList<>(map.m_list);
     }
 
     @Override
-    public V put(K key, V value) {
+    public V put(final K key, final V value) {
         Entry<K,V> entry = getEntry(key);
         if (entry != null) {
             return entry.setValue(value);
@@ -69,10 +68,9 @@ public class ListMap<K,V>
      *
      * @return the entries of the map in a List
      */
+    @SuppressWarnings("unchecked") // Safe: SimpleEntry<K,V> extends Entry<K,V>
     public List<Entry<K,V>> asList() {
-        List<Entry<K,V>> list = (List) m_list;
-        assert (list = Collections.unmodifiableList(list)) != null;
-        return list;
+        return (List<Entry<K,V>>) (List<?>) m_list;
     }
 
     /**
@@ -82,7 +80,7 @@ public class ListMap<K,V>
      *
      * @return an entry
      */
-    public Entry<K,V> entryAt(int index) {
+    public Entry<K,V> entryAt(final int index) {
         return m_list.get(index);
     }
 
@@ -93,10 +91,8 @@ public class ListMap<K,V>
      *
      * @return the entry if it exists; otherwise null
      */
-    protected SimpleEntry<K,V> getEntry(Object key) {
-        ArrayList<SimpleEntry<K,V>> list = m_list;
-        for (int i = 0, c = list.size(); i < c; ++i) { // avoid Iterator creation
-            SimpleEntry<K, V> entry = list.get(i);
+    protected SimpleEntry<K,V> getEntry(final Object key) {
+        for (final SimpleEntry<K, V> entry : m_list) { // avoid Iterator creation
             if (entry.getKey().equals(key)) {
                 return entry;
             }
@@ -106,7 +102,7 @@ public class ListMap<K,V>
     }
 
     @Override
-    public V get(Object key) {
+    public V get(final Object key) {
         SimpleEntry<K, V> entry = getEntry(key);
         return entry == null ? null : entry.getValue();
     }
@@ -123,8 +119,9 @@ public class ListMap<K,V>
      */
     private final Set<Entry<K, V>> m_setEntries = new AbstractSet<>() {
         @Override
+        @SuppressWarnings("unchecked") // Safe: SimpleEntry<K,V> extends Entry<K,V>
         public Iterator<Entry<K, V>> iterator() {
-            return (Iterator) m_list.iterator();
+            return (Iterator<Entry<K, V>>) (Iterator<?>) m_list.iterator();
         }
 
         @Override
@@ -141,5 +138,5 @@ public class ListMap<K,V>
     /**
      * An empty ListMap.
      */
-    public static final ListMap EMPTY = new ListMap<>(-1);
+    public static final ListMap<?, ?> EMPTY = new ListMap<>(-1);
 }

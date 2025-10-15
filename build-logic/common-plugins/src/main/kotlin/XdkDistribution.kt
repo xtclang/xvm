@@ -16,8 +16,6 @@ class XdkDistribution(
         const val DISTRIBUTION_TASK_GROUP = "distribution"
         const val JAVATOOLS_PREFIX_PATTERN = "**/javatools*"
 
-        private const val CI = "CI"
-
         // These need to be computed at execution time to be configuration cache compatible
         val currentOs: OperatingSystem = OperatingSystem.current()
         fun getCurrentArch(project: Project): String = normalizeArchitecture(project.providers.systemProperty("os.arch").get())

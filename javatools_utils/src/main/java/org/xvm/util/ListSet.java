@@ -15,10 +15,7 @@ import java.util.NoSuchElementException;
  * circular array, and deletion from the middle of the sequence of elements is supported without
  * having to copy the remainder of the array. Null is a supported element value.
  */
-public class ListSet<E>
-        extends AbstractSet<E> {
-    // ----- constructors --------------------------------------------------------------------------
-
+public class ListSet<E> extends AbstractSet<E> {
     /**
      * Construct a new ListSet.
      */
@@ -31,7 +28,7 @@ public class ListSet<E>
      *
      * @param cInitSize  the initial capacity; negative value indicates an immutable empty set
      */
-    public ListSet(int cInitSize) {
+    public ListSet(final int cInitSize) {
         // make sure the size is a power of 2
         m_aElem = new Object[Integer.highestOneBit(Math.max(cInitSize, 4) * 2 - 1)];
     }
@@ -41,7 +38,8 @@ public class ListSet<E>
      *
      * @param that  a collection of compatible elements
      */
-    public ListSet(Collection<? extends E> that) {
+    @SuppressWarnings("this-escape")
+    public ListSet(final Collection<? extends E> that) {
         this(that.size());
         addAll(that);
     }
@@ -74,6 +72,7 @@ public class ListSet<E>
      * Configure the Set to avoid hashing for rapid  only identity comparisons to determine element equality. This
      * disables the use of the {@link Object#equals} method on elements.
      */
+    @SuppressWarnings("unused")
     public ListSet<E> disallowNulls() {
         assert isEmpty();
         m_fSuppressNull = true;
@@ -109,7 +108,7 @@ public class ListSet<E>
      * @return the item at the specified position; this operation could be expensive for indexes
      *         that are not close to either 0 or size()
      */
-    public E get(int index) {
+    public E get(final int index) {
         int cSize = size();
         if (index < 0 || index >= cSize) {
             throw new IllegalArgumentException();
@@ -147,12 +146,12 @@ public class ListSet<E>
     }
 
     @Override
-    public boolean contains(Object o) {
+    public boolean contains(final Object o) {
         return indexOf(toInternal(o)) >= 0;
     }
 
     @Override
-    public boolean add(E e) {
+    public boolean add(final E e) {
         if (m_fSuppressNull && e == null) {
             throw new IllegalArgumentException("null value is not permitted");
         }
@@ -167,7 +166,7 @@ public class ListSet<E>
     }
 
     @Override
-    public boolean remove(Object o) {
+    public boolean remove(final Object o) {
         int i = indexOf(toInternal(o));
         if (i < 0) {
             return false;
@@ -190,7 +189,7 @@ public class ListSet<E>
             m_iTail  = 0;
             m_cBlank = 0;
 
-            // clearing all of the storage represents a re-organization of the underlying data
+            // clearing all the storage represents a re-organization of the underlying data
             ++m_cReorgs;
         }
     }
@@ -202,7 +201,6 @@ public class ListSet<E>
                 : new SafeIterator();
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
     /**
@@ -212,7 +210,7 @@ public class ListSet<E>
      *
      * @return the index of the element, tail <= i < head, or -1 if not found
      */
-    private int indexOf(Object o) {
+    private int indexOf(final Object o) {
         // check if the set is empty
         int iHead = m_iHead;
         int iTail = m_iTail;
@@ -254,7 +252,7 @@ public class ListSet<E>
      *
      * @return an object in internal format that can be stored in the underlying storage
      */
-    private static Object toInternal(Object o) {
+    private static Object toInternal(final Object o) {
         return o == null ? NULL : o;
     }
 
@@ -265,7 +263,8 @@ public class ListSet<E>
      *
      * @return an element of type E (including null)
      */
-    private static <E> E toExternal(Object o) {
+    @SuppressWarnings("unchecked")
+    private static <E> E toExternal(final Object o) {
         assert o != null && !(o instanceof Stop);
         return o == NULL ? null : (E) o;
     }
@@ -275,7 +274,7 @@ public class ListSet<E>
      *
      * @param o  the Object to add (which may even be a NULL or a HardStop)
      */
-    private void addInternal(Object o) {
+    private void addInternal(final Object o) {
         // test if resize is necessary
         if (m_iHead - m_iTail >= m_aElem.length) {
             ensureSpace();
@@ -363,7 +362,7 @@ public class ListSet<E>
         boolean  fAdjust  = indexEnabled();
         while (iSrc < iSrcEnd) {
             Object elem = aElem[iSrc & nMask];
-            if (elem instanceof Stop stopCur) {
+            if (elem instanceof final Stop stopCur) {
                 if (!fFront && !stopCur.isDisposable()) {
                     if (stop == null) {
                         stop = stopCur;
@@ -455,7 +454,7 @@ public class ListSet<E>
      *
      * @return the index where the element is found, otherwise -1
      */
-    private int verify(int i, Object elem) {
+    private int verify(final int i, final Object elem) {
         // first check optimistically if the passed-in-index is still correct
         final Object[] aElem = m_aElem;
         final int      nMask = aElem.length - 1;
@@ -489,7 +488,7 @@ public class ListSet<E>
      * @return the element index, or -1 if either the element or the hard-stop could not be found or
      *         if the element was not located before the hard stop
      */
-    private int verifyIterator(Object eNext, int nStop) {
+    private int verifyIterator(final Object eNext, final int nStop) {
         final Object[] aElem = m_aElem;
         final int nMask = aElem.length - 1;
         int iNext = -1;
@@ -501,7 +500,7 @@ public class ListSet<E>
 
             for (int iTest = iNext+1, iLast = m_iHead - 1; iTest <= iLast; ++iTest) {
                 Object eCur = aElem[iTest & nMask];
-                if (eCur instanceof Stop stop) {
+                if (eCur instanceof final Stop stop) {
                     if (stop.appliesTo(nStop)) {
                         return iNext;
                     }
@@ -532,7 +531,7 @@ public class ListSet<E>
      *
      * @param i  an index, {@code (m_iTail <= i < m_iHead)}
      */
-    private void remove(int i) {
+    private void remove(final int i) {
         assert i >= m_iTail && i < m_iHead;
 
         int    nMask = m_aElem.length-1;
@@ -625,7 +624,7 @@ public class ListSet<E>
      * @param nHash  the hash code of the value
      * @param index  the index into the underlying ListSet storage for the value
      */
-    private void indexAdd(int nHash, int index) {
+    private void indexAdd(final int nHash, final int index) {
         int[] anIndex  = m_anHash;
         int   cBuckets = anIndex.length;
         int   nModulo  = cBuckets >>> 1;
@@ -653,7 +652,7 @@ public class ListSet<E>
      * @param nHash  the hash code of the value
      * @param index  the index into the underlying ListSet storage for the value
      */
-    private void indexRemove(int nHash, int index) {
+    private void indexRemove(int nHash, final int index) {
         int[]    anIndex  = m_anHash;
         int      cBuckets = anIndex.length;
         int      nModulo  = cBuckets >>> 1;
@@ -722,7 +721,7 @@ public class ListSet<E>
      *
      * @return the index of the object, or -1 if the object is not in the set
      */
-    private int indexSearch(Object o) {
+    private int indexSearch(final Object o) {
         int[]    anIndex  = m_anHash;
         int      cBuckets = anIndex.length;
         int      nModulo  = cBuckets >>> 1;
@@ -737,8 +736,7 @@ public class ListSet<E>
             if (iElem >= 0) {
                 if (anIndex[iBucket+1] == nHash) {
                     Object oElem = aElem[iElem & nMask];
-                    if (o == oElem || !m_fSuppressEquals
-                            && o != null && !(o instanceof Special) && oElem.equals(o)) {
+                    if (o == oElem || !m_fSuppressEquals && !(o instanceof Special) && oElem.equals(o)) {
                         return iElem;
                     }
                 }
@@ -762,7 +760,7 @@ public class ListSet<E>
      * @param indexOld  the old index of the value
      * @param indexNew  the new index of the value
      */
-    private void indexAdjust(int nHash, int indexOld, int indexNew) {
+    private void indexAdjust(final int nHash, final int indexOld, final int indexNew) {
         int[]    anIndex  = m_anHash;
         int      cBuckets = anIndex.length;
         int      nModulo  = cBuckets >>> 1;
@@ -793,7 +791,7 @@ public class ListSet<E>
      *
      * @param indexDelta  the magnitude of the adjustment for all indexes
      */
-    private void indexAdjustAll(int indexDelta) {
+    private void indexAdjustAll(final int indexDelta) {
         int[] anIndex = m_anHash;
         for (int i = 0, c = anIndex.length; i < c; i += 2) {
             int index = anIndex[i];
@@ -985,7 +983,7 @@ public class ListSet<E>
          *
          * @param nStop  a hard-stop id
          */
-        Stop(int nStop) {
+        Stop(final int nStop) {
             first = last = nStop;
         }
 
@@ -1005,7 +1003,7 @@ public class ListSet<E>
          *
          * @return true if the hard-stop id is represented by this hard-stop
          */
-        boolean appliesTo(int nStop) {
+        boolean appliesTo(final int nStop) {
             return next == null
                     ? nStop >= first && nStop <= last
                     : next.appliesTo(nStop);
@@ -1035,14 +1033,14 @@ public class ListSet<E>
         }
 
         /**
-         * Take all of the information from this hard-stop and combine it with information from
+         * Take all the information from this hard-stop and combine it with information from
          * another hard-stop, so that the other hard-stop represents the combination of the two,
          * and then link to that other hard-stop so that future operations against this hard-stop
          * will be delegated to that hard-stop.
          *
          * @param that  the hard-stop to merge this hard-stop into
          */
-        void mergeInto(Stop that) {
+        void mergeInto(final Stop that) {
             that.first  = Math.min(this.first, that.first);
             that.last   = Math.max(this.last , that.last );
             that.active = this.active + that.active;
@@ -1097,7 +1095,7 @@ public class ListSet<E>
         }
 
         @Override
-        public boolean equals(Object obj) {
+        public boolean equals(final Object obj) {
             return obj instanceof Null;
         }
 
@@ -1121,7 +1119,7 @@ public class ListSet<E>
      * The amount of storage for an index, based on the size of the underlying storage for the
      * ListSet, which is always of a power-of-two size.
      */
-    private static final int[] INDEX_SIZE = new int[] {
+    private static final int[] INDEX_SIZE = {
                0,        0,         0,         0,        23,    // 1, 2, 4, 8, 16,
               47,       97,       191,       373,       757,    // 32, ...
             1543,     2999,      5987,     11987,     23993,    // 1024, ...

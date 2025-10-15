@@ -60,8 +60,8 @@ public class PackedInteger
      *
      * @param lVal  the <tt>long</tt> value for the PackedInteger
      */
-    public PackedInteger(long lVal) {
-        setLong(lVal);
+    public PackedInteger(final long lVal) {
+        initLong(lVal);
     }
 
     /**
@@ -69,8 +69,8 @@ public class PackedInteger
      *
      * @param bigint  the <tt>BigInteger</tt> value for the PackedInteger
      */
-    public PackedInteger(BigInteger bigint) {
-        setBigInteger(bigint);
+    public PackedInteger(final BigInteger bigint) {
+        initBigInteger(bigint);
     }
 
     /**
@@ -80,9 +80,9 @@ public class PackedInteger
      *
      * @throws IOException  if an I/O exception occurs while reading the data
      */
-    public PackedInteger(DataInput in)
+    public PackedInteger(final DataInput in)
             throws IOException {
-        readObject(in);
+        initFromStream(in);
     }
 
 
@@ -94,7 +94,7 @@ public class PackedInteger
      *
      * @param lVal  the <tt>long</tt> value for the PackedInteger
      */
-    public static PackedInteger valueOf(long lVal) {
+    public static PackedInteger valueOf(final long lVal) {
         if (lVal >= CACHE_MIN & lVal <= CACHE_MAX) {
             final int iCache = (int) (lVal - CACHE_MIN);
 
@@ -165,7 +165,7 @@ public class PackedInteger
      *
      * @return true iff the PackedInteger is in the specified range
      */
-    public boolean checkRange(long nLo, long nHi) {
+    public boolean checkRange(final long nLo, final long nHi) {
         if (isBig()) {
             return false;
         }
@@ -222,10 +222,9 @@ public class PackedInteger
      *
      * @param lVal  the <tt>long</tt> value for the PackedInteger
      */
-    public void setLong(long lVal) {
+    public void setLong(final long lVal) {
         verifyUninitialized();
-        m_lValue       = lVal;
-        m_fInitialized = true;
+        initLong(lVal);
     }
 
     /**
@@ -250,26 +249,10 @@ public class PackedInteger
      *
      * @param bigint  the BigInteger value for the PackedInteger
      */
-    public void setBigInteger(BigInteger bigint) {
+    @SuppressWarnings("unused")
+    public void setBigInteger(final BigInteger bigint) {
         verifyUninitialized();
-
-        if (bigint == null) {
-            throw new IllegalArgumentException("big integer value required");
-        }
-
-        // determine if the number of bytes allows the BigInteger value to be
-        // stored in a long value
-        if (!(m_fBig = calculateSignedByteCount(bigint) > 8)) {
-            m_lValue = bigint.longValue();
-        } else if (calculateUnsignedByteCount(bigint) <= 8) {
-            // the unsigned value still fits the long
-            m_lValue = bigint.longValue();
-        } else {
-            m_lValue = 0;
-        }
-
-        m_bigint       = bigint;
-        m_fInitialized = true;
+        initBigInteger(bigint);
     }
 
     /**
@@ -308,7 +291,7 @@ public class PackedInteger
      *
      * @return the resulting PackedInteger
      */
-    public PackedInteger add(PackedInteger that) {
+    public PackedInteger add(final PackedInteger that) {
         return new PackedInteger(this.getBigInteger().add(that.getBigInteger()));
     }
 
@@ -320,7 +303,7 @@ public class PackedInteger
      *
      * @return the resulting PackedInteger
      */
-    public PackedInteger sub(PackedInteger that) {
+    public PackedInteger sub(final PackedInteger that) {
         return new PackedInteger(this.getBigInteger().subtract(that.getBigInteger()));
     }
 
@@ -332,7 +315,7 @@ public class PackedInteger
      *
      * @return the resulting PackedInteger
      */
-    public PackedInteger mul(PackedInteger that) {
+    public PackedInteger mul(final PackedInteger that) {
         return new PackedInteger(this.getBigInteger().multiply(that.getBigInteger()));
     }
 
@@ -344,7 +327,7 @@ public class PackedInteger
      *
      * @return the resulting PackedInteger
      */
-    public PackedInteger div(PackedInteger that) {
+    public PackedInteger div(final PackedInteger that) {
         return new PackedInteger(this.getBigInteger().divide(that.getBigInteger()));
     }
 
@@ -356,7 +339,7 @@ public class PackedInteger
      *
      * @return the resulting PackedInteger (never negative - modulo not remainder!)
      */
-    public PackedInteger mod(PackedInteger that) {
+    public PackedInteger mod(final PackedInteger that) {
         return new PackedInteger(this.getBigInteger().mod(that.getBigInteger()));
     }
 
@@ -368,7 +351,7 @@ public class PackedInteger
      *
      * @return an array of the resulting PackedInteger quotient and remainder
      */
-    public PackedInteger[] divrem(PackedInteger that) {
+    public PackedInteger[] divrem(final PackedInteger that) {
         BigInteger   [] aBigInt = this.getBigInteger().divideAndRemainder(that.getBigInteger());
         PackedInteger[] aPacked = new PackedInteger[2];
         aPacked[0] = new PackedInteger(aBigInt[0]);
@@ -384,7 +367,7 @@ public class PackedInteger
      *
      * @return the resulting PackedInteger
      */
-    public PackedInteger and(PackedInteger that) {
+    public PackedInteger and(final PackedInteger that) {
         return new PackedInteger(this.getBigInteger().and(that.getBigInteger()));
     }
 
@@ -396,7 +379,7 @@ public class PackedInteger
      *
      * @return the resulting PackedInteger
      */
-    public PackedInteger or(PackedInteger that) {
+    public PackedInteger or(final PackedInteger that) {
         return new PackedInteger(this.getBigInteger().or(that.getBigInteger()));
     }
 
@@ -408,7 +391,7 @@ public class PackedInteger
      *
      * @return the resulting PackedInteger
      */
-    public PackedInteger xor(PackedInteger that) {
+    public PackedInteger xor(final PackedInteger that) {
         return new PackedInteger(this.getBigInteger().xor(that.getBigInteger()));
     }
 
@@ -420,7 +403,7 @@ public class PackedInteger
      *
      * @return the resulting PackedInteger
      */
-    public PackedInteger shl(PackedInteger that) {
+    public PackedInteger shl(final PackedInteger that) {
         return shl(that.getInt());
     }
 
@@ -432,7 +415,7 @@ public class PackedInteger
      *
      * @return the resulting PackedInteger
      */
-    public PackedInteger shl(int count) {
+    public PackedInteger shl(final int count) {
         return new PackedInteger(this.getBigInteger().shiftLeft(count));
     }
 
@@ -444,7 +427,7 @@ public class PackedInteger
      *
      * @return the resulting PackedInteger
      */
-    public PackedInteger shr(PackedInteger that) {
+    public PackedInteger shr(final PackedInteger that) {
         return shr(that.getInt());
     }
 
@@ -456,7 +439,7 @@ public class PackedInteger
      *
      * @return the resulting PackedInteger
      */
-    public PackedInteger shr(int count) {
+    public PackedInteger shr(final int count) {
         return count <= 0
                 ? this
                 : new PackedInteger(this.getBigInteger().shiftRight(count));
@@ -470,7 +453,7 @@ public class PackedInteger
      *
      * @return the resulting PackedInteger
      */
-    public PackedInteger ushr(PackedInteger that) {
+    public PackedInteger ushr(final PackedInteger that) {
         return shr(that.getInt());
     }
 
@@ -482,7 +465,7 @@ public class PackedInteger
      *
      * @return the resulting PackedInteger
      */
-    public PackedInteger ushr(int count) {
+    public PackedInteger ushr(final int count) {
         return shr(count);
     }
 
@@ -493,7 +476,7 @@ public class PackedInteger
      *
      * @return -1, 0, or 1 if this is less than, equal to, or greater than that
      */
-    public int cmp(PackedInteger that) {
+    public int cmp(final PackedInteger that) {
         return this.getBigInteger().compareTo(that.getBigInteger());
     }
 
@@ -505,7 +488,7 @@ public class PackedInteger
      *
      * @return the String value of this PackedInteger in the format of the specified radix
      */
-    public String toString(int radix) {
+    public String toString(final int radix) {
         if (radix == 10) {
             return toString();
         }
@@ -546,37 +529,11 @@ public class PackedInteger
      *
      * @throws IOException  if an I/O exception occurs while reading the data
      */
-    public void readObject(DataInput in)
+    @SuppressWarnings("unused")
+    public void readObject(final DataInput in)
             throws IOException {
         verifyUninitialized();
-
-        // check for large or huge format with more than 8 trailing bytes (needs BigInteger)
-        final int b = in.readByte();
-        if ((b & 0xE0) == 0xA0) {
-            int cBytes = 1 + (b & 0x1F);
-            if (cBytes == 1) {
-                // huge format
-                long len = readLong(in, in.readByte(), true);
-                if (len < 33) {
-                    throw new IOException("huge integer size of " + len + " bytes; minimum is 33");
-                }
-                if (len > 8192) {
-                    throw new IOException("huge integer size of " + len + " bytes; maximum is 8192");
-                }
-                cBytes = (int) len;
-            }
-
-            if (cBytes > 8) {
-                final byte[] ab = new byte[cBytes];
-                in.readFully(ab);
-                setBigInteger(new BigInteger(ab));
-                return;
-            }
-        }
-
-        // small, medium, and large (up to 8 trailing bytes) format values fit into
-        // a Java long
-        setLong(readLong(in, b, false));
+        initFromStream(in);
     }
 
     /**
@@ -586,7 +543,7 @@ public class PackedInteger
      *
      * @throws IOException  if an I/O exception occurs while writing the data
      */
-    public void writeObject(DataOutput out)
+    public void writeObject(final DataOutput out)
             throws IOException {
         verifyInitialized();
 
@@ -600,7 +557,7 @@ public class PackedInteger
             // truncate any redundant bytes
             boolean fNeg  = (ab[0] & 0x80) != 0;
             int     bSkip = fNeg ? 0xFF : 0x00;
-            while (of < cb-1 && ab[of] == bSkip && (ab[of+1] & 0x80) == (bSkip & 0x80)) {
+            while (of < cb-1 && ab[of] == bSkip && (ab[of+1] & 0x80) == 0) {
                 ++of;
             }
             cb -= of;
@@ -651,8 +608,8 @@ public class PackedInteger
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (!(obj instanceof PackedInteger that)) {
+    public boolean equals(final Object obj) {
+        if (!(obj instanceof final PackedInteger that)) {
             return false;
         }
 
@@ -670,7 +627,7 @@ public class PackedInteger
     // ----- Comparable methods --------------------------------------------------------------------
 
     @Override
-    public int compareTo(PackedInteger that) {
+    public int compareTo(final PackedInteger that) {
         if (this.isBig() || that.isBig()) {
             return this.getBigInteger().compareTo(that.getBigInteger());
         }
@@ -691,7 +648,7 @@ public class PackedInteger
      *
      * @throws IOException  if an I/O exception occurs
      */
-    public static void writeLong(DataOutput out, long l)
+    public static void writeLong(final DataOutput out, final long l)
             throws IOException {
         // test for small (1-byte format)
         if (l <= 127 && l >= -64) {
@@ -752,7 +709,7 @@ public class PackedInteger
      * @throws IOException  if an I/O exception occurs
      * @throws NumberFormatException  if the integer does not fit into a <tt>long</tt> value
      */
-    public static long readLong(DataInput in)
+    public static long readLong(final DataInput in)
             throws IOException {
         return readLong(in, in.readByte(), false);
     }
@@ -766,7 +723,7 @@ public class PackedInteger
      *
      * @return the number of bytes used to encode the packed integer
      */
-    public static int packedLength(byte[] ab, int of) {
+    public static int packedLength(final byte[] ab, final int of) {
         int b = ab[of];
         if ((b & 0xC0) != 0x80) {
             // small format
@@ -796,7 +753,7 @@ public class PackedInteger
      *
      * @return the smallest number of bytes necessary to encode the packed integer
      */
-    public static int packedLength(long n) {
+    public static int packedLength(final long n) {
         // test for small (1-byte format)
         if (n <= 127 && n >= -64) {
             return 1;
@@ -822,7 +779,7 @@ public class PackedInteger
      * @return the int value encoded as bits 0..31, and the number of bytes used by the value
      *         encoded as bits 32..63
      */
-    public static long unpackInt(byte[] ab, int of) {
+    public static long unpackInt(final byte[] ab, int of) {
         int n;
         int cb;
 
@@ -841,19 +798,12 @@ public class PackedInteger
             cb = 1 + cBytes;
             ++of;
 
-            switch (cBytes) {
-            case 2:
-                n  = ab[of] << 8 | ab[of+1] & 0xFF;
-                break;
-            case 3:
-                n  = ab[of] << 16 | (ab[of+1] & 0xFF) << 8 | ab[of+2] & 0xFF;
-                break;
-            case 4:
-                n  = ab[of] << 24 | (ab[of+1] & 0xFF) << 16 | (ab[of+2] & 0xFF) << 8 | ab[of+3] & 0xFF;
-                break;
-            default:
-                throw new IllegalStateException("# trailing bytes=" + cBytes);
-            }
+            n = switch (cBytes) {
+                case 2 -> ab[of] << 8 | ab[of + 1] & 0xFF;
+                case 3 -> ab[of] << 16 | (ab[of + 1] & 0xFF) << 8 | ab[of + 2] & 0xFF;
+                case 4 -> ab[of] << 24 | (ab[of + 1] & 0xFF) << 16 | (ab[of + 2] & 0xFF) << 8 | ab[of + 3] & 0xFF;
+                default -> throw new IllegalStateException("# trailing bytes=" + cBytes);
+            };
         }
 
         return ((long) cb) << 32 | n & 0xFFFFFFFFL;
@@ -862,7 +812,83 @@ public class PackedInteger
 
     // ----- internal ------------------------------------------------------------------------------
 
-    private static long readLong(DataInput in, int b, boolean recursion)
+    /**
+     * Private initialization method for long values. This method is called from constructors
+     * to avoid the this-escape pattern.
+     *
+     * @param lVal  the <tt>long</tt> value for the PackedInteger
+     */
+    private void initLong(final long lVal) {
+        m_lValue       = lVal;
+        m_fInitialized = true;
+    }
+
+    /**
+     * Private initialization method for BigInteger values. This method is called from constructors
+     * to avoid the this-escape pattern.
+     *
+     * @param bigint  the BigInteger value for the PackedInteger
+     */
+    private void initBigInteger(final BigInteger bigint) {
+        if (bigint == null) {
+            throw new IllegalArgumentException("big integer value required");
+        }
+
+        // determine if the number of bytes allows the BigInteger value to be
+        // stored in a long value
+        if (!(m_fBig = calculateSignedByteCount(bigint) > 8)) {
+            m_lValue = bigint.longValue();
+        } else if (calculateUnsignedByteCount(bigint) <= 8) {
+            // the unsigned value still fits the long
+            m_lValue = bigint.longValue();
+        } else {
+            m_lValue = 0;
+        }
+
+        m_bigint       = bigint;
+        m_fInitialized = true;
+    }
+
+    /**
+     * Private initialization method for reading from a DataInput stream. This method is called
+     * from constructors to avoid the this-escape pattern.
+     *
+     * @param in  a DataInput stream to read from
+     *
+     * @throws IOException  if an I/O exception occurs while reading the data
+     */
+    private void initFromStream(final DataInput in)
+            throws IOException {
+        // check for large or huge format with more than 8 trailing bytes (needs BigInteger)
+        final int b = in.readByte();
+        if ((b & 0xE0) == 0xA0) {
+            int cBytes = 1 + (b & 0x1F);
+            if (cBytes == 1) {
+                // huge format
+                long len = readLong(in, in.readByte(), true);
+                if (len < 33) {
+                    throw new IOException("huge integer size of " + len + " bytes; minimum is 33");
+                }
+                if (len > 8192) {
+                    throw new IOException("huge integer size of " + len + " bytes; maximum is 8192");
+                }
+                cBytes = (int) len;
+            }
+
+            if (cBytes > 8) {
+                final byte[] ab = new byte[cBytes];
+                in.readFully(ab);
+                initBigInteger(new BigInteger(ab));
+                return;
+            }
+        }
+
+        // small, medium, and large (up to 8 trailing bytes) format values fit into
+        // a Java long
+        initLong(readLong(in, b, false));
+    }
+
+    private static long readLong(final DataInput in, int b, final boolean recursion)
             throws IOException {
         // small format: 1 byte value -64..127
         if ((b & 0xC0) != 0x80) {
@@ -892,31 +918,20 @@ public class PackedInteger
             size = (int) nestedSize;
         }
 
-        switch (size) {
-        case 1:
-            return in.readByte();
-        case 2:
-            return in.readShort();
-        case 3:
-            return in.readByte() << 16 | in.readUnsignedShort();
-        case 4:
-            return in.readInt();
-        case 5:
-            return ((long) in.readByte()) << 32 | readUnsignedInt(in);
-        case 6:
-            return ((long) in.readShort()) << 32 | readUnsignedInt(in);
-        case 7:
-            return ((long) in.readByte()) << 48
-                    | ((long) in.readUnsignedShort()) << 32
-                    | readUnsignedInt(in);
-        case 8:
-            return in.readLong();
-        default:
-            throw new IllegalStateException("# trailing bytes=" + size);
-        }
+        return switch (size) {
+            case 1 -> in.readByte();
+            case 2 -> in.readShort();
+            case 3 -> in.readByte() << 16 | in.readUnsignedShort();
+            case 4 -> in.readInt();
+            case 5 -> ((long)in.readByte()) << 32 | readUnsignedInt(in);
+            case 6 -> ((long)in.readShort()) << 32 | readUnsignedInt(in);
+            case 7 -> ((long)in.readByte()) << 48 | ((long)in.readUnsignedShort()) << 32 | readUnsignedInt(in);
+            case 8 -> in.readLong();
+            default -> throw new IllegalStateException("# trailing bytes=" + size);
+        };
     }
 
-    private static long readUnsignedInt(DataInput in)
+    private static long readUnsignedInt(final DataInput in)
             throws IOException {
         return in.readInt() & 0xFFFFFFFFL;
     }
@@ -928,7 +943,7 @@ public class PackedInteger
      *
      * @throws IllegalArgumentException if the BigInteger is out of range
      */
-    private static int calculateSignedByteCount(BigInteger bigint) {
+    private static int calculateSignedByteCount(final BigInteger bigint) {
         return bigint.bitLength() / 8 + 1;
     }
 
@@ -939,7 +954,7 @@ public class PackedInteger
      *
      * @throws IllegalArgumentException if the BigInteger is out of range
      */
-    private static int calculateUnsignedByteCount(BigInteger bigint) {
+    private static int calculateUnsignedByteCount(final BigInteger bigint) {
         return (bigint.bitLength() + 7) / 8;
     }
 
@@ -1001,20 +1016,26 @@ public class PackedInteger
     /**
      * The PackedInteger for the value <tt>-1</tt>.
      */
+    @SuppressWarnings("unused")
     public static final PackedInteger NEG_ONE    = valueOf(-1L);
 
     /**
      * Smallest 1-byte (8-bit) signed integer value.
      */
+    @SuppressWarnings("unused")
     public static final PackedInteger SINT1_MIN  = valueOf(-0x80L);
+
     /**
      * Smallest 2-byte (16-bit) signed integer value.
      */
+
     public static final PackedInteger SINT2_MIN  = valueOf(-0x8000L);
     /**
      * Smallest 4-byte (32-bit) signed integer value.
      */
+
     public static final PackedInteger SINT4_MIN  = valueOf(-0x80000000L);
+
     /**
      * Smallest 8-byte (64-bit) signed integer value.
      */
@@ -1030,6 +1051,7 @@ public class PackedInteger
     /**
      * Largest 1-byte (8-bit) signed integer value.
      */
+    @SuppressWarnings("unused")
     public static final PackedInteger SINT1_MAX  = valueOf(0x7F);
     /**
      * Largest 2-byte (16-bit) signed integer value.
@@ -1054,6 +1076,7 @@ public class PackedInteger
     /**
      * Largest 1-byte (8-bit) unsigned integer value.
      */
+    @SuppressWarnings("unused")
     public static final PackedInteger UINT1_MAX  = valueOf(0xFF);
     /**
      * Largest 2-byte (16-bit) unsigned integer value.
