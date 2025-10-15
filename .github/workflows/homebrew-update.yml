@@ -8,7 +8,7 @@
 # - Manually run with test-publishing=true (testing)
 # Can also be triggered manually via workflow_dispatch for testing.
 #
-name: update_homebrew
+name: Update Homebrew
 
 permissions:
     contents: read
