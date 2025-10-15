@@ -25,6 +25,7 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -119,15 +120,9 @@ public class NativeTypeSystem
     private final ClassLoader bridgeLoader;
 
     /**
-     * A cache of native class names keyed by type.
+     * A cache of native class names keyed by class id.
      */
-    public final Map<TypeConstant, String> nativeByType = new ConcurrentHashMap<>();
-
-    /**
-     * A cache of native types keyed by native class name.
-     * TODO: not currently used, remove
-     */
-    public final Map<String, TypeConstant> nativeByName = new ConcurrentHashMap<>();
+    public final Map<ClassConstant, String> nativeByClass = new ConcurrentHashMap<>();
 
     /**
      * A cache of builders for native classes keyed by type.
@@ -199,14 +194,13 @@ public class NativeTypeSystem
         ConstantPool pool = pool();
 
         // only rebased types need to be registered
-        nativeByType.put(pool.typeModule(),  Builder.N_xModule);
-        nativeByType.put(pool.typeObject(),  Builder.N_xObj);
-        nativeByType.put(pool.typeService(), Builder.N_xService);
-        nativeByType.put(pool.typeType(),    Builder.N_xType);
-
-        for (Map.Entry<TypeConstant, String > entry : nativeByType.entrySet()) {
-            nativeByName.put(entry.getValue(), entry.getKey());
-        }
+        nativeByClass.put(pool.clzClass(),     Builder.N_xClass);
+        nativeByClass.put(pool.clzEnum(),      Builder.N_xEnum);
+        nativeByClass.put(pool.clzEnumValue(), Builder.N_xEnum);
+        nativeByClass.put(pool.clzModule(),    Builder.N_xModule);
+        nativeByClass.put(pool.clzObject(),    Builder.N_xObj);
+        nativeByClass.put(pool.clzService(),   Builder.N_xService);
+        nativeByClass.put(pool.clzType(),      Builder.N_xType);
 
         nativeBuilders.put(pool.typeInt64(),  org.xvm.javajit.builders.Int64Builder.class);
         nativeBuilders.put(pool.typeString(), org.xvm.javajit.builders.StringBuilder.class);

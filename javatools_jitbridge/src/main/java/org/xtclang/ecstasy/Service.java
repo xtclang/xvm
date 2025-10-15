@@ -1,7 +1,5 @@
 package org.xtclang.ecstasy;
 
-import org.xtclang.ecstasy.reflect.Type;
-
 import org.xvm.javajit.Ctx;
 
 /**
@@ -22,7 +20,7 @@ public interface Service extends Object {
     /**
      * {@code <Value> SharedContext<Value>.Token? findContextToken(SharedContext<Value> ctx)}
      */
-    xObj findContextToken(Ctx ctx, Type t$Value, SharedContext sharedContext);
+    xObj findContextToken(Ctx ctx, xType t$Value, SharedContext sharedContext);
 
     /**
      * {@code void registerContextToken(SharedContext.Token token)}

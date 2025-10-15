@@ -1328,6 +1328,21 @@ public class PropertyInfo
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
+     * @return the identity of the property to be used by the JIT compiler
+     */
+    public PropertyConstant getJitIdentity() {
+        // get the lowest explicit in the chain
+        PropertyConstant id = null;
+        for (PropertyBody body : m_aBody) {
+            if (id == null ||
+                    body.getImplementation() == Implementation.Explicit) {
+                id = body.getIdentity();
+            }
+        }
+        return id;
+    }
+
+    /**
      * @return the JitMethodDesc for the property getter
      */
     public JitMethodDesc getGetterJitDesc(TypeSystem ts) {

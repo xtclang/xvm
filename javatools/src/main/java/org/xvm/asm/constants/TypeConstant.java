@@ -6427,35 +6427,37 @@ public abstract class TypeConstant
                 sJitName = type.m_sJitName;
                 ComputeName:
                 if (sJitName == null) {
-                    String name = ts.xvm.nativeTypeSystem.nativeByType.get(type);
-                    if (name == null) {
-                        ConstantPool     pool  = getConstantPool();
-                        IdentityConstant idClz = getSingleUnderlyingClass(true);
-
-                        if (idClz.equals(pool.clzEnumeration())) {
-                            // JIT class name for Enumeration<Enum> is "Enumeration", but
-                            // JIT class name for Enumeration<X> is "X$Enumeration"
-                            TypeConstant typeValue = type.getParamType(0);
-                            if (!typeValue.isFormalType() && !typeValue.equals(pool.clzEnum().getType())) {
-                                sJitName = typeValue.ensureJitClassName(ts) + Builder.ENUMERATION;
-                                break ComputeName;
-                            }
-                        } else if (idClz.equals(pool.clzClass())) {
-                            TypeConstant typePublic = this.getParamType(0);
-                            if (!typePublic.isFormalType() && typePublic.isEnum() &&
-                                                             !typePublic.equals(pool.clzEnum().getType())) {
-                                // JIT class name for Class<PublicType> or Class<Enum> is "Class", but
-                                // JIT class name for Class<X> where X is an Enum is "X$Enumeration"
-                                sJitName = typePublic.ensureJitClassName(ts) + Builder.ENUMERATION;
-                                break ComputeName;
-                            }
+                    ConstantPool     pool = getConstantPool();
+                    IdentityConstant id   = getSingleUnderlyingClass(true);
+                    if (id instanceof ClassConstant idClz) {
+                        sJitName = ts.xvm.nativeTypeSystem.nativeByClass.get(idClz);
+                        if (sJitName != null) {
+                            break ComputeName;
                         }
-                        sJitName = loader.prefix + idClz.getJitName(ts);
-
-                        // TODO: check for collisions, reserved keywords etc.
-                    } else {
-                        sJitName = name;
                     }
+                    if (id.equals(pool.clzEnumeration())) {
+                        // JIT class name for Enumeration<Enum> is "Enumeration", but
+                        // JIT class name for Enumeration<X> is "X$Enumeration"
+                        TypeConstant typeValue = type.getParamType(0);
+                        if (!typeValue.isFormalType() && !typeValue.equals(pool.clzEnum().getType())) {
+                            sJitName = typeValue.ensureJitClassName(ts) + Builder.ENUMERATION;
+                            break ComputeName;
+                        }
+                    } else if (id.equals(pool.clzClass())) {
+                        TypeConstant typePublic = this.getParamType(0);
+                        if (!typePublic.isFormalType() && typePublic.isEnum() &&
+                                                         !typePublic.equals(pool.clzEnum().getType())) {
+                            // JIT class name for Class<PublicType> or Class<Enum> is "Class", but
+                            // JIT class name for Class<X> where X is an Enum is "X$Enumeration"
+                            sJitName = typePublic.ensureJitClassName(ts) + Builder.ENUMERATION;
+                        } else {
+                            sJitName = Builder.N_xClass;
+                        }
+                        break ComputeName;
+                    }
+                    sJitName = loader.prefix + id.getJitName(ts);
+
+                    // TODO: check for collisions, reserved keywords etc.
                 }
                 type.m_sJitName = sJitName;
             }

@@ -310,17 +310,17 @@ public class TypeSystem {
         Artifact art = deduceArtifact(module, name);
         if (art != null) {
             if (art.id.getComponent() instanceof ClassStructure clz) {
-                TypeConstant type      = clz.getCanonicalType();
-                Builder      builder   = ensureBuilder(type);
+                TypeConstant type       = clz.getCanonicalType();
+                Builder      jitBuilder = ensureBuilder(type);
                 Consumer<? super ClassBuilder> handler = classBuilder -> {
-                    classBuilder.with(SourceFileAttribute.of(clz.getSourceFileName()));
                     switch (art.shape) {
                         case Impl:
-                            builder.assembleImpl(className, classBuilder);
+                            classBuilder.with(SourceFileAttribute.of(clz.getSourceFileName()));
+                            jitBuilder.assembleImpl(className, classBuilder);
                             break;
 
                         case Exception:
-                            ((ExceptionBuilder) builder).
+                            ((ExceptionBuilder) jitBuilder).
                                 assembleJavaException(className, classBuilder);
                             break;
 
@@ -411,17 +411,25 @@ public class TypeSystem {
             return new Artifact(module.getIdentityConstant(), ClassfileShape.Impl);
         }
 
-        for (ClassfileShape shape : ClassfileShape.values()) {
-            int shapeOffset = name.indexOf(shape.prefix);
-            if (shapeOffset >= 0) {
-                if (shape != ClassfileShape.Impl) {
-                    // all other suffixes are of the length 2
-                    name = name.substring(0, shapeOffset) + name.substring(shapeOffset + 2);
+        ClassfileShape shape  = ClassfileShape.Impl;
+        int            dotIx  = name.lastIndexOf('.');
+        String         simple = name.substring(dotIx + 1);
+        if (simple.length() > 2 && simple.charAt(1) == '$') {
+            for (ClassfileShape sh : ClassfileShape.values()) {
+                if (sh == ClassfileShape.Impl) {
+                    throw new IllegalStateException("Invalid synthetic name: " + name);
                 }
-                if (module.getChildByPath(name.replace('$', '.')) instanceof ClassStructure struct) {
-                    return new Artifact(struct.getIdentityConstant(), shape);
+                if (simple.startsWith(sh.prefix)) {
+                    // all suffixes except Impl are of the length 2
+                    String pkg = dotIx < 0 ? "" : name.substring(0, dotIx + 1);
+                    name  = pkg + simple.substring(2);
+                    shape = sh;
+                    break;
                 }
             }
+        }
+        if (module.getChildByPath(name.replace('$', '.')) instanceof ClassStructure struct) {
+            return new Artifact(struct.getIdentityConstant(), shape);
         }
         return null;
     }

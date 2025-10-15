@@ -672,8 +672,6 @@ public class CommonBuilder
         }
 
         classBuilder.withMethodBody(jitName, md, flags, code -> {
-            int typeIndex = typeSystem.registerConstant(resourceType);
-
             // generate the following:
             // T value = this.prop;
             // if (value == null} { value = this.prop = ctx$.inject(type, name, opts);}
@@ -707,12 +705,10 @@ public class CommonBuilder
                     .astore(valueSlot)
                     .ifnonnull(endLbl)
                     .aload(1) // ctx$
-                    .dup()
-                    .loadConstant(typeIndex)
-                    .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
-                    .checkcast(CD_TypeConstant)                               // <- type
-                    .ldc(resourceName)
-                    .aconst_null()                                            // opts
+                    .dup();
+                Builder.loadTypeConstant(code, typeSystem, resourceType);
+                code.ldc(resourceName)
+                    .aconst_null() // opts
                     .invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
                     .checkcast(pdStd.cd)
                     .dup()
@@ -737,7 +733,7 @@ public class CommonBuilder
      */
     protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
         for (MethodInfo method : typeInfo.getMethods().values()) {
-            if (!method.getIdentity().getNamespace().equals(thisId)) {
+            if (method.isNative() || !method.getIdentity().getNamespace().equals(thisId)) {
                 continue; // not our responsibility
             }
 
@@ -752,7 +748,7 @@ public class CommonBuilder
         boolean cap    = method.isCapped();
         boolean router = false;
 
-        String jitName = method.getIdentity().ensureJitMethodName(typeSystem);
+        String jitName = method.getJitIdentity().ensureJitMethodName(typeSystem);
 
         if (!cap) {
             MethodBody[] chain = method.ensureOptimizedMethodChain(typeInfo);
@@ -1236,6 +1232,11 @@ public class CommonBuilder
             flags |= ClassFile.ACC_ABSTRACT;
         }
         if (method.isFunction() || method.isConstructor()) {
+            if (classStruct.getFormat() == Component.Format.INTERFACE) {
+                // this must be a funky interface method; just ignore
+                return;
+            }
+
             flags |= ClassFile.ACC_STATIC;
         }
 
@@ -1463,6 +1464,7 @@ public class CommonBuilder
     private final static String[] TEST_SET = new String[] {
         "Test", "test",
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
+         "Boolean", "Ordered",
         "TerminalConsole",
     };
     private final static HashSet<String> SKIP_SET = new HashSet<>();

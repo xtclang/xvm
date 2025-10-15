@@ -6,13 +6,12 @@ import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
-import java.lang.constant.ClassDesc;
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Slot;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -62,10 +61,13 @@ public class GP_Compl
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected void buildOptimizedUnary(BuildContext bctx, CodeBuilder code, ClassDesc cdTarget) {
-        switch (cdTarget.descriptorString()) {
-            case "I", "S", "B", "C", "Z"
-                     -> code.iconst_m1().ixor();
+    protected void buildOptimizedUnary(BuildContext bctx, CodeBuilder code, Slot slotTarget) {
+        switch (slotTarget.cd().descriptorString()) {
+            case "I"  -> {
+                code.iconst_m1().ixor();
+                bctx.adjustIntValue(code, slotTarget.type());
+            }
+            case "Z" -> code.iconst_m1().ixor();
             case "J" -> code.ldc(-1L).lxor();
             default  -> throw new IllegalStateException();
         }

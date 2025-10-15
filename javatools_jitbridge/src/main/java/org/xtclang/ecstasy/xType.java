@@ -1,5 +1,7 @@
 package org.xtclang.ecstasy;
 
+import org.xtclang.ecstasy.reflect.Type;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
@@ -8,7 +10,8 @@ import org.xvm.javajit.Ctx;
  * All Ecstasy `Type` types must extend this class.
  */
 public abstract class xType
-        extends xConst {
+        extends xConst
+        implements Type {
 
     public xType(Ctx ctx, TypeConstant type) {
         super(ctx);

@@ -66,7 +66,7 @@ public class Exception extends xConst {
         sb.append(": ")
           .append(text == Nullable.Null ? "" : text.toString($ctx()));
         for (StackTraceElement el : $exception.getStackTrace()) {
-            if (el.getFileName().endsWith(".x")) {
+            if (el.getFileName().endsWith(".x") && !el.getMethodName().startsWith("$")) {
                 sb.append("\n    at ")
                   .append(el);
             }
@@ -80,5 +80,9 @@ public class Exception extends xConst {
 
     public static xException $oob(Ctx ctx, java.lang.String text) {
         return new OutOfBounds(ctx).$init(ctx, text, null);
+    }
+
+    public static xException $unsupported(Ctx ctx, java.lang.String text) {
+        return new Unsupported(ctx).$init(ctx, text, null);
     }
 }

@@ -124,12 +124,6 @@ public class JitConnector
         }
     }
 
-    /**
-     * Print a JIT exception.
-     */
-    private void printFilteredException(Throwable e) {
-    }
-
     @Override
     public int join() {
         return (int) result;

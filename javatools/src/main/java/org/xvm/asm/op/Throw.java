@@ -99,8 +99,8 @@ public class Throw
     public void build(BuildContext bctx, CodeBuilder code) {
         Slot target = bctx.loadArgument(code, m_nArgValue);
         assert target.type().isA(bctx.pool().typeException());
-        code.getfield(CD_Exception, "$exception", CD_xException);
-        code.athrow();
+        code.getfield(CD_Exception, "$exception", CD_xException)
+            .athrow();
     }
 
     // ----- fields --------------------------------------------------------------------------------

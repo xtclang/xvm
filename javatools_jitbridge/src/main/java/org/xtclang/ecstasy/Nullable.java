@@ -20,7 +20,7 @@ public class Nullable
 
     public static final Nullable Null = new Nullable();
 
-    public Enumeration enumeration$get() {
+    public Enumeration enumeration$get(Ctx ctx) {
         return Nullable$Enumeration.$INSTANCE;
     }
 

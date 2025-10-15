@@ -2,16 +2,9 @@ package org.xtclang.ecstasy;
 
 import org.xvm.javajit.Ctx;
 
-import org.xtclang.ecstasy.numbers.Int64;
+public class Range$Orderable extends Range {
 
-/**
- * Native implementation for `ecstasy.Range`.
- *
- * Supports the primitive form of the `Range<Int>` type.
- */
-public abstract class Range extends xConst {
-
-    public Range(Ctx ctx) {
+    public Range$Orderable(Ctx ctx) {
         super(ctx);
     }
 

@@ -73,6 +73,13 @@ public abstract class xObj implements Object {
         return $type().$type.isA(t.$type);
     }
 
+    /**
+     * {@code static <CompileType extends Object> Boolean equals(CompileType o1, CompileType o2)}
+     */
+    static boolean equals$p(Ctx ctx, xType CompileType, xObj o1, xObj o2) {
+        return o1 == o2; // TODO CP: check unwrap
+    }
+
     // ----- static helpers for when references may be non-xObj classes ----------------------------
 
     public static java.lang.Object $makeImmut(Ctx ctx, java.lang.Object ref) {

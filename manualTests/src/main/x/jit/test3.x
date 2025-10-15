@@ -7,6 +7,8 @@ module test3.examples.org {
     void run() {
         testTry1();
         console.print(testTry2());
+
+        testAssert1(False);
     }
 
     void testTry1() {
@@ -59,6 +61,15 @@ module test3.examples.org {
             throw new Unsupported("Test Unsupported");
         } else {
             throw new IllegalState("Test IllegalState");
+        }
+    }
+
+    void testAssert1(Boolean flag) {
+        try {
+            assert flag as "Flag is not set";
+        } catch (IllegalState e) {
+            console.print("Assert: ", True);
+            console.print(e.text);
         }
     }
 }

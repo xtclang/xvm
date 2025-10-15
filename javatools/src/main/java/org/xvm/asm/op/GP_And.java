@@ -6,8 +6,6 @@ import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
-import java.lang.constant.ClassDesc;
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
@@ -57,10 +55,12 @@ public class GP_And
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, ClassDesc cdTarget) {
-        switch (cdTarget.descriptorString()) {
-            case "I", "S", "B", "C", "Z"
-                     -> code.iand();
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, BuildContext.Slot slotTarget) {
+        switch (slotTarget.cd().descriptorString()) {
+            case "I" -> {
+                code.iand();
+                bctx.adjustIntValue(code, slotTarget.type());
+            }
             case "J" -> code.land();
             default  -> throw new IllegalStateException();
         }

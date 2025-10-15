@@ -55,14 +55,14 @@ public class ExceptionBuilder extends CommonBuilder {
         MethodTypeDesc initMD   = MethodTypeDesc.of(CD_void, CD_Throwable, thisCD);
 
         classBuilder.withMethod(jitName, createMD, ClassFile.ACC_PUBLIC,
-            methodBuilder -> methodBuilder.withCode(code -> {
+            methodBuilder -> methodBuilder.withCode(code ->
                 code.new_(javaExCD)
                     .dup()
                     .aload(code.parameterSlot(0))
                     .aload(0)
                     .invokespecial(javaExCD, INIT_NAME, initMD)
-                    .areturn();
-            })
+                    .areturn()
+            )
         );
     }
 

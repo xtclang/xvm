@@ -274,6 +274,11 @@ public class MethodConstant
      * Ensure a unique name for this method at the specified TypeSystem.
      */
     public String ensureJitMethodName(TypeSystem ts) {
+        if (isFunction() && !isConstructor()) {
+            // function names don't have to be unique
+            return getName();
+        }
+
         String sJitName = m_sJitName;
         if (sJitName == null) {
             StringBuilder    prefix   = new StringBuilder();

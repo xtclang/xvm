@@ -574,7 +574,7 @@ public abstract class OpCallable extends Op {
         if (m_nFunctionId == A_SUPER) {
             MethodBody body = bctx.callChain[1];
 
-            cdTarget = body.getIdentity().getType().ensureClassDesc(ts);;
+            cdTarget = body.getIdentity().ensureClassDesc(ts);
             jmdCall  = body.getJitDesc(bctx.typeSystem);
             sigCall  = body.getSignature();
             fSpecial = true;
@@ -583,7 +583,7 @@ public abstract class OpCallable extends Op {
             IdentityConstant idTarget   = idMethod.getClassIdentity();
             MethodInfo       infoMethod = idTarget.getType().ensureTypeInfo().getMethodById(idMethod);
 
-            cdTarget = idTarget.getType().ensureClassDesc(ts);
+            cdTarget = idTarget.ensureClassDesc(ts);
             jmdCall  = infoMethod.getJitDesc(ts);
             sigCall  = infoMethod.getSignature();
             fSpecial = false;
@@ -593,7 +593,7 @@ public abstract class OpCallable extends Op {
             throw new UnsupportedOperationException("function call " + slotFn.type());
         }
 
-        String methodName = sigCall.getName();
+        String methodName = sigCall.getName(); // function names don't have to be unique
         if (jmdCall.isOptimized) {
             mdCall      = jmdCall.optimizedMD;
             methodName += Builder.OPT;
@@ -622,37 +622,9 @@ public abstract class OpCallable extends Op {
      * Support for NEW_ ops.
      */
     protected void buildNew(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
-        TypeSystem       ts         = bctx.typeSystem;
-        MethodConstant   idCtor     = (MethodConstant) bctx.getConstant(m_nFunctionId);
-        IdentityConstant idTarget   = idCtor.getNamespace();
-        TypeConstant     typeTarget = idTarget.getType();
-        TypeInfo         infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();
-        MethodInfo       infoCtor   = infoTarget.getMethodById(idCtor);
-
-        if (infoCtor == null) {
-            throw new RuntimeException("Unresolvable constructor \"" +
-                idCtor.getValueString() + "\" for " + typeTarget.getValueString());
-        }
-        String        sJitTarget = typeTarget.ensureJitClassName(ts);
-        ClassDesc     cdTarget   = ClassDesc.of(sJitTarget);
-        JitMethodDesc jmdNew     =
-            Builder.convertConstructToNew(infoTarget, sJitTarget, infoCtor.getJitDesc(ts));
-
-        boolean fOptimized = jmdNew.isOptimized;
-        String  sJitNew    = idCtor.ensureJitMethodName(ts).replace("construct", Builder.NEW);
-        MethodTypeDesc md;
-        if (fOptimized) {
-            md       = jmdNew.optimizedMD;
-            sJitNew += Builder.OPT;
-        }
-        else {
-            md = jmdNew.standardMD;
-        }
-
-        bctx.loadCtx(code);
-        bctx.loadArguments(code, jmdNew, anArgValue);
-
-        code.invokestatic(cdTarget, sJitNew, md);
+        MethodConstant idCtor     = (MethodConstant) bctx.getConstant(m_nFunctionId);
+        TypeConstant   typeTarget = idCtor.getNamespace().getType();
+        ClassDesc      cdTarget   = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
 
         bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, typeTarget, cdTarget, ""));
     }

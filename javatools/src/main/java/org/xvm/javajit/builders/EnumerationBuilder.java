@@ -4,8 +4,6 @@ import java.lang.classfile.ClassBuilder;
 
 import java.lang.constant.ClassDesc;
 
-import java.util.Collections;
-
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 

@@ -9,13 +9,14 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.TypeSystem;
@@ -24,6 +25,13 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
+
+import static java.lang.constant.ConstantDescs.CD_boolean;
+
+import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_Ordered;
+import static org.xvm.javajit.Builder.CD_xType;
+import static org.xvm.javajit.Builder.OPT;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -254,14 +262,17 @@ public abstract class OpTest
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         TypeSystem   ts         = bctx.typeSystem;
-        Slot         slot1      = bctx.loadArgument(code, m_nValue1);
-        Slot         slot2      = bctx.loadArgument(code, m_nValue2);
-        TypeConstant typeCommon = selectCommonType(slot1.type(), slot2.type(), ErrorListener.BLACKHOLE);
+        TypeConstant type1      = bctx.getArgumentType(m_nValue1);
+        TypeConstant type2      = bctx.getArgumentType(m_nValue2);
+        TypeConstant typeCommon = selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
 
-        // TODO: remove the assert
+        // TODO: remove the assert and potentially get rid of m_nType
         assert typeCommon.equals(bctx.getConstant(m_nType));
 
         if (typeCommon.isPrimitive()) {
+            bctx.loadArgument(code, m_nValue1);
+            bctx.loadArgument(code, m_nValue2);
+
             ClassDesc cdCommon = JitTypeDesc.getPrimitiveClass(typeCommon);
             Label     lblTrue  = code.newLabel();
             Label     lblEnd   = code.newLabel();
@@ -314,13 +325,80 @@ public abstract class OpTest
                 .labelBinding(lblTrue)
                 .iconst_1()
                 .labelBinding(lblEnd);
-            bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, bctx.pool().typeBoolean()));
         } else {
-            SignatureConstant sigEquals = bctx.pool().sigEquals();
-            MethodInfo        method    = typeCommon.ensureTypeInfo().getMethodBySignature(sigEquals);
-            JitMethodDesc     jmd       = method.getJitDesc(ts);
-            throw new UnsupportedOperationException("call equals");
+            ConstantPool pool = bctx.pool();
+            int          nOp  = getOpCode();
+            SignatureConstant sig = switch (nOp) {
+                case OP_IS_EQ, OP_IS_NEQ                      -> pool.sigEquals();
+                case OP_IS_GT, OP_IS_GTE, OP_IS_LT, OP_IS_LTE -> pool.sigCompare();
+                default                                       -> throw new IllegalStateException();
+            };
+            MethodInfo    method  = typeCommon.ensureTypeInfo().getMethodBySignature(sig);
+            JitMethodDesc jmd     = method.getJitDesc(ts);
+            ClassDesc     cd      = method.getJitIdentity().getNamespace().ensureClassDesc(ts);
+            String        jitName = sig.getName(); // function
+
+            bctx.loadCtx(code);
+            switch (nOp) {
+            case OP_IS_EQ, OP_IS_NEQ:
+                assert jmd.isOptimized;
+                // Boolean equals(Ctx,xType,xObj,xObj)
+                code.dup();
+                Builder.loadType(code, ts, typeCommon);
+                bctx.loadArgument(code, m_nValue1);
+                bctx.loadArgument(code, m_nValue2);
+                code.invokestatic(cd, jitName+OPT, MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_xType, cd, cd));
+                if (nOp == OP_IS_NEQ) {
+                    code.iconst_1()
+                        .ixor();
+                }
+                break;
+
+            case OP_IS_GT, OP_IS_GTE, OP_IS_LT, OP_IS_LTE:
+                // Ordered compare(Ctx,Type,xObj,xObj)
+                code.dup();
+                Builder.loadType(code, ts, typeCommon);
+                bctx.loadArgument(code, m_nValue1);
+                bctx.loadArgument(code, m_nValue2);
+                code.invokestatic(cd, jitName, MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_xType, cd, cd));
+
+                boolean fInverse;
+                switch (nOp) {
+                case OP_IS_GT:
+                    bctx.builder.loadConstant(code, pool.valGreater());
+                    fInverse = false;
+                    break;
+                case OP_IS_GTE:
+                    bctx.builder.loadConstant(code, pool.valLesser());
+                    fInverse = true;
+                    break;
+                case OP_IS_LT:
+                    bctx.builder.loadConstant(code, pool.valLesser());
+                    fInverse = false;
+                    break;
+                case OP_IS_LTE:
+                    bctx.builder.loadConstant(code, pool.valGreater());
+                    fInverse = true;
+                    break;
+                default:
+                    throw new IllegalStateException();
+                }
+
+                Label labelTrue = code.newLabel();
+                if (fInverse) {
+                    code.if_acmpne(labelTrue);
+                } else {
+                    code.if_acmpeq(labelTrue);
+                }
+                Label labelEnd = code.newLabel();
+                code.iconst_0()
+                    .goto_(labelEnd)
+                    .labelBinding(labelTrue)
+                    .iconst_1()
+                    .labelBinding(labelEnd);
+            }
         }
+        bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, bctx.pool().typeBoolean()));
     }
 
     // ----- fields --------------------------------------------------------------------------------

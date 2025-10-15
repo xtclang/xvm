@@ -8,6 +8,10 @@ import java.io.IOException;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
+import java.lang.constant.ClassDesc;
+
+import java.util.Arrays;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
@@ -15,6 +19,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Ctx;
@@ -31,6 +36,7 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_xException;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -169,17 +175,31 @@ public class Assert
     public void build(BuildContext bctx, CodeBuilder code) {
         Label labelEnd = code.newLabel();
 
-        bctx.loadArgument(code, m_nTest);
-        code.ifne(labelEnd);
+        boolean fAlwaysFalse = m_nTest <= Op.CONSTANT_OFFSET
+            && bctx.getConstant(m_nTest).equals(bctx.pool().valFalse());
+        if (!fAlwaysFalse) {
+            bctx.loadArgument(code, m_nTest);
+            code.ifne(labelEnd);
+        }
         bctx.loadCtx(code);
         if (m_nConstructor == A_IGNORE) {
             code.loadConstant( "Debugger support for jit is not yet implemented");
             code.invokevirtual(CD_Ctx, "log", Ctx.MD_log);
         } else {
             buildMessage(bctx, code);
-            code.invokevirtual(CD_Ctx, "log", Ctx.MD_log); // TODO: throw
-    }
-        code.labelBinding(labelEnd);
+            MethodConstant idCtor = (MethodConstant) bctx.getConstant(m_nConstructor);
+            TypeConstant   typeEx = idCtor.getNamespace().getType();
+            int[]          anArgs = new int[idCtor.getSignature().getParamCount()];
+
+            Arrays.fill(anArgs, Op.A_DEFAULT);
+
+            ClassDesc cdEx = bctx.buildNew(code, typeEx, idCtor, anArgs);
+            code.getfield(cdEx, "$exception", CD_xException)
+                .athrow();
+        }
+        if (!fAlwaysFalse) {
+            code.labelBinding(labelEnd);
+        }
     }
 
     /**

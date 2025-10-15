@@ -23,6 +23,7 @@ import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.MethodBody;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
@@ -38,7 +39,9 @@ import org.xvm.asm.op.Guarded;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_TypeConstant;
+import static org.xvm.javajit.Builder.CD_Exception;
+import static org.xvm.javajit.Builder.CD_JavaString;
+import static org.xvm.javajit.Builder.CD_xException;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.toTypeKind;
 
@@ -325,6 +328,27 @@ public class BuildContext {
     }
 
     /**
+     * Obtain the type of the specified argument.
+     */
+    public TypeConstant getArgumentType(int argId) {
+        if (argId >= 0) {
+            Slot slot = getSlot(argId);
+            assert slot != null;
+            return slot.type();
+        }
+
+        if (argId <= Op.CONSTANT_OFFSET) {
+            return getConstant(argId).getType();
+        }
+
+        return switch (argId) {
+            case Op.A_STACK -> tailStack.peek().type();
+            case Op.A_THIS  -> slots.get(Op.A_THIS).type();
+            default -> throw new UnsupportedOperationException("id=" + argId);
+        };
+    }
+
+    /**
      * Build the code to load an argument value on the Java stack.
      */
     public Slot loadArgument(CodeBuilder code, int argId) {
@@ -551,14 +575,11 @@ public class BuildContext {
 
                 slots.put(varIndex, slot);
 
-                int typeIndex = typeSystem.registerConstant(resourceType);
-                loadCtx(code)
-                    .dup()
-                    .loadConstant(typeIndex)
-                    .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
-                    .checkcast(CD_TypeConstant)                               // <- type
-                    .ldc(resourceName)
-                    .aconst_null()                                            // opts
+                loadCtx(code);
+                code.dup();
+                Builder.loadTypeConstant(code, typeSystem, resourceType);
+                code.ldc(resourceName)
+                    .aconst_null() // opts
                     .invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
                     .astore(slot.slot())
                     .labelBinding(varStart);
@@ -573,9 +594,10 @@ public class BuildContext {
      */
     public void loadArguments(CodeBuilder code, JitMethodDesc jmd, int[] anArgValue) {
         boolean isOptimized = jmd.isOptimized;
+        int     argCount    = anArgValue.length;
 
-        for (int i = 0, c = anArgValue == null ? 0 : anArgValue.length; i < c; i++ ) {
-            int          iArg = anArgValue[i];
+        for (int i = 0, c = jmd.standardParams.length; i < c; i++ ) {
+            int          iArg = i < argCount ? anArgValue[i] : Op.A_DEFAULT;
             JitParamDesc pd   = isOptimized ? jmd.getOptimizedParam(i) : jmd.standardParams[i];
             switch (pd.flavor) {
             case SpecificWithDefault, WidenedWithDefault:
@@ -615,6 +637,7 @@ public class BuildContext {
         }
         PropertyConstant propId     = (PropertyConstant) getConstant(propIdIndex);
         PropertyInfo     propInfo   = propId.getPropertyInfo();
+        ClassDesc        cdOwner    = propInfo.getJitIdentity().getNamespace().ensureClassDesc(typeSystem);
         JitMethodDesc    jmd        = propInfo.getGetterJitDesc(typeSystem);
         String           getterName = propInfo.getGetterId().ensureJitMethodName(typeSystem);
 
@@ -627,7 +650,7 @@ public class BuildContext {
         }
 
         loadCtx(code);
-        code.invokevirtual(targetSlot.cd(), getterName, md);
+        code.invokevirtual(cdOwner, getterName, md);
         assignReturns(code, jmd, 1, new int[] {retIndex});
     }
 
@@ -640,6 +663,7 @@ public class BuildContext {
         }
         PropertyConstant propId     = (PropertyConstant) getConstant(propIdIndex);
         PropertyInfo     propInfo   = propId.getPropertyInfo();
+        ClassDesc        cdOwner    = propInfo.getJitIdentity().getNamespace().ensureClassDesc(typeSystem);
         JitMethodDesc    jmd        = propInfo.getSetterJitDesc(typeSystem);
         String           setterName = propInfo.getSetterId().ensureJitMethodName(typeSystem);
 
@@ -656,7 +680,42 @@ public class BuildContext {
         if (!valueSlot.isSingle()) {
             throw new UnsupportedOperationException("Multislot L_Set");
         }
-        code.invokevirtual(targetSlot.cd(), setterName, md);
+        code.invokevirtual(cdOwner, setterName, md);
+    }
+
+    /**
+     * Call the constructor.
+     */
+    public ClassDesc buildNew(CodeBuilder code, TypeConstant typeTarget,
+                              MethodConstant idCtor, int[] anArgValue) {
+        TypeInfo   infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+        MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
+
+        if (infoCtor == null) {
+            throw new RuntimeException("Unresolvable constructor \"" +
+                idCtor.getValueString() + "\" for " + typeTarget.getValueString());
+        }
+        String        sJitTarget = typeTarget.ensureJitClassName(typeSystem);
+        ClassDesc     cdTarget   = ClassDesc.of(sJitTarget);
+        JitMethodDesc jmdNew     =
+            Builder.convertConstructToNew(infoTarget, sJitTarget, infoCtor.getJitDesc(typeSystem));
+
+        boolean fOptimized = jmdNew.isOptimized;
+        String  sJitNew    = idCtor.ensureJitMethodName(typeSystem).replace("construct", Builder.NEW);
+        MethodTypeDesc md;
+        if (fOptimized) {
+            md       = jmdNew.optimizedMD;
+            sJitNew += Builder.OPT;
+        }
+        else {
+            md = jmdNew.standardMD;
+        }
+
+        loadCtx(code);
+        loadArguments(code, jmdNew, anArgValue);
+
+        code.invokestatic(cdTarget, sJitNew, md);
+        return cdTarget;
     }
 
     /**
@@ -732,6 +791,32 @@ public class BuildContext {
                     break;
                 }
             }
+        }
+    }
+
+    /**
+     * Throw an "Unsupported" exception.
+     */
+    public void throwUnsupported(CodeBuilder code) {
+        loadCtx(code);
+        code.aconst_null()
+            .invokestatic(CD_Exception, "$unsupported",
+                MethodTypeDesc.of(CD_xException, CD_Ctx, CD_JavaString))
+            .athrow();
+    }
+
+    /**
+     * Adjust the int value on the stack according to its type.
+     */
+    public void adjustIntValue(CodeBuilder code, TypeConstant type) {
+        switch (type.getSingleUnderlyingClass(false).getName()) {
+            case "Int8"   -> code.i2b();
+            case "Int16"  -> code.i2s();
+            case "Int32"  -> {}
+            case "UInt8"  -> code.ldc(0xFF).iand();
+            case "UInt16" -> code.ldc(0xFFFF).iand();
+            case "UInt32" -> {}
+            default       -> throw new IllegalStateException();
         }
     }
 

@@ -5,6 +5,13 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
+
+import java.lang.classfile.instruction.SwitchCase;
+
+import java.lang.constant.MethodTypeDesc;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -15,7 +22,17 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.ByteConstant;
+import org.xvm.asm.constants.CharConstant;
+import org.xvm.asm.constants.EnumValueConstant;
+import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.RangeConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.Builder;
 
 import org.xvm.runtime.ConstHeap;
 import org.xvm.runtime.Frame;
@@ -26,6 +43,10 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
+
+import static java.lang.constant.ConstantDescs.CD_long;
+
+import static org.xvm.javajit.Builder.CD_Ctx;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -361,6 +382,236 @@ public class JumpVal
           .append(", ");
     }
 
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        Slot slotArg = bctx.loadArgument(code, m_nArgCond);
+
+        int[] aofCase = m_aofCase;
+        int   cRows   = aofCase.length;
+        assert cRows > 0;
+
+        // retrieve the base type
+        Constant constant = bctx.getConstant(m_anConstCase[0]);
+        if (constant instanceof RangeConstant range) {
+            constant = range.getFirst();
+        }
+
+        switch (constant) {
+        case ByteConstant _       -> buildByteSwitch(bctx, code, slotArg);
+        case CharConstant _       -> buildCharSwitch(bctx, code, slotArg);
+        case IntConstant _        -> buildLongSwitch(bctx, code, slotArg);
+        case StringConstant _     -> buildStringSwitch(bctx, code, slotArg);
+        case EnumValueConstant _  -> buildEnumSwitch(bctx, code, slotArg);
+        default                   -> buildIfLadder(bctx, code, slotArg);
+        }
+    }
+
+    private void buildByteSwitch(BuildContext bctx, CodeBuilder code, Slot slotArg) {
+        assert slotArg.cd().isPrimitive() &&
+               Builder.toTypeKind(slotArg.cd()).slotSize() == 1;
+
+        int[] aofCase = m_aofCase;
+        int   cRows   = aofCase.length;
+        int   nThis   = getAddress();
+        int   iMin    = Integer.MAX_VALUE;
+        int   iMax    = Integer.MIN_VALUE;
+
+        List<SwitchCase> listCases = new ArrayList<>();
+        for (int iRow = 0; iRow < cRows; iRow++) {
+            Constant constant = bctx.getConstant(m_anConstCase[iRow]);
+            Label    label    = bctx.ensureLabel(code, nThis + aofCase[iRow]);
+            if (constant instanceof RangeConstant range) {
+                int iFirst = ((ByteConstant) range.getEffectiveFirst()).getValue().intValue();
+                int iLast  = ((ByteConstant) range.getEffectiveLast()).getValue().intValue();
+
+                iMin = Math.min(iMin, iFirst);
+                iMax = Math.max(iMax, iLast);
+
+                for (int iVal = iFirst; iVal <= iLast; iVal++) {
+                    listCases.add(SwitchCase.of(iVal, label));
+                }
+            } else {
+                int iVal = ((ByteConstant) constant).getValue().intValue();
+
+                iMin = Math.min(iMin, iVal);
+                iMax = Math.max(iMax, iVal);
+
+                listCases.add(SwitchCase.of(iVal, label));
+            }
+        }
+
+        Label labelDflt = bctx.ensureLabel(code, nThis + m_ofDefault);
+        code.tableswitch(iMin, iMax, labelDflt, listCases);
+    }
+
+    private void buildCharSwitch(BuildContext bctx, CodeBuilder code, Slot slotArg) {
+        throw new UnsupportedOperationException();
+    }
+
+    private void buildLongSwitch(BuildContext bctx, CodeBuilder code, Slot slotArg) {
+        assert slotArg.cd().descriptorString().equals("J");
+
+        int[] aofCase = m_aofCase;
+        int   cRows   = aofCase.length;
+        long  lMin    = Long.MAX_VALUE;
+        long  lMax    = Long.MIN_VALUE;
+        int   cCases  = cRows;
+        int   cSpread = 0;
+
+        Constant[] aConst = new Constant[cRows];
+        for (int iRow = 0; iRow < cRows; iRow++) {
+            Constant constant = aConst[iRow] = bctx.getConstant(m_anConstCase[iRow]);
+            if (constant instanceof RangeConstant range) {
+                long lFirst = range.getEffectiveFirst().getIntValue().getLong();
+                long lLast  = range.getEffectiveLast().getIntValue().getLong();
+
+                lMin = Math.min(lMin, lFirst);
+                lMax = Math.max(lMax, lLast);
+
+                cCases += (int) (lLast - lFirst); // no need for "+1" since we already counted it
+            } else {
+                long lVal = constant.getIntValue().getLong();
+
+                lMin = Math.min(lMin, lVal);
+                lMax = Math.max(lMax, lVal);
+            }
+        }
+
+        Plan plan;
+        if (lMax - lMin > Integer.MAX_VALUE) {
+            // JVM's lookupswitch and tableswitch instructions only accept int operands
+            plan = Plan.IfLadder;
+        } else {
+            cSpread = (int) (lMax - lMin);
+
+            int nDensity = cSpread / cCases;
+            if (cSpread > 256 || (cSpread > 32 && nDensity < 4)) {
+                plan = Plan.LookupSwitch;
+            } else {
+                plan = Plan.TableSwitch;
+            }
+        }
+
+        int   nThis     = getAddress();
+        Label labelDflt = bctx.ensureLabel(code, nThis + m_ofDefault);
+        switch (plan) {
+        case TableSwitch, LookupSwitch:
+            code.ldc(lMin)
+                .lsub()
+                .l2i(); // (int) (lArg - lMin);
+
+            List<SwitchCase> listCases = new ArrayList<>();
+            for (int iRow = 0; iRow < cRows; iRow++) {
+                Constant constant = aConst[iRow];
+                Label    label    = bctx.ensureLabel(code, nThis + aofCase[iRow]);
+                if (constant instanceof RangeConstant range) {
+                    long  lFirst = range.getEffectiveFirst().getIntValue().getLong();
+                    long  lLast  = range.getEffectiveLast().getIntValue().getLong();
+
+                    for (long lVal = lFirst; lVal <= lLast; lVal++) {
+                        int ix = (int) (lVal - lMin);
+                        listCases.add(SwitchCase.of(ix, label));
+                    }
+                } else {
+                    long lVal = constant.getIntValue().getLong();
+                    int  ix   = (int) (lVal - lMin);
+                    listCases.add(SwitchCase.of(ix, label));
+                }
+            }
+            if (plan == Plan.TableSwitch) {
+                code.tableswitch(0, cSpread, labelDflt, listCases);
+            } else {
+                code.lookupswitch(labelDflt, listCases);
+            }
+        break;
+
+        case IfLadder:
+            int nSlotArg = slotArg.slot();
+            for (int iRow = 0; iRow < cRows; iRow++) {
+                if (iRow > 0) {
+                    // copy the argument for the next cycle
+                    code.lload(nSlotArg);
+                }
+
+                Constant constant = aConst[iRow];
+                Label    label    = bctx.ensureLabel(code, nThis + aofCase[iRow]);
+                if (constant instanceof RangeConstant range) {
+                    long  lFirst  = range.getEffectiveFirst().getIntValue().getLong();
+                    long  lLast   = range.getEffectiveLast().getIntValue().getLong();
+                    Label lblNext = code.newLabel();
+                    code.ldc(lFirst)
+                        .lcmp()
+                        .iflt(lblNext)
+                        .lload(nSlotArg)
+                        .ldc(lLast)
+                        .lcmp()
+                        .ifle(label)
+                        .labelBinding(lblNext);
+                } else {
+                    code.ldc(constant.getIntValue().getLong())
+                        .lcmp()
+                        .ifeq(label);
+                }
+            }
+        }
+        code.goto_(labelDflt);
+    }
+
+    private void buildStringSwitch(BuildContext bctx, CodeBuilder code, Slot slotArg) {
+        // TODO: optimize
+        buildIfLadder(bctx, code, slotArg);
+    }
+
+    private void buildEnumSwitch(BuildContext bctx, CodeBuilder code, Slot slotArg) {
+        assert slotArg.type().isEnum();
+
+        int[] aofCase = m_aofCase;
+        int   cRows   = aofCase.length;
+        int   nThis   = getAddress();
+        int   iMin    = Integer.MAX_VALUE;
+        int   iMax    = Integer.MIN_VALUE;
+
+        List<SwitchCase> listCases = new ArrayList<>();
+        for (int iRow = 0; iRow < cRows; iRow++) {
+            Constant constant = bctx.getConstant(m_anConstCase[iRow]);
+            Label    label    = bctx.ensureLabel(code, nThis + aofCase[iRow]);
+            if (constant instanceof RangeConstant range) {
+                int iFirst = ((EnumValueConstant) range.getEffectiveFirst()).getPresumedOrdinal();
+                int iLast  = ((EnumValueConstant) range.getEffectiveLast()).getPresumedOrdinal();
+
+                iMin = Math.min(iMin, iFirst);
+                iMax = Math.max(iMax, iLast);
+
+                for (int iVal = iFirst; iVal <= iLast; iVal++) {
+                    listCases.add(SwitchCase.of(iVal, label));
+                }
+            } else {
+                int iVal = ((EnumValueConstant) constant).getPresumedOrdinal();
+
+                iMin = Math.min(iMin, iVal);
+                iMax = Math.max(iMax, iVal);
+
+                listCases.add(SwitchCase.of(iVal, label));
+            }
+        }
+
+        // enumValue -> enumValue.ordinal;
+        bctx.loadCtx(code);
+        code.invokevirtual(slotArg.cd(), "ordinal$get$p", MethodTypeDesc.of(CD_long, CD_Ctx))
+            .l2i();
+
+        Label labelDflt = bctx.ensureLabel(code, nThis + m_ofDefault);
+        code.tableswitch(iMin, iMax, labelDflt, listCases);
+    }
+
+    private void buildIfLadder(BuildContext bctx, CodeBuilder code, Slot slotArg) {
+        throw new UnsupportedOperationException();
+    }
+
+    enum Plan {TableSwitch, LookupSwitch, IfLadder}
 
     // ----- fields --------------------------------------------------------------------------------
 

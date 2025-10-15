@@ -19,7 +19,7 @@ import org.xvm.javajit.TypeSystem;
  * The builder for Enum value types.
  *
  * It overrides the CommonBuilder to do the following:
- *   - create a synthetic "$name" property to hold the name
+ *   - create a synthetic "$name" field to hold the name
  *   - supply the "ordinal" and "name" properties
  */
 public class EnumValueBuilder extends CommonBuilder {

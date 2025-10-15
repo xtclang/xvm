@@ -448,7 +448,7 @@ public abstract class OpInPlace
 
         TypeInfo       info     = slot.type().ensureTypeInfo();
         MethodInfo     method   = info.findOpMethod(sName, sOp, 0);
-        String         sJitName = method.getIdentity().ensureJitMethodName(bctx.typeSystem);
+        String         sJitName = method.getJitIdentity().ensureJitMethodName(bctx.typeSystem);
         JitMethodDesc  jmd      = method.getJitDesc(bctx.typeSystem);
 
         assert !jmd.isOptimized;

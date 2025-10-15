@@ -1,71 +1,29 @@
 package org.xtclang.ecstasy.collections;
 
-
 import org.xvm.javajit.Ctx;
 
 import org.xtclang.ecstasy.Exception;
+import org.xtclang.ecstasy.Range$Int64;
 import org.xtclang.ecstasy.xException;
 import org.xtclang.ecstasy.xObj;
-
-import org.xtclang.ecstasy.Range;
 import org.xtclang.ecstasy.xType;
+import org.xtclang.ecstasy.reflect.Var;
 
 /**
- * An abstract base class for all Ecstasy `Array` types.
+ * Abstract native base class implementation for all types of `ecstasy.collections.Array`. Actual
+ * storage for elements is based on the element type, and huge and sliced arrays require a separate
+ * implementation as well, so concrete subclasses will exist for each combination of these aspects.
  *
- * constructors
- * no "delegate" field; delegate property should evaluate to "this"
- *
- * capacity (get and set)
- * getElement
- * setElement
- * elementAt
- * size
- * add
- * clear
- * reify
- *
- * - Array
- *    - xArray64 - supports Boolean and all the "small" (1..32) bit size numbers packed into longs,
- *                 64-bit values as longs, and 128-bit values as pairs of longs
- *                 - Boolean
- *                 - UInt1
- *                 - Int2
- *                 - UInt2
- *                 - Int4
- *                 - UInt4
- *                 - Float4e2
- *                 - Int8
- *                 - UInt8
- *                 - Float8e4
- *                 - Float8e5
- *                 - Int16
- *                 - UInt16
- *                 - Float16
- *                 - BFloat16
- *                 - Int32
- *                 - UInt32
- *                 - Float32
- *                 - Dec32
- *                 - Int64
- *                 - UInt64
- *                 - Float64
- *                 - Dec64
- *                 - Int128
- *                 - UInt128
- *                 - Float128
- *                 - Dec128
- *      - xArraySlice64
- *      - xArrayExt64
- *      - xArrayView64 - issues include:
- *                       - last long can be partially "empty" (and if this is from a slice, there
- *                          may be data there that we have to purposefully ignore)
- *                       - odd packed forms e.g. 21 bit can have space at the end of the long that
- *                         we must pretend doesn't exist
- *                         - could add a new helper that allows such an array to be viewed
- *                           (read-only)  as longs with that extra space in it
+ * The expected "hot" calls, in order of importance; these are -- by far -- the calls to optimize:
+ * * element get by index -- assume 85%+ of the overall array usage
+ * * element set by index -- assume 10%
+ * * element count (size and empty properties) -- assume 2%
+ * * hash code and equals -- assume 1%
+ * As a result, optimizing array element access and modification by index is pretty much the only
+ * thing that matters from a performance perspective, and making sure that there are no virtual
+ * calls involved in either of those two operations is the goal.
  */
-public abstract class Array<Element extends xObj>
+public abstract class Array
         extends xObj {
 
     public Array(Ctx ctx) {
@@ -75,126 +33,159 @@ public abstract class Array<Element extends xObj>
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * A 32-bit value containing a 30-bit array size and a 2-bit Mutability enum.
+     * A 32-bit value containing a 30-bit Ecstasy element count (aka array size) and a 2-bit
+     * Mutability enum.
      */
-    protected int sizeEtc;
+    protected int $sizeEtc;
 
-    protected static final int CONSTANT   = 0;     // Mutability.Constant
-    protected static final int PERSISTENT = 1;     // Mutability.Persistent
-    protected static final int FIXED      = 2;     // Mutability.Fixed
-    protected static final int MUTABLE    = 3;     // Mutability.Mutable
+    /**
+     * A 64-bit value containing the cached hash code iff non-zero and mutability==Constant.
+     * Otherwise, if storage is not allocated, the lower 48 bits are the configured capacity.
+     */
+    protected long $hashEtc;
 
-    protected static final int SIZE_MASK    = -1 >>> 2;
-    protected static final int MUT_MASK     = ~SIZE_MASK;
-    protected static final int MUT_SHIFT    = 30;
-    protected static final int INPLACE_MASK = 0b10 << MUT_SHIFT;    // i.e. either Fixed or Mutable
+    protected static final int  $CONSTANT     = 0;     // Array.Mutability.Constant
+    protected static final int  $PERSISTENT   = 1;     // Array.Mutability.Persistent
+    protected static final int  $FIXED        = 2;     // Array.Mutability.Fixed
+    protected static final int  $MUTABLE      = 3;     // Array.Mutability.Mutable
 
-
-
-/* TODO move this stuff to the "special" impls?
-public static final long SIZE_MASK = 0x0000FFFFFFFFFFFFL;
-public static final long ETC_MASK  = ~SIZE_MASK;
-public static final int REVERSE  = 63;
-public static final int SLICE    = 62;
-public static final int OVERFLOW = 61;
-public static final int UNOWNED  = 60;
-/**
- * Index of the element following the last element in the underlying array.
-private int end;
-*/
+    protected static final int  $SIZE_MASK    = -1 >>> 2;
+    protected static final int  $MUT_MASK     = ~$SIZE_MASK;
+    protected static final int  $MUT_SHIFT    = 30;
+    protected static final int  $INPLACE_MASK = 0b10 << $MUT_SHIFT;    // i.e. either Fixed or Mutable
+    protected static final int  $MIN_CAP      = 8;
+    protected static final long $CAP_MASK     = 0x0000FFFFFFFFFFFFL;
 
     // ----- xObj API ------------------------------------------------------------------------------
 
+    /**
+     * Note: It's expected that a few subclasses will know their type implicitly, while most will
+     *       need to add a field to hold the type.
+     */
     @Override public abstract xType $type();
 
+    /**
+     * Note: Arrays are immutable iff their "mutability==Constant"
+     */
     @Override public boolean $isImmut() {
-        return $mut() == CONSTANT;
+        return $mut() == $CONSTANT;
     }
-
-    @Override public abstract void $makeImmut(Ctx ctx);
 
     // ----- xArray API ----------------------------------------------------------------------------
 
     /**
      * A delegate for handling all special situations and features.
+     *
+     * Subclasses aren't intended to use this accessor. Instead, this accessor simply enables each
+     * subclass to expose its delegate to this base class, and the base class doesn't implement any
+     * of the "hot" methods using this, so the virtual cost is irrelevant. Subclasses implement the
+     * "hot" methods using that field directly, so when the array type is known at JIT time, the
+     * code can be generated not against this Array class, but rather against a specific subclass,
+     * relying on the JVM's inline cache to avoid virtual calls for the common case, and accepting
+     * the virtual call cost for delegate arrays (slices and/or huge arrays).
      */
-    protected abstract Array<Element> $especial();
+    protected abstract Array $delegate();
 
     /**
-     * @return one of {@link #MUTABLE}, {@link #FIXED}, {@link #PERSISTENT}, or {@link #CONSTANT}
+     * @return one of {@link #$MUTABLE}, {@link #$FIXED}, {@link #$PERSISTENT}, or {@link #$CONSTANT}
      */
     public int $mut() {
-        Array<Element> especial = $especial();
-        return especial == null ? (sizeEtc >>> MUT_SHIFT) : especial.$mut();
+        Array delegate = $delegate();
+        return delegate == null ? ($sizeEtc >>> $MUT_SHIFT) : delegate.$mut();
     }
 
     /**
-     * @param mutability one of {@link #MUTABLE}, {@link #FIXED}, {@link #PERSISTENT}, or
-     *        {@link #CONSTANT}
+     * Store the mutability value for this Array. This implementation does not include any logic
+     * from Array.x; it just stores the mutability value.
+     *
+     * @param mutability one of {@link #$MUTABLE}, {@link #$FIXED}, {@link #$PERSISTENT}, or
+     *        {@link #$CONSTANT}
      */
     public void $mut(int mutability) {
-        // this impl does not include any logic from Array.x; it just stores the mutability value
-        Array<Element> especial = $especial();
-        if (especial == null) {
-            sizeEtc = (sizeEtc & SIZE_MASK) | (mutability << MUT_SHIFT);
+        Array delegate = $delegate();
+        if (delegate == null) {
+            $sizeEtc = ($sizeEtc & $SIZE_MASK) | (mutability << $MUT_SHIFT);
         } else {
-            especial.$mut(mutability);
+            delegate.$mut(mutability);
         }
     }
 
-//    protected final boolean $inPlace() {
-//        return getMutability() >= FIXED;
-//    }
+    /**
+     * @return true iff mutating array operations are in-place; false if the array is a "persistent"
+     *         data structure, such that "mutating" operations result in a new array
+     */
+    protected final boolean $mutInPlace() {
+        return $mut() >= $FIXED;
+    }
 
-//    protected final boolean $fixed() {
-//        return getMutability() == FIXED;
-//    }
+    /**
+     * @return true iff the array is "mutability==Fixed"
+     */
+    protected final boolean $mutFixed() {
+        return $mut() == $FIXED;
+    }
 
     /**
      * @return the current storage capacity of the array; this is the "delegate.capacity" value
      *         referred to by Array.x
      */
-    public abstract long $cap();
+    public abstract long capacity$get$p(Ctx ctx);
 
     /**
-     * @param cap  the desired storage capacity for the array; this is the "delegate.capacity" value
-     *             referred to by Array.x
+     * @param cap the desired storage capacity for the array; this is the "delegate.capacity" value
+     *            referred to by Array.x
      */
-    public abstract void $cap(long cap);
+    public abstract void capacity$set$p(Ctx ctx, long cap);
+
+    public long $capCfg() {
+        long cap = $isImmut() ? 0 : ($hashEtc & $CAP_MASK);
+        return cap == 0 ? $MIN_CAP : cap;
+    }
 
     /**
      * @return `true` iff the array contains no elements
      */
-    public boolean $empty() {
-        Array<Element> especial = $especial();
-        return especial == null ? (sizeEtc & SIZE_MASK) == 0 : especial.$empty();
+    public boolean empty$p(Ctx ctx) {
+        Array delegate = $delegate();
+        return delegate == null ? ($sizeEtc & $SIZE_MASK) == 0 : delegate.empty$p(ctx);
     }
 
     /**
      * @return the length of the string in characters
      */
-    public long $size() {
-        Array<Element> especial = $especial();
-        return especial == null ? (sizeEtc & SIZE_MASK) : especial.$size();
+    public long size$p(Ctx ctx) {
+        Array delegate = $delegate();
+        return delegate == null ? ($sizeEtc & $SIZE_MASK) : delegate.size$p(ctx);
     }
 
     /**
      * Obtain the element at the specified index.
      *
-     * @param index  the element index
+     * @param index the element index
      *
      * @return the element value
      */
-    public abstract Element $get(long index);
+    public abstract xObj getElement$p(Ctx ctx, long index);
 
     /**
      * Store the specified element value at the specified index.
      *
-     * @param ctx    the XVM context
      * @param index  the element index
      * @param value  the element value
      */
-    public abstract void $set(Ctx ctx, long index, Element value);
+    public abstract void setElement$p(Ctx ctx, long index, xObj value);
+
+    /**
+     * Obtain the Var for the specified index in the array.
+     *
+     * @param index  the element index
+     *
+     * @return a Var object representing the storage for the element in the array
+     */
+    public Var elementAt$p(Ctx ctx, long index) {
+        // TODO need a Var<T> impl, possibly a child class of Array
+        throw $oob(ctx, index);
+    }
 
     /**
      * Insert storage for the specified number of elements at the specified index, shifting all
@@ -219,16 +210,18 @@ private int end;
     /**
      * Obtain a slice of this array.
      *
-     * @param ctx  the XVM context
-     * @param n    a 64-bit primitive `Range<Int64>` representation
+     * @param ctx    the XVM context
+     * @param range  the range of indexes to slice
      *
      * @return the specified array slice
      */
-    public Array<Element> $slice(Ctx ctx, long n) {
-//        if ($empty(n)) {
-//            return TODO
-//        }
-        return $slice(ctx, Range.$first(n), Range.$size(ctx, n), Range.$descending(n));
+    public Array slice(Ctx ctx, Range$Int64 range) {
+        if (range.$rangeTo128(ctx)) {
+            return slice$p(ctx, ctx.i0, ctx.i1);
+        } else {
+            long lower = range.effectiveLowerBound$get$p(ctx);
+            throw $oob(ctx, lower < 0 ? lower : range.effectiveUpperBound$get$p(ctx));
+        }
     }
 
     /**
@@ -240,46 +233,17 @@ private int end;
      *
      * @return the specified array slice
      */
-    public Array<Element> $slice(Ctx ctx, long n1, long n2) {
-//        if ($empty(n)) {
-//            return TODO
-//        }
-        return $slice(ctx, Range.$first(n1, n2), Range.$size(ctx, n1, n2), Range.$descending(n1, n2));
-    }
-
-    public abstract Array<Element> $slice(Ctx ctx, long offset, long size, boolean descending);
-
-    // ----- slice support -------------------------------------------------------------------------
-
-//    /**
-//     * @param slice  indicates the slice of this array
-//     *
-//     * @return `true` iff the array contains no elements
-//     */
-//    public boolean $empty(long slice) {
-//        return slice == 0 ? $empty() : $empty() || sliceEmpty(slice);
-//    }
-//
-//    /**
-//     * @param slice  indicates the slice of this array
-//     *
-//     * @return the length of the string in characters
-//     */
-//    public long $size(long slice) {
-//        return slice == 0 ? $size() : min($size(), sliceSize(slice));
-//    }
-//
-//    public abstract Element $get(long slice, long index);
+    public abstract Array slice$p(Ctx ctx, long n1, long n2);
 
     // ----- debugging support ---------------------------------------------------------------------
 
     java.lang.String $mutDesc() {
         return switch ($mut()) {
-            case CONSTANT   -> "Constant";
-            case PERSISTENT -> "Persistent";
-            case FIXED      -> "Fixed";
-            case MUTABLE    -> "Mutable";
-            default         -> throw new IllegalStateException();
+            case $CONSTANT   -> "Constant";
+            case $PERSISTENT -> "Persistent";
+            case $FIXED      -> "Fixed";
+            case $MUTABLE    -> "Mutable";
+            default          -> throw new IllegalStateException();
         };
     }
     /**
@@ -293,7 +257,7 @@ private int end;
         if (index < 0) {
             throw Exception.$oob(ctx, "negative index: " + index);
         }
-        throw Exception.$oob(ctx, "index: " + index + " (size=" + $size() + ")");
+        throw Exception.$oob(ctx, "index: " + index + " (size=" + size$p(ctx) + ")");
     }
 
     /**

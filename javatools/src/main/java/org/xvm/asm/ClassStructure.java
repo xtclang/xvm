@@ -3130,7 +3130,7 @@ public class ClassStructure
      *                  need to be created
      */
     public void synthesizeConstInterface(boolean fRuntime) {
-        assert getFormat() == Format.CONST;
+        assert getFormat() == Format.CONST || getFormat() == Format.ENUM;
 
         ConstantPool pool = getConstantPool();
 
@@ -3307,9 +3307,9 @@ public class ClassStructure
     }
 
     @Override
-    protected void synthesizeChildren() {
-        if (getFormat() == Format.CONST) {
-            synthesizeConstInterface(true);
+    public void synthesizeChildren() {
+        switch (getFormat()) {
+            case CONST, ENUM -> synthesizeConstInterface(true);
         }
 
         super.synthesizeChildren();

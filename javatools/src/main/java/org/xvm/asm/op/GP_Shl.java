@@ -6,13 +6,12 @@ import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
-import java.lang.constant.ClassDesc;
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Slot;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -57,10 +56,12 @@ public class GP_Shl
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, ClassDesc cdTarget) {
-        switch (cdTarget.descriptorString()) {
-            case "I", "S", "B", "C", "Z"
-                     -> code.ishl();
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, Slot slotTarget) {
+        switch (slotTarget.cd().descriptorString()) {
+            case "I" -> {
+                code.ishl();
+                bctx.adjustIntValue(code, slotTarget.type());
+            }
             case "J" -> code.l2i().lshl();
             default  -> throw new IllegalStateException();
         }
