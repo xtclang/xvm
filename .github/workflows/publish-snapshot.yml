@@ -7,7 +7,7 @@
 #
 # It triggers automatically on master after CI completes, or can be manually triggered.
 #
-name: Publish Snapshots
+name: publish_snapshot_release
 
 permissions:
     contents: write
@@ -16,10 +16,10 @@ permissions:
 
 on:
     # Automatic trigger after CI completes
-    # - VerifyCommit on master: Automatic publishing
-    # - VerifyCommit via workflow_dispatch: Testing on any branch
+    # - verify_commit on master: Automatic publishing
+    # - verify_commit via workflow_dispatch: Testing on any branch
     workflow_run:
-        workflows: ["VerifyCommit"]
+        workflows: ["verify_commit"]
         types: [completed]
 
     # Manual trigger from any branch
@@ -28,6 +28,36 @@ on:
             ci-run-id:
                 description: 'CI run ID to download artifact from (leave empty to skip artifact download)'
                 required: false
+            publish-github:
+                description: 'Publish to GitHub Packages'
+                type: boolean
+                required: false
+                default: true
+            publish-maven-central:
+                description: 'Publish to Maven Central'
+                type: boolean
+                required: false
+                default: true
+            publish-gradle-plugin-portal:
+                description: 'Publish to Gradle Plugin Portal (not recommended for snapshots)'
+                type: boolean
+                required: false
+                default: false
+            publish-to-github:
+                description: 'Publish to GitHub Packages'
+                type: boolean
+                required: false
+                default: true
+            publish-to-maven-central:
+                description: 'Publish to Maven Central'
+                type: boolean
+                required: false
+                default: true
+            publish-to-gradle-plugin-portal:
+                description: 'Publish to Gradle Plugin Portal (not recommended for snapshots)'
+                type: boolean
+                required: false
+                default: false
 
 jobs:
     publish-snapshots:
@@ -104,13 +134,14 @@ jobs:
 
             - name: Download XDK artifact from CI
               if: steps.commit.outputs.has-artifact == 'true'
-              uses: actions/download-artifact@v4
+              id: artifact
+              uses: ./.github/actions/download-ci-artifact
               with:
-                  name: xdk-dist-${{ steps.commit.outputs.commit }}
-                  path: ./artifacts
+                  run-id: ${{ steps.commit.outputs.run-id }}
+                  commit: ${{ steps.commit.outputs.commit }}
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   repository: ${{ github.repository }}
-                  run-id: ${{ steps.commit.outputs.run-id }}
+                  output-path: ./artifacts
 
             - name: Publish Maven snapshots
               env:
@@ -125,9 +156,13 @@ jobs:
                   SIGNING_PASSWORD: ${{ secrets.ORG_XTCLANG_SIGNING_PASSWORD }}
                   ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
                   ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
+                  # Publishing flags for snapshots (defaults: GitHub=true, Maven Central=true, Plugin Portal=false)
+                  ORG_XTCLANG_PUBLISH_GITHUB: ${{ github.event.inputs.publish-to-github || 'true' }}
+                  ORG_XTCLANG_PUBLISH_MAVEN_CENTRAL: ${{ github.event.inputs.publish-to-maven-central || 'true' }}
+                  ORG_XTCLANG_PUBLISH_GRADLE_PLUGIN_PORTAL: ${{ github.event.inputs.publish-to-gradle-plugin-portal || 'false' }}
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
               run: |
-                  echo "📦 Publishing Maven snapshot artifacts to GitHub Packages..."
+                  echo "📦 Publishing Maven snapshot artifacts to GitHub Packages and Maven Central..."
                   ./gradlew ${{ steps.versions.outputs.gradle-options }} publish --info
                   echo "✅ Maven snapshots published"
 
@@ -157,19 +192,6 @@ jobs:
                   package-type: 'maven'
                   min-versions-to-keep: 50
                   token: ${{ secrets.GITHUB_TOKEN }}
-
-            - name: Find artifact path
-              if: success() && steps.commit.outputs.has-artifact == 'true'
-              id: artifact
-              shell: bash
-              run: |
-                  XDK_ZIP=$(find ./artifacts -name "xdk-*.zip" | head -1)
-                  if [ -z "$XDK_ZIP" ]; then
-                      echo "❌ No XDK distribution ZIP found in artifacts"
-                      exit 1
-                  fi
-                  echo "artifact-path=$XDK_ZIP" >> $GITHUB_OUTPUT
-                  echo "Found artifact: $XDK_ZIP"
 
             - name: Publish to GitHub snapshot release
               if: success() && steps.commit.outputs.has-artifact == 'true'

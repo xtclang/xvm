@@ -9,7 +9,7 @@
 # IMPORTANT: This workflow requires a release version (no -SNAPSHOT suffix)
 # Either update version.properties to a release version, or provide a version override.
 #
-name: Publish Release
+name: publish_release
 
 permissions:
     contents: write
@@ -28,11 +28,21 @@ on:
                 type: boolean
                 required: false
                 default: false
+            publish-to-github:
+                description: 'Publish to GitHub Packages'
+                type: boolean
+                required: false
+                default: true
+            publish-to-maven-central:
+                description: 'Publish to Maven Central (staged)'
+                type: boolean
+                required: false
+                default: true
             publish-to-gradle-plugin-portal:
                 description: 'Publish to Gradle Plugin Portal (immediate, cannot be staged)'
                 type: boolean
                 required: false
-                default: false
+                default: true
             close-maven-staging:
                 description: 'Automatically close Maven staging repository'
                 type: boolean
@@ -229,6 +239,10 @@ jobs:
 
             - name: Publish to Maven Central staging repository
               env:
+                  # Publishing flags for releases (defaults: all true)
+                  ORG_XTCLANG_PUBLISH_GITHUB: ${{ github.event.inputs.publish-to-github || 'true' }}
+                  ORG_XTCLANG_PUBLISH_MAVEN_CENTRAL: ${{ github.event.inputs.publish-to-maven-central || 'true' }}
+                  ORG_XTCLANG_PUBLISH_GRADLE_PLUGIN_PORTAL: ${{ github.event.inputs.publish-to-gradle-plugin-portal || 'false' }}
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
                   VERSION_OVERRIDE: ${{ github.event.inputs.version-override }}
               run: |
@@ -239,12 +253,12 @@ jobs:
                       GRADLE_OPTIONS="$GRADLE_OPTIONS -Pversion=$VERSION_OVERRIDE"
                   fi
 
-                  echo "📦 Publishing to Maven Central staging repository..."
+                  echo "📦 Publishing to Maven Central staging repository and GitHub Packages..."
                   echo "   Version: ${{ needs.build-and-test.outputs.release-version }}"
 
                   ./gradlew $GRADLE_OPTIONS publish --info
 
-                  echo "✅ Published to Maven Central staging repository"
+                  echo "✅ Published to Maven Central staging repository and GitHub Packages"
                   echo ""
                   echo "📋 Next steps:"
                   echo "   1. Log in to https://oss.sonatype.org/"
@@ -284,6 +298,10 @@ jobs:
 
             - name: Publish to Gradle Plugin Portal
               env:
+                  # Publishing flags for Gradle Plugin Portal (only plugin portal enabled)
+                  ORG_XTCLANG_PUBLISH_GITHUB: false
+                  ORG_XTCLANG_PUBLISH_MAVEN_CENTRAL: false
+                  ORG_XTCLANG_PUBLISH_GRADLE_PLUGIN_PORTAL: true
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
                   VERSION_OVERRIDE: ${{ github.event.inputs.version-override }}
               run: |
