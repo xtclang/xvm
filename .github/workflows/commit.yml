@@ -225,8 +225,8 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                  echo "🚀 Triggering Publish Maven Snapshot workflow..."
-                  gh workflow run "Publish Maven Snapshot" \
+                  echo "🚀 Triggering Publish Snapshots workflow..."
+                  gh workflow run "Publish Snapshots" \
                       --repo ${{ github.repository }} \
                       --ref ${{ github.ref_name }} \
                       --field ci-run-id=${{ github.run_id }}
