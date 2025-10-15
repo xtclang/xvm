@@ -20,10 +20,10 @@ on:
     pull_request:
     # Manual trigger - optionally triggers publishing workflows after successful completion
     # This allows testing the full publishing pipeline (snapshot, docker, homebrew) from any branch
-    # without pushing to master. Set test-publishing=true to trigger publishing workflows.
+    # without pushing to master. Set publish-snapshots=true to trigger publishing workflows.
     workflow_dispatch:
         inputs:
-            test-publishing:
+            publish-snapshots:
                 description: 'Trigger publishing workflows after build (snapshot, docker, homebrew)'
                 type: boolean
                 required: false
@@ -59,7 +59,7 @@ env:
 
     skip_manual_tests: ${{ github.event.inputs.skip_tests == true || github.event.inputs.skip_tests == 'true' }}
     run_manual_tests_parallel: ${{ github.event.inputs.parallel-test-mode == true || github.event.inputs.parallel-test-mode == 'true' }}
-    trigger_publishing: ${{ github.event.inputs.test-publishing == true || github.event.inputs.test-publishing == 'true' }}
+    trigger_publishing: ${{ github.event.inputs.publish-snapshots == true || github.event.inputs.publish-snapshots == 'true' }}
 
     # Gradle cache inspection function
     GRADLE_CACHE_INSPECT: |
@@ -197,25 +197,50 @@ jobs:
                   fi
                   echo "✅ All builds completed successfully"                      
 
-    # Trigger publishing workflows when test-publishing is enabled
-    # This job runs after build-and-test succeeds and explicitly triggers downstream workflows
-    # NOTE: Automatic master publishing temporarily disabled for testing
+    # Trigger publishing workflows for snapshots
+    # Runs when:
+    # 1. Push to master (automatic snapshot publishing) - BUT NOT for release merges
+    # 2. Manual trigger with publish-snapshots=true (testing from any branch)
+    #
+    # Release merges are handled by promote-release.yml workflow instead
     trigger-publishing:
-        name: Trigger publishing workflows
+        name: Trigger snapshot publishing workflows
         needs: build-and-test
         runs-on: ubuntu-latest
         if: |
             success() &&
-            (github.event_name == 'workflow_dispatch' &&
-             (github.event.inputs.test-publishing == true || github.event.inputs.test-publishing == 'true'))
+            (
+                (github.ref == 'refs/heads/master' && github.event_name == 'push')
+                ||
+                (github.event_name == 'workflow_dispatch' &&
+                 (github.event.inputs.publish-snapshots == true || github.event.inputs.publish-snapshots == 'true'))
+            )
 
         steps:
             - name: Checkout repository
               uses: actions/checkout@v5
               with:
-                  fetch-depth: 1
+                  fetch-depth: 10  # Need history to check for release tags
+
+            - name: Check if this is a release merge
+              id: check-release
+              run: |
+                  # Check if current commit has a release tag (v*.*.*)
+                  # Release merges should use promote-release.yml, not snapshot publishing
+                  RELEASE_TAG=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true)
+
+                  if [ -n "$RELEASE_TAG" ]; then
+                      echo "is-release=true" >> $GITHUB_OUTPUT
+                      echo "release-tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
+                      echo "🏷️  Detected release tag: $RELEASE_TAG"
+                      echo "⏭️  Skipping snapshot publishing (will be handled by promote-release.yml)"
+                  else
+                      echo "is-release=false" >> $GITHUB_OUTPUT
+                      echo "✅ No release tag detected - proceeding with snapshot publishing"
+                  fi
 
             - name: Trigger snapshot publishing
+              if: steps.check-release.outputs.is-release != 'true'
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
@@ -224,6 +249,7 @@ jobs:
                   echo "✅ Snapshot publishing triggered"
 
             - name: Trigger Docker publishing
+              if: steps.check-release.outputs.is-release != 'true'
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
@@ -232,6 +258,7 @@ jobs:
                   echo "✅ Docker publishing triggered"
 
             - name: Trigger Homebrew update
+              if: steps.check-release.outputs.is-release != 'true'
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
@@ -239,8 +266,8 @@ jobs:
                   gh workflow run "Update Homebrew" --repo ${{ github.repository }} --ref ${{ github.ref_name }} --field ci-run-id=${{ github.run_id }}
                   echo "✅ Homebrew update triggered"
 
-            - name: Summary
-              if: success()
+            - name: Summary - Snapshots Triggered
+              if: steps.check-release.outputs.is-release != 'true'
               run: |
                   echo "### 🚀 Publishing Workflows Triggered" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
@@ -250,3 +277,14 @@ jobs:
                   echo "- ✅ Homebrew update" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "Check the [Actions tab](https://github.com/${{ github.repository }}/actions) for workflow status." >> $GITHUB_STEP_SUMMARY
+
+            - name: Summary - Release Detected
+              if: steps.check-release.outputs.is-release == 'true'
+              run: |
+                  echo "### 🏷️ Release Merge Detected" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Release Tag:** ${{ steps.check-release.outputs.release-tag }}" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "Snapshot publishing skipped - release promotion will be handled by promote-release.yml workflow." >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "Check the [Actions tab](https://github.com/${{ github.repository }}/actions) for promote-release workflow status." >> $GITHUB_STEP_SUMMARY
