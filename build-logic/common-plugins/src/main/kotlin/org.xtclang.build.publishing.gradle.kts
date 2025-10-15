@@ -142,11 +142,11 @@ tasks.withType<PublishToMavenRepository>().configureEach {
     when {
         repoName.equals("Github", ignoreCase = true) && !githubEnabled -> {
             enabled = false
-            logger.info("[publishing] Disabled task $name - GitHub Packages publishing is disabled")
+            logger.lifecycle("[publishing] Disabled task $name - GitHub Packages publishing is disabled")
         }
         repoName.equals("MavenCentral", ignoreCase = true) && !mavenCentralEnabled -> {
             enabled = false
-            logger.info("[publishing] Disabled task $name - Maven Central publishing is disabled")
+            logger.lifecycle("[publishing] Disabled task $name - Maven Central publishing is disabled")
         }
     }
 }
