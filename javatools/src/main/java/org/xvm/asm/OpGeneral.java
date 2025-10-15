@@ -216,7 +216,7 @@ public abstract class OpGeneral
                         slotArg.type().getValueString() + " to " + slotTarget.type().getValueString());
                 }
 
-                buildOptimizedBinary(bctx, code, cdTarget);
+                buildOptimizedBinary(bctx, code, slotTarget);
             } else {
                 // TODO: there could be multiple op methods; need to use the arg type
                 String sName;
@@ -261,7 +261,7 @@ public abstract class OpGeneral
             bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, typeRet));
         } else { // unary op
             if (cdTarget.isPrimitive()) {
-                buildOptimizedUnary(bctx, code, cdTarget);
+                buildOptimizedUnary(bctx, code, slotTarget);
             } else {
                 String sName;
                 String sOp;
@@ -290,10 +290,10 @@ public abstract class OpGeneral
         }
     }
 
-    protected void buildOptimizedUnary(BuildContext bctx, CodeBuilder code, ClassDesc cdTarget) {
+    protected void buildOptimizedUnary(BuildContext bctx, CodeBuilder code, Slot slotTarget) {
         throw new UnsupportedOperationException();
     }
-    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, ClassDesc cdTarget) {
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, Slot slotTarget) {
         throw new UnsupportedOperationException();
     }
 

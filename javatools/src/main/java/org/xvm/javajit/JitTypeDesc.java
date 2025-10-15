@@ -2,9 +2,6 @@ package org.xvm.javajit;
 
 import java.lang.constant.ClassDesc;
 
-import org.xvm.asm.ConstantPool;
-
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
@@ -45,29 +42,17 @@ public class JitTypeDesc {
      *         class; null otherwise
      */
     public static ClassDesc getPrimitiveClass(TypeConstant type) {
-        ConstantPool pool = type.getConstantPool();
-
-        if (type.isSingleUnderlyingClass(false)) {
-            IdentityConstant id = type.getSingleUnderlyingClass(false);
-            if (id.getName().startsWith("Int")) {
-                if (type.equals(pool.typeInt64()) || type.equals(pool.typeInt32()) ||
-                    type.equals(pool.typeInt16()) || type.equals(pool.typeInt8())) {
-                    // TODO: use "int" and "byte" for lower arity types
-                    return CD_long;
-                }
-            } else if (id.getName().startsWith("UInt")) {
-                if (type.equals(pool.typeUInt64()) || type.equals(pool.typeUInt32()) ||
-                    type.equals(pool.typeUInt16()) || type.equals(pool.typeUInt8())) {
-
-                    return CD_long;
-                }
-            } else if (type.equals(pool.typeBoolean())) {
-
-                return CD_boolean;
-            } else if (type.equals(pool.typeChar())) {
-
-                return CD_int;
-            }
+        if (type.isPrimitive()) {
+            return switch (type.getSingleUnderlyingClass(false).getName()) {
+                case "Char", "Int8", "Int16", "Int32", "UInt8", "UInt16", "UInt32"
+                    -> CD_int;
+                case "Int64", "UInt64"
+                    -> CD_long;
+                case "Boolean"
+                    -> CD_boolean;
+                default
+                    -> null;
+            };
         }
         return null;
     }

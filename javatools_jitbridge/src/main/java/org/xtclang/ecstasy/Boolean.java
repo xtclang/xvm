@@ -63,9 +63,11 @@ public class Boolean
         return this.$value ? 1 : 0;
     }
 
-    public byte toByte$p(Ctx ctx) {
+    public int toByte$p(Ctx ctx) {
         return this.$value ? (byte) 1 : (byte) 0;
     }
+
+    // ----- debugging support ---------------------------------------------------------------------
 
     @Override
     public java.lang.String toString() {

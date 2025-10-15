@@ -5,8 +5,6 @@ import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
-import java.lang.constant.ClassDesc;
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
@@ -56,10 +54,12 @@ public class GP_Add
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, ClassDesc cdTarget) {
-        switch (cdTarget.descriptorString()) {
-            case "I", "S", "B", "C", "Z"
-                     -> code.iadd();
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, BuildContext.Slot slotTarget) {
+        switch (slotTarget.cd().descriptorString()) {
+            case "I" -> {
+                code.iadd();
+                bctx.adjustIntValue(code, slotTarget.type());
+            }
             case "J" -> code.ladd();
             case "F" -> code.fadd();
             case "D" -> code.dadd();

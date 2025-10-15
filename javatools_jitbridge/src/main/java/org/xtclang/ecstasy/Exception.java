@@ -81,4 +81,8 @@ public class Exception extends xConst {
     public static xException $oob(Ctx ctx, java.lang.String text) {
         return new OutOfBounds(ctx).$init(ctx, text, null);
     }
+
+    public static xException $unsupported(Ctx ctx, java.lang.String text) {
+        return new Unsupported(ctx).$init(ctx, text, null);
+    }
 }

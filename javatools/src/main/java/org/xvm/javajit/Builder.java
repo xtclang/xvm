@@ -322,28 +322,30 @@ public abstract class Builder {
     public void unbox(CodeBuilder code, TypeConstant type, ClassDesc cd) {
         assert cd.isPrimitive() && type.isPrimitive();
 
-        ConstantPool pool = type.getConstantPool();
         switch (cd.descriptorString()) {
         case "Z": // boolean
-            assert type.equals(pool.typeBoolean());
+            assert type.equals(typeSystem.pool().typeBoolean());
             code.getfield(CD_Boolean, "$value", cd);
             break;
 
         case "J": // long
-            if (type.equals(pool.typeInt64())) {
-                code.getfield(CD_Int64, "$value", cd);
-            } else {
-                // TODO: does this cover all types?
-                code.getfield(type.ensureClassDesc(typeSystem), "$value", cd);
+            switch (type.getSingleUnderlyingClass(false).getName()) {
+                case "Int64"  -> code.getfield(CD_Int64,  "$value", cd);
+                case "UInt64" -> code.getfield(CD_UInt32, "$value", cd);
+                default       -> throw new IllegalStateException();
             }
             break;
 
         case "I": // int
-            if (type.equals(pool.typeChar())) {
-                 // REVIEW: what Java type is the prop of UInt32? what's the name?
-                code.getfield(CD_Char, "codepoint", cd);
-            } else {
-                throw new UnsupportedOperationException();
+            switch (type.getSingleUnderlyingClass(false).getName()) {
+                case "Char"   -> code.getfield(CD_Char, "codepoint", cd);
+                case "Int8"   -> code.getfield(CD_Int8,   "$value", cd);
+                case "Int16"  -> code.getfield(CD_Int16,  "$value", cd);
+                case "Int32"  -> code.getfield(CD_Int32,  "$value", cd);
+                case "UInt8"  -> code.getfield(CD_UInt8,  "$value", cd);
+                case "UInt16" -> code.getfield(CD_UInt16, "$value", cd);
+                case "UInt32" -> code.getfield(CD_UInt32, "$value", cd);
+                default       -> throw new IllegalStateException();
             }
             break;
 
@@ -361,29 +363,30 @@ public abstract class Builder {
     public void box(CodeBuilder code, TypeConstant type, ClassDesc cd) {
         assert cd.isPrimitive() && type.isPrimitive();
 
-        ConstantPool pool = type.getConstantPool();
         switch (cd.descriptorString()) {
         case "Z": // boolean
-            assert type.equals(pool.typeBoolean());
+            assert type.equals(typeSystem.pool().typeBoolean());
             code.invokestatic(CD_Boolean, "$box", MD_Boolean_box);
             break;
 
         case "J": // long
-            if (type.equals(pool.typeInt64())) {
-                code.invokestatic(CD_Int64, "$box", MD_Int64_box);
-            } else {
-                // TODO: does this cover all types?
-                ClassDesc      boxCD = type.ensureClassDesc(typeSystem);
-                MethodTypeDesc boxMD = MethodTypeDesc.of(boxCD, cd);
-                code.invokestatic(boxCD, "$box", boxMD);
+            switch (type.getSingleUnderlyingClass(false).getName()) {
+                case "Int64"  -> code.invokestatic(CD_Int64,  "$box", MD_Int64_box);
+                case "UInt64" -> code.invokestatic(CD_UInt64, "$box", MD_UInt64_box);
+                default       -> throw new IllegalStateException();
             }
             break;
 
         case "I": // int
-            if (type.equals(pool.typeChar())) {
-                code.invokestatic(CD_Char, "$box", MD_Char_box);
-            } else {
-                throw new UnsupportedOperationException();
+            switch (type.getSingleUnderlyingClass(false).getName()) {
+                case "Char"   -> code.invokestatic(CD_Char,   "$box", MD_Char_box);
+                case "Int8"   -> code.invokestatic(CD_Int8,   "$box", MD_Int8_box);
+                case "Int16"  -> code.invokestatic(CD_Int16,  "$box", MD_Int16_box);
+                case "Int32"  -> code.invokestatic(CD_Int32,  "$box", MD_Int32_box);
+                case "UInt8"  -> code.invokestatic(CD_UInt8,  "$box", MD_UInt8_box);
+                case "UInt16" -> code.invokestatic(CD_UInt16, "$box", MD_UInt16_box);
+                case "UInt32" -> code.invokestatic(CD_UInt32, "$box", MD_UInt32_box);
+                default       -> throw new IllegalStateException();
             }
             break;
 
@@ -567,11 +570,18 @@ public abstract class Builder {
     public static final String N_Boolean      = "org.xtclang.ecstasy.Boolean";
     public static final String N_Char         = "org.xtclang.ecstasy.text.Char";
     public static final String N_Exception    = "org.xtclang.ecstasy.Exception";
+    public static final String N_Int8         = "org.xtclang.ecstasy.numbers.Int8";
+    public static final String N_Int16        = "org.xtclang.ecstasy.numbers.Int16";
+    public static final String N_Int32        = "org.xtclang.ecstasy.numbers.Int32";
     public static final String N_Int64        = "org.xtclang.ecstasy.numbers.Int64";
     public static final String N_Nullable     = "org.xtclang.ecstasy.Nullable";
     public static final String N_Object       = "org.xtclang.ecstasy.Object";
     public static final String N_Ordered      = "org.xtclang.ecstasy.Ordered";
     public static final String N_String       = "org.xtclang.ecstasy.text.String";
+    public static final String N_UInt8        = "org.xtclang.ecstasy.numbers.UInt8";
+    public static final String N_UInt16       = "org.xtclang.ecstasy.numbers.UInt16";
+    public static final String N_UInt32       = "org.xtclang.ecstasy.numbers.UInt32";
+    public static final String N_UInt64       = "org.xtclang.ecstasy.numbers.UInt64";
 
     public static final String N_xClass       = "org.xtclang.ecstasy.xClass";
     public static final String N_xConst       = "org.xtclang.ecstasy.xConst";
@@ -607,11 +617,18 @@ public abstract class Builder {
 
     public static final ClassDesc CD_Boolean       = ClassDesc.of(N_Boolean);
     public static final ClassDesc CD_Char          = ClassDesc.of(N_Char);
+    public static final ClassDesc CD_Int8          = ClassDesc.of(N_Int8);
+    public static final ClassDesc CD_Int16         = ClassDesc.of(N_Int16);
+    public static final ClassDesc CD_Int32         = ClassDesc.of(N_Int32);
     public static final ClassDesc CD_Int64         = ClassDesc.of(N_Int64);
     public static final ClassDesc CD_Nullable      = ClassDesc.of(N_Nullable);
     public static final ClassDesc CD_Object        = ClassDesc.of(N_Object);
     public static final ClassDesc CD_Ordered       = ClassDesc.of(N_Ordered);
     public static final ClassDesc CD_String        = ClassDesc.of(N_String);
+    public static final ClassDesc CD_UInt8         = ClassDesc.of(N_UInt8);
+    public static final ClassDesc CD_UInt16        = ClassDesc.of(N_UInt16);
+    public static final ClassDesc CD_UInt32        = ClassDesc.of(N_UInt32);
+    public static final ClassDesc CD_UInt64        = ClassDesc.of(N_UInt64);
 
     public static final ClassDesc CD_xClass        = ClassDesc.of(N_xClass);
     public static final ClassDesc CD_xConst        = ClassDesc.of(N_xConst);
@@ -628,8 +645,15 @@ public abstract class Builder {
 
     public static final String         Instance       = "$INSTANCE";
     public static final MethodTypeDesc MD_Boolean_box = MethodTypeDesc.of(CD_Boolean, CD_boolean);
-    public static final MethodTypeDesc MD_Char_box    = MethodTypeDesc.of(CD_Char, CD_int);
-    public static final MethodTypeDesc MD_Int64_box   = MethodTypeDesc.of(CD_Int64, CD_long);
-    public static final MethodTypeDesc MD_Initializer = MethodTypeDesc.of(CD_void, CD_Ctx);
+    public static final MethodTypeDesc MD_Char_box    = MethodTypeDesc.of(CD_Char,   CD_int);
+    public static final MethodTypeDesc MD_Int8_box    = MethodTypeDesc.of(CD_Int8,   CD_int);
+    public static final MethodTypeDesc MD_Int16_box   = MethodTypeDesc.of(CD_Int16,  CD_int);
+    public static final MethodTypeDesc MD_Int32_box   = MethodTypeDesc.of(CD_Int32,  CD_int);
+    public static final MethodTypeDesc MD_Int64_box   = MethodTypeDesc.of(CD_Int64,  CD_long);
+    public static final MethodTypeDesc MD_UInt8_box   = MethodTypeDesc.of(CD_UInt8,  CD_int);
+    public static final MethodTypeDesc MD_UInt16_box  = MethodTypeDesc.of(CD_UInt16, CD_int);
+    public static final MethodTypeDesc MD_UInt32_box  = MethodTypeDesc.of(CD_UInt32, CD_int);
+    public static final MethodTypeDesc MD_UInt64_box  = MethodTypeDesc.of(CD_UInt64, CD_long);
+    public static final MethodTypeDesc MD_Initializer = MethodTypeDesc.of(CD_void,   CD_Ctx);
     public static final MethodTypeDesc MD_StringOf    = MethodTypeDesc.of(CD_String, CD_Ctx, CD_JavaString);
 }

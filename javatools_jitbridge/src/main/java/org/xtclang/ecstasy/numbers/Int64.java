@@ -16,7 +16,7 @@ public class Int64 extends xConst {
      *
      * @param value  the 64-bit signed integer value
      */
-    public Int64(long value) {
+    private Int64(long value) {
         super(null);
         $value = value;
     }
@@ -25,7 +25,7 @@ public class Int64 extends xConst {
 
     @Override
     public String toString(Ctx ctx) {
-        return String.of(ctx, java.lang.String.valueOf($value));
+        return String.of(ctx, Long.toString($value));
     }
 
     private static final int     SMALL_CACHE_OFFSET = 512;  // number of cached negative values
@@ -39,11 +39,11 @@ public class Int64 extends xConst {
     public static final Int64 MAX     = $box(Long.MAX_VALUE);
 
     /**
-     * Obtain an xInt64 for a 64-bit "primitive" int (a Java "long" value).
+     * Obtain an Int64 for a 64-bit "primitive" int (a Java "long" value).
      *
      * @param value  a 64-bit "primitive" int
      *
-     * @return an xInt64 reference
+     * @return an Int64 reference
      */
     public static Int64 $box(long value) {
         long key = value + SMALL_CACHE_OFFSET;

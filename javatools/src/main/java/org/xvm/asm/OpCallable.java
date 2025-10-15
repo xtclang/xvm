@@ -574,7 +574,7 @@ public abstract class OpCallable extends Op {
         if (m_nFunctionId == A_SUPER) {
             MethodBody body = bctx.callChain[1];
 
-            cdTarget = body.getIdentity().ensureClassDesc(ts);;
+            cdTarget = body.getIdentity().ensureClassDesc(ts);
             jmdCall  = body.getJitDesc(bctx.typeSystem);
             sigCall  = body.getSignature();
             fSpecial = true;

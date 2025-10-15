@@ -6,13 +6,12 @@ import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
-import java.lang.constant.ClassDesc;
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Slot;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -57,11 +56,13 @@ public class GP_Mod
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, ClassDesc cdTarget) {
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, Slot slotTarget) {
         // TODO: convert remainder to a modulo
-        switch (cdTarget.descriptorString()) {
-            case "I", "S", "B", "C", "Z"
-                     -> code.irem();
+        switch (slotTarget.cd().descriptorString()) {
+            case "I" -> {
+                code.irem();
+                bctx.adjustIntValue(code, slotTarget.type());
+            }
             case "J" -> code.lrem();
             case "F" -> code.frem();
             case "D" -> code.drem();

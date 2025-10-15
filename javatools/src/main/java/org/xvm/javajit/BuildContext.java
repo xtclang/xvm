@@ -39,6 +39,9 @@ import org.xvm.asm.op.Guarded;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_Exception;
+import static org.xvm.javajit.Builder.CD_JavaString;
+import static org.xvm.javajit.Builder.CD_xException;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.toTypeKind;
 
@@ -591,9 +594,10 @@ public class BuildContext {
      */
     public void loadArguments(CodeBuilder code, JitMethodDesc jmd, int[] anArgValue) {
         boolean isOptimized = jmd.isOptimized;
+        int     argCount    = anArgValue.length;
 
-        for (int i = 0, c = anArgValue == null ? 0 : anArgValue.length; i < c; i++ ) {
-            int          iArg = anArgValue[i];
+        for (int i = 0, c = jmd.standardParams.length; i < c; i++ ) {
+            int          iArg = i < argCount ? anArgValue[i] : Op.A_DEFAULT;
             JitParamDesc pd   = isOptimized ? jmd.getOptimizedParam(i) : jmd.standardParams[i];
             switch (pd.flavor) {
             case SpecificWithDefault, WidenedWithDefault:
@@ -787,6 +791,32 @@ public class BuildContext {
                     break;
                 }
             }
+        }
+    }
+
+    /**
+     * Throw an "Unsupported" exception.
+     */
+    public void throwUnsupported(CodeBuilder code) {
+        loadCtx(code);
+        code.aconst_null()
+            .invokestatic(CD_Exception, "$unsupported",
+                MethodTypeDesc.of(CD_xException, CD_Ctx, CD_JavaString))
+            .athrow();
+    }
+
+    /**
+     * Adjust the int value on the stack according to its type.
+     */
+    public void adjustIntValue(CodeBuilder code, TypeConstant type) {
+        switch (type.getSingleUnderlyingClass(false).getName()) {
+            case "Int8"   -> code.i2b();
+            case "Int16"  -> code.i2s();
+            case "Int32"  -> {}
+            case "UInt8"  -> code.ldc(0xFF).iand();
+            case "UInt16" -> code.ldc(0xFFFF).iand();
+            case "UInt32" -> {}
+            default       -> throw new IllegalStateException();
         }
     }
 
