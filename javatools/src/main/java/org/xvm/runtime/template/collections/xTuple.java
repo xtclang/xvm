@@ -389,7 +389,7 @@ public class xTuple
             } else {
                 ahValue  = hTuple.m_ahValue.clone();
                 stepNext = frameCaller -> frameCaller.assignValue(iReturn,
-                                makeHandle(hTuple.getComposition(), ahValue));
+                                makeImmutableHandle(hTuple.getComposition(), ahValue));
             }
 
             switch (freezeValues(frame, ahValue, fInPlace, 0)) {
