@@ -33,10 +33,10 @@ on:
                 description: 'Run only single platform (ubuntu-latest, windows-latest, or all platforms)'
                 type: choice
                 required: false
-                default: 'all'
+                default: 'ubuntu-latest'
                 options:
-                    - 'all'
                     - 'ubuntu-latest'
+                    - 'all'
                     - 'windows-latest'
             extra-gradle-options:
                 description: 'Extra Gradle options to pass to the build'
@@ -93,7 +93,7 @@ jobs:
     build-and-test:
         strategy:
             matrix:
-                os: ${{ github.event.inputs.platforms == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.platforms == 'windows-latest' && fromJSON('["windows-latest"]') || fromJSON('["ubuntu-latest", "windows-latest"]') }}
+                os: ${{ github.event.inputs.platforms == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.platforms == 'windows-latest' && fromJSON('["windows-latest"]') || github.event.inputs.platforms == 'all' && fromJSON('["ubuntu-latest", "windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
 
         runs-on: ${{ matrix.os }}
 
@@ -186,17 +186,35 @@ jobs:
                   echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
 
-    # Trigger publishing workflows on master or when test-publishing is enabled
+    # Summary job that always succeeds if build-and-test completes
+    # Use this for branch protection instead of individual matrix jobs
+    build-complete:
+        name: All builds complete
+        needs: build-and-test
+        runs-on: ubuntu-latest
+        if: always()
+        steps:
+            - name: Check build status
+              run: |
+                  if [ "${{ needs.build-and-test.result }}" = "success" ]; then
+                      echo "✅ All builds completed successfully"
+                      exit 0
+                  else
+                      echo "❌ Build failed or was cancelled"
+                      exit 1
+                  fi
+
+    # Trigger publishing workflows when test-publishing is enabled
     # This job runs after build-and-test succeeds and explicitly triggers downstream workflows
+    # NOTE: Automatic master publishing temporarily disabled for testing
     trigger-publishing:
         name: Trigger publishing workflows
         needs: build-and-test
         runs-on: ubuntu-latest
         if: |
             success() &&
-            (github.ref_name == 'master' ||
-             (github.event_name == 'workflow_dispatch' &&
-              github.event.inputs.test-publishing == 'true'))
+            (github.event_name == 'workflow_dispatch' &&
+             github.event.inputs.test-publishing == true)
 
         steps:
             - name: Checkout repository
@@ -208,8 +226,8 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                  echo "🚀 Triggering publish_snapshot_release workflow..."
-                  gh workflow run publish_snapshot_release \
+                  echo "🚀 Triggering Publish Maven Snapshot workflow..."
+                  gh workflow run "Publish Maven Snapshot" \
                       --repo ${{ github.repository }} \
                       --ref ${{ github.ref_name }} \
                       --field ci-run-id=${{ github.run_id }}
@@ -219,8 +237,8 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                  echo "🚀 Triggering publish_docker workflow..."
-                  gh workflow run publish_docker \
+                  echo "🚀 Triggering Build Docker Images workflow..."
+                  gh workflow run "Build Docker Images" \
                       --repo ${{ github.repository }} \
                       --ref ${{ github.ref_name }} \
                       --field ci-run-id=${{ github.run_id }}
@@ -230,8 +248,8 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                  echo "🚀 Triggering update_homebrew workflow..."
-                  gh workflow run update_homebrew \
+                  echo "🚀 Triggering Update Homebrew workflow..."
+                  gh workflow run "Update Homebrew" \
                       --repo ${{ github.repository }} \
                       --ref ${{ github.ref_name }} \
                       --field ci-run-id=${{ github.run_id }}
