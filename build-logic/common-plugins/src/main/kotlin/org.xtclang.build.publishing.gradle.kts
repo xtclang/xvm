@@ -130,55 +130,51 @@ plugins.withType<SigningPlugin> {
     }
 }
 
-// Evaluate publishing flags at configuration time to avoid capturing extension in doFirst
-val githubEnabled = xdkPublishingCredentials.enableGithub.get()
-val mavenCentralEnabled = xdkPublishingCredentials.enableMavenCentral.get()
-val pluginPortalEnabled = xdkPublishingCredentials.enablePluginPortal.get()
+// Determine if this is a snapshot or release version
+val isSnapshot = publicationVersion.contains("SNAPSHOT", ignoreCase = true)
+val allowPublish = xdkPublishingCredentials.allowPublish.get()
 
-// Disable publish tasks for disabled repositories at configuration time
-tasks.withType<PublishToMavenRepository>().configureEach {
-    val repoName = name.substringAfter("To").substringBefore("Repository")
-    logger.lifecycle("[publishing] Configuring task $name for repository: $repoName")
-    when {
-        repoName.equals("Github", ignoreCase = true) && !githubEnabled -> {
-            enabled = false
-            logger.lifecycle("[publishing] Disabled task $name - GitHub Packages publishing is disabled")
-        }
-        repoName.equals("MavenCentral", ignoreCase = true) && !mavenCentralEnabled -> {
-            enabled = false
-            logger.lifecycle("[publishing] Disabled task $name - Maven Central publishing is disabled")
-        }
+// Log publishing configuration
+logger.lifecycle("[publishing] Version: $publicationVersion ${if (isSnapshot) "(SNAPSHOT)" else "(RELEASE)"}")
+if (isSnapshot) {
+    logger.lifecycle("[publishing] SNAPSHOT: Publishing to GitHub Packages + Maven Central (staging)")
+    logger.lifecycle("[publishing] SNAPSHOT: Gradle Plugin Portal will be skipped (does not accept snapshots)")
+} else {
+    if (allowPublish) {
+        logger.lifecycle("[publishing] RELEASE: Publishing enabled (allowPublish=true)")
+        logger.lifecycle("[publishing] RELEASE: Will publish to GitHub Packages + Maven Central (staging) + Gradle Plugin Portal")
+    } else {
+        logger.lifecycle("[publishing] RELEASE: Publishing BLOCKED (allowPublish=false)")
+        logger.lifecycle("[publishing] RELEASE: Use -Porg.xtclang.allowPublish=true to enable")
     }
 }
 
-// Disable Gradle Plugin Portal task if disabled
-plugins.withId("com.gradle.plugin-publish") {
-    tasks.named("publishPlugins") {
-        if (!pluginPortalEnabled) {
-            enabled = false
-            logger.lifecycle("[publishing] Disabled task publishPlugins - Gradle Plugin Portal publishing is disabled")
+// For release versions, require allowPublish=true
+if (!isSnapshot) {
+    tasks.withType<PublishToMavenRepository>().configureEach {
+        onlyIf {
+            if (!allowPublish) {
+                logger.lifecycle("[publishing] Skipping $name - release publishing requires -Porg.xtclang.allowPublish=true")
+                false
+            } else {
+                true
+            }
         }
     }
 }
-
-// Log publishing configuration at configuration time
-logger.lifecycle("[publishing] GitHub Packages: ${if (githubEnabled) "ENABLED" else "DISABLED"}")
-logger.lifecycle("[publishing] Maven Central: ${if (mavenCentralEnabled) "ENABLED" else "DISABLED"}")
-logger.lifecycle("[publishing] Gradle Plugin Portal: ${if (pluginPortalEnabled) "ENABLED" else "DISABLED"}")
 
 // Register validateCredentials task for credential validation
 val validateCredentials by tasks.registering(ValidateCredentialsTask::class) {
     group = PUBLISH_TASK_GROUP
     description = "Validate all publishing credentials (GitHub, Maven Central, Plugin Portal, Signing) without publishing"
-    // Set project name for output (configuration-cache safe)
+    // Set project info for output (configuration-cache safe)
     projectName.set(project.name)
-    enableGithub.set(xdkPublishingCredentials.enableGithub)
+    projectVersion.set(project.version.toString())
+    allowPublish.set(xdkPublishingCredentials.allowPublish)
     githubUsername.set(xdkPublishingCredentials.githubUsername)
     githubPassword.set(xdkPublishingCredentials.githubPassword)
-    enablePluginPortal.set(xdkPublishingCredentials.enablePluginPortal)
     gradlePublishKey.set(xdkPublishingCredentials.gradlePublishKey)
     gradlePublishSecret.set(xdkPublishingCredentials.gradlePublishSecret)
-    enableMavenCentral.set(xdkPublishingCredentials.enableMavenCentral)
     mavenCentralUsername.set(xdkPublishingCredentials.mavenCentralUsername)
     mavenCentralPassword.set(xdkPublishingCredentials.mavenCentralPassword)
     signingKeyId.set(xdkPublishingCredentials.signingKeyId)

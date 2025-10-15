@@ -140,10 +140,8 @@ jobs:
                   SIGNING_PASSWORD: ${{ secrets.ORG_XTCLANG_SIGNING_PASSWORD }}
                   ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
                   ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
-                  # Publishing flags for snapshots (defaults: GitHub=true, Maven Central=true, Plugin Portal=false)
-                  ORG_XTCLANG_PUBLISH_GITHUB: ${{ github.event.inputs.publish-to-github || 'true' }}
-                  ORG_XTCLANG_PUBLISH_MAVEN_CENTRAL: ${{ github.event.inputs.publish-to-maven-central || 'true' }}
-                  ORG_XTCLANG_PUBLISH_GRADLE_PLUGIN_PORTAL: ${{ github.event.inputs.publish-to-gradle-plugin-portal || 'false' }}
+                  # SNAPSHOT versions automatically publish to GitHub Packages + Maven Central (staging)
+                  # Gradle Plugin Portal is automatically skipped (doesn't accept snapshots)
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
               run: |
                   echo "📦 Publishing Maven snapshot artifacts to GitHub Packages and Maven Central..."

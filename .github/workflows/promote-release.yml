@@ -265,9 +265,7 @@ jobs:
                   # Publish ONLY to Gradle Plugin Portal
                   ./gradlew $GRADLE_OPTIONS \
                       -Pversion=$VERSION \
-                      -Porg.xtclang.publish.github=false \
-                      -Porg.xtclang.publish.mavenCentral=false \
-                      -Porg.xtclang.publish.gradlePluginPortal=true \
+                      -Porg.xtclang.allowPublish=true \
                       :plugin:publishPlugins \
                       --info
 
