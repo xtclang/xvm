@@ -10,7 +10,7 @@
 # - Manually run with test-publishing=true (testing)
 # Can also be triggered manually via workflow_dispatch for testing.
 #
-name: publish_snapshot_release
+name: Publish Snapshots
 
 permissions:
     contents: write

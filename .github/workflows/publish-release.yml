@@ -9,7 +9,7 @@
 # IMPORTANT: This workflow requires a release version (no -SNAPSHOT suffix)
 # Either update version.properties to a release version, or provide a version override.
 #
-name: publish_release
+name: Publish Release
 
 permissions:
     contents: write
