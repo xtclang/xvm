@@ -177,7 +177,7 @@ jobs:
 
             - name: Summary
               if: success()
-              shell: bashConfiguring ta
+              shell: bash
               run: |
                   echo "### ✅ Build and Test Completed" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
