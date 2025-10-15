@@ -148,7 +148,7 @@ jobs:
                   commit: ${{ steps.commit.outputs.commit }}
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   repository: ${{ github.repository }}
-                  output-path: ./artifacts
+                  output-path: ./docker
 
             - name: Build and push Docker image (${{ matrix.arch }})
               shell: bash
@@ -169,10 +169,10 @@ jobs:
                   echo "🏷️ Architecture-specific tags for ${{ matrix.arch }}:"
                   echo "$TAGS"
 
-                  # Copy XDK ZIP to Docker context (artifact already validated by download-ci-artifact action)
-                  DIST_ZIP_FILE="${{ steps.artifact.outputs.artifact-path }}"
-                  cp "$DIST_ZIP_FILE" xdk-dist.zip
-                  echo "📦 Copied: $(basename "$DIST_ZIP_FILE") → xdk-dist.zip"
+                  # Rename artifact to expected name in Docker context
+                  DIST_ZIP_FILE="$(basename "${{ steps.artifact.outputs.artifact-path }}")"
+                  mv "$DIST_ZIP_FILE" xdk-dist.zip
+                  echo "📦 Renamed: $DIST_ZIP_FILE → xdk-dist.zip"
 
                   # Build and push
                   docker buildx build \
