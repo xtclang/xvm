@@ -136,7 +136,7 @@ jobs:
                   ORG_GRADLE_PROJECT_github_actor: ${{ github.actor }}
                   ORG_GRADLE_PROJECT_github_token: ${{ secrets.GITHUB_TOKEN }}
                   SIGNING_KEY: ${{ secrets.ORG_XTCLANG_SIGNING_KEY }}
-                  SIGNING_KEYID: ${{ secrets.ORG_XTCLANG_SIGNING_KEY_ID }}
+                  SIGNING_KEY_ID: ${{ secrets.ORG_XTCLANG_SIGNING_KEY_ID }}
                   SIGNING_PASSWORD: ${{ secrets.ORG_XTCLANG_SIGNING_PASSWORD }}
                   ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
                   ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
