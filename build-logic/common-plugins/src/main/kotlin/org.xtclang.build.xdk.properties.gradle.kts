@@ -36,8 +36,9 @@ val xdkProperties = extensions.create<ProjectXdkProperties>(
 )
 
 // Automatically set group and version from properties
+// Allow -Pversion override, otherwise use xdk.version from properties
 project.group = xdkProperties.stringValue("xdk.group")
-project.version = xdkProperties.stringValue("xdk.version")
+project.version = xdkProperties.stringValue("version", xdkProperties.stringValue("xdk.version"))
 logger.info("[properties] Versioned '${project.name}': group=${project.group}, version=${project.version}")
 
 /**
