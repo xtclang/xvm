@@ -137,9 +137,15 @@ public abstract class Array
      */
     public abstract void capacity$set$p(Ctx ctx, long cap);
 
-    public long $capCfg() {
+    public long $capCfg(Ctx ctx) {
         long cap = $isImmut() ? 0 : ($hashEtc & $CAP_MASK);
         return cap == 0 ? $MIN_CAP : cap;
+    }
+
+    public void $capCfg(Ctx ctx, long cap) {
+        // this internal method must only be called when no storage has been allocated
+        assert !$isImmut() && empty$p(ctx) && cap >= 0 && cap <= $CAP_MASK;
+        $hashEtc = ($hashEtc & ~$CAP_MASK) | (cap & $CAP_MASK);
     }
 
     /**
@@ -147,7 +153,7 @@ public abstract class Array
      */
     public boolean empty$p(Ctx ctx) {
         Array delegate = $delegate();
-        return delegate == null ? ($sizeEtc & $SIZE_MASK) == 0 : delegate.empty$p(ctx);
+        return delegate == null ? size$p(ctx) == 0 : delegate.empty$p(ctx);
     }
 
     /**
