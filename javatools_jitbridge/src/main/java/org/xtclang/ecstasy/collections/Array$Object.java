@@ -21,57 +21,18 @@ public class Array$Object extends Array {
     public Array$Object $delegate;
     public xObj[] $storage;
 
+    // ----- xObj API ------------------------------------------------------------------------------
+
     @Override public xType $type() {
         return $type;
     }
 
-    @Override protected Array$Object $delegate() {
-        return $delegate;
-    }
+    // ----- Array API -----------------------------------------------------------------------------
 
     @Override public long capacity$get$p(Ctx ctx) {
         return $delegate == null
                 ? $storage == null ? $capCfg(ctx) : $storage.length
                 : $delegate.capacity$get$p(ctx);
-    }
-
-    @Override public void capacity$set$p(Ctx ctx, long cap) {
-        if ($delegate != null) {
-            $delegate.capacity$set$p(ctx, cap);
-            return;
-        }
-
-        // validate new capacity
-        if (cap < 0 || cap > $CAP_MASK) {
-            throw $oob(ctx, cap);
-        }
-
-        // before allocating storage, the desired capacity is only a plan
-        if ($storage == null) {
-            $capCfg(ctx, cap);
-            return;
-        }
-
-        // this class is only responsible for non-huge sizes; delegate the handling of huge sizes
-        if (cap > $SIZE_MASK) {
-            $growHuge(ctx, cap);
-            return;
-        }
-
-        int smallCap = (int) cap;
-        if (smallCap < $storage.length) {
-            // either the caller desires a shrink or they're just making sure we have "at least"
-            // the specified capacity
-            if (smallCap == ($sizeEtc & $SIZE_MASK)) {
-                // if the specified capacity is exactly the current size (i.e. `a.capacity=a.size`),
-                // assume that the intention is to trim to the exact amount of storage being used
-                xObj[] newArray = new xObj[smallCap];
-                arraycopy($storage, 0, newArray, 0, smallCap);
-                $storage = newArray;
-            }
-        } else if (smallCap > $storage.length) {
-            $growInPlace(ctx, smallCap);
-        }
     }
 
     @Override public long size$p(Ctx ctx) {
@@ -123,7 +84,83 @@ public class Array$Object extends Array {
         }
     }
 
-    @Override public void $insert(Ctx ctx, long index, long count) {
+    @Override public Array$Object slice$p(Ctx ctx, long n1, long n2) {
+        // slice must be in-range
+        // TODO check lower bound as well
+        long upper = Range$Int64.$effectiveUpperBound(ctx, n1, n2);
+        if (size$p(ctx) > upper) {
+            throw $oob(ctx, upper);
+        }
+
+        // optimized empty slice
+        if (Range$Int64.$empty(ctx, n1, n2)) {
+            // return TODO empty Array$Object
+        }
+
+        // return TODO Array$Object$Slice
+        throw $oob(ctx, upper);
+    }
+
+    // ----- Array internals -----------------------------------------------------------------------
+
+    @Override protected Array$Object $delegate() {
+        return $delegate;
+    }
+
+    @Override protected Object $storage() {
+        return $storage;
+    }
+
+    /**
+     * Ensure the specified capacity.
+     *
+     * @param ctx     the runtime context
+     * @param minCap  the minimum capacity requirement
+     *
+     * @return true iff this array has able to grow "in place" to support the capacity requirement;
+     *         false indicates that the array transitioned to the "huge" model
+     */
+    @Override protected boolean $growInPlace(Ctx ctx, long minCap) {
+        // the caller is responsible for passing valid args; this will not be checked at runtime
+        assert minCap > 0 && minCap <= $SIZE_MASK+1 && ($storage == null || minCap > $storage.length);
+
+        if ($storage == null) {
+            long cap = max($capCfg(ctx), minCap);
+            if (cap > $SIZE_MASK) {
+                $growHuge(ctx, cap);
+                return false;
+            } else {
+                $storage = new xObj[(int) cap];
+                return true;
+            }
+        }
+
+        // calculate power of 2 growth
+        long cap = max($MIN_CAP, Long.highestOneBit(-1 + minCap + minCap)); // TODO current cap, not requested cap
+        if (cap > $SIZE_MASK) {
+            $growHuge(ctx, cap);
+            return false;
+        }
+
+        $storage = Arrays.copyOf($storage, (int) cap);
+        return true;
+    }
+
+    @Override protected void $growHuge(Ctx ctx, long cap) {
+        // TODO new Array$Object$Huge
+        throw $oob(ctx, cap);
+    }
+
+    @Override protected void $shrinkToSize(Ctx ctx) {
+        int size = $sizeEtc & $MUT_MASK;
+        if ($storage != null && $storage.length > size) {
+            xObj[] newArray = new xObj[size];
+            arraycopy($storage, 0, newArray, 0, size);
+            $storage = newArray;
+        }
+    }
+
+    @Override protected void $insert(Ctx ctx, long index, long count) {
         if ($delegate != null) {
             $delegate.$insert(ctx, index, count);
             return;
@@ -152,7 +189,7 @@ public class Array$Object extends Array {
         }
     }
 
-    @Override public void $delete(Ctx ctx, long index, long count) {
+    @Override protected void $delete(Ctx ctx, long index, long count) {
         if ($delegate != null) {
             $delegate.$delete(ctx, index, count);
             return;
@@ -198,62 +235,5 @@ public class Array$Object extends Array {
             Arrays.fill($storage, newSize, oldSize, null);
         }
         $sizeEtc = $sizeEtc & $MUT_MASK | newSize;
-    }
-
-    @Override public Array$Object slice$p(Ctx ctx, long n1, long n2) {
-        // slice must be in-range
-        // TODO check lower bound as well
-        long upper = Range$Int64.$effectiveUpperBound(ctx, n1, n2);
-        if (size$p(ctx) > upper) {
-            throw $oob(ctx, upper);
-        }
-
-        // optimized empty slice
-        if (Range$Int64.$empty(ctx, n1, n2)) {
-            // return TODO empty Array$Object
-        }
-
-        // return TODO Array$Object$Slice
-        throw $oob(ctx, upper);
-    }
-
-    /**
-     * Ensure the specified capacity.
-     *
-     * @param ctx     the runtime context
-     * @param minCap  the minimum capacity requirement
-     *
-     * @return true iff this array has able to grow "in place" to support the capacity requirement;
-     *         false indicates that the array transitioned to the "huge" model
-     */
-    protected boolean $growInPlace(Ctx ctx, long minCap) {
-        // the caller is responsible for passing valid args; this will not be checked at runtime
-        assert minCap > 0 && minCap <= $SIZE_MASK+1 && ($storage == null || minCap > $storage.length);
-
-        if ($storage == null) {
-            long cap = max($capCfg(ctx), minCap);
-            if (cap > $SIZE_MASK) {
-                $growHuge(ctx, cap);
-                return false;
-            } else {
-                $storage = new xObj[(int) cap];
-                return true;
-            }
-        }
-
-        // calculate power of 2 growth
-        long cap = max($MIN_CAP, Long.highestOneBit(-1 + minCap + minCap)); // TODO current cap, not requested cap
-        if (cap > $SIZE_MASK) {
-            $growHuge(ctx, cap);
-            return false;
-        }
-
-        $storage = Arrays.copyOf($storage, (int) cap);
-        return true;
-    }
-
-    protected void $growHuge(Ctx ctx, long cap) {
-        // TODO new Array$Object$Huge
-        throw $oob(ctx, cap);
     }
 }

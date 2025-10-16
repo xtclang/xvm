@@ -9,6 +9,8 @@ import org.xtclang.ecstasy.xObj;
 import org.xtclang.ecstasy.xType;
 import org.xtclang.ecstasy.reflect.Var;
 
+import static java.lang.System.arraycopy;
+
 /**
  * Abstract native base class implementation for all types of `ecstasy.collections.Array`. Actual
  * storage for elements is based on the element type, and huge and sliced arrays require a separate
@@ -59,8 +61,8 @@ public abstract class Array
     // ----- xObj API ------------------------------------------------------------------------------
 
     /**
-     * Note: It's expected that a few subclasses will know their type implicitly, while most will
-     *       need to add a field to hold the type.
+     * Note: It's expected that some subclasses (e.g. "Int[]") will know their type implicitly,
+     *       while others will need to add a field to hold the type (e.g. "Point[]").
      */
     @Override public abstract xType $type();
 
@@ -71,81 +73,67 @@ public abstract class Array
         return $mut() == $CONSTANT;
     }
 
-    // ----- xArray API ----------------------------------------------------------------------------
-
-    /**
-     * A delegate for handling all special situations and features.
-     *
-     * Subclasses aren't intended to use this accessor. Instead, this accessor simply enables each
-     * subclass to expose its delegate to this base class, and the base class doesn't implement any
-     * of the "hot" methods using this, so the virtual cost is irrelevant. Subclasses implement the
-     * "hot" methods using that field directly, so when the array type is known at JIT time, the
-     * code can be generated not against this Array class, but rather against a specific subclass,
-     * relying on the JVM's inline cache to avoid virtual calls for the common case, and accepting
-     * the virtual call cost for delegate arrays (slices and/or huge arrays).
-     */
-    protected abstract Array $delegate();
-
-    /**
-     * @return one of {@link #$MUTABLE}, {@link #$FIXED}, {@link #$PERSISTENT}, or {@link #$CONSTANT}
-     */
-    public int $mut() {
-        Array delegate = $delegate();
-        return delegate == null ? ($sizeEtc >>> $MUT_SHIFT) : delegate.$mut();
-    }
-
-    /**
-     * Store the mutability value for this Array. This implementation does not include any logic
-     * from Array.x; it just stores the mutability value.
-     *
-     * @param mutability one of {@link #$MUTABLE}, {@link #$FIXED}, {@link #$PERSISTENT}, or
-     *        {@link #$CONSTANT}
-     */
-    public void $mut(int mutability) {
-        Array delegate = $delegate();
-        if (delegate == null) {
-            $sizeEtc = ($sizeEtc & $SIZE_MASK) | (mutability << $MUT_SHIFT);
-        } else {
-            delegate.$mut(mutability);
-        }
-    }
-
-    /**
-     * @return true iff mutating array operations are in-place; false if the array is a "persistent"
-     *         data structure, such that "mutating" operations result in a new array
-     */
-    protected final boolean $mutInPlace() {
-        return $mut() >= $FIXED;
-    }
-
-    /**
-     * @return true iff the array is "mutability==Fixed"
-     */
-    protected final boolean $mutFixed() {
-        return $mut() == $FIXED;
-    }
+    // ----- Array API -----------------------------------------------------------------------------
 
     /**
      * @return the current storage capacity of the array; this is the "delegate.capacity" value
      *         referred to by Array.x
      */
-    public abstract long capacity$get$p(Ctx ctx);
+    public long capacity$get$p(Ctx ctx) {
+        // reasonably efficient implementation at the base class level, but likely to be overridden
+        // for hot classes
+        Array delegate = $delegate();
+        if (delegate != null) {
+            return delegate.capacity$get$p(ctx);
+        }
+
+        Object storage = $storage();
+        return storage == null
+                ? $capCfg(ctx)
+                : $elementCapacity(java.lang.reflect.Array.getLength(storage));
+    }
 
     /**
      * @param cap the desired storage capacity for the array; this is the "delegate.capacity" value
      *            referred to by Array.x
      */
-    public abstract void capacity$set$p(Ctx ctx, long cap);
+    public void capacity$set$p(Ctx ctx, long cap) {
+        if ($isImmut()) {
+            throw $ro(ctx);
+        }
 
-    public long $capCfg(Ctx ctx) {
-        long cap = $isImmut() ? 0 : ($hashEtc & $CAP_MASK);
-        return cap == 0 ? $MIN_CAP : cap;
-    }
+        Array delegate = $delegate();
+        if (delegate != null) {
+            delegate.capacity$set$p(ctx, cap);
+            return;
+        }
 
-    public void $capCfg(Ctx ctx, long cap) {
-        // this internal method must only be called when no storage has been allocated
-        assert !$isImmut() && empty$p(ctx) && cap >= 0 && cap <= $CAP_MASK;
-        $hashEtc = ($hashEtc & ~$CAP_MASK) | (cap & $CAP_MASK);
+        // validate new capacity
+        if (cap < 0 || cap > $CAP_MASK) {
+            throw $oob(ctx, cap);
+        }
+
+        // before allocating storage, the desired capacity is only a plan
+        Object storage = $storage();
+        if (storage == null) {
+            $capCfg(ctx, cap);
+            return;
+        }
+
+        // a class with no delegate but with element storage is only responsible for non-huge sizes;
+        // delegate the handling of huge sizes
+        if (cap > $SIZE_MASK) {
+            $growHuge(ctx, cap);
+            return;
+        }
+
+        int smallCap = (int) cap;
+        int existCap = (int) capacity$get$p(ctx);
+        if (smallCap > existCap) {
+            $growInPlace(ctx, smallCap);
+        } else if (smallCap < existCap && smallCap == size$p(ctx)) {
+            $shrinkToSize(ctx);
+        }
     }
 
     /**
@@ -176,6 +164,8 @@ public abstract class Array
     /**
      * Store the specified element value at the specified index.
      *
+     * If the Array is immutable, this method must throw an exception without mutating the array.
+     *
      * @param index  the element index
      * @param value  the element value
      */
@@ -193,25 +183,12 @@ public abstract class Array
         throw $oob(ctx, index);
     }
 
-    /**
-     * Insert storage for the specified number of elements at the specified index, shifting all
-     * subsequent elements up by `count` indexes. The inserted elements should be assumed to be
-     * unassigned, and must be assigned by the caller.
-     *
-     * @param ctx    the XVM context
-     * @param index  the element index
-     * @param count  the number of elements to insert
-     */
-    public abstract void $insert(Ctx ctx, long index, long count);
-
-    /**
-     * Remove the element at the specified index, shifting all subsequent elements down by `count`
-     * indexes.
-     *
-     * @param index  the element index
-     * @param count  the number of elements to delete
-     */
-    public abstract void $delete(Ctx ctx, long index, long count);
+// TODO
+// - add/addAll
+// - insert/insertAll
+// - delete/deleteAll
+// - clear
+// - reify
 
     /**
      * Obtain a slice of this array.
@@ -241,17 +218,130 @@ public abstract class Array
      */
     public abstract Array slice$p(Ctx ctx, long n1, long n2);
 
-    // ----- debugging support ---------------------------------------------------------------------
+    // ----- Array internals -----------------------------------------------------------------------
 
-    java.lang.String $mutDesc() {
-        return switch ($mut()) {
-            case $CONSTANT   -> "Constant";
-            case $PERSISTENT -> "Persistent";
-            case $FIXED      -> "Fixed";
-            case $MUTABLE    -> "Mutable";
-            default          -> throw new IllegalStateException();
-        };
+    /**
+     * A delegate for handling all special situations and features.
+     *
+     * Subclasses aren't intended to use this accessor. Instead, this accessor simply enables each
+     * subclass to expose its delegate to this base class, and the base class doesn't implement any
+     * of the "hot" methods using this, so the virtual cost is irrelevant. Subclasses implement the
+     * "hot" methods using that field directly, so when the array type is known at JIT time, the
+     * code can be generated not against this Array class, but rather against a specific subclass,
+     * relying on the JVM's inline cache to avoid virtual calls for the common case, and accepting
+     * the virtual call cost for delegate arrays (slices and/or huge arrays).
+     */
+    protected abstract Array $delegate();
+
+    /**
+     * The storage for the contents of this array. It should never be the case that an array has
+     * both a non-null "$delegate()" and a non-null "$storage()".
+     */
+    protected abstract Object $storage();
+
+    /**
+     * @return the configured capacity of this array; this value only has meaning up to the point
+     *         where storage is allocated
+     */
+    protected long $capCfg(Ctx ctx) {
+        long cap = $isImmut() ? 0 : ($hashEtc & $CAP_MASK);
+        return cap == 0 ? $MIN_CAP : cap;
     }
+
+    /**
+     * Configure the size that will be pre-allocated for the array when storage is first allocated.
+     *
+     * If the Array is immutable, then this method should never be called.
+     *
+     * @param cap the capacity value to use when storage is first allocated
+     */
+    protected void $capCfg(Ctx ctx, long cap) {
+        // this internal method must only be called when no storage has been allocated
+        assert $delegate() == null && $storage() == null && !$isImmut();
+        $hashEtc = ($hashEtc & ~$CAP_MASK) | (cap & $CAP_MASK);
+    }
+
+    protected int $elementCapacity(int javaArrayLength) {
+        // base class assumes 1:1
+        return javaArrayLength;
+    }
+
+    protected int $javaArrayLength(int elementCapacity) {
+        // base class assumes 1:1
+        return elementCapacity;
+    }
+
+    protected abstract boolean $growInPlace(Ctx ctx, long minCap);
+
+    protected abstract void $growHuge(Ctx ctx, long cap);
+
+    protected abstract void $shrinkToSize(Ctx ctx);
+
+    /**
+     * @return one of {@link #$MUTABLE}, {@link #$FIXED}, {@link #$PERSISTENT}, or {@link #$CONSTANT}
+     */
+    protected int $mut() {
+        Array delegate = $delegate();
+        return delegate == null ? ($sizeEtc >>> $MUT_SHIFT) : delegate.$mut();
+    }
+
+    /**
+     * Store the mutability value for this Array. This implementation does not include any logic
+     * from Array.x; it just stores the mutability value.
+     *
+     * @param mutability one of {@link #$MUTABLE}, {@link #$FIXED}, {@link #$PERSISTENT}, or
+     *        {@link #$CONSTANT}
+     */
+    protected void $mut(int mutability) {
+        Array delegate = $delegate();
+        if (delegate == null) {
+            $sizeEtc = ($sizeEtc & $SIZE_MASK) | (mutability << $MUT_SHIFT);
+        } else {
+            delegate.$mut(mutability);
+        }
+    }
+
+    /**
+     * @return true iff mutating array operations are in-place; false if the array is a "persistent"
+     *         data structure, such that "mutating" operations result in a new array
+     */
+    protected final boolean $mutInPlace() {
+        return $mut() >= $FIXED;
+    }
+
+    /**
+     * @return true iff the array is "mutability==Fixed"
+     */
+    protected final boolean $mutFixed() {
+        return $mut() == $FIXED;
+    }
+
+    /**
+     * Insert storage for the specified number of elements at the specified index, shifting all
+     * subsequent elements up by `count` indexes. The inserted elements should be assumed to be
+     * unassigned, and must be assigned by the caller.
+     *
+     * If the Array is immutable, then this method should never be called.
+     *
+     * @param ctx    the XVM context
+     * @param index  the element index
+     * @param count  the number of elements to insert
+     */
+    protected abstract void $insert(Ctx ctx, long index, long count);
+
+    /**
+     * Remove the element at the specified index, shifting all subsequent elements down by `count`
+     * indexes.
+     *
+     * If the Array is immutable, then this method should never be called.
+     *
+     * @param index  the element index
+     * @param count  the number of elements to delete
+     */
+    protected abstract void $delete(Ctx ctx, long index, long count);
+
+    // ----- exception helpers ---------------------------------------------------------------------
+
     /**
      * @param index an illegal index
      *
@@ -273,6 +363,18 @@ public abstract class Array
      */
     protected xException $ro(Ctx ctx) {
         throw Exception.$ro(ctx, "array mutability=" + $mutDesc());
+    }
+
+    // ----- debugging support ---------------------------------------------------------------------
+
+    public java.lang.String $mutDesc() {
+        return switch ($mut()) {
+            case $CONSTANT   -> "Constant";
+            case $PERSISTENT -> "Persistent";
+            case $FIXED      -> "Fixed";
+            case $MUTABLE    -> "Mutable";
+            default          -> throw new IllegalStateException();
+        };
     }
 
     @Override public java.lang.String toString() {
