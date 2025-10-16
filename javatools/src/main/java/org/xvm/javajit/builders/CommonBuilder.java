@@ -1009,7 +1009,7 @@ public class CommonBuilder
      * Ecstasy:
      *      val o = new C(x, y, z);
      * Java:
-     *      C o = C.$new$0(ctx, x, y, z);
+     *      C o = C.$new$17(ctx, x, y, z);
      *
      * For singletons, referencing the instance of the singleton for the first time causes it to be
      * created using the well-known "Java singleton pattern" that leverages the Java ClassLoader
@@ -1020,9 +1020,9 @@ public class CommonBuilder
      * singletons have a non-static "$init()" method that is signature-wise identical to the
      * "$new()" method and performs everything in the following list of steps starting with step 4.
      *
-     * public static C $new$0(Ctx ctx, X x, Y y, Z z) {
+     * public static C $new$17(Ctx ctx, X x, Y y, Z z) {
      *    // note: singletons use this signature instead:
-     *    public C $init$0(Ctx ctx)
+     *    public C $init$17(Ctx ctx)
      *
      *    // step 1: ONLY FOR "anonymous inner classes": a "wrapper constructor" (in lieu
      *    //   of steps 3 and 5) (TODO GG)
@@ -1048,7 +1048,7 @@ public class CommonBuilder
      *    // - we do NOT have to save off the arguments for the `finally()` call
      *    //   in the constructor context because we have the arguments right here
      *    // note: cctx argument is optional
-     *    construct$0(ctx, cctx, thi$, x, y, z);
+     *    construct$17(ctx, cctx, thi$, x, y, z);
      *
      *    // step 7: `assert()` is called (may be one on each constituent piece -- e.g.
      *    // base classes, mixins, annotations -- of the composition)
@@ -1075,11 +1075,11 @@ public class CommonBuilder
      *    // from #3 and #4 are executed, in reverse order of what the constructors
      *    // were called in
      *    // note: cctx argument is optional
-     *    finally$0(ctx, cctx, thi$, x, y, z);
+     *    finally$17(ctx, cctx, thi$, x, y, z);
      * }
      *
      * // assuming C extends B and B has a finally that takes some (P p, Q q):
-     * public static construct$0(CtorCtx cctx, C thi$, X x, Y y, Z z) {
+     * public static construct$17(CtorCtx cctx, C thi$, X x, Y y, Z z) {
      *    // user logic before the `construct B(p,q);`
      *    P p;
      *    Q q;
@@ -1094,7 +1094,7 @@ public class CommonBuilder
      *    // ...
      * }
      *
-     * public static finally$0(CtorCtx cctx, C thi$, X x, Y y, Z z) {
+     * public static finally$17(CtorCtx cctx, C thi$, X x, Y y, Z z) {
      *    // run the `finally` on B before running the `finally` on D
      *    // (we saved off the args in the constructor .. it's basically
      *    // a hand-rolled closure)
@@ -1162,7 +1162,7 @@ public class CommonBuilder
             ;
 
             // step 6: call the constructor
-            // construct$0(ctx, cctx, thi$, x, y, z);
+            // construct$17(ctx, cctx, thi$, x, y, z);
             String        ctorName = constructor.getIdentity().ensureJitMethodName(typeSystem);
             JitMethodDesc ctorDesc = constructor.getJitDesc(typeSystem);
 
