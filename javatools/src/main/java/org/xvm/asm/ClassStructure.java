@@ -549,7 +549,7 @@ public class ClassStructure
     public ListMap<StringConstant, TypeConstant> getTypeParams() {
         ListMap<StringConstant, TypeConstant> mapThis = m_mapParams;
         return mapThis == null
-                ? ListMap.EMPTY
+                ? ListMap.empty()
                 : mapThis;
     }
 
@@ -3339,6 +3339,7 @@ public class ClassStructure
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Iterator<? extends XvmStructure> getContained() {
         // we cannot use the "collectAnnotations" API at this time, since our module may not yet
         // be linked
@@ -3354,9 +3355,9 @@ public class ClassStructure
 
         return listAnno == null
                 ? super.getContained()
-                : new LinkedIterator(
-                        super.getContained(),
-                        listAnno.iterator());
+                : new LinkedIterator<XvmStructure>(
+                        (Iterator<XvmStructure>) super.getContained(),
+                        (Iterator<XvmStructure>) (Iterator<?>) listAnno.iterator());
     }
 
     @Override
@@ -3589,8 +3590,8 @@ public class ClassStructure
         }
 
         // type parameters
-        Map mapThisParams = this.m_mapParams;
-        Map mapThatParams = that.m_mapParams;
+        ListMap<StringConstant, TypeConstant> mapThisParams = this.m_mapParams;
+        ListMap<StringConstant, TypeConstant> mapThatParams = that.m_mapParams;
         int cThisParams   = mapThisParams == null ? 0 : mapThisParams.size();
         int cThatParams   = mapThatParams == null ? 0 : mapThatParams.size();
 

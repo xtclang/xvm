@@ -948,7 +948,7 @@ public abstract class Component
      * @param child    the child component
      * @param sibling  the sibling component to unlink
      */
-    protected void unlinkSibling(Map kids, Object id, Component child, Component sibling) {
+    protected void unlinkSibling(Map<String, Component> kids, String id, Component child, Component sibling) {
         if (sibling == child && child.getNextSibling() == null) {
             // most common case: the specified child is the only sibling with that id
             markModified();

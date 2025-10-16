@@ -159,9 +159,9 @@ public class MultiMethodStructure
         MethodStructure method = (MethodStructure) child;
         MethodConstant  id     = method.getIdentityConstant();
 
-        MethodStructure sibling = kids.remove(id);
-
-        unlinkSibling(kids, id, child, sibling);
+        kids.remove(id);
+        method.getIdentityConstant().resetCachedInfo();
+        markModified();
     }
 
     @Override

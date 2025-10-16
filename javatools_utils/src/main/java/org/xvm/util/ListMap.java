@@ -7,14 +7,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-
 /**
  * A simple implementation of a Map on top of an ArrayList to maintain order of
  * insertion. This map should work well for small numbers of entries, but will
  * degrade in performance as it grows in size.
  */
-public class ListMap<K,V>
-        extends AbstractMap<K,V> {
+public class ListMap<K,V> extends AbstractMap<K,V> {
     /**
      * Construct a new ListMap.
      */
@@ -139,4 +137,17 @@ public class ListMap<K,V>
      * An empty ListMap.
      */
     public static final ListMap<?, ?> EMPTY = new ListMap<>(-1);
+
+    /**
+     * Return a typed empty ListMap.
+     *
+     * @param <K>  the key type
+     * @param <V>  the value type
+     *
+     * @return an empty ListMap with the correct type parameters
+     */
+    @SuppressWarnings("unchecked")
+    public static <K, V> ListMap<K, V> empty() {
+        return (ListMap<K, V>) EMPTY;
+    }
 }

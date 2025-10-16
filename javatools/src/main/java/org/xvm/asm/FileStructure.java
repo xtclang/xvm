@@ -791,9 +791,10 @@ public class FileStructure
         Map<ModuleConstant, ModuleStructure> kids    = f_moduleById;
         ModuleStructure                      module  = (ModuleStructure) child;
         ModuleConstant                       id      = module.getIdentityConstant();
-        ModuleStructure                      sibling = kids.remove(id);
 
-        unlinkSibling(kids, id, module, sibling);
+        kids.remove(id);
+        module.getIdentityConstant().resetCachedInfo();
+        markModified();
     }
 
     @Override
