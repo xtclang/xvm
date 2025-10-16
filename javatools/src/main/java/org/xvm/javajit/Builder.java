@@ -338,7 +338,7 @@ public abstract class Builder {
 
         case "I": // int
             switch (type.getSingleUnderlyingClass(false).getName()) {
-                case "Char"   -> code.getfield(CD_Char, "codepoint", cd);
+                case "Char"   -> code.getfield(CD_Char,   "$value", cd);
                 case "Int8"   -> code.getfield(CD_Int8,   "$value", cd);
                 case "Int16"  -> code.getfield(CD_Int16,  "$value", cd);
                 case "Int32"  -> code.getfield(CD_Int32,  "$value", cd);
