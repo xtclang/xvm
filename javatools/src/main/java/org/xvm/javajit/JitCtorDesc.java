@@ -12,7 +12,7 @@ import static org.xvm.javajit.Builder.CD_CtorCtx;
  * JIT specific information for a constructor.
  *
  * According to the step 6 of the "CommonBuilder.assembleNew" algorithm, the constructor signature
- * is: {@code construct$0(ctx, cctx, thi$, x, y, z)}, where "cctx" arg is optional
+ * is: {@code construct$17(ctx, cctx, thi$, x, y, z)}, where "cctx" arg is optional
  */
 public class JitCtorDesc
         extends JitMethodDesc {

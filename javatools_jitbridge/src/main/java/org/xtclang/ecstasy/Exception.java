@@ -24,9 +24,11 @@ public class Exception extends xConst {
      * This is a static method that will be called by the naturally constructed sub-classes.
      * See {@link org.xvm.javajit.builders.CommonBuilder#assembleNew}.
      *
-     * The name is reserved at {@link org.xvm.javajit.NativeNames}
+     * The name is known to be "construct" since it's the very first constructor at Exception.x
+     *
+     * @see {@link org.xvm.asm.constants.MethodConstant#ensureJitMethodName}
      */
-    public static void construct$n(Ctx ctx, CtorCtx cctx, Exception thi$, xObj message, xObj cause) {
+    public static void construct(Ctx ctx, CtorCtx cctx, Exception thi$, xObj message, xObj cause) {
         thi$.text       = message instanceof String text ? text : Nullable.Null;
         thi$.cause      = cause instanceof Exception e ? e : Nullable.Null;
         thi$.$exception = thi$.$createJavaException(cause instanceof Exception e ? e.$exception : null);

@@ -15,7 +15,6 @@ public class NativeNames {
      */
     static final Map<String, String> reservedMethodSuffix = new HashMap<>();
     static {
-        reservedMethodSuffix.put("Exception/construct/2", "construct$n");
     }
 
     /**

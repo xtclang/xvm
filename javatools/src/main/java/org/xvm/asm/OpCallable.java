@@ -18,7 +18,6 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -565,27 +564,26 @@ public abstract class OpCallable extends Op {
     protected void buildCall(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         TypeSystem ts = bctx.typeSystem;
 
-        ClassDesc         cdTarget;
-        JitMethodDesc     jmdCall;
-        SignatureConstant sigCall;
-        MethodTypeDesc    mdCall;
-        boolean           fSpecial;
+        MethodConstant idMethod;
+        ClassDesc      cdTarget;
+        JitMethodDesc  jmdCall;
+        boolean        fSpecial;
 
         if (m_nFunctionId == A_SUPER) {
             MethodBody body = bctx.callChain[1];
 
-            cdTarget = body.getIdentity().ensureClassDesc(ts);
-            jmdCall  = body.getJitDesc(bctx.typeSystem);
-            sigCall  = body.getSignature();
+            idMethod = body.getIdentity();
+            cdTarget = idMethod.getClassIdentity().ensureClassDesc(ts);
+            jmdCall  = body.getJitDesc(ts);
             fSpecial = true;
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
-            MethodConstant   idMethod   = (MethodConstant) bctx.getConstant(m_nFunctionId);
+            idMethod   = (MethodConstant) bctx.getConstant(m_nFunctionId);
+
             IdentityConstant idTarget   = idMethod.getClassIdentity();
             MethodInfo       infoMethod = idTarget.getType().ensureTypeInfo().getMethodById(idMethod);
 
             cdTarget = idTarget.ensureClassDesc(ts);
             jmdCall  = infoMethod.getJitDesc(ts);
-            sigCall  = infoMethod.getSignature();
             fSpecial = false;
         } else {
             Slot slotFn = bctx.getSlot(m_nFunctionId);
@@ -593,10 +591,11 @@ public abstract class OpCallable extends Op {
             throw new UnsupportedOperationException("function call " + slotFn.type());
         }
 
-        String methodName = sigCall.getName(); // function names don't have to be unique
+        String         sJitName = idMethod.ensureJitMethodName(ts);
+        MethodTypeDesc mdCall;
         if (jmdCall.isOptimized) {
-            mdCall      = jmdCall.optimizedMD;
-            methodName += Builder.OPT;
+            mdCall  = jmdCall.optimizedMD;
+            sJitName += Builder.OPT;
         }
         else {
             mdCall = jmdCall.standardMD;
@@ -606,12 +605,12 @@ public abstract class OpCallable extends Op {
         bctx.loadArguments(code, jmdCall, anArgValue);
 
         if (fSpecial) {
-            code.invokespecial(cdTarget, methodName, mdCall);
+            code.invokespecial(cdTarget, sJitName, mdCall);
         } else {
-            code.invokestatic(cdTarget, methodName, mdCall);
+            code.invokestatic(cdTarget, sJitName, mdCall);
         }
 
-        int cReturns = sigCall.getReturnCount();
+        int cReturns = idMethod.getSignature().getReturnCount();
         if (cReturns > 0) {
             int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
             bctx.assignReturns(code, jmdCall, cReturns, anVar);

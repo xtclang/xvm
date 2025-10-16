@@ -11,6 +11,7 @@ import java.lang.classfile.Label;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -333,10 +334,11 @@ public abstract class OpTest
                 case OP_IS_GT, OP_IS_GTE, OP_IS_LT, OP_IS_LTE -> pool.sigCompare();
                 default                                       -> throw new IllegalStateException();
             };
-            MethodInfo    method  = typeCommon.ensureTypeInfo().getMethodBySignature(sig);
-            JitMethodDesc jmd     = method.getJitDesc(ts);
-            ClassDesc     cd      = method.getJitIdentity().getNamespace().ensureClassDesc(ts);
-            String        jitName = sig.getName(); // function
+            MethodInfo     method   = typeCommon.ensureTypeInfo().getMethodBySignature(sig);
+            JitMethodDesc  jmd      = method.getJitDesc(ts);
+            MethodConstant idFn     = method.getJitIdentity();
+            ClassDesc      cd       = idFn.getNamespace().ensureClassDesc(ts);
+            String         sJitName = idFn.ensureJitMethodName(ts);
 
             bctx.loadCtx(code);
             switch (nOp) {
@@ -347,7 +349,7 @@ public abstract class OpTest
                 Builder.loadType(code, ts, typeCommon);
                 bctx.loadArgument(code, m_nValue1);
                 bctx.loadArgument(code, m_nValue2);
-                code.invokestatic(cd, jitName+OPT, MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_xType, cd, cd));
+                code.invokestatic(cd, sJitName +OPT, MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_xType, cd, cd));
                 if (nOp == OP_IS_NEQ) {
                     code.iconst_1()
                         .ixor();
@@ -360,7 +362,7 @@ public abstract class OpTest
                 Builder.loadType(code, ts, typeCommon);
                 bctx.loadArgument(code, m_nValue1);
                 bctx.loadArgument(code, m_nValue2);
-                code.invokestatic(cd, jitName, MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_xType, cd, cd));
+                code.invokestatic(cd, sJitName, MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_xType, cd, cd));
 
                 boolean fInverse;
                 switch (nOp) {

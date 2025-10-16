@@ -524,7 +524,7 @@ public abstract class Builder {
     }
 
     /**
-     * Convert the "void construct$0(...)" to "This new$0(...)"
+     * Convert the "void construct$17(...)" to "This new$17(...)"
      */
     public static JitMethodDesc convertConstructToNew(TypeInfo typeInfo, String className,
                                                       JitMethodDesc jmdCtor) {
