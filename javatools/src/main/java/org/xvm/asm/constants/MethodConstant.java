@@ -274,47 +274,64 @@ public class MethodConstant
      * Ensure a unique name for this method at the specified TypeSystem.
      */
     public String ensureJitMethodName(TypeSystem ts) {
-        if (isFunction() && !isConstructor()) {
-            // function names don't have to be unique
-            return getName();
-        }
-
         String sJitName = m_sJitName;
         if (sJitName == null) {
-            StringBuilder    prefix   = new StringBuilder();
-            IdentityConstant idParent = getNamespace();
-
-            String sReservedName = NativeNames.findReservedJitName(this);
-            if (sReservedName == null) {
-                ComputeName: while (true) {
-                    switch (idParent.getFormat()) {
-                    case Class, Package, Module:
-                        break ComputeName;
-
-                    case Property:
-                        prefix.insert(0, '$')
-                              .insert(0, ((PropertyConstant) idParent).ensureJitPropertyName(ts));
+            if (isFunction() || isConstructor()) {
+                // function names don't have to be unique across the type system, but they may need
+                // to be unique within the class scope; the reason is that two distinct XTC
+                // functions f(String|Person sp) and f(Int|Animal ia) could end up being compiled
+                // into the same function f(xObj o1);
+                // to avoid any complex computation and make it predictable we simply suffix the
+                // function and constructor names with the corresponding "ordinal" (the index in
+                // the parent MultiMethodStructure)
+                MethodStructure method = (MethodStructure) getComponent();
+                int     ix     = 0;
+                boolean fFound = false;
+                for (Component m : method.getParent().children()) {
+                    if (m == method) {
+                        fFound = true;
                         break;
-
-                    case Method:
-                        prefix.insert(0, '$')
-                              .insert(0, ((MethodConstant) idParent).ensureJitMethodName(ts));
-                        break;
-
-                    default:
-                        throw new IllegalStateException();
                     }
-                    idParent = idParent.getNamespace();
+                    ix++;
                 }
-
-                SignatureConstant sigJit = getSignature();
-                if (!prefix.isEmpty()) {
-                    sigJit  = sigJit.getConstantPool().ensureSignatureConstant(
-                        prefix + sigJit.getName(), sigJit.getRawParams(), sigJit.getRawReturns());
-                }
-                sJitName = sigJit.ensureJitMethodName(ts);
+                assert fFound;
+                sJitName = ix == 0 ? getName() : getName() + "$" + ix;
             } else {
-                sJitName = sReservedName;
+                StringBuilder    prefix   = new StringBuilder();
+                IdentityConstant idParent = getNamespace();
+
+                String sReservedName = NativeNames.findReservedJitName(this);
+                if (sReservedName == null) {
+                    ComputeName: while (true) {
+                        switch (idParent.getFormat()) {
+                        case Class, Package, Module:
+                            break ComputeName;
+
+                        case Property:
+                            prefix.insert(0, '$')
+                                  .insert(0, ((PropertyConstant) idParent).ensureJitPropertyName(ts));
+                            break;
+
+                        case Method:
+                            prefix.insert(0, '$')
+                                  .insert(0, ((MethodConstant) idParent).ensureJitMethodName(ts));
+                            break;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+                        idParent = idParent.getNamespace();
+                    }
+
+                    SignatureConstant sigJit = getSignature();
+                    if (!prefix.isEmpty()) {
+                        sigJit  = sigJit.getConstantPool().ensureSignatureConstant(
+                            prefix + sigJit.getName(), sigJit.getRawParams(), sigJit.getRawReturns());
+                    }
+                    sJitName = sigJit.ensureJitMethodName(ts);
+                } else {
+                    sJitName = sReservedName;
+                }
             }
             m_sJitName = sJitName;
         }
