@@ -12,7 +12,6 @@ import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.ConfigurationContainer;
-import org.gradle.api.artifacts.VersionCatalogsExtension;
 import org.gradle.api.component.AdhocComponentWithVariants;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.ProjectLayout;
@@ -40,7 +39,6 @@ public abstract class ProjectDelegate<T, R> {
     protected final DirectoryProperty buildDir;
     protected final ExtraPropertiesExtension extra;
     protected final ExtensionContainer extensions;
-    protected final VersionCatalogsExtension versionCatalogExtension;
 
     // Cached XDK version and semantic version read from plugin-build-info.properties (read once at construction)
     private final String xdkVersion;
@@ -64,7 +62,6 @@ public abstract class ProjectDelegate<T, R> {
         this.extensions = project.getExtensions();
         this.buildDir = layout.getBuildDirectory();
         this.extra = extensions.getByType(ExtraPropertiesExtension.class);
-        this.versionCatalogExtension = extensions.findByType(VersionCatalogsExtension.class);
         this.component = component;
         this.pluginUrl = getClass().getProtectionDomain().getCodeSource().getLocation();
 

@@ -1,11 +1,7 @@
-import XdkBuildLogic.XDK_ARTIFACT_NAME_JAVATOOLS_JAR
-
 plugins {
-    id("org.xtclang.build.xdk.versioning")
     alias(libs.plugins.xdk.build.java)
-    alias(libs.plugins.gradle.portal.publish)
-    id("java-gradle-plugin")
-    id("org.xtclang.build.publishing")
+    alias(libs.plugins.gradle.portal.publish)  // Automatically applies java-gradle-plugin
+    alias(libs.plugins.xdk.build.publishing)
 }
 
 private val defaultJvmArgs: Provider<List<String>> = extensions.getByName<Provider<List<String>>>("defaultJvmArgs")
@@ -14,7 +10,7 @@ private val defaultJvmArgs: Provider<List<String>> = extensions.getByName<Provid
 val generatePluginResources by tasks.registering {
     val outputDir = layout.buildDirectory.dir("generated/resources")
     val buildInfoFile = outputDir.map { it.file("org/xtclang/build/internal/plugin-build-info.properties") }
-    val xdkVersionProvider = libs.versions.xdk
+    val xdkVersionProvider = provider { version.toString() }
     inputs.property("defaultJvmArgs", defaultJvmArgs)
     inputs.property("xdkVersion", xdkVersionProvider)
     outputs.file(buildInfoFile)

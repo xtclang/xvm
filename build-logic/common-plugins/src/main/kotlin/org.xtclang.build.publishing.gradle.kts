@@ -35,6 +35,23 @@ val xdkPublishingCredentials = extensions.create<XdkPublishingCredentials>(
     xdkProperties
 )
 
+// Bridge signing credentials from XdkPublishingCredentials to dotted project properties
+// This allows both local (signing.keyId from gradle.properties) and CI (signing_keyId from ORG_GRADLE_PROJECT_)
+// credentials to be visible to the Gradle signing plugin via standard signing.* property names.
+// Note: Only set if not already defined (existing gradle.properties take precedence)
+if (!project.hasProperty("signing.keyId")) {
+    project.extensions.extraProperties.set("signing.keyId", xdkPublishingCredentials.signingKeyId)
+}
+if (!project.hasProperty("signing.password")) {
+    project.extensions.extraProperties.set("signing.password", xdkPublishingCredentials.signingPassword)
+}
+if (!project.hasProperty("signing.key")) {
+    project.extensions.extraProperties.set("signing.key", xdkPublishingCredentials.signingKey)
+}
+if (!project.hasProperty("signing.secretKeyRingFile")) {
+    project.extensions.extraProperties.set("signing.secretKeyRingFile", xdkPublishingCredentials.signingSecretKeyRingFile)
+}
+
 /**
  * Extension for customizing publishing POM metadata.
  */
@@ -45,11 +62,8 @@ abstract class XdkPublishingExtension {
 
 val xdkPublishing = extensions.create<XdkPublishingExtension>("xdkPublishing")
 
-// Access version catalog to get coordinates
-val libsCatalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
-
-// Get coordinates from version catalog and project
-val publicationGroupId = libsCatalog.findVersion("group-xdk").get().requiredVersion
+// Get coordinates from project (automatically set by properties plugin)
+val publicationGroupId = project.group.toString()
 val publicationArtifactId = project.name
 val publicationVersion = project.version.toString()
 
@@ -58,10 +72,9 @@ extensions.configure<MavenPublishBaseExtension> {
     signAllPublications()
     coordinates(publicationGroupId, publicationArtifactId, publicationVersion)
 
-    // Maven Central publishing (disabled by default) - resolve at configuration time
-    if (xdkPublishingCredentials.enableMavenCentral.get()) {
-        publishToMavenCentral(automaticRelease = false)
-    }
+    // Always configure Maven Central - credentials will be checked at task execution time
+    // Configuration cache requires no eager evaluation of credentials
+    publishToMavenCentral(automaticRelease = false)
 
     // Common POM configuration
     pom {
@@ -87,80 +100,71 @@ extensions.configure<MavenPublishBaseExtension> {
     }
 }
 
-// Configure GitHub Packages repository - credentials resolved at configuration time (configuration cache safe)
+// Always register GitHub Packages repository (will be skipped at task level if disabled)
 extensions.configure<PublishingExtension> {
     repositories {
-        if (xdkPublishingCredentials.enableGithub.get()) {
-            maven {
-                name = "github"
-                url = uri("https://maven.pkg.github.com/xtclang/xvm")
-                // Credentials are configuration cache inputs and evaluated at configuration time
-                credentials {
-                    username = xdkPublishingCredentials.githubUsername.get().ifEmpty { "xtclang" }
-                    password = xdkPublishingCredentials.githubPassword.get()
-                }
-            }
+        maven {
+            name = "github"
+            url = uri("https://maven.pkg.github.com/xtclang/xvm")
+            // Use implicit credentials for configuration cache compatibility
+            // Gradle automatically looks for properties: githubUsername and githubPassword
+            // CI should set: ORG_GRADLE_PROJECT_githubUsername and ORG_GRADLE_PROJECT_githubPassword
+            // Or use the secret gradle properties file
+            credentials(PasswordCredentials::class)
         }
     }
 }
 
 // Configure signing plugin if available (applied by Vanniktech plugin)
+// The signing plugin automatically reads signing.* properties
+// Our XdkPublishingCredentials supports both dotted (signing.keyId) and underscored (signing_keyId)
+// versions, ensuring compatibility with local gradle.properties and CI env vars
 plugins.withType<SigningPlugin> {
     extensions.configure<SigningExtension> {
-        val creds = xdkPublishingCredentials
+        // Let the signing plugin handle credentials automatically via Gradle properties
+        // The Vanniktech plugin will call useInMemoryPgpKeys if signing.key is available
+        // or use keyring file if signing.secretKeyRingFile is available
 
-        // Try to get the in-memory key - prefer signing.key over legacy signingInMemoryKey
-        val inMemoryKey = creds.signingKey.orElse(creds.signingInMemoryKey).orElse("")
-        val keyId = creds.signingKeyId.orElse("")
-        val password = creds.signingPassword.orElse("")  // Can be empty for keys without passwords
-
-        // Check if we have minimum required credentials for in-memory signing (key and keyId)
-        val hasInMemoryKey = inMemoryKey.map { it.isNotEmpty() }.get()
-        val hasKeyId = keyId.map { it.isNotEmpty() }.get()
-
-        // Configure in-memory signing if we have both key and keyId
-        if (hasInMemoryKey && hasKeyId) {
-            useInMemoryPgpKeys(keyId.get(), inMemoryKey.get(), password.get())
-            logger.info("[publishing] Signing configured with in-memory GPG key (keyId: ${keyId.get()}, password: ${if (password.get().isEmpty()) "none" else "set"})")
-            return@configure
-        }
-
-        // Configure keyring file signing if available
-        val keyRingFile = creds.signingSecretKeyRingFile.get()
-        if (hasKeyId && keyRingFile.isNotEmpty()) {
-            logger.info("[publishing] Signing configured with keyring file: $keyRingFile (keyId: ${keyId.get()})")
-            return@configure
-        }
-
-        // No signing configured
-        logger.info("[publishing] Signing not configured - missing credentials (hasKey=${hasInMemoryKey}, hasKeyId=${hasKeyId})")
+        isRequired = false  // Don't fail build if signing is not configured
     }
+}
+
+// Determine if this is a snapshot or release version
+val isSnapshot = publicationVersion.contains("SNAPSHOT", ignoreCase = true)
+// Keep allowRelease as a Provider for configuration cache compatibility
+val allowReleaseProvider = xdkPublishingCredentials.allowRelease
+
+// Log publishing configuration (configuration-time logging, no provider evaluation)
+logger.lifecycle("[publishing] Version: $publicationVersion ${if (isSnapshot) "(SNAPSHOT)" else "(RELEASE)"}")
+if (isSnapshot) {
+    logger.lifecycle("[publishing] SNAPSHOT: Publishing to GitHub Packages + Maven Central Snapshots")
+    logger.lifecycle("[publishing] SNAPSHOT: Gradle Plugin Portal will be skipped (does not accept snapshots)")
+} else {
+    logger.lifecycle("[publishing] RELEASE: Use -Porg.xtclang.allowRelease=true to enable release publishing")
 }
 
 // Register validateCredentials task for credential validation
 val validateCredentials by tasks.registering(ValidateCredentialsTask::class) {
     group = PUBLISH_TASK_GROUP
     description = "Validate all publishing credentials (GitHub, Maven Central, Plugin Portal, Signing) without publishing"
-
-    // Set project name for output (configuration-cache safe)
+    // Set project info for output (configuration-cache safe)
     projectName.set(project.name)
-
-    // Use centralized credential management
+    projectVersion.set(project.version.toString())
+    allowRelease.set(xdkPublishingCredentials.allowRelease)
     githubUsername.set(xdkPublishingCredentials.githubUsername)
     githubPassword.set(xdkPublishingCredentials.githubPassword)
-    enableGithub.set(xdkPublishingCredentials.enableGithub)
-
-    enablePluginPortal.set(xdkPublishingCredentials.enablePluginPortal)
     gradlePublishKey.set(xdkPublishingCredentials.gradlePublishKey)
     gradlePublishSecret.set(xdkPublishingCredentials.gradlePublishSecret)
-
-    enableMavenCentral.set(xdkPublishingCredentials.enableMavenCentral)
     mavenCentralUsername.set(xdkPublishingCredentials.mavenCentralUsername)
     mavenCentralPassword.set(xdkPublishingCredentials.mavenCentralPassword)
-
     signingKeyId.set(xdkPublishingCredentials.signingKeyId)
     signingPassword.set(xdkPublishingCredentials.signingPassword)
     signingSecretKeyRingFile.set(xdkPublishingCredentials.signingSecretKeyRingFile)
     signingKey.set(xdkPublishingCredentials.signingKey)
     signingInMemoryKey.set(xdkPublishingCredentials.signingInMemoryKey)
+}
+
+// Make all publish tasks depend on validateCredentials to fail fast before publishing
+tasks.withType<PublishToMavenRepository>().configureEach {
+    dependsOn(validateCredentials)
 }

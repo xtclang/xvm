@@ -1,5 +1,5 @@
-import XdkBuildLogic.XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE
 import XdkDistribution.Companion.JAVATOOLS_PREFIX_PATTERN
+import XdkDistribution.Companion.XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE
 import org.gradle.api.DefaultTask
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
@@ -21,14 +21,12 @@ import java.io.File
  */
 
 plugins {
-    id("org.xtclang.build.xdk.versioning")
-    alias(libs.plugins.xtc)
+    alias(libs.plugins.xdk.build.properties)  // Apply first to set group/version
+    alias(libs.plugins.xtc)  // Apply after properties are set
+    alias(libs.plugins.xdk.build.publishing)
     application
     distribution
-    id("org.xtclang.build.publishing")
 }
-
-// Access xdkProperties extension (provided by Java convention plugin)
 
 val xtcLauncherBinaries by configurations.registering {
     isCanBeResolved = true
@@ -90,8 +88,8 @@ dependencies {
     xtcLauncherBinaries(project(path = ":javatools-launcher", configuration = "xtcLauncherBinaries"))
 }
 
-// semanticVersion is now a Project extension property
-private val xdkDist = xdkDistribution()
+// Create XDK distribution configuration
+private val xdkDist = XdkDistribution.create(project)
 
 // Configuration cache compatibility: Extract just the version string to avoid holding project references
 val artifactVersion = version.toString()
@@ -170,11 +168,14 @@ val prepareDistributionScripts by tasks.registering(Copy::class) {
 }
 
 /**
- * Propagate the "version" part of the semanticVersion to all XTC compilers in all subprojects (the XDK modules
- * will get stamped with the Gradle project version, as defined in VERSION in the repo root).
+ * Propagate group and version to all subprojects (the XDK modules will get stamped with the Gradle project
+ * version, as defined in VERSION in the repo root).
  */
 
 subprojects {
+    group = rootProject.group
+    version = rootProject.version
+
     tasks.withType<XtcCompileTask>().configureEach {
         /*
          * Add version stamp to XDK module from the XDK build global version single source of truth.
@@ -382,7 +383,8 @@ val cleanXdk by tasks.registering(Delete::class) {
     subprojects.forEach {
         delete(it.layout.buildDirectory)
     }
-    delete(compositeRootBuildDirectory)
+    // Delete build directory at composite root
+    delete(File(XdkPropertiesService.compositeRootDirectory(projectDir), "build"))
 }
 
 val clean by tasks.existing {
