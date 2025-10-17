@@ -99,7 +99,7 @@ public class PropertyClassTypeConstant
     protected void resolveConstants() {
         super.resolveConstants();
 
-        m_idProp = (PropertyConstant) getConstantPool().getConstant(m_iProp);
+        m_idProp = getConstantPool().getConstant(m_iProp);
     }
 
     /**
@@ -146,8 +146,9 @@ public class PropertyClassTypeConstant
     }
 
     @Override
-    public Constant getDefiningConstant() {
-        return getPropertyInfo().getIdentity();
+    @SuppressWarnings("unchecked")
+    public <T extends Constant> T getDefiningConstant() {
+        return (T) getPropertyInfo().getIdentity();
     }
 
     @Override
@@ -184,7 +185,7 @@ public class PropertyClassTypeConstant
 
     @Override
     public boolean extendsClass(IdentityConstant constClass) {
-        PropertyConstant idProp = (PropertyConstant) getDefiningConstant();
+        PropertyConstant idProp = getDefiningConstant();
         return idProp.getType().extendsClass(constClass);
     }
 
@@ -283,7 +284,7 @@ public class PropertyClassTypeConstant
                 if (!isComplete(infoBase)) {
                     return null;
                 }
-                idBase = (IdentityConstant) typeRef.getDefiningConstant();
+                idBase = typeRef.getDefiningConstant();
 
                 mapProps      .putAll(infoBase.getProperties());
                 mapMethods    .putAll(infoBase.getMethods());
@@ -303,7 +304,7 @@ public class PropertyClassTypeConstant
                 mapContribMethods  = new HashMap<>();
                 mapContribChildren = new ListMap<>();
 
-                ArrayList<PropertyConstant> listExplode = new ArrayList<>();
+                List<PropertyConstant> listExplode = new ArrayList<>();
 
                 PropertyStructure prop = infoProp.getHead().getStructure();
                 collectChildInfo(idBase, false, prop, mapTypeParams,
@@ -426,7 +427,7 @@ public class PropertyClassTypeConstant
     protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 
-        m_idProp = (PropertyConstant) pool.register(m_idProp);
+        m_idProp = pool.register(m_idProp);
     }
 
     @Override

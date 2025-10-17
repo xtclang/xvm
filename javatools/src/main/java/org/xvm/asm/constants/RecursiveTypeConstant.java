@@ -116,7 +116,7 @@ public class RecursiveTypeConstant
     }
 
     @Override
-    public Constant getDefiningConstant() {
+    public <T extends Constant> T getDefiningConstant() {
         throw new IllegalStateException();
     }
 

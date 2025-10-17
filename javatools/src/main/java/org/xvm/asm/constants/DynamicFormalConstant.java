@@ -79,8 +79,8 @@ public class DynamicFormalConstant
 
         ConstantPool pool = getConstantPool();
 
-        m_typeReg     = (TypeConstant)   pool.getConstant(m_iType);
-        m_constFormal = (FormalConstant) pool.getConstant(m_iFormal);
+        m_typeReg     = pool.getConstant(m_iType);
+        m_constFormal = pool.getConstant(m_iFormal);
     }
 
 
@@ -214,7 +214,7 @@ public class DynamicFormalConstant
         super.registerConstants(pool);
 
         m_typeReg     = (TypeConstant)   pool.register(m_typeReg);
-        m_constFormal = (FormalConstant) pool.register(m_constFormal);
+        m_constFormal = pool.register(m_constFormal);
     }
 
     @Override

@@ -92,7 +92,7 @@ public abstract class OpInPlaceAssign
                     return completeWithRegister(frame, hTarget, hValue);
                 }
             } else {
-                PropertyConstant idProp = (PropertyConstant) frame.getConstant(nTarget);
+                PropertyConstant idProp = frame.getConstant(nTarget);
 
                 ObjectHandle hTarget = frame.getThis();
                 ObjectHandle hValue  = frame.getArgument(m_nArgValue);

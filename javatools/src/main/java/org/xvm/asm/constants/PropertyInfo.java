@@ -360,7 +360,6 @@ public class PropertyInfo
      *
      * @param idProp      the identity of the property for this operation
      * @param setClass    the set of identities that call chain bodies can come from
-     * @param setClass    the set of identities that call chain bodies can come from
      * @param setDefault  the set of identities that default bodies can come from
      *
      * @return the resulting PropertyInfo, or null if nothing has been retained
@@ -571,7 +570,7 @@ public class PropertyInfo
             if (parent == null) {
                 ConstantPool pool = ConstantPool.getCurrentPool();
                 if (idProp.isShared(pool)) {
-                    idProp = (PropertyConstant) pool.register(idProp);
+                    idProp = pool.register(idProp);
                     parent = idProp.getNamespace().getComponent();
                 }
             }
@@ -1182,7 +1181,7 @@ public class PropertyInfo
         if (FInjected == null) {
             m_FInjected = FInjected = getHead().isInjected();
         }
-        return FInjected.booleanValue();
+        return FInjected;
     }
 
     /**

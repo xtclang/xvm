@@ -77,7 +77,7 @@ public class PropertyBody
         assert effectGet != null && effectSet != null;
 
         m_structProp    = struct;
-        m_impl          = struct != null && struct.isNative() ? Implementation.Native : impl;
+        m_impl          = struct.isNative() ? Implementation.Native : impl;
         m_constDelegate = constDelegate;
         m_infoFormal    = null;
         m_type          = type;

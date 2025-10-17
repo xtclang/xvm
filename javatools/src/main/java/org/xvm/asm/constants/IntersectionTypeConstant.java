@@ -87,7 +87,7 @@ public class IntersectionTypeConstant
                 : typeParent;
     }
 
-    private TypeConstant extractParentImpl(TypeConstant type1, String sChild) {
+    private static TypeConstant extractParentImpl(TypeConstant type1, String sChild) {
         if (type1.isSingleUnderlyingClass(true)) {
             ClassStructure clz = (ClassStructure) type1.getSingleUnderlyingClass(true).getComponent();
             if (clz.findChildDeep(sChild) != null) {
@@ -637,7 +637,7 @@ public class IntersectionTypeConstant
         return rel1.worseOf(rel2);
     }
 
-    private boolean isEnumOrNullable(TypeConstant type) {
+    private static boolean isEnumOrNullable(TypeConstant type) {
         return type.isEnumValue() || type.isOnlyNullable();
     }
 

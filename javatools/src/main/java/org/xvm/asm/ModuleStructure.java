@@ -705,13 +705,13 @@ public class ModuleStructure
         if (isFingerprint()) {
             VersionTree<Boolean> vtreeAllow = new VersionTree<>();
             for (int i = 0, c = readMagnitude(in); i < c; ++i) {
-                VersionConstant constVer = (VersionConstant) pool.getConstant(readMagnitude(in));
+                VersionConstant constVer = pool.getConstant(readMagnitude(in));
                 vtreeAllow.put(constVer.getVersion(), in.readBoolean());
             }
 
             List<Version> listPrefer = new ArrayList<>();
             for (int i = 0, c = readMagnitude(in); i < c; ++i) {
-                VersionConstant constVer = (VersionConstant) pool.getConstant(readMagnitude(in));
+                VersionConstant constVer = pool.getConstant(readMagnitude(in));
                 Version         ver      = constVer.getVersion();
                 if (!listPrefer.contains(ver)) {
                     listPrefer.add(ver);
@@ -722,12 +722,12 @@ public class ModuleStructure
             m_listImportPreferVers = listPrefer;
         } else {
             if (in.readBoolean()) {
-                m_constVersion = (VersionConstant) pool.getConstant(readMagnitude(in));
+                m_constVersion = pool.getConstant(readMagnitude(in));
             }
         }
 
-        m_constDir       = (LiteralConstant) getConstantPool().getConstant(readIndex(in));
-        m_constTimestamp = (LiteralConstant) getConstantPool().getConstant(readIndex(in));
+        m_constDir       = getConstantPool().getConstant(readIndex(in));
+        m_constTimestamp = getConstantPool().getConstant(readIndex(in));
     }
 
     @Override
@@ -743,11 +743,11 @@ public class ModuleStructure
                 pool.ensureVersionConstant(ver);
             }
         } else if (m_constVersion != null) {
-            m_constVersion = (VersionConstant) pool.register(m_constVersion);
+            m_constVersion = pool.register(m_constVersion);
         }
 
-        m_constDir       = (LiteralConstant) pool.register(m_constDir);
-        m_constTimestamp = (LiteralConstant) pool.register(m_constTimestamp);
+        m_constDir       = pool.register(m_constDir);
+        m_constTimestamp = pool.register(m_constTimestamp);
     }
 
     @Override

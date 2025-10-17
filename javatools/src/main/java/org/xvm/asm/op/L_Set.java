@@ -76,7 +76,7 @@ public class L_Set
             ObjectHandle hValue  = frame.getArgument(m_nValue);
             ObjectHandle hTarget = frame.getThis();
 
-            PropertyConstant idProp = (PropertyConstant) frame.getConstant(m_nPropId);
+            PropertyConstant idProp = frame.getConstant(m_nPropId);
 
             return isDeferred(hValue)
                     ? hValue.proceed(frame, frameCaller ->

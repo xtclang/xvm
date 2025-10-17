@@ -4,6 +4,7 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -202,7 +203,7 @@ public class AllCondition
         }
 
         Map<ConditionalConstant, Influence> influences  = new HashMap<>();
-        Set<VersionedCondition>             setVerConds = new HashSet<>();
+        Collection<VersionedCondition>      setVerConds = new HashSet<>();
         Set<Version>                        setVers     = null;
         for (Iterator<ConditionalConstant> iter = flatIterator(); iter.hasNext(); ) {
             ConditionalConstant cond = iter.next();

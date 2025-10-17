@@ -83,7 +83,7 @@ public abstract class OpPropInPlaceAssign
      * Continuation of the processing with resolved arguments.
      */
     protected int processProperty(Frame frame, ObjectHandle hTarget, ObjectHandle hValue) {
-        PropertyConstant idProp = (PropertyConstant) frame.getConstant(m_nPropId);
+        PropertyConstant idProp = frame.getConstant(m_nPropId);
 
         return complete(frame, hTarget, idProp, hValue);
     }

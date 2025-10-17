@@ -62,7 +62,7 @@ public class MethodBindingConstant
 
     @Override
     protected void resolveConstants() {
-        m_idMethod = (MethodConstant) getConstantPool().getConstant(m_iMethod);
+        m_idMethod = getConstantPool().getConstant(m_iMethod);
     }
 
 
@@ -146,7 +146,7 @@ public class MethodBindingConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_idMethod = (MethodConstant) pool.register(m_idMethod);
+        m_idMethod = pool.register(m_idMethod);
     }
 
     @Override

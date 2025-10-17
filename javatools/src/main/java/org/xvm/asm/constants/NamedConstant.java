@@ -31,7 +31,7 @@ public abstract class NamedConstant
      * @param constParent  the module, package, class, or method that contains this identity
      * @param sName        the name associated with this identity
      */
-    public NamedConstant(ConstantPool pool, IdentityConstant constParent, String sName) {
+    protected NamedConstant(ConstantPool pool, IdentityConstant constParent, String sName) {
         super(pool);
 
         if (constParent == null) {
@@ -55,7 +55,7 @@ public abstract class NamedConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public NamedConstant(ConstantPool pool, Format format, DataInput in)
+    protected NamedConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException {
         super(pool);
 
@@ -67,8 +67,8 @@ public abstract class NamedConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constParent = (IdentityConstant) pool.getConstant(m_iParent);
-        m_constName   = (StringConstant)   pool.getConstant(m_iName);
+        m_constParent = pool.getConstant(m_iParent);
+        m_constName   = pool.getConstant(m_iName);
     }
 
 
@@ -158,8 +158,8 @@ public abstract class NamedConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constParent = (IdentityConstant) pool.register(m_constParent);
-        m_constName   = (StringConstant)   pool.register(m_constName);
+        m_constParent = pool.register(m_constParent);
+        m_constName   = pool.register(m_constName);
     }
 
     @Override

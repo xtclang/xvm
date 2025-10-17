@@ -97,6 +97,7 @@ public class FSNodeConstant
      * @param ftModified   the date/time value that the link was last modified
      * @param constLinkTo  the value of the constant
      */
+    @SuppressWarnings("unused")
     public FSNodeConstant(
             ConstantPool   pool,
             String         sName,
@@ -143,10 +144,10 @@ public class FSNodeConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constName     = (StringConstant ) pool.getConstant(m_iName    );
-        m_constCreated  = (LiteralConstant) pool.getConstant(m_iCreated );
-        m_constModified = (LiteralConstant) pool.getConstant(m_iModified);
-        m_constData     =                   pool.getConstant(m_iData    );
+        m_constName     = pool.getConstant(m_iName    );
+        m_constCreated  = pool.getConstant(m_iCreated );
+        m_constModified = pool.getConstant(m_iModified);
+        m_constData     = pool.getConstant(m_iData    );
     }
 
 
@@ -313,10 +314,10 @@ public class FSNodeConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constName     = (StringConstant ) pool.register(m_constName    );
-        m_constCreated  = (LiteralConstant) pool.register(m_constCreated );
-        m_constModified = (LiteralConstant) pool.register(m_constModified);
-        m_constData     =                   pool.register(m_constData    );
+        m_constName     = pool.register(m_constName);
+        m_constCreated  = pool.register(m_constCreated);
+        m_constModified = pool.register(m_constModified);
+        m_constData     = pool.register(m_constData);
     }
 
     @Override
@@ -356,6 +357,7 @@ public class FSNodeConstant
     /**
      * An immutable empty array of FSNodeConstants.
      */
+    @SuppressWarnings("unused")
     public static final FSNodeConstant[] NO_NODES = new FSNodeConstant[0];
 
     /**

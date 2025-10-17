@@ -74,7 +74,7 @@ public class Float16Constant
      */
     @Override
     public Float getValue() {
-        return Float.valueOf(m_flVal);
+        return m_flVal;
     }
 
 

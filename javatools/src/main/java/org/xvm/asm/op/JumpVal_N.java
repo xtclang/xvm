@@ -138,7 +138,7 @@ public class JumpVal_N
 
         for (int cRows = m_aofCase.length; iRow < cRows; iRow++) {
             int            cColumns     = ahValue.length;
-            ArrayConstant  contValues   = (ArrayConstant) frame.getConstant(m_anConstCase[iRow]);
+            ArrayConstant  contValues   = frame.getConstant(m_anConstCase[iRow]);
             Constant[]     aconstValues = contValues.getValue();
             ObjectHandle[] ahCases      = new ObjectHandle[cColumns];
 
