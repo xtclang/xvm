@@ -82,7 +82,7 @@ val publishLocal by tasks.registering {
  * (GitHub Packages, Maven Central, Gradle Plugin Portal).
  *
  * Options:
- * - Use -PallowRelease=true to allow publishing release versions (required for non-SNAPSHOT versions)
+ * - Use -Porg.xtclang.allowRelease=true to allow publishing release versions (required for non-SNAPSHOT versions)
  */
 val publish by tasks.registering {
     group = PUBLISH_TASK_GROUP
@@ -90,7 +90,7 @@ val publish by tasks.registering {
 
     // Capture version and allowRelease as Providers for configuration cache compatibility
     val versionProvider = xdkProperties.string("xdk.version")
-    val allowReleaseProvider = xdkProperties.boolean("allowRelease", false)
+    val allowReleaseProvider = xdkProperties.boolean("org.xtclang.allowRelease", false)
 
     doFirst {
         // Safety check: prevent accidental release publishing
@@ -106,9 +106,9 @@ val publish by tasks.registering {
                 |Current version: $currentVersion
                 |
                 |This is a RELEASE version (no -SNAPSHOT suffix).
-                |To publish a release, you must explicitly set -PallowRelease=true
+                |To publish a release, you must explicitly set -Porg.xtclang.allowRelease=true
                 |
-                |Example: ./gradlew publish -PallowRelease=true
+                |Example: ./gradlew publish -Porg.xtclang.allowRelease=true
                 |
                 |This safety check prevents accidental release publishing.
                 """.trimMargin()

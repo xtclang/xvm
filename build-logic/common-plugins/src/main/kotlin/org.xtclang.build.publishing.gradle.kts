@@ -55,8 +55,14 @@ extensions.configure<MavenPublishBaseExtension> {
     signAllPublications()
     coordinates(publicationGroupId, publicationArtifactId, publicationVersion)
 
-    // Always register Maven Central repository (will be skipped at task level if disabled)
-    publishToMavenCentral(automaticRelease = false)
+    // Only configure Maven Central if credentials are available (optional for non-publishing builds)
+    val hasMavenCreds = xdkPublishingCredentials.mavenCentralUsername.orNull?.isNotEmpty() == true &&
+                       xdkPublishingCredentials.mavenCentralPassword.orNull?.isNotEmpty() == true
+    if (hasMavenCreds) {
+        publishToMavenCentral(automaticRelease = false)
+    } else {
+        logger.info("[publishing] Maven Central not configured - missing credentials (skipped at configuration time)")
+    }
 
     // Common POM configuration
     pom {
@@ -132,34 +138,55 @@ plugins.withType<SigningPlugin> {
 
 // Determine if this is a snapshot or release version
 val isSnapshot = publicationVersion.contains("SNAPSHOT", ignoreCase = true)
-val allowPublish = xdkPublishingCredentials.allowPublish.get()
+val allowRelease = xdkPublishingCredentials.allowRelease.get()
 
 // Log publishing configuration
 logger.lifecycle("[publishing] Version: $publicationVersion ${if (isSnapshot) "(SNAPSHOT)" else "(RELEASE)"}")
 if (isSnapshot) {
-    logger.lifecycle("[publishing] SNAPSHOT: Publishing to GitHub Packages + Maven Central (staging)")
+    logger.lifecycle("[publishing] SNAPSHOT: Publishing to GitHub Packages + Maven Central Snapshots")
     logger.lifecycle("[publishing] SNAPSHOT: Gradle Plugin Portal will be skipped (does not accept snapshots)")
 } else {
-    if (allowPublish) {
-        logger.lifecycle("[publishing] RELEASE: Publishing enabled (allowPublish=true)")
-        logger.lifecycle("[publishing] RELEASE: Will publish to GitHub Packages + Maven Central (staging) + Gradle Plugin Portal")
+    if (allowRelease) {
+        logger.lifecycle("[publishing] RELEASE: Publishing enabled (allowRelease=true)")
+        logger.lifecycle("[publishing] RELEASE: Will publish to GitHub Packages + Maven Central Staging + Gradle Plugin Portal")
     } else {
-        logger.lifecycle("[publishing] RELEASE: Publishing BLOCKED (allowPublish=false)")
-        logger.lifecycle("[publishing] RELEASE: Use -Porg.xtclang.allowPublish=true to enable")
+        logger.lifecycle("[publishing] RELEASE: Publishing BLOCKED (allowRelease=false)")
+        logger.lifecycle("[publishing] RELEASE: Use -Porg.xtclang.allowRelease=true to enable")
     }
 }
 
-// For release versions, require allowPublish=true
-if (!isSnapshot) {
-    tasks.withType<PublishToMavenRepository>().configureEach {
-        onlyIf {
-            if (!allowPublish) {
-                logger.lifecycle("[publishing] Skipping $name - release publishing requires -Porg.xtclang.allowPublish=true")
-                false
-            } else {
-                true
+// Configure publishing tasks to skip gracefully when credentials are missing or releases not allowed
+tasks.withType<PublishToMavenRepository>().configureEach {
+    onlyIf {
+        // For releases, check allowRelease flag
+        if (!isSnapshot && !allowRelease) {
+            logger.lifecycle("[publishing] ⏭️  Skipping $name - release publishing requires -Porg.xtclang.allowRelease=true")
+            return@onlyIf false
+        }
+
+        // Check for required credentials based on repository
+        val repoName = repository?.name ?: "unknown"
+        when (repoName.lowercase()) {
+            "github" -> {
+                val hasGithubCreds = xdkPublishingCredentials.githubPassword.get().isNotEmpty()
+                if (!hasGithubCreds) {
+                    logger.lifecycle("[publishing] ⏭️  Skipping $name - GitHub credentials not configured")
+                    logger.lifecycle("[publishing]     Set githubPassword or GITHUB_TOKEN to enable GitHub Packages publishing")
+                    return@onlyIf false
+                }
+            }
+            "sonatype" -> {
+                val hasMavenCreds = xdkPublishingCredentials.mavenCentralUsername.get().isNotEmpty() &&
+                                   xdkPublishingCredentials.mavenCentralPassword.get().isNotEmpty()
+                if (!hasMavenCreds) {
+                    logger.lifecycle("[publishing] ⏭️  Skipping $name - Maven Central credentials not configured")
+                    logger.lifecycle("[publishing]     Set mavenCentralUsername and mavenCentralPassword to enable Maven Central publishing")
+                    return@onlyIf false
+                }
             }
         }
+
+        true
     }
 }
 
@@ -170,7 +197,7 @@ val validateCredentials by tasks.registering(ValidateCredentialsTask::class) {
     // Set project info for output (configuration-cache safe)
     projectName.set(project.name)
     projectVersion.set(project.version.toString())
-    allowPublish.set(xdkPublishingCredentials.allowPublish)
+    allowRelease.set(xdkPublishingCredentials.allowRelease)
     githubUsername.set(xdkPublishingCredentials.githubUsername)
     githubPassword.set(xdkPublishingCredentials.githubPassword)
     gradlePublishKey.set(xdkPublishingCredentials.gradlePublishKey)
