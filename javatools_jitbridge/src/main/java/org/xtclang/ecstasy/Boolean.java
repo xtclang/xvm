@@ -4,6 +4,9 @@ import org.xtclang.ecstasy.reflect.Enumeration;
 
 import org.xtclang.ecstasy.text.String;
 
+import org.xvm.asm.ConstantPool;
+
+import org.xvm.javajit.Container;
 import org.xvm.javajit.Ctx;
 
 /**
@@ -24,6 +27,12 @@ public class Boolean
 
     public static Boolean False = new Boolean(false, 0, String.of(null, "False"));
     public static Boolean True  = new Boolean(true, 1, String.of(null, "True"));
+
+    @Override public xType $type() {
+        Container    container = Ctx.get().container;
+        ConstantPool pool      = container.typeSystem.pool();
+        return (xType) ($value ? pool.typeTrue() : pool.typeFalse()).ensureXType(container);
+    }
 
     public Enumeration enumeration$get(Ctx ctx) {
         return Boolean$Enumeration.$INSTANCE;
