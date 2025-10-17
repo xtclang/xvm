@@ -99,17 +99,24 @@ jobs:
 
             - name: Publish Maven snapshots
               env:
+                  # Legacy environment variables (kept for compatibility)
                   GITHUB_ACTOR: ${{ github.actor }}
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  GRADLE_PUBLISH_KEY: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY }}
-                  GRADLE_PUBLISH_SECRET: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET }}
+                  # Gradle properties for configuration-cache-safe implicit credentials lookup
+                  ORG_GRADLE_PROJECT_githubUsername: ${{ github.actor }}
+                  ORG_GRADLE_PROJECT_githubPassword: ${{ secrets.GITHUB_TOKEN }}
                   ORG_GRADLE_PROJECT_github_actor: ${{ github.actor }}
                   ORG_GRADLE_PROJECT_github_token: ${{ secrets.GITHUB_TOKEN }}
-                  SIGNING_KEY: ${{ secrets.ORG_XTCLANG_SIGNING_KEY }}
-                  SIGNING_KEY_ID: ${{ secrets.ORG_XTCLANG_SIGNING_KEY_ID }}
-                  SIGNING_PASSWORD: ${{ secrets.ORG_XTCLANG_SIGNING_PASSWORD }}
+                  # Gradle Plugin Portal credentials
+                  ORG_GRADLE_PROJECT_gradle_publish_key: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY }}
+                  ORG_GRADLE_PROJECT_gradle_publish_secret: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET }}
+                  # Maven Central credentials
                   ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
                   ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
+                  # Signing credentials
+                  ORG_GRADLE_PROJECT_signing_keyId: ${{ secrets.ORG_XTCLANG_SIGNING_KEY_ID }}
+                  ORG_GRADLE_PROJECT_signing_password: ${{ secrets.ORG_XTCLANG_SIGNING_PASSWORD }}
+                  ORG_GRADLE_PROJECT_signing_key: ${{ secrets.ORG_XTCLANG_SIGNING_KEY }}
                   # SNAPSHOT versions automatically publish to GitHub Packages + Maven Central Snapshots
                   # Gradle Plugin Portal is automatically skipped (doesn't accept snapshots)
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}

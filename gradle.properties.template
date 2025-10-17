@@ -1,0 +1,33 @@
+# Publishing Credentials Template
+# Copy these properties to your secure gradle.properties file and fill in actual values
+# These properties enable configuration-cache-compatible publishing
+
+# GitHub Packages credentials (required for GitHub Packages publishing)
+# Get a token from: https://github.com/settings/tokens (needs 'write:packages' scope)
+githubUsername=your-github-username
+githubPassword=your-github-token
+
+# Maven Central credentials (Sonatype Central Portal token)
+# Obtained from https://central.sonatype.com/account -> Generate User Token
+mavenCentralUsername=your-token-username
+mavenCentralPassword=your-token-password
+
+# Gradle Plugin Portal credentials (required for plugin publishing)
+# Get from: https://plugins.gradle.org/ -> "My API Keys"
+gradle.publish.key=your-api-key
+gradle.publish.secret=your-api-secret
+
+# Signing credentials (required for artifact signing)
+# Option 1: In-memory key (recommended for CI)
+signing.keyId=your-8-char-key-id
+signing.password=your-key-password
+signing.key=-----BEGIN PGP PRIVATE KEY BLOCK-----\\n...your-key...\\n-----END PGP PRIVATE KEY BLOCK-----
+
+# Option 2: Key ring file (alternative for local development)
+# signing.keyId=your-key-id
+# signing.password=your-key-password
+# signing.secretKeyRingFile=/path/to/secring.gpg
+
+# Release control (optional, defaults to false)
+# Set to true to allow release publishing
+# org.xtclang.allowRelease=false
