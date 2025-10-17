@@ -10,6 +10,10 @@ abstract class ProjectXdkProperties @Inject constructor(
     private fun resolve(key: String): String? =
         providers.environmentVariable(toEnvKey(key)).orNull
             ?: providers.gradleProperty(key).orNull
+            // Also check underscored version for dotted properties
+            // ORG_GRADLE_PROJECT_signing.keyId doesn't work, so CI uses ORG_GRADLE_PROJECT_signing_keyId
+            // which creates Gradle property "signing_keyId", not "signing.keyId"
+            ?: (if (key.contains('.')) providers.gradleProperty(key.replace('.', '_')).orNull else null)
             ?: providers.systemProperty(key).orNull
             ?: service.get(key)
 
