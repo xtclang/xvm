@@ -120,7 +120,7 @@ public class Assert
             return frame.f_context.getDebugger().activate(frame, iPC);
         }
 
-        MethodConstant   idConstruct = (MethodConstant) frame.getConstant(m_nConstructor);
+        MethodConstant   idConstruct = frame.getConstant(m_nConstructor);
         MethodStructure  construct   = (MethodStructure) idConstruct.getComponent();
         ClassConstant    constClz    = (ClassConstant) idConstruct.getNamespace();
         ClassTemplate    template    = frame.ensureTemplate(constClz);
@@ -187,7 +187,7 @@ public class Assert
             code.invokevirtual(CD_Ctx, "log", Ctx.MD_log);
         } else {
             buildMessage(bctx, code);
-            MethodConstant idCtor = (MethodConstant) bctx.getConstant(m_nConstructor);
+            MethodConstant idCtor = bctx.getConstant(m_nConstructor);
             TypeConstant   typeEx = idCtor.getNamespace().getType();
             int[]          anArgs = new int[idCtor.getSignature().getParamCount()];
 

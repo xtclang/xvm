@@ -232,7 +232,7 @@ public class CompositeComponent
 
     @Override
     protected Component getEldestSibling() {
-        return f_siblings.get(0).getEldestSibling();
+        return f_siblings.getFirst().getEldestSibling();
     }
 
     @Override
@@ -267,12 +267,12 @@ public class CompositeComponent
 
     @Override
     public Map<String, Component> getChildByNameMap() {
-        return f_siblings.get(0).getChildByNameMap();
+        return f_siblings.getFirst().getChildByNameMap();
     }
 
     @Override
     public Map<String, Component> ensureChildByNameMap() {
-        return f_siblings.get(0).ensureChildByNameMap();
+        return f_siblings.getFirst().ensureChildByNameMap();
     }
 
     @Override
@@ -334,7 +334,7 @@ public class CompositeComponent
         }
 
         if (listChild.size() == 1) {
-            return listChild.get(0);
+            return listChild.getFirst();
         }
 
         return new CompositeComponent(this, listChild);
@@ -361,7 +361,7 @@ public class CompositeComponent
         }
 
         if (listChild.size() == 1) {
-            return listChild.get(0);
+            return listChild.getFirst();
         }
 
         return new CompositeComponent(this, listChild);
@@ -395,7 +395,7 @@ public class CompositeComponent
     @Override
     public Iterator<? extends XvmStructure> getContained() {
         // TODO this is not correct, if some of the structures have additional "contained" structures, i.e. need Component.getBodyContained()
-        return f_siblings.get(0).getContained();
+        return f_siblings.getFirst().getContained();
     }
 
     @Override

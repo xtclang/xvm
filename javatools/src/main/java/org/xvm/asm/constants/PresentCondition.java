@@ -171,7 +171,7 @@ public class PresentCondition
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constStruct = (IdentityConstant) pool.register(m_constStruct);
+        m_constStruct = pool.register(m_constStruct);
     }
 
     @Override

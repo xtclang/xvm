@@ -1775,7 +1775,7 @@ public class MethodStructure
             aAnnos[i] = (Annotation) pool.getConstant(readMagnitude(in));
         }
 
-        m_idFinally = (MethodConstant) pool.getConstant(readIndex(in));
+        m_idFinally = pool.getConstant(readIndex(in));
 
         int         cReturns = aconstReturnTypes.length;
         Parameter[] aReturns = new Parameter[cReturns];
@@ -1800,7 +1800,7 @@ public class MethodStructure
             aParams[i] = param;
         }
 
-        m_idSuper = (MethodConstant) pool.getConstant(readIndex(in));
+        m_idSuper = pool.getConstant(readIndex(in));
 
         Constant[] aconstSuper;
         if (m_idSuper == null) {
@@ -1868,7 +1868,7 @@ public class MethodStructure
         m_aAnnotations = (Annotation[]) Constant.registerConstants(pool, m_aAnnotations);
 
         if (m_idFinally != null) {
-            m_idFinally = (MethodConstant) pool.register(m_idFinally);
+            m_idFinally = pool.register(m_idFinally);
         }
 
         for (Parameter param : m_aReturns) {
@@ -1880,7 +1880,7 @@ public class MethodStructure
         }
 
         if (m_idSuper != null) {
-            m_idSuper     = (MethodConstant) pool.register(m_idSuper);
+            m_idSuper     = pool.register(m_idSuper);
             m_aconstSuper = Constant.registerConstants(pool, m_aconstSuper);
         }
 
@@ -2922,7 +2922,7 @@ public class MethodStructure
                 ConstantPool pool = getConstantPool();
                 for (int i = 0; i < cLines; ++i) {
                     anIndents[i] = readPackedInt(in);
-                    aconstSrc[i] = (StringConstant) pool.getConstant(readIndex(in));
+                    aconstSrc[i] = pool.getConstant(readIndex(in));
                 }
 
                 m_aconstSrc = aconstSrc;

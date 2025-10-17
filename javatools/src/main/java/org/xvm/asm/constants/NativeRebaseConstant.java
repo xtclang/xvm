@@ -13,7 +13,7 @@ import org.xvm.util.Hash;
  * NativeRebaseConstant is a transient, pseudo constant that represents a native type that does
  * not exist outside of (previous to) the runtime, and could not have been naturally created.
  * Its purpose is to provide a native class representation where there is only an interface known.
- *
+ * <p>
  * This TypeConstant is *never* registered with the ConstantPool and is intended to be used only
  * by the runtime.
  */

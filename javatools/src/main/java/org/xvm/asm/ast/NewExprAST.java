@@ -134,7 +134,7 @@ public class NewExprAST
             parent = readExprAST(in, res);
         }
         if (!isVirtual()) {
-            type = (TypeConstant) res.getConstant(readMagnitude(in));
+            type = res.getConstant(readMagnitude(in));
         }
         constr = res.getConstant(readMagnitude(in));
         args   = readExprArray(in, res);

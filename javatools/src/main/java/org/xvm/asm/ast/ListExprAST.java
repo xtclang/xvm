@@ -52,7 +52,7 @@ public class ListExprAST
     @Override
     protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
-        type   = (TypeConstant) res.getConstant(readMagnitude(in));
+        type   = res.getConstant(readMagnitude(in));
         values = readExprArray(in, res);
     }
 

@@ -121,8 +121,8 @@ public class MethodConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constParent = (MultiMethodConstant) pool.getConstant(m_iParent);
-        m_constSig    = (SignatureConstant  ) pool.getConstant(m_iSig   );
+        m_constParent = pool.getConstant(m_iParent);
+        m_constSig    = pool.getConstant(m_iSig   );
     }
 
 
@@ -586,7 +586,7 @@ public class MethodConstant
 
         // there is a possibility of creating a method for a lambda hosted by another lambda
         // while the containing lambda has not yet been injected with the signature
-        m_constParent = (MultiMethodConstant) pool.register(m_constParent);
+        m_constParent = pool.register(m_constParent);
         m_constSig    = (SignatureConstant  ) pool.register(m_constSig   );
     }
 

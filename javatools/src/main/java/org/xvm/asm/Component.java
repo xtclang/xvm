@@ -1628,7 +1628,7 @@ public abstract class Component
                 int          cSiblings   = readMagnitude(in);
                 assert cSiblings > 0;
                 for (int i = 0; i < cSiblings; ++i) {
-                    ConditionalConstant condition  = (ConditionalConstant) pool.getConstant(readIndex(in));
+                    ConditionalConstant condition  = pool.getConstant(readIndex(in));
                     int                 nFlags     = in.readUnsignedShort();
                     Component           curSibling = Format.fromFlags(nFlags).instantiate(
                             this, pool.getConstant(readMagnitude(in)), nFlags, condition);
@@ -2164,8 +2164,8 @@ public abstract class Component
     protected void registerConstants(ConstantPool pool) {
         assert getContaining() == null || getContaining() instanceof Component;
 
-        m_constId = (IdentityConstant   ) pool.register(m_constId);
-        m_cond    = (ConditionalConstant) pool.register(m_cond);
+        m_constId = pool.register(m_constId);
+        m_cond    = pool.register(m_cond);
 
         // register the contributions
         List<Contribution> listContribs = m_listContribs;
@@ -2539,7 +2539,7 @@ public abstract class Component
         protected Contribution(DataInput in, ConstantPool pool)
                 throws IOException {
             m_composition = Composition.valueOf(in.readUnsignedByte());
-            m_typeContrib = (TypeConstant) pool.getConstant(readIndex(in));
+            m_typeContrib = pool.getConstant(readIndex(in));
             assert m_typeContrib != null;
 
             switch (m_composition) {
@@ -2554,7 +2554,7 @@ public abstract class Component
                 break;
 
             case Delegates:
-                m_constProp   = (PropertyConstant) pool.getConstant(readIndex(in));
+                m_constProp   = pool.getConstant(readIndex(in));
                 break;
 
             case Incorporates:
@@ -2564,22 +2564,22 @@ public abstract class Component
                     for (int i = 0; i < cParams; ++i) {
                         int iName = readMagnitude(in);
                         int iType = readMagnitude(in);
-                        map.put((StringConstant) pool.getConstant(iName),
-                                iType == 0 ? null : (TypeConstant) pool.getConstant(iType));
+                        map.put(pool.getConstant(iName),
+                                iType == 0 ? null : pool.getConstant(iType));
                     }
                     m_mapParams = map;
                 }
                 break;
 
             case Import:
-                m_constInjector = (SingletonConstant) pool.getConstant(readIndex(in));
+                m_constInjector = pool.getConstant(readIndex(in));
                 if (m_constInjector != null) {
                     int c = readIndex(in);
                     if (c >= 0) {
                         List<Injection> listInject = new ArrayList<>(c);
                         for (int i = 0; i < c; ++i) {
-                            TypeConstant   type = (TypeConstant)   pool.getConstant(readIndex(in));
-                            StringConstant name = (StringConstant) pool.getConstant(readIndex(in));
+                            TypeConstant   type = pool.getConstant(readIndex(in));
+                            StringConstant name = pool.getConstant(readIndex(in));
                             listInject.add(new Injection(type, name));
                         }
                         m_listInject = listInject;
@@ -3016,8 +3016,8 @@ public abstract class Component
          * @see XvmStructure#registerConstants(ConstantPool)
          */
         protected void registerConstants(ConstantPool pool) {
-            m_typeContrib  = (TypeConstant)     pool.register(m_typeContrib);
-            m_constProp    = (PropertyConstant) pool.register(m_constProp);
+            m_typeContrib  = pool.register(m_typeContrib);
+            m_constProp    = pool.register(m_constProp);
 
             if (m_annotation != null) {
                 assert !m_annotation.containsUnresolved();
@@ -3031,14 +3031,14 @@ public abstract class Component
                     StringConstant constName = entry.getKey();
                     TypeConstant   type      = entry.getValue();
 
-                    mapNew.put((StringConstant) pool.register(constName),
-                               (TypeConstant) (type == null ? null : pool.register(type)));
+                    mapNew.put(pool.register(constName),
+                               type == null ? null : pool.register(type));
                 }
                 m_mapParams = mapNew;
             }
 
             if (m_constInjector != null) {
-                m_constInjector = (SingletonConstant) pool.register(m_constInjector);
+                m_constInjector = pool.register(m_constInjector);
 
                 List<Injection> listInject = m_listInject;
                 if (listInject != null) {
@@ -3046,8 +3046,8 @@ public abstract class Component
                         Injection      oldInject = listInject.get(i);
                         TypeConstant   oldType   = oldInject.getType();
                         StringConstant oldName   = oldInject.getNameConstant();
-                        TypeConstant   newType   = (TypeConstant)   pool.register(oldType);
-                        StringConstant newName   = (StringConstant) pool.register(oldName);
+                        TypeConstant   newType   = pool.register(oldType);
+                        StringConstant newName   = pool.register(oldName);
                         if (newType != oldType || newName != oldName) {
                             listInject.set(i, new Injection(newType, newName));
                         }

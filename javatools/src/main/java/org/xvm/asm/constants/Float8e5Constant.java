@@ -54,7 +54,7 @@ public class Float8e5Constant
      */
     @Override
     public Float getValue() {
-        return Float.valueOf(toFloat(m_nBits));
+        return toFloat(m_nBits);
     }
 
 

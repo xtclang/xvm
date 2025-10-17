@@ -61,8 +61,8 @@ public class VersionMatchesCondition
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constStruct = (ModuleConstant)  pool.getConstant(m_iModule);
-        m_constVer    = (VersionConstant) pool.getConstant(m_iVer);
+        m_constStruct = pool.getConstant(m_iModule);
+        m_constVer    = pool.getConstant(m_iVer);
     }
 
 
@@ -174,7 +174,7 @@ public class VersionMatchesCondition
     @Override
     protected void registerConstants(ConstantPool pool) {
         m_constStruct = (ModuleConstant)  pool.register(m_constStruct);
-        m_constVer    = (VersionConstant) pool.register(m_constVer);
+        m_constVer    = pool.register(m_constVer);
     }
 
     @Override

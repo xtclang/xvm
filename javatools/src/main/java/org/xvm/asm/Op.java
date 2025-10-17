@@ -713,8 +713,9 @@ public abstract class Op {
         }
 
         @Override
-        public Constant getConstant(int id) {
-            return getConstantArray()[id];
+        @SuppressWarnings("unchecked")
+        public <T extends Constant> T getConstant(int id) {
+            return (T) getConstantArray()[id];
         }
 
         @Override

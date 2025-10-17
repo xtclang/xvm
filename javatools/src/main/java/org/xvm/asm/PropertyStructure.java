@@ -689,7 +689,7 @@ public class PropertyStructure
 
         int nAccess = in.readByte();
         m_accessVar = nAccess < 0 ? null : Access.valueOf(nAccess);
-        m_type      = (TypeConstant) pool.getConstant(readIndex(in));
+        m_type      = pool.getConstant(readIndex(in));
         int nValue  = readIndex(in);
         if (nValue >= 0) {
             m_constVal = pool.getConstant(nValue);
@@ -700,7 +700,7 @@ public class PropertyStructure
     protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 
-        m_type = (TypeConstant) pool.register(m_type);
+        m_type = pool.register(m_type);
         if (m_constVal != null) {
             assert !(m_constVal instanceof DeferredValueConstant);
             m_constVal = pool.register(m_constVal);

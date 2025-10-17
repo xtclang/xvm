@@ -1316,9 +1316,10 @@ public class Frame
     /**
      * @return the constant for the specified constant id
      */
-    public Constant getConstant(int iArg) {
+    @SuppressWarnings("unchecked")
+    public <T extends Constant> T getConstant(int iArg) {
         assert iArg <= Op.CONSTANT_OFFSET;
-        return localConstants()[Op.CONSTANT_OFFSET - iArg];
+        return (T) localConstants()[Op.CONSTANT_OFFSET - iArg];
     }
 
     /**

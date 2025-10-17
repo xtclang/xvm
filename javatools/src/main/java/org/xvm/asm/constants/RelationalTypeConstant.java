@@ -78,8 +78,8 @@ public abstract class RelationalTypeConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constType1 = (TypeConstant) pool.getConstant(m_iType1);
-        m_constType2 = (TypeConstant) pool.getConstant(m_iType2);
+        m_constType1 = pool.getConstant(m_iType1);
+        m_constType2 = pool.getConstant(m_iType2);
     }
 
     // ----- type specific methods -----------------------------------------------------------------
@@ -189,7 +189,7 @@ public abstract class RelationalTypeConstant
     }
 
     @Override
-    public Constant getDefiningConstant() {
+    public <T extends Constant> T getDefiningConstant() {
         throw new UnsupportedOperationException();
     }
 
@@ -334,8 +334,8 @@ public abstract class RelationalTypeConstant
 
                 assert type1.isGenericType() && type2.isGenericType();
 
-                PropertyConstant id1 = (PropertyConstant) type1.getDefiningConstant();
-                PropertyConstant id2 = (PropertyConstant) type2.getDefiningConstant();
+                PropertyConstant id1 = type1.getDefiningConstant();
+                PropertyConstant id2 = type2.getDefiningConstant();
 
                 if (!id1.getName().equals(id2.getName()) ||
                     !id1.getConstraintType().equals(id2.getConstraintType())) {
@@ -665,8 +665,8 @@ public abstract class RelationalTypeConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constType1 = (TypeConstant) pool.register(m_constType1);
-        m_constType2 = (TypeConstant) pool.register(m_constType2);
+        m_constType1 = pool.register(m_constType1);
+        m_constType2 = pool.register(m_constType2);
     }
 
     @Override

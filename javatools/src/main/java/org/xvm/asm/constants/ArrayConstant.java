@@ -73,7 +73,7 @@ public class ArrayConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constType = (TypeConstant) pool.getConstant(m_iType);
+        m_constType = pool.getConstant(m_iType);
 
         int[]      aiConst = m_aiVal;
         int        cConsts = aiConst.length;
@@ -84,7 +84,7 @@ public class ArrayConstant
         m_aconstVal = aconst;
     }
 
-    private void validateFormatAndType(Format fmt, TypeConstant constType) {
+    private static void validateFormatAndType(Format fmt, TypeConstant constType) {
         if (fmt == null) {
             throw new IllegalArgumentException("format required");
         }
@@ -209,7 +209,7 @@ public class ArrayConstant
 
         return typeNew == typeOld && aconstNew == null
                 ? this
-                : (ArrayConstant) getConstantPool().register(
+                : getConstantPool().register(
                         new ArrayConstant(getConstantPool(), f_fmt, typeNew, aconstNew));
     }
 
@@ -242,23 +242,21 @@ public class ArrayConstant
         int        cConsts = aconst.length;
 
         String sStart;
-        String sEnd;
-        switch (f_fmt) {
-        case Array:
-            sStart = "[";
-            sEnd   = "]";
-            break;
-        case Tuple:
-            sStart = cConsts < 2 ? "Tuple:(" : "(";
-            sEnd   = ")";
-            break;
-        case Set:
-            sStart = "Set:{";
-            sEnd   = "}";
-            break;
-        default:
-            throw new IllegalArgumentException("illegal format: " + f_fmt);
-        }
+        String sEnd = switch (f_fmt) {
+            case Array -> {
+                sStart = "[";
+                yield "]";
+            }
+            case Tuple -> {
+                sStart = cConsts < 2 ? "Tuple:(" : "(";
+                yield ")";
+            }
+            case Set -> {
+                sStart = "Set:{";
+                yield "}";
+            }
+            default -> throw new IllegalArgumentException("illegal format: " + f_fmt);
+        };
 
         StringBuilder sb = new StringBuilder();
         sb.append(sStart);
@@ -280,7 +278,7 @@ public class ArrayConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constType = (TypeConstant) pool.register(m_constType);
+        m_constType = pool.register(m_constType);
         m_aconstVal = registerConstants(pool, m_aconstVal);
     }
 
