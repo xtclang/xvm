@@ -1,3 +1,5 @@
+import ecstasy.reflect.Injector;
+
 /**
  * BasicResourceProvider is a minimal `ResourceProvider` implementation that is necessary to
  * load an Ecstasy module dynamically into a lightweight container. The example use:
@@ -16,12 +18,11 @@
  *   }
  */
 service BasicResourceProvider
-             implements ResourceProvider {
+             implements ResourceProvider, Injector {
     @Override
     Supplier getResource(Type type, String name) {
         import ecstasy.collections.HashCollector;
         import ecstasy.mgmt.Container.Linker;
-        import ecstasy.reflect.Injector;
 
         switch (type, name) {
         case (Console, "console"):
@@ -32,10 +33,10 @@ service BasicResourceProvider
             @Inject Clock clock;
             return clock;
 
-        case (HashCollector, "hash"):
-            @Inject HashCollector hash;
-            return hash;
-
+//        case (HashCollector, "hash"): // TODO CP: add native or natural implementation
+//            @Inject HashCollector hash;
+//            return hash;
+//
         case (Injector, "injector"):
             return &this.maskAs(Injector);
 
@@ -62,5 +63,16 @@ service BasicResourceProvider
                     throw new Exception($|Unsupported resource: type="{type}", name="{name}"
                                        );
         }
+    }
+
+    @Override
+    <InjectionType> InjectionType inject(Type<InjectionType> type, String name,
+                                         Inject.Options opts = Null) {
+        Supplier supplier = getResource(type, name);
+        if (val supply := supplier.is(function Resource(Inject.Options))) {
+            return supply(opts).as(InjectionType);
+        }
+
+        return supplier.as(InjectionType);
     }
 }
