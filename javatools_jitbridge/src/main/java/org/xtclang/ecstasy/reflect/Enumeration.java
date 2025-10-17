@@ -18,6 +18,6 @@ public abstract class Enumeration extends xClass {
     }
 
     public abstract long count$get$p();
-    public abstract String[] names$get();
-    public abstract xEnum[] values$get();
+    public abstract String[] names$get();   // TODO GG Array$Object
+    public abstract xEnum[] values$get();   // TODO GG Array$Object
 }
