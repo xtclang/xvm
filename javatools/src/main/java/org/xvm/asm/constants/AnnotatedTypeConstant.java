@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -116,8 +117,8 @@ public class AnnotatedTypeConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_annotation = (Annotation) pool.getConstant(m_iAnno);
-        m_constType  = (TypeConstant) pool.getConstant(m_iType);
+        m_annotation = pool.getConstant(m_iAnno);
+        m_constType  = pool.getConstant(m_iType);
     }
 
 
@@ -133,7 +134,7 @@ public class AnnotatedTypeConstant
     /**
      * Return the annotation type with any type parameters resolved that overlap with the
      * underlying TypeConstant.
-     *
+     * <p>
      * For example, an "@Atomic Var<Int>" type should yield Atomic<Int>.
      *
      * @return the resolved annotation type
@@ -410,7 +411,7 @@ public class AnnotatedTypeConstant
         IdentityConstant idBase;
         ClassStructure   struct;
         try {
-            idBase = (IdentityConstant) typeBase.getDefiningConstant();
+            idBase = typeBase.getDefiningConstant();
             struct = (ClassStructure)   idBase.getComponent();
         } catch (RuntimeException e) {
             throw new IllegalStateException("Unable to determine class for " + getValueString(), e);
@@ -440,19 +441,19 @@ public class AnnotatedTypeConstant
 
     /**
      * Extract the type annotations in front of this type.
-     *
+     * <p>
      * All "into class" annotations are to be collected into the listClassAnnos; the rest goes
      * into the listAnnos.
-     *
+     * <p>
      * For example, if this type is @A->@B->@C->@D->X and @A and @B are into class, then collect @A
      * and @B into the listClassAnnos; @C and @D into lisAnnos and return X.
      *
      * @return the first underlying type that follows extracted annotations
      */
-    public TypeConstant extractAnnotation(List<Annotation> listClassAnnos,
-                                          List<Annotation> listMixinAnnos,
+    public TypeConstant extractAnnotation(Collection<Annotation> listClassAnnos,
+                                          Collection<Annotation> listMixinAnnos,
                                           ErrorListener    errs) {
-        List<Constant> listAnnoClz = new ArrayList<>();
+        Collection<Constant> listAnnoClz = new ArrayList<>();
         TypeConstant   typeCurr    = this;
 
         while (true) {
@@ -490,7 +491,7 @@ public class AnnotatedTypeConstant
                     return null;
                 }
 
-                // the annotation could be a annotation "into Class", which means that it's a
+                // the annotation could be an annotation "into Class", which means that it's a
                 // non-virtual, compile-time annotation (like @Abstract)
                 TypeConstant typeInto = typeAnno.getExplicitClassInto(true);
 
@@ -663,8 +664,8 @@ public class AnnotatedTypeConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_annotation = (Annotation)   pool.register(m_annotation);
-        m_constType  = (TypeConstant) pool.register(m_constType);
+        m_annotation = pool.register(m_annotation);
+        m_constType  = pool.register(m_constType);
 
         // invalidate cached type
         m_typeAnno = null;

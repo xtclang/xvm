@@ -565,7 +565,7 @@ public class MethodInfo
 
     /**
      * Get an id of the method that this capped method is narrowed by.
-     *
+     * <p>
      * Note: this method if very similar to {@link TypeInfo#getNarrowingMethod}, except it only
      *       chooses the narrowing methods from the specified map.
      *
@@ -1036,7 +1036,7 @@ public class MethodInfo
         return sigSuper;
     }
 
-    private MethodBody findSuper(TypeInfo infoType, MethodBody[] chain) {
+    private static MethodBody findSuper(TypeInfo infoType, MethodBody[] chain) {
         boolean    fAnno     = infoType.getFormat() == Component.Format.ANNOTATION;
         boolean    fMixin    = infoType.getFormat() == Component.Format.MIXIN;
         MethodBody bodySuper = null;
@@ -1149,7 +1149,7 @@ public class MethodInfo
     /**
      * @return the ConstantPool
      */
-    private ConstantPool pool() {
+    private static ConstantPool pool() {
         return ConstantPool.getCurrentPool();
     }
 

@@ -222,7 +222,7 @@ public class ByteConstant
      */
     @Override
     public Integer getValue() {
-        return Integer.valueOf(m_nVal);
+        return m_nVal;
     }
 
 

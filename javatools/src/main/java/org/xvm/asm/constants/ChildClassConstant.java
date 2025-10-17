@@ -75,8 +75,8 @@ public class ChildClassConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constParent = (PseudoConstant) pool.getConstant(m_iParent);
-        m_constName   = (StringConstant) pool.getConstant(m_iName);
+        m_constParent = pool.getConstant(m_iParent);
+        m_constName   = pool.getConstant(m_iName);
     }
 
 
@@ -182,8 +182,8 @@ public class ChildClassConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constParent = (PseudoConstant) pool.register(m_constParent);
-        m_constName   = (StringConstant) pool.register(m_constName);
+        m_constParent = pool.register(m_constParent);
+        m_constName   = pool.register(m_constName);
     }
 
     @Override

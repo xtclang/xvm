@@ -55,8 +55,8 @@ public class Parameter
         int iDefault   = readIndex(in);
 
         m_aAnnotations = aAnnos;
-        m_constType    = (TypeConstant)   pool.getConstant(iType   );
-        m_constName    = (StringConstant) pool.getConstant(iName   );
+        m_constType    = pool.getConstant(iType   );
+        m_constName    = pool.getConstant(iName   );
         m_constDefault =                  pool.getConstant(iDefault);
 
         f_iParam       = fReturn ? -1 - index : index;
@@ -384,9 +384,9 @@ public class Parameter
     @Override
     protected void registerConstants(ConstantPool pool) {
         m_aAnnotations = (Annotation[])   Constant.registerConstants(pool, m_aAnnotations);
-        m_constType    = (TypeConstant)   pool.register(m_constType   );
-        m_constName    = (StringConstant) pool.register(m_constName   );
-        m_constDefault =                  pool.register(m_constDefault);
+        m_constType    = pool.register(m_constType   );
+        m_constName    = pool.register(m_constName   );
+        m_constDefault = pool.register(m_constDefault);
     }
 
     @Override

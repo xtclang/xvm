@@ -67,14 +67,14 @@ public class TypedefStructure
     throws IOException {
         super.disassemble(in);
 
-        m_type = (TypeConstant) getConstantPool().getConstant(readIndex(in));
+        m_type = getConstantPool().getConstant(readIndex(in));
     }
 
     @Override
     protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 
-        m_type = (TypeConstant) pool.register(m_type);
+        m_type = pool.register(m_type);
     }
 
     @Override

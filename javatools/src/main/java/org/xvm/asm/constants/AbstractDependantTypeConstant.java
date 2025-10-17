@@ -34,7 +34,7 @@ public abstract class AbstractDependantTypeConstant
      * @param pool        the ConstantPool that will contain this Constant
      * @param typeParent  the parent's type
      */
-    public AbstractDependantTypeConstant(ConstantPool pool, TypeConstant typeParent) {
+    protected AbstractDependantTypeConstant(ConstantPool pool, TypeConstant typeParent) {
         super(pool);
 
         if (typeParent == null) {
@@ -53,7 +53,7 @@ public abstract class AbstractDependantTypeConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public AbstractDependantTypeConstant(ConstantPool pool, Format format, DataInput in)
+    protected AbstractDependantTypeConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException {
         super(pool);
 
@@ -62,7 +62,7 @@ public abstract class AbstractDependantTypeConstant
 
     @Override
     protected void resolveConstants() {
-        m_typeParent = (TypeConstant) getConstantPool().getConstant(m_iTypeParent);
+        m_typeParent = getConstantPool().getConstant(m_iTypeParent);
     }
 
 
@@ -129,8 +129,9 @@ public abstract class AbstractDependantTypeConstant
     }
 
     @Override
-    public Constant getDefiningConstant() {
-        return getSingleUnderlyingClass(true);
+    @SuppressWarnings("unchecked")
+    public <T extends Constant> T getDefiningConstant() {
+        return (T) getSingleUnderlyingClass(true);
     }
 
     @Override
@@ -307,7 +308,7 @@ public abstract class AbstractDependantTypeConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_typeParent = (TypeConstant) pool.register(m_typeParent);
+        m_typeParent = pool.register(m_typeParent);
     }
 
     @Override

@@ -314,7 +314,7 @@ public abstract class OpCallable extends Op {
 
         ConstantPool        pool       = frame.poolContext();
         GenericTypeResolver resolver   = frame.getGenericsResolver(false);
-        MethodConstant      idCtor     = (MethodConstant) frame.getConstant(m_nFunctionId);
+        MethodConstant      idCtor     = frame.getConstant(m_nFunctionId);
         IdentityConstant    idTarget   = idCtor.getNamespace();
         TypeConstant        typeTarget = idTarget.getFormalType().resolveGenerics(pool, resolver);
 
@@ -371,7 +371,7 @@ public abstract class OpCallable extends Op {
      */
     protected MethodStructure getMethodStructure(Frame frame) {
         ServiceContext   context    = frame.f_context;
-        MethodConstant   idFunction = (MethodConstant) frame.getConstant(m_nFunctionId);
+        MethodConstant   idFunction = frame.getConstant(m_nFunctionId);
         MethodStructure  function   = (MethodStructure) context.getOpInfo(this, Category.Function);
         IdentityConstant idTarget   = idFunction.getNamespace();
 
@@ -579,7 +579,7 @@ public abstract class OpCallable extends Op {
             sigCall  = body.getSignature();
             fSpecial = true;
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
-            MethodConstant   idMethod   = (MethodConstant) bctx.getConstant(m_nFunctionId);
+            MethodConstant   idMethod   = bctx.getConstant(m_nFunctionId);
             IdentityConstant idTarget   = idMethod.getClassIdentity();
             MethodInfo       infoMethod = idTarget.getType().ensureTypeInfo().getMethodById(idMethod);
 
@@ -622,7 +622,7 @@ public abstract class OpCallable extends Op {
      * Support for NEW_ ops.
      */
     protected void buildNew(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
-        MethodConstant idCtor     = (MethodConstant) bctx.getConstant(m_nFunctionId);
+        MethodConstant idCtor     = bctx.getConstant(m_nFunctionId);
         TypeConstant   typeTarget = idCtor.getNamespace().getType();
         ClassDesc      cdTarget   = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
 
@@ -634,7 +634,7 @@ public abstract class OpCallable extends Op {
      */
     protected void buildConstruct(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         TypeSystem       ts         = bctx.typeSystem;
-        MethodConstant   idCtor     = (MethodConstant) bctx.getConstant(m_nFunctionId);
+        MethodConstant   idCtor     = bctx.getConstant(m_nFunctionId);
         IdentityConstant idTarget   = idCtor.getNamespace();
         TypeConstant     typeTarget = idTarget.getType();
         TypeInfo         infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();

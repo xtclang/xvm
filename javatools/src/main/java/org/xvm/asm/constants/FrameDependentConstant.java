@@ -20,7 +20,7 @@ public abstract class FrameDependentConstant
      *
      * @param pool  the ConstantPool that will contain this Constant
      */
-    public FrameDependentConstant(ConstantPool pool) {
+    protected FrameDependentConstant(ConstantPool pool) {
         super(pool);
     }
 

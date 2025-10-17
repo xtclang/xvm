@@ -105,7 +105,7 @@ public class FormalTypeChildConstant
                                     resolveFormalType(this);
             assert type.isGenericType();
 
-            PropertyConstant idProp = (PropertyConstant) type.getDefiningConstant();
+            PropertyConstant idProp = type.getDefiningConstant();
             return m_typeConstraint = idProp.getConstraintType();
         }
 
@@ -126,7 +126,7 @@ public class FormalTypeChildConstant
             }
 
             if (typeParent.isFormalType()) {
-                FormalConstant idParentResolved = (FormalConstant) typeParent.getDefiningConstant();
+                FormalConstant idParentResolved = typeParent.getDefiningConstant();
                 if (idParentResolved != idParent) {
                     switch (idParentResolved.getFormat()) {
                     case FormalTypeChild:

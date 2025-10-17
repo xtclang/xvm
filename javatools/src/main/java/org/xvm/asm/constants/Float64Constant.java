@@ -67,7 +67,7 @@ public class Float64Constant
      */
     @Override
     public Double getValue() {
-        return Double.valueOf(m_dflVal);
+        return m_dflVal;
     }
 
 

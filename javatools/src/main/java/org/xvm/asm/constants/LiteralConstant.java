@@ -155,7 +155,7 @@ public class LiteralConstant
 
     @Override
     protected void resolveConstants() {
-        m_constStr = (StringConstant) getConstantPool().getConstant(m_iStr);
+        m_constStr = getConstantPool().getConstant(m_iStr);
     }
 
 
@@ -226,7 +226,7 @@ public class LiteralConstant
         return 10;
     }
 
-    private int pickFPRadixForNumericOperation(LiteralConstant const1, LiteralConstant const2) {
+    private static int pickFPRadixForNumericOperation(LiteralConstant const1, LiteralConstant const2) {
         assert const1.getFormat() == Format.FPLiteral || const2.getFormat() == Format.FPLiteral;
         return const1.getRadix() == 16 && const2.getRadix() == 16
                 ? 16
@@ -392,7 +392,7 @@ public class LiteralConstant
                 String sLit = m_constStr.getValue();
                 // note: BigDecimal does not support hexadecimal representation of FP numbers
                 dec = getRadix() == 16
-                        ? BigDecimal.valueOf(Double.valueOf(sLit))
+                        ? BigDecimal.valueOf(Double.parseDouble(sLit))
                         : new BigDecimal(sLit);
             }
             m_oVal = dec;
@@ -1618,7 +1618,7 @@ public class LiteralConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constStr = (StringConstant) pool.register(m_constStr);
+        m_constStr = pool.register(m_constStr);
     }
 
     @Override

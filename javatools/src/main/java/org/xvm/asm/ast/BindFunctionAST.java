@@ -85,7 +85,7 @@ public class BindFunctionAST
                 args[i]    = readExprAST(in, res);
             }
         }
-        type = (TypeConstant) res.getConstant(readMagnitude(in));
+        type = res.getConstant(readMagnitude(in));
     }
 
     @Override

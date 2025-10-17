@@ -163,8 +163,9 @@ public abstract class Constant
      * @return this same type, but without any typedefs or resolvable
      *         {@link UnresolvedNameConstant}s in it
      */
-    public Constant resolveTypedefs() {
-        return this;
+    @SuppressWarnings("unchecked")
+    public <T extends Constant> T resolveTypedefs() {
+        return (T) this;
     }
 
     /**
@@ -240,7 +241,7 @@ public abstract class Constant
             return pool.ensureDecConstant(Decimal64.POS_ZERO);
         case "numbers.Dec128":
             return pool.ensureDecConstant(Decimal128.POS_ZERO);
-        case "numbers.DecN":
+        case "numbers.DecN", "numbers.FloatN":
             throw new UnsupportedOperationException();
 
         case "numbers.Float8e4":
@@ -257,8 +258,6 @@ public abstract class Constant
             return pool.ensureFloat64Constant(0.0);
         case "numbers.Float128":
             return pool.ensureFloat128Constant(new byte[16]);
-        case "numbers.FloatN":
-            throw new UnsupportedOperationException();
 
         // TODO arrays and lists and maps and tuples and so on
         }
@@ -309,16 +308,17 @@ public abstract class Constant
      *
      * @return the new Constant
      */
-    protected Constant adoptedBy(ConstantPool pool) {
+    @SuppressWarnings("unchecked")
+    protected <T extends Constant> T adoptedBy(ConstantPool pool) {
         Constant that;
         try {
-            that = (Constant) super.clone();
+            that = (Constant) clone();
         } catch (CloneNotSupportedException e) {
             throw new IllegalStateException(e);
         }
         that.setContaining(pool);
         that.resetRefs();
-        return that;
+        return (T) that;
     }
 
     /**
@@ -333,7 +333,7 @@ public abstract class Constant
     /**
      * Check whether this constant and all its underlying constants are registered with
      * ConstantPools that are upstream (linked to by this constant's containing pool).
-     *
+     * <p>
      * This method is used only as an assertion for debugging purposes.
      */
     public void checkValidPools(Set<ConstantPool> setValidPools, int[] anDepth) {
@@ -876,7 +876,7 @@ public abstract class Constant
         }
 
         public Format next() {
-            return Format.valueOf(this.ordinal() + 1);
+            return valueOf(this.ordinal() + 1);
         }
 
         /**
@@ -884,9 +884,9 @@ public abstract class Constant
          */
         public boolean isTypeable() {
             return switch (this) {
-                case Module, Package, Class, Typedef, Property, TypeParameter, FormalTypeChild -> true;
-                case DynamicFormal, ThisClass, ParentClass, ChildClass, DecoratedClass, NativeClass -> true;
-                case UnresolvedName, IsConst, IsEnum, IsModule, IsPackage, IsClass -> true;
+                case Module,
+                     Package, Class, Typedef, Property, TypeParameter, FormalTypeChild, UnresolvedName, IsConst, IsEnum, IsModule, IsPackage, IsClass,
+                     DynamicFormal, ThisClass, ParentClass, ChildClass, DecoratedClass, NativeClass -> true;
 
                 default -> false;
             };
@@ -939,7 +939,7 @@ public abstract class Constant
         /**
          * All of the Format enums.
          */
-        private static final Format[] FORMATS = Format.values();
+        private static final Format[] FORMATS = values();
 
         /**
          * The package name.

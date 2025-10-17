@@ -118,7 +118,7 @@ public abstract class OpPropInPlace
      * Continuation of the processing.
      */
     protected int processProperty(Frame frame, ObjectHandle hTarget) {
-        PropertyConstant idProp = (PropertyConstant) frame.getConstant(m_nPropId);
+        PropertyConstant idProp = frame.getConstant(m_nPropId);
 
         return complete(frame, hTarget, idProp);
     }

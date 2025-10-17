@@ -174,12 +174,13 @@ public class UnresolvedTypeConstant
     }
 
     @Override
-    public Constant getDefiningConstant() {
+    @SuppressWarnings("unchecked")
+    public <T extends Constant> T getDefiningConstant() {
         return isTypeResolved()
                 ? getResolvedType().getDefiningConstant()
                 : m_constId.isNameResolved()
-                        ? m_constId.getResolvedConstant()
-                        : m_constId;
+                        ? (T) m_constId.getResolvedConstant()
+                        : (T) m_constId;
     }
 
     @Override

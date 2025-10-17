@@ -83,7 +83,7 @@ public class P_Get
         try {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
 
-            PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
+            PropertyConstant constProperty = frame.getConstant(m_nPropId);
 
             if (frame.isNextRegister(m_nRetValue)) {
                 // OLD TODO GG: the actual type needs to be injected by the compiler/verifier

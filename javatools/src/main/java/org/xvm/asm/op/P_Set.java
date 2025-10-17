@@ -82,7 +82,7 @@ public class P_Set
         try {
             ObjectHandle[] ahArg = frame.getArguments(new int[] {m_nTarget, m_nValue}, 2);
 
-            PropertyConstant idProp = (PropertyConstant) frame.getConstant(m_nPropId);
+            PropertyConstant idProp = frame.getConstant(m_nPropId);
 
             if (anyDeferred(ahArg)) {
                 Frame.Continuation stepNext = frameCaller ->

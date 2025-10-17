@@ -1046,7 +1046,7 @@ public class IntConstant
     public Float64Constant toFloat64Constant() {
         PackedInteger pi = getValue();
         return new Float64Constant(getConstantPool(),
-                pi.isBig() ? pi.getBigInteger().doubleValue() : (double) pi.getLong());
+                pi.isBig() ? pi.getBigInteger().doubleValue() : pi.getLong());
     }
 
     /**
@@ -1099,7 +1099,7 @@ public class IntConstant
         return switch (format) {
             case Float32 -> new Float32Constant(pool, pi.isBig()
                     ? pi.getBigInteger().floatValue()
-                    : (float) pi.getLong());
+                    : pi.getLong());
             default -> null;
         };
     }

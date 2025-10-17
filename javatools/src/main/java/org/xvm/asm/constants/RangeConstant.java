@@ -136,7 +136,7 @@ public class RangeConstant
      *
      * @return true iff the value is found within this range
      */
-    public boolean contains(Constant value) {
+    public boolean contains(Comparable<Constant> value) {
         if (value.equals(m_const1)) {
             return !m_fExclude1 && !(value.equals(m_const2) && m_fExclude2);
         }
@@ -147,8 +147,8 @@ public class RangeConstant
 
         return switch (Integer.signum(m_const1.compareTo(m_const2))) {
             case -1 -> value.compareTo(m_const1) >= 0 && value.compareTo(m_const2) <= 0;
-            default -> false;
             case 1  -> value.compareTo(m_const2) >= 0 && value.compareTo(m_const1) <= 0;
+            default -> false;
         };
     }
 

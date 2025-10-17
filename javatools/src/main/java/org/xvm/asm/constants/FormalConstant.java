@@ -13,7 +13,7 @@ import org.xvm.compiler.ast.Context;
 
 /**
  * FormalConstant is a Constant that represents a formal type, which could be generic class level
- * type parameter, such as Map.Key, a method type parameter (such as Object.equals.CompileType)
+ * type parameter, such as Map.Key, a method type parameter (such as Object.equals.CompileType
  * or a formal type child constant, such as Map.equals.CompileType.Key)
  */
 public abstract class FormalConstant
@@ -26,7 +26,7 @@ public abstract class FormalConstant
      * @param constParent  the module, package, class, or method that contains this identity
      * @param sName        the name associated with this formal constant
      */
-    public FormalConstant(ConstantPool pool, IdentityConstant constParent, String sName) {
+    protected FormalConstant(ConstantPool pool, IdentityConstant constParent, String sName) {
         super(pool, constParent, sName);
     }
 
@@ -39,7 +39,7 @@ public abstract class FormalConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public FormalConstant(ConstantPool pool, Format format, DataInput in)
+    protected FormalConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException {
         super(pool, format, in);
     }

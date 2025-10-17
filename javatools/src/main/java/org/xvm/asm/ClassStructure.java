@@ -2800,7 +2800,7 @@ public class ClassStructure
 
         // create a transient MethodStructure (without an intermediate MultiMethodStructure)
         MethodConstant idMethod = pool.ensureMethodConstant(
-                (IdentityConstant) pool.register(getIdentityConstant()),
+                pool.register(getIdentityConstant()),
                 "default", TypeConstant.NO_TYPES, TypeConstant.NO_TYPES);
 
         // use the module as a parent component without adding the method as a child
@@ -3303,7 +3303,7 @@ public class ClassStructure
 
         // read in the type parameters
         m_mapParams = disassembleTypeParams(in);
-        m_constPath = (LiteralConstant) getConstantPool().getConstant(readIndex(in));
+        m_constPath = getConstantPool().getConstant(readIndex(in));
     }
 
     @Override
@@ -3321,7 +3321,7 @@ public class ClassStructure
 
         // register the type parameters
         m_mapParams = registerTypeParams(m_mapParams);
-        m_constPath = (LiteralConstant) pool.register(m_constPath);
+        m_constPath = pool.register(m_constPath);
 
         // invalidate cached types
         m_typeCanonical = null;
@@ -3422,8 +3422,8 @@ public class ClassStructure
         ListMap<StringConstant, TypeConstant> map = new ListMap<>();
         ConstantPool pool = getConstantPool();
         for (int i = 0; i < c; ++i) {
-            StringConstant constName = (StringConstant) pool.getConstant(readIndex(in));
-            TypeConstant   constType = (TypeConstant)   pool.getConstant(readIndex(in));
+            StringConstant constName = pool.getConstant(readIndex(in));
+            TypeConstant   constType = pool.getConstant(readIndex(in));
             assert !map.containsKey(constName);
             map.put(constName, constType);
         }
@@ -3446,10 +3446,10 @@ public class ClassStructure
         ListMap<StringConstant, TypeConstant> mapNew = mapOld;
         for (Map.Entry<StringConstant, TypeConstant> entry : mapOld.entrySet()) {
             StringConstant constOldKey = entry.getKey();
-            StringConstant constNewKey = (StringConstant) pool.register(constOldKey);
+            StringConstant constNewKey = pool.register(constOldKey);
 
             TypeConstant   constOldVal = entry.getValue();
-            TypeConstant   constNewVal = (TypeConstant) pool.register(constOldVal);
+            TypeConstant   constNewVal = pool.register(constOldVal);
 
             if (mapNew != mapOld || constOldKey != constNewKey) {
                 if (mapNew == mapOld) {

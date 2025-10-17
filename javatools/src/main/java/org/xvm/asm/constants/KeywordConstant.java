@@ -45,7 +45,7 @@ public class KeywordConstant
         this(pool, format);
     }
 
-    private boolean isValid(Format format) {
+    private static boolean isValid(Format format) {
         return format != null && switch (format) {
             case IsConst, IsEnum, IsModule, IsPackage, IsClass -> true;
             default                                            -> false;

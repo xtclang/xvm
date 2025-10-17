@@ -444,7 +444,7 @@ public abstract class BinaryAST {
 
         TypeConstant[] types = new TypeConstant[count];
         for (int i = 0; i < count; ++i) {
-            types[i] = (TypeConstant) res.getConstant(readMagnitude(in));
+            types[i] = res.getConstant(readMagnitude(in));
         }
         return types;
     }
@@ -538,14 +538,14 @@ public abstract class BinaryAST {
          *
          * @return the unique constant reference to use; null iff the passed constant is null
          */
-        Constant register(Constant constant);
+        <T extends Constant> T register(T constant);
 
         /**
          * @param id  constant pool index
          *
          * @return the constant from the constant pool
          */
-        Constant getConstant(int id);
+        <T extends Constant> T getConstant(int id);
 
         /**
          * @param name  the type name

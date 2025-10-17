@@ -73,7 +73,7 @@ public class InvokeExprAST
             throws IOException {
         super.readBody(in, res);
 
-        method = (MethodConstant) res.getConstant(readMagnitude(in));
+        method = res.getConstant(readMagnitude(in));
         target = readExprAST(in, res);
     }
 

@@ -131,7 +131,7 @@ public abstract class OpInvocable extends Op {
 
         context.setOpInfo(this, Category.Composition, clazz);
 
-        MethodConstant  idMethod = (MethodConstant) frame.getConstant(m_nMethodId);
+        MethodConstant  idMethod = frame.getConstant(m_nMethodId);
         MethodStructure method   = (MethodStructure) idMethod.getComponent();
 
         m_constMethod = idMethod; // used by "toString()" only
@@ -309,7 +309,7 @@ public abstract class OpInvocable extends Op {
         }
 
         ClassDesc      cdTarget   = targetSlot.cd();
-        MethodConstant idMethod   = (MethodConstant) bctx.getConstant(m_nMethodId);
+        MethodConstant idMethod   = bctx.getConstant(m_nMethodId);
         MethodInfo     infoMethod = targetSlot.type().ensureTypeInfo().getMethodById(idMethod);
         JitMethodDesc  jmd        = infoMethod.getJitDesc(bctx.typeSystem);
         String         methodName = infoMethod.getJitIdentity().ensureJitMethodName(bctx.typeSystem);

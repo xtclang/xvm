@@ -149,7 +149,7 @@ public class ChildInfo {
     public boolean equals(Object obj) {
         return obj instanceof ChildInfo that
             && this.f_child.equals(that.f_child)
-            && Objects.equals(this.f_access, that.f_access)
+            && this.f_access == that.f_access
             && Objects.equals(this.f_setIds, that.f_setIds)
             ;
     }

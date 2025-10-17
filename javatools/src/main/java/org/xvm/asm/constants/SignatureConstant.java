@@ -134,7 +134,7 @@ public class SignatureConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constName     = (StringConstant) pool.getConstant(m_iName);
+        m_constName     = pool.getConstant(m_iName);
         m_aconstParams  = lookupTypes(pool, m_aiParams);
         m_aconstReturns = lookupTypes(pool, m_aiReturns);
 
@@ -751,7 +751,7 @@ public class SignatureConstant
         if (sJitName == null) {
             // get the master instance of the signature constant
             ConstantPool      pool = ts.findOwnerPool(this);
-            SignatureConstant sig  = (SignatureConstant) pool.register(this);
+            SignatureConstant sig  = pool.register(this);
 
             synchronized (sig) {
                 sJitName = sig.m_sJitName;
@@ -769,7 +769,7 @@ public class SignatureConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constName     = (StringConstant) pool.register(m_constName);
+        m_constName     = pool.register(m_constName);
         m_aconstParams  = TypeConstant.registerTypeConstants(pool, m_aconstParams);
         m_aconstReturns = TypeConstant.registerTypeConstants(pool, m_aconstReturns);
 
@@ -843,7 +843,7 @@ public class SignatureConstant
         int c = an.length;
         TypeConstant[] aconst = new TypeConstant[c];
         for (int i = 0; i < c; ++i) {
-            aconst[i] = (TypeConstant) pool.getConstant(an[i]);
+            aconst[i] = pool.getConstant(an[i]);
         }
         return aconst;
     }

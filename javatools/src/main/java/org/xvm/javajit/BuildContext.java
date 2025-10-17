@@ -140,9 +140,10 @@ public class BuildContext {
     /**
      * Get the constant for the specified argument index.
      */
-    public Constant getConstant(int argId) {
+    @SuppressWarnings("unchecked")
+    public <T extends Constant> T getConstant(int argId) {
         assert argId <= Op.CONSTANT_OFFSET;
-        return methodStruct.getLocalConstants()[Op.CONSTANT_OFFSET - argId];
+        return (T) methodStruct.getLocalConstants()[Op.CONSTANT_OFFSET - argId];
     }
 
     /**

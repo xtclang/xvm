@@ -37,6 +37,7 @@ public class MapConstant
      * @param constKey    the constant value of the map key
      * @param constVal    the constant value of the map value
      */
+    @SuppressWarnings("unused")
     public MapConstant(ConstantPool pool, TypeConstant constType, Constant constKey, Constant constVal) {
         this(pool, Format.MapEntry, constType, new Constant[] {constKey}, new Constant[] {constVal});
     }
@@ -136,7 +137,7 @@ public class MapConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constType = (TypeConstant) pool.getConstant(m_iType);
+        m_constType = pool.getConstant(m_iType);
 
         int[]      aiConstKey = m_aiKeys;
         int[]      aiConstVal = m_aiVals;
@@ -309,7 +310,7 @@ public class MapConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constType = (TypeConstant) pool.register(m_constType);
+        m_constType = pool.register(m_constType);
         m_aconstKey = registerConstants(pool, m_aconstKey);
         m_aconstVal = registerConstants(pool, m_aconstVal);
     }
@@ -423,7 +424,7 @@ public class MapConstant
                                 return iNext < ak.length;
                             }
 
-                            int iNext = 0;
+                            int iNext;
                         };
                     }
                 };
@@ -457,7 +458,7 @@ public class MapConstant
                                 return iNext < ak.length;
                             }
 
-                            int iNext = 0;
+                            int iNext;
                         };
                     }
                 };

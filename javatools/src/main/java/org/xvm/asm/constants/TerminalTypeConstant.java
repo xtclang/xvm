@@ -421,11 +421,12 @@ public class TerminalTypeConstant
     }
 
     @Override
-    public Constant getDefiningConstant() {
+    @SuppressWarnings("unchecked")
+    public <T extends Constant> T getDefiningConstant() {
         Constant constId = ensureResolvedConstant();
         return constId.getFormat() == Format.Typedef
                 ? ((TypedefConstant) constId).getReferredToType().getDefiningConstant()
-                : constId;
+                : (T) constId;
     }
 
     /**

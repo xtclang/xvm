@@ -30,7 +30,7 @@ public abstract class AbstractDependantChildTypeConstant
      * @param pool        the ConstantPool that will contain this Constant
      * @param typeParent  the parent's type
      */
-    public AbstractDependantChildTypeConstant(ConstantPool pool, TypeConstant typeParent) {
+    protected AbstractDependantChildTypeConstant(ConstantPool pool, TypeConstant typeParent) {
         super(pool, typeParent);
     }
 
@@ -43,7 +43,7 @@ public abstract class AbstractDependantChildTypeConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public AbstractDependantChildTypeConstant(ConstantPool pool, Format format, DataInput in)
+    protected AbstractDependantChildTypeConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException {
         super(pool, format, in);
     }

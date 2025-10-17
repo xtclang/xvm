@@ -653,8 +653,9 @@ public abstract class TypeConstant
      *
      * @throws UnsupportedOperationException if there is not a single defining constant
      */
-    public Constant getDefiningConstant() {
-        return getUnderlyingType().getDefiningConstant();
+    @SuppressWarnings("unchecked")
+    public <T extends Constant> T getDefiningConstant() {
+        return (T) getUnderlyingType().getDefiningConstant();
     }
 
     /**
@@ -1613,7 +1614,7 @@ public abstract class TypeConstant
 
         // since we're producing a lot of information for the TypeInfo, there is no reason to do
         // it unless the type is registered (which resolves typedefs)
-        TypeConstant typeResolved = (TypeConstant) pool.register(this);
+        TypeConstant typeResolved = pool.register(this);
 
         // Additionally:
         // - resolve the auto-narrowing;
@@ -1676,7 +1677,7 @@ public abstract class TypeConstant
                 for (TypeConstant typeDeferred : listDeferred) {
                     if (typeDeferred != this) {
                         if (typeDeferred.getConstantPool() != pool) {
-                            typeDeferred = (TypeConstant) pool.register(typeDeferred);
+                            typeDeferred = pool.register(typeDeferred);
                         }
 
                         TypeInfo infoDeferred = typeDeferred.getTypeInfo();
@@ -2392,7 +2393,7 @@ public abstract class TypeConstant
             // to insert a layer of code between this class and the class being extended, such
             // as when a service (which is a Service format) extends Object (which is a Class
             // format)
-            typeRebase = (TypeConstant) pool.register(struct.getRebaseType());
+            typeRebase = pool.register(struct.getRebaseType());
 
             // next up, for any class type, there may be an "extends" contribution that
             // specifies a "super" class
@@ -2525,7 +2526,7 @@ public abstract class TypeConstant
             if (constId instanceof NativeRebaseConstant idNative) {
                 // for a native rebase, the interface becomes a class, and that class implements
                 // the original interface and Object
-                TypeConstant typeNatural = (TypeConstant) pool.register(
+                TypeConstant typeNatural = pool.register(
                         idNative.getClassConstant().getType());
                 if (isParamsSpecified()) {
                     typeNatural = pool.ensureParameterizedTypeConstant(typeNatural, getParamTypesArray());

@@ -84,7 +84,7 @@ public class CmpChainExprAST
         for (int i = 0; i < count-1; ++i) {
             ops[i] = Operator.values()[readMagnitude(in)];
         }
-        MethodConstant method = (MethodConstant) res.getConstant(readMagnitude(in));
+        MethodConstant method = res.getConstant(readMagnitude(in));
 
         this.exprs  = exprs;
         this.ops    = ops;
