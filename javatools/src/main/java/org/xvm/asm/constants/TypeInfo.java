@@ -130,6 +130,11 @@ public class TypeInfo {
         f_cacheById  = new ConcurrentHashMap<>(mapMethods);
         f_cacheByNid = new ConcurrentHashMap<>(mapVirtMethods);
 
+        // mapTypeParams has two types of entries:
+        //  - actual generic types keyed by the generic type name
+        //  - exploded Ref types keyed by the corresponding NestedIdentity
+        m_fHasGenerics = mapTypeParams.keySet().stream().anyMatch(k -> k instanceof String);
+
         m_fExplicitAbstract = fSynthetic || !isClass() || struct.isExplicitlyAbstract() ||
                 containsAnnotation(aannoClass, "Abstract");
 
@@ -170,8 +175,9 @@ public class TypeInfo {
         f_setDepends          = null;
         f_progress            = Progress.Complete;
 
-        f_cacheById  = infoConstraint.f_cacheById;
-        f_cacheByNid = infoConstraint.f_cacheByNid;
+        f_cacheById    = infoConstraint.f_cacheById;
+        f_cacheByNid   = infoConstraint.f_cacheByNid;
+        m_fHasGenerics = infoConstraint.m_fHasGenerics;
 
         m_fExplicitAbstract = true;
         m_fImplicitAbstract = false;
@@ -745,6 +751,13 @@ public class TypeInfo {
      */
     public Map<Object, ParamInfo> getTypeParams() {
         return f_mapTypeParams;
+    }
+
+    /**
+     * @return true iff this type has any formal type parameters
+     */
+    public boolean hasGenericTypes() {
+        return m_fHasGenerics;
     }
 
     /**
@@ -2485,6 +2498,11 @@ public class TypeInfo {
      * Whether this type is abstract due to a presence of abstract properties or methods.
      */
     private boolean m_fImplicitAbstract;
+
+    /**
+     * Whether this type defines has any underlying generic types.
+     */
+    private boolean m_fHasGenerics;
 
     /**
      * The type parameters for this TypeInfo key'ed by a String or Nid.

@@ -629,6 +629,30 @@ public abstract class OpCallable extends Op {
     }
 
     /**
+     * Support for NEW_G ops.
+     */
+    protected void buildNewG(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
+        TypeConstant typeTarget;
+        if (nTypeArg <= CONSTANT_OFFSET) {
+            typeTarget = bctx.getType(nTypeArg);
+            if (typeTarget.containsFormalType(true)) {
+                // resolve the type against "this.$type()"
+                throw new UnsupportedOperationException("ToDo resolve formal type");
+            }
+        } else {
+            assert nTypeArg >= 0;
+            Slot slotXType = bctx.loadArgument(code, nTypeArg);
+            assert slotXType.type().isTypeOfType();
+            throw new UnsupportedOperationException("ToDo dynamic type");
+        }
+
+        MethodConstant idCtor   = (MethodConstant) bctx.getConstant(m_nFunctionId);
+        ClassDesc      cdTarget = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
+
+        bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, typeTarget, cdTarget, ""));
+    }
+
+    /**
      * Support for CONSTR_ ops.
      */
     protected void buildConstruct(BuildContext bctx, CodeBuilder code, int[] anArgValue) {

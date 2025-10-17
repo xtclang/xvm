@@ -576,7 +576,6 @@ public class BuildContext {
                 slots.put(varIndex, slot);
 
                 loadCtx(code);
-                code.dup();
                 Builder.loadTypeConstant(code, typeSystem, resourceType);
                 code.ldc(resourceName)
                     .aconst_null() // opts
@@ -684,21 +683,29 @@ public class BuildContext {
     }
 
     /**
-     * Call the constructor.
+     * Call the "new$" [static] method.
      */
     public ClassDesc buildNew(CodeBuilder code, TypeConstant typeTarget,
                               MethodConstant idCtor, int[] anArgValue) {
         TypeInfo   infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();
         MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
 
+        if (infoTarget.hasGenericTypes()) {
+            // Jit classes are created for canonical types; we need to readhust
+            typeTarget = infoTarget.getClassStructure().getCanonicalType();
+            infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+            infoCtor   = infoTarget.getMethodById(infoCtor.getIdentity());
+        }
+
         if (infoCtor == null) {
             throw new RuntimeException("Unresolvable constructor \"" +
                 idCtor.getValueString() + "\" for " + typeTarget.getValueString());
         }
+
         String        sJitTarget = typeTarget.ensureJitClassName(typeSystem);
         ClassDesc     cdTarget   = ClassDesc.of(sJitTarget);
-        JitMethodDesc jmdNew     =
-            Builder.convertConstructToNew(infoTarget, sJitTarget, infoCtor.getJitDesc(typeSystem));
+        JitMethodDesc jmdNew     = Builder.convertConstructToNew(infoTarget, sJitTarget,
+                                    (JitCtorDesc) infoCtor.getJitDesc(typeSystem));
 
         boolean fOptimized = jmdNew.isOptimized;
         String  sJitNew    = idCtor.ensureJitMethodName(typeSystem).replace("construct", Builder.NEW);
@@ -712,6 +719,9 @@ public class BuildContext {
         }
 
         loadCtx(code);
+        if (infoTarget.hasGenericTypes()) {
+            Builder.loadTypeConstant(code, typeSystem, infoTarget.getType());
+        }
         loadArguments(code, jmdNew, anArgValue);
 
         code.invokestatic(cdTarget, sJitNew, md);
