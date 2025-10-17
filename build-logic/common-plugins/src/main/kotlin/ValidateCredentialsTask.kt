@@ -43,6 +43,9 @@ abstract class XdkPublishingCredentials @Inject constructor(xdkProperties: Proje
         }
 
     // Signing credentials
+    // xdkProperties automatically checks both dotted and underscored Gradle properties
+    // Local: uses signing.keyId from gradle.properties
+    // CI: uses signing_keyId from ORG_GRADLE_PROJECT_signing_keyId
     val signingKeyId: Provider<String> = xdkProperties.string("signing.keyId", "")
     val signingPassword: Provider<String> = xdkProperties.string("signing.password", "")
     val signingSecretKeyRingFile: Provider<String> = xdkProperties.string("signing.secretKeyRingFile", "")

@@ -35,6 +35,23 @@ val xdkPublishingCredentials = extensions.create<XdkPublishingCredentials>(
     xdkProperties
 )
 
+// Bridge signing credentials from XdkPublishingCredentials to dotted project properties
+// This allows both local (signing.keyId from gradle.properties) and CI (signing_keyId from ORG_GRADLE_PROJECT_)
+// credentials to be visible to the Gradle signing plugin via standard signing.* property names.
+// Note: Only set if not already defined (existing gradle.properties take precedence)
+if (!project.hasProperty("signing.keyId")) {
+    project.extensions.extraProperties.set("signing.keyId", xdkPublishingCredentials.signingKeyId)
+}
+if (!project.hasProperty("signing.password")) {
+    project.extensions.extraProperties.set("signing.password", xdkPublishingCredentials.signingPassword)
+}
+if (!project.hasProperty("signing.key")) {
+    project.extensions.extraProperties.set("signing.key", xdkPublishingCredentials.signingKey)
+}
+if (!project.hasProperty("signing.secretKeyRingFile")) {
+    project.extensions.extraProperties.set("signing.secretKeyRingFile", xdkPublishingCredentials.signingSecretKeyRingFile)
+}
+
 /**
  * Extension for customizing publishing POM metadata.
  */
@@ -99,15 +116,15 @@ extensions.configure<PublishingExtension> {
 }
 
 // Configure signing plugin if available (applied by Vanniktech plugin)
-// Configuration cache compatible - signing configuration uses standard Gradle property lookup
-// Signing credentials should be provided via:
-//   - signing.keyId, signing.password, signing.key (Gradle properties)
-//   - Or signing.keyId, signing.password, signing.secretKeyRingFile
-// The Vanniktech plugin handles this automatically
+// The signing plugin automatically reads signing.* properties
+// Our XdkPublishingCredentials supports both dotted (signing.keyId) and underscored (signing_keyId)
+// versions, ensuring compatibility with local gradle.properties and CI env vars
 plugins.withType<SigningPlugin> {
     extensions.configure<SigningExtension> {
-        // Signing configuration is handled by Gradle properties
-        // No explicit credential evaluation needed here for configuration cache compatibility
+        // Let the signing plugin handle credentials automatically via Gradle properties
+        // The Vanniktech plugin will call useInMemoryPgpKeys if signing.key is available
+        // or use keyring file if signing.secretKeyRingFile is available
+
         isRequired = false  // Don't fail build if signing is not configured
     }
 }
@@ -145,4 +162,9 @@ val validateCredentials by tasks.registering(ValidateCredentialsTask::class) {
     signingSecretKeyRingFile.set(xdkPublishingCredentials.signingSecretKeyRingFile)
     signingKey.set(xdkPublishingCredentials.signingKey)
     signingInMemoryKey.set(xdkPublishingCredentials.signingInMemoryKey)
+}
+
+// Make all publish tasks depend on validateCredentials to fail fast before publishing
+tasks.withType<PublishToMavenRepository>().configureEach {
+    dependsOn(validateCredentials)
 }
