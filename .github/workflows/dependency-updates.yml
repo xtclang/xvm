@@ -2,7 +2,7 @@
 # GitHub workflow for handling dependency updates from Dependabot
 # This workflow runs when Dependabot creates PRs for dependency updates
 #
-name: dependency_udates
+name: Dependency Updates
 
 permissions:
     contents: write

@@ -31,15 +31,15 @@ The XVM CI/CD pipeline follows a clear separation between internal build artifac
 │  commit.yml (Verify Commit)                                     │
 │  ├─ Build XDK                                                   │
 │  ├─ Run tests (including manual tests)                          │
-│  └─ Upload artifact: xdk-dist-{COMMIT}                          │
-│     • Temporary (10 days)                                       │
-│     • Contains: xdk-{VERSION}.zip                               │
+│  ├─ Upload artifact: xdk-dist-{COMMIT}                          │
+│  │   • Temporary (10 days)                                      │
+│  │   • Contains: xdk-{VERSION}.zip                              │
+│  └─ Trigger publishing (if master or publish-snapshots=true)    │
+│     └─ gh workflow run with --field ci-run-id={RUN_ID}          │
 └───────────────────────────┬─────────────────────────────────────┘
                             │
-                ┌───────────┴───────────┐
-                │  workflow_run trigger │
-                │  (waits for CI)       │
-                └───────────┬───────────┘
+                            │ Direct trigger (not workflow_run)
+                            │ Passes ci-run-id for artifact download
                             │
         ┌───────────────────┼───────────────────┐
         │                   │                   │
@@ -48,9 +48,12 @@ The XVM CI/CD pipeline follows a clear separation between internal build artifac
 │publish-docker│   │homebrew      │   │publish-snapshot  │
 │.yml          │   │-update.yml   │   │.yml              │
 ├──────────────┤   ├──────────────┤   ├──────────────────┤
+│Receive       │   │Receive       │   │Receive           │
+│ci-run-id     │   │ci-run-id     │   │ci-run-id         │
+│              │   │              │   │                  │
 │Download      │   │Download      │   │Download          │
 │artifact by   │   │artifact by   │   │artifact by       │
-│commit        │   │commit        │   │commit            │
+│run-id+commit │   │run-id+commit │   │run-id+commit     │
 │              │   │              │   │                  │
 │Build Docker  │   │Update brew   │   │Publish Maven     │
 │images        │   │formula       │   │snapshots         │
@@ -67,17 +70,19 @@ The XVM CI/CD pipeline follows a clear separation between internal build artifac
 1. **CI Build** (`commit.yml`) runs on every push to any branch
    - Builds, tests, uploads temporary build artifact
    - Artifact named: `xdk-dist-{40-char-commit-hash}`
+   - On master (or manual with `publish-snapshots=true`): Directly triggers publishing workflows
 
-2. **Automatic Triggers** (master only) wait for CI to complete:
+2. **Direct Publishing Triggers** (master only, or manual with flag):
+   - `commit.yml` directly triggers workflows via `gh workflow run --field ci-run-id=...`
    - `publish-docker.yml` - Builds multi-platform Docker images
    - `homebrew-update.yml` - Updates Homebrew tap formula
    - `publish-snapshot.yml` - Publishes Maven + GitHub snapshot release
+   - Each workflow receives `ci-run-id` to download artifacts from CI run
 
-3. **Manual Release** (`publish-release.yml`) triggered manually:
-   - Only for non-SNAPSHOT versions
-   - Creates draft GitHub release
-   - Publishes to Maven Central staging
-   - Optionally publishes to Gradle Plugin Portal
+3. **Manual Release** (two-phase process):
+   - `prepare-release.yml` - Creates release branch, stages artifacts, creates PR
+   - `promote-release.yml` - Promotes staged artifacts to production (auto on PR merge)
+   - See [RELEASE_PROCESS.md](RELEASE_PROCESS.md) for complete documentation
 
 ---
 
@@ -205,15 +210,15 @@ All workflows support `workflow_dispatch` for manual testing from any branch.
 5. Generate summary
 
 **Manual Trigger Inputs**:
-- `test-publishing`: Trigger publishing workflows after build (default: false)
+- `publish-snapshots`: Trigger publishing workflows after build (default: false)
   - Set `true` to test full publishing pipeline on non-master branches
   - Publishing workflows: snapshot, docker, homebrew
 - `platforms`: Run on specific platform(s) or all
-  - Options: `all`, `ubuntu-latest`, `windows-latest`
-  - Default: `all`
+  - Options: `ubuntu-latest`, `windows-latest`, `all`
+  - Default: `ubuntu-latest`
 - `extra-gradle-options`: Extra Gradle CLI options
-- `test`: Run manual tests (default: true)
-- `parallel-test`: Run manual tests in parallel (default: false)
+- `skip-tests`: Skip manual tests (default: true)
+- `parallel-test-mode`: Run manual tests in parallel (default: true)
 
 **Manual Test Configuration**:
 - Set via workflow inputs when manually triggering
@@ -226,13 +231,13 @@ All workflows support `workflow_dispatch` for manual testing from any branch.
 gh workflow run commit.yml \
   --ref your-branch \
   -f platforms=ubuntu-latest \
-  -f test=true \
-  -f parallel-test=false
+  -f skip-tests=false \
+  -f parallel-test-mode=false
 
 # Build, test, AND trigger publishing workflows
 gh workflow run commit.yml \
   --ref your-branch \
-  -f test-publishing=true \
+  -f publish-snapshots=true \
   -f platforms=ubuntu-latest
 ```
 
@@ -390,109 +395,86 @@ brew install xdk-latest
 
 ---
 
-### publish-release.yml (Publish Release)
+### Release Workflows (prepare-release.yml & promote-release.yml)
 
-**Trigger**: Manual only (never automatic)
+**Purpose**: Two-phase automated release process for XDK releases
 
-**Purpose**: Publish XDK releases to multiple repositories
+**Architecture**:
+- **Phase 1: Prepare** (`prepare-release.yml`) - Build and stage artifacts
+- **Phase 2: Promote** (`promote-release.yml`) - Promote staged artifacts to production
 
-**Version Requirement**: **MUST NOT** contain `-SNAPSHOT` (validated)
+**Understanding Artifact Publishing**:
 
-**Destinations**:
-- GitHub Releases (DRAFT, requires manual publish)
-- Maven Central (staging, requires manual release via Sonatype)
-- Gradle Plugin Portal (optional, immediate publication)
+| Artifact Type | Prepare Phase | Promote Phase |
+|---------------|---------------|---------------|
+| **GitHub Packages** (Maven) | ✅ Published immediately | No action (already live) |
+| **Maven Central** | ⏸️ Staged in `orgxtclang-XXXX` | ✅ Close & release to production |
+| **GitHub Release** (zip) | 📝 Uploaded as DRAFT | ✅ Publish draft → public |
+| **Gradle Plugin Portal** | 🔍 Credentials validated | ✅ Published immediately |
 
-**Key Steps**:
+**⚠️ Note**: GitHub Packages artifacts are **immediately public** when prepare-release runs, before PR approval. Most users consume from Maven Central, which remains staged until promotion.
 
-1. **Build and Test**:
-   - Setup XVM project
-   - Validate version does NOT contain `-SNAPSHOT`
-   - Validate semantic versioning format
-   - Build XDK with optional version override
-   - Run tests (optional via input)
-   - Upload artifact: `xdk-release-{version}`
+**For complete release workflow documentation, see:**
+**[📖 RELEASE_PROCESS.md](RELEASE_PROCESS.md)**
 
-2. **Publish GitHub Draft**:
-   - Download artifact from build job
-   - Create DRAFT GitHub release using `publish-github-release` action
-   - Tag: `v{VERSION}` (e.g., `v0.4.4`)
-   - Includes TODO template for release notes
+**Quick Summary**:
 
-3. **Publish Maven Staging**:
-   - Setup XVM project with build cache
-   - Publish to Maven Central staging repository
-   - Requires manual steps in Sonatype Nexus:
-     - Review staged artifacts
-     - Close staging repository
-     - Release to Maven Central (syncs in 10-30 min)
+1. **Prepare Release** (Manual trigger):
+   ```bash
+   gh workflow run "Prepare Release" --field release-version=0.4.4
+   ```
+   - Creates `release/X.Y.Z` branch
+   - Tags `vX.Y.Z`
+   - Runs `./gradlew publish` (publishes to GitHub Packages + stages to Maven Central)
+   - Uploads XDK zip as GitHub draft release
+   - Validates Gradle Plugin Portal credentials
+   - Creates PR to master with next snapshot version
 
-4. **Publish Gradle Plugin Portal** (optional):
-   - Only if input enabled
-   - Immediate publication (no staging available)
-   - Cannot be undone
+2. **Review Staged Artifacts** (Manual):
+   - Verify Maven Central staging repository at oss.sonatype.org
+   - Review GitHub draft release
+   - Test staged artifacts
+   - Complete PR checklist
 
-5. **Summary**:
-   - GitHub: Created as DRAFT ✓
-   - Maven: Published to STAGING ✓
-   - Gradle: Published or Skipped
-   - Manual steps required for completion
+3. **Promote Release** (Automatic on PR merge):
+   - Maven Central: Close & release staging → production (via Nexus API)
+   - GitHub Release: Publish draft → public (via gh CLI)
+   - Gradle Plugin Portal: Run `./gradlew :plugin:publishPlugins` (if enabled)
+   - GitHub Packages: No action (already published in prepare)
 
-**Manual Trigger Inputs**:
-- `version-override`: Override version from version.properties
-  - Must NOT contain `-SNAPSHOT`
-  - Must be semantic version (e.g., `0.4.4`)
-- `skip-tests`: Skip test execution (default: false)
-- `publish-to-gradle-plugin-portal`: Publish to Gradle Plugin Portal (default: false)
-- `close-maven-staging`: Auto-close Maven staging repo (default: true)
+**Key Features**:
+- ✅ Automatic version bumps (no manual editing)
+- ✅ Staging before production (reversible)
+- ✅ PR-based approval gate
+- ✅ Single merge = complete release
+- ✅ Selective publishing via PR labels
 
-**Example Manual Trigger**:
-```bash
-gh workflow run publish-release.yml \
-  --ref release-branch \
-  -f version-override=0.4.4 \
-  -f skip-tests=false \
-  -f publish-to-gradle-plugin-portal=false \
-  -f close-maven-staging=true
-```
-
-**Post-Release Manual Steps**:
-
-1. **Review Maven Central Staging**:
-   - Log in to https://oss.sonatype.org/
-   - Navigate to "Staging Repositories"
-   - Find repository `orgxtclang-XXXX`
-   - Review staged artifacts
-   - Close repository (if not auto-closed)
-   - Release to Maven Central
-
-2. **Publish GitHub Release**:
-   - Go to https://github.com/xtclang/xvm/releases
-   - Find draft release `v{VERSION}`
-   - Edit release notes (replace TODOs)
-   - Click "Publish release"
-
-3. **Update version.properties**:
-   - Bump to next snapshot version
-   - Example: `0.4.4` → `0.4.5-SNAPSHOT`
-   - Commit and push to master
+**See [RELEASE_PROCESS.md](RELEASE_PROCESS.md) for**:
+- Complete step-by-step instructions
+- Selective publishing control
+- Manual re-promotion
+- Troubleshooting
+- Rollback procedures
 
 ---
 
-### dependency-updates.yml (Check Dependencies)
+### dependency-updates.yml (Dependency Updates)
 
-**Trigger**: Pull requests to master, manual
+**Trigger**: Pull requests to master (Dependabot PRs), manual
 
-**Purpose**: Validate version updates and suggest dependency updates
+**Purpose**: Validate dependency updates from Dependabot and auto-approve if tests pass
 
 **Key Steps**:
-1. Checkout code
-2. Run Gradle dependency checks
-3. Comment on PR with suggestions
+1. Fetch sources and setup project
+2. Analyze dependency changes
+3. Generate dependency lock files
+4. Run validation build (without tests)
+5. Check for dependency vulnerabilities
+6. Auto-approve Dependabot PR if all checks pass
 
 **Manual Trigger**:
 ```bash
-gh workflow run dependency-updates.yml
+gh workflow run "Dependency Updates"
 ```
 
 ---
@@ -600,36 +582,38 @@ gh workflow run dependency-updates.yml
 
 ### Overview
 
-To test the complete publishing pipeline (snapshot, Docker, Homebrew) from a non-master branch **without** merging to master, manually dispatch the **Verify Commit** workflow. When manually triggered, Verify Commit automatically triggers all three publishing workflows after successful completion.
+To test the complete publishing pipeline (snapshot, Docker, Homebrew) from a non-master branch **without** merging to master, manually dispatch the **Verify Commit** workflow. When manually triggered with `publish-snapshots=true`, Verify Commit automatically triggers all three publishing workflows after successful completion.
 
 ### Single Command to Test Publishing
 
 ```bash
-gh workflow run commit.yml --ref your-branch-name -f test-publishing=true
+gh workflow run commit.yml --ref your-branch-name -f publish-snapshots=true
 ```
 
 This command will:
 1. Build and test your branch
 2. Upload build artifact
-3. Automatically trigger publish-snapshot.yml
-4. Automatically trigger publish-docker.yml
-5. Automatically trigger homebrew-update.yml
+3. Automatically trigger publish-snapshot.yml (with ci-run-id)
+4. Automatically trigger publish-docker.yml (with ci-run-id)
+5. Automatically trigger homebrew-update.yml (with ci-run-id)
 
-**Without** `-f test-publishing=true`, only the build and test run (no publishing).
+**Without** `-f publish-snapshots=true`, only the build and test run (no publishing).
 
 ### How It Works
 
 **Trigger Mechanism**:
-- Publishing workflows listen for `workflow_run` events from "Verify Commit"
-- They check: `github.event.workflow_run.inputs.test-publishing == 'true'`
-- When Verify Commit is manually dispatched with `test-publishing=true`, this condition is TRUE
-- Therefore, publishing workflows run even on non-master branches
+- On master push or manual trigger with `publish-snapshots=true`, commit.yml completes its build
+- At the end of commit.yml, a `trigger-publishing` job runs that:
+  - Checks if this is a release merge (has release tag) - skips if true
+  - Directly triggers each publishing workflow via `gh workflow run`
+  - Passes `ci-run-id` field so workflows can download artifacts from the CI run
+- Each publishing workflow receives the `ci-run-id` and downloads artifacts directly
 
 **Automatic vs Manual Triggering**:
 
-| Trigger Type | Branch | test-publishing | Publishing Runs? |
+| Trigger Type | Branch | publish-snapshots | Publishing Runs? |
 |--------------|--------|-----------------|------------------|
-| Push (automatic) | master | N/A | ✅ YES (automatic on master) |
+| Push (automatic) | master | N/A | ✅ YES (automatic on master, if not release tag) |
 | Push (automatic) | feature-branch | N/A | ❌ NO (branch not master) |
 | Manual dispatch | master | false | ❌ NO (flag not set) |
 | Manual dispatch | master | true | ✅ YES (flag enabled) |
@@ -648,7 +632,7 @@ git push origin feature/update-publishing
 
 **2. Trigger Verify Commit (builds + triggers publishing)**:
 ```bash
-gh workflow run commit.yml --ref feature/update-publishing -f test-publishing=true
+gh workflow run commit.yml --ref feature/update-publishing -f publish-snapshots=true
 ```
 
 **3. Monitor workflow runs**:
@@ -696,18 +680,18 @@ When you manually trigger Verify Commit from a non-master branch:
 gh workflow run commit.yml --ref your-branch
 
 # With publishing enabled
-gh workflow run commit.yml --ref your-branch -f test-publishing=true
+gh workflow run commit.yml --ref your-branch -f publish-snapshots=true
 
 # Skip manual tests (faster CI, no publishing)
 gh workflow run commit.yml \
   --ref your-branch \
-  -f test=false
+  -f skip-tests=true
 
 # Run only Ubuntu with publishing
 gh workflow run commit.yml \
   --ref your-branch \
   -f platforms=ubuntu-latest \
-  -f test-publishing=true
+  -f publish-snapshots=true
 ```
 
 ### Full Example Workflow
@@ -723,7 +707,7 @@ git commit -am "Optimize Docker builds"
 git push
 
 # 3. Test the complete pipeline with ONE command (includes publishing)
-gh workflow run commit.yml --ref feature/docker-improvements -f test-publishing=true
+gh workflow run commit.yml --ref feature/docker-improvements -f publish-snapshots=true
 
 # 4. Monitor progress (watch until complete)
 gh run watch
@@ -735,7 +719,7 @@ gh run list --branch feature/docker-improvements --limit 10
 vim .github/workflows/publish-docker.yml
 git commit -am "Fix Docker build issue"
 git push
-gh workflow run commit.yml --ref feature/docker-improvements -f test-publishing=true
+gh workflow run commit.yml --ref feature/docker-improvements -f publish-snapshots=true
 
 # 7. Once working, merge to master
 gh pr create --title "Optimize Docker builds"
@@ -809,8 +793,8 @@ You can run multiple times on the same commit:
 gh workflow run commit.yml \
   --ref your-branch \
   -f platforms=ubuntu-latest \
-  -f test=true \
-  -f parallel-test=false
+  -f skip-tests=false \
+  -f parallel-test-mode=false
 ```
 
 **Manual Test Tasks**:

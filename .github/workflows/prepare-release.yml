@@ -51,18 +51,15 @@ jobs:
               id: validate
               run: |
                   VERSION="${{ github.event.inputs.release-version }}"
-
                   # Validate format
                   if [[ "$VERSION" == *-SNAPSHOT ]]; then
                       echo "❌ ERROR: Release version cannot contain -SNAPSHOT"
                       exit 1
                   fi
-
                   if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
                       echo "❌ ERROR: Version must be semantic: X.Y.Z"
                       exit 1
                   fi
-
                   echo "release-version=$VERSION" >> $GITHUB_OUTPUT
                   echo "✅ Validated release version: $VERSION"
 
@@ -78,24 +75,21 @@ jobs:
                   git config user.name "GitHub Actions"
                   git config user.email "actions@github.com"
 
-            - name: Check if release already exists
+            - name: Check if GitHub release already exists
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   VERSION="${{ steps.validate.outputs.release-version }}"
-
                   # Check GitHub release
                   if gh release view "v$VERSION" --repo ${{ github.repository }} >/dev/null 2>&1; then
                       echo "❌ ERROR: Release v$VERSION already exists"
                       exit 1
                   fi
-
                   # Check release branch
                   if git ls-remote --exit-code --heads origin "release/$VERSION" >/dev/null 2>&1; then
                       echo "❌ ERROR: Branch release/$VERSION already exists"
                       exit 1
                   fi
-
                   echo "✅ Version $VERSION is available"
 
             - name: Create release branch
@@ -107,16 +101,12 @@ jobs:
             - name: Update version to release version
               run: |
                   VERSION="${{ steps.validate.outputs.release-version }}"
-
                   # Update version.properties
                   sed -i "s/^xdk\.version=.*/xdk.version=$VERSION/" version.properties
-
                   # Verify change
                   grep "xdk.version" version.properties
-
                   git add version.properties
                   git commit -m "Release $VERSION"
-
                   echo "✅ Committed release version $VERSION"
 
             - name: Create release tag
@@ -244,15 +234,20 @@ jobs:
 
             - name: Stage to Maven Central and GitHub Packages
               env:
+                  # GitHub CLI (used for release operations)
                   GITHUB_ACTOR: ${{ github.actor }}
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  ORG_GRADLE_PROJECT_github_actor: ${{ github.actor }}
-                  ORG_GRADLE_PROJECT_github_token: ${{ secrets.GITHUB_TOKEN }}
-                  SIGNING_KEY: ${{ secrets.ORG_XTCLANG_SIGNING_KEY }}
-                  SIGNING_KEY_ID: ${{ secrets.ORG_XTCLANG_SIGNING_KEY_ID }}
-                  SIGNING_PASSWORD: ${{ secrets.ORG_XTCLANG_SIGNING_PASSWORD }}
+                  # GitHub Packages credentials (Gradle properties for Maven publishing)
+                  ORG_GRADLE_PROJECT_githubUsername: ${{ github.actor }}
+                  ORG_GRADLE_PROJECT_githubPassword: ${{ secrets.GITHUB_TOKEN }}
+                  # Maven Central credentials
                   ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
                   ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
+                  # Signing credentials
+                  ORG_GRADLE_PROJECT_signing_keyId: ${{ secrets.ORG_XTCLANG_SIGNING_KEY_ID }}
+                  ORG_GRADLE_PROJECT_signing_password: ${{ secrets.ORG_XTCLANG_SIGNING_PASSWORD }}
+                  ORG_GRADLE_PROJECT_signing_key: ${{ secrets.ORG_XTCLANG_SIGNING_KEY }}
+                  # Release control
                   ORG_XTCLANG_ALLOW_PUBLISH: true
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
               run: |

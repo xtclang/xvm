@@ -99,14 +99,12 @@ jobs:
 
             - name: Publish Maven snapshots
               env:
-                  # Legacy environment variables (kept for compatibility)
+                  # GitHub CLI (used for GitHub API operations)
                   GITHUB_ACTOR: ${{ github.actor }}
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  # Gradle properties for configuration-cache-safe implicit credentials lookup
+                  # GitHub Packages credentials (Gradle properties for Maven publishing)
                   ORG_GRADLE_PROJECT_githubUsername: ${{ github.actor }}
                   ORG_GRADLE_PROJECT_githubPassword: ${{ secrets.GITHUB_TOKEN }}
-                  ORG_GRADLE_PROJECT_github_actor: ${{ github.actor }}
-                  ORG_GRADLE_PROJECT_github_token: ${{ secrets.GITHUB_TOKEN }}
                   # Gradle Plugin Portal credentials
                   ORG_GRADLE_PROJECT_gradle_publish_key: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY }}
                   ORG_GRADLE_PROJECT_gradle_publish_secret: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET }}
@@ -122,6 +120,7 @@ jobs:
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
               run: |
                   echo "📦 Publishing Maven snapshot artifacts to GitHub Packages and Maven Central..."
+                  echo "   (please note that gradlePluginPortal is skipped, since does not support SNAPSHOT versions.)"
                   ./gradlew ${{ steps.versions.outputs.gradle-options }} publish --info
                   echo "✅ Maven snapshots published"
 
@@ -131,7 +130,7 @@ jobs:
               with:
                   package-name: 'org.xtclang.xdk'
                   package-type: 'maven'
-                  min-versions-to-keep: 50
+                  min-versions-to-keep: 30
                   token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Clean up old Plugin package versions (keep 50 newest)
@@ -140,7 +139,7 @@ jobs:
               with:
                   package-name: 'org.xtclang.xtc-plugin'
                   package-type: 'maven'
-                  min-versions-to-keep: 50
+                  min-versions-to-keep: 30
                   token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Clean up old Plugin Marker package versions (keep 50 newest)
@@ -149,7 +148,7 @@ jobs:
               with:
                   package-name: 'org.xtclang.xtc-plugin.org.xtclang.xtc-plugin.gradle.plugin'
                   package-type: 'maven'
-                  min-versions-to-keep: 50
+                  min-versions-to-keep: 30
                   token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Publish to GitHub snapshot release
