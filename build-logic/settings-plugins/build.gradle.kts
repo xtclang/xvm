@@ -10,8 +10,9 @@ group = "org.xtclang.build"
 // instantiated the XdkPropertiesExtension and the version catalog yet.
 // Read JDK version from version.properties (parent directory walk to find it)
 val versionProps = Properties().apply {
-    val versionPropsFile = generateSequence(projectDir.parentFile) { it.parentFile }
-        .firstNotNullOfOrNull { dir -> file("$dir/version.properties").takeIf { it.exists() } }
+    val versionPropsFile = generateSequence(projectDir.parentFile)
+        { it.parentFile }.
+        firstNotNullOfOrNull { dir -> file("$dir/version.properties").takeIf { it.exists() } }
         ?: error("Could not find version.properties in parent directories")
     versionPropsFile.inputStream().use { load(it) }
 }
@@ -20,7 +21,7 @@ val versionProps = Properties().apply {
 val jdkVersion = versionProps.getProperty("org.xtclang.java.jdk")?.toInt() ?: error("org.xtclang.java.jdk not found in version.properties")
 val kotlinJdkVersion = versionProps.getProperty("org.xtclang.kotlin.jdk")?.toInt() ?: error("org.xtclang.kotlin.jdk not found in version.properties")
 
-logger.info("[settings] Boostrap properties: ${versionProps.size} direct properties (jdk=$jdkVersion, kotlin=$kotlinJdkVersion)")
+logger.lifecycle("[settings] Boostrap properties: ${versionProps.size} direct properties (jdk=$jdkVersion, kotlin=$kotlinJdkVersion)")
 
 // NOTE: This avoids kotlin warnings, but the build system will run with Java 24.
 // The produced output will still be Java 25.

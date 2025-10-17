@@ -11,9 +11,7 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
-// Use shared utility from XdkPropertiesService for composite root file resolution
-fun compositeRootRelativeFile(path: String): File =
-    XdkPropertiesService.compositeRootRelativeFile(file("."), path)
+fun compositeRootRelativeFile(path: String): File = XdkPropertiesService.compositeRootRelativeFile(file("."), path)
 
 val libsVersionCatalog = compositeRootRelativeFile("gradle/libs.versions.toml")
 
