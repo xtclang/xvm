@@ -146,7 +146,7 @@ public class MethodBindingConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_idMethod = (MethodConstant) pool.register(m_idMethod);
+        m_idMethod = pool.register(m_idMethod);
     }
 
     @Override

@@ -9,9 +9,8 @@ import java.util.ListIterator;
 /**
  * An ArrayList using identity for equality comparison.
  */
-public class IdentityArrayList<E>
-        extends ArrayList<E> {
-    private static final long serialVersionUID = 1L;
+@SuppressWarnings("serial")
+public class IdentityArrayList<E> extends ArrayList<E> {
     /**
      * Add the specified element if it is not already present in the list.
      *

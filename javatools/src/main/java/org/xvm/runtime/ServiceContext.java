@@ -1080,7 +1080,7 @@ public class ServiceContext {
             return null;
         }
 
-        Message request = new CallLaterRequest(frame, hFunction, ahArg, cReturns);
+        CallLaterRequest request = new CallLaterRequest(frame, hFunction, ahArg, cReturns);
 
         // TODO: should we reject (throw) if the service overwhelmed?
         addRequest(request);
@@ -1102,7 +1102,7 @@ public class ServiceContext {
     public int sendOp1Request(Frame frame, Op op, int iReturn, TypeConstant... typeRet) {
         assert iReturn != Op.A_IGNORE_ASYNC;
 
-        OpRequest request = new OpRequest(frame, op, iReturn == Op.A_IGNORE ? 0 : 1,
+        OpRequest<ObjectHandle> request = new OpRequest<>(frame, op, iReturn == Op.A_IGNORE ? 0 : 1,
                                 frame.isDynamicVar(iReturn),
                                 typeRet.length == 0 ? null : i -> typeRet[i]);
 
@@ -1128,8 +1128,8 @@ public class ServiceContext {
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int sendOpNRequest(Frame frame, Op op, int[] aiReturn, TypeConstant... typeRet) {
-        int       cRets   = aiReturn.length;
-        OpRequest request = new OpRequest(frame, op, cRets, false,
+        int cRets = aiReturn.length;
+        OpRequest<ObjectHandle[]> request = new OpRequest<>(frame, op, cRets, false,
                                 cRets == 0 ? null : i -> typeRet[i]);
 
         addRequest(request);
@@ -1247,11 +1247,11 @@ public class ServiceContext {
 
 
         TypeSupplier supplier = resolveFormalReturnTypes(hFunction, ahArg);
-        OpRequest    request  = new OpRequest(frame, opCall, cReturns, fAsync, supplier);
+        OpRequest<ObjectHandle> request  = new OpRequest<>(frame, opCall, cReturns, fAsync, supplier);
 
         boolean fOverwhelmed = addRequest(request);
 
-        Fiber                           fiber  = frame.f_fiber;
+        Fiber fiber = frame.f_fiber;
         CompletableFuture<ObjectHandle> future = request.f_future;
 
         if (fHandleExceptions) {
@@ -1312,10 +1312,10 @@ public class ServiceContext {
         }
 
         TypeSupplier supplier = resolveFormalReturnTypes(hFunction, ahArg);
-        OpRequest    request  = new OpRequest(frame, opCall, cReturns, fAsync, supplier);
+        OpRequest<ObjectHandle[]> request  = new OpRequest<>(frame, opCall, cReturns, fAsync, supplier);
 
-        CompletableFuture<ObjectHandle[]> future       = request.f_future;
-        boolean                           fOverwhelmed = addRequest(request);
+        CompletableFuture<ObjectHandle[]> future = request.f_future;
+        boolean fOverwhelmed = addRequest(request);
 
         if (cReturns == 0) {
             frame.f_fiber.registerUncapturedRequest(request);
@@ -1510,7 +1510,7 @@ public class ServiceContext {
             }
         };
 
-        OpRequest request = new OpRequest(frame, opInit, 1, false, null);
+        OpRequest<ObjectHandle> request = new OpRequest<>(frame, opInit, 1, false, null);
 
         addRequest(request);
 
@@ -1571,8 +1571,10 @@ public class ServiceContext {
 
     /**
      * Base class for an asynchronous cross-service messages based on a CompletableFuture.
+     *
+     * @param <T> the return type (ObjectHandle or ObjectHandle[])
      */
-    public abstract static class Message {
+    public abstract static class Message<T> {
         protected Message(Frame frameCaller) {
             if (frameCaller == null) {
                 f_fiberCaller = null;
@@ -1588,7 +1590,7 @@ public class ServiceContext {
                 f_mapTokens   = frameCaller.f_fiber.getTokens();
             }
 
-            f_future = new CompletableFuture();
+            f_future = new CompletableFuture<>();
         }
 
         /**
@@ -1619,14 +1621,16 @@ public class ServiceContext {
 
         /**
          * Send the specified number of return values back to the caller.
+         * Uses the instance's f_future field which is properly typed based on cReturns.
          */
-        protected void sendResponse(Fiber fiberCaller, Frame frame, CompletableFuture future, int cReturns) {
+        @SuppressWarnings("unchecked")
+        protected void sendResponse(Fiber fiberCaller, Frame frame, int cReturns) {
             ServiceContext ctxDst = fiberCaller.f_context;
 
             switch (cReturns) {
             case 0:
-                ctxDst.respond(new Response<ObjectHandle>(
-                        fiberCaller, xTuple.H_VOID, frame.m_hException, future));
+                ctxDst.respond(new Response<>(
+                        fiberCaller, xTuple.H_VOID, frame.m_hException, (CompletableFuture<ObjectHandle>) (Object) f_future));
                 break;
 
             case 1: {
@@ -1634,7 +1638,7 @@ public class ServiceContext {
                 ExceptionHandle hException = frame.m_hException;
 
                 ctxDst.respond(
-                        new Response<ObjectHandle>(fiberCaller, hReturn, hException, future));
+                        new Response<>( fiberCaller, hReturn, hException, (CompletableFuture<ObjectHandle>) (Object) f_future));
                 break;
             }
 
@@ -1644,7 +1648,7 @@ public class ServiceContext {
                 TupleHandle     hTuple     = hException == null ? (TupleHandle) ahReturn[0] : null;
 
                 ctxDst.respond(
-                        new Response<ObjectHandle>(fiberCaller, hTuple, hException, future));
+                        new Response<>(fiberCaller, hTuple, hException, (CompletableFuture<ObjectHandle>) (Object) f_future));
                 break;
             }
 
@@ -1667,7 +1671,7 @@ public class ServiceContext {
                     }
                 }
                 ctxDst.respond(
-                        new Response<ObjectHandle[]>(fiberCaller, ahReturn, hException, future));
+                        new Response<>(fiberCaller, ahReturn, hException, (CompletableFuture<ObjectHandle[]>) (Object) f_future));
                 break;
             }
             }
@@ -1678,7 +1682,7 @@ public class ServiceContext {
         /**
          * The CompletableFuture associates with this message.
          */
-        public final CompletableFuture f_future;
+        public final CompletableFuture<T> f_future;
 
         /**
          * The Fiber this message runs on (assigned by {@link #createFrame}).
@@ -1713,9 +1717,11 @@ public class ServiceContext {
 
     /**
      * A cross-service Op based Message.
+     *
+     * @param <T> the return type (ObjectHandle or ObjectHandle[])
      */
-    public static class OpRequest
-            extends Message {
+    public static class OpRequest<T>
+            extends Message<T> {
         /**
          * @param fAsync        if true, avoid the in-line optimization for the request execution
          * @param typeSupplier  (optional) the supplier of return types to be used *only* if the
@@ -1768,7 +1774,7 @@ public class ServiceContext {
 
             Op opRespond = new Op() {
                 public int process(Frame frame, int iPC) {
-                    sendResponse(f_fiberCaller, frame, f_future, f_cReturns);
+                    sendResponse(f_fiberCaller, frame, f_cReturns);
                     return iPC + 1;
                 }
                 @Override
@@ -1889,7 +1895,7 @@ public class ServiceContext {
      * Represents a natural "fire and forget" or a native call request to a service.
      */
     public static class CallLaterRequest
-            extends Message {
+            extends Message<ObjectHandle> {
         private final FunctionHandle f_hFunction;
         private final ObjectHandle[] f_ahArg;
         private final int            f_cReturns;
@@ -1958,7 +1964,7 @@ public class ServiceContext {
                 });
             } else {
                 frame0.addContinuation(_null -> {
-                    sendResponse(f_fiberCaller, frame0, f_future, f_cReturns);
+                    sendResponse(f_fiberCaller, frame0, f_cReturns);
                     return Op.R_NEXT;
                 });
             }

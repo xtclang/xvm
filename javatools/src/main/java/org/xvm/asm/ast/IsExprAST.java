@@ -71,7 +71,7 @@ public class IsExprAST
         super.prepareWrite(res);
 
         if (typeOfType != null) {
-            typeOfType = (TypeConstant) res.register(typeOfType);
+            typeOfType = res.register(typeOfType);
         }
     }
 

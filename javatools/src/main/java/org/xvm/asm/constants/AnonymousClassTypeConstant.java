@@ -249,7 +249,7 @@ public class AnonymousClassTypeConstant
     protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 
-        m_idAnon = (ClassConstant) pool.register(m_idAnon);
+        m_idAnon = pool.register(m_idAnon);
     }
 
     @Override

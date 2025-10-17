@@ -182,8 +182,8 @@ public class ChildClassConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constParent = (PseudoConstant) pool.register(m_constParent);
-        m_constName   = (StringConstant) pool.register(m_constName);
+        m_constParent = pool.register(m_constParent);
+        m_constName   = pool.register(m_constName);
     }
 
     @Override

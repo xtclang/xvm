@@ -884,7 +884,7 @@ public final class VersionTree<V> implements Iterable<Version> {
          *
          * @return a new array of nodes (it may be a different array from the one passed in)
          */
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings({"unchecked", "rawtypes"})
         private static <V> Node<V>[] addNode(Node<V>[] nodes, final Node<V> node) {
             if (nodes == null) {
                 // most common case: the node has no children yet

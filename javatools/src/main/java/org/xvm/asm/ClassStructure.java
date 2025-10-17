@@ -67,8 +67,8 @@ public class ClassStructure
      * @param constId    the constant that specifies the identity of the Module, Package, or Class
      * @param condition  the optional condition for this ClassStructure
      */
-    protected ClassStructure(XvmStructure xsParent, int nFlags, IdentityConstant constId,
-                             ConditionalConstant condition) {
+    protected ClassStructure(final XvmStructure xsParent, final int nFlags, final IdentityConstant constId,
+                             final ConditionalConstant condition) {
         super(xsParent, nFlags, constId, condition);
     }
 
@@ -99,7 +99,7 @@ public class ClassStructure
      *
      * @param constPath  the literal constant indicating the source path, or Null
      */
-    public void setSourcePath(LiteralConstant constPath) {
+    public void setSourcePath(final LiteralConstant constPath) {
         m_constPath = constPath;
         markModified();
     }
@@ -131,31 +131,28 @@ public class ClassStructure
      * @return true iff this class is a singleton
      */
     public boolean isSingleton() {
-        switch (getFormat()) {
-        case MODULE, PACKAGE, ENUMVALUE:
-            // these types are always singletons
-            return true;
-
-        case INTERFACE, CLASS, ENUM, ANNOTATION, MIXIN:
-            // these types are never singletons
-            return false;
-
-        case CONST, SERVICE:
-            // these COULD be singletons (if they are static and NOT an inner class)
-            if (isStatic()) {
-                Format format = getParent().getFormat();
-                return format == Format.MODULE || format == Format.PACKAGE;
+        return switch (getFormat()) {
+            case MODULE, PACKAGE, ENUMVALUE ->
+                // these types are always singletons
+                    true;
+            case INTERFACE, CLASS, ENUM, ANNOTATION, MIXIN ->
+                // these types are never singletons
+                    false;
+            case CONST, SERVICE -> {
+                // these COULD be singletons (if they are static and NOT an inner class)
+                if (isStatic()) {
+                    Format format = getParent().getFormat();
+                    yield format == Format.MODULE || format == Format.PACKAGE;
+                }
+                yield false;
             }
-            return false;
-
-        default:
-            throw new IllegalStateException();
-        }
+            default -> throw new IllegalStateException();
+        };
     }
 
     /**
      * Check if this class is annotated as "Abstract".
-     *
+     * <p>
      * Note: class structures are never marked with the {@link #isAbstract abstract} flag and
      * can only be made abstract via the annotation.
      *
@@ -177,8 +174,8 @@ public class ClassStructure
     /**
      * @return true iff this class is annotated by the specified annotation
      */
-    public boolean containsAnnotation(ClassConstant idAnno) {
-        for (Contribution contrib : getContributionsAsList()) {
+    public boolean containsAnnotation(final ClassConstant idAnno) {
+        for (final Contribution contrib : getContributionsAsList()) {
             if (contrib.getComposition() == Composition.Annotation) {
                 TypeConstant type = contrib.getTypeConstant();
 
@@ -199,23 +196,10 @@ public class ClassStructure
      *
      * @return an array of annotations
      */
-    public Annotation[] collectAnnotations(boolean fIntoClass) {
+    public Annotation[] collectAnnotations(final boolean fIntoClass) {
         Annotation[] annos = fIntoClass ? m_aAnnoClass : m_aAnnoMixin;
         if (annos == null) {
-            List<Annotation> listAnnos = null;
-
-            for (Contribution contrib : getContributionsAsList()) {
-                if (contrib.getComposition() == Composition.Annotation) {
-                    Annotation anno = contrib.getAnnotation();
-
-                    if (fIntoClass == anno.getAnnotationType().getExplicitClassInto().isIntoClassType()) {
-                        if (listAnnos == null) {
-                            listAnnos = new ArrayList<>();
-                        }
-                        listAnnos.add(anno);
-                    }
-                }
-            }
+            List<Annotation> listAnnos = getAnnotationList(fIntoClass);
             annos = listAnnos == null
                     ? Annotation.NO_ANNOTATIONS
                     : listAnnos.toArray(Annotation.NO_ANNOTATIONS);
@@ -228,27 +212,40 @@ public class ClassStructure
         return annos;
     }
 
+    private List<Annotation> getAnnotationList(boolean fIntoClass) {
+        List<Annotation> listAnnos = null;
+
+        for (final Contribution contrib : getContributionsAsList()) {
+            if (contrib.getComposition() == Composition.Annotation) {
+                Annotation anno = contrib.getAnnotation();
+
+                if (fIntoClass == anno.getAnnotationType().getExplicitClassInto().isIntoClassType()) {
+                    if (listAnnos == null) {
+                        listAnnos = new ArrayList<>();
+                    }
+                    listAnnos.add(anno);
+                }
+            }
+        }
+        return listAnnos;
+    }
+
     /**
      * @return true iff this class is a module, package, or class whose immediate parent is a module
      *         or package
      */
     public boolean isTopLevel() {
-        switch (getFormat()) {
-        case MODULE, PACKAGE:
-            return true;
-
-        case INTERFACE, CLASS, ENUM, MIXIN, ANNOTATION, CONST, SERVICE: {
-            Format format = getParent().getFormat();
-            return format == Format.MODULE || format == Format.PACKAGE;
-        }
-
-        case ENUMVALUE:
-            // enum values are always a child of an enum
-            return false;
-
-        default:
-            throw new IllegalStateException();
-        }
+        return switch (getFormat()) {
+            case MODULE, PACKAGE -> true;
+            case INTERFACE, CLASS, ENUM, MIXIN, ANNOTATION, CONST, SERVICE -> {
+                Format format = getParent().getFormat();
+                yield format == Format.MODULE || format == Format.PACKAGE;
+            }
+            case ENUMVALUE ->
+                // enum values are always a child of an enum
+                    false;
+            default -> throw new IllegalStateException();
+        };
     }
 
     /**
@@ -325,9 +322,7 @@ public class ClassStructure
         }
 
         return switch (getFormat()) {
-            case CLASS   -> true;
-            case CONST   -> true;
-            case SERVICE -> true;
+            case CLASS, CONST, SERVICE -> true;
             default      -> false;
         };
     }
@@ -336,7 +331,7 @@ public class ClassStructure
      * @return true iff this class is the specified parent class itself, or a virtual child of that
      *         class or any of its virtual children (recursively)
      */
-    public boolean isVirtualDescendant(IdentityConstant idParent) {
+    public boolean isVirtualDescendant(final IdentityConstant idParent) {
         return getIdentityConstant().equals(idParent) ||
                 isVirtualChild() && getOuter().isVirtualDescendant(idParent);
     }
@@ -345,9 +340,9 @@ public class ClassStructure
      * @return true iff this class is the specified parent class itself, or a child of that class or
      *         any of its children (recursively)
      */
-    public boolean isDescendant(IdentityConstant idParent) {
+    public boolean isDescendant(final IdentityConstant idParent) {
         return getIdentityConstant().equals(idParent) ||
-            getParent() instanceof ClassStructure parent && parent.isDescendant(idParent);
+            getParent() instanceof final ClassStructure parent && parent.isDescendant(idParent);
     }
 
     /**
@@ -359,12 +354,12 @@ public class ClassStructure
      * @return null iff all generic types are accessible; otherwise a non-accessible generic
      *         property name (used for error reporting)
      */
-    public String checkGenericTypeVisibility(TypeConstant type) {
+    public String checkGenericTypeVisibility(final TypeConstant type) {
         String[] asName = new String[1];
 
         Consumer<Constant> visitor = new Consumer<>() {
-            public void accept(Constant c) {
-                if (c instanceof TypeConstant t) {
+            public void accept(final Constant c) {
+                if (c instanceof final TypeConstant t) {
                     if (t.isGenericType()) {
                         Constant constId = t.getDefiningConstant();
                         if (constId.getFormat() == Constant.Format.Property) {
@@ -429,6 +424,7 @@ public class ClassStructure
     /**
      * @return true iff this class implements an "immutable X" interface
      */
+    @SuppressWarnings("fallthrough")
     public boolean isImmutable() {
         switch (getFormat()) {
         case MODULE, PACKAGE, CONST, ENUM, ENUMVALUE:
@@ -443,9 +439,9 @@ public class ClassStructure
                 return true;
             }
         }
-            // fall through
+            // falls through
         case CLASS, INTERFACE:
-            for (Contribution contrib : getContributionsAsList()) {
+            for (final Contribution contrib : getContributionsAsList()) {
                 if (contrib.getComposition() == Composition.Implements) {
                     if (!contrib.containsUnresolved() && contrib.getTypeConstant().isImmutable()) {
                         return true;
@@ -467,25 +463,26 @@ public class ClassStructure
      *
      * @return a child structure or null if not found
      */
-    public ClassStructure getVirtualChild(String sName) {
+    public ClassStructure getVirtualChild(final String sName) {
         Component child = findChildDeep(sName, true);
-        return child instanceof ClassStructure clz && clz.isVirtualChild() ? clz : null;
+        return child instanceof final ClassStructure clz && clz.isVirtualChild() ? clz : null;
     }
 
     /**
      * Find a child with a given name in the class or any of its contributions.
      */
-    public Component findChildDeep(String sName) {
+    public Component findChildDeep(final String sName) {
         return findChildDeep(sName, true);
     }
 
-    private Component findChildDeep(String sName, boolean fAllowInto) {
+    @SuppressWarnings("fallthrough")
+    private Component findChildDeep(final String sName, boolean fAllowInto) {
         Component child = getChild(sName);
         if (child != null) {
             return child;
         }
 
-        for (Contribution contrib : getContributionsAsList()) {
+        for (final Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib = contrib.getTypeConstant();
 
             // TODO: allow intersection types to be traversed as well
@@ -508,7 +505,7 @@ public class ClassStructure
 
             case Incorporates:
                 fAllowInto = false;
-                // break through
+                // falls through
             case Delegates, Implements, Extends:
                 fCheck = true;
                 break;
@@ -573,7 +570,7 @@ public class ClassStructure
      *
      * @return a newly created PropertyStructure that represents the generic type parameter
      */
-    public PropertyStructure addTypeParam(String sName, TypeConstant typeConstraint) {
+    public PropertyStructure addTypeParam(final String sName, TypeConstant typeConstraint) {
         ListMap<StringConstant, TypeConstant> map = m_mapParams;
         if (map == null) {
             m_mapParams = map = new ListMap<>();
@@ -612,7 +609,8 @@ public class ClassStructure
      *
      * @return the constraint type
      */
-    public TypeConstant getConstraint(String sName) {
+    @SuppressWarnings("unused")
+    public TypeConstant getConstraint(final String sName) {
         return m_mapParams.get(getConstantPool().ensureStringConstant(sName));
     }
 
@@ -622,7 +620,7 @@ public class ClassStructure
      * @param sName           the generic type name
      * @param typeConstraint  the new constraint type
      */
-    public void updateConstraint(String sName, TypeConstant typeConstraint) {
+    public void updateConstraint(final String sName, final TypeConstant typeConstraint) {
         ListMap<StringConstant, TypeConstant> map = m_mapParams;
         assert map != null;
 
@@ -687,7 +685,7 @@ public class ClassStructure
                     Map<StringConstant, TypeConstant> mapThis = m_mapParams;
                     TypeConstant[] aTypes = new TypeConstant[mapThis.size()];
                     int ix = 0;
-                    for (StringConstant constName : mapThis.keySet()) {
+                    for (final StringConstant constName : mapThis.keySet()) {
                         PropertyStructure prop = (PropertyStructure) getChild(constName.getValue());
                         aTypes[ix++] = prop.getIdentityConstant().getFormalType();
                     }
@@ -745,7 +743,7 @@ public class ClassStructure
                 TypeConstant[] atypeParam = new TypeConstant[mapParams.size()];
                 int ix = 0;
                 GenericTypeResolver resolver = new SimpleTypeResolver(pool, new ArrayList<>());
-                for (TypeConstant typeParam : mapParams.values()) {
+                for (final TypeConstant typeParam : mapParams.values()) {
                     atypeParam[ix++] = typeParam.isFormalTypeSequence()
                             ? pool.typeTuple0()
                             : typeParam.resolveGenerics(pool, resolver);
@@ -760,7 +758,7 @@ public class ClassStructure
 
     /**
      * Resolve the formal type for this class based on the specified list of actual types.
-     *
+     * <p>
      * Note: the specified list is allowed to skip some number of actual parameters (at the tail);
      *       they will be replaced by the corresponding resolved canonical types
      *
@@ -769,7 +767,7 @@ public class ClassStructure
      *
      * @return the resolved type
      */
-    public TypeConstant resolveType(ConstantPool pool, List<TypeConstant> listActual) {
+    public TypeConstant resolveType(final ConstantPool pool, final List<TypeConstant> listActual) {
         return listActual.isEmpty() && !isParameterized()
             ? getCanonicalType()
             : getFormalType().resolveGenerics(pool, new SimpleTypeResolver(pool, listActual));
@@ -784,7 +782,7 @@ public class ClassStructure
      *
      * @return a list of types that has exact size as the map of formal parameters for this class
      */
-    public List<TypeConstant> normalizeParameters(ConstantPool pool, List<TypeConstant> listActual) {
+    public List<TypeConstant> normalizeParameters(final ConstantPool pool, final List<TypeConstant> listActual) {
         int cActual = listActual.size();
         int cFormal = getTypeParamCount();
 
@@ -802,7 +800,7 @@ public class ClassStructure
      *
      * @return an array of types that has exact size as the map of formal parameters for this class
      */
-    public TypeConstant[] normalizeParameters(ConstantPool pool, TypeConstant[] atypeActual) {
+    public TypeConstant[] normalizeParameters(final ConstantPool pool, final TypeConstant[] atypeActual) {
         int cActual = atypeActual.length;
         int cFormal = getTypeParamCount();
 
@@ -819,9 +817,9 @@ public class ClassStructure
      * @param mapModulePaths  pass a map containing all previously encountered modules (including
      *                        the current one)
      */
-    protected void collectDependencies(String sModulePath, Map<ModuleConstant, String> mapModulePaths) {
-        for (Component child : children()) {
-            if (child instanceof PackageStructure pkg) {
+    protected void collectDependencies(final String sModulePath, final Map<ModuleConstant, String> mapModulePaths) {
+        for (final Component child : children()) {
+            if (child instanceof final PackageStructure pkg) {
                 if (pkg.isModuleImport()) {
                     ModuleStructure moduleDep  = pkg.getImportedModule();
                     ModuleConstant  idDep      = moduleDep.getIdentityConstant();
@@ -853,10 +851,10 @@ public class ClassStructure
      * @return a list of conditional incorporates for this class that applies to the specified type;
      *         null if there are none
      */
-    public List<Contribution> collectConditionalIncorporates(TypeConstant type) {
+    public List<Contribution> collectConditionalIncorporates(final TypeConstant type) {
         ConstantPool       pool             = getConstantPool();
         List<Contribution> listIncorporates = null;
-        for (Contribution contrib : getContributionsAsList()) {
+        for (final Contribution contrib : getContributionsAsList()) {
             if (contrib.getComposition() == Composition.Incorporates &&
                     contrib.isConditional() && contrib.resolveGenerics(pool, type) != null) {
                 if (listIncorporates == null) {
@@ -880,7 +878,7 @@ public class ClassStructure
             return true;
         }
 
-        for (Contribution contrib : getContributionsAsList()) {
+        for (final Contribution contrib : getContributionsAsList()) {
             if (contrib.getComposition() == Composition.Into) {
                 if (contrib.getTypeConstant().isTuple()) {
                     return true;
@@ -902,12 +900,12 @@ public class ClassStructure
      *
      * @return the list of types
      */
-    public List<TypeConstant> getTupleParamTypes(ConstantPool pool, List<TypeConstant> listParams) {
+    public List<TypeConstant> getTupleParamTypes(final ConstantPool pool, final List<TypeConstant> listParams) {
         if (getIdentityConstant().equals(pool.clzTuple())) {
             return listParams;
         }
 
-        for (Contribution contrib : getContributionsAsList()) {
+        for (final Contribution contrib : getContributionsAsList()) {
             if (contrib.getComposition() == Composition.Into) {
                 TypeConstant typeContrib = contrib.resolveGenerics(pool,
                                                 new SimpleTypeResolver(pool, listParams));
@@ -985,7 +983,7 @@ public class ClassStructure
     }
 
     @Override
-    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector) {
+    public ResolutionResult resolveName(final String sName, final Access access, final ResolutionCollector collector) {
         ResolutionResult result = super.resolveName(sName, access, collector);
         if (result == ResolutionResult.UNKNOWN && getFormat() == Format.SERVICE) {
             // look into the Service interface itself
@@ -1026,7 +1024,7 @@ public class ClassStructure
      *
      * @return true if this type represents a sub-classing of the specified class
      */
-    public boolean extendsClass(IdentityConstant idClass) {
+    public boolean extendsClass(final IdentityConstant idClass) {
         if (getFormat() == Format.INTERFACE) {
             // interfaces do not extend; they implement
             return false;
@@ -1039,7 +1037,7 @@ public class ClassStructure
 
         ClassStructure structCur = this;
         NextSuper: while (true) {
-            for (Contribution contrib : structCur.getContributionsAsList()) {
+            for (final Contribution contrib : structCur.getContributionsAsList()) {
                 if (contrib.getComposition() == Composition.Extends) {
                     // even though this class may be id'd by a ModuleConstant or PackageConstant,
                     // the super will always be a class (because a Module and a Package cannot be
@@ -1062,7 +1060,7 @@ public class ClassStructure
     /**
      * Check if the specified annotation type is "into Class", meaning that the annotation applies
      * to the meta-data of the class and is not actually mixed into the class functionality itself.
-     *
+     * <p>
      * A slight complication comes from a scenario when the annotation applies to a union of
      * types, for example:
      * <code>
@@ -1077,7 +1075,7 @@ public class ClassStructure
      *
      * @return true iff the annotation applies to the class meta-data
      */
-    public boolean isIntoClassAnnotation(TypeConstant typeAnno) {
+    public boolean isIntoClassAnnotation(final TypeConstant typeAnno) {
         assert typeAnno.isExplicitClassIdentity(true);
 
         if (typeAnno.getExplicitClassFormat() != Format.ANNOTATION) {
@@ -1104,7 +1102,7 @@ public class ClassStructure
      *
      * @return true if this type has a contribution of the specified class
      */
-    public boolean hasContribution(IdentityConstant idClass) {
+    public boolean hasContribution(final IdentityConstant idClass) {
         if (idClass.equals(getConstantPool().clzObject())) {
             // everything is considered to implement the Object interface
             return true;
@@ -1125,7 +1123,7 @@ public class ClassStructure
      * @return a first (if more than one) contribution matching the specified identity
      *         or null if none found
      */
-    public Contribution findContribution(IdentityConstant idContrib) {
+    public Contribution findContribution(final IdentityConstant idContrib) {
         if (idContrib.equals(getIdentityConstant())) {
             return new Contribution(Composition.Equal, getFormalType());
         }
@@ -1142,8 +1140,9 @@ public class ClassStructure
      * @return a first (if more than one) contribution matching the specified identity
      *         or null if none found
      */
-    private Contribution findContributionImpl(IdentityConstant idContrib, boolean fAllowInto) {
-        for (Contribution contrib : getContributionsAsList()) {
+    @SuppressWarnings("fallthrough")
+    private Contribution findContributionImpl(final IdentityConstant idContrib, boolean fAllowInto) {
+        for (final Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib  = contrib.getTypeConstant();
             Contribution contribMatch = null;
 
@@ -1162,7 +1161,7 @@ public class ClassStructure
 
                 case Incorporates:
                     fAllowInto = false;
-                    // break through
+                    // falls through
                 case Delegates, Implements, Extends:
                     fCheck = true;
                     break;
@@ -1176,7 +1175,7 @@ public class ClassStructure
                 if (fCheck) {
                     contribMatch = checkContribution(contrib, typeContrib, idContrib);
                 }
-            } else if (typeContrib instanceof IntersectionTypeConstant typeIntersection) {
+            } else if (typeContrib instanceof final IntersectionTypeConstant typeIntersection) {
                 // the only relational type contributions we can process further are the
                 // intersection types
                 contribMatch = checkIntersectionContribution(contrib, typeIntersection, idContrib);
@@ -1200,8 +1199,8 @@ public class ClassStructure
      *
      * @return the contribution that matches the specified identity
      */
-    private Contribution checkContribution(Contribution contrib,
-                                           TypeConstant typeContrib, IdentityConstant idTest) {
+    private Contribution checkContribution(final Contribution contrib,
+                                           final TypeConstant typeContrib, final IdentityConstant idTest) {
         IdentityConstant idContrib = typeContrib.getSingleUnderlyingClass(true);
         if (idContrib.equals(idTest)) {
             return contrib;
@@ -1221,13 +1220,13 @@ public class ClassStructure
      *
      * @return the contribution that matches the specified identity
      */
-    private Contribution checkIntersectionContribution(Contribution             contrib,
-                                                       IntersectionTypeConstant typeContrib,
-                                                       IdentityConstant         idTest) {
+    private Contribution checkIntersectionContribution(final Contribution             contrib,
+                                                       final IntersectionTypeConstant typeContrib,
+                                                       final IdentityConstant         idTest) {
         TypeConstant type1    = typeContrib.getUnderlyingType();
         Contribution contrib1 = type1.isExplicitClassIdentity(true)
                 ? checkContribution(contrib, type1, idTest)
-                : type1 instanceof IntersectionTypeConstant typeIntersection1
+                : type1 instanceof final IntersectionTypeConstant typeIntersection1
                         ? checkIntersectionContribution(contrib, typeIntersection1, idTest)
                         : null;
         if (contrib1 != null) {
@@ -1237,7 +1236,7 @@ public class ClassStructure
         TypeConstant type2 = typeContrib.getUnderlyingType2();
         return type2.isExplicitClassIdentity(true)
                 ? checkContribution(contrib, type2, idTest)
-                : type2 instanceof IntersectionTypeConstant typeIntersection2
+                : type2 instanceof final IntersectionTypeConstant typeIntersection2
                         ? checkIntersectionContribution(contrib, typeIntersection2, idTest)
                         : null;
     }
@@ -1254,6 +1253,7 @@ public class ClassStructure
      *
      * @return a type to rebase onto, if rebasing is required by this class; otherwise null
      */
+    @SuppressWarnings("fallthrough")
     public TypeConstant getRebaseType() {
         ConstantPool pool   = getConstantPool();
         Format       format = getFormat();
@@ -1275,7 +1275,7 @@ public class ClassStructure
             if (clzSuper == null || format != clzSuper.getFormat()) {
                 return format == Format.CONST ? pool.typeConstRB() : pool.typeServiceRB();
             }
-            // break through
+            // falls through
         default:
             return null;
         }
@@ -1308,7 +1308,7 @@ public class ClassStructure
      *         determination of a virtual child super; the return valued does NOT imply the presence
      *         or the absence of a virtual child super
      */
-    public boolean resolveVirtualSuper(Set<Contribution> setContribs) {
+    public boolean resolveVirtualSuper(final Set<Contribution> setContribs) {
         assert isVirtualChild();
 
         // prevent circularity and repeatedly checking the same components
@@ -1335,7 +1335,7 @@ public class ClassStructure
                     if (component != null) {
                         Object o = component.findVirtualChildSuper(idThis, cDepth, setVisited);
                         if (o != null) {
-                            if (o instanceof Boolean Flag) {
+                            if (o instanceof final Boolean Flag) {
                                 // something necessary hasn't resolved yet
                                 assert !Flag;
                                 return false;
@@ -1359,7 +1359,7 @@ public class ClassStructure
                                 if (clzSuper.isParameterized()) {
                                     typeSuper = typeSuper.adoptParameters(pool, clzSuper.getFormalType());
                                 }
-                            } else if (compSuper instanceof ClassStructure clz) {
+                            } else if (compSuper instanceof final ClassStructure clz) {
                                 clzSuper  = clz;
                                 typeSuper = clzSuper.getFormalType();
                             } else {
@@ -1375,7 +1375,7 @@ public class ClassStructure
 
             // we are finished walking up the parent chain AFTER we have processed the first class
             // in that chain that is NOT a virtual child class
-            if (parent instanceof ClassStructure clz && !clz.isVirtualChild()) {
+            if (parent instanceof final ClassStructure clz && !clz.isVirtualChild()) {
                 break;
             }
 
@@ -1388,9 +1388,9 @@ public class ClassStructure
 
     @Override
     protected Object findVirtualChildSuper(
-            IdentityConstant        idVirtChild,
-            int                     cDepth,
-            Set<IdentityConstant>   setVisited) {
+            final IdentityConstant        idVirtChild,
+            final int                     cDepth,
+            final Set<IdentityConstant>   setVisited) {
         Object oResult = super.findVirtualChildSuper(idVirtChild, cDepth, setVisited);
 
         if (oResult == null && isVirtualChild()) {
@@ -1404,17 +1404,18 @@ public class ClassStructure
     }
 
     @Override
+    @SuppressWarnings("fallthrough")
     protected Iterator<IdentityConstant> potentialVirtualChildContributors() {
         List<IdentityConstant> list = null;
 
-        for (Contribution contrib : getContributionsAsList()) {
+        for (final Contribution contrib : getContributionsAsList()) {
             TypeConstant type = contrib.getTypeConstant();
             switch (contrib.getComposition()) {
             case Annotation:
                 if (isIntoClassAnnotation(type)) {
                     break;
                 }
-                // break through
+                // falls through
             case Extends:
             case Incorporates:
             case Implements:
@@ -1465,14 +1466,14 @@ public class ClassStructure
 
     /**
      * Find an index of a generic parameter with the specified name.
-     *
+     * <p>
      * Note: this method only looks for parameters declared by this class.
      *
      * @param sParamName  the parameter name
      *
      * @return the parameter index or -1 if not found
      */
-    public int indexOfGenericParameter(String sParamName) {
+    public int indexOfGenericParameter(final String sParamName) {
         List<Map.Entry<StringConstant, TypeConstant>> listFormal = getTypeParamsAsList();
         for (int i = 0, c = listFormal.size(); i < c; i++) {
             if (listFormal.get(i).getKey().getValue().equals(sParamName)) {
@@ -1490,7 +1491,7 @@ public class ClassStructure
      *
      * @return true if the formal type with this name exists
      */
-    public boolean containsGenericParamType(String sName) {
+    public boolean containsGenericParamType(final String sName) {
         return containsGenericParamTypeImpl(sName, true);
     }
 
@@ -1502,13 +1503,14 @@ public class ClassStructure
      *
      * @return the corresponding actual type or null if there is no matching formal type
      */
-    protected boolean containsGenericParamTypeImpl(String sName, boolean fAllowInto) {
+    @SuppressWarnings("fallthrough")
+    protected boolean containsGenericParamTypeImpl(final String sName, boolean fAllowInto) {
         int ix = indexOfGenericParameter(sName);
         if (ix >= 0) {
             return true;
         }
 
-        for (Contribution contrib : getContributionsAsList()) {
+        for (final Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib = contrib.getTypeConstant();
 
             if (typeContrib.containsUnresolved() || !typeContrib.isSingleUnderlyingClass(true)) {
@@ -1530,7 +1532,7 @@ public class ClassStructure
 
             case Incorporates:
                 fAllowInto = false;
-                // break through
+                // falls through
             case Delegates, Implements, Extends:
                 fCheck = true;
                 break;
@@ -1563,7 +1565,7 @@ public class ClassStructure
      *
      * @return the corresponding actual type or null if there is no matching formal type
      */
-    public TypeConstant getGenericParamType(ConstantPool pool, String sName, TypeConstant typeActual) {
+    public TypeConstant getGenericParamType(final ConstantPool pool, final String sName, final TypeConstant typeActual) {
         return getGenericParamTypeImpl(pool, sName, typeActual, true);
     }
 
@@ -1575,15 +1577,16 @@ public class ClassStructure
      *
      * @return the corresponding actual type or null if there is no matching formal type
      */
-    protected TypeConstant getGenericParamTypeImpl(ConstantPool pool, String sName,
-                                                   TypeConstant typeActual, boolean fAllowInto) {
+    @SuppressWarnings("fallthrough")
+    protected TypeConstant getGenericParamTypeImpl(final ConstantPool pool, final String sName,
+                                                   final TypeConstant typeActual, boolean fAllowInto) {
         int ix = indexOfGenericParameter(sName);
         if (ix >= 0) {
             // the formal name is declared at this level; don't traverse the contributions
             return extractGenericType(pool, ix, typeActual.getParamTypes());
         }
 
-        for (Contribution contrib : getContributionsAsList()) {
+        for (final Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib = contrib.getTypeConstant();
 
             if (typeContrib.containsUnresolved() || !typeContrib.isSingleUnderlyingClass(true)) {
@@ -1611,7 +1614,7 @@ public class ClassStructure
 
             case Incorporates:
                 fAllowInto = false;
-                // break through
+                // falls through
             case Delegates, Implements, Extends:
                 fCheck = true;
                 break;
@@ -1656,7 +1659,7 @@ public class ClassStructure
      *
      * @return the type corresponding to the specified formal type or null if cannot be determined
      */
-    private TypeConstant extractGenericType(ConstantPool pool, String sName, List<TypeConstant> list) {
+    private TypeConstant extractGenericType(final ConstantPool pool, final String sName, final List<TypeConstant> list) {
         int ix = indexOfGenericParameter(sName);
 
         return ix >= 0
@@ -1673,7 +1676,7 @@ public class ClassStructure
      *
      * @return the type corresponding to the specified formal type or null if cannot be determined
      */
-    private TypeConstant extractGenericType(ConstantPool pool, int ix, List<TypeConstant> list) {
+    private TypeConstant extractGenericType(final ConstantPool pool, final int ix, final List<TypeConstant> list) {
         if (isTuple()) {
             return pool.ensureTupleType(list.toArray(TypeConstant.NO_TYPES));
         }
@@ -1682,7 +1685,7 @@ public class ClassStructure
     }
 
     @Override
-    public void addAnnotation(Annotation annotation) {
+    public void addAnnotation(final Annotation annotation) {
         super.addAnnotation(annotation);
 
         // clear the cache
@@ -1694,12 +1697,12 @@ public class ClassStructure
 
     /**
      * Calculate assignability between two parameterized types of this class.
-     *
+     * <p>
      *  C<L1, L2, ...> lvalue = (C<R1, R2, ...>) rvalue;
      */
-    public Relation calculateAssignability(ConstantPool pool,
-                                           List<TypeConstant> listLeft, Access accessLeft,
-                                           List<TypeConstant> listRight) {
+    public Relation calculateAssignability(final ConstantPool pool,
+                                           final List<TypeConstant> listLeft, final Access accessLeft,
+                                           final List<TypeConstant> listRight) {
         int     cParamsLeft  = listLeft.size();
         int     cParamsRight = listRight.size();
         int     cParamsMax   = Math.max(cParamsRight, cParamsLeft);
@@ -1818,7 +1821,7 @@ public class ClassStructure
      *
      * @return the specified MethodStructure of null if not found
      */
-    public MethodStructure findMethod(String sName, int cArgs, TypeConstant... aType) {
+    public MethodStructure findMethod(final String sName, final int cArgs, final TypeConstant... aType) {
         return findMethod(sName, method -> {
             int cParamsAll     = method.getParamCount();
             int cParamsDefault = method.getDefaultParamCount();
@@ -1849,10 +1852,10 @@ public class ClassStructure
      *
      * @return the specified MethodStructure or null if not found
      */
-    public MethodStructure findMethod(String sName, Predicate<MethodStructure> test) {
+    public MethodStructure findMethod(final String sName, final Predicate<MethodStructure> test) {
         MultiMethodStructure structMM = (MultiMethodStructure) getChild(sName);
         if (structMM != null) {
-            for (MethodStructure method : structMM.methods()) {
+            for (final MethodStructure method : structMM.methods()) {
                 if (test.test(method)) {
                     return method;
                 }
@@ -1870,10 +1873,11 @@ public class ClassStructure
      *
      * @return the specified MethodStructure or null if not found
      */
-    public MethodStructure findMethodDeep(String sName, Predicate<MethodStructure> test) {
+    @SuppressWarnings("fallthrough")
+    public MethodStructure findMethodDeep(final String sName, final Predicate<MethodStructure> test) {
         MethodStructure method = findMethod(sName, test);
         if (method == null) {
-            for (Contribution contrib : getContributionsAsList()) {
+            for (final Contribution contrib : getContributionsAsList()) {
                 TypeConstant typeContrib = contrib.getTypeConstant();
                 switch (contrib.getComposition()) {
                 case Into:
@@ -1884,7 +1888,7 @@ public class ClassStructure
                     if (isIntoClassAnnotation(typeContrib)) {
                         break;
                     }
-                    // break through
+                    // falls through
                 case Incorporates:
                 case Extends:
                 case Implements: {
@@ -1917,7 +1921,7 @@ public class ClassStructure
      *
      * @throws IllegalStateException if the constructor cannot be found
      */
-    public MethodStructure findConstructor(TypeConstant... types) {
+    public MethodStructure findConstructor(final TypeConstant... types) {
         MethodStructure method = findMethod("construct", types.length, types);
         if (method == null) {
             throw new IllegalStateException(
@@ -1934,7 +1938,7 @@ public class ClassStructure
      *
      * @return the matching constructor or null, if not found
      */
-    public MethodStructure findConstructor(Constant[] aconstArgs, TypeConstant typeTarget) {
+    public MethodStructure findConstructor(final Constant[] aconstArgs, final TypeConstant typeTarget) {
         ConstantPool pool  = typeTarget.getConstantPool();
         int          cArgs = aconstArgs.length;
 
@@ -1952,7 +1956,7 @@ public class ClassStructure
                 // we know the ValueConstants do produce the right type by getType() method,
                 // but some others (as PropertyClassTypeConstant) require special handling;
                 // we may need to augment the logic below for other Constant sub-types
-                TypeConstant typeArg = constArg instanceof PropertyClassTypeConstant constProp
+                TypeConstant typeArg = constArg instanceof final PropertyClassTypeConstant constProp
                         ? constProp.getProperty().getValueType(pool, null)
                         : constArg.getType();
                 if (!typeArg.isA(atypeParam[i].resolveGenerics(pool, typeTarget))) {
@@ -1970,10 +1974,11 @@ public class ClassStructure
      *
      * @return the specified PropertyStructure or null if not found
      */
-    public PropertyStructure findPropertyDeep(String sName) {
+    @SuppressWarnings("fallthrough")
+    public PropertyStructure findPropertyDeep(final String sName) {
         Component component = getChild(sName);
         if (component == null) {
-            for (Contribution contrib : getContributionsAsList()) {
+            for (final Contribution contrib : getContributionsAsList()) {
                 TypeConstant typeContrib = contrib.getTypeConstant();
                 switch (contrib.getComposition()) {
                 case Into:
@@ -1984,7 +1989,7 @@ public class ClassStructure
                     if (isIntoClassAnnotation(typeContrib)) {
                         break;
                     }
-                    // break through
+                    // falls through
                 case Incorporates:
                 case Extends:
                 case Implements: {
@@ -2005,7 +2010,7 @@ public class ClassStructure
                 }
             }
         }
-        return component instanceof PropertyStructure prop ? prop : null;
+        return component instanceof final PropertyStructure prop ? prop : null;
     }
 
     /**
@@ -2018,8 +2023,8 @@ public class ClassStructure
      *
      * @return the best "isA" relation
      */
-    public Relation calculateRelation(ConstantPool pool,
-                                      TypeConstant typeLeft, TypeConstant typeRight) {
+    public Relation calculateRelation(final ConstantPool pool,
+                                      final TypeConstant typeLeft, final TypeConstant typeRight) {
         return calculateRelationImpl(pool, typeLeft, typeRight, true);
     }
 
@@ -2028,8 +2033,9 @@ public class ClassStructure
      *
      * @param fAllowInto specifies whether the "Into" contribution is to be skipped
      */
-    protected Relation calculateRelationImpl(ConstantPool pool,
-                                             TypeConstant typeLeft, TypeConstant typeRight,
+    @SuppressWarnings("fallthrough")
+    protected Relation calculateRelationImpl(final ConstantPool pool,
+                                             final TypeConstant typeLeft, final TypeConstant typeRight,
                                              boolean fAllowInto) {
         assert typeLeft.isSingleDefiningConstant();
 
@@ -2051,7 +2057,7 @@ public class ClassStructure
 
         case NativeClass:
             constIdLeft = ((NativeRebaseConstant) constIdLeft).getClassConstant();
-            // fall through
+            // falls through
         case Class:
             if (constIdLeft.equals(pool.clzObject())) {
                 return Relation.IS_A;
@@ -2155,7 +2161,7 @@ public class ClassStructure
 
         Relation relation = Relation.INCOMPATIBLE;
 
-        for (Contribution contrib : getContributionsAsList()) {
+        for (final Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib = contrib.getTypeConstant();
             Composition  composition = contrib.getComposition();
             switch (composition) {
@@ -2163,7 +2169,7 @@ public class ClassStructure
                 if (!fAllowInto) {
                     break;
                 }
-                // fall through
+                // falls through
             case Delegates:
             case Implements:
                 if (typeContrib.equals(pool.typeObject())) {
@@ -2185,7 +2191,7 @@ public class ClassStructure
                 if (isIntoClassAnnotation(typeContrib)) {
                     break;
                 }
-                // break through
+                // falls through
             case Incorporates:
                 fAllowInto = false;
             case Extends: {
@@ -2260,11 +2266,11 @@ public class ClassStructure
      *
      * @return the relation
      */
-    public Relation findUnionContribution(ConstantPool pool, UnionTypeConstant typeLeft,
-                                          List<TypeConstant> listRight) {
+    public Relation findUnionContribution(final ConstantPool pool, final UnionTypeConstant typeLeft,
+                                          final List<TypeConstant> listRight) {
         Relation relation = Relation.INCOMPATIBLE;
 
-        for (Contribution contrib : getContributionsAsList()) {
+        for (final Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib = contrib.getTypeConstant();
             switch (contrib.getComposition()) {
             case Extends: {
@@ -2317,24 +2323,25 @@ public class ClassStructure
      * Determine if this template consumes a formal type with the specified name for the specified
      * access policy.
      */
-    public boolean consumesFormalType(ConstantPool pool,
-                                      String sName, Access access, List<TypeConstant> listActual) {
+    public boolean consumesFormalType(final ConstantPool pool,
+                                      final String sName, final Access access, final List<TypeConstant> listActual) {
         return consumesFormalTypeImpl(pool, sName, access, listActual, true);
     }
 
-    protected boolean consumesFormalTypeImpl(ConstantPool pool, String sName, Access access,
-                                             List<TypeConstant> listActual, boolean fAllowInto) {
+    @SuppressWarnings("fallthrough")
+    protected boolean consumesFormalTypeImpl(final ConstantPool pool, final String sName, final Access access,
+                                             final List<TypeConstant> listActual, boolean fAllowInto) {
         assert indexOfGenericParameter(sName) >= 0;
 
-        for (Component child : children()) {
-            if (child instanceof MultiMethodStructure mms) {
-                for (MethodStructure method : mms.methods()) {
+        for (final Component child : children()) {
+            if (child instanceof final MultiMethodStructure mms) {
+                for (final MethodStructure method : mms.methods()) {
                     if (!method.isStatic() && method.isAccessible(access)
                             && method.consumesFormalType(sName)) {
                         return true;
                     }
                 }
-            } else if (child instanceof PropertyStructure property) {
+            } else if (child instanceof final PropertyStructure property) {
                 if (property.isGenericTypeParameter()) {
                     // generic types don't consume
                     continue;
@@ -2363,7 +2370,7 @@ public class ClassStructure
         }
 
         // check the contributions
-        for (Contribution contrib : getContributionsAsList()) {
+        for (final Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib = contrib.getTypeConstant();
             switch (contrib.getComposition()) {
             case Delegates:
@@ -2380,10 +2387,10 @@ public class ClassStructure
                 if (isIntoClassAnnotation(typeContrib)) {
                     continue;
                 }
-                // break through
+                // falls through
             case Incorporates:
                 fAllowInto = false;
-                // break through
+                // falls through
             case Extends:
                 // the identity constant for those contributions is always a class
                 assert typeContrib.isExplicitClassIdentity(true);
@@ -2443,24 +2450,25 @@ public class ClassStructure
      * Determine if this template produces a formal type with the specified name for the
      * specified access policy.
      */
-    public boolean producesFormalType(ConstantPool pool, String sName, Access access,
-                                      List<TypeConstant> listActual) {
+    public boolean producesFormalType(final ConstantPool pool, final String sName, final Access access,
+                                      final List<TypeConstant> listActual) {
         return producesFormalTypeImpl(pool, sName, access, listActual, true);
     }
 
-    protected boolean producesFormalTypeImpl(ConstantPool pool, String sName, Access access,
-                                             List<TypeConstant> listActual, boolean fAllowInto) {
+    @SuppressWarnings("fallthrough")
+    protected boolean producesFormalTypeImpl(final ConstantPool pool, final String sName, final Access access,
+                                             final List<TypeConstant> listActual, boolean fAllowInto) {
         assert indexOfGenericParameter(sName) >= 0;
 
-        for (Component child : children()) {
-            if (child instanceof MultiMethodStructure mms) {
-                for (MethodStructure method : mms.methods()) {
+        for (final Component child : children()) {
+            if (child instanceof final MultiMethodStructure mms) {
+                for (final MethodStructure method : mms.methods()) {
                     if (!method.isStatic() && method.isAccessible(access)
                             && method.producesFormalType(sName)) {
                         return true;
                     }
                 }
-            } else if (child instanceof PropertyStructure property) {
+            } else if (child instanceof final PropertyStructure property) {
                 if (property.isGenericTypeParameter()) {
                     // generic types don't produce
                     continue;
@@ -2489,7 +2497,7 @@ public class ClassStructure
         }
 
         // check the contributions
-        for (Contribution contrib : getContributionsAsList()) {
+        for (final Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib = contrib.getTypeConstant();
             switch (contrib.getComposition()) {
             case Delegates:
@@ -2506,10 +2514,10 @@ public class ClassStructure
                 if (isIntoClassAnnotation(typeContrib)) {
                     continue;
                 }
-                // break through
+                // falls through
             case Incorporates:
                 fAllowInto = false;
-                // break through
+                // falls through
             case Extends:
                 // the identity constant for those contributions is always a class
                 assert typeContrib.isExplicitClassIdentity(true);
@@ -2575,14 +2583,14 @@ public class ClassStructure
      *
      * @return a set of method/property signatures that don't have a match
      */
-    public Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessRight,
-                                                            List<TypeConstant> listLeft) {
+    public Set<SignatureConstant> isInterfaceAssignableFrom(final TypeConstant typeRight, final Access accessRight,
+                                                            final List<TypeConstant> listLeft) {
         ConstantPool           pool     = typeRight.getConstantPool();
         Set<SignatureConstant> setMiss  = new HashSet<>();
         GenericTypeResolver    resolver = null;
 
-        for (Component child : children()) {
-            if (child instanceof PropertyStructure prop) {
+        for (final Component child : children()) {
+            if (child instanceof final PropertyStructure prop) {
                 if (prop.isGenericTypeParameter()) {
                     if (!typeRight.containsGenericParam(prop.getName())) {
                         setMiss.add(prop.getIdentityConstant().getSignature());
@@ -2606,8 +2614,8 @@ public class ClassStructure
                         setMiss.add(sig);
                     }
                 }
-            } else if (child instanceof MultiMethodStructure mms) {
-                for (MethodStructure method : mms.methods()) {
+            } else if (child instanceof final MultiMethodStructure mms) {
+                for (final MethodStructure method : mms.methods()) {
                     if (!method.isAccessible(accessRight)) {
                         continue;
                     }
@@ -2645,7 +2653,7 @@ public class ClassStructure
             }
         }
 
-        for (Contribution contrib : getContributionsAsList()) {
+        for (final Contribution contrib : getContributionsAsList()) {
             if (contrib.getComposition() == Composition.Implements) {
                 TypeConstant typeResolved = contrib.resolveType(pool, this, listLeft);
                 if (typeResolved.containsUnresolved()) {
@@ -2675,21 +2683,22 @@ public class ClassStructure
      *
      * @return true iff there is a matching method or property
      */
-    public boolean containsSubstitutableMethod(ConstantPool pool, SignatureConstant signature,
-                                               Access access, boolean fFunction,
-                                               List<TypeConstant> listParams) {
+    public boolean containsSubstitutableMethod(final ConstantPool pool, final SignatureConstant signature,
+                                               final Access access, final boolean fFunction,
+                                               final List<TypeConstant> listParams) {
         return containsSubstitutableMethodImpl(pool, signature, access, fFunction,
                 listParams, getIdentityConstant(), true);
     }
 
-    protected boolean containsSubstitutableMethodImpl(ConstantPool pool, SignatureConstant signature,
-                                                      Access access, boolean fFunction,
-                                                      List<TypeConstant> listParams,
-                                                      IdentityConstant idClass, boolean fAllowInto) {
+    @SuppressWarnings("fallthrough")
+    protected boolean containsSubstitutableMethodImpl(final ConstantPool pool, final SignatureConstant signature,
+                                                      final Access access, final boolean fFunction,
+                                                      final List<TypeConstant> listParams,
+                                                      final IdentityConstant idClass, boolean fAllowInto) {
         Component child = getChild(signature.getName());
 
         if (signature.isProperty()) {
-            if (child instanceof PropertyStructure prop) {
+            if (child instanceof final PropertyStructure prop) {
                 // TODO: should we check the "Var" access?
                 if (!prop.isStatic() &&
                         prop.isRefAccessible(access) &&
@@ -2698,12 +2707,12 @@ public class ClassStructure
                 }
             }
         } else {
-            if (child instanceof MultiMethodStructure mms) {
+            if (child instanceof final MultiMethodStructure mms) {
                 GenericTypeResolver resolver = listParams.isEmpty()
                         ? null
                         : new SimpleTypeResolver(pool, listParams);
 
-                for (MethodStructure method : mms.methods()) {
+                for (final MethodStructure method : mms.methods()) {
                     SignatureConstant sigMethod = method.getIdentityConstant().getSignature();
                     if (method.isAccessible(access) && method.isFunction() == fFunction) {
                         if (!fFunction) {
@@ -2718,7 +2727,7 @@ public class ClassStructure
         }
 
         // check the contributions
-        for (Contribution contrib : getContributionsAsList()) {
+        for (final Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib = contrib.getTypeConstant();
             if (typeContrib.containsUnresolved()) {
                 continue;
@@ -2740,10 +2749,10 @@ public class ClassStructure
                 if (isIntoClassAnnotation(typeContrib)) {
                     continue;
                 }
-                // break through
+                // falls through
             case Incorporates:
                 fAllowInto = false;
-                // break through
+                // falls through
             case Extends:
                 // the identity constant for these contributions is always a class
                 assert typeContrib.isExplicitClassIdentity(true);
@@ -2794,13 +2803,13 @@ public class ClassStructure
      *
      * @return the [synthetic] MethodStructure for the corresponding default constructor
      */
-    public MethodStructure createInitializer(ConstantPool pool, TypeConstant typeStruct,
-                                             Map<Object, FieldInfo> mapFields) {
+    public MethodStructure createInitializer(final ConstantPool pool, final TypeConstant typeStruct,
+                                             final Map<Object, FieldInfo> mapFields) {
         int nFlags = Format.METHOD.ordinal() | Access.PUBLIC.FLAGS | STATIC_BIT | SYNTHETIC_BIT;
 
         // create a transient MethodStructure (without an intermediate MultiMethodStructure)
         MethodConstant idMethod = pool.ensureMethodConstant(
-                (IdentityConstant) pool.register(getIdentityConstant()),
+                pool.register(getIdentityConstant()),
                 "default", TypeConstant.NO_TYPES, TypeConstant.NO_TYPES);
 
         // use the module as a parent component without adding the method as a child
@@ -2813,9 +2822,9 @@ public class ClassStructure
         assert typeStruct.getAccess() == Access.STRUCT;
 
         TypeInfo infoStruct = typeStruct.ensureTypeInfo();
-        for (Map.Entry<Object, FieldInfo> entry : mapFields.entrySet()) {
+        for (final Map.Entry<Object, FieldInfo> entry : mapFields.entrySet()) {
             Object       nid      = entry.getKey();
-            PropertyInfo infoProp = nid instanceof PropertyConstant idProp
+            PropertyInfo infoProp = nid instanceof final PropertyConstant idProp
                     ? infoStruct.findProperty(idProp)
                     : infoStruct.findPropertyByNid(nid);
 
@@ -2862,7 +2871,7 @@ public class ClassStructure
                 // by the constructor (see ClassTemplate#proceedConstruction)
                 code.add(new Op() {
                     @Override
-                    public int process(Frame frame, int iPC) {
+                    public int process(final Frame frame, final int iPC) {
                         GenericHandle hStruct = (GenericHandle) frame.getThis();
                         RefHandle     hRef    = (RefHandle) hStruct.getField(frame, idField);
 
@@ -2871,7 +2880,7 @@ public class ClassStructure
                     }
 
                     @Override
-                    public void write(DataOutput out, ConstantRegistry registry) {
+                    public void write(final DataOutput out, final ConstantRegistry registry) {
                     }
 
                     @Override
@@ -2902,7 +2911,7 @@ public class ClassStructure
      * @return a synthetic MethodStructure that has the auto-generated delegating code
      */
     public MethodStructure ensurePropertyDelegation(
-            PropertyStructure prop, PropertyStructure propTarget, SignatureConstant sigAccessor) {
+            final PropertyStructure prop, final PropertyStructure propTarget, final SignatureConstant sigAccessor) {
         PropertyStructure propHost = (PropertyStructure) getChild(prop.getName());
         if (propHost == null) {
             assert !prop.isStatic();
@@ -2967,7 +2976,7 @@ public class ClassStructure
      *
      * @return a synthetic MethodStructure that has the auto-generated delegating code
      */
-    public MethodStructure ensureMethodDelegation(MethodStructure method, String sDelegate) {
+    public MethodStructure ensureMethodDelegation(final MethodStructure method, final String sDelegate) {
         SignatureConstant sig            = method.getIdentityConstant().getSignature();
         MethodStructure   methodDelegate = findMethod(sig);
         if (methodDelegate == null) {
@@ -2978,7 +2987,7 @@ public class ClassStructure
             PropertyInfo infoDelegate = infoPrivate.findProperty(sDelegate);
             TypeConstant typeDelegate = infoDelegate.getType();
 
-            Annotation[] aAnnos       = new Annotation[] {pool.ensureAnnotation(pool.clzOverride())};
+            Annotation[] aAnnos       = {pool.ensureAnnotation(pool.clzOverride())};
             Parameter[]  aParams      = method.getParamArray().clone();
             Parameter[]  aReturns     = method.getReturnArray().clone();
 
@@ -3115,10 +3124,10 @@ public class ClassStructure
 
     /**
      * Create necessary method structures for the Const interface functions and methods.
-     *
+     * <p>
      * All the methods that are created artificially will be marked as "transient" and should not be
      * persisted during the serialization phase.
-     *
+     * <p>
      * Note: we should not call "registerConstants()" for generated code when called during the
      *       compilation phase; it will be done by the compiler.
      *
@@ -3129,7 +3138,7 @@ public class ClassStructure
      *                  created from the source code, at which point only the pertinent structures
      *                  need to be created
      */
-    public void synthesizeConstInterface(boolean fRuntime) {
+    public void synthesizeConstInterface(final boolean fRuntime) {
         assert getFormat() == Format.CONST;
 
         ConstantPool pool = getConstantPool();
@@ -3143,7 +3152,7 @@ public class ClassStructure
     /**
      * Synthesize the function if it doesn't exist.
      */
-    private void synthesizeConstFunction(String sName, int cParams, TypeConstant typeReturn) {
+    private void synthesizeConstFunction(final String sName, final int cParams, final TypeConstant typeReturn) {
         Predicate<MethodStructure> test = method -> {
             if (    method.getTypeParamCount() != 1
                  || method.getParamCount()     != 1  + cParams
@@ -3184,7 +3193,7 @@ public class ClassStructure
                 }
             }
 
-            Parameter[] aReturn = new Parameter[] {
+            Parameter[] aReturn = {
                 new Parameter(pool, typeReturn, null, null, true, 0, false)
             };
 
@@ -3214,7 +3223,7 @@ public class ClassStructure
      * If explicit "toString()" exists, not using the "super()", and "appendTo()" does not exist,
      * generate "appendTo()" to route to "toString" and a trivial "estimateStringLength".
      */
-    private void synthesizeAppendTo(boolean fGenerateCode) {
+    private void synthesizeAppendTo(final boolean fGenerateCode) {
         MethodStructure methToString = findMethod("toString", 0);
         if (methToString != null && !methToString.usesSuper()) {
             ConstantPool pool         = getConstantPool();
@@ -3223,13 +3232,13 @@ public class ClassStructure
 
             MethodStructure methAppendTo = findMethod("appendTo", 1, typeAppender);
             if (methAppendTo == null) {
-                Parameter[] aRet = new Parameter[] {
+                Parameter[] aRet = {
                     new Parameter(pool, typeAppender, null, null, true, 0, false)
                 };
-                Parameter[] aParam = new Parameter[] {
+                Parameter[] aParam = {
                     new Parameter(pool, typeAppender, "appender", null, false, 0, false)
                 };
-                Annotation[] aAnno = new Annotation[] {
+                Annotation[] aAnno = {
                     pool.ensureAnnotation(pool.clzOverride())
                 };
 
@@ -3256,7 +3265,7 @@ public class ClassStructure
                     code.add(new Invoke_11(regString, idAppendTo, regAppender, regResult));
                     code.add(new Return_1(regResult));
 
-                    RegisterAST[] aAstReg = new RegisterAST[] {(RegisterAST) regAppender.getRegisterAST()};
+                    RegisterAST[] aAstReg = {(RegisterAST) regAppender.getRegisterAST()};
                     ExprAST astToString = new InvokeExprAST(
                             idToString, new TypeConstant[]{regString.getType()},
                             regThis.getRegisterAST(), ExprAST.NO_EXPRS, false);
@@ -3270,7 +3279,7 @@ public class ClassStructure
 
                 MethodStructure methEstimate = findMethod("estimateStringLength", 0);
                 if (methEstimate == null) {
-                    Parameter[] aReturn = new Parameter[] {
+                    Parameter[] aReturn = {
                         new Parameter(pool, pool.typeInt64(), null, null, true, 0, false)
                     };
                     methEstimate = createMethod(/*function*/ false, Constants.Access.PUBLIC, aAnno,
@@ -3297,7 +3306,7 @@ public class ClassStructure
     // ----- XvmStructure/Component methods --------------------------------------------------------
 
     @Override
-    protected void disassemble(DataInput in)
+    protected void disassemble(final DataInput in)
             throws IOException {
         super.disassemble(in);
 
@@ -3316,12 +3325,12 @@ public class ClassStructure
     }
 
     @Override
-    protected void registerConstants(ConstantPool pool) {
+    protected void registerConstants(final ConstantPool pool) {
         super.registerConstants(pool);
 
         // register the type parameters
         m_mapParams = registerTypeParams(m_mapParams);
-        m_constPath = (LiteralConstant) pool.register(m_constPath);
+        m_constPath = pool.register(m_constPath);
 
         // invalidate cached types
         m_typeCanonical = null;
@@ -3329,7 +3338,7 @@ public class ClassStructure
     }
 
     @Override
-    protected void assemble(DataOutput out)
+    protected void assemble(final DataOutput out)
             throws IOException {
         super.assemble(out);
 
@@ -3344,7 +3353,7 @@ public class ClassStructure
         // we cannot use the "collectAnnotations" API at this time, since our module may not yet
         // be linked
         List<Annotation> listAnno = null;
-        for (Contribution contrib : getContributionsAsList()) {
+        for (final Contribution contrib : getContributionsAsList()) {
             if (contrib.getComposition() == Composition.Annotation) {
                 if (listAnno == null) {
                     listAnno = new ArrayList<>();
@@ -3355,9 +3364,7 @@ public class ClassStructure
 
         return listAnno == null
                 ? super.getContained()
-                : new LinkedIterator<XvmStructure>(
-                        (Iterator<XvmStructure>) super.getContained(),
-                        (Iterator<XvmStructure>) (Iterator<?>) listAnno.iterator());
+                : new LinkedIterator<>((Iterator<XvmStructure>)super.getContained(), (Iterator<XvmStructure>)(Iterator<?>)listAnno.iterator());
     }
 
     @Override
@@ -3372,7 +3379,7 @@ public class ClassStructure
         } else {
             sb.append('<');
             boolean fFirst = true;
-            for (Map.Entry<StringConstant, TypeConstant> entry : map.entrySet()) {
+            for (final Map.Entry<StringConstant, TypeConstant> entry : map.entrySet()) {
                 if (fFirst) {
                     fFirst = false;
                 } else {
@@ -3412,7 +3419,7 @@ public class ClassStructure
      * @throws IOException  if an I/O exception occurs during disassembly from the provided
      *                      DataInput stream, or if there is invalid data in the stream
      */
-    protected ListMap<StringConstant, TypeConstant> disassembleTypeParams(DataInput in)
+    protected ListMap<StringConstant, TypeConstant> disassembleTypeParams(final DataInput in)
         throws IOException {
         int c = readMagnitude(in);
         if (c <= 0) {
@@ -3438,19 +3445,19 @@ public class ClassStructure
      *
      * @return the map of registered type parameters (might be different from the map passed in)
      */
-    protected ListMap<StringConstant, TypeConstant> registerTypeParams(ListMap<StringConstant, TypeConstant> mapOld) {
+    protected ListMap<StringConstant, TypeConstant> registerTypeParams(final ListMap<StringConstant, TypeConstant> mapOld) {
         if (mapOld == null || mapOld.isEmpty()) {
             return mapOld;
         }
 
         ConstantPool                          pool   = getConstantPool();
         ListMap<StringConstant, TypeConstant> mapNew = mapOld;
-        for (Map.Entry<StringConstant, TypeConstant> entry : mapOld.entrySet()) {
+        for (final Map.Entry<StringConstant, TypeConstant> entry : mapOld.entrySet()) {
             StringConstant constOldKey = entry.getKey();
-            StringConstant constNewKey = (StringConstant) pool.register(constOldKey);
+            StringConstant constNewKey = pool.register(constOldKey);
 
             TypeConstant   constOldVal = entry.getValue();
-            TypeConstant   constNewVal = (TypeConstant) pool.register(constOldVal);
+            TypeConstant   constNewVal = pool.register(constOldVal);
 
             if (mapNew != mapOld || constOldKey != constNewKey) {
                 if (mapNew == mapOld) {
@@ -3458,7 +3465,7 @@ public class ClassStructure
                     // key (which map does not support), so create a new map, and copy the old map
                     // to the new map, but only up to (but not including!) the current entry
                     mapNew = new ListMap<>();
-                    for (Map.Entry<StringConstant, TypeConstant> entryCopy : mapOld.entrySet()) {
+                    for (final Map.Entry<StringConstant, TypeConstant> entryCopy : mapOld.entrySet()) {
                         if (entryCopy.getKey() == constOldKey) {
                             break;
                         }
@@ -3484,7 +3491,7 @@ public class ClassStructure
      * @throws IOException  if an I/O exception occurs during assembly to the provided DataOutput
      *                      stream
      */
-    protected void assembleTypeParams(ListMap<StringConstant, TypeConstant> map, DataOutput out)
+    protected static void assembleTypeParams(final ListMap<StringConstant, TypeConstant> map, final DataOutput out)
         throws IOException {
         int c = map == null ? 0 : map.size();
         writePackedLong(out, c);
@@ -3493,7 +3500,7 @@ public class ClassStructure
             return;
         }
 
-        for (Map.Entry<StringConstant, TypeConstant> entry : map.entrySet()) {
+        for (final Map.Entry<StringConstant, TypeConstant> entry : map.entrySet()) {
             writePackedLong(out, entry.getKey().getPosition());
             writePackedLong(out, entry.getValue().getPosition());
         }
@@ -3509,16 +3516,17 @@ public class ClassStructure
      *
      * @return the specified component, or null
      */
-    public Component getNestedChild(Object id) {
+    @SuppressWarnings("unused")
+    public Component getNestedChild(final Object id) {
         return switch (id) {
             // a null identity indicates the class itself
             case null -> this;
 
             // immediately-nested properties are identified by using only a string name
-            case String sName -> getChild(sName);
+            case final String sName -> getChild(sName);
 
             // immediately-nested multi-method/method combinations are identified by using only a sig
-            case SignatureConstant sig -> findMethod(sig);
+            case final SignatureConstant sig -> findMethod(sig);
 
             default -> ((NestedIdentity) id).getIdentityConstant().relocateNestedIdentity(this);
         };
@@ -3531,7 +3539,7 @@ public class ClassStructure
      *
      * @return the corresponding method
      */
-    public MethodStructure ensureSyntheticMethod(SignatureConstant sig) {
+    public MethodStructure ensureSyntheticMethod(final SignatureConstant sig) {
         assert isSynthetic();
 
         MethodStructure method = findMethod(sig);
@@ -3566,7 +3574,7 @@ public class ClassStructure
      *
      * @return the corresponding property
      */
-    public PropertyStructure ensureSyntheticProperty(String sName, TypeConstant type) {
+    public PropertyStructure ensureSyntheticProperty(final String sName, final TypeConstant type) {
         assert isSynthetic();
 
         PropertyStructure prop = (PropertyStructure) getChild(sName);
@@ -3580,12 +3588,12 @@ public class ClassStructure
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(final Object obj) {
         if (obj == this) {
             return true;
         }
 
-        if (!(obj instanceof ClassStructure that) || !super.equals(obj)) {
+        if (!(obj instanceof final ClassStructure that) || !super.equals(obj)) {
             return false;
         }
 
@@ -3607,11 +3615,11 @@ public class ClassStructure
      * @param pool  the ConstantPool to use
      * @param errs  the error listener
      */
-    public void addImplicitTypeParameters(ConstantPool pool, ErrorListener errs) {
+    public void addImplicitTypeParameters(final ConstantPool pool, final ErrorListener errs) {
         assert getFormat() == Format.MIXIN || getFormat() == Format.ANNOTATION;
 
         ListMap<String, TypeConstant> mapTypeParams = null;
-        for (Contribution contrib : getContributionsAsList()) {
+        for (final Contribution contrib : getContributionsAsList()) {
             switch (contrib.getComposition()) {
             case Extends:
             case Implements:
@@ -3658,7 +3666,7 @@ public class ClassStructure
             }
 
             // collect the formal types and verify that there are no collisions
-            for (TypeConstant typeParam : atypeGeneric) {
+            for (final TypeConstant typeParam : atypeGeneric) {
                 assert typeParam.isGenericType();
 
                 PropertyConstant idParam        = (PropertyConstant) typeParam.getDefiningConstant();
@@ -3682,7 +3690,7 @@ public class ClassStructure
         }
 
         if (mapTypeParams != null) {
-            for (Map.Entry<String, TypeConstant> entry : mapTypeParams.entrySet()) {
+            for (final Map.Entry<String, TypeConstant> entry : mapTypeParams.entrySet()) {
                 addTypeParam(entry.getKey(), entry.getValue())
                          .setSynthetic(true);
             }
@@ -3703,7 +3711,8 @@ public class ClassStructure
          * @param pool        the ConstantPool to use
          * @param listActual  the actual type list
          */
-        public SimpleTypeResolver(ConstantPool pool, List<TypeConstant> listActual) {
+        @SuppressWarnings("this-escape") // 'this' is intentionally passed to resolveGenerics
+        public SimpleTypeResolver(final ConstantPool pool, List<TypeConstant> listActual) {
             f_pool       = pool;
             m_listActual = listActual;
 
@@ -3721,7 +3730,7 @@ public class ClassStructure
                     List<Map.Entry<StringConstant, TypeConstant>> entries = getTypeParamsAsList();
 
                     if (id.equals(pool.clzClass()) && cActual > 0) {
-                        TypeConstant typePublic = listActual.get(0);
+                        TypeConstant typePublic = listActual.getFirst();
                         if (typePublic.isSingleUnderlyingClass(false) && !typePublic.isFormalType()) {
                             // we know a bit more about the relationship between Class formal types;
                             // prime them accordingly
@@ -3761,7 +3770,7 @@ public class ClassStructure
         }
 
         @Override
-        public TypeConstant resolveGenericType(String sFormalName) {
+        public TypeConstant resolveGenericType(final String sFormalName) {
             return extractGenericType(f_pool, sFormalName, m_listActual);
         }
 

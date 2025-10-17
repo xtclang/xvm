@@ -67,7 +67,7 @@ public class MapExprAST
 
     @Override
     public void prepareWrite(ConstantResolver res) {
-        type = (TypeConstant) res.register(type);
+        type = res.register(type);
         prepareASTArray(keys, res);
         prepareASTArray(values, res);
     }

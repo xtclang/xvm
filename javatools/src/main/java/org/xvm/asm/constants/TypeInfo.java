@@ -845,6 +845,7 @@ public class TypeInfo {
     /**
      * @return all properties for this type sorted by their {@link PropertyInfo#getRank() rank}
      */
+    @SuppressWarnings("unchecked") // generic array creation
     public Entry<PropertyConstant, PropertyInfo>[] sortedProperties() {
         Entry<PropertyConstant, PropertyInfo>[] aEntry = f_mapProps.entrySet().toArray(new Entry[0]);
         if (aEntry.length > 1) {
@@ -1189,6 +1190,7 @@ public class TypeInfo {
     /**
      * @return all methods for this type sorted by their {@link MethodInfo#getRank() rank}
      */
+    @SuppressWarnings("unchecked") // generic array creation
     public Entry<MethodConstant, MethodInfo>[] sortedMethods() {
         Entry<MethodConstant, MethodInfo>[] aEntry = f_mapMethods.entrySet().toArray(new Entry[0]);
         if (aEntry.length > 1) {

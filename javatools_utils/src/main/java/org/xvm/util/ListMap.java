@@ -25,11 +25,10 @@ public class ListMap<K,V> extends AbstractMap<K,V> {
      *
      * @param cInitSize  the initial capacity; negative value indicates an immutable empty map
      */
-    @SuppressWarnings("unchecked") // Safe: EMPTY_ARRAY_LIST is empty and immutable
     public ListMap(final int cInitSize) {
         m_list = cInitSize >= 0
             ? new ArrayList<>(cInitSize)
-            : (ArrayList<SimpleEntry<K,V>>) EMPTY_ARRAY_LIST;
+            : emptyArrayList();
     }
 
     /**
@@ -66,9 +65,8 @@ public class ListMap<K,V> extends AbstractMap<K,V> {
      *
      * @return the entries of the map in a List
      */
-    @SuppressWarnings("unchecked") // Safe: SimpleEntry<K,V> extends Entry<K,V>
     public List<Entry<K,V>> asList() {
-        return (List<Entry<K,V>>) (List<?>) m_list;
+        return m_list;
     }
 
     /**
@@ -89,8 +87,8 @@ public class ListMap<K,V> extends AbstractMap<K,V> {
      *
      * @return the entry if it exists; otherwise null
      */
-    protected SimpleEntry<K,V> getEntry(final Object key) {
-        for (final SimpleEntry<K, V> entry : m_list) { // avoid Iterator creation
+    protected Entry<K,V> getEntry(final Object key) {
+        for (final Entry<K, V> entry : m_list) { // avoid Iterator creation
             if (entry.getKey().equals(key)) {
                 return entry;
             }
@@ -101,15 +99,14 @@ public class ListMap<K,V> extends AbstractMap<K,V> {
 
     @Override
     public V get(final Object key) {
-        SimpleEntry<K, V> entry = getEntry(key);
+        Entry<K, V> entry = getEntry(key);
         return entry == null ? null : entry.getValue();
     }
 
     /**
-     * The contents of the map are stored in an ArrayList of SimpleEntry
-     * objects.
+     * The contents of the map are stored in an ArrayList of Entry objects.
      */
-    private final ArrayList<SimpleEntry<K, V>> m_list;
+    private final ArrayList<Entry<K, V>> m_list;
 
     /**
      * The AbstractMap implementation needs an underlying "entry set" to be
@@ -117,9 +114,8 @@ public class ListMap<K,V> extends AbstractMap<K,V> {
      */
     private final Set<Entry<K, V>> m_setEntries = new AbstractSet<>() {
         @Override
-        @SuppressWarnings("unchecked") // Safe: SimpleEntry<K,V> extends Entry<K,V>
         public Iterator<Entry<K, V>> iterator() {
-            return (Iterator<Entry<K, V>>) (Iterator<?>) m_list.iterator();
+            return m_list.iterator();
         }
 
         @Override
@@ -134,6 +130,19 @@ public class ListMap<K,V> extends AbstractMap<K,V> {
     private static final ArrayList<?> EMPTY_ARRAY_LIST = new ArrayList<>(0);
 
     /**
+     * Helper method to cast the empty ArrayList to the correct type.
+     *
+     * @param <K>  the key type
+     * @param <V>  the value type
+     *
+     * @return an empty ArrayList with the correct type parameters
+     */
+    @SuppressWarnings("unchecked") // Safe: EMPTY_ARRAY_LIST is empty and immutable
+    private static <K, V> ArrayList<Entry<K, V>> emptyArrayList() {
+        return (ArrayList<Entry<K, V>>) (ArrayList<?>) EMPTY_ARRAY_LIST;
+    }
+
+    /**
      * An empty ListMap.
      */
     public static final ListMap<?, ?> EMPTY = new ListMap<>(-1);
@@ -146,7 +155,7 @@ public class ListMap<K,V> extends AbstractMap<K,V> {
      *
      * @return an empty ListMap with the correct type parameters
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings("unchecked") // Safe: EMPTY is empty and immutable
     public static <K, V> ListMap<K, V> empty() {
         return (ListMap<K, V>) EMPTY;
     }

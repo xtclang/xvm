@@ -71,7 +71,7 @@ public class BindMethodAST
     public void prepareWrite(ConstantResolver res) {
         target.prepareWrite(res);
         method = res.register(method);
-        type   = (TypeConstant) res.register(type);
+        type   = res.register(type);
     }
 
     @Override

@@ -154,7 +154,7 @@ public class AssignAST
     public void prepareWrite(ConstantResolver res) {
         lhs.prepareWrite(res);
         rhs.prepareWrite(res);
-        method = (MethodConstant) res.register(method);
+        method = res.register(method);
     }
 
     @Override

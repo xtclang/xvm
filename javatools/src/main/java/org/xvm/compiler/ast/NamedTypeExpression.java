@@ -84,6 +84,7 @@ public class NamedTypeExpression
     /**
      * Construct a synthetic validated NamedTypeExpression.
      */
+    @SuppressWarnings("this-escape") // setTypeConstant is overridden but safe to call here
     public NamedTypeExpression(Expression exprSource, TypeConstant type) {
         this.left       = null;
         this.immutable  = null;

@@ -155,7 +155,7 @@ public class DecoratedClassConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_type = (TypeConstant) pool.register(m_type);
+        m_type = pool.register(m_type);
     }
 
     @Override

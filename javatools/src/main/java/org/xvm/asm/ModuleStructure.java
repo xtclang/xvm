@@ -435,9 +435,9 @@ public class ModuleStructure
      * @return a VersionTree that provides a catalog of all versions of this module that are present
      */
     public VersionTree<Boolean> getVersions() {
-        VersionTree vtree = m_vtree;
+        VersionTree<Boolean> vtree = m_vtree;
         if (vtree == null) {
-            collectVersions(m_vtree = vtree = new VersionTree());
+            collectVersions(m_vtree = vtree = new VersionTree<>());
         }
         return vtree;
     }
@@ -445,7 +445,7 @@ public class ModuleStructure
     /**
      * An implementation for {@link #getVersions()}
      */
-    protected void collectVersions(VersionTree vtree) {
+    protected void collectVersions(VersionTree<Boolean> vtree) {
         ModuleStructure module = this;
         do {
             Version version = module.getVersion();
@@ -743,11 +743,11 @@ public class ModuleStructure
                 pool.ensureVersionConstant(ver);
             }
         } else if (m_constVersion != null) {
-            m_constVersion = (VersionConstant) pool.register(m_constVersion);
+            m_constVersion = pool.register(m_constVersion);
         }
 
-        m_constDir       = (LiteralConstant) pool.register(m_constDir);
-        m_constTimestamp = (LiteralConstant) pool.register(m_constTimestamp);
+        m_constDir       = pool.register(m_constDir);
+        m_constTimestamp = pool.register(m_constTimestamp);
     }
 
     @Override

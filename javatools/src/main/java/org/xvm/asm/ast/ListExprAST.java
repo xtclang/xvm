@@ -58,7 +58,7 @@ public class ListExprAST
 
     @Override
     public void prepareWrite(ConstantResolver res) {
-        type = (TypeConstant) res.register(type);
+        type = res.register(type);
         prepareASTArray(values, res);
     }
 

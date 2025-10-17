@@ -78,7 +78,7 @@ public abstract class Constant
      *
      * @param pool  the containing constant pool
      */
-    protected Constant(ConstantPool pool) {
+    protected Constant(final ConstantPool pool) {
         super(pool);
     }
 
@@ -175,7 +175,7 @@ public abstract class Constant
      *
      * @return a Constant of the specified type, if possible, otherwise the constant for False
      */
-    public static Constant defaultValue(TypeConstant type) {
+    public static Constant defaultValue(final TypeConstant type) {
         ConstantPool pool = type.getConstantPool();
         switch (type.getEcstasyClassName()) {
         default:
@@ -280,7 +280,7 @@ public abstract class Constant
      *
      * @return the result as a Constant
      */
-    public Constant apply(Token.Id op, Constant that) {
+    public Constant apply(final Token.Id op, final Constant that) {
         if (that instanceof DeferredValueConstant) {
             return that;
         }
@@ -298,7 +298,7 @@ public abstract class Constant
      *
      * @throws ArithmeticException  on overflow
      */
-    public Constant convertTo(TypeConstant typeOut) {
+    public Constant convertTo(final TypeConstant typeOut) {
         return getType().isA(typeOut) ? this : null;
     }
 
@@ -309,11 +309,11 @@ public abstract class Constant
      *
      * @return the new Constant
      */
-    protected Constant adoptedBy(ConstantPool pool) {
+    protected Constant adoptedBy(final ConstantPool pool) {
         Constant that;
         try {
             that = (Constant) super.clone();
-        } catch (CloneNotSupportedException e) {
+        } catch (final CloneNotSupportedException e) {
             throw new IllegalStateException(e);
         }
         that.setContaining(pool);
@@ -327,16 +327,16 @@ public abstract class Constant
      * @param visitor  a Consumer&lt;Constant&gt; whose {@link Consumer#accept(Object)}that will be
      *                 called with each underlying (i.e. referenced) constant
      */
-    public void forEachUnderlying(Consumer<Constant> visitor) {
+    public void forEachUnderlying(final Consumer<Constant> visitor) {
     }
 
     /**
      * Check whether this constant and all its underlying constants are registered with
      * ConstantPools that are upstream (linked to by this constant's containing pool).
-     *
+     * <p>
      * This method is used only as an assertion for debugging purposes.
      */
-    public void checkValidPools(Set<ConstantPool> setValidPools, int[] anDepth) {
+    public void checkValidPools(final Set<ConstantPool> setValidPools, final int[] anDepth) {
         // check this pool
         if (!setValidPools.contains(getConstantPool())) {
             if (setValidPools.isEmpty()) {
@@ -376,7 +376,7 @@ public abstract class Constant
      *
      * @param iPos  the position to assign to the Constant
      */
-    protected void setPosition(int iPos) {
+    protected void setPosition(final int iPos) {
         assert iPos >= -1;
         m_iPos = iPos;
     }
@@ -479,11 +479,11 @@ public abstract class Constant
     }
 
     @Override
-    public void purgeCondition(ConditionalConstant condition) {
+    public void purgeCondition(final ConditionalConstant condition) {
     }
 
     @Override
-    public boolean isPresent(LinkerContext ctx) {
+    public boolean isPresent(final LinkerContext ctx) {
         // a constant does not support conditional inclusion of itself; it will simply be
         // automatically discarded if it is not referenced at the time of assembly
         return true;
@@ -495,7 +495,7 @@ public abstract class Constant
     }
 
     @Override
-    protected void disassemble(DataInput in) {
+    protected void disassemble(final DataInput in) {
         // constants are fully assembled during the construction/resolveConstants() cycle
         throw new IllegalStateException();
     }
@@ -506,11 +506,11 @@ public abstract class Constant
      * This method must be overridden by constant types which reference other constants.
      */
     @Override
-    protected void registerConstants(ConstantPool pool) {
+    protected void registerConstants(final ConstantPool pool) {
     }
 
     @Override
-    protected void assemble(DataOutput out)
+    protected void assemble(final DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());
     }
@@ -539,7 +539,7 @@ public abstract class Constant
     }
 
     @Override
-    public Constant registerConstants(Op.ConstantRegistry registry) {
+    public Constant registerConstants(final Op.ConstantRegistry registry) {
         return registry.register(this);
     }
 
@@ -552,7 +552,7 @@ public abstract class Constant
     public abstract String getValueString();
 
     @Override
-    protected void dump(PrintWriter out, String sIndent) {
+    protected void dump(final PrintWriter out, final String sIndent) {
         // this must be over-ridden by any Constant implementation that has a multi-line toString()
         out.print(sIndent);
         out.println(this);
@@ -600,8 +600,8 @@ public abstract class Constant
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (!(obj instanceof Constant that)) {
+    public boolean equals(final Object obj) {
+        if (!(obj instanceof final Constant that)) {
             return false;
         }
 
@@ -620,7 +620,7 @@ public abstract class Constant
     // ----- Comparable interface ------------------------------------------------------------------
 
     @Override
-    public int compareTo(Constant that) {
+    public int compareTo(final Constant that) {
         if (this == that) {
             return 0;
         }
@@ -651,7 +651,7 @@ public abstract class Constant
      *
      * @return the Constant's index in the ConstantPool, or -1 if passed constant is null
      */
-    protected static int indexOf(Constant constant) {
+    protected static int indexOf(final Constant constant) {
         return constant == null ? -1 : constant.getPosition();
     }
 
@@ -664,7 +664,7 @@ public abstract class Constant
      * @return one of {@code Boolean.True}, {@code Boolean.False}, {@code Ordered.Lesser},
      *         {@code Ordered.Equal}, {@code Ordered.Greater}
      */
-    protected Constant translateOrder(int nOrder, Token.Id op) {
+    protected Constant translateOrder(final int nOrder, final Token.Id op) {
         ConstantPool pool = getConstantPool();
         return switch (op) {
             case COMP_EQ   -> pool.valOf(nOrder == 0);
@@ -683,7 +683,7 @@ public abstract class Constant
      *
      * @param type  the TypeConstant to defer the building of a TypeInfo for
      */
-    protected void addDeferredTypeInfo(TypeConstant type) {
+    protected void addDeferredTypeInfo(final TypeConstant type) {
         getConstantPool().addDeferredTypeInfo(type);
     }
 
@@ -710,7 +710,7 @@ public abstract class Constant
      * @param pool    the ConstantPool
      * @param aconst  an array of constants
      */
-    protected static Constant[] registerConstants(ConstantPool pool, Constant[] aconst) {
+    protected static Constant[] registerConstants(final ConstantPool pool, final Constant[] aconst) {
         Constant[] aconstNew = null;
         for (int i = 0, c = aconst.length; i < c; ++i) {
             Constant constOld = aconst[i];
@@ -871,7 +871,7 @@ public abstract class Constant
             this(null);
         }
 
-        Format(String sPackage) {
+        Format(final String sPackage) {
             f_sPackage = sPackage;
         }
 
@@ -906,7 +906,7 @@ public abstract class Constant
          *
          * @return the Ecstasy type for this format enum value
          */
-        public TypeConstant getType(ConstantPool pool) {
+        public TypeConstant getType(final ConstantPool pool) {
             return switch (this) {
                 case Int8     -> pool.typeInt8();
                 case Int16    -> pool.typeInt16();
@@ -932,7 +932,7 @@ public abstract class Constant
          *
          * @return the Format enum for the specified ordinal
          */
-        public static Format valueOf(int i) {
+        public static Format valueOf(final int i) {
             return FORMATS[i];
         }
 

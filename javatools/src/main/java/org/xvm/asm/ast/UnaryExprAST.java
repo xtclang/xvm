@@ -48,7 +48,7 @@ public abstract class UnaryExprAST
     public void prepareWrite(ConstantResolver res) {
         super.prepareWrite(res);
 
-        type = (TypeConstant) res.register(type);
+        type = res.register(type);
     }
 
     @Override

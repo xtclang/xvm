@@ -40,7 +40,7 @@ import org.xvm.util.Handy;
  * Runtime operates on Object handles holding the struct references or the values themselves
  * for the following types:
  *  Bit, Boolean, Char, Int, UInt, Nullable.Null, and optionally for some Tuples
- *
+ * <p>
  * Note, that the equals() and hashCode() methods should be only for immutable handles.
  */
 public abstract class ObjectHandle
@@ -48,7 +48,7 @@ public abstract class ObjectHandle
     protected TypeComposition m_clazz;
     protected boolean m_fMutable;
 
-    protected ObjectHandle(TypeComposition clazz) {
+    protected ObjectHandle(final TypeComposition clazz) {
         m_clazz    = clazz;
         m_fMutable = false;
     }
@@ -60,12 +60,12 @@ public abstract class ObjectHandle
      *
      * @return the new handle
      */
-    public ObjectHandle cloneAs(TypeComposition clazz) {
+    public ObjectHandle cloneAs(final TypeComposition clazz) {
         try {
-            ObjectHandle handle = (ObjectHandle) super.clone();
+            ObjectHandle handle = (ObjectHandle)clone();
             handle.m_clazz = clazz;
             return handle;
-        } catch (CloneNotSupportedException e) {
+        } catch (final CloneNotSupportedException e) {
             throw new IllegalStateException();
         }
     }
@@ -155,14 +155,14 @@ public abstract class ObjectHandle
         return getType();
     }
 
-    public ObjectHandle ensureAccess(Constants.Access access) {
+    public ObjectHandle ensureAccess(final Constants.Access access) {
         return getComposition().ensureAccess(this, access);
     }
 
     /**
      * @return true iff the specified property has custom code or is Ref-annotated
      */
-    public boolean isInflated(PropertyConstant idProp) {
+    public boolean isInflated(final PropertyConstant idProp) {
         FieldInfo field = getComposition().getFieldInfo(idProp);
         return field != null && field.isInflated();
     }
@@ -170,14 +170,14 @@ public abstract class ObjectHandle
     /**
      * @return true iff the specified property has an injected value
      */
-    public boolean isInjected(PropertyConstant idProp) {
+    public boolean isInjected(final PropertyConstant idProp) {
         return getComposition().isInjected(idProp);
     }
 
     /**
      * @return true iff the specified property has an atomic value
      */
-    public boolean isAtomic(PropertyConstant idProp) {
+    public boolean isAtomic(final PropertyConstant idProp) {
         return getComposition().isAtomic(idProp);
     }
 
@@ -194,7 +194,7 @@ public abstract class ObjectHandle
      * @return true iff the handle is an object that is allowed to be passed across service/container
      *         boundaries (an immutable, a service or an object that has all pass-through fields)
      */
-    public boolean isPassThrough(Container container) {
+    public boolean isPassThrough(final Container container) {
         if (isService()) {
             return true;
         }
@@ -219,7 +219,7 @@ public abstract class ObjectHandle
      *
      * @return true iff this object's type is shared with that pool
      */
-    public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited) {
+    public boolean isShared(final Container container, final Map<ObjectHandle, Boolean> mapVisited) {
         return true;
     }
 
@@ -233,9 +233,9 @@ public abstract class ObjectHandle
      *
      * @return true iff this object's type is shared with that pool
      */
-    protected static boolean areShared(ObjectHandle[] ahValue, Container container,
-                                       Map<ObjectHandle, Boolean> mapVisited) {
-        for (ObjectHandle field : ahValue) {
+    protected static boolean areShared(final ObjectHandle[] ahValue, final Container container,
+                                       final Map<ObjectHandle, Boolean> mapVisited) {
+        for (final ObjectHandle field : ahValue) {
             if (field != null && !field.isShared(container, mapVisited)) {
                 return false;
             }
@@ -281,7 +281,7 @@ public abstract class ObjectHandle
      * @return a new handle for this object masked to the specified type or null if the
      *         request cannot be fulfilled
      */
-    public ObjectHandle maskAs(Container owner, TypeConstant typeAs) {
+    public ObjectHandle maskAs(final Container owner, final TypeConstant typeAs) {
         return this;
     }
 
@@ -291,7 +291,7 @@ public abstract class ObjectHandle
      * @return a new handle for this object revealed as the specified type or null if the
      *         request cannot be fulfilled
      */
-    public ObjectHandle revealAs(Frame frame, TypeConstant typeAs) {
+    public ObjectHandle revealAs(final Frame frame, final TypeConstant typeAs) {
         return this;
     }
 
@@ -304,14 +304,14 @@ public abstract class ObjectHandle
      *
      * @return Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION
      */
-    public int proceed(Frame frameCaller, Frame.Continuation continuation) {
+    public int proceed(final Frame frameCaller, final Frame.Continuation continuation) {
         throw new IllegalStateException("Not deferred");
     }
 
     /**
      * @return the result of comparison (only for isNativeEqual() handles)
      */
-    public int compareTo(ObjectHandle that) {
+    public int compareTo(final ObjectHandle that) {
         throw new UnsupportedOperationException(getClass() + " cannot compare");
     }
 
@@ -325,7 +325,7 @@ public abstract class ObjectHandle
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(final Object obj) {
         if (isNativeEqual()) {
             throw new UnsupportedOperationException(getClass() + " must implement \"equals()\"");
         }
@@ -344,7 +344,7 @@ public abstract class ObjectHandle
 
     public static class GenericHandle
             extends ObjectHandle {
-        public GenericHandle(TypeComposition clazz) {
+        public GenericHandle(final TypeComposition clazz) {
             super(clazz);
 
             m_fMutable = true;
@@ -359,11 +359,11 @@ public abstract class ObjectHandle
 
         // ----- id-based field access -------------------------------------------------------------
 
-        public boolean containsField(PropertyConstant idProp) {
+        public boolean containsField(final PropertyConstant idProp) {
             return getComposition().getFieldInfo(idProp) != null;
         }
 
-        public ObjectHandle getField(Frame frame, PropertyConstant idProp) {
+        public ObjectHandle getField(final Frame frame, final PropertyConstant idProp) {
             FieldInfo field = getComposition().getFieldInfo(idProp);
 
             return field == null
@@ -371,7 +371,7 @@ public abstract class ObjectHandle
                     : getField(frame, field);
         }
 
-        public ObjectHandle getField(Frame frame, String sProp) {
+        public ObjectHandle getField(final Frame frame, final String sProp) {
             FieldInfo field = getComposition().getFieldInfo(sProp);
 
             return field == null
@@ -379,18 +379,18 @@ public abstract class ObjectHandle
                     : getField(frame, field);
         }
 
-        private ObjectHandle missingPropertyException(Frame frame, String sProp) {
+        private ObjectHandle missingPropertyException(final Frame frame, final String sProp) {
             return new DeferredCallHandle(
                     xException.makeHandle(frame, "Missing property: " + sProp));
         }
 
-        public ObjectHandle getField(Frame frame, FieldInfo field) {
+        public ObjectHandle getField(final Frame frame, final FieldInfo field) {
             return field.isTransient()
                     ? getTransientField(frame, field)
                     : m_aFields[field.getIndex()];
         }
 
-        public void setField(Frame frame, PropertyConstant idProp, ObjectHandle hValue) {
+        public void setField(final Frame frame, final PropertyConstant idProp, final ObjectHandle hValue) {
             FieldInfo field = getComposition().getFieldInfo(idProp);
             if (field.isTransient()) {
                 setTransientField(frame, field.getIndex(), hValue);
@@ -399,7 +399,7 @@ public abstract class ObjectHandle
             }
         }
 
-        public void setField(Frame frame, String sProp, ObjectHandle hValue) {
+        public void setField(final Frame frame, final String sProp, final ObjectHandle hValue) {
             FieldInfo field = getComposition().getFieldInfo(sProp);
             if (field.isTransient()) {
                 setTransientField(frame, field.getIndex(), hValue);
@@ -408,21 +408,21 @@ public abstract class ObjectHandle
             }
         }
 
-        public FieldInfo getFieldInfo(PropertyConstant idProp) {
+        public FieldInfo getFieldInfo(final PropertyConstant idProp) {
             return getComposition().getFieldInfo(idProp);
         }
 
         // ----- index-based field access ----------------------------------------------------------
 
-        public ObjectHandle getField(int iPos) {
+        public ObjectHandle getField(final int iPos) {
             return m_aFields[iPos];
         }
 
-        public void setField(int iPos, ObjectHandle hValue) {
+        public void setField(final int iPos, final ObjectHandle hValue) {
             m_aFields[iPos] = hValue;
         }
 
-        public ObjectHandle getTransientField(Frame frame, FieldInfo field) {
+        public ObjectHandle getTransientField(final Frame frame, final FieldInfo field) {
             TransientId  hId    = (TransientId) m_aFields[field.getIndex()];
             ObjectHandle hValue = frame.f_context.getTransientValue(hId);
 
@@ -435,7 +435,7 @@ public abstract class ObjectHandle
             return hValue;
         }
 
-        public void setTransientField(Frame frame, int iPos, ObjectHandle hValue) {
+        public void setTransientField(final Frame frame, final int iPos, final ObjectHandle hValue) {
             frame.f_context.setTransientValue((TransientId) m_aFields[iPos], hValue);
         }
 
@@ -443,12 +443,12 @@ public abstract class ObjectHandle
             return m_owner == null ? getComposition().getContainer() : m_owner;
         }
 
-        public void setOwner(Container owner) {
+        public void setOwner(final Container owner) {
             m_owner = owner;
         }
 
         public boolean containsMutableFields() {
-            for (ObjectHandle hField : m_aFields) {
+            for (final ObjectHandle hField : m_aFields) {
                 if (hField != null && hField.isMutable()) {
                     return true;
                 }
@@ -475,7 +475,7 @@ public abstract class ObjectHandle
         }
 
         @Override
-        public ObjectHandle cloneAs(TypeComposition clazz) {
+        public ObjectHandle cloneAs(final TypeComposition clazz) {
             // when we clone a struct into a non-struct, we need to update the inflated
             // RefHandles to point to a non-struct parent handle;
             // when we clone a non-struct to a struct, we need to do the opposite
@@ -485,7 +485,7 @@ public abstract class ObjectHandle
             ObjectHandle[] aFields = m_aFields;
 
             if (fUpdateOuter && aFields != null) {
-                for (FieldInfo field : clazz.getFieldLayout().values()) {
+                for (final FieldInfo field : clazz.getFieldLayout().values()) {
                     if (field.isInflated() && !field.isTransient()) {
                         RefHandle    hValue = (RefHandle) aFields[field.getIndex()];
                         ObjectHandle hOuter = hValue.getField(null, OUTER);
@@ -504,7 +504,7 @@ public abstract class ObjectHandle
             ObjectHandle[] aFields = m_aFields;
             if (aFields != null) {
                 TypeComposition clazz = getComposition();
-                for (FieldInfo field : clazz.getFieldLayout().values()) {
+                for (final FieldInfo field : clazz.getFieldLayout().values()) {
                     ObjectHandle hValue = aFields[field.getIndex()];
                     if (hValue == null) {
                         if (!field.isAllowedUnassigned()) {
@@ -541,7 +541,7 @@ public abstract class ObjectHandle
         }
 
         @Override
-        public GenericHandle maskAs(Container owner, TypeConstant typeAs) {
+        public GenericHandle maskAs(final Container owner, final TypeConstant typeAs) {
             if (!isService()) {
                 TypeConstant type = getType();
                 assert type.isSingleUnderlyingClass(true);
@@ -578,7 +578,7 @@ public abstract class ObjectHandle
         }
 
         @Override
-        public GenericHandle revealAs(Frame frame, TypeConstant typeAs) {
+        public GenericHandle revealAs(final Frame frame, final TypeConstant typeAs) {
             Container owner = m_owner;
             if (owner != null) {
                 // only the owner or its parent(s) can reveal
@@ -595,7 +595,7 @@ public abstract class ObjectHandle
         }
 
         @Override
-        public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited) {
+        public boolean isShared(final Container container, Map<ObjectHandle, Boolean> mapVisited) {
             TypeConstant type = getType();
             if (!type.isShared(container.getConstantPool())) {
                 return false;
@@ -609,11 +609,7 @@ public abstract class ObjectHandle
                 mapVisited = new IdentityHashMap<>();
             }
 
-            if (mapVisited.put(this, Boolean.TRUE) != null ||
-                    areShared(m_aFields, container, mapVisited)) {
-                return true;
-            }
-            return false;
+            return mapVisited.put(this, Boolean.TRUE) != null || areShared(m_aFields, container, mapVisited);
         }
 
         /**
@@ -641,7 +637,7 @@ public abstract class ObjectHandle
          * @param sRTError  if specified, indicates a *hidden* RT-error message to be logged to the
          *                  system console when an [obscured] exception text is being retrieved
          */
-        public ExceptionHandle(TypeComposition clazz, String sRTError) {
+        public ExceptionHandle(final TypeComposition clazz, final String sRTError) {
             super(clazz);
 
             f_sRTError = sRTError;
@@ -655,18 +651,19 @@ public abstract class ObjectHandle
         public String toString() {
             ObjectHandle hText = getField(null, "text");
             return super.toString() +
-                (hText instanceof StringHandle hString
+                (hText instanceof final StringHandle hString
                     ? Handy.quotedString(hString.getStringValue())
                     : "");
         }
 
+        @SuppressWarnings("serial")
         public class WrapperException
                 extends Exception {
             public WrapperException() {
                 super();
             }
 
-            public WrapperException(Throwable cause) {
+            public WrapperException(final Throwable cause) {
                 super(cause);
             }
 
@@ -688,7 +685,7 @@ public abstract class ObjectHandle
             extends ObjectHandle {
         protected long m_lValue;
 
-        public JavaLong(TypeComposition clazz, long lValue) {
+        public JavaLong(final TypeComposition clazz, final long lValue) {
             super(clazz);
             m_lValue = lValue;
         }
@@ -708,13 +705,13 @@ public abstract class ObjectHandle
         }
 
         @Override
-        public int compareTo(ObjectHandle that) {
+        public int compareTo(final ObjectHandle that) {
             return Long.compare(m_lValue, ((JavaLong) that).m_lValue);
         }
 
         @Override
-        public boolean equals(Object obj) {
-            return obj instanceof JavaLong that && m_lValue == that.m_lValue;
+        public boolean equals(final Object obj) {
+            return obj instanceof final JavaLong that && m_lValue == that.m_lValue;
         }
 
         @Override
@@ -730,7 +727,7 @@ public abstract class ObjectHandle
      */
     public static class ConstantHandle
             extends ObjectHandle {
-        public ConstantHandle(Constant constant) {
+        public ConstantHandle(final Constant constant) {
             super(xObject.CLASS);
 
             assert constant != null;
@@ -752,7 +749,7 @@ public abstract class ObjectHandle
     /**
      * DeferredCallHandle represents a deferred action, such as a property access or a method call,
      * which would place the result of that action on the corresponding frame's stack.
-     *
+     * <p>
      * Note: this handle cannot be allocated naturally and must be processed in a special way.
      */
     public static class DeferredCallHandle
@@ -760,14 +757,14 @@ public abstract class ObjectHandle
         protected final Frame           f_frameNext;
         protected final ExceptionHandle f_hException;
 
-        public DeferredCallHandle(Frame frameNext) {
+        public DeferredCallHandle(final Frame frameNext) {
             super(null);
 
             f_frameNext  = frameNext;
             f_hException = frameNext.m_hException;
         }
 
-        public DeferredCallHandle(ExceptionHandle hException) {
+        public DeferredCallHandle(final ExceptionHandle hException) {
             super(null);
 
             f_frameNext  = null;
@@ -775,7 +772,7 @@ public abstract class ObjectHandle
         }
 
         @Override
-        public int proceed(Frame frameCaller, Frame.Continuation continuation) {
+        public int proceed(final Frame frameCaller, final Frame.Continuation continuation) {
             if (f_hException == null) {
                 Frame frameNext = f_frameNext;
                 if (continuation != null) {
@@ -787,14 +784,14 @@ public abstract class ObjectHandle
             return frameCaller.raiseException(f_hException);
         }
 
-        public void addContinuation(Frame.Continuation continuation) {
+        public void addContinuation(final Frame.Continuation continuation) {
             if (f_hException == null) {
                 f_frameNext.addContinuation(continuation);
             }
         }
 
         @Override
-        public boolean isPassThrough(Container container) {
+        public boolean isPassThrough(final Container container) {
             throw new IllegalStateException();
         }
 
@@ -809,21 +806,21 @@ public abstract class ObjectHandle
     /**
      * DeferredPropertyHandle represents a deferred property access, which would place the result
      * of that action on the corresponding frame's stack.
-     *
+     * <p>
      * Note: this handle cannot be allocated naturally and must be processed in a special way.
      */
     public static class DeferredPropertyHandle
             extends DeferredCallHandle {
         private final PropertyConstant f_idProp;
 
-        public DeferredPropertyHandle(PropertyConstant idProp) {
+        public DeferredPropertyHandle(final PropertyConstant idProp) {
             super((ExceptionHandle) null);
 
             f_idProp = idProp;
         }
 
         @Override
-        public void addContinuation(Frame.Continuation continuation) {
+        public void addContinuation(final Frame.Continuation continuation) {
             throw new UnsupportedOperationException();
         }
 
@@ -832,26 +829,19 @@ public abstract class ObjectHandle
         }
 
         @Override
-        public int proceed(Frame frameCaller, Frame.Continuation continuation) {
+        public int proceed(final Frame frameCaller, final Frame.Continuation continuation) {
             ObjectHandle hThis = frameCaller.getThis();
 
-            switch (hThis.getTemplate().getPropertyValue(frameCaller, hThis, f_idProp, Op.A_STACK)) {
-            case Op.R_NEXT:
-                return continuation.proceed(frameCaller);
-
-            case Op.R_CALL:
-                frameCaller.m_frameNext.addContinuation(continuation);
-                return Op.R_CALL;
-
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
-
-            case Op.R_REPEAT:
-                return Op.R_REPEAT;
-
-            default:
-                throw new IllegalStateException();
-            }
+            return switch (hThis.getTemplate().getPropertyValue(frameCaller, hThis, f_idProp, Op.A_STACK)) {
+                case Op.R_NEXT -> continuation.proceed(frameCaller);
+                case Op.R_CALL -> {
+                    frameCaller.m_frameNext.addContinuation(continuation);
+                    yield Op.R_CALL;
+                }
+                case Op.R_EXCEPTION -> Op.R_EXCEPTION;
+                case Op.R_REPEAT -> Op.R_REPEAT;
+                default -> throw new IllegalStateException();
+            };
         }
 
         @Override
@@ -863,21 +853,21 @@ public abstract class ObjectHandle
     /**
      * DeferredSingletonHandle represents a deferred singleton calculation, which would place the
      * result of that action on the corresponding frame's stack.
-     *
+     * <p>
      * Note: this handle cannot be allocated naturally and must be processed in a special way.
      */
     public static class DeferredSingletonHandle
             extends DeferredCallHandle {
         private final SingletonConstant f_constSingleton;
 
-        public DeferredSingletonHandle(SingletonConstant constSingleton) {
+        public DeferredSingletonHandle(final SingletonConstant constSingleton) {
             super((ExceptionHandle) null);
 
             f_constSingleton = constSingleton;
         }
 
         @Override
-        public void addContinuation(Frame.Continuation continuation) {
+        public void addContinuation(final Frame.Continuation continuation) {
             throw new UnsupportedOperationException();
         }
 
@@ -886,7 +876,7 @@ public abstract class ObjectHandle
         }
 
         @Override
-        public int proceed(Frame frameCaller, Frame.Continuation continuation) {
+        public int proceed(final Frame frameCaller, final Frame.Continuation continuation) {
             return Utils.initConstants(frameCaller, Collections.singletonList(f_constSingleton),
                 frame -> {
                     frame.pushStack(f_constSingleton.getHandle());
@@ -903,7 +893,7 @@ public abstract class ObjectHandle
     /**
      * DeferredArrayHandle represents a deferred array initialization, which would place the array
      * handle on the corresponding frame's stack.
-     *
+     * <p>
      * Note: this handle cannot be allocated naturally and must be processed in a special way.
      */
     public static class DeferredArrayHandle
@@ -911,7 +901,7 @@ public abstract class ObjectHandle
         private final TypeComposition f_clzArray;
         private final ObjectHandle[]  f_ahValue;
 
-        public DeferredArrayHandle(TypeComposition clzArray, ObjectHandle[] ahValue) {
+        public DeferredArrayHandle(final TypeComposition clzArray, final ObjectHandle[] ahValue) {
             super((ExceptionHandle) null);
 
             f_clzArray = clzArray;
@@ -929,29 +919,24 @@ public abstract class ObjectHandle
         }
 
         @Override
-        public void addContinuation(Frame.Continuation continuation) {
+        public void addContinuation(final Frame.Continuation continuation) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public int proceed(Frame frameCaller, Frame.Continuation continuation) {
+        public int proceed(final Frame frameCaller, final Frame.Continuation continuation) {
             Frame.Continuation stepAssign = frame -> frame.pushStack(
                     xArray.createImmutableArray(f_clzArray, f_ahValue));
 
-            switch (new Utils.GetArguments(f_ahValue, stepAssign).doNext(frameCaller)) {
-            case Op.R_NEXT:
-                return continuation.proceed(frameCaller);
-
-            case Op.R_CALL:
-                frameCaller.m_frameNext.addContinuation(continuation);
-                return Op.R_CALL;
-
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
-
-            default:
-                throw new IllegalStateException();
-            }
+            return switch (new Utils.GetArguments(f_ahValue, stepAssign).doNext(frameCaller)) {
+                case Op.R_NEXT -> continuation.proceed(frameCaller);
+                case Op.R_CALL -> {
+                    frameCaller.m_frameNext.addContinuation(continuation);
+                    yield Op.R_CALL;
+                }
+                case Op.R_EXCEPTION -> Op.R_EXCEPTION;
+                default -> throw new IllegalStateException();
+            };
         }
 
         @Override
@@ -993,7 +978,7 @@ public abstract class ObjectHandle
             extends ObjectHandle {
         private final SingletonConstant f_constSingleton;
 
-        public InitializingHandle(SingletonConstant constSingleton) {
+        public InitializingHandle(final SingletonConstant constSingleton) {
             super(null);
 
             f_constSingleton = constSingleton;
@@ -1021,7 +1006,7 @@ public abstract class ObjectHandle
         }
 
         @Override
-        public ObjectHandle cloneAs(TypeComposition clazz) {
+        public ObjectHandle cloneAs(final TypeComposition clazz) {
             return assertInitialized().cloneAs(clazz);
         }
 
@@ -1052,7 +1037,7 @@ public abstract class ObjectHandle
         }
 
         @Override
-        public boolean isPassThrough(Container container) {
+        public boolean isPassThrough(final Container container) {
             return assertInitialized().isPassThrough(container);
         }
 
@@ -1072,22 +1057,22 @@ public abstract class ObjectHandle
         }
 
         @Override
-        public ObjectHandle maskAs(Container owner, TypeConstant typeAs) {
+        public ObjectHandle maskAs(final Container owner, final TypeConstant typeAs) {
             return assertInitialized().maskAs(owner, typeAs);
         }
 
         @Override
-        public ObjectHandle revealAs(Frame frame, TypeConstant typeAs) {
+        public ObjectHandle revealAs(final Frame frame, final TypeConstant typeAs) {
             return assertInitialized().revealAs(frame, typeAs);
         }
 
         @Override
-        public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited) {
+        public boolean isShared(final Container container, final Map<ObjectHandle, Boolean> mapVisited) {
             return assertInitialized().isShared(container, mapVisited);
         }
 
         @Override
-        public int compareTo(ObjectHandle that) {
+        public int compareTo(final ObjectHandle that) {
             return assertInitialized().compareTo(that);
         }
 
@@ -1097,7 +1082,7 @@ public abstract class ObjectHandle
         }
 
         @Override
-        public boolean equals(Object obj) {
+        public boolean equals(final Object obj) {
             return assertInitialized().equals(obj);
         }
 
@@ -1113,7 +1098,7 @@ public abstract class ObjectHandle
      */
     public static class NativeFutureHandle
             extends ObjectHandle {
-        protected NativeFutureHandle(CompletableFuture cf) {
+        protected NativeFutureHandle(final CompletableFuture<Object> cf) {
             super(null);
 
             f_future = cf;
@@ -1124,7 +1109,7 @@ public abstract class ObjectHandle
             return "Native: " + f_future;
         }
 
-        public final CompletableFuture f_future;
+        public final CompletableFuture<Object> f_future;
     }
     /**
      * A handle that is used as an indicator for a default method argument value.

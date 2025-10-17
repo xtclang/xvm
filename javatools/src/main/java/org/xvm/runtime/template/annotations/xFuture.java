@@ -525,9 +525,11 @@ public class xFuture
             return frame.assignValue(iReturn, hThat);
         }
 
-        CompletableFuture cfAny = CompletableFuture.anyOf(cfThis, cfThat);
+        CompletableFuture<Object> cfAny = CompletableFuture.anyOf(cfThis, cfThat);
 
-        return frame.assignValue(iReturn, makeHandle(hThis.getComposition(), cfAny));
+        @SuppressWarnings("unchecked") // anyOf returns Object, but we know it's ObjectHandle
+        CompletableFuture<ObjectHandle> cfResult = (CompletableFuture<ObjectHandle>) (CompletableFuture<?>) cfAny;
+        return frame.assignValue(iReturn, makeHandle(hThis.getComposition(), cfResult));
     }
 
     /**
@@ -768,7 +770,7 @@ public class xFuture
          *         exceptionally; null otherwise
          */
         public ExceptionHandle getException() {
-            CompletableFuture future = getFuture();
+            CompletableFuture<ObjectHandle> future = getFuture();
             if (future.isCompletedExceptionally()) {
                 try {
                     future.get();

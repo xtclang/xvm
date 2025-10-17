@@ -238,8 +238,8 @@ public class MethodStructure
      * Replace the annotations with an equivalent re-ordered array.
      */
     public void reorderAnnotations(Annotation[] annotations) {
-        assert new HashSet(Arrays.asList(annotations)).equals(
-               new HashSet(Arrays.asList(m_aAnnotations)));
+        assert new HashSet<>(Arrays.asList(annotations)).equals(
+               new HashSet<>(Arrays.asList(m_aAnnotations)));
 
         m_aAnnotations = annotations;
     }
@@ -1538,7 +1538,7 @@ public class MethodStructure
     }
 
     @Override
-    public void setConditionalReturn(boolean fConditional) {
+    public final void setConditionalReturn(boolean fConditional) {
         if (fConditional != isConditionalReturn()) {
             // verify that the first return value is a boolean
             Parameter paramOld = m_aReturns[0];
@@ -1868,7 +1868,7 @@ public class MethodStructure
         m_aAnnotations = (Annotation[]) Constant.registerConstants(pool, m_aAnnotations);
 
         if (m_idFinally != null) {
-            m_idFinally = (MethodConstant) pool.register(m_idFinally);
+            m_idFinally = pool.register(m_idFinally);
         }
 
         for (Parameter param : m_aReturns) {
@@ -1880,7 +1880,7 @@ public class MethodStructure
         }
 
         if (m_idSuper != null) {
-            m_idSuper     = (MethodConstant) pool.register(m_idSuper);
+            m_idSuper     = pool.register(m_idSuper);
             m_aconstSuper = Constant.registerConstants(pool, m_aconstSuper);
         }
 
@@ -2003,12 +2003,13 @@ public class MethodStructure
     }
 
     @Override
+    @SuppressWarnings("unchecked") // safe: both iterators produce XvmStructure
     public Iterator<? extends XvmStructure> getContained() {
         return getAnnotationCount() == 0
                 ? super.getContained()
-                : new LinkedIterator(
-                    super.getContained(),
-                    Arrays.stream(m_aAnnotations).iterator());
+                : new LinkedIterator<>(
+                    (Iterator<XvmStructure>) super.getContained(),
+                    (Iterator<XvmStructure>) (Iterator<?>) Arrays.stream(m_aAnnotations).iterator());
     }
 
     @Override

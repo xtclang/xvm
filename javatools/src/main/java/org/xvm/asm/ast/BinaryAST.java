@@ -268,7 +268,7 @@ public abstract class BinaryAST {
 
     // ----- internal ------------------------------------------------------------------------------
 
-    private static final Set<String> ALREADY_DISPLAYED = new HashSet();
+    private static final Set<String> ALREADY_DISPLAYED = new HashSet<>();
 
     static void reportUnimplemented(String msg) {
         if (ALREADY_DISPLAYED.add(msg)) {
@@ -291,6 +291,7 @@ public abstract class BinaryAST {
      *
      * @throws IOException  indicates a corrupt stream
      */
+    @SuppressWarnings("unchecked") // instantiate() returns BinaryAST, cast to N is safe by design
     public static <N extends BinaryAST> N readAST(DataInput in, ConstantResolver res)
             throws IOException {
         N node = (N) (NodeType.valueOf(in.readUnsignedByte())).instantiate();
@@ -538,7 +539,7 @@ public abstract class BinaryAST {
          *
          * @return the unique constant reference to use; null iff the passed constant is null
          */
-        Constant register(Constant constant);
+        <T extends Constant> T register(T constant);
 
         /**
          * @param id  constant pool index

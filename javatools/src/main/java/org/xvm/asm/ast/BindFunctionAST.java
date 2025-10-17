@@ -92,7 +92,7 @@ public class BindFunctionAST
     public void prepareWrite(ConstantResolver res) {
         target.prepareWrite(res);
         prepareASTArray(args, res);
-        type = (TypeConstant) res.register(type);
+        type = res.register(type);
     }
 
     @Override

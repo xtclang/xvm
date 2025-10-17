@@ -681,7 +681,7 @@ public abstract class Op {
          * @return the constant reference to use (may be different from the passed constant)
          */
         @Override
-        public Constant register(Constant constant) {
+        public <T extends Constant> T register(T constant) {
             ensureRegistering();
 
             if (constant == null) {

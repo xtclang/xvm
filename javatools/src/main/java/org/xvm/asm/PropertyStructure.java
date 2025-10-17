@@ -116,7 +116,7 @@ public class PropertyStructure
         return m_accessVar;
     }
 
-    public void setVarAccess(Access access) {
+    public final void setVarAccess(Access access) {
         assert access == null || access.ordinal() >= getAccess().ordinal();
         m_accessVar = access;
     }
@@ -150,7 +150,7 @@ public class PropertyStructure
      *
      * @param type  the type constant that indicates the property's type
      */
-    public void setType(TypeConstant type) {
+    public final void setType(TypeConstant type) {
         assert type != null;
         m_type = type;
 

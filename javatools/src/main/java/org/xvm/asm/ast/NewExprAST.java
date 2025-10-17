@@ -146,7 +146,7 @@ public class NewExprAST
             parent.prepareWrite(res);
         }
         if (!isVirtual()) {
-            type = (TypeConstant) res.register(type);
+            type = res.register(type);
         }
         constr = res.register(constr);
         prepareASTArray(args, res);

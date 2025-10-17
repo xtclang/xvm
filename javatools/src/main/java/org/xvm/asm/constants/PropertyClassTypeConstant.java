@@ -426,7 +426,7 @@ public class PropertyClassTypeConstant
     protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 
-        m_idProp = (PropertyConstant) pool.register(m_idProp);
+        m_idProp = pool.register(m_idProp);
     }
 
     @Override

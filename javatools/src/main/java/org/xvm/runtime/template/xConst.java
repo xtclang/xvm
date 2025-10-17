@@ -54,8 +54,7 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
  * While this template represents a native interface, it never serves as an inception type
  * by itself.
  */
-public class xConst
-        extends ClassTemplate {
+public class xConst extends ClassTemplate {
     public static xConst INSTANCE;
 
     public xConst(Container container, ClassStructure structure, boolean fInstance) {
@@ -530,7 +529,7 @@ public class xConst
                     return frameCaller.raiseException("Unassigned property \"" + field.getName() +'"');
                 }
 
-                TypeConstant typeProp = (TypeConstant) pool.register(clzBase.getFieldType(enid));
+                TypeConstant typeProp = pool.register(clzBase.getFieldType(enid));
 
                 typeProp = typeProp.resolveGenerics(pool,
                             frameCaller.getGenericsResolver(typeProp.containsDynamicType()));
@@ -618,7 +617,7 @@ public class xConst
                     return frameCaller.raiseException("Unassigned property \"" + field.getName() +'"');
                 }
 
-                TypeConstant typeProp = (TypeConstant) pool.register(clzBase.getFieldType(enid));
+                TypeConstant typeProp = pool.register(clzBase.getFieldType(enid));
 
                 // this check is only to provide a better exception description
                 if (typeProp.findCallable(pool.sigCompare()) == null) {
@@ -706,7 +705,7 @@ public class xConst
                     return frameCaller.raiseException("Unassigned property: \"" + field.getName() + '"');
                 }
 
-                TypeConstant typeProp = (TypeConstant) pool.register(clzBase.getFieldType(enid));
+                TypeConstant typeProp = pool.register(clzBase.getFieldType(enid));
 
                 typeProp = typeProp.resolveGenerics(pool,
                             frameCaller.getGenericsResolver(typeProp.containsDynamicType()));

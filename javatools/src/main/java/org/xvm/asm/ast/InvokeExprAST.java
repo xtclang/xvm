@@ -81,7 +81,7 @@ public class InvokeExprAST
     public void prepareWrite(ConstantResolver res) {
         super.prepareWrite(res);
 
-        method = (MethodConstant) res.register(method);
+        method = res.register(method);
         target.prepareWrite(res);
     }
 
