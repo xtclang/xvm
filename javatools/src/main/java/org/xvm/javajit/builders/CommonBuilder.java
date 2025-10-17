@@ -53,6 +53,7 @@ import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.BuildContext.DoubleSlot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.Ctx;
+import org.xvm.javajit.JitCtorDesc;
 import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
@@ -584,7 +585,7 @@ public class CommonBuilder
         String         jitName = isOpt ? jitSetterName+OPT : jitSetterName;
 
         classBuilder.withMethodBody(jitName, md, flags, code -> {
-            int argSlot = code.parameterSlot(1); // compensate for ctx$
+            int argSlot = code.parameterSlot(1); // compensate for $ctx
             if (isOpt) {
                 JitParamDesc pdOpt = jmd.optimizedParams[0];
                 ClassDesc    cdOpt = pdOpt.cd;
@@ -674,7 +675,7 @@ public class CommonBuilder
         classBuilder.withMethodBody(jitName, md, flags, code -> {
             // generate the following:
             // T value = this.prop;
-            // if (value == null} { value = this.prop = ctx$.inject(type, name, opts);}
+            // if (value == null} { value = this.prop = $ctx.inject(type, name, opts);}
             // return value;
 
             if (isOpt) {
@@ -704,8 +705,7 @@ public class CommonBuilder
                     .dup()
                     .astore(valueSlot)
                     .ifnonnull(endLbl)
-                    .aload(1) // ctx$
-                    .dup();
+                    .aload(1); // $ctx
                 Builder.loadTypeConstant(code, typeSystem, resourceType);
                 code.ldc(resourceName)
                     .aconst_null() // opts
@@ -779,7 +779,7 @@ public class CommonBuilder
 
             if (method.isConstructor()) {
                 String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
-                JitMethodDesc newDesc = Builder.convertConstructToNew(typeInfo, className, jmDesc);
+                JitMethodDesc newDesc = Builder.convertConstructToNew(typeInfo, className, (JitCtorDesc) jmDesc);
                 if (newDesc.isOptimized) {
                     assembleNew(className, classBuilder, method, newName+OPT, newDesc.optimizedMD, true);
                     assembleMethodWrapper(className, classBuilder, newName, newDesc, true, false);
@@ -1007,9 +1007,18 @@ public class CommonBuilder
      *
      * <code><pre>
      * Ecstasy:
+     *      class C {...}
      *      val o = new C(x, y, z);
      * Java:
      *      C o = C.$new$17(ctx, x, y, z);
+     *
+     * For generic types:
+     * Ecstasy:
+     *      class C<Element> {...}
+     *      val o = new C<A>(x, y, z);
+     * Java:
+     *      C o = C.$new$17(ctx, TC, x, y, z);
+     * where TC is a TypeConstant for the actual type C<A>.
      *
      * For singletons, referencing the instance of the singleton for the first time causes it to be
      * created using the well-known "Java singleton pattern" that leverages the Java ClassLoader
@@ -1020,7 +1029,9 @@ public class CommonBuilder
      * singletons have a non-static "$init()" method that is signature-wise identical to the
      * "$new()" method and performs everything in the following list of steps starting with step 4.
      *
-     * public static C $new$17(Ctx ctx, X x, Y y, Z z) {
+     * public static C $new$17(Ctx ctx, X x, Y y, Z z)
+     * or
+     * public static C $new$17(Ctx ctx, TC, X x, Y y, Z z)
      *    // note: singletons use this signature instead:
      *    public C $init$17(Ctx ctx)
      *
@@ -1049,6 +1060,8 @@ public class CommonBuilder
      *    //   in the constructor context because we have the arguments right here
      *    // note: cctx argument is optional
      *    construct$17(ctx, cctx, thi$, x, y, z);
+     *      // or for generic types
+     *    construct$17(ctx, cctx, T, thi$, x, y, z);
      *
      *    // step 7: `assert()` is called (may be one on each constituent piece -- e.g.
      *    // base classes, mixins, annotations -- of the composition)
@@ -1112,6 +1125,7 @@ public class CommonBuilder
     protected void assembleNew(String className, ClassBuilder classBuilder, MethodInfo constructor,
                                String jitName, MethodTypeDesc md, boolean isOptimized) {
         boolean   isSingleton = typeInfo.isSingleton();
+        boolean   hasType     = typeInfo.hasGenericTypes();
         ClassDesc CD_this     = ClassDesc.of(className);
 
         // Note: the "$init" is a virtual method for singletons and "$new" is static otherwise
@@ -1127,8 +1141,15 @@ public class CommonBuilder
 
             code.labelBinding(startScope);
 
-            int ctxSlot = code.parameterSlot(0);
+            int ctxSlot    = code.parameterSlot(0);
+            int extraSlots = 1;
             code.localVariable(ctxSlot, "$ctx", CD_Ctx, startScope, endScope);
+
+            int typeSlot = -1;
+            if (hasType) {
+                typeSlot = code.parameterSlot(1);
+                extraSlots++;
+            }
 
             // for singleton classes the steps 0-2 are performed by the static initializer;
             // see "assembleStaticInitializer()"
@@ -1162,13 +1183,16 @@ public class CommonBuilder
             ;
 
             // step 6: call the constructor
-            // construct$17(ctx, cctx, thi$, x, y, z);
+            // construct$17(ctx, cctx, [type], thi$, x, y, z);
             String        ctorName = constructor.getIdentity().ensureJitMethodName(typeSystem);
             JitMethodDesc ctorDesc = constructor.getJitDesc(typeSystem);
 
             code.aload(ctxSlot)
-                .aload(cctxSlot)
-                .aload(thisSlot);
+                .aload(cctxSlot);
+            if (hasType) {
+                code.aload(typeSlot);
+            }
+            code.aload(thisSlot);
 
             // if this "new$" is optimized, the underlying constructor is optimized and vice versa
             assert isOptimized == ctorDesc.isOptimized;
@@ -1186,7 +1210,7 @@ public class CommonBuilder
 
             for (int i = 0, c = ctorPds.length; i < c; i++) {
                 JitParamDesc pd = ctorPds[i];
-                load(code, pd.cd, code.parameterSlot(1 + i));
+                load(code, pd.cd, code.parameterSlot(extraSlots + i));
             }
 
             code.invokestatic(CD_this, ctorName, ctorMd);
@@ -1464,7 +1488,7 @@ public class CommonBuilder
     private final static String[] TEST_SET = new String[] {
         "Test", "test",
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
-         "Boolean", "Ordered",
+        "Boolean", "Ordered",
         "TerminalConsole",
     };
     private final static HashSet<String> SKIP_SET = new HashSet<>();

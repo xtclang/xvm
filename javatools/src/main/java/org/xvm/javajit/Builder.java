@@ -112,7 +112,7 @@ public abstract class Builder {
             }
             break;
 
-        case SingletonConstant singleton:
+        case SingletonConstant singleton: {
             if (singleton instanceof EnumValueConstant enumConstant) {
                 ConstantPool pool = constant.getConstantPool();
                 if (enumConstant.getType().isOnlyNullable()) {
@@ -138,10 +138,15 @@ public abstract class Builder {
             ClassDesc cd = jtd.cd;
             code.getstatic(cd, Instance, cd);
             return new SingleSlot(Op.A_STACK, type, cd, "");
+        }
 
         case NamedCondition cond:
             code.loadConstant(cond.getName());
             return new SingleSlot(Op.A_STACK, cond.getConstantPool().typeString(), CD_String, "");
+
+        case TypeConstant type:
+            Builder.loadTypeConstant(code, typeSystem, type);
+            return new SingleSlot(Op.A_STACK, type.getType(), CD_TypeConstant, "");
 
         default:
             break;
@@ -237,24 +242,22 @@ public abstract class Builder {
 
     /**
      * Generate a "load" for the specified TypeConstant.
-     * In:  Ctx
      * Out: TypeConstant
      */
     public static void loadTypeConstant(CodeBuilder code, TypeSystem ts, TypeConstant type) {
-        code.loadConstant(ts.registerConstant(type))
+        code.aload(code.parameterSlot(0)) // $ctx
+            .loadConstant(ts.registerConstant(type))
             .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
             .checkcast(CD_TypeConstant);                              // <- type
     }
 
     /**
      * Generate a "get" for an xType.
-     * In:  Ctx
      * Out: xType instance
      */
     public static void loadType(CodeBuilder code, TypeSystem ts, TypeConstant type) {
-        code.dup(); // ctx
         loadTypeConstant(code, ts, type);
-        code.swap() // [ctx, type] -> [type, ctx]
+        code.aload(code.parameterSlot(0)) // $ctx
             .getfield(CD_Ctx, "container", CD_Container)
             .invokevirtual(CD_TypeConstant, "ensureXType",
                     MethodTypeDesc.of(CD_JavaObject, CD_Container))
@@ -422,7 +425,7 @@ public abstract class Builder {
     public static void loadFromContext(CodeBuilder code, ClassDesc cd, int returnIndex) {
         assert returnIndex >= 0;
 
-        code.aload(code.parameterSlot(0));
+        code.aload(code.parameterSlot(0)); // $ctx
 
         if (cd.isPrimitive()) {
             if (returnIndex < 8) {
@@ -471,7 +474,7 @@ public abstract class Builder {
     public static void storeToContext(CodeBuilder code, ClassDesc cd, int returnIndex) {
         assert returnIndex >= 0;
 
-        code.aload(code.parameterSlot(0));
+        code.aload(code.parameterSlot(0)); // $ctx
         if (cd.isPrimitive() && cd.descriptorString().equals("J")) {
              // the value is a "long" that occupies two slots
              // stack (lvalue, lvalue2, $ctx) -> ($ctx, lvalue, lvalue2)
@@ -527,14 +530,19 @@ public abstract class Builder {
      * Convert the "void construct$17(...)" to "This new$17(...)"
      */
     public static JitMethodDesc convertConstructToNew(TypeInfo typeInfo, String className,
-                                                      JitMethodDesc jmdCtor) {
+                                                      JitCtorDesc jmdCtor) {
         JitParamDesc retDesc = new JitParamDesc(typeInfo.getType(), Specific,
                 ClassDesc.of(className), 0, -1, false);
 
         JitParamDesc[] standardReturns  = new JitParamDesc[] {retDesc};
         JitParamDesc[] optimizedReturns = jmdCtor.isOptimized ? standardReturns : null;
-        return new JitMethodDesc(standardReturns,  jmdCtor.standardParams,
-                                 optimizedReturns, jmdCtor.optimizedParams);
+        return typeInfo.hasGenericTypes()
+            ? new JitCtorDesc(null, /*addCtorCtx*/ false, /*addType*/ true,
+                    standardReturns,  jmdCtor.standardParams,
+                    optimizedReturns, jmdCtor.optimizedParams)
+            : new JitMethodDesc(
+                    standardReturns,  jmdCtor.standardParams,
+                    optimizedReturns, jmdCtor.optimizedParams);
     }
 
     /**

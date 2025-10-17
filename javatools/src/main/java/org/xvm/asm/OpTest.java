@@ -345,7 +345,6 @@ public abstract class OpTest
             case OP_IS_EQ, OP_IS_NEQ:
                 assert jmd.isOptimized;
                 // Boolean equals(Ctx,xType,xObj,xObj)
-                code.dup();
                 Builder.loadType(code, ts, typeCommon);
                 bctx.loadArgument(code, m_nValue1);
                 bctx.loadArgument(code, m_nValue2);
@@ -358,7 +357,6 @@ public abstract class OpTest
 
             case OP_IS_GT, OP_IS_GTE, OP_IS_LT, OP_IS_LTE:
                 // Ordered compare(Ctx,Type,xObj,xObj)
-                code.dup();
                 Builder.loadType(code, ts, typeCommon);
                 bctx.loadArgument(code, m_nValue1);
                 bctx.loadArgument(code, m_nValue2);

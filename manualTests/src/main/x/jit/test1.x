@@ -19,6 +19,12 @@ module test1.examples.org {
         console.print(t1);
         console.print(t1.x);
 
+        TestFormal<Int> t2 = new TestFormal(7);
+        console.print(t2.value);
+
+        TestFormal<TestBase> t3 = new TestFormal(t1);
+        console.print(t3.value);
+
 //        StringBuffer buf = new StringBuffer();
 //        buf.add('c');
 //        console.print(buf.toString());
@@ -26,4 +32,5 @@ module test1.examples.org {
 
     class TestBase(Int x);
     class TestDerived(Int x) extends TestBase(x) {}
+    class TestFormal<Element> (Element value) {}
 }

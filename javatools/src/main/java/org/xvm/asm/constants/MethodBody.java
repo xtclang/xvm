@@ -688,9 +688,19 @@ public class MethodBody {
                     ? listParamsOpt.toArray(JitParamDesc.NONE)
                     : null;
 
-            m_jmd = jmd = isConstructor()
-                ? new JitCtorDesc(ts, this, apdStdReturn, apdStdParam, apdOptReturn, apdOptParam)
-                : new JitMethodDesc(apdStdReturn, apdStdParam, apdOptReturn, apdOptParam);
+            if (isConstructor()) {
+                TypeInfo infoContainer = method.getContainingClass().getCanonicalType().ensureTypeInfo();
+                boolean  fAddCtorCtx   = true; // TODO: isFinalizerRequired()
+                boolean  fAddType      = infoContainer.hasGenericTypes();
+
+                jmd = new JitCtorDesc(infoContainer.getType().ensureClassDesc(ts),
+                                      fAddCtorCtx, fAddType,
+                                      apdStdReturn, apdStdParam, apdOptReturn, apdOptParam);
+
+            } else {
+                jmd = new JitMethodDesc(apdStdReturn, apdStdParam, apdOptReturn, apdOptParam);
+            }
+            m_jmd = jmd;
         }
         return jmd;
     }
