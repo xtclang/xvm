@@ -25,36 +25,6 @@ on:
             ci-run-id:
                 description: 'CI run ID to download artifact from (leave empty to skip artifact download)'
                 required: false
-            publish-github:
-                description: 'Publish to GitHub Packages'
-                type: boolean
-                required: false
-                default: true
-            publish-maven-central:
-                description: 'Publish to Maven Central'
-                type: boolean
-                required: false
-                default: true
-            publish-gradle-plugin-portal:
-                description: 'Publish to Gradle Plugin Portal (not recommended for snapshots)'
-                type: boolean
-                required: false
-                default: false
-            publish-to-github:
-                description: 'Publish to GitHub Packages'
-                type: boolean
-                required: false
-                default: true
-            publish-to-maven-central:
-                description: 'Publish to Maven Central'
-                type: boolean
-                required: false
-                default: true
-            publish-to-gradle-plugin-portal:
-                description: 'Publish to Gradle Plugin Portal (not recommended for snapshots)'
-                type: boolean
-                required: false
-                default: false
 
 jobs:
     publish-snapshots:
@@ -140,7 +110,7 @@ jobs:
                   SIGNING_PASSWORD: ${{ secrets.ORG_XTCLANG_SIGNING_PASSWORD }}
                   ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
                   ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
-                  # SNAPSHOT versions automatically publish to GitHub Packages + Maven Central (staging)
+                  # SNAPSHOT versions automatically publish to GitHub Packages + Maven Central Snapshots
                   # Gradle Plugin Portal is automatically skipped (doesn't accept snapshots)
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
               run: |

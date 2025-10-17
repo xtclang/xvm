@@ -196,7 +196,6 @@ jobs:
               run: |
                   VERSION="${{ needs.prepare-release.outputs.release-version }}"
                   GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
-
                   echo "🔨 Building XDK release $VERSION..."
                   ./gradlew $GRADLE_OPTIONS clean
                   ./gradlew $GRADLE_OPTIONS -Pversion=$VERSION :xdk:distZip
@@ -264,9 +263,7 @@ jobs:
                   echo "   Version: $VERSION"
                   echo "   NOT publishing to Gradle Plugin Portal (will happen during promotion)"
                   echo ""
-
                   ./gradlew $GRADLE_OPTIONS -Pversion=$VERSION publish --info
-
                   echo "✅ Artifacts staged to Maven Central and GitHub Packages"
 
             - name: Upload XDK distribution artifact
@@ -290,14 +287,12 @@ jobs:
             - name: Staging summary
               run: |
                   VERSION="${{ needs.prepare-release.outputs.release-version }}"
-
                   echo "### 🎯 Release $VERSION Staged" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "**Staged Artifacts:**" >> $GITHUB_STEP_SUMMARY
                   echo "- ✅ Maven Central: Staged (review at https://oss.sonatype.org/)" >> $GITHUB_STEP_SUMMARY
                   echo "- ✅ GitHub Packages: Published (staging)" >> $GITHUB_STEP_SUMMARY
                   echo "- ✅ GitHub Release: Draft created" >> $GITHUB_STEP_SUMMARY
-
                   if [ "${{ github.event.inputs.publish-gradle-plugin }}" = "true" ]; then
                       echo "- ✅ Gradle Plugin Portal: Credentials validated (will publish on promotion)" >> $GITHUB_STEP_SUMMARY
                   else

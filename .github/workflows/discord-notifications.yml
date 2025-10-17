@@ -17,7 +17,8 @@ jobs:
     notify-pr:
         name: Notify Discord - Pull Request
         runs-on: ubuntu-latest
-        if: github.event_name == 'pull_request'
+        if: false  # Temporarily disabled
+        # if: github.event_name == 'pull_request'
 
         steps:
             - name: Send Discord notification
@@ -94,7 +95,8 @@ jobs:
     notify-workflow:
         name: Notify Discord - Workflow
         runs-on: ubuntu-latest
-        if: github.event_name == 'workflow_run'
+        if: false  # Temporarily disabled
+        # if: github.event_name == 'workflow_run'
 
         steps:
             - name: Send Discord notification

@@ -54,9 +54,9 @@ abstract class XdkPublishingCredentials @Inject constructor(xdkProperties: Proje
     val signingInMemoryKey: Provider<String> = xdkProperties.string("signingInMemoryKey", "")
 
     // Publishing control
-    // For SNAPSHOT versions: Always publish to Maven Central (staging), GitHub Packages, skip Gradle Plugin Portal
-    // For release versions: Require -PallowPublish=true to publish (all targets including Gradle Plugin Portal)
-    val allowPublish: Provider<Boolean> = xdkProperties.boolean("org.xtclang.allowPublish", false)
+    // For SNAPSHOT versions: Always publish to Maven Central Snapshots, GitHub Packages, skip Gradle Plugin Portal
+    // For release versions: Require -Porg.xtclang.allowRelease=true to publish (all targets including Gradle Plugin Portal)
+    val allowRelease: Provider<Boolean> = xdkProperties.boolean("org.xtclang.allowRelease", false)
 }
 
 /**
@@ -72,7 +72,7 @@ abstract class ValidateCredentialsTask : DefaultTask() {
     abstract val projectVersion: Property<String>
 
     @get:Input
-    abstract val allowPublish: Property<Boolean>
+    abstract val allowRelease: Property<Boolean>
 
     @get:Input
     abstract val githubUsername: Property<String>
@@ -121,18 +121,18 @@ abstract class ValidateCredentialsTask : DefaultTask() {
         val project = projectName.get()
         val version = projectVersion.get()
         val isSnapshot = version.contains("SNAPSHOT", ignoreCase = true)
-        val publishAllowed = allowPublish.get()
+        val releaseAllowed = allowRelease.get()
 
         logger.lifecycle("🔐 Publishing Credentials Validation Report [$project]")
         logger.lifecycle("=".repeat(60))
         logger.lifecycle("")
         logger.lifecycle("Version: $version ${if (isSnapshot) "(SNAPSHOT)" else "(RELEASE)"}")
 
-        if (!isSnapshot && !publishAllowed) {
+        if (!isSnapshot && !releaseAllowed) {
             logger.lifecycle("⚠️  Release version detected but publishing not allowed")
-            logger.lifecycle("   Use -Porg.xtclang.allowPublish=true to enable release publishing")
+            logger.lifecycle("   Use -Porg.xtclang.allowRelease=true to enable release publishing")
             logger.lifecycle("")
-            throw GradleException("Release publishing requires -Porg.xtclang.allowPublish=true")
+            throw GradleException("Release publishing requires -Porg.xtclang.allowRelease=true")
         }
 
         logger.lifecycle("")
@@ -169,9 +169,9 @@ abstract class ValidateCredentialsTask : DefaultTask() {
         logger.lifecycle("   Username: ${if (mcUsername.isNotEmpty()) "✅ Available" else "❌ Missing"}")
         logger.lifecycle("   Password: ${if (mcPassword.isNotEmpty()) "✅ Available" else "❌ Missing"}")
         if (isSnapshot) {
-            logger.lifecycle("   Target:   Staging (snapshot repository)")
+            logger.lifecycle("   Target:   Snapshots repository")
         } else {
-            logger.lifecycle("   Target:   Staging (release repository, requires manual promotion)")
+            logger.lifecycle("   Target:   Staging repository (requires manual promotion)")
         }
 
         if (mcUsername.isEmpty() || mcPassword.isEmpty()) {
@@ -284,7 +284,7 @@ abstract class ValidateCredentialsTask : DefaultTask() {
         logger.lifecycle("")
         logger.lifecycle("Ready to publish to:")
         logger.lifecycle("  • GitHub Packages")
-        logger.lifecycle("  • Maven Central (staging, ${if (isSnapshot) "snapshot repo" else "requires manual promotion"})")
+        logger.lifecycle("  • Maven Central ${if (isSnapshot) "Snapshots" else "Staging (requires manual promotion)"}")
         if (!isSnapshot) {
             logger.lifecycle("  • Gradle Plugin Portal")
         }
