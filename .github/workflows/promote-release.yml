@@ -36,7 +36,7 @@ on:
     workflow_dispatch:
         inputs:
             release-version:
-                description: 'Release version to promote (e.g., 0.4.4)'
+                description: 'Release version to promote (e.g., 0.4.4); must not have -SNAPSHOT suffix.'
                 required: true
             promote-maven-central:
                 description: 'Promote Maven Central staging to production'
@@ -100,13 +100,11 @@ jobs:
 
                       # Plugin Portal: default OFF, needs 'publish-gradle-plugin' label to enable
                       # Can be disabled with 'skip-gradle-plugin-portal' even if enabled in prepare-release
+                      PLUGIN_PORTAL="false"
                       if [ "${{ contains(github.event.pull_request.labels.*.name, 'publish-gradle-plugin') }}" = "true" ] && \
                          [ "${{ contains(github.event.pull_request.labels.*.name, 'skip-gradle-plugin-portal') }}" = "false" ]; then
                           PLUGIN_PORTAL="true"
-                      else
-                          PLUGIN_PORTAL="false"
                       fi
-
                   else
                       echo "🎛️  Manual promotion via workflow_dispatch"
                       echo "   Using workflow inputs to control targets"
@@ -120,11 +118,10 @@ jobs:
                   echo "maven-central=$MAVEN_CENTRAL" >> $GITHUB_OUTPUT
                   echo "github-release=$GITHUB_RELEASE" >> $GITHUB_OUTPUT
                   echo "plugin-portal=$PLUGIN_PORTAL" >> $GITHUB_OUTPUT
-
                   echo ""
                   echo "Promotion plan:"
-                  echo "  - Maven Central:         $([ "$MAVEN_CENTRAL" = "true" ] && echo "✅ Promote" || echo "⏭️  Skip")"
                   echo "  - GitHub Release:        $([ "$GITHUB_RELEASE" = "true" ] && echo "✅ Publish" || echo "⏭️  Skip")"
+                  echo "  - Maven Central:         $([ "$MAVEN_CENTRAL" = "true" ] && echo "✅ Promote" || echo "⏭️  Skip")"
                   echo "  - Gradle Plugin Portal:  $([ "$PLUGIN_PORTAL" = "true" ] && echo "✅ Publish" || echo "⏭️  Skip")"
 
             - name: Validate version format

@@ -47,9 +47,24 @@ gh workflow run "Promote Release" \
 ## Overview
 
 The release process is **two-phase** with full automation:
-
-1. **Prepare Phase**: Stage artifacts for review (reversible)
+li1. **Prepare Phase**: Stage artifacts for review (mostly reversible)
 2. **Promote Phase**: Publish staged artifacts to production (automatic on PR merge)
+
+### Understanding "Staging"
+
+Not all publishing targets support staging equally:
+
+| Target | Staging Support | Prepare Phase | Promote Phase |
+|--------|----------------|---------------|---------------|
+| **GitHub Packages** (Maven) | ❌ None | Published immediately | Already live |
+| **Maven Central** | ✅ Full staging | Artifacts in staging repo | Close & release to production |
+| **GitHub Release** (zip) | ✅ Draft releases | Uploaded as DRAFT | Publish draft → public |
+| **Gradle Plugin Portal** | ❌ None | Credentials validated only | Published immediately |
+
+**Important**: GitHub Packages artifacts are **immediately public** when prepare-release runs. This is acceptable because:
+- Few users consume artifacts from GitHub Packages (most use Maven Central)
+- The PR approval gate still controls Maven Central publication
+- GitHub Packages versions can be deleted if needed (unlike Maven Central)
 
 ## Why This Approach?
 
@@ -111,14 +126,57 @@ The release process is **two-phase** with full automation:
 
 ### Prerequisites
 
-Ensure secrets are configured:
-- `ORG_XTCLANG_MAVEN_CENTRAL_USERNAME`
-- `ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD`
-- `ORG_XTCLANG_SIGNING_KEY`
-- `ORG_XTCLANG_SIGNING_KEY_ID`
-- `ORG_XTCLANG_SIGNING_PASSWORD`
-- `ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY` (if publishing plugin)
-- `ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET` (if publishing plugin)
+ralU#### GitHub Repository Secrets (CI/CD)
+
+Configure these secrets in **GitHub repository settings** (Settings → Secrets and variables → Actions):
+
+**GitHub Packages** (required for all publishing):
+- `GITHUB_TOKEN` - ✅ Automatic (provided by GitHub Actions)
+- `GITHUB_ACTOR` - ✅ Automatic (provided by GitHub Actions)
+
+**Maven Central** (required):
+- `ORG_XTCLANG_MAVEN_CENTRAL_USERNAME` - Sonatype OSSRH username
+- `ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD` - Sonatype OSSRH password/token
+
+**Signing** (required for Maven Central):
+- `ORG_XTCLANG_SIGNING_KEY_ID` - GPG key ID (8-char short or full fingerprint)
+- `ORG_XTCLANG_SIGNING_PASSWORD` - GPG key password
+- `ORG_XTCLANG_SIGNING_KEY` - GPG private key (ASCII-armored with escaped `\n`)
+
+**Gradle Plugin Portal** (optional, only if publishing plugin):
+- `ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY` - API key
+- `ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET` - API secret
+
+**Note**: Workflows automatically convert these secrets to Gradle properties using `ORG_GRADLE_PROJECT_*` prefix.
+
+#### Local Development Properties (Optional)
+
+For local testing, add to `~/.gradle/gradle.properties`:
+
+```properties
+# GitHub Packages
+githubUsername=your-github-username
+githubPassword=ghp_YourPersonalAccessToken
+
+# Maven Central
+mavenCentralUsername=your-sonatype-username
+mavenCentralPassword=your-sonatype-password
+
+# Signing
+signing.keyId=YOUR_KEY_ID
+signing.password=your-key-password
+signing.secretKeyRingFile=/path/to/secring.gpg
+# Or for in-memory signing:
+# signing.key=-----BEGIN PGP PRIVATE KEY BLOCK-----\n...\n-----END PGP PRIVATE KEY BLOCK-----
+
+# Gradle Plugin Portal (if publishing plugin)
+gradle.publish.key=your-api-key
+gradle.publish.secret=your-api-secret
+```
+
+**Alternative property names** (also supported):
+- `github.actor` / `github.token` instead of `githubUsername` / `githubPassword`
+- `maven.central.username` / `maven.central.password` instead of `mavenCentralUsername` / `mavenCentralPassword`
 
 ### 1. Prepare Release
 
@@ -139,10 +197,14 @@ gh workflow run "Prepare Release" \
 - ✅ Pushes branch and tag
 - ✅ Builds from tag `v0.4.4`
 - ✅ Runs tests
-- ✅ Stages to Maven Central
-- ✅ Creates GitHub draft release
+- ✅ **Publishes Maven artifacts** (runs `./gradlew publish`):
+  - **GitHub Packages**: ⚠️ **Published immediately to `maven.pkg.github.com`** (no staging)
+  - **Maven Central**: Staged in `orgxtclang-XXXX` repository (not live yet)
+- ✅ Creates **GitHub Release** draft with XDK zip (not live yet)
 - ✅ Validates Gradle Plugin Portal credentials (doesn't publish)
 - ✅ Creates PR to `master`
+
+**⚠️ Important**: GitHub Packages artifacts (`org.xtclang:xdk:0.4.4`) are **immediately available** at this point, even before PR approval! However, Maven Central (where most users get artifacts) remains in staging until promotion.
 
 **Time:** ~10-15 minutes
 
@@ -228,9 +290,12 @@ Or click "Merge pull request" in the GitHub UI.
 - ✅ PR merged to `master`
 - ✅ Master is now at `0.4.5-SNAPSHOT`
 - ✅ `promote-release` workflow triggers automatically
-- ✅ Maven Central staging repository released
-- ✅ GitHub draft release published
-- ✅ Gradle Plugin Portal published (if `publish-gradle-plugin` was enabled)
+- ✅ **Maven Central**: Closes and releases staging repository via Nexus API (artifacts already uploaded)
+- ✅ **GitHub Release**: Publishes draft via `gh release edit --draft=false` (zip already uploaded)
+- ✅ **Gradle Plugin Portal**: Runs `./gradlew :plugin:publishPlugins` (if `publish-gradle-plugin` was enabled)
+- ✅ **GitHub Packages**: No action needed (already published in prepare phase)
+
+**Note**: The promote workflow does NOT run `./gradlew publish` again. Maven artifacts are already in staging and GitHub Packages from prepare-release. This workflow only promotes them to production.
 
 **Time:** ~2-5 minutes
 

@@ -1,8 +1,7 @@
 plugins {
     alias(libs.plugins.xdk.build.java)
-    alias(libs.plugins.gradle.portal.publish)
+    alias(libs.plugins.gradle.portal.publish)  // Automatically applies java-gradle-plugin
     alias(libs.plugins.xdk.build.publishing)
-    id("java-gradle-plugin")
 }
 
 private val defaultJvmArgs: Provider<List<String>> = extensions.getByName<Provider<List<String>>>("defaultJvmArgs")
@@ -119,40 +118,5 @@ tasks.withType<Jar>().configureEach {
             attributes(baseAttributes)
         }
         logger.info("[plugin] Configured '$taskName' manifest with attributes: $baseAttributes")
-    }
-}
-
-// Configure publishPlugins task to skip SNAPSHOT versions and check allowRelease for releases
-// Gradle Plugin Portal does not accept SNAPSHOT versions
-tasks.named("publishPlugins") {
-    onlyIf {
-        val currentVersion = version.toString()
-        val isSnapshot = currentVersion.contains("SNAPSHOT", ignoreCase = true)
-        val allowRelease = xdkProperties.booleanValue("$pprefix.allowRelease", false)
-        val hasPortalCreds = xdkProperties.stringValue("gradle.publish.key", "").isNotEmpty() &&
-                            xdkProperties.stringValue("gradle.publish.secret", "").isNotEmpty()
-
-        when {
-            isSnapshot -> {
-                logger.warn("⏭️  Skipping Gradle Plugin Portal publication for SNAPSHOT version: $currentVersion")
-                logger.warn("   Gradle Plugin Portal does not accept SNAPSHOT versions")
-                logger.warn("   Maven Central and GitHub Packages will still receive snapshot artifacts")
-                false
-            }
-            !hasPortalCreds -> {
-                logger.lifecycle("⏭️  Skipping Gradle Plugin Portal publication - credentials not configured")
-                logger.lifecycle("   Set gradle.publish.key and gradle.publish.secret to enable Plugin Portal publishing")
-                false
-            }
-            !allowRelease -> {
-                logger.lifecycle("⏭️  Skipping Gradle Plugin Portal publication for release version: $currentVersion")
-                logger.lifecycle("   Release publishing requires -Porg.xtclang.allowRelease=true")
-                false
-            }
-            else -> {
-                logger.lifecycle("✅ Publishing to Gradle Plugin Portal: $currentVersion")
-                true
-            }
-        }
     }
 }

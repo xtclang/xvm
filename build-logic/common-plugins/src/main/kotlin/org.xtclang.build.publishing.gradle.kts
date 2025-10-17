@@ -126,14 +126,6 @@ if (isSnapshot) {
     logger.lifecycle("[publishing] RELEASE: Use -Porg.xtclang.allowRelease=true to enable release publishing")
 }
 
-// Publishing tasks configuration
-// Configuration cache compatibility: No script object references captured
-// Release control is enforced at execution time by the user setting -Porg.xtclang.allowRelease=true
-tasks.withType<PublishToMavenRepository>().configureEach {
-    // All configuration-cache-compatible setup here
-    // Credentials are handled via implicit lookup (no explicit evaluation)
-}
-
 // Register validateCredentials task for credential validation
 val validateCredentials by tasks.registering(ValidateCredentialsTask::class) {
     group = PUBLISH_TASK_GROUP
