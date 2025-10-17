@@ -6,6 +6,7 @@ import org.xtclang.ecstasy.Range$Int64;
 import org.xtclang.ecstasy.xObj;
 import org.xtclang.ecstasy.xType;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.Ctx;
 
 import static java.lang.Math.max;
@@ -13,21 +14,50 @@ import static java.lang.System.arraycopy;
 
 public class Array$Object extends Array {
 
-    public Array$Object(Ctx ctx) {
-        super(ctx);
+    public Array$Object(Ctx ctx, TypeConstant type) {
+        super(ctx, type);
+        $type = type;
     }
 
-    public xType $type;
+    public TypeConstant $type;
     public Array$Object $delegate;
     public xObj[] $storage;
 
     // ----- xObj API ------------------------------------------------------------------------------
 
     @Override public xType $type() {
-        return $type;
+        // TODO in makeImmutable() or when mutability changes to Constant, remember to do: $type = $type.freeze()
+        return (xType) $type.ensureXType(Ctx.get().container);
     }
 
     // ----- Array API -----------------------------------------------------------------------------
+
+    /**
+     * Array Constructor: construct(Int capacity = 0)
+     */
+    public static Array$Object $new$0$p(Ctx ctx, TypeConstant type, long capacity) {
+        assert !type.isImmutable();
+
+        ctx.alloc(64); // REVIEW how big?
+        Array$Object array = new Array$Object(ctx, type);
+        array.$capCfg(ctx, capacity);
+        return array;
+    }
+
+    public static Array$Object $new$1$p(Ctx ctx, TypeConstant type, long size, xObj supply) {
+        // TODO
+        throw new UnsupportedOperationException();
+    }
+
+    public static Array$Object $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, org.xtclang.ecstasy.Iterable elements) {
+        // TODO
+        throw new UnsupportedOperationException();
+    }
+
+    public static Array$Object $new$3$p(Ctx ctx, TypeConstant type, Array$Object that) {
+        // TODO
+        throw new UnsupportedOperationException();
+    }
 
     @Override public long capacity$get$p(Ctx ctx) {
         return $delegate == null
@@ -35,9 +65,9 @@ public class Array$Object extends Array {
                 : $delegate.capacity$get$p(ctx);
     }
 
-    @Override public long size$p(Ctx ctx) {
+    @Override public long size$get$p(Ctx ctx) {
         // for virtual calls coded against xArray$Object, this avoids the virtual field accessor
-        return $delegate == null ? ($sizeEtc & $SIZE_MASK) : $delegate.size$p(ctx);
+        return $delegate == null ? ($sizeEtc & $SIZE_MASK) : $delegate.size$get$p(ctx);
     }
 
     @Override public xObj getElement$p(Ctx ctx, long index) {
@@ -84,11 +114,28 @@ public class Array$Object extends Array {
         }
     }
 
+// TODO CP
+//
+//    @Override public Array$Object clear(Ctx ctx) {
+//        if (empty$get$p(ctx)) {
+//            return this;
+//        }
+//
+//        Array delegate = $delegate();
+//        if (delegate != null) {
+//            return delegate.clear(ctx);
+//        }
+//
+//        switch ($mut()) {
+//        case $CONSTANT -> return
+//        }
+//    }
+
     @Override public Array$Object slice$p(Ctx ctx, long n1, long n2) {
         // slice must be in-range
         // TODO check lower bound as well
         long upper = Range$Int64.$effectiveUpperBound(ctx, n1, n2);
-        if (size$p(ctx) > upper) {
+        if (size$get$p(ctx) > upper) {
             throw $oob(ctx, upper);
         }
 
@@ -167,7 +214,7 @@ public class Array$Object extends Array {
         }
 
         // the caller is responsible for passing valid args; this will not be checked at runtime
-        assert index >= 0 && index <= size$p(ctx) && count > 0;
+        assert index >= 0 && index <= size$get$p(ctx) && count > 0;
 
         // only mutable arrays can insert
         if (($sizeEtc >>> $MUT_SHIFT) != $MUTABLE) {
