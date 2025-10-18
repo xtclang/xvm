@@ -103,7 +103,7 @@ jobs:
 
             - name: Download XDK artifact from CI
               if: steps.commit.outputs.has-artifact == 'true'
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v5
               with:
                   name: xdk-dist-${{ steps.commit.outputs.commit }}
                   path: ./artifacts
