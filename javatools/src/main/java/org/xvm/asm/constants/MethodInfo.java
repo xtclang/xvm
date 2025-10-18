@@ -860,9 +860,16 @@ public class MethodInfo
             ArrayList<MethodBody> listDefault = null;
             forAll:
             for (int i = 0, c = chain.length; i < c; ++i) {
-                MethodBody     body = chain[i];
-                Implementation impl;
-                switch (impl = body.getImplementation()) {
+                MethodBody      body   = chain[i];
+                Implementation  impl   = body.getImplementation();
+                if (impl != Implementation.Native) {
+                    MethodStructure method = body.getMethodStructure();
+                    if (method != null && method.isNative()) {
+                        body.markNative();
+                        impl = Implementation.Native;
+                    }
+                }
+                switch (impl) {
                 case Implicit:
                     if (fAnno || fMixin) {
                         // since annotations and mixins themselves are not concrete

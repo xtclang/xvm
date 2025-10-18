@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.xvm.asm.Annotation;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ConstantPool;
@@ -162,12 +161,10 @@ public class MethodBody {
             case Field:
                 return null;
 
-            default: {
-                Component component = m_id.getComponent();
-                if (component instanceof MethodStructure method) {
+            default:
+                if (m_id.getComponent() instanceof MethodStructure method) {
                     return m_structMethod = method;
                 }
-            }
             }
         }
         return structMethod;
@@ -180,7 +177,6 @@ public class MethodBody {
         assert m_structMethod == null;
         m_structMethod = method;
     }
-
 
     /**
      * @return true iff this is an abstract method, which means that the method is declared or
@@ -287,6 +283,13 @@ public class MethodBody {
      */
     public boolean isNative() {
         return m_impl == Implementation.Native;
+    }
+
+    /**
+     * Mark this body as native
+     */
+    public void markNative() {
+        m_impl = Implementation.Native;
     }
 
     /**
@@ -715,7 +718,7 @@ public class MethodBody {
     /**
      * The implementation type for the method body.
      */
-    private final Implementation m_impl;
+    private Implementation m_impl;
 
     /**
      * The constant denoting additional information (if required) for the MethodBody implementation:
