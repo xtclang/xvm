@@ -179,7 +179,7 @@ jobs:
                   setup-build: false
 
             - name: Download XDK distribution
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v5
               with:
                   name: xdk-release-${{ needs.build-and-test.outputs.release-version }}
                   path: ./artifacts

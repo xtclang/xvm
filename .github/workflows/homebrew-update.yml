@@ -87,7 +87,7 @@ jobs:
                   echo "run-id=$RUN_ID" >> $GITHUB_OUTPUT
 
             - name: Download XDK build artifact
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v5
               with:
                   name: xdk-dist-${{ steps.commit.outputs.commit }}
                   path: ./artifacts
