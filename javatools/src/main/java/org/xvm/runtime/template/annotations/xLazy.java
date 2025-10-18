@@ -102,7 +102,7 @@ public class xLazy
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
-    protected static class LazyHandle
+    public static class LazyHandle
             extends RefHandle {
         /**
          * A set of services that have seen this Lazy unassigned. Only used by lazy properties

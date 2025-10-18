@@ -30,6 +30,8 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.TransientId;
 
+import org.xvm.runtime.template.annotations.xLazy.LazyHandle;
+
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import org.xvm.runtime.template.text.xString;
@@ -501,7 +503,8 @@ public class ClassComposition
         for (FieldInfo field : m_mapFields.values()) {
             ObjectHandle hValue = ahField[field.getIndex()];
 
-            if (hValue != null && hValue.isMutable() && !hValue.isService() && !field.isLazy() &&
+            if (hValue != null && hValue.isMutable() && !hValue.isService() &&
+                    (!(hValue instanceof LazyHandle hLazy) || hLazy.isAssigned()) &&
                     !hValue.makeImmutable()) {
                 return false;
             }

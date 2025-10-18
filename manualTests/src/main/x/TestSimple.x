@@ -1,32 +1,21 @@
 module TestSimple {
 
     @Inject Console console;
-    @Inject Clock clock;
 
     void run() {
-        @Future ClassA a;
-
-        clock.schedule(Duration:1s, () -> {
-            console.print("assigning a");
-            a = new ClassA();
-        });
-        clock.schedule(Duration:2s, () -> {
-            console.print("assigning a.b");
-            a.b = new ClassB();
-        });
-        clock.schedule(Duration:3s, () -> {
-            console.print("assigning a.b.i");
-            a.b.i = 42;
-        });
-
-        console.print("a=" + a.b.i); // this used to assert the compiler
+        ClassA a = new ClassA();
+        console.print(a.b.i);
+        a = a.makeImmutable(); // this used to fail to freeze "a.b"
+        a.b.i[0]++;            // and this used to be incorrectly allowed
+        console.print(a.b.i);
     }
 
     class ClassA {
-        @Future ClassB b;
+        @Lazy
+        ClassB b.calc() = new ClassB();
     }
 
     class ClassB {
-        @Future Int i;
+        Int[] i = new Int[1] (i -> i);
     }
 }
