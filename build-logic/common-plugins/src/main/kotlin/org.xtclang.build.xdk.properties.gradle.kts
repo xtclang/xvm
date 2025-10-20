@@ -29,11 +29,7 @@ val xdkPropertiesService = gradle.sharedServices
     }
     .get()
 
-val xdkProperties = extensions.create<ProjectXdkProperties>(
-    "xdkProperties",
-    providers,
-    xdkPropertiesService
-)
+val xdkProperties = extensions.create<ProjectXdkProperties>("xdkProperties",providers, xdkPropertiesService)
 
 // Automatically set group and version from properties
 // Allow -Pversion override, otherwise use xdk.version from properties

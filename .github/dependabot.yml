@@ -11,9 +11,9 @@ updates:
           time: "06:00"
       open-pull-requests-limit: 5
       reviewers:
-          - "maintainers"
+          - "xtclang/maintainers"
       assignees:
-          - "maintainers"
+          - "xtclang/maintainers"
       commit-message:
           prefix: "ci"
           include: "scope"
@@ -27,9 +27,9 @@ updates:
           time: "06:00"
       open-pull-requests-limit: 5
       reviewers:
-          - "maintainers"
+          - "xtclang/maintainers"
       assignees:
-          - "maintainers"
+          - "xtclang/maintainers"
       commit-message:
           prefix: "docker"
           include: "scope"
@@ -49,9 +49,9 @@ updates:
           time: "06:00"
       open-pull-requests-limit: 10
       reviewers:
-          - "maintainers"
+          - "xtclang/maintainers"
       assignees:
-          - "maintainers"
+          - "xtclang/maintainers"
       commit-message:
           prefix: "deps"
           include: "scope"

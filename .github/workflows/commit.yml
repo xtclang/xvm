@@ -23,7 +23,7 @@ on:
     # without pushing to master. Set publish-snapshots=true to trigger publishing workflows.
     workflow_dispatch:
         inputs:
-            publish-snapshots:
+            11pshots:
                 description: 'Trigger publishing workflows after build (snapshot, docker, homebrew)'
                 type: boolean
                 required: false
