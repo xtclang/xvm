@@ -32,8 +32,6 @@ import org.xvm.javajit.builders.ExceptionBuilder;
 import org.xvm.javajit.builders.FunctionBuilder;
 import org.xvm.javajit.builders.ModuleBuilder;
 
-import org.xvm.util.ListMap;
-
 import static org.xvm.javajit.Builder.ENUMERATION;
 import static org.xvm.javajit.Builder.MODULE;
 
@@ -163,15 +161,11 @@ public class TypeSystem {
     protected final Map<String, TypeConstant> functionTypes = new ConcurrentHashMap<>();
 
     /**
-     * A list of constants that are registered by the JIT compiler to be accessed by the run-time.
-     */
-    protected final ListMap<Constant, Integer> constantsRegistry = new ListMap<>(1024);
-
-    /**
      * @return the ConstantPool associated with this TypeSystem
      */
     public ConstantPool pool() {
-        // TODO should there be a separate ConstantPool created for this type system when there are only shared modules? i.e. is there a FileStructure?
+        // TODO should there be a separate ConstantPool created for this type system when there are
+        //      only shared modules? i.e. is there a FileStructure?
         return owned.length == 0 ? xvm.ecstasyPool /* <-- TODO wrong */ : owned[0].module.getConstantPool();
     }
 
@@ -480,16 +474,8 @@ public class TypeSystem {
      *
      * @return the index of the constant
      */
-    public synchronized int registerConstant(Constant constant) {
-        ListMap<Constant, Integer> registry = constantsRegistry;
-        Integer                    index    = registry.get(constant);
-        if (index == null) {
-            int size = registry.size();
-            registry.put(constant, size);
-            return size;
-        } else {
-            return index;
-        }
+    public int registerConstant(Constant constant) {
+        return pool().register(constant).getPosition();
     }
 
     /**
@@ -499,7 +485,7 @@ public class TypeSystem {
      * growth occurs, the old list still contains the corresponding entry at the right place.
      */
     public Constant getConstant(int index) {
-        return constantsRegistry.entryAt(index).getKey();
+        return pool().getConstant(index);
     }
 }
 
