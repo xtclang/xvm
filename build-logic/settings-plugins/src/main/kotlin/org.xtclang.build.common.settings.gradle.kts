@@ -8,7 +8,17 @@
  */
 
 plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+    id("org.gradle.toolchains.foojay-resolver") version "1.0.0"
+}
+
+toolchainManagement {
+    jvm {
+        javaRepositories {
+            repository("foojay") {
+                resolverClass.set(org.gradle.toolchains.foojay.FoojayToolchainResolver::class.java)
+            }
+        }
+    }
 }
 
 fun compositeRootRelativeFile(path: String): File = XdkPropertiesService.compositeRootRelativeFile(file("."), path)

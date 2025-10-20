@@ -23,6 +23,7 @@ jline = "3.30.5"
 ktlint = "13.1.0"
 palantir-git-version = "4.0.0"
 junit = "6.0.0"
+gradle-doctor = "0.10.0"
 
 [plugins]
 # Included build plugins - no version (resolved from source)
@@ -39,6 +40,7 @@ gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradl
 vanniktech-maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-maven-publish" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 palantir-git-version = { id = "com.palantir.git-version", version.ref = "palantir-git-version" }
+gradle-doctor = { id = "com.osacky.doctor", version.ref = "gradle-doctor" }
 
 [libraries]
 # Self-built artifacts (included builds) - no version needed, Gradle substitutes by group:name

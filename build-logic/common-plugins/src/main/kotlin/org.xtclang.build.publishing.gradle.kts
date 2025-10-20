@@ -129,19 +129,26 @@ plugins.withType<SigningPlugin> {
     }
 }
 
+/**
+ * Logs the publishing configuration based on version type (snapshot or release).
+ * Configuration-time logging with no provider evaluation for configuration cache compatibility.
+ */
+fun logPublishingConfiguration(logger: Logger, version: String, isSnapshot: Boolean) {
+    logger.info("[publishing] Version: $version ${if (isSnapshot) "(SNAPSHOT)" else "(RELEASE)"}")
+    if (isSnapshot) {
+        logger.info("[publishing] SNAPSHOT: Publishing to GitHub Packages + Maven Central Snapshots")
+        return
+    }
+    logger.warn("[publishing] Publication, if triggered, will run in release mode.")
+}
+
 // Determine if this is a snapshot or release version
-val isSnapshot = publicationVersion.contains("SNAPSHOT", ignoreCase = true)
 // Keep allowRelease as a Provider for configuration cache compatibility
+val isSnapshot = publicationVersion.contains("SNAPSHOT", ignoreCase = true)
 val allowReleaseProvider = xdkPublishingCredentials.allowRelease
 
-// Log publishing configuration (configuration-time logging, no provider evaluation)
-logger.lifecycle("[publishing] Version: $publicationVersion ${if (isSnapshot) "(SNAPSHOT)" else "(RELEASE)"}")
-if (isSnapshot) {
-    logger.lifecycle("[publishing] SNAPSHOT: Publishing to GitHub Packages + Maven Central Snapshots")
-    logger.lifecycle("[publishing] SNAPSHOT: Gradle Plugin Portal will be skipped (does not accept snapshots)")
-} else {
-    logger.lifecycle("[publishing] RELEASE: Use -Porg.xtclang.allowRelease=true to enable release publishing")
-}
+// Log publishing configuration
+logPublishingConfiguration(logger, publicationVersion, isSnapshot)
 
 // Register validateCredentials task for credential validation
 val validateCredentials by tasks.registering(ValidateCredentialsTask::class) {
