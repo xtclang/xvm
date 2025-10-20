@@ -13,11 +13,11 @@ module test1.examples.org {
 
         TestBase t0 = new TestBase(5);
         console.print(t0);
-        console.print(t0.x);
+        assert t0.augment() == t0.x + 1;
 
         TestBase t1 = new TestDerived(6);
         console.print(t1);
-        console.print(t1.x);
+        assert t1.augment() == (t1.x + 1) * t1.x;
 
         TestFormal<Int> t2 = new TestFormal(7);
         console.print(t2.value);
@@ -30,7 +30,15 @@ module test1.examples.org {
 //        console.print(buf.toString());
     }
 
-    class TestBase(Int x);
-    class TestDerived(Int x) extends TestBase(x) {}
+    class TestBase(Int x) {
+        Int augment() {
+            return x + 1;
+        }
+    }
+    class TestDerived(Int x) extends TestBase(x) {
+        @Override Int augment() {
+            return super() * x;
+        }
+    }
     class TestFormal<Element> (Element value) {}
 }

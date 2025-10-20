@@ -54,7 +54,6 @@ import org.xvm.javajit.BuildContext.DoubleSlot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.Ctx;
 import org.xvm.javajit.JitCtorDesc;
-import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitTypeDesc;
@@ -66,6 +65,8 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
+
+import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 
 /**
  * Generic Java class builder.
@@ -321,7 +322,7 @@ public class CommonBuilder
                         Slot   slot    = loadConstant(code, prop.getInitialValue());
                         String jitName = prop.getIdentity().ensureJitPropertyName(ts);
                         if (slot instanceof DoubleSlot doubleSlot) {
-                            assert doubleSlot.flavor() == JitFlavor.MultiSlotPrimitive;
+                            assert doubleSlot.flavor() == MultiSlotPrimitive;
                             // loadConstant() has already loaded the value and the boolean
                             Label ifTrue = code.newLabel();
                             Label endIf  = code.newLabel();
@@ -423,7 +424,7 @@ public class CommonBuilder
                         Slot   slot    = loadConstant(code, prop.getInitialValue());
                         String jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
                         if (slot instanceof DoubleSlot doubleSlot) {
-                            assert doubleSlot.flavor() == JitFlavor.MultiSlotPrimitive;
+                            assert doubleSlot.flavor() == MultiSlotPrimitive;
                             // loadConstant() has already loaded the value and the boolean
                             Label ifTrue = code.newLabel();
                             Label endIf  = code.newLabel();

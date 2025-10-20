@@ -44,6 +44,7 @@ import static org.xvm.javajit.Builder.CD_JavaString;
 import static org.xvm.javajit.Builder.CD_xException;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.toTypeKind;
+import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 
 /**
  * Whatever is necessary for the Ops compilation.
@@ -399,7 +400,7 @@ public class BuildContext {
         Slot slot = loadArgument(code, argId);
         if (slot.cd().isPrimitive() && !targetDesc.cd.isPrimitive()) {
             if (slot instanceof DoubleSlot doubleSlot) {
-                assert doubleSlot.flavor == JitFlavor.MultiSlotPrimitive;
+                assert doubleSlot.flavor == MultiSlotPrimitive;
                 // loadArgument() has already loaded the value and the boolean
 
                 Label ifTrue = code.newLabel();
@@ -428,7 +429,16 @@ public class BuildContext {
      * We **always** load a primitive value if possible.
      */
     public Slot loadConstant(CodeBuilder code, int argId) {
-        return builder.loadConstant(code, getConstant(argId));
+        return loadConstant(code, getConstant(argId));
+    }
+
+    /**
+     * Build the code to load a value for a constant on the stack.
+     *
+     * We **always** load a primitive value if possible.
+     */
+    public Slot loadConstant(CodeBuilder code, Constant constant) {
+        return builder.loadConstant(code, constant);
     }
 
     /**
@@ -528,7 +538,7 @@ public class BuildContext {
             code.localVariable(slotIndex, name, cd, varStart, scope.endLabel);
             code.localVariable(slotExt,   name+EXT, CD_boolean, varStart, scope.endLabel);
 
-            slot = new DoubleSlot(slotIndex, slotExt, JitFlavor.MultiSlotPrimitive, type, cd, name);
+            slot = new DoubleSlot(slotIndex, slotExt, MultiSlotPrimitive, type, cd, name);
         } else {
             cd = JitParamDesc.getJitClass(typeSystem, type);
 
@@ -634,23 +644,11 @@ public class BuildContext {
         if (!targetSlot.isSingle()) {
             throw new UnsupportedOperationException("Multislot P_Get");
         }
-        PropertyConstant propId     = (PropertyConstant) getConstant(propIdIndex);
-        PropertyInfo     propInfo   = propId.getPropertyInfo();
-        ClassDesc        cdOwner    = propInfo.getJitIdentity().getNamespace().ensureClassDesc(typeSystem);
-        JitMethodDesc    jmd        = propInfo.getGetterJitDesc(typeSystem);
-        String           getterName = propInfo.getGetterId().ensureJitMethodName(typeSystem);
 
-        MethodTypeDesc md;
-        if (jmd.isOptimized) {
-            md         = jmd.optimizedMD;
-            getterName += Builder.OPT;
-        } else {
-            md = jmd.standardMD;
-        }
+        PropertyConstant propId = (PropertyConstant) getConstant(propIdIndex);
+        JitMethodDesc    jmdGet = builder.loadProperty(code, propId);
 
-        loadCtx(code);
-        code.invokevirtual(cdOwner, getterName, md);
-        assignReturns(code, jmd, 1, new int[] {retIndex});
+        assignReturns(code, jmdGet, 1, new int[] {retIndex});
     }
 
     /**

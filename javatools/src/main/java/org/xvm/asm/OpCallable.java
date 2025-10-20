@@ -576,6 +576,7 @@ public abstract class OpCallable extends Op {
             cdTarget = idMethod.getClassIdentity().ensureClassDesc(ts);
             jmdCall  = body.getJitDesc(ts);
             fSpecial = true;
+            code.aload(0); // this
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
             idMethod   = (MethodConstant) bctx.getConstant(m_nFunctionId);
 
