@@ -388,13 +388,14 @@ public class TypeSystem {
      * Jit class shapes.
      */
     public enum ClassfileShape {
+        Class    ("c$"),  // used to prefix a class name only when a collision would otherwise occur
         Pure     ("i$"),
         Proxy    ("p$"),
         Duck     ("d$"),
         Mask     ("m$"),
         Future   ("f$"),
-        Exception("e$"),
-        Impl     (""), // needs to be last
+        Exception("e$"), // RuntimeException "entangled" with the corresponding XTC Exception class
+        Impl     (""),   // needs to be last
         ;
 
         ClassfileShape(String prefix) {

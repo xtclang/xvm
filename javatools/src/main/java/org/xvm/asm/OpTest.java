@@ -365,19 +365,19 @@ public abstract class OpTest
                 boolean fInverse;
                 switch (nOp) {
                 case OP_IS_GT:
-                    bctx.builder.loadConstant(code, pool.valGreater());
+                    bctx.loadConstant(code, pool.valGreater());
                     fInverse = false;
                     break;
                 case OP_IS_GTE:
-                    bctx.builder.loadConstant(code, pool.valLesser());
+                    bctx.loadConstant(code, pool.valLesser());
                     fInverse = true;
                     break;
                 case OP_IS_LT:
-                    bctx.builder.loadConstant(code, pool.valLesser());
+                    bctx.loadConstant(code, pool.valLesser());
                     fInverse = false;
                     break;
                 case OP_IS_LTE:
-                    bctx.builder.loadConstant(code, pool.valGreater());
+                    bctx.loadConstant(code, pool.valGreater());
                     fInverse = true;
                     break;
                 default:

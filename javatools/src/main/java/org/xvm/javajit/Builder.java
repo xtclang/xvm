@@ -16,6 +16,8 @@ import org.xvm.asm.constants.EnumValueConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.NamedCondition;
+import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -30,6 +32,7 @@ import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 
+import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 
 /**
@@ -132,7 +135,7 @@ public abstract class Builder {
 
             TypeConstant type = singleton.getType();
             JitTypeDesc  jtd  = type.getJitDesc(typeSystem);
-            assert jtd.flavor == JitFlavor.Specific;
+            assert jtd.flavor == Specific;
 
             // retrieve from Singleton.$INSTANCE (see CommonBuilder.assembleStaticInitializer)
             ClassDesc cd = jtd.cd;
@@ -148,11 +151,49 @@ public abstract class Builder {
             Builder.loadTypeConstant(code, typeSystem, type);
             return new SingleSlot(Op.A_STACK, type.getType(), CD_TypeConstant, "");
 
+        case PropertyConstant propId:
+            // support for the "local property" mode
+            code.aload(0);
+            loadProperty(code, propId);
+
+            TypeConstant type = propId.getType();
+            JitTypeDesc  jtd  = type.getJitDesc(typeSystem);
+            if (jtd.flavor == MultiSlotPrimitive) {
+                throw new UnsupportedOperationException("TODO multislot property");
+            }
+            return new SingleSlot(Op.A_STACK, type, jtd.cd, "");
+
         default:
             break;
         }
 
         throw new UnsupportedOperationException(constant.toString());
+    }
+
+    /**
+     * Build the code to load a local property on the Java stack.
+     *
+     * This method assumes the "owner" ref is loaded on Java stack.
+     *
+     * @return the JitMethodDesc for the "get" method
+     */
+    public JitMethodDesc loadProperty(CodeBuilder code, PropertyConstant propId) {
+        PropertyInfo  propInfo   = propId.getPropertyInfo();
+        ClassDesc     cdOwner    = propInfo.getJitIdentity().getNamespace().ensureClassDesc(typeSystem);
+        JitMethodDesc jmdGet     = propInfo.getGetterJitDesc(typeSystem);
+        String        getterName = propInfo.getGetterId().ensureJitMethodName(typeSystem);
+
+        MethodTypeDesc md;
+        if (jmdGet.isOptimized) {
+            md         = jmdGet.optimizedMD;
+            getterName += Builder.OPT;
+        } else {
+            md = jmdGet.standardMD;
+        }
+
+        code.aload(code.parameterSlot(0)); // $ctx
+        code.invokevirtual(cdOwner, getterName, md);
+        return jmdGet;
     }
 
     /**
