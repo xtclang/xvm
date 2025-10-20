@@ -23,7 +23,7 @@ on:
     # without pushing to master. Set publish-snapshots=true to trigger publishing workflows.
     workflow_dispatch:
         inputs:
-            11pshots:
+            publish-snapshots:
                 description: 'Trigger publishing workflows after build (snapshot, docker, homebrew)'
                 type: boolean
                 required: false
@@ -44,7 +44,7 @@ on:
                 description: 'Skip manual tests'
                 type: boolean
                 required: false
-                default: true
+                default: false
             parallel-test-mode:
                 description: 'Run manual tests in parallel mode'
                 type: boolean
@@ -57,7 +57,7 @@ env:
     ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
     ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
 
-    skip_manual_tests: ${{ github.event.inputs.skip_tests == true || github.event.inputs.skip_tests == 'true' }}
+    skip_manual_tests: ${{ github.event.inputs.skip-tests == true || github.event.inputs.skip-tests == 'true' }}
     run_manual_tests_parallel: ${{ github.event.inputs.parallel-test-mode == true || github.event.inputs.parallel-test-mode == 'true' }}
     trigger_publishing: ${{ github.event.inputs.publish-snapshots == true || github.event.inputs.publish-snapshots == 'true' }}
 
