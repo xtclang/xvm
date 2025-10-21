@@ -26,6 +26,12 @@ on:
                 description: 'XDK version to publish (leave empty to use latest from version.properties)'
                 required: false
 
+# Concurrency settings: ensure only one Homebrew update runs at a time to avoid git conflicts
+# Queue multiple triggers instead of cancelling in-progress updates
+concurrency:
+    group: update-homebrew
+    cancel-in-progress: false
+
 jobs:
     update-homebrew:
         name: Update Homebrew tap
@@ -143,11 +149,18 @@ jobs:
               run: |
                   echo "### ✅ Homebrew Tap Updated" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Formula:** xdk-latest" >> $GITHUB_STEP_SUMMARY
                   echo "- **Version:** ${{ steps.version.outputs.xdk-version }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "Users can now install with:" >> $GITHUB_STEP_SUMMARY
+                  echo "**Installation:**" >> $GITHUB_STEP_SUMMARY
                   echo '```bash' >> $GITHUB_STEP_SUMMARY
                   echo "brew tap xtclang/xvm" >> $GITHUB_STEP_SUMMARY
-                  echo "brew install xdk" >> $GITHUB_STEP_SUMMARY
+                  echo "brew install xdk-latest" >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Upgrade existing installation:**" >> $GITHUB_STEP_SUMMARY
+                  echo '```bash' >> $GITHUB_STEP_SUMMARY
+                  echo "brew update" >> $GITHUB_STEP_SUMMARY
+                  echo "brew upgrade xdk-latest" >> $GITHUB_STEP_SUMMARY
                   echo '```' >> $GITHUB_STEP_SUMMARY

@@ -3,6 +3,7 @@
 #
 # This workflow publishes snapshots to:
 # - GitHub Packages (Maven artifacts)
+# - Maven Central Snapshots
 # - GitHub Releases (XDK snapshot release)
 #
 # Triggered by verify_commit workflow when:
@@ -25,6 +26,12 @@ on:
             ci-run-id:
                 description: 'CI run ID to download artifact from (leave empty to skip artifact download)'
                 required: false
+
+# Concurrency settings: ensure only one publish runs at a time to avoid upload conflicts
+# Queue multiple triggers instead of cancelling in-progress uploads
+concurrency:
+    group: publish-snapshots
+    cancel-in-progress: false
 
 jobs:
     publish-snapshots:
@@ -173,6 +180,7 @@ jobs:
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "**Published to:**" >> $GITHUB_STEP_SUMMARY
                   echo "- ✅ GitHub Packages (Maven artifacts)" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ Maven Central Snapshots" >> $GITHUB_STEP_SUMMARY
                   if [ "${{ steps.commit.outputs.has-artifact }}" = "true" ]; then
                       echo "- ✅ GitHub Releases (xdk-snapshots)" >> $GITHUB_STEP_SUMMARY
                   else

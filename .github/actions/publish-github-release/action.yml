@@ -89,26 +89,44 @@ runs:
 
               echo "📥 Publishing snapshot to: $RELEASE_TAG"
 
+              # Prepare release notes with current commit
+              BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+              RELEASE_NOTES="**Automated snapshot builds from master branch**
+
+              Latest snapshot version: **${VERSION}**
+              Build commit: \`${COMMIT}\`
+              Build date: ${BUILD_DATE}
+
+              Download the \`xdk-${VERSION}.zip\` asset below for the most recent snapshot build."
+
               # Create or update snapshot release
               if gh release view "$RELEASE_TAG" --repo "$REPO" >/dev/null 2>&1; then
-                  echo "Uploading to existing snapshot release..."
-                  gh release upload "$RELEASE_TAG" "$ASSET_NAME" \
+                  echo "Updating existing snapshot release..."
+
+                  # Delete and recreate to update tag target (for source archives)
+                  # This ensures source zip/tar.gz reflect the current commit
+                  echo "Deleting old release to update tag target..."
+                  gh release delete "$RELEASE_TAG" --yes --repo "$REPO" --cleanup-tag
+
+                  echo "Creating fresh release with current commit..."
+                  gh release create "$RELEASE_TAG" \
+                      "$ASSET_NAME" \
                       --repo "$REPO" \
-                      --clobber
+                      --title "XDK Snapshot Builds" \
+                      --notes "$RELEASE_NOTES" \
+                      --prerelease \
+                      --latest=false \
+                      --target "$COMMIT"
               else
                   echo "Creating new snapshot release..."
                   gh release create "$RELEASE_TAG" \
                       "$ASSET_NAME" \
                       --repo "$REPO" \
                       --title "XDK Snapshot Builds" \
-                      --notes "**Automated snapshot builds from master branch**
-
-              Latest snapshot version: **${VERSION}**
-              Build commit: \`${COMMIT}\`
-
-              Download the \`xdk-${VERSION}.zip\` asset below for the most recent snapshot build." \
+                      --notes "$RELEASE_NOTES" \
                       --prerelease \
-                      --latest=false
+                      --latest=false \
+                      --target "$COMMIT"
               fi
 
               echo "✅ Snapshot published: $ASSET_NAME"
@@ -175,7 +193,7 @@ runs:
               ### Homebrew
               \`\`\`sh
               brew tap xtclang/xvm
-              brew install xdk
+              brew install xdk-latest
               \`\`\`
 
               ### Maven

@@ -129,20 +129,20 @@ detects newer builds correctly. Stable releases will be available through other 
 
 Our CI system maintains a single, continuously updated snapshot release:
 
-- **Release Name**: `XDK Latest Snapshot`
-- **GitHub Tag**: `xdk-latest-snapshot`
-- **Download URL**: `https://github.com/xtclang/xvm/releases/download/xdk-latest-snapshot/xdk-0.4.4-SNAPSHOT.zip`
+- **Release Name**: `XDK Snapshot Builds`
+- **GitHub Tag**: `xdk-snapshots`
+- **Download URL**: `https://github.com/xtclang/xvm/releases/download/xdk-snapshots/xdk-0.4.4-SNAPSHOT.zip`
 
 **Automatic Overwrite Process:**
 1. Every push to `master` triggers the CI pipeline
-2. The existing `xdk-latest-snapshot` release is **completely deleted**
+2. The existing `xdk-snapshots` release is **completely deleted**
 3. A new release with the same tag is created with the latest build
-4. The Homebrew formula gets dynamic versioning: `0.4.4-SNAPSHOT.{commitSHA}`
+4. The Homebrew formula gets dynamic versioning: `0.4.4-SNAPSHOT.{timestamp}`
 
 This ensures:
 - ✅ Only **one** snapshot release exists (never accumulates old releases)
 - ✅ Download URL remains consistent for automation
-- ✅ `brew update` works correctly due to commit-qualified versioning
+- ✅ `brew update` works correctly due to timestamp-qualified versioning
 - ✅ Always reflects the latest master commit
 
 #### Snapshots vs. Stable Releases

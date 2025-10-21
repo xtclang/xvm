@@ -11,16 +11,18 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}🚀 Triggering 'Verify Commit' workflow with publish-snapshots=true...${NC}"
+echo -e "${BLUE}🚀 Triggering 'Verify Commit' workflow with publish-snapshots=true and skip-tests=true...${NC}"
 
 # Get the current branch
 CURRENT_BRANCH=$(git branch --show-current)
 echo -e "${BLUE}Branch: ${CURRENT_BRANCH}${NC}"
+echo -e "${YELLOW}⚠️  Manual tests will be skipped${NC}"
 
 # Trigger the workflow
 gh workflow run "Verify Commit" \
     --ref "$CURRENT_BRANCH" \
-    --field publish-snapshots=true
+    --field publish-snapshots=true \
+    --field skip-tests=true
 
 echo -e "${GREEN}✅ Workflow triggered${NC}"
 echo -e "${YELLOW}⏳ Waiting for workflow run to start...${NC}"
@@ -67,7 +69,7 @@ if [ "$STATUS" = "success" ]; then
     sleep 8
 
     # Monitor each triggered workflow
-    WORKFLOWS=("Publish Snapshots" "Build Docker Images" "Update Homebrew")
+    WORKFLOWS=("Publish Snapshots" "Publish Docker Images" "Update Homebrew")
     FAILED_WORKFLOWS=()
 
     echo -e "${BLUE}Looking for workflows triggered by CI run: ${RUN_ID}${NC}"
@@ -142,7 +144,7 @@ if [ "$STATUS" = "success" ]; then
         echo -e "${GREEN}🎉 All publishing workflows completed successfully!${NC}"
         echo ""
         echo -e "${BLUE}Published artifacts:${NC}"
-        echo "  • Maven snapshots → GitHub Packages"
+        echo "  • Maven snapshots → GitHub Packages + Maven Central Snapshots"
         echo "  • XDK distribution → GitHub Releases (xdk-snapshots)"
         echo "  • Docker images → GitHub Container Registry"
         echo "  • Homebrew formula → Updated"
