@@ -69,7 +69,7 @@ if [ "$STATUS" = "success" ]; then
     sleep 8
 
     # Monitor each triggered workflow
-    WORKFLOWS=("Publish Snapshots" "Publish Docker Images" "Update Homebrew")
+    WORKFLOWS=("Publish Snapshots" "Build Docker Images" "Update Homebrew")
     FAILED_WORKFLOWS=()
 
     echo -e "${BLUE}Looking for workflows triggered by CI run: ${RUN_ID}${NC}"

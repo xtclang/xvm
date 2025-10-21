@@ -131,7 +131,7 @@ jobs:
                       echo "  🚀 PUBLISHING WORKFLOWS WILL BE TRIGGERED"
                       echo -e "\033[0m"
                       echo "  📋 Reason: $TRIGGER_REASON"
-                      echo "  📦 Workflows: Publish Snapshots, Publish Docker Images, Update Homebrew"
+                      echo "  📦 Workflows: Publish Snapshots, Build Docker Images, Update Homebrew"
                   else
                       echo "::notice::⏭️  PUBLISHING DISABLED: No publishing workflows will be triggered"
                       echo -e "\033[1;33m"
@@ -297,8 +297,8 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                  echo "🚀 Triggering Publish Docker Images workflow..."
-                  gh workflow run "Publish Docker Images" --repo ${{ github.repository }} --ref ${{ github.ref_name }} --field ci-run-id=${{ github.run_id }}
+                  echo "🚀 Triggering Build Docker Images workflow..."
+                  gh workflow run "Build Docker Images" --repo ${{ github.repository }} --ref ${{ github.ref_name }} --field ci-run-id=${{ github.run_id }}
                   echo "✅ Docker publishing triggered"
 
             - name: Trigger Homebrew update
