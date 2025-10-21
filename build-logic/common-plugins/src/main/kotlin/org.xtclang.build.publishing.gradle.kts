@@ -141,11 +141,21 @@ extensions.configure<PublishingExtension> {
 // versions, ensuring compatibility with local gradle.properties and CI env vars
 plugins.withType<SigningPlugin> {
     extensions.configure<SigningExtension> {
-        // Let the signing plugin handle credentials automatically via Gradle properties
-        // The Vanniktech plugin will call useInMemoryPgpKeys if signing.key is available
-        // or use keyring file if signing.secretKeyRingFile is available
-
         isRequired = false  // Don't fail build if signing is not configured
+
+        // Explicitly configure in-memory key if available (required for configuration cache compatibility)
+        // This prevents the signing plugin from trying to access keyring files in CI
+        val keyId = project.findProperty("signing.keyId") as? String
+        val password = project.findProperty("signing.password") as? String
+        val inMemoryKey = project.findProperty("signing.key") as? String
+
+        if (keyId != null && inMemoryKey != null) {
+            // Use in-memory key (preferred for CI and configuration cache compatibility)
+            useInMemoryPgpKeys(keyId, inMemoryKey, password ?: "")
+            logger.info("[publishing] Configured in-memory PGP signing for artifact signing")
+        }
+        // If in-memory key is not available, signing plugin will use keyring file automatically
+        // via signing.secretKeyRingFile property (for local development)
     }
 }
 
