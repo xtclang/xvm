@@ -117,13 +117,16 @@ Homebrew provides continuously updated `xdk-latest` builds from our CI pipeline:
 ```bash
 # Install Homebrew if you have not already done so: https://brew.sh/
 brew tap xtclang/xvm && brew install xdk-latest
-# Upgrade to latest CI build:
-brew update && brew upgrade xdk-latest
+
+# Upgrade to latest CI build (choose one):
+brew update && brew upgrade xdk-latest  # Standard approach
+brew reinstall xdk-latest               # Alternative: always gets latest
 ```
 
 Note: Homebrew delivers CI snapshots for development. Each snapshot gets a unique timestamp-based
-version (e.g., `0.4.4-SNAPSHOT.20250831181403`) ensuring `brew update && brew upgrade xdk-latest`
-detects newer builds correctly. Stable releases will be available through other package managers.
+version (e.g., `0.4.4-SNAPSHOT.20250831181403`). You must run `brew update` first to refresh the
+tap, then `brew upgrade xdk-latest` will detect the newer build. Alternatively, `brew reinstall`
+always installs the latest snapshot. Stable releases will be available through other package managers.
 
 #### How Snapshot Releases Work
 

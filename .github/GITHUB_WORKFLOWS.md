@@ -389,7 +389,13 @@ gh workflow run homebrew-update.yml --ref master
 ```bash
 brew tap xtclang/xvm
 brew install xdk-latest
+
+# Upgrade to latest snapshot (choose one):
+brew update && brew upgrade xdk-latest  # Standard: refresh tap first
+brew reinstall xdk-latest               # Alternative: always gets latest
 ```
+
+**Important**: Homebrew caches tap metadata locally. You must run `brew update` to refresh the tap before `brew upgrade` will detect new snapshot versions. Alternatively, use `brew reinstall xdk-latest` to always get the latest snapshot.
 
 **Dependencies**: `openjdk@{version}` (from version.properties)
 

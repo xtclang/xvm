@@ -159,8 +159,11 @@ jobs:
                   echo "brew install xdk-latest" >> $GITHUB_STEP_SUMMARY
                   echo '```' >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "**Upgrade existing installation:**" >> $GITHUB_STEP_SUMMARY
+                  echo "**Upgrade to latest snapshot:**" >> $GITHUB_STEP_SUMMARY
                   echo '```bash' >> $GITHUB_STEP_SUMMARY
-                  echo "brew update" >> $GITHUB_STEP_SUMMARY
-                  echo "brew upgrade xdk-latest" >> $GITHUB_STEP_SUMMARY
+                  echo "# Option 1: Standard upgrade (refresh tap first)" >> $GITHUB_STEP_SUMMARY
+                  echo "brew update && brew upgrade xdk-latest" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "# Option 2: Force install latest (always works)" >> $GITHUB_STEP_SUMMARY
+                  echo "brew reinstall xdk-latest" >> $GITHUB_STEP_SUMMARY
                   echo '```' >> $GITHUB_STEP_SUMMARY

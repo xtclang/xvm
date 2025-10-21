@@ -17,6 +17,8 @@ permissions:
 
 on:
     push:
+        branches-ignore:
+            - 'dependabot/**'  # Don't run on Dependabot branches (already runs on pull_request)
     pull_request:
     # Manual trigger - optionally triggers publishing workflows after successful completion
     # This allows testing the full publishing pipeline (snapshot, docker, homebrew) from any branch
