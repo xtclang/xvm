@@ -11,7 +11,7 @@ updates:
           time: "06:00"
       open-pull-requests-limit: 5
       commit-message:
-          prefix: "ci"
+          prefix: "ci [skip ci]"
           include: "scope"
 
     # Enable version updates for Docker
@@ -23,7 +23,7 @@ updates:
           time: "06:00"
       open-pull-requests-limit: 5
       commit-message:
-          prefix: "docker"
+          prefix: "docker [skip ci]"
           include: "scope"
 
     # Enable version updates for Gradle dependencies
@@ -44,7 +44,7 @@ updates:
               patterns:
                   - "*"
       commit-message:
-          prefix: "deps"
+          prefix: "deps [skip ci]"
           include: "scope"
       ignore:
           # Ignore XDK internal dependencies
