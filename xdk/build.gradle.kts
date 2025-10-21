@@ -28,6 +28,13 @@ plugins {
     distribution
 }
 
+// Configure all XTC compile tasks to use the compiler daemon (fork=false enables it)
+subprojects {
+    tasks.withType<XtcCompileTask>().configureEach {
+        fork.set(false)  // Use in-process daemon instead of forking new JVM
+    }
+}
+
 val xtcLauncherBinaries by configurations.registering {
     isCanBeResolved = true
     isCanBeConsumed = false
