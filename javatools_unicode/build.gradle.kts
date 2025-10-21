@@ -10,7 +10,6 @@ import de.undercouch.gradle.tasks.download.Download
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
 
 plugins {
-    id("org.xtclang.build.xdk.versioning")
     alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.download)
 }

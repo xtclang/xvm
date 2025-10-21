@@ -2,7 +2,11 @@
 # GitHub workflow for building and publishing Docker images
 #
 # This workflow builds multi-platform Docker images (amd64/arm64) and pushes them to GHCR.
-# It triggers automatically on master after CI completes, or can be manually triggered.
+#
+# Triggered by verify_commit workflow when:
+# - Running on master branch (automatic)
+# - Manually run with test-publishing=true (testing)
+# Can also be triggered manually via workflow_dispatch for testing.
 #
 name: Build Docker Images
 
@@ -12,13 +16,8 @@ permissions:
     actions: read
 
 on:
-    # AUTOMATIC TRIGGERS DISABLED FOR TESTING
-    # Uncomment the following lines to enable automatic publishing after CI:
-    # workflow_run:
-    #     workflows: ["VerifyCommit"]
-    #     types: [completed]
-
-    # Manual trigger from any branch
+    # Triggered explicitly by verify_commit workflow (on master or when test-publishing=true)
+    # Can also be manually triggered for testing
     workflow_dispatch:
         inputs:
             ci-run-id:
@@ -35,6 +34,12 @@ on:
                 required: false
                 default: true
 
+# Concurrency settings: ensure only one Docker build runs at a time to avoid upload conflicts
+# Queue multiple triggers instead of cancelling in-progress uploads
+concurrency:
+    group: publish-docker
+    cancel-in-progress: false
+
 env:
     # Build configuration pulled from get-versions action
     DOCKER_BASE_IMAGE: ghcr.io/xtclang/xvm
@@ -45,15 +50,6 @@ jobs:
     compute-tags:
         name: Compute Docker tags
         runs-on: ubuntu-latest
-        # Only run if:
-        # - Manual trigger, OR
-        # - CI succeeded AND (master branch OR manually dispatched CI with test-publishing=true)
-        if: |
-            github.event_name == 'workflow_dispatch' ||
-            (github.event.workflow_run.conclusion == 'success' &&
-             (github.event.workflow_run.head_branch == 'master' ||
-              (github.event.workflow_run.event == 'workflow_dispatch' &&
-               github.event.workflow_run.inputs.test-publishing == 'true')))
         outputs:
             version: ${{ steps.versions.outputs.xdk-version }}
             branch-tag: ${{ steps.compute.outputs.branch-tag }}
@@ -140,30 +136,25 @@ jobs:
             - name: Determine commit and run ID
               id: commit
               shell: bash
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                  # Use workflow_run commit if triggered automatically
-                  if [ "${{ github.event_name }}" = "workflow_run" ]; then
-                      GH_COMMIT="${{ github.event.workflow_run.head_sha }}"
-                      RUN_ID="${{ github.event.workflow_run.id }}"
-                      echo "📌 Using commit from workflow_run: $GH_COMMIT (run: $RUN_ID)"
-                  # Use manual input (required for manual trigger)
-                  else
-                      RUN_ID="${{ github.event.inputs.ci-run-id }}"
-                      # Get commit from the specified run
-                      GH_COMMIT=$(gh api /repos/${{ github.repository }}/actions/runs/$RUN_ID --jq '.head_sha')
-                      echo "📌 Using CI run from input: $RUN_ID (commit: $GH_COMMIT)"
-                  fi
+                  RUN_ID="${{ github.event.inputs.ci-run-id }}"
+                  # Get commit from the specified run
+                  GH_COMMIT=$(gh api /repos/${{ github.repository }}/actions/runs/$RUN_ID --jq '.head_sha')
+                  echo "📌 Using CI run from input: $RUN_ID (commit: $GH_COMMIT)"
                   echo "commit=$GH_COMMIT" >> $GITHUB_OUTPUT
                   echo "run-id=$RUN_ID" >> $GITHUB_OUTPUT
 
             - name: Download XDK build artifact
-              uses: actions/download-artifact@v4
+              id: artifact
+              uses: ./.github/actions/download-ci-artifact
               with:
-                  name: xdk-dist-${{ steps.commit.outputs.commit }}
-                  path: ./artifacts
+                  run-id: ${{ steps.commit.outputs.run-id }}
+                  commit: ${{ steps.commit.outputs.commit }}
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   repository: ${{ github.repository }}
-                  run-id: ${{ steps.commit.outputs.run-id }}
+                  output-path: ./docker
 
             - name: Build and push Docker image (${{ matrix.arch }})
               shell: bash
@@ -184,10 +175,10 @@ jobs:
                   echo "🏷️ Architecture-specific tags for ${{ matrix.arch }}:"
                   echo "$TAGS"
 
-                  # Copy XDK ZIP to Docker context
-                  DIST_ZIP_FILE=$(find ../artifacts -name "xdk-*.zip" | head -1)
-                  cp "$DIST_ZIP_FILE" xdk-dist.zip
-                  echo "📦 Copied: $(basename "$DIST_ZIP_FILE") → xdk-dist.zip"
+                  # Rename artifact to expected name in Docker context
+                  DIST_ZIP_FILE="$(basename "${{ steps.artifact.outputs.artifact-path }}")"
+                  mv "$DIST_ZIP_FILE" xdk-dist.zip
+                  echo "📦 Renamed: $DIST_ZIP_FILE → xdk-dist.zip"
 
                   # Build and push
                   docker buildx build \
@@ -207,6 +198,28 @@ jobs:
                       .
 
                   echo "✅ Docker image built and pushed for ${{ matrix.arch }}"
+
+            - name: Summary
+              if: success()
+              shell: bash
+              run: |
+                  VERSION="${{ needs.compute-tags.outputs.version }}"
+                  BASE_TAGS='${{ needs.compute-tags.outputs.tags-json }}'
+                  ARCH="${{ matrix.arch }}"
+                  COMMIT="${{ steps.commit.outputs.commit }}"
+
+                  echo "### ✅ Docker Image Built ($ARCH)" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Version:** $VERSION" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Platform:** ${{ matrix.platform }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Commit:** $COMMIT" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Published architecture-specific tags:**" >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  echo "$BASE_TAGS" | jq -r --arg base "${{ env.DOCKER_BASE_IMAGE }}" --arg arch "$ARCH" '.[] | $base + ":" + . + "-" + $arch'
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "Multi-platform manifests will be created after both architectures complete." >> $GITHUB_STEP_SUMMARY
 
     docker-manifest:
         name: Create multi-platform manifest
@@ -235,6 +248,24 @@ jobs:
                       echo "✅ Pushed: $manifest_tag"
                   done
                   echo "🎉 All multi-platform manifests created"
+
+            - name: Summary
+              if: success()
+              shell: bash
+              run: |
+                  BASE_TAGS='${{ needs.compute-tags.outputs.tags-json }}'
+                  VERSION="${{ needs.compute-tags.outputs.version }}"
+
+                  echo "### ✅ Multi-Platform Manifests Created" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "Combined amd64 and arm64 images into multi-platform manifests." >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Published tags:**" >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  echo "$BASE_TAGS" | jq -r --arg base "${{ env.DOCKER_BASE_IMAGE }}" '.[] | $base + ":" + .'
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "These manifests automatically select the correct architecture (amd64/arm64) when pulled." >> $GITHUB_STEP_SUMMARY
 
     docker-test:
         name: Test Docker images
@@ -269,6 +300,23 @@ jobs:
 
                   echo "✅ Docker image tests passed"
 
+            - name: Summary
+              if: success()
+              shell: bash
+              run: |
+                  IMAGE="${{ env.DOCKER_BASE_IMAGE }}:${{ github.sha }}"
+
+                  echo "### ✅ Docker Image Tests Passed" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Tested image:** \`$IMAGE\`" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Tests performed:**" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ \`xec --version\` (executor)" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ \`xcc --version\` (compiler)" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ \`xtc --version\` (CLI)" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "All XDK tools are working correctly in the Docker image." >> $GITHUB_STEP_SUMMARY
+
     docker-cleanup:
         name: Clean up old Docker images
         needs: docker-test
@@ -294,17 +342,25 @@ jobs:
         steps:
             - name: Generate summary
               run: |
-                  echo "### 🐳 Docker Build Workflow" >> $GITHUB_STEP_SUMMARY
+                  echo "### 🐳 Docker Images Published" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "- **Version:** ${{ needs.compute-tags.outputs.version }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Registry:** ghcr.io" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "**Images published:**" >> $GITHUB_STEP_SUMMARY
+                  echo "**Multi-platform manifests published:**" >> $GITHUB_STEP_SUMMARY
                   echo '```' >> $GITHUB_STEP_SUMMARY
                   echo "${{ env.DOCKER_BASE_IMAGE }}:${{ needs.compute-tags.outputs.version }}" >> $GITHUB_STEP_SUMMARY
                   echo "${{ env.DOCKER_BASE_IMAGE }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
                   if [ "${{ needs.compute-tags.outputs.is-master }}" = "true" ]; then
                       echo "${{ env.DOCKER_BASE_IMAGE }}:latest" >> $GITHUB_STEP_SUMMARY
                   fi
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Usage:**" >> $GITHUB_STEP_SUMMARY
+                  echo '```bash' >> $GITHUB_STEP_SUMMARY
+                  echo "docker pull ${{ env.DOCKER_BASE_IMAGE }}:${{ needs.compute-tags.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "docker run --rm ${{ env.DOCKER_BASE_IMAGE }}:${{ needs.compute-tags.outputs.version }} xec --version" >> $GITHUB_STEP_SUMMARY
                   echo '```' >> $GITHUB_STEP_SUMMARY

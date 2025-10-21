@@ -1,11 +1,10 @@
-import XdkBuildLogic.XDK_ARTIFACT_NAME_MACK_DIR
+import XdkDistribution.Companion.XDK_ARTIFACT_NAME_MACK_DIR
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 
 plugins {
-    id("org.xtclang.build.xdk.versioning")
-    id("org.xtclang.xtc-plugin")
+    alias(libs.plugins.xtc)
 }
 
 val xdkTurtleProvider by configurations.registering {

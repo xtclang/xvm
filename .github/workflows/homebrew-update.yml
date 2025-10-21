@@ -2,7 +2,11 @@
 # GitHub workflow for updating Homebrew tap
 #
 # This workflow updates the Homebrew formula with the latest XDK snapshot release.
-# It triggers automatically on master after CI completes, or can be manually triggered.
+#
+# Triggered by verify_commit workflow when:
+# - Running on master branch (automatic)
+# - Manually run with test-publishing=true (testing)
+# Can also be triggered manually via workflow_dispatch for testing.
 #
 name: Update Homebrew
 
@@ -11,13 +15,8 @@ permissions:
     actions: read
 
 on:
-    # AUTOMATIC TRIGGERS DISABLED FOR TESTING
-    # Uncomment the following lines to enable automatic publishing after CI:
-    # workflow_run:
-    #     workflows: ["VerifyCommit"]
-    #     types: [completed]
-
-    # Manual trigger from any branch
+    # Triggered explicitly by verify_commit workflow (on master or when test-publishing=true)
+    # Can also be manually triggered for testing
     workflow_dispatch:
         inputs:
             ci-run-id:
@@ -27,19 +26,16 @@ on:
                 description: 'XDK version to publish (leave empty to use latest from version.properties)'
                 required: false
 
+# Concurrency settings: ensure only one Homebrew update runs at a time to avoid git conflicts
+# Queue multiple triggers instead of cancelling in-progress updates
+concurrency:
+    group: update-homebrew
+    cancel-in-progress: false
+
 jobs:
     update-homebrew:
         name: Update Homebrew tap
         runs-on: ubuntu-latest
-        # Only run if:
-        # - Manual trigger, OR
-        # - CI succeeded AND (master branch OR manually dispatched CI with test-publishing=true)
-        if: |
-            github.event_name == 'workflow_dispatch' ||
-            (github.event.workflow_run.conclusion == 'success' &&
-             (github.event.workflow_run.head_branch == 'master' ||
-              (github.event.workflow_run.event == 'workflow_dispatch' &&
-               github.event.workflow_run.inputs.test-publishing == 'true')))
 
         steps:
             - name: Fetch Sources
@@ -70,30 +66,25 @@ jobs:
             - name: Determine commit and run ID
               id: commit
               shell: bash
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                  # Use workflow_run commit if triggered automatically
-                  if [ "${{ github.event_name }}" = "workflow_run" ]; then
-                      GH_COMMIT="${{ github.event.workflow_run.head_sha }}"
-                      RUN_ID="${{ github.event.workflow_run.id }}"
-                      echo "📌 Using commit from workflow_run: $GH_COMMIT (run: $RUN_ID)"
-                  # Use manual input (required for manual trigger)
-                  else
-                      RUN_ID="${{ github.event.inputs.ci-run-id }}"
-                      # Get commit from the specified run
-                      GH_COMMIT=$(gh api /repos/${{ github.repository }}/actions/runs/$RUN_ID --jq '.head_sha')
-                      echo "📌 Using CI run from input: $RUN_ID (commit: $GH_COMMIT)"
-                  fi
+                  RUN_ID="${{ github.event.inputs.ci-run-id }}"
+                  # Get commit from the specified run
+                  GH_COMMIT=$(gh api /repos/${{ github.repository }}/actions/runs/$RUN_ID --jq '.head_sha')
+                  echo "📌 Using CI run from input: $RUN_ID (commit: $GH_COMMIT)"
                   echo "commit=$GH_COMMIT" >> $GITHUB_OUTPUT
                   echo "run-id=$RUN_ID" >> $GITHUB_OUTPUT
 
             - name: Download XDK build artifact
-              uses: actions/download-artifact@v4
+              id: artifact
+              uses: ./.github/actions/download-ci-artifact
               with:
-                  name: xdk-dist-${{ steps.commit.outputs.commit }}
-                  path: ./artifacts
+                  run-id: ${{ steps.commit.outputs.run-id }}
+                  commit: ${{ steps.commit.outputs.commit }}
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   repository: ${{ github.repository }}
-                  run-id: ${{ steps.commit.outputs.run-id }}
+                  output-path: ./artifacts
 
             - name: Update Homebrew formula
               env:
@@ -107,12 +98,8 @@ jobs:
                       exit 1
                   fi
 
-                  # Get SHA256 from build artifact
-                  XDK_ZIP=$(find ./artifacts -name "xdk-*.zip" | head -1)
-                  if [ -z "$XDK_ZIP" ]; then
-                      echo "❌ No XDK artifact found"
-                      exit 1
-                  fi
+                  # Get SHA256 from build artifact (artifact already validated by download-ci-artifact action)
+                  XDK_ZIP="${{ steps.artifact.outputs.artifact-path }}"
                   SHA256=$(sha256sum "$XDK_ZIP" | cut -d' ' -f1)
 
                   # Build release URL and dynamic version
@@ -162,11 +149,18 @@ jobs:
               run: |
                   echo "### ✅ Homebrew Tap Updated" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Formula:** xdk-latest" >> $GITHUB_STEP_SUMMARY
                   echo "- **Version:** ${{ steps.version.outputs.xdk-version }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "Users can now install with:" >> $GITHUB_STEP_SUMMARY
+                  echo "**Installation:**" >> $GITHUB_STEP_SUMMARY
                   echo '```bash' >> $GITHUB_STEP_SUMMARY
                   echo "brew tap xtclang/xvm" >> $GITHUB_STEP_SUMMARY
-                  echo "brew install xdk" >> $GITHUB_STEP_SUMMARY
+                  echo "brew install xdk-latest" >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Upgrade existing installation:**" >> $GITHUB_STEP_SUMMARY
+                  echo '```bash' >> $GITHUB_STEP_SUMMARY
+                  echo "brew update" >> $GITHUB_STEP_SUMMARY
+                  echo "brew upgrade xdk-latest" >> $GITHUB_STEP_SUMMARY
                   echo '```' >> $GITHUB_STEP_SUMMARY

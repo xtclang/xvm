@@ -4,8 +4,7 @@
  */
 
 plugins {
-    id("org.xtclang.build.xdk.versioning")
-    id("org.xtclang.build.java")
+    alias(libs.plugins.xdk.build.java)
 }
 
 // Special configuration for javatools-jitbridge - this is a binary blob that gets

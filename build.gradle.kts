@@ -7,14 +7,32 @@ import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 
 plugins {
     alias(libs.plugins.xdk.build.aggregator)
-    id("org.xtclang.build.xdk.properties")
+    alias(libs.plugins.xdk.build.properties)
 }
 
-// Root aggregator: set version directly from xdkProperties (special case, not using versioning plugin)
+// Root aggregator: version set automatically by properties plugin
 group = xdkProperties.stringValue("xdk.group")
 version = xdkProperties.stringValue("xdk.version")
 
 logger.info("[xvm] Root aggregator version: $group:$name:$version")
+
+/**
+ * Print version information for the root aggregator and all included builds.
+ * The aggregator plugin creates this task and adds dependencies to all included builds.
+ * We configure it here to also print the root aggregator's version.
+ */
+val versions by tasks.existing {
+    // Capture values during configuration for configuration cache compatibility
+    val projectName = project.name
+    val projectGroup = project.group
+    val projectVersion = project.version
+
+    doFirst {
+        logger.lifecycle("\n📦 Root Aggregator: $projectName")
+        logger.lifecycle("   $projectGroup:$projectName:$projectVersion")
+        logger.lifecycle("")
+    }
+}
 
 /**
  * Installation and distribution tasks that aggregate publishable/distributable included
@@ -24,6 +42,13 @@ logger.info("[xvm] Root aggregator version: $group:$name:$version")
  * of the root build.gradle.kts, we have installed convention plugins, resolved version catalogs
  * and similar things.
  */
+
+val distZip by tasks.registering {
+    group = DISTRIBUTION_TASK_GROUP
+    description = "Build the XDK distribution zip in the xdk/build/distributions directory."
+    dependsOn(xdk.task(":$name"))
+}
+
 val installDist by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Install the XDK distribution in the xdk/build/distributions and xdk/build/install directories."
@@ -38,14 +63,14 @@ val installWithNativeLaunchersDist by tasks.registering {
 
 private val xdk = gradle.includedBuild("xdk")
 private val plugin = gradle.includedBuild("plugin")
-private val includedBuildsWithPublications = listOf(xdk, plugin)
+private val publishedBuilds = listOf(xdk, plugin)
 
 val publishLocal by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Publish XDK and plugin artifacts to local Maven repository."
 
     // Publish to local Maven repository for all included builds with publications
-    includedBuildsWithPublications.forEach { build ->
+    publishedBuilds.forEach { build ->
         dependsOn(build.task(":publishToMavenLocal"))
     }
 }
@@ -57,7 +82,7 @@ val publishLocal by tasks.registering {
  * (GitHub Packages, Maven Central, Gradle Plugin Portal).
  *
  * Options:
- * - Use -PallowRelease=true to allow publishing release versions (required for non-SNAPSHOT versions)
+ * - Use -Porg.xtclang.allowRelease=true to allow publishing release versions (required for non-SNAPSHOT versions)
  */
 val publish by tasks.registering {
     group = PUBLISH_TASK_GROUP
@@ -65,7 +90,7 @@ val publish by tasks.registering {
 
     // Capture version and allowRelease as Providers for configuration cache compatibility
     val versionProvider = xdkProperties.string("xdk.version")
-    val allowReleaseProvider = xdkProperties.boolean("allowRelease", false)
+    val allowReleaseProvider = xdkProperties.boolean("org.xtclang.allowRelease", false)
 
     doFirst {
         // Safety check: prevent accidental release publishing
@@ -81,9 +106,9 @@ val publish by tasks.registering {
                 |Current version: $currentVersion
                 |
                 |This is a RELEASE version (no -SNAPSHOT suffix).
-                |To publish a release, you must explicitly set -PallowRelease=true
+                |To publish a release, you must explicitly set -Porg.xtclang.allowRelease=true
                 |
-                |Example: ./gradlew publish -PallowRelease=true
+                |Example: ./gradlew publish -Porg.xtclang.allowRelease=true
                 |
                 |This safety check prevents accidental release publishing.
                 """.trimMargin()
@@ -100,7 +125,7 @@ val publish by tasks.registering {
 
     // Publish to all enabled remote repositories for all included builds with publications
     // The :publish task will publish to all repositories enabled via properties
-    includedBuildsWithPublications.forEach { build ->
+    publishedBuilds.forEach { build ->
         dependsOn(build.task(":publish"))
     }
 }
@@ -113,7 +138,7 @@ val validateCredentials by tasks.registering {
     description = "Validate all publishing credentials across all projects without publishing"
 
     // Run validateCredentials in all projects with publications
-    includedBuildsWithPublications.forEach { build ->
+    publishedBuilds.forEach { build ->
         dependsOn(build.task(":validateCredentials"))
     }
 }

@@ -1,0 +1,385 @@
+#
+# GitHub workflow for preparing a release
+#
+# This workflow automates the release preparation process:
+# 1. Creates a release branch (release/X.Y.Z)
+# 2. Updates version.properties to release version
+# 3. Tags the release commit
+# 4. Bumps version.properties to next snapshot
+# 5. Builds and stages artifacts (Maven Central, GitHub draft)
+# 6. Validates Gradle Plugin Portal credentials (doesn't publish yet)
+# 7. Creates PR to master for final approval
+#
+# After merging the PR, the promote-release workflow automatically publishes everything.
+#
+name: Prepare Release
+
+permissions:
+    contents: write
+    packages: write
+    pull-requests: write
+    actions: read
+
+on:
+    workflow_dispatch:
+        inputs:
+            release-version:
+                description: 'Release version (e.g., 0.4.4) - must not contain -SNAPSHOT'
+                required: true
+            publish-gradle-plugin:
+                description: 'Publish to Gradle Plugin Portal (will happen during promotion)'
+                type: boolean
+                required: false
+                default: false
+            skip-tests:
+                description: 'Skip test execution during staging'
+                type: boolean
+                required: false
+                default: false
+
+jobs:
+    prepare-release:
+        name: Prepare release branch
+        runs-on: ubuntu-latest
+        outputs:
+            release-version: ${{ steps.validate.outputs.release-version }}
+            next-version: ${{ steps.versions.outputs.next-version }}
+            release-commit: ${{ steps.release-commit.outputs.sha }}
+
+        steps:
+            - name: Validate release version
+              id: validate
+              run: |
+                  VERSION="${{ github.event.inputs.release-version }}"
+                  # Validate format
+                  if [[ "$VERSION" == *-SNAPSHOT ]]; then
+                      echo "❌ ERROR: Release version cannot contain -SNAPSHOT"
+                      exit 1
+                  fi
+                  if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                      echo "❌ ERROR: Version must be semantic: X.Y.Z"
+                      exit 1
+                  fi
+                  echo "release-version=$VERSION" >> $GITHUB_OUTPUT
+                  echo "✅ Validated release version: $VERSION"
+
+            - name: Checkout master
+              uses: actions/checkout@v5
+              with:
+                  ref: master
+                  fetch-depth: 0
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Setup Git
+              run: |
+                  git config user.name "GitHub Actions"
+                  git config user.email "actions@github.com"
+
+            - name: Check if GitHub release already exists
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  VERSION="${{ steps.validate.outputs.release-version }}"
+                  # Check GitHub release
+                  if gh release view "v$VERSION" --repo ${{ github.repository }} >/dev/null 2>&1; then
+                      echo "❌ ERROR: Release v$VERSION already exists"
+                      exit 1
+                  fi
+                  # Check release branch
+                  if git ls-remote --exit-code --heads origin "release/$VERSION" >/dev/null 2>&1; then
+                      echo "❌ ERROR: Branch release/$VERSION already exists"
+                      exit 1
+                  fi
+                  echo "✅ Version $VERSION is available"
+
+            - name: Create release branch
+              run: |
+                  VERSION="${{ steps.validate.outputs.release-version }}"
+                  git checkout -b "release/$VERSION"
+                  echo "✅ Created branch release/$VERSION"
+
+            - name: Update version to release version
+              run: |
+                  VERSION="${{ steps.validate.outputs.release-version }}"
+                  # Update version.properties
+                  sed -i "s/^xdk\.version=.*/xdk.version=$VERSION/" version.properties
+                  # Verify change
+                  grep "xdk.version" version.properties
+                  git add version.properties
+                  git commit -m "Release $VERSION"
+                  echo "✅ Committed release version $VERSION"
+
+            - name: Create release tag
+              id: release-commit
+              run: |
+                  VERSION="${{ steps.validate.outputs.release-version }}"
+
+                  git tag -a "v$VERSION" -m "Release $VERSION"
+
+                  COMMIT_SHA=$(git rev-parse HEAD)
+                  echo "sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
+
+                  echo "✅ Created tag v$VERSION at $COMMIT_SHA"
+
+            - name: Calculate next development version
+              id: versions
+              run: |
+                  VERSION="${{ steps.validate.outputs.release-version }}"
+
+                  # Parse X.Y.Z
+                  IFS='.' read -r major minor patch <<< "$VERSION"
+
+                  # Bump patch version
+                  next_patch=$((patch + 1))
+                  NEXT_VERSION="$major.$minor.$next_patch-SNAPSHOT"
+
+                  echo "next-version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+                  echo "✅ Next development version: $NEXT_VERSION"
+
+            - name: Update version to next snapshot
+              run: |
+                  NEXT_VERSION="${{ steps.versions.outputs.next-version }}"
+
+                  # Update version.properties
+                  sed -i "s/^xdk\.version=.*/xdk.version=$NEXT_VERSION/" version.properties
+
+                  # Verify change
+                  grep "xdk.version" version.properties
+
+                  git add version.properties
+                  git commit -m "Prepare for next development iteration: $NEXT_VERSION"
+
+                  echo "✅ Committed next snapshot version $NEXT_VERSION"
+
+            - name: Push release branch and tag
+              run: |
+                  VERSION="${{ steps.validate.outputs.release-version }}"
+
+                  git push origin "release/$VERSION"
+                  git push origin "v$VERSION"
+
+                  echo "✅ Pushed release/$VERSION and v$VERSION"
+
+    stage-artifacts:
+        name: Build and stage artifacts
+        needs: prepare-release
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout release tag
+              uses: actions/checkout@v5
+              with:
+                  ref: v${{ needs.prepare-release.outputs.release-version }}
+                  fetch-depth: 1
+
+            - name: Setup XVM Project
+              id: versions
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: true
+                  cache-read-only: false
+                  enable-debug: false
+
+            - name: Build XDK distribution
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  VERSION="${{ needs.prepare-release.outputs.release-version }}"
+                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
+                  echo "🔨 Building XDK release $VERSION..."
+                  ./gradlew $GRADLE_OPTIONS clean
+                  ./gradlew $GRADLE_OPTIONS -Pversion=$VERSION :xdk:distZip
+
+            - name: Run tests
+              if: ${{ github.event.inputs.skip-tests != 'true' }}
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  VERSION="${{ needs.prepare-release.outputs.release-version }}"
+                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
+                  echo "🧪 Running tests..."
+                  ./gradlew $GRADLE_OPTIONS -Pversion=$VERSION check
+
+            - name: Validate Gradle Plugin Portal credentials
+              if: ${{ github.event.inputs.publish-gradle-plugin == 'true' }}
+              env:
+                  GRADLE_PUBLISH_KEY: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY }}
+                  GRADLE_PUBLISH_SECRET: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET }}
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  VERSION="${{ needs.prepare-release.outputs.release-version }}"
+                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
+
+                  echo "🔍 Validating Gradle Plugin Portal credentials..."
+                  echo "   (Not publishing yet - validation only)"
+                  echo ""
+
+                  # Check credentials exist
+                  if [ -z "$GRADLE_PUBLISH_KEY" ] || [ -z "$GRADLE_PUBLISH_SECRET" ]; then
+                      echo "❌ ERROR: Gradle Plugin Portal credentials not configured"
+                      echo ""
+                      echo "Required secrets:"
+                      echo "  - ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY"
+                      echo "  - ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET"
+                      echo ""
+                      exit 1
+                  fi
+
+                  # Validate plugin metadata
+                  echo "Validating plugin metadata..."
+                  ./gradlew $GRADLE_OPTIONS -Pversion=$VERSION :plugin:validatePlugins --info
+
+                  echo "✅ Gradle Plugin Portal credentials validated"
+                  echo "   Plugin will be published during promotion phase"
+
+            - name: Stage to Maven Central and GitHub Packages
+              env:
+                  # GitHub CLI (used for release operations)
+                  GITHUB_ACTOR: ${{ github.actor }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  # GitHub Packages credentials (Gradle properties for Maven publishing)
+                  ORG_GRADLE_PROJECT_githubUsername: ${{ github.actor }}
+                  ORG_GRADLE_PROJECT_githubPassword: ${{ secrets.GITHUB_TOKEN }}
+                  # Maven Central credentials
+                  ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
+                  ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
+                  # Signing credentials
+                  ORG_GRADLE_PROJECT_signing_keyId: ${{ secrets.ORG_XTCLANG_SIGNING_KEY_ID }}
+                  ORG_GRADLE_PROJECT_signing_password: ${{ secrets.ORG_XTCLANG_SIGNING_PASSWORD }}
+                  ORG_GRADLE_PROJECT_signing_key: ${{ secrets.ORG_XTCLANG_SIGNING_KEY }}
+                  # Release control
+                  ORG_XTCLANG_ALLOW_PUBLISH: true
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  VERSION="${{ needs.prepare-release.outputs.release-version }}"
+                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
+
+                  echo "📦 Staging to Maven Central and GitHub Packages..."
+                  echo "   Version: $VERSION"
+                  echo "   NOT publishing to Gradle Plugin Portal (will happen during promotion)"
+                  echo ""
+                  ./gradlew $GRADLE_OPTIONS -Pversion=$VERSION publish --info
+                  echo "✅ Artifacts staged to Maven Central and GitHub Packages"
+
+            - name: Upload XDK distribution artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: xdk-release-${{ needs.prepare-release.outputs.release-version }}
+                  path: xdk/build/distributions/xdk-*.zip
+                  retention-days: 90
+
+            - name: Create GitHub draft release
+              uses: ./.github/actions/publish-github-release
+              with:
+                  artifact-path: xdk/build/distributions/xdk-${{ needs.prepare-release.outputs.release-version }}.zip
+                  xdk-version: ${{ needs.prepare-release.outputs.release-version }}
+                  commit: ${{ needs.prepare-release.outputs.release-commit }}
+                  repo: ${{ github.repository }}
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  release-type: release
+                  release-tag: v${{ needs.prepare-release.outputs.release-version }}
+
+            - name: Staging summary
+              run: |
+                  VERSION="${{ needs.prepare-release.outputs.release-version }}"
+                  echo "### 🎯 Release $VERSION Staged" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Staged Artifacts:**" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ Maven Central: Staged (review at https://oss.sonatype.org/)" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ GitHub Packages: Published (staging)" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ GitHub Release: Draft created" >> $GITHUB_STEP_SUMMARY
+                  if [ "${{ github.event.inputs.publish-gradle-plugin }}" = "true" ]; then
+                      echo "- ✅ Gradle Plugin Portal: Credentials validated (will publish on promotion)" >> $GITHUB_STEP_SUMMARY
+                  else
+                      echo "- ⏭️ Gradle Plugin Portal: Skipped" >> $GITHUB_STEP_SUMMARY
+                  fi
+
+    create-pr:
+        name: Create release PR
+        needs: [prepare-release, stage-artifacts]
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v5
+
+            - name: Create PR to master
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  VERSION="${{ needs.prepare-release.outputs.release-version }}"
+                  NEXT_VERSION="${{ needs.prepare-release.outputs.next-version }}"
+                  PUBLISH_PLUGIN="${{ github.event.inputs.publish-gradle-plugin }}"
+
+                  # Create PR body
+                  PR_BODY="$(cat <<EOF
+                  ## Release $VERSION
+
+                  This PR prepares release $VERSION and bumps master to $NEXT_VERSION.
+
+                  ### 📋 Pre-Merge Checklist
+
+                  **Verify all staged artifacts before merging!**
+
+                  - [ ] **Maven Central Staging**: Review at https://oss.sonatype.org/
+                    - Check all artifacts are present
+                    - Verify POM files are correct
+                    - Ensure signatures are valid
+                  - [ ] **GitHub Draft Release**: Review at https://github.com/${{ github.repository }}/releases
+                    - Update release notes with actual changes
+                    - Verify XDK distribution is attached
+                  - [ ] **All Tests Passed**: Check workflow results above
+                  - [ ] **Version Bump Verified**: Master will be at $NEXT_VERSION after merge
+
+                  ### 🚀 What Happens When Merged
+
+                  **This merge will make the release PUBLIC! The following actions will be triggered automatically:**
+
+                  1. ✅ **Master branch** updated to $NEXT_VERSION
+                  2. 🏛️ **Maven Central staging** → Released to production
+                  3. 📦 **GitHub draft release** → Published
+                  EOF
+                  )"
+
+                  # Add Gradle Plugin Portal note if enabled
+                  if [ "$PUBLISH_PLUGIN" = "true" ]; then
+                      PR_BODY="$PR_BODY"$'\n'"4. 🔌 **Gradle Plugin Portal** → Published (IMMEDIATE, cannot be undone)"
+                  fi
+
+                  PR_BODY="$PR_BODY"$'\n\n'"### ⚠️ Important Notes"$'\n\n'
+                  PR_BODY="$PR_BODY"$'- **This action is FINAL** - artifacts will be publicly available\n'
+                  PR_BODY="$PR_BODY"$'- Maven Central releases cannot be deleted (only deprecated)\n'
+
+                  if [ "$PUBLISH_PLUGIN" = "true" ]; then
+                      PR_BODY="$PR_BODY"$'- Gradle Plugin Portal releases cannot be undone\n'
+                  fi
+
+                  PR_BODY="$PR_BODY"$'\n### 📚 Post-Release Tasks\n\n'
+                  PR_BODY="$PR_BODY"$'After merge completes:\n'
+                  PR_BODY="$PR_BODY"$'- [ ] Wait 10-30 minutes for Maven Central sync\n'
+                  PR_BODY="$PR_BODY"$'- [ ] Verify artifacts on Maven Central\n'
+                  PR_BODY="$PR_BODY"$'- [ ] Announce release\n'
+
+                  # Create PR
+                  PR_URL=$(gh pr create \
+                      --base master \
+                      --head "release/$VERSION" \
+                      --title "Release $VERSION" \
+                      --body "$PR_BODY" \
+                      --label "release")
+
+                  # Add Gradle Plugin Portal label if enabled
+                  # Note: Can be overridden later with 'skip-gradle-plugin-portal' label if needed
+                  if [ "$PUBLISH_PLUGIN" = "true" ]; then
+                      gh pr edit "$PR_URL" --add-label "publish-gradle-plugin"
+                      echo "✅ Added 'publish-gradle-plugin' label (will publish to Plugin Portal on merge)"
+                  else
+                      echo "ℹ️  Plugin Portal publication not enabled (add 'publish-gradle-plugin' label to enable)"
+                  fi
+
+                  echo "✅ Created release PR: $PR_URL"
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
+                  echo "1. Review PR: $PR_URL" >> $GITHUB_STEP_SUMMARY
+                  echo "2. Verify staged artifacts" >> $GITHUB_STEP_SUMMARY
+                  echo "3. Merge PR to promote release to production" >> $GITHUB_STEP_SUMMARY

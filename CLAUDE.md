@@ -7,6 +7,10 @@ This is a composite build where you CAN run gradlew with many tasks across multi
 
 **CRITICAL CLEAN RULE**: If you need to clean, you MUST run `./gradlew clean` as a standalone command first, with NO other tasks. Never combine clean with other tasks.
 
+# Code Style Rules (UNBREAKABLE)
+1. ALWAYS add a newline at the end of every file
+2. NEVER use star imports (import foo.*) - always use explicit imports
+
 ### Safe Approach Options:
 
 **Option 1: Target specific subprojects (SAFEST)**
@@ -56,21 +60,26 @@ val taskName by tasks.registering {
 }
 ```
 
+or even better:
+
+```kotlin
+val otherTask by tasks.existing<SomeTaskType>()
+
+val taskName by tasks.registering {
+    dependsOn(otherTask)  // Typed dependency
+}
+```
+
 **Rules:**
 - Always use `val taskName by tasks.registering` instead of `tasks.register("taskName")`
-- Always use `dependsOn(tasks.named("taskName"))` instead of `dependsOn("taskName")`
 - Always use typed task references with proper Provider API
 - This ensures proper build cache support, configuration cache compatibility, and IDE support
+- NEVER run without the configuration cache enabled. Everything MUST work with the configuration cache.
+
 
 # important-instruction-reminders
-Do what has been asked; nothing more, nothing less.
-NEVER create files unless they're absolutely necessary for achieving your goal.
-ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
-
-# Code Style Rules (UNBREAKABLE)
-1. ALWAYS add a newline at the end of every file
-2. NEVER use star imports (import foo.*) - always use explicit imports
+- Do what has been asked; nothing more, nothing less.
+- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
 
 # CRITICAL GRADLE RULE - CONFIGURATION CACHE COMPATIBILITY
 **NEVER WRITE GRADLE CODE THAT IS INCOMPATIBLE WITH THE CONFIGURATION CACHE**

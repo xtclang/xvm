@@ -8,9 +8,8 @@
 
 plugins {
     base
-    id("org.xtclang.build.xdk.versioning")
     alias(libs.plugins.palantir.git.version)  // Provides git info for Docker builds
-    id("org.xtclang.build.docker")
+    alias(libs.plugins.xdk.build.docker)
 }
 
 // Create consumer configuration for XDK distribution zip

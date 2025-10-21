@@ -8,18 +8,20 @@
  */
 
 plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+    id("org.gradle.toolchains.foojay-resolver") version "1.0.0"
 }
 
-fun compositeRootRelativeFile(path: String): File {
-    var dir = file(".")
-    var file = File(dir, path)
-    while (!file.exists()) {
-        dir = dir.parentFile
-        file = File(dir, path)
+toolchainManagement {
+    jvm {
+        javaRepositories {
+            repository("foojay") {
+                resolverClass.set(org.gradle.toolchains.foojay.FoojayToolchainResolver::class.java)
+            }
+        }
     }
-    return file
 }
+
+fun compositeRootRelativeFile(path: String): File = XdkPropertiesService.compositeRootRelativeFile(file("."), path)
 
 val libsVersionCatalog = compositeRootRelativeFile("gradle/libs.versions.toml")
 
@@ -39,13 +41,7 @@ gradle.sharedServices.registerIfAbsent(
     parameters.entries.set(props.stringPropertyNames().associateWith(props::getProperty))
 }
 
-// Extract version info from the already-loaded properties (no redundant file reads)
-val xvmVersion = props.getProperty("xdk.version")
-    ?: error("xdk.version not found in version.properties file")
-val xvmGroup = props.getProperty("xdk.group")
-    ?: error("xdk.group not found in version.properties file")
-
-// Standard dependency resolution with dynamic version injection
+// Standard dependency resolution
 @Suppress("UnstableApiUsage")
 dependencyResolutionManagement {
     repositories {
@@ -56,17 +52,13 @@ dependencyResolutionManagement {
         // Create libs catalog for included builds (root handles this separately)
         create("libs") {
             from(files(libsVersionCatalog))
-            version("xdk", xvmVersion)
-            version("xtc-plugin", xvmVersion)
-            version("group-xdk", xvmGroup)
         }
     }
 }
 
-// Optional: Log version info for debugging
+// Log configuration info
 logger.info("""
     [settings] Using version catalog from: $libsVersionCatalog
-    [settings] XVM version from version.properties file: $xvmVersion
-    [settings] XVM group from version.properties file: $xvmGroup
     [settings] Loaded ${props.size} properties from property files
+    [settings] Properties available via xdkPropertiesService
 """.trimIndent())

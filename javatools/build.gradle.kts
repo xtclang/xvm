@@ -1,4 +1,4 @@
-import XdkBuildLogic.XDK_ARTIFACT_NAME_JAVATOOLS_JAR
+import XdkDistribution.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_JAR
 import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 import org.gradle.api.tasks.PathSensitivity
 import java.util.Properties
@@ -8,14 +8,9 @@ import java.util.Properties
  */
 
 plugins {
-    id("org.xtclang.build.xdk.versioning")
     alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.palantir.git.version)
 }
-
-// semanticVersion is now a Project extension property
-
-// Using Palantir git plugin - no custom git tasks needed
 
 // TODO: Move these to common-plugins, the XDK composite build does use them in some different places.
 val xdkJavaToolsProvider by configurations.registering {
@@ -62,7 +57,9 @@ val copyEcstasyResources by tasks.registering(Copy::class) {
 }
 
 // Path to your static base properties
-val versionPropsFile = compositeRootProjectDirectory.file("version.properties")
+val versionPropsFile = layout.projectDirectory.file(
+    XdkPropertiesService.compositeRootRelativeFile(projectDir, "version.properties").absolutePath
+)
 
 abstract class GenerateBuildInfo : DefaultTask() {
     @get:InputFile

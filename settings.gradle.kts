@@ -11,7 +11,17 @@ pluginManagement {
 
 plugins {
     id("com.gradle.develocity").version("4.2")
-    id("org.gradle.toolchains.foojay-resolver-convention").version("1.0.0")
+    id("org.gradle.toolchains.foojay-resolver").version("1.0.0")
+}
+
+toolchainManagement {
+    jvm {
+        javaRepositories {
+            repository("foojay") {
+                resolverClass.set(org.gradle.toolchains.foojay.FoojayToolchainResolver::class.java)
+            }
+        }
+    }
 }
 
 develocity {
@@ -89,4 +99,4 @@ rootProject.name = "xvm"
 
 // Note: Root build doesn't use common settings plugin to avoid version catalog conflicts
 // Version catalog is automatically loaded from gradle/libs.versions.toml
-// XdkPropertiesService registration happens via versioning plugin in build.gradle.kts
+// XdkPropertiesService registration happens via properties plugin in build.gradle.kts

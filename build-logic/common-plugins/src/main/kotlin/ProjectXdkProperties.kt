@@ -1,3 +1,4 @@
+import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 import javax.inject.Inject
@@ -9,6 +10,10 @@ abstract class ProjectXdkProperties @Inject constructor(
     private fun resolve(key: String): String? =
         providers.environmentVariable(toEnvKey(key)).orNull
             ?: providers.gradleProperty(key).orNull
+            // Also check underscored version for dotted properties
+            // ORG_GRADLE_PROJECT_signing.keyId doesn't work, so CI uses ORG_GRADLE_PROJECT_signing_keyId
+            // which creates Gradle property "signing_keyId", not "signing.keyId"
+            ?: (if (key.contains('.')) providers.gradleProperty(key.replace('.', '_')).orNull else null)
             ?: providers.systemProperty(key).orNull
             ?: service.get(key)
 
@@ -44,5 +49,34 @@ abstract class ProjectXdkProperties @Inject constructor(
 
     fun hasProvider(key: String): Provider<Boolean> = providers.provider { resolve(key) != null }
 
-    private fun toEnvKey(key: String) = key.replace('.', '_').uppercase()
+    /**
+     * Convert a property key to environment variable format.
+     * Examples:
+     *   org.xtclang.publish.github -> ORG_XTCLANG_PUBLISH_GITHUB
+     *   githubUsername -> GITHUB_USERNAME
+     *   mavenCentralUsername -> MAVEN_CENTRAL_USERNAME
+     */
+    private fun toEnvKey(key: String): String {
+        // First replace dots with underscores
+        val withUnderscores = key.replace('.', '_')
+        // Then insert underscores before uppercase letters in camelCase
+        val withCamelCase = withUnderscores.replace(Regex("([a-z])([A-Z])")) { matchResult ->
+            "${matchResult.groupValues[1]}_${matchResult.groupValues[2]}"
+        }
+        return withCamelCase.uppercase()
+    }
 }
+
+/**
+ * Typed extension accessor for ProjectXdkProperties.
+ * Use this in build scripts to access properties with Provider API.
+ * Example: val jdk = xdkProperties.int("org.xtclang.java.jdk")
+ */
+val Project.xdkProperties: ProjectXdkProperties
+    get() = extensions.getByType(ProjectXdkProperties::class.java)
+
+/**
+ * Semantic version accessor (group:name:version).
+ */
+val Project.semanticVersion: String
+    get() = "$group:$name:$version"

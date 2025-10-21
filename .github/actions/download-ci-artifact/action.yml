@@ -1,0 +1,116 @@
+#
+# Downloads and validates XDK build artifact from CI workflow
+#
+# This action downloads the XDK distribution artifact produced by the verify_commit
+# workflow and validates that it exists and contains the expected zip file.
+# If the artifact is missing or invalid, the build will fail with a clear error message.
+#
+name: 'download_ci_artifact'
+description: 'Downloads and validates XDK build artifact from CI workflow'
+
+inputs:
+    run-id:
+        description: 'CI workflow run ID to download artifact from'
+        required: true
+    commit:
+        description: 'Commit SHA that identifies the artifact (artifact name: xdk-dist-{commit})'
+        required: true
+    github-token:
+        description: 'GitHub token with actions:read permission'
+        required: true
+    repository:
+        description: 'Repository in format owner/repo'
+        required: true
+    output-path:
+        description: 'Directory to download artifact to (default: ./artifacts)'
+        required: false
+        default: './artifacts'
+
+outputs:
+    artifact-path:
+        description: 'Full path to the downloaded XDK distribution zip file'
+        value: ${{ steps.validate.outputs.artifact-path }}
+    artifact-name:
+        description: 'Name of the artifact that was downloaded'
+        value: xdk-dist-${{ inputs.commit }}
+
+runs:
+    using: 'composite'
+    steps:
+        - name: Download XDK artifact from CI
+          uses: actions/download-artifact@v4
+          with:
+              name: xdk-dist-${{ inputs.commit }}
+              path: ${{ inputs.output-path }}
+              github-token: ${{ inputs.github-token }}
+              repository: ${{ inputs.repository }}
+              run-id: ${{ inputs.run-id }}
+
+        - name: Validate artifact
+          id: validate
+          shell: bash
+          run: |
+              ARTIFACT_NAME="xdk-dist-${{ inputs.commit }}"
+              OUTPUT_PATH="${{ inputs.output-path }}"
+              GH_COMMIT="${{ inputs.commit }}"
+              RUN_ID="${{ inputs.run-id }}"
+
+              echo "🔍 Validating CI artifact:"
+              echo "  Artifact name: $ARTIFACT_NAME"
+              echo "  CI run ID:     $RUN_ID"
+              echo "  Commit SHA:    $GH_COMMIT"
+              echo "  Output path:   $OUTPUT_PATH"
+              echo ""
+
+              # Check if output directory exists
+              if [ ! -d "$OUTPUT_PATH" ]; then
+                  echo "❌ ERROR: Artifact download failed - output directory not found"
+                  echo ""
+                  echo "Expected directory: $OUTPUT_PATH"
+                  echo ""
+                  exit 1
+              fi
+
+              # Find the XDK zip file
+              XDK_ZIP=$(find "$OUTPUT_PATH" -name "xdk-*.zip" | head -1)
+
+              if [ -z "$XDK_ZIP" ]; then
+                  echo "❌ ERROR: No XDK distribution ZIP found in downloaded artifact"
+                  echo ""
+                  echo "Expected artifact: $ARTIFACT_NAME"
+                  echo "Expected file pattern: xdk-*.zip"
+                  echo ""
+                  echo "Artifact contents:"
+                  ls -laR "$OUTPUT_PATH" 2>&1 || echo "  (empty or inaccessible)"
+                  echo ""
+                  echo "This usually means:"
+                  echo "  1. The CI workflow (verify_commit) did not complete successfully"
+                  echo "  2. The artifact was not uploaded (check CI run: $RUN_ID)"
+                  echo "  3. The artifact has expired (artifacts are kept for 10-90 days)"
+                  echo "  4. Wrong run-id or commit provided"
+                  echo ""
+                  exit 1
+              fi
+
+              # Verify it's a readable file
+              if [ ! -f "$XDK_ZIP" ] || [ ! -r "$XDK_ZIP" ]; then
+                  echo "❌ ERROR: XDK distribution file is not readable"
+                  echo "  File: $XDK_ZIP"
+                  exit 1
+              fi
+
+              # Get file size for validation
+              FILE_SIZE=$(ls -lh "$XDK_ZIP" | awk '{print $5}')
+
+              echo "✅ Artifact validation successful"
+              echo "  File:     $(basename "$XDK_ZIP")"
+              echo "  Size:     $FILE_SIZE"
+              echo "  Location: $XDK_ZIP"
+              echo ""
+
+              # Output the full path
+              echo "artifact-path=$XDK_ZIP" >> $GITHUB_OUTPUT
+
+branding:
+    icon: 'download-cloud'
+    color: 'blue'
