@@ -40,6 +40,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     protected final Property<@NotNull Boolean> fork;
     protected final Property<@NotNull Boolean> showVersion;
     protected final Property<@NotNull Boolean> useNativeLauncher;
+    protected final Property<@NotNull Boolean> useCompilerDaemon;
     protected final Property<@NotNull InputStream> stdin;
     protected final Property<@NotNull OutputStream> stdout;
     protected final Property<@NotNull OutputStream> stderr;
@@ -67,6 +68,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         this.fork = objects.property(Boolean.class).convention(true);
         this.showVersion = objects.property(Boolean.class).convention(false);
         this.useNativeLauncher = objects.property(Boolean.class).convention(false);
+        this.useCompilerDaemon = objects.property(Boolean.class).convention(true); // Default to true for best performance
         this.stdin = objects.property(InputStream.class);
         this.stdout = objects.property(OutputStream.class);
         this.stderr = objects.property(OutputStream.class);
@@ -107,6 +109,11 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     @Override
     public Property<@NotNull Boolean> getUseNativeLauncher() {
         return useNativeLauncher;
+    }
+
+    @Override
+    public Property<@NotNull Boolean> getUseCompilerDaemon() {
+        return useCompilerDaemon;
     }
 
     @Override

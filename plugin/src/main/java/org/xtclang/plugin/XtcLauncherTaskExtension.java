@@ -28,6 +28,24 @@ public interface XtcLauncherTaskExtension extends Named {
 
     Property<@NotNull Boolean> getUseNativeLauncher();
 
+    /**
+     * Whether to use the compiler daemon (Build Service) for compilation.
+     * When enabled, the XTC compiler runs in a persistent daemon process
+     * that is reused across all compilation tasks, eliminating JVM startup overhead.
+     *
+     * <p>Benefits of using the compiler daemon:
+     * <ul>
+     *   <li>No JVM startup overhead for each compilation</li>
+     *   <li>ClassLoader and class metadata reused across compilations</li>
+     *   <li>JIT compilation benefits from warmed-up code paths</li>
+     * </ul>
+     *
+     * <p>Default: true (recommended for best performance)
+     *
+     * @return property controlling whether to use the compiler daemon
+     */
+    Property<@NotNull Boolean> getUseCompilerDaemon();
+
     Property<@NotNull Boolean> getVerbose();
 
     ListProperty<@NotNull String> getJvmArgs();
