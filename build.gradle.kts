@@ -17,6 +17,21 @@ version = xdkProperties.stringValue("xdk.version")
 logger.info("[xvm] Root aggregator version: $group:$name:$version")
 
 /**
+ * Configure compiler daemon for all XTC compilation tasks across all subprojects.
+ * This eliminates JVM startup overhead by reusing a persistent compiler instance.
+ */
+subprojects {
+    plugins.withId("org.xtclang.xtc") {
+        configure<org.xtclang.plugin.XtcExtension> {
+            compiler {
+                useCompilerDaemon = true  // Enable persistent compiler daemon (default, but explicit)
+                fork = false              // Required for daemon - runs in-process with daemon
+            }
+        }
+    }
+}
+
+/**
  * Print version information for the root aggregator and all included builds.
  * The aggregator plugin creates this task and adds dependencies to all included builds.
  * We configure it here to also print the root aggregator's version.
