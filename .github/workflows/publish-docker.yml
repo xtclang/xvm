@@ -216,7 +216,7 @@ jobs:
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "**Published architecture-specific tags:**" >> $GITHUB_STEP_SUMMARY
                   echo '```' >> $GITHUB_STEP_SUMMARY
-                  echo "$BASE_TAGS" | jq -r --arg base "${{ env.DOCKER_BASE_IMAGE }}" --arg arch "$ARCH" '.[] | $base + ":" + . + "-" + $arch'
+                  echo "$BASE_TAGS" | jq -r --arg base "${{ env.DOCKER_BASE_IMAGE }}" --arg arch "$ARCH" '.[] | $base + ":" + . + "-" + $arch' >> $GITHUB_STEP_SUMMARY
                   echo '```' >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "Multi-platform manifests will be created after both architectures complete." >> $GITHUB_STEP_SUMMARY
