@@ -350,7 +350,24 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected <R extends ExecResult> R handleExecResult(final R result) {
         final int exitValue = result.getExitValue();
         if (exitValue != 0) {
-            getLogger().error("[plugin] terminated abnormally (exitValue: {}). Rethrowing exception.", exitValue);
+            final String taskName = getName();
+            final String launcherType = useNativeLauncherAtConfigurationTime ? "Native" :
+                                       forkAtConfigurationTime ? "JavaExec" : "BuildThread";
+            final var logger = getLogger();
+            logger.error("""
+
+                [plugin] ==============================================================================
+                [plugin] XTC Compilation Failed
+                [plugin] ==============================================================================
+                [plugin] Task:        {}
+                [plugin] Launcher:    {}
+                [plugin] Exit Code:   {}
+                [plugin] ------------------------------------------------------------------------------
+                [plugin] The XTC compiler process terminated with a non-zero exit code ({}).
+                [plugin] This typically indicates compilation errors in your XTC source files.
+                [plugin] Review the compiler output above for specific error messages.
+                [plugin] ==============================================================================
+                """, taskName, launcherType, exitValue, exitValue);
         }
         result.rethrowFailure();
         result.assertNormalExitValue();
