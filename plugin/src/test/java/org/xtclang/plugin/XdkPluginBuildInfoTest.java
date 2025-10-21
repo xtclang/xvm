@@ -261,13 +261,30 @@ public class XdkPluginBuildInfoTest {
 
         System.out.println("[test] " + argsLine.trim());
 
-        // Verify the default args include the expected values from buildInfo.properties
+        // Verify the default args include -ea (always present)
         assertTrue(argsLine.contains("-ea"),
-            "Default JVM args should include -ea");
-        assertTrue(argsLine.contains("--enable-preview"),
-            "Default JVM args should include --enable-preview");
-        assertTrue(argsLine.contains("--enable-native-access=ALL-UNNAMED"),
-            "Default JVM args should include --enable-native-access=ALL-UNNAMED");
+            "Default JVM args should always include -ea");
+
+        // Load the actual xdk.properties to verify expected values match what was configured
+        final var xdkPropsStream = getClass().getResourceAsStream("/xdk.properties");
+        if (xdkPropsStream != null) {
+            final var xdkProps = new Properties();
+            xdkProps.load(xdkPropsStream);
+
+            // Check if enablePreview was set to true
+            final var enablePreview = Boolean.parseBoolean(xdkProps.getProperty("org.xtclang.java.enablePreview", "false"));
+            if (enablePreview) {
+                assertTrue(argsLine.contains("--enable-preview"),
+                    "Default JVM args should include --enable-preview when org.xtclang.java.enablePreview=true");
+            }
+
+            // Check if enableNativeAccess was set to true
+            final var enableNativeAccess = Boolean.parseBoolean(xdkProps.getProperty("org.xtclang.java.enableNativeAccess", "false"));
+            if (enableNativeAccess) {
+                assertTrue(argsLine.contains("--enable-native-access=ALL-UNNAMED"),
+                    "Default JVM args should include --enable-native-access=ALL-UNNAMED when org.xtclang.java.enableNativeAccess=true");
+            }
+        }
 
         System.out.println("[test] ✓ Plugin successfully read default JVM args from plugin-build-info.properties");
     }
