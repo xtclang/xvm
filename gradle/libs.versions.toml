@@ -23,7 +23,7 @@ jline = "3.30.5"
 ktlint = "13.1.0"
 palantir-git-version = "4.0.0"
 junit = "6.0.0"
-gradle-doctor = "0.10.0"
+gradle-doctor = "0.12.1"
 
 [plugins]
 # Included build plugins - no version (resolved from source)
