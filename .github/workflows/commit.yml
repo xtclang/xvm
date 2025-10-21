@@ -17,8 +17,10 @@ permissions:
 
 on:
     push:
-        # Run on all branch pushes
+        # Only run on master (after PRs are merged)
+        branches: [master]
     pull_request:
+        # Test all PRs before merging
         branches: [master]
     # Manual trigger - optionally triggers publishing workflows after successful completion
     # This allows testing the full publishing pipeline (snapshot, docker, homebrew) from any branch
@@ -85,10 +87,10 @@ env:
             done
         }
 
-# Concurrency settings: group by workflow, ref, and event type to allow manual runs alongside automatic ones
-# This allows trigger-publish.sh to run without cancelling the automatic push workflow
+# Concurrency settings: group by workflow and ref to prevent duplicate runs
+# Push and pull_request for the same branch will cancel each other (keeping latest)
 concurrency:
-    group: "${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}"
+    group: "${{ github.workflow }}-${{ github.ref }}"
     cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
@@ -133,7 +135,7 @@ jobs:
                       echo "  🚀 PUBLISHING WORKFLOWS WILL BE TRIGGERED"
                       echo -e "\033[0m"
                       echo "  📋 Reason: $TRIGGER_REASON"
-                      echo "  📦 Workflows: Publish Snapshots, Build Docker Images, Update Homebrew"
+                      echo "  📦 Workflows: Publish Snapshots, Publish Docker Images, Update Homebrew"
                   else
                       echo "::notice::⏭️  PUBLISHING DISABLED: No publishing workflows will be triggered"
                       echo -e "\033[1;33m"
@@ -299,8 +301,8 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                  echo "🚀 Triggering Build Docker Images workflow..."
-                  gh workflow run "Build Docker Images" --repo ${{ github.repository }} --ref ${{ github.ref_name }} --field ci-run-id=${{ github.run_id }}
+                  echo "🚀 Triggering Publish Docker Images workflow..."
+                  gh workflow run "Publish Docker Images" --repo ${{ github.repository }} --ref ${{ github.ref_name }} --field ci-run-id=${{ github.run_id }}
                   echo "✅ Docker publishing triggered"
 
             - name: Trigger Homebrew update

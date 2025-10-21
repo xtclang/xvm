@@ -287,7 +287,7 @@ gh workflow run publish-snapshot.yml --ref master
 
 ---
 
-### publish-docker.yml (Build Docker Images)
+### publish-docker.yml (Publish Docker Images)
 
 **Trigger**:
 - Automatic: After commit.yml completes on master
@@ -654,7 +654,7 @@ gh run watch
 - Go to Actions tab in GitHub
 - Look for these workflows that started after Verify Commit completed:
   - "Publish Snapshots"
-  - "Build Docker Images"
+  - "Publish Docker Images"
   - "Update Homebrew"
 
 ### What Gets Published
@@ -738,7 +738,7 @@ gh pr create --title "Optimize Docker builds"
 3. Wait for it to complete (shows green checkmark)
 4. Look for triggered workflows below:
    - **Publish Snapshots** - Check it completed successfully
-   - **Build Docker Images** - Verify both amd64 and arm64 built
+   - **Publish Docker Images** - Verify both amd64 and arm64 built
    - **Update Homebrew** - Confirm formula was updated
 
 ### Multiple Test Runs
