@@ -26,11 +26,12 @@ permissions:
     actions: read
 
 on:
-    # Automatic trigger when release PR is merged
-    pull_request:
-        types: [closed]
-        branches:
-            - master
+    # Manual trigger ONLY - release promotion is FORBIDDEN to run automatically
+    # COMMENTED OUT - automatic trigger disabled per user request
+    # pull_request:
+    #     types: [closed]
+    #     branches:
+    #         - master
 
     # Manual trigger for re-promotion or selective publishing
     workflow_dispatch:
@@ -57,12 +58,11 @@ on:
 jobs:
     promote-release:
         name: Promote staged release
-        # Only run if:
-        # 1. PR was merged (not just closed)
-        # 2. PR came from a release/* branch
-        if: |
-            github.event.pull_request.merged == true &&
-            startsWith(github.event.pull_request.head.ref, 'release/')
+        # Manual workflow_dispatch only - no conditions needed
+        # COMMENTED OUT - old automatic trigger conditions
+        # if: |
+        #     github.event.pull_request.merged == true &&
+        #     startsWith(github.event.pull_request.head.ref, 'release/')
         runs-on: ubuntu-latest
 
         steps:
