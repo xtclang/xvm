@@ -85,6 +85,22 @@ abstract class RebuildUnicodeTablesTask : DefaultTask() {
                 outputDir.get().dir("ecstasy/text").asFile.absolutePath
             )
         }
+
+        val generatedDatDir = outputDir.get().dir("ecstasy/text").asFile
+        logger.lifecycle("""
+
+            ================================================================================
+            [javatools_unicode] Unicode .dat files generated successfully!
+            [javatools_unicode] Location: ${generatedDatDir.absolutePath}
+
+            [javatools_unicode] Next steps:
+            [javatools_unicode] 1. Review the generated .dat and .txt files
+            [javatools_unicode] 2. Copy them to: src/main/resources/ecstasy/text/
+            [javatools_unicode] 3. Update Char.x to match the new .dat file data
+            [javatools_unicode] 4. Commit the updated files to the repository
+            ================================================================================
+
+        """.trimIndent())
     }
 }
 
