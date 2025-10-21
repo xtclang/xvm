@@ -26,6 +26,7 @@ import javax.inject.Inject;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.provider.ListProperty;
@@ -59,6 +60,7 @@ import org.xtclang.plugin.launchers.XtcLauncher;
 public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extends XtcDefaultTask implements XtcLauncherTaskExtension {
 
     // All inherited from launcher task extension and turned into input
+    protected final ConfigurableFileCollection modulePath;
     protected final Property<@NotNull InputStream> stdin;
     protected final Property<@NotNull OutputStream> stdout;
     protected final Property<@NotNull OutputStream> stderr;
@@ -112,6 +114,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
                 sourceSet -> XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet)
             ));
 
+
+        this.modulePath = objects.fileCollection().from(ext.getModulePath());
 
         this.debug = objects.property(Boolean.class).convention(ext.getDebug());
         this.debugPort = objects.property(Integer.class).convention(ext.getDebugPort());
@@ -399,6 +403,12 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         final Set<File> xtcModuleDeclarations = resolveFiles(getXtcModuleDependencies());
         map.put(XTC_CONFIG_NAME_MODULE_DEPENDENCY, xtcModuleDeclarations);
 
+        // Add custom module path entries (files or directories)
+        if (!modulePath.isEmpty()) {
+            final Set<File> customModulePath = resolveFiles(modulePath);
+            map.put("customModulePath", customModulePath);
+        }
+
         for (final var entry : sourceSetOutputDirsAtConfigurationTime.entrySet()) {
             final String sourceSetName = entry.getKey();
             final Provider<@NotNull Directory> outputDir = entry.getValue();
@@ -422,6 +432,14 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getXtcModuleDependencies() {
         return xtcModuleDependenciesAtConfigurationTime.get();
+    }
+
+    @Optional
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    @Override
+    public ConfigurableFileCollection getModulePath() {
+        return modulePath;
     }
 
     @Internal
