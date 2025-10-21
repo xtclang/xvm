@@ -39,17 +39,37 @@ val xdkPublishingCredentials = extensions.create<XdkPublishingCredentials>(
 // This allows both local (signing.keyId from gradle.properties) and CI (signing_keyId from ORG_GRADLE_PROJECT_)
 // credentials to be visible to the Gradle signing plugin via standard signing.* property names.
 // Note: Only set if not already defined (existing gradle.properties take precedence)
+// IMPORTANT: For configuration cache compatibility, we must:
+// 1. Get actual values from Providers (.orNull) instead of setting Provider objects
+// 2. Only set non-empty values to avoid config cache serialization issues
+// 3. Prefer in-memory keys over keyring files
 if (!project.hasProperty("signing.keyId")) {
-    project.extensions.extraProperties.set("signing.keyId", xdkPublishingCredentials.signingKeyId)
+    val keyId = xdkPublishingCredentials.signingKeyId.orNull?.takeIf { it.isNotEmpty() }
+    if (keyId != null) {
+        project.extensions.extraProperties.set("signing.keyId", keyId)
+    }
 }
 if (!project.hasProperty("signing.password")) {
-    project.extensions.extraProperties.set("signing.password", xdkPublishingCredentials.signingPassword)
+    val password = xdkPublishingCredentials.signingPassword.orNull?.takeIf { it.isNotEmpty() }
+    if (password != null) {
+        project.extensions.extraProperties.set("signing.password", password)
+    }
 }
+// Prefer in-memory key (signing.key) over keyring file for configuration cache compatibility
+// The signing plugin evaluates keyring file paths during config cache serialization which breaks CI
 if (!project.hasProperty("signing.key")) {
-    project.extensions.extraProperties.set("signing.key", xdkPublishingCredentials.signingKey)
+    val inMemoryKey = xdkPublishingCredentials.signingKey.orNull?.takeIf { it.isNotEmpty() }
+    if (inMemoryKey != null) {
+        project.extensions.extraProperties.set("signing.key", inMemoryKey)
+    }
 }
-if (!project.hasProperty("signing.secretKeyRingFile")) {
-    project.extensions.extraProperties.set("signing.secretKeyRingFile", xdkPublishingCredentials.signingSecretKeyRingFile)
+// Only set keyring file if in-memory key is not available AND the file path is non-empty
+// This ensures we never try to use keyring files in CI environments
+if (!project.hasProperty("signing.key") && !project.hasProperty("signing.secretKeyRingFile")) {
+    val keyRingFile = xdkPublishingCredentials.signingSecretKeyRingFile.orNull?.takeIf { it.isNotEmpty() }
+    if (keyRingFile != null) {
+        project.extensions.extraProperties.set("signing.secretKeyRingFile", keyRingFile)
+    }
 }
 
 /**
