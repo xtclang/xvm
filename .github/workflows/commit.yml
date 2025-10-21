@@ -17,9 +17,9 @@ permissions:
 
 on:
     push:
-        branches-ignore:
-            - 'dependabot/**'  # Don't run on Dependabot branches (already runs on pull_request)
+        # Run on all branch pushes
     pull_request:
+        branches: [master]
     # Manual trigger - optionally triggers publishing workflows after successful completion
     # This allows testing the full publishing pipeline (snapshot, docker, homebrew) from any branch
     # without pushing to master. Set publish-snapshots=true to trigger publishing workflows.
@@ -237,7 +237,7 @@ jobs:
         steps:
             - name: Check build status
               run: |
-                  if [ "${{ needs.build-and-test.result }}" ! "success" ]; then
+                  if [ "${{ needs.build-and-test.result }}" != "success" ]; then
                     echo "❌ Build failed or was cancelled"
                     exit 1
                   fi

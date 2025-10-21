@@ -11,7 +11,7 @@ updates:
           time: "06:00"
       open-pull-requests-limit: 5
       commit-message:
-          prefix: "ci [skip ci]"
+          prefix: "ci"
           include: "scope"
 
     # Enable version updates for Docker
@@ -23,7 +23,7 @@ updates:
           time: "06:00"
       open-pull-requests-limit: 5
       commit-message:
-          prefix: "docker [skip ci]"
+          prefix: "docker"
           include: "scope"
 
     # Enable version updates for Gradle dependencies
@@ -44,14 +44,15 @@ updates:
               patterns:
                   - "*"
       commit-message:
-          prefix: "deps [skip ci]"
+          prefix: "deps"
           include: "scope"
       ignore:
           # Ignore XDK internal dependencies
           # (use dynamic versioning)
           - dependency-name: "org.xtclang.*"
-          # Ignore patch updates for build plugins (too noisy)
+          # Ignore major and minor updates (too risky, require manual review)
+          # Only allow patch updates
           - dependency-name: "*"
-            update-types: ["version-update:semver-patch"]
-            # But allow security updates even for patches
+            update-types: ["version-update:semver-major", "version-update:semver-minor"]
+            # But allow security updates even for major/minor
             # (GitHub automatically overrides this for security updates)
