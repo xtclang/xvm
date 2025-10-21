@@ -48,6 +48,7 @@ import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.internal.GradlePhaseAssertions;
 import org.xtclang.plugin.launchers.BuildThreadLauncher;
+import org.xtclang.plugin.launchers.CompilerDaemonLauncher;
 import org.xtclang.plugin.launchers.JavaExecLauncher;
 import org.xtclang.plugin.launchers.NativeBinaryLauncher;
 import org.xtclang.plugin.launchers.XtcLauncher;
@@ -84,14 +85,18 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     // Configuration inputs captured as Providers at task creation time - Gradle handles resolution and missing configs
     private final Provider<@NotNull FileCollection> javaToolsConfigAtConfigurationTime;
     private final Provider<@NotNull FileCollection> xtcModuleDependenciesAtConfigurationTime;
-    // Launcher configuration captured at configuration time to avoid Project access during execution  
+    // Launcher configuration captured at configuration time to avoid Project access during execution
     private final boolean useNativeLauncherAtConfigurationTime;
     private final boolean forkAtConfigurationTime;
-    
+    private final boolean useCompilerDaemonAtConfigurationTime;
+
     // JavaExecLauncher configuration captured at configuration time
     private final Provider<@NotNull String> toolchainExecutableAtConfigurationTime;
     private final Provider<@NotNull String> projectVersionAtConfigurationTime;
     private final Provider<org.gradle.api.file.@NotNull FileTree> xdkFileTreeAtConfigurationTime;
+
+    // Compiler daemon service provider
+    private final Provider<org.xtclang.plugin.services.XtcCompilerService> compilerServiceProvider;
 
     @SuppressWarnings("this-escape") // Suppressed because launchers need task reference in constructor
     protected XtcLauncherTask(final Project project, final E ext) {
@@ -142,6 +147,13 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         // Capture launcher configuration at configuration time to avoid Project access during execution
         this.useNativeLauncherAtConfigurationTime = ext.getUseNativeLauncher().get();
         this.forkAtConfigurationTime = ext.getFork().get();
+        this.useCompilerDaemonAtConfigurationTime = ext.getUseCompilerDaemon().get();
+
+        // Register compiler daemon build service if needed
+        this.compilerServiceProvider = project.getGradle().getSharedServices()
+                .registerIfAbsent("xtcCompilerDaemon", org.xtclang.plugin.services.XtcCompilerService.class, spec -> {
+                    // No parameters needed currently
+                });
         
         // Assert that required configurations exist - they should always be created by this plugin
         final var configurations = project.getConfigurations();
@@ -204,6 +216,15 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputXtcJavaToolsConfig() {
+        return javaToolsConfigAtConfigurationTime.get();
+    }
+
+    /**
+     * Returns the javatools classpath for use by launchers.
+     * This is used by the compiler daemon to load the XTC compiler.
+     */
+    @Internal
+    public FileCollection getJavaToolsClasspath() {
         return javaToolsConfigAtConfigurationTime.get();
     }
 
@@ -308,6 +329,12 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return useNativeLauncher;
     }
 
+    @Input
+    @Override
+    public Property<@NotNull Boolean> getUseCompilerDaemon() {
+        return ext.getUseCompilerDaemon();
+    }
+
     @Optional
     @Input
     public ListProperty<@NotNull String> getJvmArgs() {
@@ -379,6 +406,10 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         if (useNativeLauncherAtConfigurationTime) {
             getLogger().info("[plugin] Created XTC launcher: native executable.");
             return new NativeBinaryLauncher<>(this, getLogger(), getExecOperations());
+        } else if (useCompilerDaemonAtConfigurationTime && !forkAtConfigurationTime) {
+            // Use compiler daemon for best performance when fork=false (in-process)
+            getLogger().lifecycle("[compiler-daemon] Using XTC compiler daemon for improved performance.");
+            return new CompilerDaemonLauncher<>(this, getLogger(), compilerServiceProvider);
         } else if (forkAtConfigurationTime) {
             getLogger().info("[plugin] Created XTC launcher: Java process forked from build.");
             return new JavaExecLauncher<>(this, getLogger(), getExecOperations(),

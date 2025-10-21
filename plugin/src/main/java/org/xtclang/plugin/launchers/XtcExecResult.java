@@ -159,20 +159,20 @@ public final class XtcExecResult implements ExecResult {
         }
 
         @SuppressWarnings("UnusedReturnValue")
-        XtcExecResultBuilder exitValue(final int exitValue) {
+        public XtcExecResultBuilder exitValue(final int exitValue) {
             this.exitValue = exitValue;
             this.hasExitValue = true;
             return this;
         }
 
         @SuppressWarnings("UnusedReturnValue")
-        XtcExecResultBuilder failure(final Throwable failure) {
+        public XtcExecResultBuilder failure(final Throwable failure) {
             this.failure = new GradleException(launcherClass.getSimpleName() + ' ' + failure.getMessage(), failure);
             return this;
         }
 
         @SuppressWarnings("UnusedReturnValue")
-        XtcExecResultBuilder execResult(final ExecResult execResult) {
+        public XtcExecResultBuilder execResult(final ExecResult execResult) {
             exitValue(execResult.getExitValue());
             try {
                 execResult.rethrowFailure();
@@ -187,7 +187,7 @@ public final class XtcExecResult implements ExecResult {
             return out.toString();
         }
 
-        XtcExecResult build() {
+        public XtcExecResult build() {
             return new XtcExecResult(exitValue, failure, outputAsString(out), outputAsString(err));
         }
     }
