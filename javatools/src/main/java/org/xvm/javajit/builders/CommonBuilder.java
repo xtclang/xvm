@@ -108,6 +108,20 @@ public class CommonBuilder
         // assemblePureMethods(className, classBuilder);
     }
 
+    @Override
+    protected TypeConstant getThisType() {
+        return typeInfo.getType();
+    }
+
+    /**
+     * Compute the ClassDesc for the super class.
+     */
+    protected ClassDesc getSuperCD() {
+        TypeConstant superType = typeInfo.getExtends();
+        return superType == null
+            ? CD_xObj
+            : ClassDesc.of(typeSystem.ensureJitClassName(superType));
+    }
 
     /**
      * Compute the instance size of the generated class(es). If more than one class gets generated,
@@ -165,16 +179,6 @@ public class CommonBuilder
     }
 
     /**
-     * Compute the ClassDesc for the super class.
-     */
-    protected ClassDesc getSuperDesc() {
-        TypeConstant superType = typeInfo.getExtends();
-        return superType == null
-            ? CD_xObj
-            : ClassDesc.of(typeSystem.ensureJitClassName(superType));
-    }
-
-    /**
      * Assemble the class specific info for the "Impl" shape.
      */
     protected void assembleImplClass(String className, ClassBuilder classBuilder) {
@@ -183,7 +187,7 @@ public class CommonBuilder
         switch (classStruct.getFormat()) {
             case CLASS, CONST, SERVICE, ENUMVALUE:
                 flags |= ClassFile.ACC_SUPER; // see JLS 4.1
-                classBuilder.withSuperclass(getSuperDesc());
+                classBuilder.withSuperclass(getSuperCD());
                 break;
 
             case INTERFACE, MIXIN, ENUM:
@@ -414,7 +418,7 @@ public class CommonBuilder
                 // super($ctx);
                 code.aload(0)
                     .aload(ctxSlot)
-                    .invokespecial(getSuperDesc(), INIT_NAME, MD_Initializer);
+                    .invokespecial(getSuperCD(), INIT_NAME, MD_Initializer);
 
                 // add field initialization
                 for (PropertyInfo prop : props) {

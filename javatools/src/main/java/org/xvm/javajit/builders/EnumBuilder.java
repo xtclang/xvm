@@ -36,12 +36,12 @@ public class EnumBuilder extends CommonBuilder {
 
     @Override
     protected void assembleImplClass(String className, ClassBuilder classBuilder) {
-        classBuilder.withSuperclass(getSuperDesc())
+        classBuilder.withSuperclass(getSuperCD())
                     .withFlags(ClassFile.ACC_PUBLIC | ClassFile.ACC_ABSTRACT);
     }
 
     @Override
-    protected ClassDesc getSuperDesc() {
+    protected ClassDesc getSuperCD() {
         return CD_xEnum;
     }
 

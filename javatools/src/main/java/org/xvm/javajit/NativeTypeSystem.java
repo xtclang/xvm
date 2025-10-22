@@ -194,7 +194,6 @@ public class NativeTypeSystem
         ConstantPool pool = pool();
 
         // only rebased types need to be registered
-        nativeByClass.put(pool.clzClass(),     Builder.N_xClass);
         nativeByClass.put(pool.clzEnum(),      Builder.N_xEnum);
         nativeByClass.put(pool.clzEnumValue(), Builder.N_xEnum);
         nativeByClass.put(pool.clzModule(),    Builder.N_xModule);

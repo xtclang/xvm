@@ -29,11 +29,6 @@ public class EnumValueBuilder extends CommonBuilder {
     }
 
     @Override
-    protected ClassDesc getSuperDesc() {
-        return super.getSuperDesc();
-    }
-
-    @Override
     protected boolean hasStaticInitializer() {
         return true;
     }

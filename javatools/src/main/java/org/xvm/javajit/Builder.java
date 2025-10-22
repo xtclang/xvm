@@ -59,6 +59,13 @@ public abstract class Builder {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @return TypeConstant for "this" type
+     */
+    protected TypeConstant getThisType() {
+        throw new UnsupportedOperationException();
+    }
+
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
