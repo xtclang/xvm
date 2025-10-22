@@ -73,8 +73,43 @@ private class XdkBuildAggregator(val project: Project) : Runnable {
         """.trimIndent()
         )
 
-        // Filter out properties (starting with -) to get actual tasks
-        val actualTasks = startParameter.taskNames.filter { !it.startsWith("-") }
+        // Gradle options that take arguments (we need to skip both the option and its argument)
+        val optionsWithArgs = setOf(
+            "--build-file",
+            "--console",
+            "--exclude-task",
+            "--gradle-user-home",
+            "--init-script",
+            "--max-workers",
+            "--parallel",
+            "--profile",
+            "--project-cache-dir",
+            "--project-dir",
+            "--rerun-tasks",
+            "--settings-file",
+            "--tests"
+        )
+
+        // Filter out command-line options and their arguments to get actual tasks
+        val actualTasks = mutableListOf<String>()
+        val taskNames = startParameter.taskNames
+        var i = 0
+        while (i < taskNames.size) {
+            val current = taskNames[i]
+            when {
+                // Skip all flags (both - and --)
+                current.startsWith("-") -> {
+                    // If this flag takes an argument, skip the next item too
+                    if (optionsWithArgs.contains(current)) {
+                        i++ // Skip the argument
+                    }
+                }
+                else -> actualTasks.add(current)
+            }
+            i++
+        }
+
+        logger.info("[aggregator] Filtered actual tasks (excluding command-line options): $actualTasks")
 
         if (actualTasks.size > 1) {
             val conflictingTasks = actualTasks.filter { it == "clean" || lifeCycleTasks.contains(it) }

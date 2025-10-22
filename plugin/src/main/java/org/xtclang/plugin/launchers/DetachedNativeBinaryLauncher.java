@@ -1,6 +1,8 @@
 package org.xtclang.plugin.launchers;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.stream.Stream;
 
 import org.gradle.api.logging.Logger;
 import org.gradle.process.ExecOperations;
@@ -32,21 +34,14 @@ public class DetachedNativeBinaryLauncher<E extends XtcLauncherTaskExtension, T 
     public ExecResult apply(final CommandLine cmd) {
         logger.info("[plugin] Launching task in detached mode: {}", this);
         validateCommandLine(cmd);
-
         if (task.hasVerboseLogging()) {
             logger.lifecycle("[plugin] Detached NativeExec command: {}", cmd.toString());
         }
-
-        // Build command for ProcessBuilder
-        final var command = new java.util.ArrayList<String>();
-
-        // Find native executable on PATH
-        final File executable = findOnPath(commandName);
-        command.add(executable.getAbsolutePath());
-
-        // Add program arguments
-        command.addAll(cmd.toList());
-
-        return detachedHelper.startDetachedProcess(command, cmd.getIdentifier());
+        final var command = Stream.concat(Stream.of(commandName), cmd.toList().stream()).toList();
+        try {
+            return detachedHelper.startDetachedProcess(command, cmd.getIdentifier());
+        } catch (final IOException e) {
+            throw new RuntimeException("[plugin] Failed to start detached native process for task: " + this, e);
+        }
     }
 }

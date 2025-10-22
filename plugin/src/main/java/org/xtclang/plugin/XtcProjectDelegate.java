@@ -161,29 +161,10 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         createXtcDependencyConfigs();
         createDefaultRunTask();
 
-        // The plugin should look for custom run tasks, and ensure that they depend on all compile tasks in the project.
+        // Configure task dependencies
         final TaskCollection<@NotNull XtcCompileTask> compileTasks = tasks.withType(XtcCompileTask.class);
-        tasks.withType(XtcRunTask.class).configureEach(runTask -> {
-            runTask.dependsOn(XDK_EXTRACT_TASK_NAME);
-            runTask.dependsOn(compileTasks);
-            logger.info("[plugin] XtcRunTask named '{}': added dependency on: '{}' and '{}'",
-                runTask.getName(), XDK_EXTRACT_TASK_NAME, compileTasks.getNames());
-        });
-        // We should increase granularity for the dependencies, so that we have an xtc equivalent of the "classes" task,
-        // probable a "modules" and "<sourceSetName>" modules task. TODO: Do this when getting rid of the Java base plugin.
-        compileTasks.forEach(task -> {
-            final Set<SourceSet> sourceSets = taskSourceSets.get(task.getName());
-            if (sourceSets == null || sourceSets.isEmpty()) {
-                logger.warn("[plugin] WARNING: No specific source set associated with compile task '{}'.", task.getName());
-            } else {
-                sourceSets.forEach(sourceSet -> {
-                    final var processResourcesTasks = List.of(getProcessResourcesTaskName(sourceSet), getJavaProcessResourcesTaskName(sourceSet));
-                    logger.info("[plugin] Adding resource dependency for compile task '{}' -> ({}, resource tasks: {})",
-                        task.getName(), sourceSets, processResourcesTasks);
-                    task.dependsOn(processResourcesTasks);
-                });
-            }
-        });
+        configureRunTaskDependencies(compileTasks);
+        configureCompileTaskResourceDependencies(compileTasks);
 
         createResolutionStrategy();
         createVersioningTasks();
@@ -619,5 +600,46 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         if (UNSPECIFIED.equalsIgnoreCase(project.getVersion().toString())) {
             logger.lifecycle("[plugin] WARNING: Project '{}' has unspecified version.", projectName);
         }
+    }
+
+    /**
+     * Configures all XtcRunTask instances to depend on the XDK extract task and all compile tasks.
+     * This ensures that run tasks can only execute after the XDK is extracted and all sources are compiled.
+     *
+     * @param compileTasks the collection of all XtcCompileTask instances in the project
+     */
+    private void configureRunTaskDependencies(final TaskCollection<@NotNull XtcCompileTask> compileTasks) {
+        tasks.withType(XtcRunTask.class).configureEach(runTask -> {
+            runTask.dependsOn(XDK_EXTRACT_TASK_NAME);
+            runTask.dependsOn(compileTasks);
+            logger.info("[plugin] XtcRunTask named '{}': added dependency on: '{}' and '{}'",
+                runTask.getName(), XDK_EXTRACT_TASK_NAME, compileTasks.getNames());
+        });
+    }
+
+    /**
+     * Configures compile tasks to depend on their associated resource processing tasks.
+     * For each compile task, this method looks up the source sets associated with that task
+     * and adds dependencies on both XTC and Java resource processing tasks for those source sets.
+     *
+     * TODO: Increase granularity for the dependencies, so that we have an xtc equivalent of the "classes" task,
+     *   probably a "modules" and "&lt;sourceSetName&gt;Modules" task when getting rid of the Java base plugin.
+     *
+     * @param compileTasks the collection of all XtcCompileTask instances in the project
+     */
+    private void configureCompileTaskResourceDependencies(final TaskCollection<@NotNull XtcCompileTask> compileTasks) {
+        compileTasks.forEach(task -> {
+            final Set<SourceSet> sourceSets = taskSourceSets.get(task.getName());
+            if (sourceSets == null || sourceSets.isEmpty()) {
+                logger.warn("[plugin] WARNING: No specific source set associated with compile task '{}'.", task.getName());
+            } else {
+                sourceSets.forEach(sourceSet -> {
+                    final var processResourcesTasks = List.of(getProcessResourcesTaskName(sourceSet), getJavaProcessResourcesTaskName(sourceSet));
+                    logger.info("[plugin] Adding resource dependency for compile task '{}' -> ({}, resource tasks: {})",
+                        task.getName(), sourceSets, processResourcesTasks);
+                    task.dependsOn(processResourcesTasks);
+                });
+            }
+        });
     }
 }

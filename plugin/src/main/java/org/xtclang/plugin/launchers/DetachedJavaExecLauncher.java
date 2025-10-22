@@ -2,6 +2,8 @@ package org.xtclang.plugin.launchers;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.file.FileCollection;
@@ -42,38 +44,24 @@ public class DetachedJavaExecLauncher<E extends XtcLauncherTaskExtension, T exte
     @Override
     public ExecResult apply(final CommandLine cmd) {
         logger.info("[plugin] Launching task in detached mode: {}", this);
-
         // Resolve javatools.jar using parent's logic
         final File javaToolsJar = resolveJavaTools();
         if (javaToolsJar == null) {
             throw new GradleException("[plugin] Failed to resolve javatools.jar for detached execution.");
         }
-
         if (task.hasVerboseLogging()) {
             final var launchLine = cmd.toString(javaToolsJar);
             logger.lifecycle("[plugin] Detached JavaExec command: {}", launchLine);
         }
-
-        // Build command for ProcessBuilder
-        final var command = new java.util.ArrayList<String>();
-
-        // Add java executable
         final String javaExec = toolchainExecutable.getOrElse("java");
-        command.add(javaExec);
-
-        // Add JVM args
+        final var command = new ArrayList<>(List.of(javaExec));
         command.addAll(cmd.getJvmArgs());
-
-        // Add classpath
-        command.add("-cp");
-        command.add(javaToolsJar.getAbsolutePath());
-
-        // Add main class
-        command.add(cmd.getMainClassName());
-
-        // Add program arguments
+        command.addAll(List.of("-cp", javaToolsJar.getAbsolutePath(), cmd.getMainClassName()));
         command.addAll(cmd.toList());
-
-        return detachedHelper.startDetachedProcess(command, cmd.getIdentifier());
+        try {
+            return detachedHelper.startDetachedProcess(command, cmd.getIdentifier());
+        } catch (final IOException e) {
+            throw new RuntimeException("[plugin] Failed to start detached Java process for task: " + this, e);
+        }
     }
 }

@@ -1,11 +1,5 @@
 package org.xtclang.plugin.launchers;
 
-import java.io.File;
-
-import java.util.Objects;
-import java.util.StringTokenizer;
-
-import org.gradle.api.GradleException;
 import org.gradle.api.logging.Logger;
 import org.gradle.process.ExecOperations;
 import org.gradle.process.ExecResult;
@@ -36,19 +30,6 @@ public class NativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends 
         return super.validateCommandLine(cmd);
     }
 
-    protected File findOnPath(final String commandName) {
-        final var path = Objects.requireNonNull(System.getenv("PATH"));
-        final var st = new StringTokenizer(path, File.pathSeparator);
-        while (st.hasMoreTokens()) {
-            final var cmd = new File(st.nextToken(), commandName);
-            if (cmd.exists() && cmd.canExecute()) {
-                logger.info("[plugin] Successfully resolved path for command '{}': '{}'", commandName, cmd.getAbsolutePath());
-                return cmd;
-            }
-        }
-        throw new GradleException("[plugin] Could not resolve " + commandName + " from system path: " + path);
-    }
-
     @Override
     public ExecResult apply(final CommandLine cmd) {
         logger.info("[plugin] Launching task: {}}", this);
@@ -59,7 +40,8 @@ public class NativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends 
         final var builder = resultBuilder(cmd);
         final var execResult = execOperations.exec(spec -> {
             redirectIo(spec);
-            spec.setExecutable(findOnPath(commandName));
+            // Gradle ExecOperations automatically resolves executables from system PATH
+            spec.setExecutable(commandName);
             spec.setArgs(cmd.toList());
             spec.setIgnoreExitValue(true);
         });
