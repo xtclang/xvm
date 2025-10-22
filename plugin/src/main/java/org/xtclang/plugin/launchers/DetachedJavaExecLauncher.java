@@ -61,7 +61,7 @@ public class DetachedJavaExecLauncher<E extends XtcLauncherTaskExtension, T exte
         try {
             return detachedHelper.startDetachedProcess(command, cmd.getIdentifier());
         } catch (final IOException e) {
-            throw new RuntimeException("[plugin] Failed to start detached Java process for task: " + this, e);
+            throw new GradleException("[plugin] Failed to start detached Java process for task: " + this, e);
         }
     }
 }

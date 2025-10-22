@@ -7,6 +7,7 @@ import java.util.stream.Stream;
 import org.gradle.api.logging.Logger;
 import org.gradle.process.ExecOperations;
 import org.gradle.process.ExecResult;
+import org.gradle.api.GradleException;
 
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
@@ -18,7 +19,7 @@ import org.xtclang.plugin.tasks.XtcLauncherTask;
 public class DetachedNativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>>
         extends NativeBinaryLauncher<E, T> {
 
-     private final DetachedLauncher detachedHelper;
+    private final DetachedLauncher detachedHelper;
 
     public DetachedNativeBinaryLauncher(
             final T task,
@@ -41,7 +42,7 @@ public class DetachedNativeBinaryLauncher<E extends XtcLauncherTaskExtension, T 
         try {
             return detachedHelper.startDetachedProcess(command, cmd.getIdentifier());
         } catch (final IOException e) {
-            throw new RuntimeException("[plugin] Failed to start detached native process for task: " + this, e);
+            throw new GradleException("[plugin] Failed to start detached native process for task: " + this, e);
         }
     }
 }
