@@ -1,9 +1,9 @@
 package org.xtclang.plugin.launchers;
 
-import static java.nio.file.Files.writeString;
-
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import org.gradle.api.logging.Logger;
@@ -52,17 +52,18 @@ public abstract class DetachedLauncher {
      * The process will continue running after Gradle exits.
      *
      * @param command The command to execute
-     * @param identifier Identifier for log/pid files (e.g., module name)
+     * @param identifier Identifier for log files (e.g., module name)
      * @return Mock ExecResult indicating successful process start
-     * @throws IOException if the process cannot be started or files cannot be written
+     * @throws IOException if the process cannot be started
      */
     protected ExecResult startDetachedProcess(final List<String> command, final String identifier) throws IOException {
         final var pb = new ProcessBuilder(command);
         pb.directory(projectDir);
 
-        // Redirect output to log files
-        final File logFile = new File(buildDir, identifier + ".log");
-        final File pidFile = new File(buildDir, identifier + ".pid");
+        // Create timestamp for log file name
+        final String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        final String logFileName = identifier.toLowerCase() + "_pid_" + timestamp + ".log";
+        final File logFile = new File(buildDir, logFileName);
 
         pb.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile));
         pb.redirectError(ProcessBuilder.Redirect.appendTo(logFile));
@@ -70,13 +71,11 @@ public abstract class DetachedLauncher {
         final Process process = pb.start();
         final long pid = process.pid();
 
-        // Write PID to file
-        writeString(pidFile.toPath(), String.valueOf(pid));
-
-        logger.lifecycle("[plugin] Started {} with PID: {}", identifier, pid);
-        logger.lifecycle("[plugin] Logs: {}", logFile.getAbsolutePath());
-        logger.lifecycle("[plugin] Stop with: kill {}", pid);
-        logger.lifecycle("[plugin] PID saved to: {}", pidFile.getAbsolutePath());
+        logger.lifecycle("""
+            [plugin] Started {} with PID: {}
+            [plugin] Stop with: kill {} (unless there is a graceful way to exit)
+            [plugin] Logs: {}
+            """.trim(), identifier, pid, pid, logFile.getAbsolutePath());
 
         // Return mock ExecResult indicating successful start
         return MOCK_SUCCESS_RESULT;

@@ -81,8 +81,13 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected final List<String> sourceSetNames;
     protected final Provider<@NotNull FileCollection> javaToolsConfig;
     protected final Provider<@NotNull FileCollection> xtcModuleDependencies;
-    protected final boolean useNativeLauncherValue;  // Resolved at configuration phase
-    protected final boolean forkValue;  // Resolved at configuration phase
+
+    // Resolved launcher configuration values captured from extension at configuration time.
+    // These are used during task execution to avoid Project access (configuration cache compatible).
+    // The Property<Boolean> versions (fork, useNativeLauncher) are for DSL configuration and
+    // Gradle's input tracking, while these resolved primitives are for execution logic.
+    protected final boolean useNativeLauncherValue;
+    protected final boolean forkValue;
     protected final Provider<@NotNull String> toolchainExecutable;
     protected final Provider<@NotNull String> projectVersion;
     protected final Provider<org.gradle.api.file.@NotNull FileTree> xdkFileTree;
@@ -288,6 +293,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return verbose;
     }
 
+    /**
+     * Returns the fork property for DSL configuration.
+     * This property allows users to configure whether to fork a new process for execution.
+     * Note: Execution logic uses {@link #getForkValue()} which is captured at configuration time.
+     */
     @Input
     public Property<@NotNull Boolean> getFork() {
         return fork;
@@ -298,6 +308,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return showVersion;
     }
 
+    /**
+     * Returns the useNativeLauncher property for DSL configuration.
+     * This property allows users to configure whether to use the native launcher.
+     * Note: Execution logic uses {@link #getUseNativeLauncherValue()} which is captured at configuration time.
+     */
     @Input
     public Property<@NotNull Boolean> getUseNativeLauncher() {
         return useNativeLauncher;
@@ -310,20 +325,26 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     }
 
     /**
-     * Returns the launcher type configuration captured at configuration time.
-     * This is an input because changes to launcher configuration affect execution.
+     * Returns the resolved launcher type captured from the extension at configuration time.
+     * This primitive value is used during task execution to determine launcher type without
+     * accessing the Project object, ensuring configuration cache compatibility.
+     * This is an @Input because changes to launcher configuration affect task execution.
+     * See {@link #getUseNativeLauncher()} for the DSL-configurable Property version.
      */
     @Input
-    public boolean getUseNativeLauncherAtConfigurationTime() {
+    public boolean getUseNativeLauncherValue() {
         return useNativeLauncherValue;
     }
 
     /**
-     * Returns the fork configuration captured at configuration time.
-     * This is an input because changes to fork configuration affect execution.
+     * Returns the resolved fork configuration captured from the extension at configuration time.
+     * This primitive value is used during task execution to determine whether to fork without
+     * accessing the Project object, ensuring configuration cache compatibility.
+     * This is an @Input because changes to fork configuration affect task execution.
+     * See {@link #getFork()} for the DSL-configurable Property version.
      */
     @Input
-    public boolean getForkAtConfigurationTime() {
+    public boolean getForkValue() {
         return forkValue;
     }
 
@@ -332,7 +353,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
      * This is an input because changes to source sets affect the module path.
      */
     @Input
-    public List<String> getSourceSetNamesAtConfigurationTime() {
+    public List<String> getSourceSetNames() {
         return sourceSetNames;
     }
 

@@ -9,7 +9,7 @@
 ./gradlew clean build                     # ❌ WILL FAIL
 ./gradlew build publishLocal              # ❌ WILL FAIL
 ./gradlew clean build publishLocal        # ❌ WILL FAIL
-./gradlew build publishLocal -PallowMultipleTasks=true  # ❌ NEVER USE THIS FLAG
+./gradlew build publishLocal -PallowMultipleTasks=true  # ❌ NEVER USE THIS FLAG UNLESS YOU KNOW THIS IS TESTED AND WORKS FOR THE JOBS INVOLVED
 ```
 
 **REQUIRED - Run each task individually:**
@@ -26,7 +26,7 @@ The XVM project uses a custom aggregator plugin that enforces single-task execut
 - Task ordering issues
 - Configuration cache problems
 
-The `-PallowMultipleTasks=true` override exists but is **strictly forbidden** - it bypasses critical safety checks.
+The `-PallowMultipleTasks=true` override exists but is reserved for tested workflows and when you know what you are doing. You DO NOT know what you are doing.
 
 # Code Style Rules (UNBREAKABLE)
 1. ALWAYS add a newline at the end of every file

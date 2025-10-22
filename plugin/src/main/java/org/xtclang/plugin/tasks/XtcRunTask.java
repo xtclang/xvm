@@ -238,6 +238,14 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     public void executeTask() {
         super.executeTask();
 
+        // Validate that parallel execution is not enabled (not yet implemented)
+        if (getParallel().get()) {
+            throw new UnsupportedOperationException("""
+                [plugin] Parallel module execution is not yet implemented. \
+                Please set 'parallel = false' in your xtcRun configuration or remove the parallel setting.\
+                """);
+        }
+
         final var cmd = new CommandLine(XTC_RUNNER_CLASS_NAME, resolveJvmArgs());
         cmd.addBoolean("--version", getShowVersion().get());
         cmd.addBoolean("--verbose", getVerbose().get());
