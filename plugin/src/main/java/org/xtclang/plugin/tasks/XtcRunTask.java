@@ -169,6 +169,18 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         taskLocalModules.get().setModuleNames(moduleNames);
     }
 
+    @Input
+    @Override
+    public Property<Boolean> getDetach() {
+        return getExtension().getDetach();
+    }
+
+    @Input
+    @Override
+    public Property<Boolean> getParallel() {
+        return getExtension().getParallel();
+    }
+
     @Internal
     @Override
     public boolean isEmpty() {

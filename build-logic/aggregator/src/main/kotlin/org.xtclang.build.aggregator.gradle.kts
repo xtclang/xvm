@@ -66,24 +66,35 @@ private class XdkBuildAggregator(val project: Project) : Runnable {
 
     private fun checkStartParameterState() {
         val startParameter = gradle.startParameter
-        with(startParameter) {
-            logger.info(
-                """
-            [aggregator] Start parameter tasks: $taskNames
-            [aggregator] Start parameter init scripts: $allInitScripts
+        logger.info(
+            """
+            [aggregator] Start parameter tasks: ${startParameter.taskNames}
+            [aggregator] Start parameter init scripts: ${startParameter.allInitScripts}
         """.trimIndent()
-            )
+        )
 
-            // Allow multiple tasks except for clean and other lifecycle tasks that might conflict
-            val conflictingTasks = taskNames.filter { 
-                !it.startsWith("-") && 
-                (it == "clean" || lifeCycleTasks.contains(it))
-            }
-            if (conflictingTasks.size > 1) {
-                val msg =
-                    "[aggregator] Multiple conflicting lifecycle tasks detected. Please run lifecycle tasks individually: $conflictingTasks"
-                logger.error(msg)
-                throw GradleException(msg)
+        // Filter out properties (starting with -) to get actual tasks
+        val actualTasks = startParameter.taskNames.filter { !it.startsWith("-") }
+
+        if (actualTasks.size > 1) {
+            val conflictingTasks = actualTasks.filter { it == "clean" || lifeCycleTasks.contains(it) }
+            val allowMultipleTasks = (project.properties["allowMultipleTasks"]?.toString() ?: "false").toBoolean()
+
+            when {
+                conflictingTasks.size > 1 -> {
+                    val msg = "[aggregator] Multiple conflicting lifecycle tasks detected. Please run lifecycle tasks individually: $conflictingTasks"
+                    logger.error(msg)
+                    throw GradleException(msg)
+                }
+                !allowMultipleTasks -> {
+                    val msg = """
+                        [aggregator] Multiple tasks detected.
+                        Please run tasks individually or use -PallowMultipleTasks=true if you know exactly what you are doing: $actualTasks
+                    """.trimIndent().replace("\n", " ")
+                    logger.error(msg)
+                    throw GradleException(msg)
+                }
+                else -> logger.info("[aggregator] Multiple tasks allowed via -PallowMultipleTasks=true: $actualTasks")
             }
         }
 

@@ -400,13 +400,15 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         final Set<File> xdkContents = resolveDirectories(xdkContentsDirAtConfigurationTime);
         map.put(XDK_CONFIG_NAME_CONTENTS, xdkContents);
 
-        final Set<File> xtcModuleDeclarations = resolveFiles(getXtcModuleDependencies());
-        map.put(XTC_CONFIG_NAME_MODULE_DEPENDENCY, xtcModuleDeclarations);
-
-        // Add custom module path entries (files or directories)
+        // If custom module path is specified, use it instead of xtcModule dependencies
+        // This supports aggregator projects that collect modules in a custom location
         if (!modulePath.isEmpty()) {
-            final Set<File> customModulePath = resolveFiles(modulePath);
+            final Set<File> customModulePath = resolveAsDirectories(modulePath);
             map.put("customModulePath", customModulePath);
+        } else {
+            // Use xtcModule dependencies only when no custom module path is set
+            final Set<File> xtcModuleDeclarations = resolveFiles(getXtcModuleDependencies());
+            map.put(XTC_CONFIG_NAME_MODULE_DEPENDENCY, xtcModuleDeclarations);
         }
 
         for (final var entry : sourceSetOutputDirsAtConfigurationTime.entrySet()) {
@@ -510,6 +512,19 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     public static Set<File> resolveDirectories(final Set<File> files) {
         return files.stream().map(f -> requireNonNull(f.getParentFile())).collect(Collectors.toUnmodifiableSet());
+    }
+
+    /**
+     * Resolves a FileCollection to a set of directories, preserving directories as-is
+     * instead of expanding them to their contents. For files, returns their parent directory.
+     */
+    public static Set<File> resolveAsDirectories(final FileCollection files) {
+        if (files.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return files.getFiles().stream()
+                .map(f -> f.isDirectory() ? f : requireNonNull(f.getParentFile()))
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     @SuppressWarnings("unused")
