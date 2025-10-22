@@ -208,7 +208,7 @@ jobs:
                 ls -la build/ 2>/dev/null && echo "Build directory exists - will be cleaned" || echo "✅ No previous build outputs"
 
                 inspect_gradle_cache "before build"
-                ./gradlew $GRADLE_OPTIONS clean --info
+                ./gradlew $GRADLE_OPTIONS clean
                 ./gradlew $GRADLE_OPTIONS check -Porg.xtclang.java.lint=true -Porg.xtclang.java.warningsAsErrors=false -Porg.xtclang.java.test.stdout=true
                 ./gradlew $GRADLE_OPTIONS :xdk:distZip
 

@@ -33,7 +33,7 @@ import org.xtclang.plugin.tasks.XtcLauncherTask;
  */
 public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends XtcLauncher<E, T> {
     private final ExecOperations execOperations;
-    private final Provider<@NotNull String> toolchainExecutable;
+    protected final Provider<@NotNull String> toolchainExecutable;
     private final Provider<@NotNull String> projectVersion;
     private final Provider<@NotNull FileTree> xdkFileTree;
     private final Provider<@NotNull FileCollection> javaToolsConfig;
@@ -85,7 +85,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
         })));
     }
 
-    private File resolveJavaTools() {
+    protected File resolveJavaTools() {
         // TODO: Way too complicated, just making absolutely sure that we don't mix class paths for e.g. XDK development, and something
         //   that is a distribution installed locally, thinking one is the other. This can be solved through artifact signing instead.
 

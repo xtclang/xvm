@@ -16,7 +16,7 @@ import org.xtclang.plugin.tasks.XtcLauncherTask;
 
 public class NativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends XtcLauncher<E, T> {
 
-    private final String commandName;
+    protected final String commandName;
     private final ExecOperations execOperations;
 
     public NativeBinaryLauncher(final T task, final Logger logger, final ExecOperations execOperations) {
@@ -36,7 +36,7 @@ public class NativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends 
         return super.validateCommandLine(cmd);
     }
 
-    private File findOnPath(final String commandName) {
+    protected File findOnPath(final String commandName) {
         final var path = Objects.requireNonNull(System.getenv("PATH"));
         final var st = new StringTokenizer(path, File.pathSeparator);
         while (st.hasMoreTokens()) {

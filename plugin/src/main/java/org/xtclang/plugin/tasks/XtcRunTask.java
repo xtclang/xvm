@@ -43,6 +43,10 @@ import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.XtcRuntimeExtension;
 import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
 import org.xtclang.plugin.launchers.CommandLine;
+import org.xtclang.plugin.launchers.DetachedJavaExecLauncher;
+import org.xtclang.plugin.launchers.DetachedNativeBinaryLauncher;
+import org.xtclang.plugin.launchers.JavaExecLauncher;
+import org.xtclang.plugin.launchers.NativeBinaryLauncher;
 import org.xtclang.plugin.launchers.XtcLauncher;
 
 /**
@@ -74,6 +78,10 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     private final Map<XtcRunModule, ExecResult> executedModules; // TODO we can cache output here to if we want.
     private final Property<@NotNull DefaultXtcRuntimeExtension> taskLocalModules;
 
+    // Captured at configuration time for configuration cache compatibility
+    private final File buildDir;
+    private final File projectDir;
+
     /**
      * Create an XTC run task, currently delegating instead of inheriting the plugin project
      * delegate. We are slowly getting rid of this delegate pattern, now that the intra-plugin
@@ -88,6 +96,10 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         super(project, XtcProjectDelegate.resolveXtcRuntimeExtension(project));
         this.executedModules = new LinkedHashMap<>();
         this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class, project));
+
+        // Capture directories at configuration time for configuration cache
+        this.buildDir = project.getBuildDir();
+        this.projectDir = project.getProjectDir();
     }
 
 
@@ -103,11 +115,36 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         return XTC_RUNNER_CLASS_NAME;
     }
 
+    @Override
+    protected XtcLauncher<XtcRuntimeExtension, ? extends XtcLauncherTask<XtcRuntimeExtension>> createLauncher() {
+        // Check if detach mode is enabled
+        final boolean detachMode = getDetach().get();
+
+        if (detachMode) {
+            // Create detached launchers that run processes in background
+
+            if (useNativeLauncherValue) {
+                getLogger().info("[plugin] Created XTC launcher: detached native executable.");
+                return new DetachedNativeBinaryLauncher<>(this, getLogger(), getExecOperations(), buildDir, projectDir);
+            } else if (forkValue) {
+                getLogger().info("[plugin] Created XTC launcher: detached Java process.");
+                return new DetachedJavaExecLauncher<>(this, getLogger(), getExecOperations(),
+                    toolchainExecutable, projectVersion,
+                    xdkFileTree, javaToolsConfig, buildDir, projectDir);
+            } else {
+                throw new GradleException("[plugin] Detach mode requires fork=true. Set 'fork = true' in xtcRun configuration.");
+            }
+        }
+
+        // Use parent's createLauncher for normal mode
+        return super.createLauncher();
+    }
+
     // XTC modules needed to resolve module path (the contents of the XDK required to build and run this project)
     @InputDirectory
     @PathSensitive(PathSensitivity.RELATIVE)
     Provider<@NotNull Directory> getInputXdkModules() {
-        return xdkContentsDirAtConfigurationTime; // Modules in the XDK directory, captured at configuration time.
+        return xdkContentsDir;
     }
 
     // XTC modules needed to resolve module path (the ones in the output of the project source set, that the compileXtc tasks create)
@@ -116,8 +153,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputModulesCompiledByProject() {
         final var result = objects.fileCollection();
-        sourceSetNamesAtConfigurationTime.stream()
-            .map(sourceSetOutputDirsAtConfigurationTime::get)
+        sourceSetNames.stream()
+            .map(sourceSetOutputDirs::get)
             .filter(outputDir -> outputDir != null)
             .forEach(result::from);
         return result;
