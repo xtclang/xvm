@@ -6403,7 +6403,6 @@ public abstract class TypeConstant
         return null;
     }
 
-
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
@@ -6439,10 +6438,12 @@ public abstract class TypeConstant
                         // JIT class name for Enumeration<Enum> is "Enumeration", but
                         // JIT class name for Enumeration<X> is "X$Enumeration"
                         TypeConstant typeValue = type.getParamType(0);
-                        if (!typeValue.isFormalType() && !typeValue.equals(pool.clzEnum().getType())) {
+                        if (typeValue.isFormalType() || typeValue.equals(pool.clzEnum().getType())) {
+                            sJitName = Builder.N_Enumeration;
+                        } else {
                             sJitName = typeValue.ensureJitClassName(ts) + Builder.ENUMERATION;
-                            break ComputeName;
                         }
+                        break ComputeName;
                     } else if (id.equals(pool.clzClass())) {
                         TypeConstant typePublic = this.getParamType(0);
                         if (!typePublic.isFormalType() && typePublic.isEnum() &&
@@ -6457,6 +6458,11 @@ public abstract class TypeConstant
                     }
                     sJitName = loader.prefix + id.getJitName(ts);
 
+                    TypeConstant typeCanonical = getCanonicalJitType();
+                    if (typeCanonical.getParamsCount() > 0) {
+                        // TEMPORARY: TODO REPLACE the naming
+                        sJitName += "$$" + typeCanonical.getPosition();
+                    }
                     // TODO: check for collisions, reserved keywords etc.
                 }
                 type.m_sJitName = sJitName;
@@ -6478,19 +6484,34 @@ public abstract class TypeConstant
     public JitTypeDesc getJitDesc(TypeSystem ts) {
         ClassDesc cd;
         if ((cd = JitTypeDesc.getPrimitiveClass(this)) != null) {
-            return new JitTypeDesc(this, Primitive, cd);
+            return new JitTypeDesc(getCanonicalJitType(), Primitive, cd);
         }
         if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(this)) != null) {
-            return new JitTypeDesc(this.removeNullable(), MultiSlotPrimitive, cd);
+            return new JitTypeDesc(this.removeNullable().getCanonicalJitType(), MultiSlotPrimitive, cd);
         }
         if ((cd = JitTypeDesc.getWidenedClass(this)) != null) {
-            return new JitTypeDesc(this, Widened, cd);
+            return new JitTypeDesc(getCanonicalJitType(), Widened, cd);
         }
         assert isSingleUnderlyingClass(true);
 
-        return new JitTypeDesc(this, Specific, ClassDesc.of(ts.ensureJitClassName(this)));
+        return new JitTypeDesc(getCanonicalJitType(), Specific, ClassDesc.of(ts.ensureJitClassName(this)));
     }
 
+    /**
+     * @return a canonical Jit type where all the type parameters are either primitive types
+     *         or corresponding formal type constraint types
+     */
+    public TypeConstant getCanonicalJitType() {
+        if (!isModifyingType()) {
+            return this;
+        }
+
+        TypeConstant constOriginal = getUnderlyingType();
+        TypeConstant constResolved = constOriginal.getCanonicalJitType();
+        return constResolved == constOriginal
+                ? this
+                : cloneSingle(getConstantPool(), constResolved);
+    }
 
     // ----- run-time support ----------------------------------------------------------------------
 
