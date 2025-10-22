@@ -101,7 +101,10 @@ private class XdkBuildAggregator(val project: Project) : Runnable {
                 current.startsWith("-") -> {
                     // If this flag takes an argument, skip the next item too
                     if (optionsWithArgs.contains(current)) {
-                        i++ // Skip the argument
+                        // Only skip the next item if the argument is not provided inline with '='
+                        if (!current.contains("=")) {
+                            i++ // Skip the argument
+                        }
                     }
                 }
                 else -> actualTasks.add(current)
