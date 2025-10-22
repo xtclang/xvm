@@ -814,6 +814,45 @@ public class ParameterizedTypeConstant
         return false;
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public TypeConstant getCanonicalJitType() {
+        assert isSingleUnderlyingClass(true);
+
+        ConstantPool   pool = getConstantPool();
+        ClassStructure clz  = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
+
+        TypeConstant[] aconstOriginal  = m_atypeParams;
+        TypeConstant[] aconstCanonical = aconstOriginal;
+        boolean        fDiff           = false;
+        boolean        fTrivial        = true;
+        for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
+            TypeConstant typeOriginal = aconstOriginal[i];
+            if (typeOriginal.isPrimitive()) {
+                fTrivial = false;
+            } else {
+                TypeConstant typeConstraint = clz.getTypeParamsAsList().get(i).getValue();
+                if (!typeConstraint.equals(typeOriginal)) {
+                    if (!fDiff) {
+                        aconstCanonical = aconstCanonical.clone();
+                        fDiff    = true;
+                    }
+                    aconstCanonical[i] = typeConstraint;
+                }
+                if (!typeConstraint.equals(pool.typeObject())) {
+                    fTrivial = false;
+                }
+            }
+        }
+
+        return fTrivial
+                ? m_constType
+                : fDiff
+                    ? pool.ensureParameterizedTypeConstant(m_constType, aconstCanonical)
+                    : this;
+    }
+
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override

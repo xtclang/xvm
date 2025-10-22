@@ -618,6 +618,7 @@ public abstract class Builder {
 
     public static final String N_Boolean      = "org.xtclang.ecstasy.Boolean";
     public static final String N_Char         = "org.xtclang.ecstasy.text.Char";
+    public static final String N_Enumeration  = "org.xtclang.ecstasy.reflect.Enumeration";
     public static final String N_Exception    = "org.xtclang.ecstasy.Exception";
     public static final String N_Int8         = "org.xtclang.ecstasy.numbers.Int8";
     public static final String N_Int16        = "org.xtclang.ecstasy.numbers.Int16";
@@ -635,7 +636,6 @@ public abstract class Builder {
     public static final String N_xClass       = "org.xtclang.ecstasy.xClass";
     public static final String N_xConst       = "org.xtclang.ecstasy.xConst";
     public static final String N_xEnum        = "org.xtclang.ecstasy.xEnum";
-    public static final String N_xEnumeration = "org.xtclang.ecstasy.reflect.Enumeration";
     public static final String N_xException   = "org.xtclang.ecstasy.xException";
     public static final String N_xFunction    = "org.xtclang.ecstasy.xFunction";
     public static final String N_xModule      = "org.xtclang.ecstasy.xModule";
@@ -654,12 +654,12 @@ public abstract class Builder {
 
     // ----- well-known class descriptors ----------------------------------------------------------
 
+    public static final ClassDesc CD_Enumeration   = ClassDesc.of(N_Enumeration);
     public static final ClassDesc CD_Exception     = ClassDesc.of(N_Exception);
     public static final ClassDesc CD_xFunction     = ClassDesc.of(N_xFunction);
     public static final ClassDesc CD_xModule       = ClassDesc.of(N_xModule);
 
     public static final ClassDesc CD_xEnum         = ClassDesc.of(N_xEnum);
-    public static final ClassDesc CD_xEnumeration  = ClassDesc.of(N_xEnumeration);
     public static final ClassDesc CD_xException    = ClassDesc.of(N_xException);
     public static final ClassDesc CD_xObj          = ClassDesc.of(N_xObj);
     public static final ClassDesc CD_xType         = ClassDesc.of(N_xType);

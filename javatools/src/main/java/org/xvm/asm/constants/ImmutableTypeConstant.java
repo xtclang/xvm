@@ -12,6 +12,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.javajit.TypeSystem;
+
 import org.xvm.util.Hash;
 import org.xvm.util.Severity;
 
@@ -168,6 +170,14 @@ public class ImmutableTypeConstant
     @Override
     protected boolean isDuckTypeAbleFrom(TypeConstant typeRight) {
         return typeRight.isImmutable() && super.isDuckTypeAbleFrom(typeRight);
+    }
+
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public String ensureJitClassName(TypeSystem ts) {
+        return m_constType.ensureJitClassName(ts);
     }
 
 
