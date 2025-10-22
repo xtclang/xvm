@@ -24,7 +24,7 @@ public class EnumerationBuilder extends CommonBuilder {
     }
 
     @Override
-    protected ClassDesc getSuperDesc() {
+    protected ClassDesc getSuperCD() {
         return CD_Enumeration;
     }
 

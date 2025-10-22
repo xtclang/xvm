@@ -37,7 +37,7 @@ public class AugmentingBuilder extends CommonBuilder {
     public final ClassModel model;
 
     @Override
-    protected ClassDesc getSuperDesc() {
+    protected ClassDesc getSuperCD() {
         return model.superclass().get().asSymbol();
     }
 
