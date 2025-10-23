@@ -7,8 +7,6 @@ import java.io.File;
 
 import java.util.Set;
 
-import javax.inject.Inject;
-
 import groovy.lang.Closure;
 
 import org.gradle.api.Project;
@@ -25,7 +23,6 @@ import org.gradle.api.tasks.SkipWhenEmpty;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.util.PatternFilterable;
 import org.gradle.api.tasks.util.PatternSet;
-import org.gradle.internal.Factory;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -33,11 +30,9 @@ import org.xtclang.plugin.XtcCompilerExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
 
 public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension> implements PatternFilterable {
-    // This is just necessary since we assume some things about module definition source locations. It should not be exported.
     private static final String XDK_TURTLE_SOURCE_FILENAME = "mack.x";
 
     private final PatternFilterable patternSet;
-
     private ConfigurableFileCollection sourceFiles;
 
     @SuppressWarnings("this-escape")
@@ -45,17 +40,6 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
         super(project, XtcProjectDelegate.resolveXtcCompileExtension(project));
         this.patternSet = objects.newInstance(PatternSet.class);
         this.sourceFiles = objects.fileCollection();
-    }
-
-    @Inject
-    protected Factory<@NotNull PatternSet> getPatternSetFactory() {
-        throw new UnsupportedOperationException("XtcSourceTask.getPatternSetFactory()");
-    }
-
-    @SuppressWarnings("unused")
-    @Internal
-    protected PatternFilterable getPatternSet() {
-        return patternSet;
     }
 
     /**
