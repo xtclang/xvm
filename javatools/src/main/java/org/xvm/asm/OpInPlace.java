@@ -446,10 +446,10 @@ public abstract class OpInPlace
             default         -> throw new IllegalStateException();
             }
 
-        TypeInfo       info     = slot.type().ensureTypeInfo();
-        MethodInfo     method   = info.findOpMethod(sName, sOp, 0);
-        String         sJitName = method.getJitIdentity().ensureJitMethodName(bctx.typeSystem);
-        JitMethodDesc  jmd      = method.getJitDesc(bctx.typeSystem);
+        TypeConstant  type     = slot.type();
+        MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, 0);
+        String        sJitName = method.getJitIdentity().ensureJitMethodName(bctx.typeSystem);
+        JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, type);
 
         assert !jmd.isOptimized;
 
@@ -479,8 +479,8 @@ public abstract class OpInPlace
 
         MethodTypeDesc mdGet    = jmdGet.optimizedMD;
         MethodTypeDesc mdSet    = jmdSet.optimizedMD;
-        String         sGetName = infoProp.getGetterId().ensureJitMethodName(ts) + Builder.OPT;
-        String         sSetName = infoProp.getSetterId().ensureJitMethodName(ts) + Builder.OPT;
+        String         sGetName = infoProp.ensureGetterJitMethodName(ts) + Builder.OPT;
+        String         sSetName = infoProp.ensureSetterJitMethodName(ts) + Builder.OPT;
 
         Slot slotTarget = bctx.loadThis(code);
         bctx.loadCtx(code);

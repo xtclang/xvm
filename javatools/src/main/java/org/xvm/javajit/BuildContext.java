@@ -59,7 +59,7 @@ public class BuildContext {
         this.typeInfo      = typeInfo;
         this.callChain     = methodInfo.getChain();
         this.methodStruct  = callChain[0].getMethodStructure();
-        this.jmd           = methodInfo.getJitDesc(typeSystem);
+        this.jmd           = methodInfo.getJitDesc(typeSystem, typeInfo.getType());
         this.isFunction    = methodInfo.isFunction();
         this.isConstructor = methodInfo.isConstructor();
         this.isOptimized   = jmd.optimizedMD != null;
@@ -298,6 +298,13 @@ public class BuildContext {
         else {
             throw new IllegalStateException("Only CatchStart can be guarded");
         }
+    }
+
+    /**
+     * @return ClassDesc for "super" class
+     */
+    public ClassDesc getSuperCD() {
+        return typeInfo.getExtends().ensureClassDesc(typeSystem);
     }
 
     /**
@@ -646,7 +653,7 @@ public class BuildContext {
         }
 
         PropertyConstant propId = (PropertyConstant) getConstant(propIdIndex);
-        JitMethodDesc    jmdGet = builder.loadProperty(code, propId);
+        JitMethodDesc    jmdGet = builder.loadProperty(code, targetSlot.type(), propId);
 
         assignReturns(code, jmdGet, 1, new int[] {retIndex});
     }
@@ -659,10 +666,9 @@ public class BuildContext {
             throw new UnsupportedOperationException("Multislot P_Set");
         }
         PropertyConstant propId     = (PropertyConstant) getConstant(propIdIndex);
-        PropertyInfo     propInfo   = propId.getPropertyInfo();
-        ClassDesc        cdOwner    = propInfo.getJitIdentity().getNamespace().ensureClassDesc(typeSystem);
+        PropertyInfo     propInfo   = propId.getPropertyInfo(targetSlot.type());
         JitMethodDesc    jmd        = propInfo.getSetterJitDesc(typeSystem);
-        String           setterName = propInfo.getSetterId().ensureJitMethodName(typeSystem);
+        String           setterName = propInfo.ensureSetterJitMethodName(typeSystem);
 
         MethodTypeDesc md;
         if (jmd.isOptimized) {
@@ -677,7 +683,7 @@ public class BuildContext {
         if (!valueSlot.isSingle()) {
             throw new UnsupportedOperationException("Multislot L_Set");
         }
-        code.invokevirtual(cdOwner, setterName, md);
+        code.invokevirtual(targetSlot.cd(), setterName, md);
     }
 
     /**
@@ -688,13 +694,6 @@ public class BuildContext {
         TypeInfo   infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();
         MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
 
-        if (infoTarget.hasGenericTypes()) {
-            // Jit classes are created for canonical types; we need to readhust
-            typeTarget = infoTarget.getClassStructure().getCanonicalType();
-            infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();
-            infoCtor   = infoTarget.getMethodById(infoCtor.getIdentity());
-        }
-
         if (infoCtor == null) {
             throw new RuntimeException("Unresolvable constructor \"" +
                 idCtor.getValueString() + "\" for " + typeTarget.getValueString());
@@ -703,7 +702,7 @@ public class BuildContext {
         String        sJitTarget = typeTarget.ensureJitClassName(typeSystem);
         ClassDesc     cdTarget   = ClassDesc.of(sJitTarget);
         JitMethodDesc jmdNew     = Builder.convertConstructToNew(infoTarget, sJitTarget,
-                                    (JitCtorDesc) infoCtor.getJitDesc(typeSystem));
+                                    (JitCtorDesc) infoCtor.getJitDesc(typeSystem, typeTarget));
 
         boolean fOptimized = jmdNew.isOptimized;
         String  sJitNew    = idCtor.ensureJitMethodName(typeSystem).replace("construct", Builder.NEW);

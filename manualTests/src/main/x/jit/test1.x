@@ -19,11 +19,17 @@ module test1.examples.org {
         console.print(t1);
         assert t1.augment() == (t1.x + 1) * t1.x;
 
-        TestFormal<Int> t2 = new TestFormal(7);
-        console.print(t2.value);
+        TestFormal<String> ts = new TestFormal("hello");
+        console.print(ts.value);
 
-        TestFormal<TestBase> t3 = new TestFormal(t1);
-        console.print(t3.value);
+        TestFormal<Int> ti = new TestFormal(7);
+        console.print(ti.value + 1);
+        ti.setValue(9);
+        assert ti.value == 9;
+        assert ti.getValue() == 9;
+
+        TestFormal<TestBase> to = new TestFormal(t1);
+        console.print(to.value);
 
 //        StringBuffer buf = new StringBuffer();
 //        buf.add('c');
@@ -40,5 +46,12 @@ module test1.examples.org {
             return super() * x;
         }
     }
-    class TestFormal<Element> (Element value) {}
+    class TestFormal<Element> (Element value) {
+        Element getValue() {
+            return value;
+        }
+        void setValue(Element value) {
+            this.value = value;
+        }
+    }
 }

@@ -241,10 +241,10 @@ public abstract class OpGeneral
 
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));
                 }
-                TypeInfo      info     = slotTarget.type().ensureTypeInfo();
-                MethodInfo    method   = info.findOpMethod(sName, sOp, 1);
+                TypeConstant  type     = slotTarget.type();
+                MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, 1);
                 String        sJitName = method.getJitIdentity().ensureJitMethodName(bctx.typeSystem);
-                JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem);
+                JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, type);
 
                 MethodTypeDesc md;
                 if (jmd.isOptimized) {
@@ -270,10 +270,10 @@ public abstract class OpGeneral
                     case OP_GP_COMPL -> {sName = "not"; sOp = "~"; }
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));
                 }
-                TypeInfo      info     = slotTarget.type().ensureTypeInfo();
-                MethodInfo    method   = info.findOpMethod(sName, sOp, 0);
+                TypeConstant  type     = slotTarget.type();
+                MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, 0);
                 String        sJitName = method.getJitIdentity().ensureJitMethodName(bctx.typeSystem);
-                JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem);
+                JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, type);
 
                 MethodTypeDesc md;
                 if (jmd.isOptimized) {

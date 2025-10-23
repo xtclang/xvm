@@ -573,18 +573,19 @@ public abstract class OpCallable extends Op {
             MethodBody body = bctx.callChain[1];
 
             idMethod = body.getIdentity();
-            cdTarget = idMethod.getClassIdentity().ensureClassDesc(ts);
-            jmdCall  = body.getJitDesc(ts);
+            cdTarget = bctx.getSuperCD();
+            jmdCall  = body.getJitDesc(ts, bctx.typeInfo.getType());
             fSpecial = true;
-            code.aload(0); // this
+            code.aload(0); // super() can only be on "this"
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
-            idMethod   = (MethodConstant) bctx.getConstant(m_nFunctionId);
+            idMethod = (MethodConstant) bctx.getConstant(m_nFunctionId);
 
             IdentityConstant idTarget   = idMethod.getClassIdentity();
-            MethodInfo       infoMethod = idTarget.getType().ensureTypeInfo().getMethodById(idMethod);
+            TypeConstant     typeTarget = idTarget.getType();
+            MethodInfo       infoMethod = typeTarget.ensureTypeInfo().getMethodById(idMethod);
 
-            cdTarget = idTarget.ensureClassDesc(ts);
-            jmdCall  = infoMethod.getJitDesc(ts);
+            cdTarget = idTarget.ensureClassDesc(ts); // function; no formal types applicable
+            jmdCall  = infoMethod.getJitDesc(ts, typeTarget);
             fSpecial = false;
         } else {
             Slot slotFn = bctx.getSlot(m_nFunctionId);
@@ -670,7 +671,7 @@ public abstract class OpCallable extends Op {
         }
         String        sJitTarget = typeTarget.ensureJitClassName(ts);
         ClassDesc     cdTarget   = ClassDesc.of(sJitTarget);
-        JitMethodDesc jmdCtor    = infoCtor.getJitDesc(ts);
+        JitMethodDesc jmdCtor    = infoCtor.getJitDesc(ts, typeTarget);
 
         boolean fOptimized = jmdCtor.isOptimized;
         String  sJitCtor   = idCtor.ensureJitMethodName(ts);

@@ -474,7 +474,7 @@ public class CommonBuilder
                 generateTrivialGetter(className, classBuilder, prop);
                 break;
             case Explicit:
-                String         jitName = prop.getGetterId().ensureJitMethodName(typeSystem);
+                String         jitName = prop.ensureGetterJitMethodName(typeSystem);
                 JitMethodDesc  jmDesc  = prop.getGetterJitDesc(typeSystem);
                 boolean        isOpt   = jmDesc.isOptimized;
                 MethodTypeDesc md      = isOpt ? jmDesc.optimizedMD : jmDesc.standardMD;
@@ -498,7 +498,7 @@ public class CommonBuilder
                 break;
 
             case Explicit:
-                String         jitName = prop.getSetterId().ensureJitMethodName(typeSystem);
+                String         jitName = prop.ensureSetterJitMethodName(typeSystem);
                 JitMethodDesc  jmDesc  = prop.getSetterJitDesc(typeSystem);
                 boolean        isOpt   = jmDesc.isOptimized;
                 MethodTypeDesc md      = isOpt ? jmDesc.optimizedMD : jmDesc.standardMD;
@@ -512,7 +512,7 @@ public class CommonBuilder
     }
 
     private void generateTrivialGetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
-        String jitGetterName = prop.getGetterId().ensureJitMethodName(typeSystem);
+        String jitGetterName = prop.ensureGetterJitMethodName(typeSystem);
         String jitFieldName  = prop.getIdentity().ensureJitPropertyName(typeSystem);
 
         ClassDesc CD_this = ClassDesc.of(className);
@@ -576,7 +576,7 @@ public class CommonBuilder
     }
 
     private void generateTrivialSetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
-        String jitSetterName = prop.getSetterId().ensureJitMethodName(typeSystem);
+        String jitSetterName = prop.ensureSetterJitMethodName(typeSystem);
         String jitFieldName  = prop.getIdentity().ensureJitPropertyName(typeSystem);
 
         ClassDesc CD_this = ClassDesc.of(className);
@@ -651,7 +651,7 @@ public class CommonBuilder
     private void generateInjected(String className, ClassBuilder classBuilder, PropertyInfo prop) {
         assert !prop.isConstant();
 
-        String jitGetterName = prop.getGetterId().ensureJitMethodName(typeSystem);
+        String jitGetterName = prop.ensureGetterJitMethodName(typeSystem);
         String jitFieldName  = prop.getIdentity().ensureJitPropertyName(typeSystem);
 
         ClassDesc CD_this = ClassDesc.of(className);
@@ -773,7 +773,7 @@ public class CommonBuilder
             assert targetMethod != null;
             assembleRoutingMethod(className, classBuilder, method, targetMethod);
         } else {
-            JitMethodDesc jmDesc = method.getJitDesc(typeSystem);
+            JitMethodDesc jmDesc = method.getJitDesc(typeSystem, typeInfo.getType());
             if (jmDesc.isOptimized) {
                 assembleMethod(className, classBuilder, method, jitName+OPT, jmDesc.optimizedMD, true);
                 assembleMethodWrapper(className, classBuilder, jitName, jmDesc,
@@ -1190,7 +1190,7 @@ public class CommonBuilder
             // step 6: call the constructor
             // construct$17(ctx, cctx, [type], thi$, x, y, z);
             String        ctorName = constructor.getIdentity().ensureJitMethodName(typeSystem);
-            JitMethodDesc ctorDesc = constructor.getJitDesc(typeSystem);
+            JitMethodDesc ctorDesc = constructor.getJitDesc(typeSystem, typeInfo.getType());
 
             code.aload(ctxSlot)
                 .aload(cctxSlot);
