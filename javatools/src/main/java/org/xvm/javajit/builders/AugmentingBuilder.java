@@ -80,6 +80,21 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     @Override
+    protected void assemblePropertyAccessor(String className, ClassBuilder classBuilder,
+                                            PropertyInfo prop, String jitName, MethodTypeDesc md,
+                                            boolean isOptimized, boolean isGetter) {
+        MethodModel mm = findMethod(jitName, md, isOptimized);
+        if (mm != null) {
+            if ((mm.flags().flagsMask() & ClassFile.ACC_ABSTRACT) == 0) {
+                // the property is already copied by the NativeTypeSystem
+                return;
+            }
+        }
+
+        super.assemblePropertyAccessor(className, classBuilder, prop, jitName, md, isOptimized, isGetter);
+    }
+
+    @Override
     protected void assembleMethod(String className, ClassBuilder classBuilder, MethodInfo method,
                                   String jitName, MethodTypeDesc md, boolean isOptimized) {
         MethodModel mm = findMethod(jitName, md, isOptimized);
@@ -89,7 +104,6 @@ public class AugmentingBuilder extends CommonBuilder {
                 // the method is already copied by the NativeTypeSystem
                 return;
             }
-            // the native method is marked as "abstract" and needs to be generated
         }
 
         if (method.getHead().isNative()) {
@@ -100,6 +114,16 @@ public class AugmentingBuilder extends CommonBuilder {
         }
 
         super.assembleMethod(className, classBuilder, method, jitName, md, isOptimized);
+    }
+
+    @Override
+    protected void assembleNew(String className, ClassBuilder classBuilder, MethodInfo constructor,
+                               String jitName, MethodTypeDesc md, boolean isOptimized) {
+        MethodModel mm = findMethod(jitName, md, isOptimized);
+        if (mm != null) {
+            return;
+        }
+        super.assembleNew(className, classBuilder, constructor, jitName, md, isOptimized);
     }
 
     // ----- helper methods ------------------------------------------------------------------------
