@@ -2,7 +2,7 @@ package org.xtclang.plugin;
 
 import static java.util.Objects.requireNonNull;
 
-import static org.xtclang.plugin.XtcPluginConstants.JAVATOOLS_JAR_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_JAR;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_MAGIC;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_MODULE_FILE_EXTENSION;
 
@@ -67,7 +67,7 @@ public final class XtcPluginUtils {
             final String expectedVersionedName = "javatools-" + artifactVersion + ".jar";
             
             // Check for exact name (XDK distribution) or exact versioned name (configuration resolution)
-            return (JAVATOOLS_JAR_NAME.equals(name) || expectedVersionedName.equals(name))
+            return (XDK_JAVATOOLS_NAME_JAR.equals(name) || expectedVersionedName.equals(name))
                 && hasJarExtension(file) && readXdkVersionFromJar(file) != null;
         }
 
@@ -152,7 +152,7 @@ public final class XtcPluginUtils {
                 }
                 return implVersion.toString();
             } catch (final IOException e) {
-                throw new XtcBuildRuntimeException(e, "Not a valid '{}': '{}'", path, JAVATOOLS_JAR_NAME);
+                throw new XtcBuildRuntimeException(e, "Not a valid '{}': '{}'", path, XDK_JAVATOOLS_NAME_JAR);
             }
         }
 

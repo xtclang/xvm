@@ -1,10 +1,5 @@
 package org.xtclang.plugin;
 
-import java.io.File;
-
-import java.util.Collections;
-import java.util.Set;
-
 import org.gradle.api.Project;
 
 public final class XtcPluginConstants {
@@ -44,18 +39,14 @@ public final class XtcPluginConstants {
     public static final String XDK_JAVATOOLS_ARTIFACT_SUFFIX = "jar";
     public static final String XDK_CONFIG_NAME_JAVATOOLS_INCOMING = "xdkJavaTools";
     public static final String XDK_CONFIG_NAME_JAVATOOLS_OUTGOING = XDK_CONFIG_NAME_JAVATOOLS_INCOMING + "Provider";
+    public static final String XDK_JAVATOOLS_NAME_MANIFEST = "META-INF/MANIFEST.MF";
+    public static final String XDK_JAVATOOLS_NAME_JAR = XDK_JAVATOOLS_ARTIFACT_ID + "-" + XDK_JAVATOOLS_ARTIFACT_SUFFIX;
 
     public static final String PLUGIN_BUILD_INFO_FILENAME = "plugin-build-info.properties";
     public static final String PLUGIN_BUILD_INFO_RESOURCE_PATH = "/org/xtclang/build/internal/" + PLUGIN_BUILD_INFO_FILENAME;
 
     // Config artifacts from the XDK build
     public static final String XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_JAR = "javatools-jar";
-
-    public static final String UNSPECIFIED = Project.DEFAULT_VERSION;
-
-    // JavaTools (launcher native code)
-    public static final String JAR_MANIFEST_PATH = "META-INF/MANIFEST.MF";
-    public static final String JAVATOOLS_JAR_NAME = "javatools.jar";
 
     // XTC Magic Number, for future verification of XTC module binaries, and for parts of language server support.
     public static final long XTC_MAGIC = 0xEC57_A5EEL;
@@ -65,6 +56,8 @@ public final class XtcPluginConstants {
 
     // Default values
     public static final int DEFAULT_DEBUG_PORT = 4711;
+
+    public static final String UNSPECIFIED = Project.DEFAULT_VERSION;
 
     private XtcPluginConstants() {
     }
