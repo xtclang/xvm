@@ -34,7 +34,9 @@ import org.xvm.javajit.TypeSystem;
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
-import static org.xvm.javajit.Builder.CD_xObj;
+import static java.lang.constant.ConstantDescs.CD_boolean;
+
+import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.JitFlavor.Widened;
@@ -1330,7 +1332,7 @@ public class PropertyInfo
     /**
      * @return the identity of the property to be used by the JIT compiler
      */
-    public PropertyConstant getJitIdentity() {
+    public ClassDesc getOwnerClassDesc(TypeSystem ts, TypeConstant typeOwner) {
         // get the lowest explicit in the chain
         PropertyConstant id = null;
         for (PropertyBody body : m_aBody) {
@@ -1339,7 +1341,29 @@ public class PropertyInfo
                 id = body.getIdentity();
             }
         }
-        return id;
+        assert id != null;
+
+        // we need to widen the identity of the owner, but not to lose the type information
+        IdentityConstant idOwner = id.getNamespace();
+        return (idOwner.equals(typeOwner.getSingleUnderlyingClass(true))
+                ? typeOwner
+                : idOwner.getFormalType().resolveGenerics(ts.pool(), typeOwner))
+            .ensureClassDesc(ts);
+    }
+
+    /**
+     * Ensure a unique name for the "get" method at the specified TypeSystem.
+     */
+    public String ensureGetterJitMethodName(TypeSystem ts) {
+        // REVIEW CP: do we need uniquify getter/setter names?
+        return getName() + "$get";
+    }
+
+    /**
+     * Ensure a unique name for the "set" method at the specified TypeSystem.
+     */
+    public String ensureSetterJitMethodName(TypeSystem ts) {
+        return getName() + "$set";
     }
 
     /**
@@ -1348,39 +1372,12 @@ public class PropertyInfo
     public JitMethodDesc getGetterJitDesc(TypeSystem ts) {
         JitMethodDesc jmd = m_jmdGetter;
         if (jmd == null) {
-            JitParamDesc[] apdStdReturn;
-            JitParamDesc[] apdOptReturn = null;
+            JitParams result = computeJitParams(ts);
 
-            TypeConstant type = getType();
-            JitTypeDesc  jtd  = type.getJitDesc(ts);
-            switch (jtd.flavor) {
-            case Primitive:
-                ClassDesc cdStd = ClassDesc.of(ts.ensureJitClassName(type));
-                apdStdReturn = new JitParamDesc[] {
-                    new JitParamDesc(type, Specific, cdStd, 0, 0, false)};
-                apdOptReturn = new JitParamDesc[] {
-                    new JitParamDesc(type, Primitive, jtd.cd, 0, 0, false)};
-                break;
-
-            case MultiSlotPrimitive:
-                apdStdReturn = new JitParamDesc[] {
-                    new JitParamDesc(type, Widened, CD_xObj, 0, 0, false)};
-                apdOptReturn = new JitParamDesc[] {
-                    new JitParamDesc(type, Primitive, jtd.cd, 0, 0, false)};
-                break;
-
-            case Specific, Widened:
-                apdStdReturn = new JitParamDesc[] {
-                    new JitParamDesc(type, jtd.flavor, jtd.cd, 0, 0, false)};
-                break;
-
-            default:
-                throw new IllegalStateException("Unsupported property flavor: " + jtd.flavor);
-            }
-
+            JitParamDesc[] apdOptParam = result.apdOptParam();
             m_jmdGetter = jmd = new JitMethodDesc(
-                    apdStdReturn, JitParamDesc.NONE,
-                    apdOptReturn, JitParamDesc.NONE);
+                    result.apdStdParam(), JitParamDesc.NONE,
+                    apdOptParam, apdOptParam == null ? null : JitParamDesc.NONE);
         }
         return jmd;
     }
@@ -1391,42 +1388,58 @@ public class PropertyInfo
     public JitMethodDesc getSetterJitDesc(TypeSystem ts) {
         JitMethodDesc jmd = m_jmdSetter;
         if (jmd == null) {
-            JitParamDesc[] apdStdParam;
-            JitParamDesc[] apdOptParam = null;
+            JitParams result = computeJitParams(ts);
 
-            TypeConstant type = getType();
-            JitTypeDesc  jtd  = type.getJitDesc(ts);
-            switch (jtd.flavor) {
-            case Primitive:
-                ClassDesc cdStd = ClassDesc.of(ts.ensureJitClassName(type));
-                apdStdParam = new JitParamDesc[] {
-                    new JitParamDesc(type, Specific, cdStd, 0, 0, false)};
-                apdOptParam = new JitParamDesc[] {
-                    new JitParamDesc(type, Primitive, jtd.cd, 0, 0, false)};
-                break;
-
-            case MultiSlotPrimitive:
-                apdStdParam = new JitParamDesc[] {
-                    new JitParamDesc(type, Widened, CD_xObj, 0, 0, false)};
-                apdOptParam = new JitParamDesc[] {
-                    new JitParamDesc(type, Primitive, jtd.cd, 0, 0, false)};
-                break;
-
-            case Specific, Widened:
-                apdStdParam = new JitParamDesc[] {
-                    new JitParamDesc(type, jtd.flavor, jtd.cd, 0, 0, false)};
-                break;
-
-            default:
-                throw new IllegalStateException("Unsupported property flavor: " + jtd.flavor);
-            }
-
+            JitParamDesc[] apdOptParam = result.apdOptParam();
             m_jmdSetter = jmd = new JitMethodDesc(
-                JitParamDesc.NONE, apdStdParam,
-                JitParamDesc.NONE, apdOptParam);
+                JitParamDesc.NONE, result.apdStdParam(),
+                apdOptParam == null ? null : JitParamDesc.NONE, apdOptParam);
         }
         return jmd;
     }
+
+    private JitParams computeJitParams(TypeSystem ts) {
+        TypeConstant   type        = getType();
+        JitParamDesc[] apdOptParam = null;
+        JitParamDesc[] apdStdParam;
+        ClassDesc cd;
+
+        if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
+            ClassDesc cdStd  = ClassDesc.of(ts.ensureJitClassName(type));
+
+            apdStdParam = new JitParamDesc[] {
+                new JitParamDesc(type, Specific, cdStd, 0, 0, false)};
+            apdOptParam = new JitParamDesc[] {
+                new JitParamDesc(type, Primitive, cd, 0, 0, false)};
+        } else if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null) {
+            apdStdParam = new JitParamDesc[] {
+                new JitParamDesc(type, Widened, cd, 0, 0, false)};
+            apdOptParam = new JitParamDesc[] {
+                new JitParamDesc(type, MultiSlotPrimitive, cd, 0, 0, false),
+                new JitParamDesc(type, MultiSlotPrimitive, CD_boolean, 0, 1, true)
+            };
+        } else if ((cd = JitTypeDesc.getWidenedClass(type)) != null) {
+            apdStdParam = new JitParamDesc[] {
+                new JitParamDesc(type, Widened, cd, 0, 0, false)};
+        } else {
+            assert type.isSingleUnderlyingClass(true);
+
+            // the possibilities are:
+            // 1) the formal type is Element and the actual is String; take the formal constraint
+            // 2) the formal type is Array<Element>; take the actual type
+            TypeConstant typeFormal = getIdentity().getType();
+            if (typeFormal.isGenericType()) {
+                type = typeFormal;
+            }
+            cd = ClassDesc.of(ts.ensureJitClassName(type));
+            apdStdParam = new JitParamDesc[] {
+                new JitParamDesc(type, Specific, cd, 0, 0, false)};
+        }
+        JitParams result = new JitParams(apdStdParam, apdOptParam);
+        return result;
+    }
+
+    private record JitParams(JitParamDesc[] apdStdParam, JitParamDesc[] apdOptParam) {}
 
     // ----- Object methods ------------------------------------------------------------------------
 

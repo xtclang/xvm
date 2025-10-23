@@ -17,6 +17,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.BuildContext.Slot;
@@ -309,9 +310,10 @@ public abstract class OpInvocable extends Op {
         }
 
         ClassDesc      cdTarget   = targetSlot.cd();
+        TypeConstant   typeTarget = targetSlot.type();
         MethodConstant idMethod   = (MethodConstant) bctx.getConstant(m_nMethodId);
-        MethodInfo     infoMethod = targetSlot.type().ensureTypeInfo().getMethodById(idMethod);
-        JitMethodDesc  jmd        = infoMethod.getJitDesc(bctx.typeSystem);
+        MethodInfo     infoMethod = typeTarget.ensureTypeInfo().getMethodById(idMethod);
+        JitMethodDesc  jmd        = infoMethod.getJitDesc(bctx.typeSystem, typeTarget);
         String         methodName = infoMethod.getJitIdentity().ensureJitMethodName(bctx.typeSystem);
         boolean        fOptimized = jmd.isOptimized;
         MethodTypeDesc md;

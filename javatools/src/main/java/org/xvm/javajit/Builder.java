@@ -161,10 +161,12 @@ public abstract class Builder {
         case PropertyConstant propId:
             // support for the "local property" mode
             code.aload(0);
-            loadProperty(code, propId);
+            JitMethodDesc jmd = loadProperty(code, getThisType(), propId);
 
-            TypeConstant type = propId.getType();
-            JitTypeDesc  jtd  = type.getJitDesc(typeSystem);
+            TypeConstant type = jmd.isOptimized
+                    ? jmd.optimizedReturns[0].type
+                    : jmd.standardReturns[0].type;
+            JitTypeDesc jtd = type.getJitDesc(typeSystem);
             if (jtd.flavor == MultiSlotPrimitive) {
                 throw new UnsupportedOperationException("TODO multislot property");
             }
@@ -184,11 +186,12 @@ public abstract class Builder {
      *
      * @return the JitMethodDesc for the "get" method
      */
-    public JitMethodDesc loadProperty(CodeBuilder code, PropertyConstant propId) {
-        PropertyInfo  propInfo   = propId.getPropertyInfo();
-        ClassDesc     cdOwner    = propInfo.getJitIdentity().getNamespace().ensureClassDesc(typeSystem);
-        JitMethodDesc jmdGet     = propInfo.getGetterJitDesc(typeSystem);
-        String        getterName = propInfo.getGetterId().ensureJitMethodName(typeSystem);
+    public JitMethodDesc loadProperty(CodeBuilder code, TypeConstant typeContainer,
+                                      PropertyConstant propId) {
+        PropertyInfo     propInfo   = propId.getPropertyInfo(typeContainer);
+        ClassDesc        cdOwner    = propInfo.getOwnerClassDesc(typeSystem, typeContainer);
+        JitMethodDesc    jmdGet     = propInfo.getGetterJitDesc(typeSystem);
+        String           getterName = propInfo.ensureGetterJitMethodName(typeSystem);
 
         MethodTypeDesc md;
         if (jmdGet.isOptimized) {

@@ -1177,8 +1177,8 @@ public class MethodInfo
     /**
      * @return the JitMethodDesc
      */
-    public JitMethodDesc getJitDesc(TypeSystem ts) {
-        return getHead().getJitDesc(ts);
+    public JitMethodDesc getJitDesc(TypeSystem ts, TypeConstant typeContainer) {
+        return getHead().getJitDesc(ts, typeContainer);
     }
 
     // ----- Object methods ------------------------------------------------------------------------

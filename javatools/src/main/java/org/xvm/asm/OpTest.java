@@ -335,7 +335,7 @@ public abstract class OpTest
                 default                                       -> throw new IllegalStateException();
             };
             MethodInfo     method   = typeCommon.ensureTypeInfo().getMethodBySignature(sig);
-            JitMethodDesc  jmd      = method.getJitDesc(ts);
+            JitMethodDesc  jmd      = method.getJitDesc(ts, typeCommon);
             MethodConstant idFn     = method.getJitIdentity();
             ClassDesc      cd       = idFn.getNamespace().ensureClassDesc(ts);
             String         sJitName = idFn.ensureJitMethodName(ts);

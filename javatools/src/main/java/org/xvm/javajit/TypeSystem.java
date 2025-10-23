@@ -303,40 +303,36 @@ public class TypeSystem {
 
         Artifact art = deduceArtifact(module, name);
         if (art != null) {
-            if (art.id.getComponent() instanceof ClassStructure clz) {
-                TypeConstant type       = clz.getCanonicalType();
-                Builder      jitBuilder = ensureBuilder(type);
-                Consumer<? super ClassBuilder> handler = classBuilder -> {
-                    switch (art.shape) {
-                        case Impl:
-                            classBuilder.with(SourceFileAttribute.of(clz.getSourceFileName()));
-                            jitBuilder.assembleImpl(className, classBuilder);
-                            break;
+            Builder builder = ensureBuilder(art.type);
+            Consumer<? super ClassBuilder> handler = classBuilder -> {
+                switch (art.shape) {
+                    case Impl:
+                        classBuilder.with(SourceFileAttribute.of(art.clz.getSourceFileName()));
+                        builder.assembleImpl(className, classBuilder);
+                        break;
 
-                        case Exception:
-                            ((ExceptionBuilder) jitBuilder).
-                                assembleJavaException(className, classBuilder);
-                            break;
+                    case Exception:
+                        ((ExceptionBuilder) builder).assembleJavaException(className, classBuilder);
+                        break;
 
-                        default:
-                            throw new UnsupportedOperationException();
-                    }
-                };
+                    default:
+                        throw new UnsupportedOperationException();
+                }
+            };
 
-                // There are other options that can be useful:
-                //     DeadCodeOption.PATCH_DEAD_CODE
-                //     DebugElementsOption.DROP_DEBUG
-                //     LineNumbersOption.DROP_LINE_NUMBERS
-                // TODO: force some of them or make configurable
-                ClassFile classFile = ClassFile.of(
-                    ClassFile.ClassHierarchyResolverOption.of(
-                        ClassHierarchyResolver.ofClassLoading(loader)),
-                    ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
-                    ClassFile.StackMapsOption.GENERATE_STACK_MAPS
-                );
+            // There are other options that can be useful:
+            //     DeadCodeOption.PATCH_DEAD_CODE
+            //     DebugElementsOption.DROP_DEBUG
+            //     LineNumbersOption.DROP_LINE_NUMBERS
+            // TODO: force some of them or make configurable
+            ClassFile classFile = ClassFile.of(
+                ClassFile.ClassHierarchyResolverOption.of(
+                    ClassHierarchyResolver.ofClassLoading(loader)),
+                ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
+                ClassFile.StackMapsOption.GENERATE_STACK_MAPS
+            );
 
-                return classFile.build(ClassDesc.of(className), handler);
-            }
+            return classFile.build(ClassDesc.of(className), handler);
         }
         return null;
     }
@@ -399,11 +395,11 @@ public class TypeSystem {
         public final String prefix;
     }
 
-    public record Artifact(IdentityConstant id, ClassfileShape shape) {}
+    public record Artifact(TypeConstant type, ClassStructure clz, ClassfileShape shape) {}
 
     public Artifact deduceArtifact(ModuleStructure module, String name) {
         if (name.equals(MODULE)) {
-            return new Artifact(module.getIdentityConstant(), ClassfileShape.Impl);
+            return new Artifact(module.getCanonicalType(), module, ClassfileShape.Impl);
         }
 
         ClassfileShape shape  = ClassfileShape.Impl;
@@ -423,8 +419,21 @@ public class TypeSystem {
                 }
             }
         }
+
+        // TEMPORARY; TODO REPLACE
+        TypeConstant type = null;
+        int idOffset = name.indexOf("$$");
+        if (idOffset > 0) {
+            // the name represents a parameterized type with primitive actual type(s)
+            type = (TypeConstant) pool().getConstant(Integer.valueOf(name.substring(idOffset+2)));
+            name = name.substring(0, idOffset);
+        }
+
         if (module.getChildByPath(name.replace('$', '.')) instanceof ClassStructure struct) {
-            return new Artifact(struct.getIdentityConstant(), shape);
+            if (type == null) {
+                type = struct.getCanonicalType();
+            }
+            return new Artifact(type, struct, shape);
         }
         return null;
     }
@@ -448,20 +457,7 @@ public class TypeSystem {
                 return name;
             }
 
-            ClassStructure structure = (ClassStructure)
-                type.getSingleUnderlyingClass(true).getComponent();
-
-            List<Contribution> condIncorporates = structure.collectConditionalIncorporates(type);
-            TypeConstant       canonicalType;
-            if (condIncorporates == null) {
-                canonicalType = structure.getCanonicalType();
-            } else {
-                // TODO: implement conditional class name computation
-                // System.err.println("Not implemented: conditional incorporates for " + type);
-                canonicalType = structure.getCanonicalType();
-            }
-
-            return canonicalType.ensureJitClassName(this);
+            return type.ensureJitClassName(this);
         }
         throw new IllegalArgumentException("No JIT class for " + type.getValueString());
     }
