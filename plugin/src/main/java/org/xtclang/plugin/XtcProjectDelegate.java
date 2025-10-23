@@ -456,6 +456,15 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
     private void createXdkDependencyConfigs() {
         final var extractTask = tasks.register(XDK_EXTRACT_TASK_NAME, XtcExtractXdkTask.class, project);
 
+        extractTask.configure(task -> {
+            // Configuration-cache safe: constants and build model references only
+            task.getInputXdkArchive().from(
+                configs.getByName(XDK_CONFIG_NAME_INCOMING_ZIP),
+                configs.getByName(XDK_CONFIG_NAME_INCOMING)
+            );
+            task.getOutputXtcModules().set(getXdkContentsDir(project));
+        });
+
         configs.register(XDK_CONFIG_NAME_JAVATOOLS_OUTGOING, it -> {
             it.setCanBeConsumed(false);
             it.setCanBeResolved(true);

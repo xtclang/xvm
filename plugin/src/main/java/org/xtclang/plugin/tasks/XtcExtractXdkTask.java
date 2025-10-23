@@ -13,11 +13,9 @@ import javax.inject.Inject;
 
 import org.gradle.api.Project;
 import org.gradle.api.file.ArchiveOperations;
-import org.gradle.api.file.Directory;
-import org.gradle.api.file.FileCollection;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.FileSystemOperations;
 import org.gradle.api.file.RelativePath;
-import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.OutputDirectory;
@@ -25,18 +23,12 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 
-import org.jetbrains.annotations.NotNull;
-
 import org.xtclang.plugin.XtcProjectDelegate;
 
 @CacheableTask
 public abstract class XtcExtractXdkTask extends XtcDefaultTask {
     private static final String XDK_ARCHIVE_DEFAULT_EXTENSION = "zip";
-    
-    // Configuration cache compatible collections resolved at construction time
-    private final FileCollection xdkArchiveConfigs;
-    private final Provider<@NotNull Directory> xdkOutputDir;
-    
+
     // Injected services for configuration cache compatibility
     private final FileSystemOperations fileSystemOperations;
     private final ArchiveOperations archiveOperations;
@@ -45,19 +37,10 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
     @Inject
     public XtcExtractXdkTask(final Project project, final FileSystemOperations fileSystemOperations, final ArchiveOperations archiveOperations) {
         super(project);
-        
+
         // Store injected services
         this.fileSystemOperations = fileSystemOperations;
         this.archiveOperations = archiveOperations;
-        
-        // Resolve configuration file collections at configuration time - not lazy
-        this.xdkArchiveConfigs = project.files(
-            project.getConfigurations().getByName(XDK_CONFIG_NAME_INCOMING_ZIP),
-            project.getConfigurations().getByName(XDK_CONFIG_NAME_INCOMING)
-        );
-        
-        // Resolve output directory at configuration time
-        this.xdkOutputDir = XtcProjectDelegate.getXdkContentsDir(project);
     }
 
     private static boolean isXdkArchive(final File file) {
@@ -66,21 +49,17 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
 
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
-    FileCollection getInputXdkArchive() {
-        return xdkArchiveConfigs;
-    }
+    public abstract ConfigurableFileCollection getInputXdkArchive();
 
     @OutputDirectory
-    Provider<@NotNull Directory> getOutputXtcModules() {
-        return xdkOutputDir;
-    }
+    public abstract org.gradle.api.file.DirectoryProperty getOutputXtcModules();
 
     @TaskAction
     public void extractXdk() {
         executeTask();
 
         // The task is configured at this point. We should indeed have found a zip archive from some xdkDistributionProvider somewhere.
-        final var archives = xdkArchiveConfigs.filter(XtcExtractXdkTask::isXdkArchive);
+        final var archives = getInputXdkArchive().filter(XtcExtractXdkTask::isXdkArchive);
 
         if (archives.isEmpty()) {
             logger.info("[plugin] Project does NOT depend on the XDK; {} is a nop.", getName());

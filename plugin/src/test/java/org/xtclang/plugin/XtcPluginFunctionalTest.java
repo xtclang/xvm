@@ -293,15 +293,15 @@ class XtcPluginFunctionalTest {
     }
 
     private Path createSimpleXtcModule(final String moduleName, final String sourceCode) throws IOException {
-        Path srcDir = testProjectDir.resolve("src/main/x");
+        final var srcDir = testProjectDir.resolve("src/main/x");
         Files.createDirectories(srcDir);
-        Path moduleFile = srcDir.resolve(moduleName + ".x");
+        final var moduleFile = srcDir.resolve(moduleName + ".x");
         Files.writeString(moduleFile, sourceCode);
         return moduleFile;
     }
 
     private void appendToBuildFile(final String content) throws IOException {
-        String existing = Files.readString(buildFile.toPath());
+        final var existing = Files.readString(buildFile.toPath());
         Files.writeString(buildFile.toPath(), existing + content);
     }
 
