@@ -128,7 +128,7 @@ jobs:
               run: |
                   echo "📦 Publishing Maven snapshot artifacts to GitHub Packages and Maven Central..."
                   echo "   (please note that gradlePluginPortal is skipped, since does not support SNAPSHOT versions.)"
-                  ./gradlew ${{ steps.versions.outputs.gradle-options }} publish --info
+                  ./gradlew ${{ steps.versions.outputs.gradle-options }} publish
                   echo "✅ Maven snapshots published"
 
             - name: Clean up old XDK package versions (keep 50 newest)

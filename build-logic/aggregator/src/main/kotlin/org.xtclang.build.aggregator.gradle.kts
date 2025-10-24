@@ -66,24 +66,73 @@ private class XdkBuildAggregator(val project: Project) : Runnable {
 
     private fun checkStartParameterState() {
         val startParameter = gradle.startParameter
-        with(startParameter) {
-            logger.info(
-                """
-            [aggregator] Start parameter tasks: $taskNames
-            [aggregator] Start parameter init scripts: $allInitScripts
+        logger.info(
+            """
+            [aggregator] Start parameter tasks: ${startParameter.taskNames}
+            [aggregator] Start parameter init scripts: ${startParameter.allInitScripts}
         """.trimIndent()
-            )
+        )
 
-            // Allow multiple tasks except for clean and other lifecycle tasks that might conflict
-            val conflictingTasks = taskNames.filter { 
-                !it.startsWith("-") && 
-                (it == "clean" || lifeCycleTasks.contains(it))
+        // Gradle options that take arguments (we need to skip both the option and its argument)
+        val optionsWithArgs = setOf(
+            "--build-file",
+            "--console",
+            "--exclude-task",
+            "--gradle-user-home",
+            "--init-script",
+            "--max-workers",
+            "--parallel",
+            "--profile",
+            "--project-cache-dir",
+            "--project-dir",
+            "--rerun-tasks",
+            "--settings-file",
+            "--tests"
+        )
+
+        // Filter out command-line options and their arguments to get actual tasks
+        val actualTasks = mutableListOf<String>()
+        val taskNames = startParameter.taskNames
+        var i = 0
+        while (i < taskNames.size) {
+            val current = taskNames[i]
+            when {
+                // Skip all flags (both - and --)
+                current.startsWith("-") -> {
+                    // If this flag takes an argument, skip the next item too
+                    if (optionsWithArgs.contains(current)) {
+                        // Only skip the next item if the argument is not provided inline with '='
+                        if (!current.contains("=")) {
+                            i++ // Skip the argument
+                        }
+                    }
+                }
+                else -> actualTasks.add(current)
             }
-            if (conflictingTasks.size > 1) {
-                val msg =
-                    "[aggregator] Multiple conflicting lifecycle tasks detected. Please run lifecycle tasks individually: $conflictingTasks"
-                logger.error(msg)
-                throw GradleException(msg)
+            i++
+        }
+
+        logger.info("[aggregator] Filtered actual tasks (excluding command-line options): $actualTasks")
+
+        if (actualTasks.size > 1) {
+            val conflictingTasks = actualTasks.filter { it == "clean" || lifeCycleTasks.contains(it) }
+            val allowMultipleTasks = (project.properties["allowMultipleTasks"]?.toString() ?: "false").toBoolean()
+
+            when {
+                conflictingTasks.size > 1 -> {
+                    val msg = "[aggregator] Multiple conflicting lifecycle tasks detected. Please run lifecycle tasks individually: $conflictingTasks"
+                    logger.error(msg)
+                    throw GradleException(msg)
+                }
+                !allowMultipleTasks -> {
+                    val msg = """
+                        [aggregator] Multiple tasks detected.
+                        Please run tasks individually or use -PallowMultipleTasks=true if you know exactly what you are doing: $actualTasks
+                    """.trimIndent().replace("\n", " ")
+                    logger.error(msg)
+                    throw GradleException(msg)
+                }
+                else -> logger.info("[aggregator] Multiple tasks allowed via -PallowMultipleTasks=true: $actualTasks")
             }
         }
 

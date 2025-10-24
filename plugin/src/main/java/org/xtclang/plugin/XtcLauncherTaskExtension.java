@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.gradle.api.Named;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
@@ -12,6 +13,15 @@ import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
 public interface XtcLauncherTaskExtension extends Named {
+    /**
+     * Additional module path entries (files or directories) to add to the -L flag.
+     * This allows specifying custom locations for XTC modules beyond the default
+     * source set outputs and xtcModule dependencies.
+     *
+     * @return the configurable file collection for the module path
+     */
+    ConfigurableFileCollection getModulePath();
+
     Property<@NotNull Boolean> getFork();
 
     Property<@NotNull Boolean> getShowVersion();

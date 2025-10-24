@@ -2,14 +2,36 @@
 
 ## MOST IMPORTANT RULE: Gradle Task Execution
 
-### Composite Build Usage
-This is a composite build where you CAN run gradlew with many tasks across multiple subprojects, but tasks may interfere with each other.
+### NEVER Run Multiple Tasks in One Command
 
-**CRITICAL CLEAN RULE**: If you need to clean, you MUST run `./gradlew clean` as a standalone command first, with NO other tasks. Never combine clean with other tasks.
+**FORBIDDEN - The aggregator plugin will reject these:**
+```bash
+./gradlew clean build                     # ❌ WILL FAIL
+./gradlew build publishLocal              # ❌ WILL FAIL
+./gradlew clean build publishLocal        # ❌ WILL FAIL
+./gradlew build publishLocal -PallowMultipleTasks=true  # ❌ NEVER USE THIS FLAG UNLESS YOU KNOW THIS IS TESTED AND WORKS FOR THE JOBS INVOLVED
+```
+
+**REQUIRED - Run each task individually:**
+```bash
+./gradlew clean
+./gradlew build
+./gradlew publishLocal
+```
+
+### Why This Rule Exists
+The XVM project uses a custom aggregator plugin that enforces single-task execution to prevent:
+- Race conditions in composite builds
+- Build conflicts between subprojects
+- Task ordering issues
+- Configuration cache problems
+
+The `-PallowMultipleTasks=true` override exists but is reserved for tested workflows and when you know what you are doing. You DO NOT know what you are doing.
 
 # Code Style Rules (UNBREAKABLE)
 1. ALWAYS add a newline at the end of every file
 2. NEVER use star imports (import foo.*) - always use explicit imports
+3. NEVER use fully qualified Java package names in the Java code. Always import, so that i.e `org.gradle.api.model.ObjectFactory` is just `ObjectFactory`
 
 ### Safe Approach Options:
 

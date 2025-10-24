@@ -10,6 +10,7 @@ import javax.inject.Inject;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.provider.ListProperty;
+import org.gradle.api.provider.Property;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -48,11 +49,15 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension 
      * mode, that is the only way to talk to the XTC debugger ATM.
      */
     private final ListProperty<@NotNull XtcRunModule> modules;
+    private final Property<Boolean> detach;
+    private final Property<Boolean> parallel;
 
     @Inject
     public DefaultXtcRuntimeExtension(final Project project) {
         super(project);
         this.modules = objects.listProperty(XtcRunModule.class).value(emptyList());
+        this.detach = objects.property(Boolean.class).convention(false);
+        this.parallel = objects.property(Boolean.class).convention(false);
         // Check for a command line module as
     }
 
@@ -116,6 +121,16 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension 
     @Override
     public void setModules(final XtcRunModule... modules) {
         setModules(Arrays.asList(modules));
+    }
+
+    @Override
+    public Property<Boolean> getDetach() {
+        return detach;
+    }
+
+    @Override
+    public Property<Boolean> getParallel() {
+        return parallel;
     }
 
     @Override

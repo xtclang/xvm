@@ -95,7 +95,7 @@ runs:
 
               # Standard build configuration
               JAVA_DISTRIBUTION="temurin"
-              GRADLE_OPTIONS="-Dorg.gradle.vfs.verbose=false -Dorg.gradle.workers.max=4 --stacktrace --console=plain"
+              GRADLE_OPTIONS="-Dorg.gradle.vfs.watch=false -Dorg.gradle.vfs.verbose=false -Dorg.gradle.workers.max=3 --stacktrace --console=plain"
               GRADLE_JVM_OPTS="-Xmx4g -XX:+UseParallelGC -XX:+UseStringDeduplication"
 
               # Compute Kotlin toolchain Java version (main version - 1)

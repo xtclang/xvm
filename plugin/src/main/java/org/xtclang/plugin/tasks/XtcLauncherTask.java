@@ -26,6 +26,7 @@ import javax.inject.Inject;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.provider.ListProperty;
@@ -59,6 +60,7 @@ import org.xtclang.plugin.launchers.XtcLauncher;
 public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extends XtcDefaultTask implements XtcLauncherTaskExtension {
 
     // All inherited from launcher task extension and turned into input
+    protected final ConfigurableFileCollection modulePath;
     protected final Property<@NotNull InputStream> stdin;
     protected final Property<@NotNull OutputStream> stdout;
     protected final Property<@NotNull OutputStream> stderr;
@@ -72,26 +74,23 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected final Property<@NotNull Boolean> useNativeLauncher;
 
     protected final E ext;
-    
-    // Configuration-time captured data to avoid Project references during execution
-    // These are captured at configuration time to be serializable with configuration cache
-    protected final Provider<@NotNull Directory> xdkContentsDirAtConfigurationTime;
-    protected final Map<String, Provider<@NotNull Directory>> sourceSetOutputDirsAtConfigurationTime;
-    
-    // Source set names captured at configuration time to avoid Project access during execution
-    protected final List<String> sourceSetNamesAtConfigurationTime;
-    
-    // Configuration inputs captured as Providers at task creation time - Gradle handles resolution and missing configs
-    private final Provider<@NotNull FileCollection> javaToolsConfigAtConfigurationTime;
-    private final Provider<@NotNull FileCollection> xtcModuleDependenciesAtConfigurationTime;
-    // Launcher configuration captured at configuration time to avoid Project access during execution  
-    private final boolean useNativeLauncherAtConfigurationTime;
-    private final boolean forkAtConfigurationTime;
-    
-    // JavaExecLauncher configuration captured at configuration time
-    private final Provider<@NotNull String> toolchainExecutableAtConfigurationTime;
-    private final Provider<@NotNull String> projectVersionAtConfigurationTime;
-    private final Provider<org.gradle.api.file.@NotNull FileTree> xdkFileTreeAtConfigurationTime;
+
+    // Captured at configuration time for configuration cache compatibility
+    protected final Provider<@NotNull Directory> xdkContentsDir;
+    protected final Provider<org.gradle.api.file.@NotNull FileTree> xdkFileTree;
+    protected final Map<String, Provider<@NotNull Directory>> sourceSetOutputDirs;
+    protected final List<String> sourceSetNames;
+    protected final Provider<@NotNull FileCollection> javaToolsConfig;
+    protected final Provider<@NotNull FileCollection> xtcModuleDependencies;
+
+    // Resolved launcher configuration values captured from extension at configuration time.
+    // These are used during task execution to avoid Project access (configuration cache compatible).
+    // The Property<Boolean> versions (fork, useNativeLauncher) are for DSL configuration and
+    // Gradle's input tracking, while these resolved primitives are for execution logic.
+    protected final boolean useNativeLauncherValue;
+    protected final boolean forkValue;
+    protected final Provider<@NotNull String> toolchainExecutable;
+    protected final Provider<@NotNull String> projectVersion;
 
     @SuppressWarnings("this-escape") // Suppressed because launchers need task reference in constructor
     protected XtcLauncherTask(final Project project, final E ext) {
@@ -101,17 +100,23 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         GradlePhaseAssertions.assertProjectAccessDuringConfiguration(project, "XtcLauncherTask construction");
         this.ext = ext;
         
-        // Capture configuration-time data to avoid Project references during execution
-        this.xdkContentsDirAtConfigurationTime = XtcProjectDelegate.getXdkContentsDir(project);
-        
-        // Capture source sets and their output directories at configuration time
+        // Capture at configuration time
+        this.xdkContentsDir = XtcProjectDelegate.getXdkContentsDir(project);
+        this.xdkFileTree = xdkContentsDir.map(dir -> {
+            final var tree = objects.fileTree();
+            tree.setDir(dir);
+            return tree;
+        });
+
         final var sourceSets = XtcProjectDelegate.getSourceSets(project);
-        this.sourceSetNamesAtConfigurationTime = sourceSets.stream().map(SourceSet::getName).toList();
-        this.sourceSetOutputDirsAtConfigurationTime = sourceSets.stream()
+        this.sourceSetNames = sourceSets.stream().map(SourceSet::getName).toList();
+        this.sourceSetOutputDirs = sourceSets.stream()
             .collect(Collectors.toMap(SourceSet::getName,
                 sourceSet -> XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet)
             ));
 
+
+        this.modulePath = objects.fileCollection().from(ext.getModulePath());
 
         this.debug = objects.property(Boolean.class).convention(ext.getDebug());
         this.debugPort = objects.property(Integer.class).convention(ext.getDebugPort());
@@ -140,20 +145,20 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         this.useNativeLauncher = objects.property(Boolean.class).convention(ext.getUseNativeLauncher());
         
         // Capture launcher configuration at configuration time to avoid Project access during execution
-        this.useNativeLauncherAtConfigurationTime = ext.getUseNativeLauncher().get();
-        this.forkAtConfigurationTime = ext.getFork().get();
+        this.useNativeLauncherValue = ext.getUseNativeLauncher().get();
+        this.forkValue = ext.getFork().get();
         
         // Assert that required configurations exist - they should always be created by this plugin
         final var configurations = project.getConfigurations();
         assert configurations.findByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING) != null : 
             "Configuration '" + XDK_CONFIG_NAME_JAVATOOLS_INCOMING + "' must exist - it should be created by XTC plugin during project configuration";
         
-        this.javaToolsConfigAtConfigurationTime = project.provider(() -> objects.fileCollection().from(configurations.getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING)));
+        this.javaToolsConfig = project.provider(() -> objects.fileCollection().from(configurations.getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING)));
         
         // Build XTC module dependencies from all source sets - assert they exist too  
-        this.xtcModuleDependenciesAtConfigurationTime = project.provider(() -> {
+        this.xtcModuleDependencies = project.provider(() -> {
             FileCollection xtcModuleDeps = objects.fileCollection();
-            for (final String sourceSetName : sourceSetNamesAtConfigurationTime) {
+            for (final String sourceSetName : sourceSetNames) {
                 final String configName = XtcProjectDelegate.incomingXtcModuleDependencies(sourceSetName);
                 assert configurations.findByName(configName) != null : 
                     "Configuration '" + configName + "' must exist for sourceSet '" + sourceSetName + "' - it should be created by XTC plugin during source set configuration";
@@ -163,7 +168,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         });
         
         // Capture JavaExecLauncher configuration at configuration time
-        this.toolchainExecutableAtConfigurationTime = project.provider(() -> {
+        this.toolchainExecutable = project.provider(() -> {
             final var javaExtension = project.getExtensions().findByType(org.gradle.api.plugins.JavaPluginExtension.class);
             if (javaExtension != null) {
                 final var toolchains = project.getExtensions().getByType(org.gradle.jvm.toolchain.JavaToolchainService.class);
@@ -172,13 +177,12 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             }
             return null;
         });
-        this.projectVersionAtConfigurationTime = project.provider(() -> project.getVersion().toString());
-        this.xdkFileTreeAtConfigurationTime = XtcProjectDelegate.getXdkContentsDir(project).map(project::fileTree);
+        this.projectVersion = project.provider(() -> project.getVersion().toString());
         
         // Validate configuration-time captures for configuration cache compatibility
-        GradlePhaseAssertions.validateConfigurationTimeCapture(this.xdkContentsDirAtConfigurationTime, "XDK contents directory");
-        GradlePhaseAssertions.validateConfigurationTimeCapture(this.sourceSetNamesAtConfigurationTime, "source set names");
-        GradlePhaseAssertions.validateConfigurationTimeCapture(this.sourceSetOutputDirsAtConfigurationTime, "source set output directories");
+        GradlePhaseAssertions.validateConfigurationTimeCapture(this.xdkContentsDir, "XDK contents directory");
+        GradlePhaseAssertions.validateConfigurationTimeCapture(this.sourceSetNames, "source set names");
+        GradlePhaseAssertions.validateConfigurationTimeCapture(this.sourceSetOutputDirs, "source set output directories");
     }
 
     @Inject
@@ -204,7 +208,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputXtcJavaToolsConfig() {
-        return javaToolsConfigAtConfigurationTime.get();
+        return javaToolsConfig.get();
     }
 
     public boolean hasStdinRedirect() {
@@ -293,6 +297,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return verbose;
     }
 
+    /**
+     * Returns the fork property for DSL configuration.
+     * This property allows users to configure whether to fork a new process for execution.
+     * Note: Execution logic uses {@link #getForkValue()} which is captured at configuration time.
+     */
     @Input
     public Property<@NotNull Boolean> getFork() {
         return fork;
@@ -303,6 +312,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return showVersion;
     }
 
+    /**
+     * Returns the useNativeLauncher property for DSL configuration.
+     * This property allows users to configure whether to use the native launcher.
+     * Note: Execution logic uses {@link #getUseNativeLauncherValue()} which is captured at configuration time.
+     */
     @Input
     public Property<@NotNull Boolean> getUseNativeLauncher() {
         return useNativeLauncher;
@@ -315,21 +329,27 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     }
 
     /**
-     * Returns the launcher type configuration captured at configuration time.
-     * This is an input because changes to launcher configuration affect execution.
+     * Returns the resolved launcher type captured from the extension at configuration time.
+     * This primitive value is used during task execution to determine launcher type without
+     * accessing the Project object, ensuring configuration cache compatibility.
+     * This is an @Input because changes to launcher configuration affect task execution.
+     * See {@link #getUseNativeLauncher()} for the DSL-configurable Property version.
      */
     @Input
-    public boolean getUseNativeLauncherAtConfigurationTime() {
-        return useNativeLauncherAtConfigurationTime;
+    public boolean getUseNativeLauncherValue() {
+        return useNativeLauncherValue;
     }
 
     /**
-     * Returns the fork configuration captured at configuration time.
-     * This is an input because changes to fork configuration affect execution.
+     * Returns the resolved fork configuration captured from the extension at configuration time.
+     * This primitive value is used during task execution to determine whether to fork without
+     * accessing the Project object, ensuring configuration cache compatibility.
+     * This is an @Input because changes to fork configuration affect task execution.
+     * See {@link #getFork()} for the DSL-configurable Property version.
      */
     @Input
-    public boolean getForkAtConfigurationTime() {
-        return forkAtConfigurationTime;
+    public boolean getForkValue() {
+        return forkValue;
     }
 
     /**
@@ -337,8 +357,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
      * This is an input because changes to source sets affect the module path.
      */
     @Input
-    public List<String> getSourceSetNamesAtConfigurationTime() {
-        return sourceSetNamesAtConfigurationTime;
+    public List<String> getSourceSetNames() {
+        return sourceSetNames;
     }
 
     @Internal
@@ -350,7 +370,24 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected <R extends ExecResult> R handleExecResult(final R result) {
         final int exitValue = result.getExitValue();
         if (exitValue != 0) {
-            getLogger().error("[plugin] terminated abnormally (exitValue: {}). Rethrowing exception.", exitValue);
+            final String taskName = getName();
+            final String launcherType = useNativeLauncherValue ? "Native" :
+                                       forkValue ? "JavaExec" : "BuildThread";
+            final var logger = getLogger();
+            logger.error("""
+
+                [plugin] ==============================================================================
+                [plugin] XTC Compilation Failed
+                [plugin] ==============================================================================
+                [plugin] Task:        {}
+                [plugin] Launcher:    {}
+                [plugin] Exit Code:   {}
+                [plugin] ------------------------------------------------------------------------------
+                [plugin] The XTC compiler process terminated with a non-zero exit code ({}).
+                [plugin] This typically indicates compilation errors in your XTC source files.
+                [plugin] Review the compiler output above for specific error messages.
+                [plugin] ==============================================================================
+                """, taskName, launcherType, exitValue, exitValue);
         }
         result.rethrowFailure();
         result.assertNormalExitValue();
@@ -359,13 +396,13 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     protected XtcLauncher<E, ? extends XtcLauncherTask<E>> createLauncher() {
         // Create launcher on-demand using captured configuration - NO getProject() calls during execution
-        if (useNativeLauncherAtConfigurationTime) {
+        if (useNativeLauncherValue) {
             getLogger().info("[plugin] Created XTC launcher: native executable.");
             return new NativeBinaryLauncher<>(this, getLogger(), getExecOperations());
-        } else if (forkAtConfigurationTime) {
+        } else if (forkValue) {
             getLogger().info("[plugin] Created XTC launcher: Java process forked from build.");
             return new JavaExecLauncher<>(this, getLogger(), getExecOperations(),
-                toolchainExecutableAtConfigurationTime, projectVersionAtConfigurationTime, xdkFileTreeAtConfigurationTime, javaToolsConfigAtConfigurationTime);
+                toolchainExecutable, projectVersion, xdkFileTree, javaToolsConfig);
         } else {
             getLogger().warn("{} WARNING: Created XTC launcher: Running launcher in the same thread as the build process. This is not recommended for production",
                     "[plugin]");
@@ -376,13 +413,21 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected List<File> resolveFullModulePath() {
         final var map = new HashMap<String, Set<File>>();
 
-        final Set<File> xdkContents = resolveDirectories(xdkContentsDirAtConfigurationTime);
+        final Set<File> xdkContents = resolveDirectories(xdkContentsDir);
         map.put(XDK_CONFIG_NAME_CONTENTS, xdkContents);
 
-        final Set<File> xtcModuleDeclarations = resolveFiles(getXtcModuleDependencies());
-        map.put(XTC_CONFIG_NAME_MODULE_DEPENDENCY, xtcModuleDeclarations);
+        // If custom module path is specified, use it instead of xtcModule dependencies
+        // This supports aggregator projects that collect modules in a custom location
+        if (!modulePath.isEmpty()) {
+            final Set<File> customModulePath = resolveAsDirectories(modulePath);
+            map.put("customModulePath", customModulePath);
+        } else {
+            // Use xtcModule dependencies only when no custom module path is set
+            final Set<File> xtcModuleDeclarations = resolveFiles(getXtcModuleDependencies());
+            map.put(XTC_CONFIG_NAME_MODULE_DEPENDENCY, xtcModuleDeclarations);
+        }
 
-        for (final var entry : sourceSetOutputDirsAtConfigurationTime.entrySet()) {
+        for (final var entry : sourceSetOutputDirs.entrySet()) {
             final String sourceSetName = entry.getKey();
             final Provider<@NotNull Directory> outputDir = entry.getValue();
             final Set<File> sourceSetOutput = resolveDirectories(outputDir);
@@ -397,21 +442,29 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @InputDirectory
     @PathSensitive(PathSensitivity.RELATIVE)
     Provider<@NotNull Directory> getInputXdkContents() {
-        return xdkContentsDirAtConfigurationTime;
+        return xdkContentsDir;
     }
 
     @Optional
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getXtcModuleDependencies() {
-        return xtcModuleDependenciesAtConfigurationTime.get();
+        return xtcModuleDependencies.get();
+    }
+
+    @Optional
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    @Override
+    public ConfigurableFileCollection getModulePath() {
+        return modulePath;
     }
 
     @Internal
     protected List<SourceSet> getDependentSourceSets() {
         // This method still returns SourceSet objects for compatibility, but they are reconstructed from names
         // TODO: Eventually replace this with a method that returns source set names only
-        throw new UnsupportedOperationException("getDependentSourceSets() should not be called at execution time for configuration cache compatibility. Use sourceSetNamesAtConfigurationTime instead.");
+        throw new UnsupportedOperationException("getDependentSourceSets() should not be called at execution time for configuration cache compatibility. Use sourceSetNames instead.");
     }
 
     protected List<File> verifiedModulePath(final Map<String, Set<File>> map) {
@@ -475,6 +528,19 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     public static Set<File> resolveDirectories(final Set<File> files) {
         return files.stream().map(f -> requireNonNull(f.getParentFile())).collect(Collectors.toUnmodifiableSet());
+    }
+
+    /**
+     * Resolves a FileCollection to a set of directories, preserving directories as-is
+     * instead of expanding them to their contents. For files, returns their parent directory.
+     */
+    public static Set<File> resolveAsDirectories(final FileCollection files) {
+        if (files.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return files.getFiles().stream()
+                .map(f -> f.isDirectory() ? f : requireNonNull(f.getParentFile()))
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     @SuppressWarnings("unused")

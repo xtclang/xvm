@@ -7,7 +7,17 @@
  */
 
 import de.undercouch.gradle.tasks.download.Download
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.Classpath
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
+import org.gradle.process.ExecOperations
+import javax.inject.Inject
 
 plugins {
     alias(libs.plugins.xdk.build.java)
@@ -33,16 +43,65 @@ val jar by tasks.existing(Jar::class)
  * Download the ucd zip file from the unicode site, if it does not exist.
  */
 val downloadUcdFlatZip by tasks.registering(Download::class) {
-    onlyIf {
-        System.err.println("Check rebuildunicode spec: should be executing: ${state.executing}")
-        assert(state.executing)
-        xdkProperties.booleanValue("org.xtclang.unicode.rebuild", false)
-    }
+    val rebuildUnicode = xdkProperties.booleanValue("org.xtclang.unicode.rebuild", false)
+    onlyIf { rebuildUnicode }
+
     src(unicodeUcdUrl)
     overwrite(false)
     onlyIfModified(true)
     quiet(false)
-    dest(project.mkdir(project.layout.buildDirectory.dir("ucd")))
+    dest(layout.buildDirectory.dir("ucd"))
+}
+
+/**
+ * Abstract task for building unicode tables with proper configuration cache support.
+ */
+abstract class RebuildUnicodeTablesTask : DefaultTask() {
+    @get:InputFile
+    abstract val unicodeJar: RegularFileProperty
+
+    @get:InputFile
+    abstract val ucdZipFile: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @get:Classpath
+    abstract val taskClasspath: ConfigurableFileCollection
+
+    @get:Inject
+    abstract val execOperations: ExecOperations
+
+    @TaskAction
+    fun rebuildTables() {
+        logger.lifecycle("[javatools_unicode] Rebuilding unicode tables...")
+        logger.lifecycle("[javatools_unicode] Downloaded unicode file: ${ucdZipFile.get().asFile.absolutePath}")
+
+        execOperations.javaexec {
+            mainClass.set("org.xvm.tool.BuildUnicodeTables")
+            classpath = taskClasspath
+            args = listOf(
+                ucdZipFile.get().asFile.absolutePath,
+                outputDir.get().dir("ecstasy/text").asFile.absolutePath
+            )
+        }
+
+        val generatedDatDir = outputDir.get().dir("ecstasy/text").asFile
+        logger.lifecycle("""
+
+            ================================================================================
+            [javatools_unicode] Unicode .dat files generated successfully!
+            [javatools_unicode] Location: ${generatedDatDir.absolutePath}
+
+            [javatools_unicode] Next steps:
+            [javatools_unicode] 1. Review the generated .dat and .txt files
+            [javatools_unicode] 2. Copy them to: src/main/resources/ecstasy/text/
+            [javatools_unicode] 3. Update Char.x to match the new .dat file data
+            [javatools_unicode] 4. Commit the updated files to the repository
+            ================================================================================
+
+        """.trimIndent())
+    }
 }
 
 /**
@@ -62,32 +121,21 @@ val downloadUcdFlatZip by tasks.registering(Download::class) {
  * its incoming resources, which means that lib_ecstasy will include them in the ecstasy.xtc
  * module. All we need to do is add the configuration as a resource for lib_ecstasy.
  */
-val rebuildUnicodeTables by tasks.registering {
+val rebuildUnicodeTables by tasks.registering(RebuildUnicodeTablesTask::class) {
     group = BUILD_GROUP
     description = "If the unicode files should be regenerated, generate them from the build tool, and place them under the build resources."
 
     val rebuildUnicode = xdkProperties.booleanValue("org.xtclang.unicode.rebuild", false)
-    // Note: moved logger usage to task action for configuration cache compatibility
 
     dependsOn(jar)
-    outputs.dir(processedResourcesDir)
+    outputDir.set(layout.dir(provider { processedResourcesDir }))
+
+    onlyIf { rebuildUnicode }
 
     if (rebuildUnicode) {
         dependsOn(downloadUcdFlatZip)
-        doLast {
-            logger.lifecycle("[javatools_unicode] Should rebuild unicode: $rebuildUnicode")
-            logger.lifecycle("[javatools_unicode] Rebuilding unicode tables...")
-            val unicodeJar = jar.get().archiveFile
-            val localUcdZip = downloadUcdFlatZip.get().outputs.files.singleFile
-            logger.lifecycle("[javatools_unicode] Downloaded unicode file: ${localUcdZip.absolutePath}")
-            
-            // Use ExecOperations service for Gradle 9 compatibility
-            val execOps = project.objects.newInstance<ExecOperations>()
-            execOps.javaexec {
-                mainClass.set("org.xvm.tool.BuildUnicodeTables")
-                classpath = files(configurations.runtimeClasspath, unicodeJar)
-                args = listOf(localUcdZip.absolutePath, File(processedResourcesDir, "ecstasy/text").absolutePath)
-            }
-        }
+        unicodeJar.set(jar.flatMap { it.archiveFile })
+        ucdZipFile.set(layout.buildDirectory.file("ucd/ucd.all.flat.zip"))
+        taskClasspath.from(configurations.runtimeClasspath, jar)
     }
 }

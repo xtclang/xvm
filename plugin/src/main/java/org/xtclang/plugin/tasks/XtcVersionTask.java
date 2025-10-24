@@ -7,6 +7,8 @@ import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.TaskAction;
 
+import org.jetbrains.annotations.NotNull;
+
 /**
  * Task that displays and provides access to XDK/XTC version information.
  * This task is cacheable and configuration-cache compatible.
@@ -21,7 +23,7 @@ public abstract class XtcVersionTask extends DefaultTask {
      * @return the XDK version property
      */
     @Input
-    public abstract Property<String> getXdkVersion();
+    public abstract Property<@NotNull String> getXdkVersion();
 
     /**
      * The semantic version string (e.g., "org.xtclang:project-name:0.4.4-SNAPSHOT").
@@ -30,7 +32,7 @@ public abstract class XtcVersionTask extends DefaultTask {
      * @return the semantic version property
      */
     @Input
-    public abstract Property<String> getSemanticVersion();
+    public abstract Property<@NotNull String> getSemanticVersion();
 
     /**
      * Whether verbose logging is enabled (info/debug log level or verbose logging override property).
@@ -40,7 +42,7 @@ public abstract class XtcVersionTask extends DefaultTask {
      * @return the verbose logging property
      */
     @Internal
-    public abstract Property<Boolean> getVerboseLogging();
+    public abstract Property<@NotNull Boolean> getVerboseLogging();
 
     /**
      * Convenience getter for the XDK version value.
@@ -48,6 +50,7 @@ public abstract class XtcVersionTask extends DefaultTask {
      *
      * @return the XDK version string
      */
+    @SuppressWarnings("unused")
     @Internal
     public String getXdkVersionValue() {
         return getXdkVersion().get();
@@ -59,6 +62,7 @@ public abstract class XtcVersionTask extends DefaultTask {
      *
      * @return the semantic version string
      */
+    @SuppressWarnings("unused")
     @Internal
     public String getSemanticVersionValue() {
         return getSemanticVersion().get();
@@ -67,11 +71,11 @@ public abstract class XtcVersionTask extends DefaultTask {
     @TaskAction
     public void displayVersion() {
         final var logger = getLogger();
-        final var xdkVer = getXdkVersion().get();
+        //final var xdkVer = getXdkVersion().get();
         final var semanticVer = getSemanticVersion().get();
 
         if (getVerboseLogging().get()) {
-            logger.lifecycle("[plugin] XDK/XTC Version: {}", xdkVer);
+            //logger.lifecycle("[plugin] XDK/XTC Version: {}", xdkVer);
             logger.lifecycle("[plugin] Project Semantic Version: {}", semanticVer);
         }
     }

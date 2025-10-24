@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import java.util.Objects;
+
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
 import org.gradle.testkit.runner.TaskOutcome;
@@ -45,7 +47,7 @@ class ConfigurationCacheCompatibilityTest {
      * Test that basic XTC tasks work with configuration cache enabled
      */
     @Test
-    void testBasicTasksWithConfigurationCache() throws IOException {
+    void testBasicTasksWithConfigurationCache() {
         // First run without configuration cache to establish baseline
         BuildResult baselineResult = createGradleRunner()
             .withArguments("tasks", "--no-configuration-cache", "--stacktrace")
@@ -82,18 +84,18 @@ class ConfigurationCacheCompatibilityTest {
         
         // Test without configuration cache
         BuildResult baselineResult = runBuildWithArgs("runXtc", "--no-configuration-cache", "--stacktrace");
-        assertEquals(TaskOutcome.SUCCESS, baselineResult.task(":runXtc").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(baselineResult.task(":runXtc")).getOutcome());
         
         // Test with configuration cache
         BuildResult configCacheResult = runBuildWithArgs("runXtc", "--configuration-cache", "--stacktrace");
-        assertEquals(TaskOutcome.SUCCESS, configCacheResult.task(":runXtc").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(configCacheResult.task(":runXtc")).getOutcome());
         
         // Verify configuration cache was stored
         assertTrue(configCacheResult.getOutput().contains("Configuration cache entry stored"));
         
         // Test reuse of configuration cache
         BuildResult reuseResult = runBuildWithArgs("runXtc", "--configuration-cache", "--stacktrace");
-        assertEquals(TaskOutcome.SUCCESS, reuseResult.task(":runXtc").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(reuseResult.task(":runXtc")).getOutcome());
         assertTrue(reuseResult.getOutput().contains("Configuration cache entry reused"));
     }
 
@@ -106,11 +108,11 @@ class ConfigurationCacheCompatibilityTest {
         
         // Test without configuration cache  
         BuildResult baselineResult = runBuildWithArgs("compileXtc", "--no-configuration-cache", "--stacktrace");
-        assertEquals(TaskOutcome.SUCCESS, baselineResult.task(":compileXtc").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(baselineResult.task(":compileXtc")).getOutcome());
         
         // Test with configuration cache
         BuildResult configCacheResult = runBuildWithArgs("compileXtc", "--configuration-cache", "--stacktrace");
-        assertEquals(TaskOutcome.SUCCESS, configCacheResult.task(":compileXtc").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(configCacheResult.task(":compileXtc")).getOutcome());
         
         // Verify outputs are equivalent
         verifyEquivalentTaskOutputs(baselineResult, configCacheResult, ":compileXtc");
@@ -125,7 +127,7 @@ class ConfigurationCacheCompatibilityTest {
         
         // Run with input change detection
         BuildResult firstRun = runBuildWithArgs("compileXtc", "--configuration-cache", "--stacktrace");
-        assertEquals(TaskOutcome.SUCCESS, firstRun.task(":compileXtc").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(firstRun.task(":compileXtc")).getOutcome());
         
         // Modify source file to trigger input change
         Files.writeString(testProjectDir.resolve("src/main/x/TestModule.x"), 
@@ -134,8 +136,8 @@ class ConfigurationCacheCompatibilityTest {
         // Run again - task should not be UP-TO-DATE due to input change
         BuildResult secondRun = runBuildWithArgs("compileXtc", "--configuration-cache", "--stacktrace");
         // Should recompile due to input change (not UP-TO-DATE)
-        assertTrue(secondRun.task(":compileXtc").getOutcome() == TaskOutcome.SUCCESS ||
-                  secondRun.task(":compileXtc").getOutcome() == TaskOutcome.UP_TO_DATE);
+        assertTrue(Objects.requireNonNull(secondRun.task(":compileXtc")).getOutcome() == TaskOutcome.SUCCESS ||
+                  Objects.requireNonNull(secondRun.task(":compileXtc")).getOutcome() == TaskOutcome.UP_TO_DATE);
     }
 
     /**
@@ -151,8 +153,8 @@ class ConfigurationCacheCompatibilityTest {
         // Verify all tasks completed successfully
         assertNotNull(result.task(":compileXtc"));
         assertNotNull(result.task(":runXtc"));
-        assertEquals(TaskOutcome.SUCCESS, result.task(":compileXtc").getOutcome());
-        assertEquals(TaskOutcome.SUCCESS, result.task(":runXtc").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(result.task(":compileXtc")).getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(result.task(":runXtc")).getOutcome());
         
         // Verify configuration cache was used
         assertTrue(result.getOutput().contains("Configuration cache entry stored") ||
@@ -190,7 +192,7 @@ class ConfigurationCacheCompatibilityTest {
         BuildResult result = runBuildWithArgs("clean", "compileXtc", 
             "--configuration-cache", "--build-cache", "--stacktrace");
             
-        assertEquals(TaskOutcome.SUCCESS, result.task(":compileXtc").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(result.task(":compileXtc")).getOutcome());
         
         // Second run should use both caches
         BuildResult cachedResult = runBuildWithArgs("clean", "compileXtc",
@@ -273,14 +275,15 @@ class ConfigurationCacheCompatibilityTest {
             .forwardOutput();
     }
 
-    private BuildResult runBuildWithArgs(String... args) {
+    private BuildResult runBuildWithArgs(final String... args) {
         return createGradleRunner()
             .withArguments(args)
             .build();
     }
 
-    private void verifyEquivalentTaskOutputs(BuildResult baseline, BuildResult configCache, String taskPath) {
-        assertEquals(baseline.task(taskPath).getOutcome(), configCache.task(taskPath).getOutcome(),
+    @SuppressWarnings("SameParameterValue")
+    private static void verifyEquivalentTaskOutputs(final BuildResult baseline, final BuildResult configCache, final String taskPath) {
+        assertEquals(Objects.requireNonNull(baseline.task(taskPath)).getOutcome(), Objects.requireNonNull(configCache.task(taskPath)).getOutcome(),
             "Task outcomes should be equivalent with and without configuration cache");
     }
 }

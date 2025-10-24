@@ -14,6 +14,7 @@ import java.io.File;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import javax.inject.Inject;
 
@@ -21,6 +22,7 @@ import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
+import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.logging.LogLevel;
 import org.gradle.api.provider.ListProperty;
@@ -43,6 +45,8 @@ import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.XtcRuntimeExtension;
 import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
 import org.xtclang.plugin.launchers.CommandLine;
+import org.xtclang.plugin.launchers.DetachedJavaExecLauncher;
+import org.xtclang.plugin.launchers.DetachedNativeBinaryLauncher;
 import org.xtclang.plugin.launchers.XtcLauncher;
 
 /**
@@ -74,6 +78,10 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     private final Map<XtcRunModule, ExecResult> executedModules; // TODO we can cache output here to if we want.
     private final Property<@NotNull DefaultXtcRuntimeExtension> taskLocalModules;
 
+    // Captured at configuration time for configuration cache compatibility
+    private final DirectoryProperty buildDirectory;
+    private final DirectoryProperty projectDirectory;
+
     /**
      * Create an XTC run task, currently delegating instead of inheriting the plugin project
      * delegate. We are slowly getting rid of this delegate pattern, now that the intra-plugin
@@ -88,6 +96,12 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         super(project, XtcProjectDelegate.resolveXtcRuntimeExtension(project));
         this.executedModules = new LinkedHashMap<>();
         this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class, project));
+
+        // Capture directories at configuration time for configuration cache compatibility
+        this.buildDirectory = objects.directoryProperty();
+        this.buildDirectory.set(project.getLayout().getBuildDirectory());
+        this.projectDirectory = objects.directoryProperty();
+        this.projectDirectory.set(project.getLayout().getProjectDirectory());
     }
 
 
@@ -103,11 +117,38 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         return XTC_RUNNER_CLASS_NAME;
     }
 
+    @Override
+    protected XtcLauncher<XtcRuntimeExtension, ? extends XtcLauncherTask<XtcRuntimeExtension>> createLauncher() {
+        // Use parent's createLauncher for normal mode
+        if (!getDetach().get()) {
+            return super.createLauncher();
+        }
+
+        // Validate detach mode requirements - fail fast
+        if (!useNativeLauncherValue && !forkValue) {
+            throw new GradleException("[plugin] Detach mode requires fork=true. Set 'fork = true' in xtcRun configuration.");
+        }
+
+        // Extract common directory resolution for detached launchers (DRY)
+        final File buildDir = buildDirectory.get().getAsFile();
+        final File projectDir = projectDirectory.get().getAsFile();
+
+        if (useNativeLauncherValue) {
+            getLogger().info("[plugin] Created XTC launcher: detached native executable.");
+            return new DetachedNativeBinaryLauncher<>(this, getLogger(), getExecOperations(), buildDir, projectDir);
+        }
+
+        // Must be fork mode (validated above)
+        getLogger().info("[plugin] Created XTC launcher: detached Java process.");
+        return new DetachedJavaExecLauncher<>(this, getLogger(), getExecOperations(),
+            toolchainExecutable, projectVersion, xdkFileTree, javaToolsConfig, buildDir, projectDir);
+    }
+
     // XTC modules needed to resolve module path (the contents of the XDK required to build and run this project)
     @InputDirectory
     @PathSensitive(PathSensitivity.RELATIVE)
     Provider<@NotNull Directory> getInputXdkModules() {
-        return xdkContentsDirAtConfigurationTime; // Modules in the XDK directory, captured at configuration time.
+        return xdkContentsDir;
     }
 
     // XTC modules needed to resolve module path (the ones in the output of the project source set, that the compileXtc tasks create)
@@ -116,9 +157,9 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputModulesCompiledByProject() {
         final var result = objects.fileCollection();
-        sourceSetNamesAtConfigurationTime.stream()
-            .map(sourceSetOutputDirsAtConfigurationTime::get)
-            .filter(outputDir -> outputDir != null)
+        sourceSetNames.stream()
+            .map(sourceSetOutputDirs::get)
+            .filter(Objects::nonNull)
             .forEach(result::from);
         return result;
     }
@@ -169,6 +210,18 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         taskLocalModules.get().setModuleNames(moduleNames);
     }
 
+    @Input
+    @Override
+    public Property<@NotNull Boolean> getDetach() {
+        return getExtension().getDetach();
+    }
+
+    @Input
+    @Override
+    public Property<@NotNull Boolean> getParallel() {
+        return getExtension().getParallel();
+    }
+
     @Internal
     @Override
     public boolean isEmpty() {
@@ -188,6 +241,14 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @Override
     public void executeTask() {
         super.executeTask();
+
+        // Validate that parallel execution is not enabled (not yet implemented)
+        if (getParallel().get()) {
+            throw new UnsupportedOperationException("""
+                [plugin] Parallel module execution is not yet implemented. \
+                Please set 'parallel = false' in your xtcRun configuration or remove the parallel setting.\
+                """);
+        }
 
         final var cmd = new CommandLine(XTC_RUNNER_CLASS_NAME, resolveJvmArgs());
         cmd.addBoolean("--version", getShowVersion().get());

@@ -60,6 +60,8 @@ env:
     ORG_GRADLE_PROJECT_includeBuildManualTests: true
     ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
     ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
+    # Allow multiple tasks in a single gradlew command (we run multiple manual test tasks for parallel speed)
+    ORG_GRADLE_PROJECT_allowMultipleTasks: true
 
     skip_manual_tests: ${{ github.event.inputs.skip-tests == true || github.event.inputs.skip-tests == 'true' }}
     run_manual_tests_parallel: ${{ github.event.inputs.parallel-test-mode == true || github.event.inputs.parallel-test-mode == 'true' }}
@@ -170,7 +172,7 @@ jobs:
               with:
                   setup-build: true
                   cache-read-only: false
-                  enable-debug: true
+                  enable-debug: false
 
             - name: Debug Environment (Windows)
               if: runner.os == 'Windows'
@@ -206,9 +208,8 @@ jobs:
                 ls -la build/ 2>/dev/null && echo "Build directory exists - will be cleaned" || echo "✅ No previous build outputs"
 
                 inspect_gradle_cache "before build"
-                ./gradlew $GRADLE_OPTIONS clean --info
-                ./gradlew $GRADLE_OPTIONS check -Porg.xtclang.java.lint=true -Porg.xtclang.java.warningsAsErrors=false -Porg.xtclang.java.test.stdout=true
-                ./gradlew $GRADLE_OPTIONS :xdk:distZip
+                ./gradlew $GRADLE_OPTIONS clean
+                ./gradlew $GRADLE_OPTIONS distZip check -Porg.xtclang.java.lint=true -Porg.xtclang.java.warningsAsErrors=false -Porg.xtclang.java.test.stdout=true
 
                 # Run manual tests inline if enabled (avoids cache rebuild)
                 if [ "${{ env.skip_manual_tests }}" == "true" ]; then

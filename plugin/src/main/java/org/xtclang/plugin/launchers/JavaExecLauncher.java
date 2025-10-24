@@ -1,7 +1,7 @@
 package org.xtclang.plugin.launchers;
 
-import static org.xtclang.plugin.XtcPluginConstants.JAR_MANIFEST_PATH;
-import static org.xtclang.plugin.XtcPluginConstants.JAVATOOLS_JAR_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_MANIFEST;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_JAR;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xtclang.plugin.XtcPluginUtils.FileUtils.readXdkVersionFromJar;
 
@@ -33,7 +33,7 @@ import org.xtclang.plugin.tasks.XtcLauncherTask;
  */
 public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends XtcLauncher<E, T> {
     private final ExecOperations execOperations;
-    private final Provider<@NotNull String> toolchainExecutable;
+    protected final Provider<@NotNull String> toolchainExecutable;
     private final Provider<@NotNull String> projectVersion;
     private final Provider<@NotNull FileTree> xdkFileTree;
     private final Provider<@NotNull FileCollection> javaToolsConfig;
@@ -55,10 +55,10 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
 
         final var javaToolsJar = resolveJavaTools();
         if (javaToolsJar == null) {
-            throw new GradleException("[plugin] Failed to resolve '" + JAVATOOLS_JAR_NAME + "' in any classpath.");
+            throw new GradleException("[plugin] Failed to resolve '" + XDK_JAVATOOLS_NAME_JAR + "' in any classpath.");
         }
 
-        logger.info("[plugin] {} (launcher: {}); Using '{}' in classpath from: {}", cmd.getIdentifier(), cmd.getClass(), JAVATOOLS_JAR_NAME, javaToolsJar);
+        logger.info("[plugin] {} (launcher: {}); Using '{}' in classpath from: {}", cmd.getIdentifier(), cmd.getClass(), XDK_JAVATOOLS_NAME_JAR, javaToolsJar);
 
         if (task.hasVerboseLogging()) {
             final var launchLine = cmd.toString(javaToolsJar);
@@ -85,7 +85,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
         })));
     }
 
-    private File resolveJavaTools() {
+    protected File resolveJavaTools() {
         // TODO: Way too complicated, just making absolutely sure that we don't mix class paths for e.g. XDK development, and something
         //   that is a distribution installed locally, thinking one is the other. This can be solved through artifact signing instead.
 
@@ -112,44 +112,42 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
          * we keep this code here for now. It will very likely go away in the future, and assume and assert that
          * there is only one configuration available to consume, containing the javatools.jar.
          */
+        // NOTE: The projectVersion is resolved to whatever "version" is if we are not building the XKD does that work?
         final String artifactVersion = projectVersion.get();
         final var javaToolsFromConfig = javaToolsConfig.get().filter(file -> FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
         final var javaToolsFromXdk = xdkFileTree.get().filter(file -> FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
 
-        logger.info("""            
-                [plugin] javaToolsFromConfig files: {}
-                [plugin] javaToolsFromXdk files: {}
+        logger.info("""
+                [plugin] [java_exec_launcher] javaToolsFromConfig files: {}
+                [plugin] [java_exec_launcher] javaToolsFromXdk files: {}
                 """.trim(), javaToolsFromConfig.getFiles(), javaToolsFromXdk.getFiles());
-
         final File resolvedFromConfig = javaToolsFromConfig.isEmpty() ? null : javaToolsFromConfig.getSingleFile();
         final File resolvedFromXdk = javaToolsFromXdk.isEmpty() ? null : javaToolsFromXdk.getSingleFile();
         if (resolvedFromConfig == null && resolvedFromXdk == null) {
-            throw new GradleException("[plugin] ERROR: Failed to resolve '" + JAVATOOLS_JAR_NAME + "' from any configuration or dependency.");
+            throw new GradleException("[plugin] ERROR: Failed to resolve '" + XDK_JAVATOOLS_NAME_JAR + "' from any configuration or dependency.");
         }
 
         logger.info("""
                 [plugin] Check for '{}' in {} config and XDK (unpacked zip, or module collection) dependency, if present.
                 [plugin]     Resolved to: [xdkJavaTools: {}, xdkContents: {}]
-                """.trim(), JAVATOOLS_JAR_NAME, XDK_CONFIG_NAME_JAVATOOLS_INCOMING, resolvedFromConfig, resolvedFromXdk);
+                """.trim(), XDK_JAVATOOLS_NAME_JAR, XDK_CONFIG_NAME_JAVATOOLS_INCOMING, resolvedFromConfig, resolvedFromXdk);
 
         final String versionConfig = readXdkVersionFromJar(resolvedFromConfig);
         final String versionXdk = readXdkVersionFromJar(resolvedFromXdk);
         if (resolvedFromConfig != null && resolvedFromXdk != null) {
             if (!versionConfig.equals(versionXdk) || !areIdenticalFiles(resolvedFromConfig, resolvedFromXdk)) {
-                logger.warn("[plugin] Different '{}' files resolved, preferring the non-XDK version: {}",
-                    JAVATOOLS_JAR_NAME, resolvedFromConfig.getAbsolutePath());
+                logger.warn("[plugin] Different '{}' files resolved, preferring the non-XDK version: {}", XDK_JAVATOOLS_NAME_JAR, resolvedFromConfig.getAbsolutePath());
                 return processJar(resolvedFromConfig);
             }
         }
 
         if (resolvedFromConfig != null) {
             assert resolvedFromXdk == null;
-            logger.info("[plugin] Resolved unique '{}' from config/artifacts/dependencies: {} (version: {})",
-                JAVATOOLS_JAR_NAME, resolvedFromConfig.getAbsolutePath(), versionConfig);
+            logger.info("[plugin] Resolved unique '{}' from config/artifacts/dependencies: {} (version: {})", XDK_JAVATOOLS_NAME_JAR, resolvedFromConfig.getAbsolutePath(), versionConfig);
             return processJar(resolvedFromConfig);
         }
 
-        logger.info("[plugin] Resolved unique '{}' from XDK: {} (version: {})", JAVATOOLS_JAR_NAME, resolvedFromXdk.getAbsolutePath(), versionXdk);
+        logger.info("[plugin] Resolved unique '{}' from XDK: {} (version: {})", XDK_JAVATOOLS_NAME_JAR, resolvedFromXdk.getAbsolutePath(), versionXdk);
         return processJar(resolvedFromXdk);
     }
 
@@ -157,14 +155,14 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
         try {
             return FileUtils.areIdenticalFiles(f1, f2);
         } catch (final IOException e) {
-            throw new GradleException("[plugin] Resolved non-identical multiple '" + JAVATOOLS_JAR_NAME + "' ('" + f1.getAbsolutePath() + "' and '" + f2.getAbsolutePath() + "')");
+            throw new GradleException("[plugin] Resolved non-identical multiple '" + XDK_JAVATOOLS_NAME_JAR + "' ('" + f1.getAbsolutePath() + "' and '" + f2.getAbsolutePath() + "')");
         }
     }
 
     @SuppressWarnings("UnusedReturnValue")
     private static boolean checkIsJarFile(final File file) {
         try (var zip = new ZipFile(file)) {
-            return zip.getEntry(JAR_MANIFEST_PATH) != null;
+            return zip.getEntry(XDK_JAVATOOLS_NAME_MANIFEST) != null;
         } catch (final IOException e) {
             throw new GradleException("[plugin] Failed to read jar file: '" + file.getAbsolutePath() + "' (is the format correct?)");
         }

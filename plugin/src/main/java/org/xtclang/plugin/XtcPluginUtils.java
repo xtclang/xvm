@@ -2,7 +2,7 @@ package org.xtclang.plugin;
 
 import static java.util.Objects.requireNonNull;
 
-import static org.xtclang.plugin.XtcPluginConstants.JAVATOOLS_JAR_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_JAR;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_MAGIC;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_MODULE_FILE_EXTENSION;
 
@@ -15,13 +15,9 @@ import java.nio.file.Files;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-
-import org.gradle.api.Project;
-import org.gradle.api.provider.Provider;
 
 /**
  * XTC Plugin Helper methods in a utility class.
@@ -32,16 +28,12 @@ public final class XtcPluginUtils {
     private XtcPluginUtils() {
     }
 
-    public static <T> Provider<? extends Iterable<? extends T>> singleArgumentIterableProvider(final Project project, final Provider<? extends T> arg) {
-        return project.provider(() -> List.of(arg.get()));
-    }
-
     public static List<String> argumentArrayToList(final String... args) {
         return Arrays.stream(ensureNotNull(args)).map(String::valueOf).toList();
     }
 
     private static Object[] ensureNotNull(final String... array) {
-        Arrays.stream(array).forEach(e -> Objects.requireNonNull(e, "Arguments must never be null."));
+        Arrays.stream(array).forEach(e -> requireNonNull(e, "Arguments must never be null."));
         return array;
     }
 
@@ -67,7 +59,7 @@ public final class XtcPluginUtils {
             final String expectedVersionedName = "javatools-" + artifactVersion + ".jar";
             
             // Check for exact name (XDK distribution) or exact versioned name (configuration resolution)
-            return (JAVATOOLS_JAR_NAME.equals(name) || expectedVersionedName.equals(name))
+            return (XDK_JAVATOOLS_NAME_JAR.equals(name) || expectedVersionedName.equals(name))
                 && hasJarExtension(file) && readXdkVersionFromJar(file) != null;
         }
 
@@ -120,6 +112,7 @@ public final class XtcPluginUtils {
             }
         }
 
+        @SuppressWarnings("unused")
         public static File checkXtcModule(final File file) {
             return checkXtcModule(file, true);
         }
@@ -152,7 +145,7 @@ public final class XtcPluginUtils {
                 }
                 return implVersion.toString();
             } catch (final IOException e) {
-                throw new XtcBuildRuntimeException(e, "Not a valid '{}': '{}'", path, JAVATOOLS_JAR_NAME);
+                throw new XtcBuildRuntimeException(e, "Not a valid '{}': '{}'", path, XDK_JAVATOOLS_NAME_JAR);
             }
         }
 

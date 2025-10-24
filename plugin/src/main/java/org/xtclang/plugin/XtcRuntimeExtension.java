@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.gradle.api.Action;
 import org.gradle.api.provider.ListProperty;
+import org.gradle.api.provider.Property;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -56,6 +57,23 @@ public interface XtcRuntimeExtension extends XtcLauncherTaskExtension {
     void setModuleNames(String... moduleNames);
 
     int size();
+
+    /**
+     * Whether to detach the XTC process and return immediately, leaving it running in the background.
+     * When true, the Gradle task will start the process and exit, allowing the build to complete
+     * while the XTC application continues running.
+     *
+     * @return property controlling detached execution
+     */
+    Property<Boolean> getDetach();
+
+    /**
+     * Whether to run multiple modules in parallel. When true and multiple modules are configured,
+     * they will be executed concurrently in separate processes. Defaults to false (sequential execution).
+     *
+     * @return property controlling parallel execution
+     */
+    Property<Boolean> getParallel();
 
     /**
      * Does this extension declare any modules to be resolved and executed?

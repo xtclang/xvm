@@ -11,6 +11,7 @@ import java.util.List;
 import static org.xtclang.plugin.XtcPluginConstants.DEFAULT_DEBUG_PORT;
 
 import org.gradle.api.Project;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.ListProperty;
@@ -30,6 +31,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     protected final Logger logger;
     protected final List<String> defaultJvmArgs;
 
+    protected final ConfigurableFileCollection modulePath;
     protected final ListProperty<@NotNull String> jvmArgs;
     protected final Property<@NotNull Boolean> debug;
     protected final Property<@NotNull Integer> debugPort;
@@ -47,6 +49,9 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         this.logger = project.getLogger();
 
         final var env = System.getenv();
+
+        // Initialize module path as an empty file collection
+        this.modulePath = objects.fileCollection();
 
         // TODO: Consider replacing the debug configuration with the debug flags inherited directly from its JavaExec extension
         //   DSL, or at least reimplementing them so that they look the same for different kinds of launchers.
@@ -69,6 +74,11 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
 
     // TODO: Sort public methods in alphabetical order for all these files, remove where just inheritance that has
     //  been added to the superclass already if any are left, and put public methods first.
+    @Override
+    public ConfigurableFileCollection getModulePath() {
+        return modulePath;
+    }
+
     @Override
     public Property<@NotNull InputStream> getStdin() {
         return stdin;
