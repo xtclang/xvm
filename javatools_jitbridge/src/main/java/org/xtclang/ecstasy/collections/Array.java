@@ -487,6 +487,15 @@ public abstract class Array
     }
 
     /**
+     * @param size  the size to store
+     */
+    protected int $size(int size) {
+        assert size >= 0 && size <= $SIZE_MASK;
+        $sizeEtc = $sizeEtc & $MUT_MASK | size;
+        return size;
+    }
+
+    /**
      * @return true iff mutating array operations are in-place; false if the array is a "persistent"
      *         data structure, such that "mutating" operations result in a new array
      */

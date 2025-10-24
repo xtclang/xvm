@@ -135,7 +135,8 @@ public class xArray$Object extends Array {
         }
 
         try {
-            $storage[size+1] = element;
+            $storage[size] = element;
+            $size(size+1);
             return this;
         } catch (ArrayIndexOutOfBoundsException e) {
             throw $oob(ctx, size);
