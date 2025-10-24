@@ -172,7 +172,7 @@ jobs:
               with:
                   setup-build: true
                   cache-read-only: false
-                  enable-debug: true
+                  enable-debug: false
 
             - name: Debug Environment (Windows)
               if: runner.os == 'Windows'
