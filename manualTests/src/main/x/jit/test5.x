@@ -10,14 +10,16 @@ module test5.examples.org {
         String[] strings = new Array<String>(3);
         strings.add("hello");
 
-        console.print(strings);
+        console.print(strings[0]);
+        strings[0] = "world";
         console.print(strings[0]);
     }
 
     void test2() {
         Char[] chars = new Array<Char>(3);
         chars.add('a');
-
+        console.print(chars[0]);
+        chars[0] = 'b';
         console.print(chars[0]);
     }
 }
