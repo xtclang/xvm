@@ -220,4 +220,31 @@ public abstract class ProjectDelegate<T, R> {
     public static String getSemanticVersion(final String projectName) {
         return "org.xtclang:" + projectName + ':' + readXdkVersion();
     }
+
+    /**
+     * Static utility to read the JDK version from the plugin's build-info.properties.
+     * This reads directly from the classpath resource without needing a ProjectDelegate instance.
+     *
+     * @return the JDK version as an integer
+     * @throws GradleException if the version cannot be read
+     */
+    public static int readJdkVersion() {
+        try (final var resourceStream = ProjectDelegate.class.getResourceAsStream(PLUGIN_BUILD_INFO_RESOURCE_PATH)) {
+            if (resourceStream == null) {
+                throw new IllegalStateException("Cannot find " + PLUGIN_BUILD_INFO_FILENAME + " in plugin JAR");
+            }
+
+            final var props = new Properties();
+            props.load(resourceStream);
+            final var version = props.getProperty("jdk.version");
+
+            if (version == null || version.isBlank()) {
+                throw new IllegalStateException("jdk.version not found in " + PLUGIN_BUILD_INFO_FILENAME);
+            }
+
+            return Integer.parseInt(version);
+        } catch (final Exception e) {
+            throw new GradleException("[plugin] FATAL: Plugin build is broken - cannot read JDK version: " + e.getMessage(), e);
+        }
+    }
 }
