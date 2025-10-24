@@ -550,7 +550,766 @@ Similar to LSP, uses JSON-RPC 2.0
 
 ---
 
-## Why DSL Representation is Beneficial
+## Real-World Examples: Language Support in Practice
+
+This section showcases how major programming languages have implemented IDE-independent language support using LSP, DAP, and TextMate grammars.
+
+### 1. Rust - rust-analyzer
+
+**Status**: ⭐ Gold standard for modern LSP implementation
+
+#### Components
+
+**LSP Server**: `rust-analyzer`
+- **Repository**: https://github.com/rust-lang/rust-analyzer
+- **Language**: Rust (self-hosted)
+- **Architecture**: Standalone LSP server
+- **Lines of Code**: ~300K LOC
+
+**TextMate Grammar**:
+- **Repository**: https://github.com/dustypomerleau/rust-syntax
+- **Used by**: VSCode, Sublime Text, Atom, etc.
+
+**Debug Adapter**: Multiple DAP implementations
+- `lldb-vscode` (LLDB-based, for native debugging)
+- `codelldb` (Popular VSCode extension)
+- `rust-gdb` (GDB wrapper)
+
+#### IDE Support
+
+| IDE | LSP Support | DAP Support | Implementation |
+|-----|-------------|-------------|----------------|
+| **VSCode** | ✅ Yes | ✅ Yes | `rust-analyzer` extension + `codelldb` |
+| **IntelliJ IDEA** | ✅ Yes | ✅ Yes | Built-in Rust plugin + rust-analyzer mode |
+| **Vim/Neovim** | ✅ Yes | ✅ Yes | Via `nvim-lspconfig` + `nvim-dap` |
+| **Emacs** | ✅ Yes | ✅ Yes | Via `lsp-mode` + `dap-mode` |
+| **Sublime Text** | ✅ Yes | ❌ Limited | Via LSP package |
+
+#### Architecture
+
+```
+┌────────────────┐
+│   VSCode       │
+│   Extension    │──────┐
+└────────────────┘      │
+                        │ JSON-RPC (stdio)
+┌────────────────┐      │
+│   IntelliJ     │      │
+│   Plugin       │──────┼────────► ┌──────────────────┐
+└────────────────┘      │          │                  │
+                        │          │  rust-analyzer   │
+┌────────────────┐      │          │  (LSP Server)    │
+│   Vim/Neovim   │──────┘          │                  │
+└────────────────┘                 └────────┬─────────┘
+                                            │
+                                            ▼
+                                   ┌──────────────────┐
+                                   │   rustc API      │
+                                   │   (Compiler)     │
+                                   └──────────────────┘
+```
+
+#### Key Features Implemented
+
+- ✅ Real-time diagnostics (compile errors/warnings)
+- ✅ Code completion with type inference
+- ✅ Go to definition/implementation
+- ✅ Find references
+- ✅ Rename refactoring
+- ✅ Inline hints (type annotations, parameter names)
+- ✅ Macro expansion visualization
+- ✅ Cargo integration (build system)
+
+#### Debugging
+
+- Uses LLVM's LLDB debugger (native code)
+- DAP adapters: `lldb-vscode`, `codelldb`
+- Supports breakpoints, stepping, variable inspection
+- Works with both debug and release builds
+
+#### Lessons Learned
+
+✅ **Successes**:
+- Self-hosted in Rust ensures dogfooding
+- Incremental compilation (salsa library) for fast responses
+- Works across all major IDEs
+- Active community contributions
+
+⚠️ **Challenges**:
+- Initial development took 2+ years to mature
+- Macro system complexity required special handling
+- Memory usage can be high for large projects
+
+---
+
+### 2. TypeScript - typescript-language-server
+
+**Status**: ⭐ Reference implementation by Microsoft
+
+#### Components
+
+**LSP Server**: `typescript-language-server`
+- **Repository**: https://github.com/typescript-language-server/typescript-language-server
+- **Language**: TypeScript (self-hosted)
+- **Architecture**: Wraps TypeScript compiler API
+- **Maintained by**: Microsoft + community
+
+**TextMate Grammar**:
+- **Repository**: Embedded in VSCode
+- **Scope**: `source.ts`, `source.tsx`
+
+**Debug Adapter**: `vscode-js-debug`
+- **Repository**: https://github.com/microsoft/vscode-js-debug
+- **Supports**: Node.js, Chrome, Edge debugging
+- **Protocol**: DAP
+
+#### IDE Support
+
+| IDE | LSP Support | DAP Support | Implementation |
+|-----|-------------|-------------|----------------|
+| **VSCode** | ✅ Yes | ✅ Yes | Native (built-in) |
+| **IntelliJ IDEA** | ✅ Yes | ✅ Yes | Built-in TypeScript support |
+| **Vim/Neovim** | ✅ Yes | ✅ Yes | Via `nvim-lspconfig` + `nvim-dap` |
+| **Emacs** | ✅ Yes | ✅ Yes | Via `lsp-mode` + `dap-mode` |
+| **Sublime Text** | ✅ Yes | ❌ Limited | Via LSP package |
+
+#### Architecture
+
+```
+┌────────────────────────────────────────┐
+│          IDE/Editor                    │
+└─────────────┬──────────────────────────┘
+              │ LSP (JSON-RPC)
+              ▼
+┌─────────────────────────────────────────┐
+│   typescript-language-server            │
+│                                         │
+│   ┌─────────────────────────────────┐  │
+│   │  TypeScript Compiler API        │  │
+│   │  - Parser                       │  │
+│   │  - Type Checker                 │  │
+│   │  - Language Service             │  │
+│   └─────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+```
+
+#### Key Features Implemented
+
+- ✅ IntelliSense (auto-completion)
+- ✅ Real-time type checking
+- ✅ Go to definition/references
+- ✅ Rename refactoring
+- ✅ Organize imports
+- ✅ Quick fixes (auto-import, etc.)
+- ✅ Signature help
+- ✅ Semantic highlighting
+
+#### Debugging
+
+- **Node.js**: Debug Adapter connects to V8 inspector protocol
+- **Browser**: Remote debugging via Chrome DevTools Protocol
+- Source maps for TypeScript → JavaScript mapping
+- Supports breakpoints, watches, call stack, step debugging
+
+#### Lessons Learned
+
+✅ **Successes**:
+- Reuses existing TypeScript compiler (no duplication)
+- Fast incremental compilation
+- Excellent source map support
+- Works with JavaScript too
+
+⚠️ **Challenges**:
+- TypeScript compiler wasn't originally designed for IDE use
+- Had to add `LanguageService` API for incremental updates
+- Large projects can be slow (tsserver memory usage)
+
+---
+
+### 3. Python - Pylance / Jedi
+
+**Status**: ⭐ Multiple competing LSP implementations
+
+#### Components
+
+**LSP Servers** (multiple options):
+
+**Option 1: Pylance** (Microsoft, closed-source core)
+- **Language**: Python + TypeScript (wrapper)
+- **Engine**: Pyright (type checker)
+- **Speed**: Fast (written in TypeScript/Node.js)
+- **Best for**: VSCode users
+
+**Option 2: Jedi** (Open-source)
+- **Repository**: https://github.com/davidhalter/jedi
+- **Language**: Pure Python
+- **Speed**: Moderate
+- **Best for**: Vim, Emacs, Sublime
+
+**Option 3: python-lsp-server** (formerly python-language-server)
+- **Repository**: https://github.com/python-lsp/python-lsp-server
+- **Language**: Pure Python
+- **Uses**: Jedi, Rope, pyflakes, etc.
+- **Best for**: Generic LSP clients
+
+**TextMate Grammar**:
+- **Repository**: https://github.com/MagicStack/MagicPython
+- **Scope**: `source.python`
+
+**Debug Adapter**: `debugpy`
+- **Repository**: https://github.com/microsoft/debugpy
+- **Based on**: Python's `pdb` + DAP wrapper
+- **Supports**: CPython debugging
+
+#### IDE Support
+
+| IDE | LSP Support | DAP Support | Implementation |
+|-----|-------------|-------------|----------------|
+| **VSCode** | ✅ Yes | ✅ Yes | Pylance + Python extension + debugpy |
+| **IntelliJ/PyCharm** | ✅ Yes | ✅ Yes | Built-in (proprietary, not LSP) |
+| **Vim/Neovim** | ✅ Yes | ✅ Yes | Jedi/python-lsp-server + nvim-dap |
+| **Emacs** | ✅ Yes | ✅ Yes | python-lsp-server + dap-mode |
+| **Sublime Text** | ✅ Yes | ❌ Limited | Via LSP package |
+
+#### Architecture (Pylance)
+
+```
+┌────────────────────────────────────────┐
+│          VSCode                        │
+└─────────────┬──────────────────────────┘
+              │ LSP (JSON-RPC)
+              ▼
+┌─────────────────────────────────────────┐
+│   Pylance (LSP Server)                  │
+│   ┌─────────────────────────────────┐  │
+│   │  Pyright (Type Checker)         │  │
+│   │  - Parser (written in TS)       │  │
+│   │  - Type inference               │  │
+│   │  - Import resolution            │  │
+│   └─────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+```
+
+#### Key Features Implemented
+
+- ✅ Code completion (with type hints)
+- ✅ Type checking (optional, via mypy/pyright)
+- ✅ Go to definition/references
+- ✅ Rename refactoring
+- ✅ Auto-import
+- ✅ Docstring on hover
+- ✅ Pytest integration
+
+#### Debugging (debugpy)
+
+- Injects debug hooks into Python interpreter
+- Supports breakpoints, conditional breakpoints
+- Variable inspection (locals, globals, closures)
+- Expression evaluation in debug context
+- Multi-threaded debugging
+- Remote debugging (attach to running process)
+
+#### Lessons Learned
+
+✅ **Successes**:
+- Multiple LSP implementations give users choice
+- Debugpy is excellent (production-quality)
+- Works well with dynamic typing
+
+⚠️ **Challenges**:
+- Dynamic typing makes static analysis hard
+- Import resolution is complex (sys.path, virtualenvs)
+- Pylance being partially closed-source is controversial
+- Performance varies widely between implementations
+
+---
+
+### 4. Go - gopls
+
+**Status**: ⭐ Official LSP server by Go team
+
+#### Components
+
+**LSP Server**: `gopls`
+- **Repository**: https://github.com/golang/tools/tree/master/gopls
+- **Language**: Go (self-hosted)
+- **Architecture**: Uses Go's official `go/ast` and `go/types` packages
+- **Maintained by**: Go team at Google
+
+**TextMate Grammar**:
+- **Repository**: https://github.com/jeff-hykin/better-go-syntax
+- **Scope**: `source.go`
+
+**Debug Adapter**: `delve` (via `vscode-go`)
+- **Repository**: https://github.com/go-delve/delve
+- **Debugger**: Delve (native Go debugger)
+- **DAP Support**: Via adapter layer
+
+#### IDE Support
+
+| IDE | LSP Support | DAP Support | Implementation |
+|-----|-------------|-------------|----------------|
+| **VSCode** | ✅ Yes | ✅ Yes | Go extension + gopls + delve |
+| **IntelliJ/GoLand** | ✅ Yes | ✅ Yes | Built-in (proprietary + gopls fallback) |
+| **Vim/Neovim** | ✅ Yes | ✅ Yes | gopls + nvim-dap-go |
+| **Emacs** | ✅ Yes | ✅ Yes | gopls + dap-mode |
+| **Sublime Text** | ✅ Yes | ❌ Limited | Via LSP package |
+
+#### Architecture
+
+```
+┌────────────────────────────────────────┐
+│          IDE/Editor                    │
+└─────────────┬──────────────────────────┘
+              │ LSP (JSON-RPC)
+              ▼
+┌─────────────────────────────────────────┐
+│   gopls (LSP Server)                    │
+│   ┌─────────────────────────────────┐  │
+│   │  Go Standard Library            │  │
+│   │  - go/parser                    │  │
+│   │  - go/ast                       │  │
+│   │  - go/types (type checker)      │  │
+│   │  - go/analysis                  │  │
+│   └─────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+```
+
+#### Key Features Implemented
+
+- ✅ Code completion
+- ✅ Go to definition/implementation/references
+- ✅ Rename refactoring
+- ✅ Code actions (extract function, etc.)
+- ✅ Inline documentation
+- ✅ Import organization
+- ✅ Error detection (via `go vet`, `staticcheck`)
+- ✅ Go modules support
+
+#### Debugging (Delve)
+
+- Native Go debugger (understands goroutines)
+- Breakpoints (including function breakpoints)
+- Goroutine visualization
+- Variable inspection (including channels, maps)
+- Expression evaluation
+- Core dump analysis
+
+#### Lessons Learned
+
+✅ **Successes**:
+- Reuses Go's standard library (go/ast, go/types)
+- Very fast (compiled language, efficient implementation)
+- Official support from Go team
+- Excellent goroutine debugging
+
+⚠️ **Challenges**:
+- Initial gopls performance was poor (improved over time)
+- Go modules added complexity
+- Delve has some limitations with optimized builds
+
+---
+
+### 5. C/C++ - clangd
+
+**Status**: ⭐ LLVM-based LSP server
+
+#### Components
+
+**LSP Server**: `clangd`
+- **Repository**: https://github.com/llvm/llvm-project/tree/main/clang-tools-extra/clangd
+- **Language**: C++
+- **Architecture**: Built on Clang compiler frontend
+- **Maintained by**: LLVM project
+
+**TextMate Grammar**:
+- **Repository**: Built into most editors (legacy TextMate grammars)
+- **Scope**: `source.c`, `source.cpp`
+
+**Debug Adapters**: Multiple options
+- `lldb-vscode` (LLDB-based)
+- `cppdbg` (Microsoft, uses GDB/LLDB)
+- `codelldb` (Popular VSCode extension)
+
+#### IDE Support
+
+| IDE | LSP Support | DAP Support | Implementation |
+|-----|-------------|-------------|----------------|
+| **VSCode** | ✅ Yes | ✅ Yes | clangd extension + cppdbg |
+| **IntelliJ/CLion** | ✅ Yes | ✅ Yes | Built-in (proprietary + clangd) |
+| **Vim/Neovim** | ✅ Yes | ✅ Yes | clangd + nvim-dap |
+| **Emacs** | ✅ Yes | ✅ Yes | clangd + dap-mode |
+| **Qt Creator** | ✅ Yes | ✅ Yes | Built-in clangd support |
+
+#### Architecture
+
+```
+┌────────────────────────────────────────┐
+│          IDE/Editor                    │
+└─────────────┬──────────────────────────┘
+              │ LSP (JSON-RPC)
+              ▼
+┌─────────────────────────────────────────┐
+│   clangd (LSP Server)                   │
+│   ┌─────────────────────────────────┐  │
+│   │  Clang Frontend (LLVM)          │  │
+│   │  - Lexer/Parser                 │  │
+│   │  - AST                          │  │
+│   │  - Sema (semantic analysis)     │  │
+│   │  - Index (cross-file analysis)  │  │
+│   └─────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+```
+
+#### Key Features Implemented
+
+- ✅ Code completion (context-aware)
+- ✅ Go to definition/declaration/references
+- ✅ Rename refactoring
+- ✅ Code actions (fix includes, etc.)
+- ✅ Hover documentation
+- ✅ Compile error diagnostics
+- ✅ Include path resolution
+- ✅ Cross-compilation support
+
+#### Debugging (LLDB)
+
+- Native debugger (part of LLVM)
+- Breakpoints (line, conditional, watchpoints)
+- Variable inspection (complex types)
+- Expression evaluation (C++ expressions)
+- Assembly-level debugging
+- Core dump analysis
+- Remote debugging
+
+#### Lessons Learned
+
+✅ **Successes**:
+- Built on production compiler (Clang)
+- Very accurate (same parser as compiler)
+- Fast incremental compilation
+- Excellent cross-platform support
+
+⚠️ **Challenges**:
+- C++ complexity (templates, macros)
+- Build system integration (compile_commands.json required)
+- Memory usage for large projects
+- Header dependencies require careful indexing
+
+---
+
+### 6. Kotlin - kotlin-language-server
+
+**Status**: ⭐ Community-driven LSP implementation
+
+#### Components
+
+**LSP Server**: `kotlin-language-server`
+- **Repository**: https://github.com/fwcd/kotlin-language-server
+- **Language**: Kotlin (self-hosted)
+- **Architecture**: Uses Kotlin compiler API
+- **Maintained by**: Community (fwcd)
+
+**TextMate Grammar**:
+- **Repository**: https://github.com/nishtahir/language-kotlin
+- **Scope**: `source.kotlin`
+
+**Debug Adapter**: Uses Java debugging
+- Via `java-debug` (Microsoft)
+- Kotlin compiles to JVM bytecode
+- Uses JDWP (Java Debug Wire Protocol)
+
+#### IDE Support
+
+| IDE | LSP Support | DAP Support | Implementation |
+|-----|-------------|-------------|----------------|
+| **VSCode** | ✅ Yes | ✅ Yes | Kotlin extension + kotlin-language-server |
+| **IntelliJ IDEA** | ✅ Yes | ✅ Yes | Built-in (JetBrains, not LSP) |
+| **Vim/Neovim** | ✅ Yes | ⚠️ Via Java | kotlin-language-server + nvim-jdtls |
+| **Emacs** | ✅ Yes | ⚠️ Via Java | kotlin-language-server + dap-mode |
+
+#### Architecture
+
+```
+┌────────────────────────────────────────┐
+│          IDE/Editor                    │
+└─────────────┬──────────────────────────┘
+              │ LSP (JSON-RPC)
+              ▼
+┌─────────────────────────────────────────┐
+│   kotlin-language-server                │
+│   ┌─────────────────────────────────┐  │
+│   │  Kotlin Compiler API            │  │
+│   │  - Parser                       │  │
+│   │  - Resolver (name resolution)   │  │
+│   │  - Type inference               │  │
+│   └─────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+```
+
+#### Key Features Implemented
+
+- ✅ Code completion
+- ✅ Go to definition/references
+- ✅ Hover information
+- ✅ Diagnostics (compile errors)
+- ⚠️ Limited refactoring (rename only)
+- ⚠️ No code actions yet
+
+#### Debugging
+
+- Debugs Kotlin via JVM bytecode
+- Uses Java debuggers (JDWP)
+- Source mapping: Kotlin → JVM bytecode
+- Breakpoints work at Kotlin source level
+- Variable names preserved (with debug info)
+
+#### Lessons Learned
+
+✅ **Successes**:
+- Community project shows LSP is accessible
+- Reuses Kotlin compiler
+- Good enough for basic usage
+
+⚠️ **Challenges**:
+- IntelliJ IDEA's built-in support is much better
+- Kotlin compiler wasn't designed for incremental IDE use
+- Limited resources (community-driven)
+- JVM debugging adds complexity
+
+---
+
+### 7. Java - Eclipse JDT.LS
+
+**Status**: ⭐ Eclipse-based LSP server
+
+#### Components
+
+**LSP Server**: `eclipse.jdt.ls`
+- **Repository**: https://github.com/eclipse-jdt/eclipse.jdt.ls
+- **Language**: Java
+- **Architecture**: Built on Eclipse JDT (Java Development Tools)
+- **Maintained by**: Eclipse Foundation + Microsoft
+
+**TextMate Grammar**:
+- **Repository**: Built into most editors
+- **Scope**: `source.java`
+
+**Debug Adapter**: `java-debug`
+- **Repository**: https://github.com/microsoft/java-debug
+- **Protocol**: DAP over JDWP
+- **Supports**: JVM debugging
+
+#### IDE Support
+
+| IDE | LSP Support | DAP Support | Implementation |
+|-----|-------------|-------------|----------------|
+| **VSCode** | ✅ Yes | ✅ Yes | Java extension pack + jdt.ls + java-debug |
+| **IntelliJ IDEA** | ✅ Yes | ✅ Yes | Built-in (JetBrains, not LSP) |
+| **Vim/Neovim** | ✅ Yes | ✅ Yes | nvim-jdtls + nvim-dap |
+| **Emacs** | ✅ Yes | ✅ Yes | lsp-java + dap-mode |
+
+#### Architecture
+
+```
+┌────────────────────────────────────────┐
+│          IDE/Editor                    │
+└─────────────┬──────────────────────────┘
+              │ LSP (JSON-RPC)
+              ▼
+┌─────────────────────────────────────────┐
+│   eclipse.jdt.ls (LSP Server)           │
+│   ┌─────────────────────────────────┐  │
+│   │  Eclipse JDT Core               │  │
+│   │  - Java Parser                  │  │
+│   │  - AST                          │  │
+│   │  - Type resolution              │  │
+│   │  - Incremental compilation      │  │
+│   └─────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+```
+
+#### Key Features Implemented
+
+- ✅ Code completion (context-aware)
+- ✅ Go to definition/implementation/references
+- ✅ Rename refactoring
+- ✅ Extract method/variable
+- ✅ Organize imports
+- ✅ Quick fixes (auto-import, etc.)
+- ✅ Formatter
+- ✅ Maven/Gradle integration
+
+#### Debugging (java-debug)
+
+- DAP adapter over JDWP
+- Breakpoints (line, conditional, exception)
+- Variable inspection (all Java types)
+- Expression evaluation (Java expressions)
+- Hot code replacement (limited)
+- Remote debugging
+- Multi-threaded debugging
+
+#### Lessons Learned
+
+✅ **Successes**:
+- Reuses mature Eclipse JDT compiler
+- Very feature-rich
+- Good incremental compilation
+- Excellent Maven/Gradle integration
+
+⚠️ **Challenges**:
+- Eclipse JDT is complex and heavyweight
+- Startup time can be slow
+- Memory usage is high
+- Java version compatibility
+
+---
+
+## Comparison Matrix: Real-World Language Support
+
+| Language | LSP Server | Written In | Reuses Compiler? | DAP Adapter | Debugger Backend | IDE Coverage | Maturity |
+|----------|------------|------------|------------------|-------------|------------------|--------------|----------|
+| **Rust** | rust-analyzer | Rust | ✅ Yes (rustc API) | lldb-vscode, codelldb | LLDB (native) | Excellent | Mature |
+| **TypeScript** | typescript-language-server | TypeScript | ✅ Yes (TSC API) | vscode-js-debug | V8 Inspector | Excellent | Mature |
+| **Python** | Pylance, Jedi, python-lsp-server | Python/TS | ⚠️ Partial | debugpy | pdb + hooks | Excellent | Mature |
+| **Go** | gopls | Go | ✅ Yes (go/ast) | delve | Delve (native) | Excellent | Mature |
+| **C/C++** | clangd | C++ | ✅ Yes (Clang) | lldb-vscode, cppdbg | LLDB/GDB | Excellent | Mature |
+| **Kotlin** | kotlin-language-server | Kotlin | ✅ Yes (kotlinc) | java-debug | JDWP | Good | Growing |
+| **Java** | eclipse.jdt.ls | Java | ✅ Yes (Eclipse JDT) | java-debug | JDWP | Excellent | Mature |
+
+---
+
+## Key Takeaways for Ecstasy
+
+### 1. **Reuse Compiler Infrastructure** ✅
+**All successful LSP servers reuse their language's compiler:**
+- Rust: uses `rustc` API
+- TypeScript: uses `tsc` API
+- Go: uses `go/ast` and `go/types`
+- C/C++: uses Clang frontend
+- Java: uses Eclipse JDT
+
+**For Ecstasy**: Reuse `org.xvm.compiler.Lexer`, `Parser`, AST, and type system ✅ Already planned
+
+### 2. **Self-Hosting is Common** ✅
+**Languages written in themselves:**
+- Rust → rust-analyzer in Rust
+- TypeScript → typescript-language-server in TypeScript
+- Go → gopls in Go
+- Kotlin → kotlin-language-server in Kotlin
+
+**For Ecstasy**: Java is fine (compiler is Java-based), but future Ecstasy LSP could be self-hosted
+
+### 3. **DAP Adapters Are Thinner Than LSP Servers** ✅
+**Debugging adapters are generally simpler:**
+- Often just protocol translation layers
+- Reuse existing debuggers (LLDB, GDB, JDWP, pdb)
+- Focus on mapping between DAP and debugger-specific protocol
+
+**For Ecstasy**: Perfect! DebugConsole already exists, just need DAP adapter ✅
+
+### 4. **TextMate Grammars Are Standard** ✅
+**Every language has a TextMate grammar:**
+- Usually community-maintained
+- Small effort (1-2 weeks typically)
+- Works across all major editors
+
+**For Ecstasy**: Create `ecstasy.tmLanguage.json` from BNF grammar ✅ Already planned
+
+### 5. **JVM Languages Leverage JDWP** 🔧
+**Kotlin and Java use JVM debugging:**
+- Compile to JVM bytecode
+- Debug via JDWP (Java Debug Wire Protocol)
+- Source mapping critical (source ↔ bytecode)
+
+**For Ecstasy**: If JIT stays as Java bytecode, can use JDWP + source maps ✅
+
+### 6. **Native Debuggers for Compiled Languages** 🔧
+**Rust, Go, C/C++ use native debuggers:**
+- LLDB (LLVM debugger) for Rust and C/C++
+- Delve (custom) for Go
+- Emit DWARF debug info in compiled code
+
+**For Ecstasy**: If JIT switches to LLVM, will need DWARF + LLDB ✅ Design for backend flexibility
+
+### 7. **Incremental Compilation Is Critical** ⚠️
+**All fast LSP servers use incremental compilation:**
+- rust-analyzer: uses `salsa` incremental framework
+- gopls: incremental via `go/types`
+- clangd: incremental via Clang's indexing
+- TypeScript: built-in incremental mode
+
+**For Ecstasy**: Must implement incremental parsing/analysis ⚠️ Important for Phase 2/3
+
+### 8. **Community vs. Official Support** 📊
+**Official support (Go, TypeScript, Java) tends to be more mature:**
+- Better integration with build tools
+- More resources
+- Faster bug fixes
+
+**Community-driven (Kotlin LSP, Jedi) works but is resource-constrained:**
+- Slower development
+- May lack advanced features
+- Still valuable!
+
+**For Ecstasy**: Official support from xtclang team is ideal ✅
+
+### 9. **Performance Matters** ⚡
+**Users expect <100ms response times:**
+- rust-analyzer: Fast (Rust performance)
+- gopls: Fast (Go performance)
+- clangd: Fast (C++ performance)
+- TypeScript: Moderate (Node.js)
+- Eclipse JDT.LS: Slower (Java, heavyweight)
+
+**For Ecstasy**: Java LSP server should be fast enough, but watch memory usage ⚠️
+
+### 10. **Multiple IDEs Work Seamlessly** ✅
+**LSP enables wide IDE support:**
+- VSCode: Always first-class (Microsoft-backed)
+- IntelliJ: Now supports LSP (2023.2+)
+- Vim/Neovim: Excellent via plugins
+- Emacs: Excellent via lsp-mode
+
+**For Ecstasy**: One LSP server → all major IDEs ✅ This is the goal
+
+---
+
+## Recommended Path for Ecstasy
+
+Based on these real-world examples, Ecstasy should follow this proven pattern:
+
+### Phase 1: TextMate Grammar (2-4 weeks)
+- ✅ Standard approach (all languages do this)
+- ✅ Low effort, high value
+- ✅ Works immediately in VSCode, Sublime, etc.
+
+### Phase 2: LSP Server in Java (6-10 weeks)
+- ✅ Reuse existing compiler (like Rust, Go, TypeScript)
+- ✅ Use Eclipse LSP4J framework (proven, used by Java LSP)
+- ✅ Focus on incremental compilation early
+- ✅ Start with diagnostics + basic completion
+
+### Phase 3: Advanced LSP Features (8-12 weeks)
+- ✅ Type-aware completion, refactoring
+- ✅ Learn from rust-analyzer's design
+- ✅ Implement indexing for cross-file analysis
+
+### Phase 4: IDE Extensions (4-6 weeks)
+- ✅ VSCode first (largest user base)
+- ✅ IntelliJ via LSP support (2023.2+)
+- ✅ Vim/Emacs via existing LSP clients
+
+### Phase 5: DAP Adapter (4-6 weeks)
+- ✅ Leverage existing DebugConsole (like java-debug over JDWP)
+- ✅ Design for backend flexibility (interpreter + JIT)
+- ✅ If JIT is Java bytecode: use JDWP
+- ✅ If JIT is LLVM: use LLDB with DWARF
+
+This matches the proven patterns from Rust, Go, TypeScript, and Java! 🎯
+
+---
 
 ### 1. Leveraging Existing Compiler Infrastructure
 
@@ -635,6 +1394,759 @@ Users expect IDE to work with **broken code**.
 - Comparison with reference implementation
 
 **Benefit**: Higher quality tooling, fewer bugs
+
+---
+
+## Kotlin-Based Reflective DSL for XTC: Advanced Meta-Programming
+
+### Overview
+
+Beyond standard IDE support, XTC/Ecstasy can leverage **Kotlin's DSL capabilities** to create powerful, type-safe tools for working with Ecstasy code. This approach uses Kotlin's advanced features to build reflective DSLs that understand and manipulate XTC structures.
+
+### What is a Reflective DSL?
+
+A **reflective DSL** is a domain-specific language that:
+1. **Reflects** the structure of the target language (XTC/Ecstasy)
+2. Provides **type-safe** APIs for working with language constructs
+3. Enables **programmatic** manipulation of code
+4. Supports **meta-programming** (code that generates/analyzes code)
+
+### Why Kotlin for XTC DSLs?
+
+Kotlin offers unique features that make it ideal for building DSLs:
+
+| Feature | Benefit for XTC DSL | Example |
+|---------|-------------------|---------|
+| **Type-safe builders** | Structured, compile-time checked APIs | Build XTC AST nodes with validation |
+| **Extension functions** | Add methods to XTC classes without modification | `XtcModule.findClasses()` |
+| **Operator overloading** | Natural syntax for DSL operations | `module["MyClass"]` |
+| **Inline functions** | Zero-overhead abstractions | Fast traversal of XTC structures |
+| **Context receivers** | Implicit context passing | Scoped DSL operations |
+| **@DslMarker** | Prevent scope pollution | Clean, unambiguous DSL syntax |
+| **Sealed classes** | Exhaustive pattern matching | Type-safe AST node handling |
+| **Delegation** | Property delegation patterns | Lazy loading of XTC metadata |
+
+---
+
+### Use Cases for XTC Kotlin DSL
+
+#### 1. Type-Safe Build Scripts (Like Gradle Kotlin DSL)
+
+**Problem**: Current build scripts lack type safety and IDE support.
+
+**Solution**: Kotlin DSL for XTC build configuration.
+
+**Example**:
+
+```kotlin
+// build.gradle.kts with XTC DSL
+xtc {
+    module("com.example.myapp") {
+        version = "1.0.0"
+
+        dependencies {
+            implementation("ecstasy.xtclang.org:0.4.4")
+            implementation("collections.xtclang.org:0.4.4")
+        }
+
+        sourceSet {
+            main {
+                xtc {
+                    srcDirs("src/main/x")
+                }
+            }
+            test {
+                xtc {
+                    srcDirs("src/test/x")
+                }
+            }
+        }
+
+        compiler {
+            strict = true
+            optimizationLevel = 2
+            emitDebugInfo = true
+        }
+    }
+}
+```
+
+**Benefits**:
+- ✅ Full IDE autocomplete
+- ✅ Compile-time validation
+- ✅ Refactoring support
+- ✅ Type-safe DSL prevents errors
+
+**Already Exists**: Gradle Kotlin DSL (gold standard)
+
+---
+
+#### 2. XTC Code Generation DSL
+
+**Problem**: Generating XTC code programmatically is error-prone with string concatenation.
+
+**Solution**: Type-safe builder DSL for XTC code.
+
+**Example**:
+
+```kotlin
+// Generate XTC code using Kotlin DSL
+val generatedModule = xtcModule("GeneratedAPI") {
+    import("ecstasy.xtclang.org")
+
+    service("UserService") {
+        annotation("@Inject")
+
+        property("database", "Database") {
+            annotation("@Inject")
+            visibility = Visibility.PRIVATE
+        }
+
+        method("findUser", returns = "User?") {
+            parameter("userId", "Int64")
+
+            body {
+                // Type-safe XTC code generation
+                +"""
+                return database.users.get(userId);
+                """.trimIndent()
+            }
+        }
+
+        method("createUser", returns = "User") {
+            parameter("name", "String")
+            parameter("email", "String")
+
+            async = true
+
+            body {
+                +"""
+                User user = new User(name, email);
+                database.users.put(user.id, user);
+                return user;
+                """.trimIndent()
+            }
+        }
+    }
+}
+
+// Emit to .x file
+generatedModule.writeTo(File("build/generated/x/GeneratedAPI.x"))
+```
+
+**Benefits**:
+- ✅ Type-safe structure validation
+- ✅ Prevents invalid XTC constructs
+- ✅ IDE support while writing generators
+- ✅ Easy to maintain and test
+
+**Similar Approach**: KotlinPoet (generates Kotlin code), JavaPoet (generates Java code)
+
+---
+
+#### 3. XTC Testing DSL
+
+**Problem**: Writing tests for XTC code requires boilerplate.
+
+**Solution**: Fluent DSL for XTC testing.
+
+**Example**:
+
+```kotlin
+// XTC test DSL
+class UserServiceTest : XtcSpec({
+
+    describe("UserService") {
+
+        val service by inject<UserService>()
+
+        it("should create a user") {
+            val user = service.createUser("Alice", "alice@example.com")
+
+            user.name shouldBe "Alice"
+            user.email shouldBe "alice@example.com"
+        }
+
+        it("should find user by id") {
+            val created = service.createUser("Bob", "bob@example.com")
+            val found = service.findUser(created.id)
+
+            found shouldNotBe null
+            found!!.name shouldBe "Bob"
+        }
+
+        context("when user does not exist") {
+            it("should return null") {
+                val found = service.findUser(999)
+                found shouldBe null
+            }
+        }
+    }
+
+}) {
+    // XTC container setup
+    container {
+        module = "com.example.test"
+        provide<Database> { mockDatabase() }
+    }
+}
+```
+
+**Benefits**:
+- ✅ Readable, behavior-driven tests
+- ✅ Type-safe assertions
+- ✅ Easy mocking of XTC services
+- ✅ Container setup in DSL
+
+**Similar Approach**: Kotest (Kotlin testing DSL), Spek (BDD framework)
+
+---
+
+#### 4. XTC Analysis and Transformation DSL
+
+**Problem**: Analyzing or transforming XTC code requires manual AST traversal.
+
+**Solution**: Declarative DSL for XTC code analysis.
+
+**Example**:
+
+```kotlin
+// Analyze XTC module
+val analysis = analyzeXtcModule("myapp.xtc") {
+
+    // Find all services
+    val services = findAll<ServiceDeclaration>()
+    println("Found ${services.size} services")
+
+    // Find all @Inject annotations
+    val injectedFields = findAll<PropertyDeclaration> {
+        hasAnnotation("@Inject")
+    }
+
+    // Check for common issues
+    validate {
+        rule("All services should be async") {
+            allServices { it.isAsync }
+        }
+
+        rule("No mutable state in services") {
+            allServices { service ->
+                service.properties.none { it.isMutable }
+            }
+        }
+
+        rule("All public methods should have documentation") {
+            allMethods { method ->
+                if (method.visibility == Visibility.PUBLIC) {
+                    method.hasDocumentation
+                } else true
+            }
+        }
+    }
+
+    // Transform: Add logging to all methods
+    transform {
+        everyMethod { method ->
+            method.prependToBody {
+                +"""
+                @Inject Console console;
+                console.print("Entering ${method.name}");
+                """.trimIndent()
+            }
+        }
+    }
+}
+
+// Report results
+analysis.violations.forEach { violation ->
+    println("❌ ${violation.rule}: ${violation.message}")
+}
+```
+
+**Benefits**:
+- ✅ Declarative analysis rules
+- ✅ Type-safe AST traversal
+- ✅ Easy to write custom linters
+- ✅ Code transformation capabilities
+
+**Similar Approach**: Detekt (Kotlin static analysis), ktlint (Kotlin linter)
+
+---
+
+#### 5. XTC Reflection and Introspection DSL
+
+**Problem**: Working with XTC type information at runtime is verbose.
+
+**Solution**: Kotlin DSL for XTC reflection.
+
+**Example**:
+
+```kotlin
+// Type-safe XTC reflection
+val userType = xtcReflect<User> {
+
+    // Introspect type structure
+    val properties = this.properties
+    val methods = this.methods
+
+    // Find specific members
+    val nameProperty = property("name")
+    val emailProperty = property("email")
+
+    // Get annotations
+    val annotations = this.annotations
+
+    // Check type characteristics
+    require(this.isClass) { "Expected a class" }
+    require(!this.isMixin) { "Should not be a mixin" }
+
+    // Get generic type arguments
+    if (this is GenericType) {
+        val typeArgs = this.typeArguments
+        println("Type arguments: $typeArgs")
+    }
+}
+
+// Create instances dynamically
+val user = userType.newInstance {
+    set("name", "Alice")
+    set("email", "alice@example.com")
+}
+
+// Invoke methods dynamically
+val result = user.invoke("toString")
+println(result)
+
+// Type-safe property access
+val userName: String = user["name"]
+val userEmail: String = user["email"]
+```
+
+**Benefits**:
+- ✅ Type-safe reflection
+- ✅ Runtime introspection
+- ✅ Dynamic invocation
+- ✅ Clean API for meta-programming
+
+**Similar Approach**: Kotlin Reflection API (`kotlin-reflect`)
+
+---
+
+### Architecture: XTC Kotlin DSL Layer
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    User Code (Kotlin)                        │
+│                                                              │
+│  Build Scripts │ Generators │ Tests │ Analysis │ Tooling    │
+└─────────────────────┬────────────────────────────────────────┘
+                      │
+                      │ Uses Kotlin DSL APIs
+                      ▼
+┌──────────────────────────────────────────────────────────────┐
+│                XTC Kotlin DSL Layer                          │
+│                                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │   Builders   │  │  Reflection  │  │   Analysis   │      │
+│  │   (Create)   │  │  (Inspect)   │  │  (Transform) │      │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘      │
+│         │                  │                  │              │
+└─────────┼──────────────────┼──────────────────┼──────────────┘
+          │                  │                  │
+          │                  │                  │
+          ▼                  ▼                  ▼
+┌──────────────────────────────────────────────────────────────┐
+│              XTC/Ecstasy Compiler API (Java)                 │
+│                                                              │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │  Lexer   │  │  Parser  │  │   AST    │  │  Type    │   │
+│  │          │─►│          │─►│          │─►│  System  │   │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Implementation Example: XTC Module Builder DSL
+
+**Core DSL Definition**:
+
+```kotlin
+@DslMarker
+annotation class XtcDsl
+
+@XtcDsl
+class XtcModuleBuilder(val name: String) {
+    private val imports = mutableListOf<String>()
+    private val classes = mutableListOf<XtcClassBuilder>()
+    private val services = mutableListOf<XtcServiceBuilder>()
+
+    var version: String = "1.0.0"
+
+    fun import(moduleName: String) {
+        imports.add(moduleName)
+    }
+
+    fun clazz(name: String, init: XtcClassBuilder.() -> Unit) {
+        val builder = XtcClassBuilder(name)
+        builder.init()
+        classes.add(builder)
+    }
+
+    fun service(name: String, init: XtcServiceBuilder.() -> Unit) {
+        val builder = XtcServiceBuilder(name)
+        builder.init()
+        services.add(builder)
+    }
+
+    fun build(): XtcModule {
+        // Convert to actual XTC AST using compiler API
+        return XtcModule(name, version, imports, classes, services)
+    }
+}
+
+@XtcDsl
+class XtcClassBuilder(val name: String) {
+    private val properties = mutableListOf<XtcProperty>()
+    private val methods = mutableListOf<XtcMethod>()
+    private val annotations = mutableListOf<String>()
+
+    var visibility: Visibility = Visibility.PUBLIC
+    var isAbstract: Boolean = false
+
+    fun annotation(name: String) {
+        annotations.add(name)
+    }
+
+    fun property(name: String, type: String, init: XtcPropertyBuilder.() -> Unit = {}) {
+        val builder = XtcPropertyBuilder(name, type)
+        builder.init()
+        properties.add(builder.build())
+    }
+
+    fun method(name: String, init: XtcMethodBuilder.() -> Unit) {
+        val builder = XtcMethodBuilder(name)
+        builder.init()
+        methods.add(builder.build())
+    }
+}
+
+@XtcDsl
+class XtcMethodBuilder(val name: String) {
+    private val parameters = mutableListOf<Pair<String, String>>()
+    private val body = StringBuilder()
+
+    var returns: String = "void"
+    var visibility: Visibility = Visibility.PUBLIC
+    var async: Boolean = false
+
+    fun parameter(name: String, type: String) {
+        parameters.add(name to type)
+    }
+
+    fun body(init: StringBuilder.() -> Unit) {
+        body.init()
+    }
+
+    fun build(): XtcMethod {
+        return XtcMethod(name, returns, parameters, body.toString(), visibility, async)
+    }
+}
+
+// Top-level DSL function
+fun xtcModule(name: String, init: XtcModuleBuilder.() -> Unit): XtcModule {
+    val builder = XtcModuleBuilder(name)
+    builder.init()
+    return builder.build()
+}
+```
+
+**Usage**:
+
+```kotlin
+val module = xtcModule("com.example.api") {
+    version = "2.0.0"
+
+    import("ecstasy.xtclang.org")
+    import("json.xtclang.org")
+
+    service("ApiService") {
+        annotation("@Inject")
+
+        property("logger", "Logger") {
+            annotation("@Inject")
+        }
+
+        method("handleRequest") {
+            returns = "Response"
+            parameter("request", "Request")
+            async = true
+
+            body {
+                appendLine("logger.info(\"Handling request: \${request}\");")
+                appendLine("return processRequest(request);")
+            }
+        }
+    }
+}
+
+// Emit to file
+module.writeTo("build/generated/x/api.x")
+```
+
+---
+
+### Languages with Similar Reflective DSL Capabilities
+
+| Language | DSL Approach | Example Use Cases | Maturity |
+|----------|--------------|-------------------|----------|
+| **Kotlin** | Type-safe builders, extension functions, inline | Gradle build scripts, Ktor routing, HTML builders | ⭐⭐⭐⭐⭐ Excellent |
+| **Scala** | Implicits, macros, operator overloading | sbt build scripts, Akka actors, Play framework | ⭐⭐⭐⭐⭐ Excellent |
+| **Ruby** | Metaprogramming, blocks, method_missing | Rake build scripts, RSpec tests, Rails routing | ⭐⭐⭐⭐ Very Good |
+| **Groovy** | AST transformations, builders, closures | Gradle (legacy), Spock tests, Jenkins pipelines | ⭐⭐⭐⭐ Very Good |
+| **Rust** | Macros (declarative and procedural) | Serde serialization, Rocket routing, test frameworks | ⭐⭐⭐⭐ Very Good |
+| **Lisp/Clojure** | Homoiconicity, macros | Code as data, meta-programming, test frameworks | ⭐⭐⭐⭐⭐ Excellent |
+| **Python** | Decorators, metaclasses, descriptors | Flask routes, pytest fixtures, Django models | ⭐⭐⭐ Good |
+| **TypeScript** | Decorators, type system | NestJS controllers, TypeORM entities | ⭐⭐⭐ Good |
+
+---
+
+### Detailed Example: Gradle Kotlin DSL (Reference Implementation)
+
+**Before (Groovy DSL)**:
+
+```groovy
+// build.gradle
+plugins {
+    id 'java'
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter:2.7.0'
+    testImplementation 'junit:junit:4.13.2'
+}
+
+task myTask {
+    doLast {
+        println 'Hello from Groovy'
+    }
+}
+```
+
+**After (Kotlin DSL)**:
+
+```kotlin
+// build.gradle.kts
+plugins {
+    java
+}
+
+dependencies {
+    implementation("org.springframework.boot:spring-boot-starter:2.7.0")
+    testImplementation("junit:junit:4.13.2")
+}
+
+tasks.register("myTask") {
+    doLast {
+        println("Hello from Kotlin")
+    }
+}
+```
+
+**Benefits Achieved**:
+- ✅ Full IDE autocomplete
+- ✅ Compile-time type checking
+- ✅ Refactoring support (rename dependencies, etc.)
+- ✅ Better performance (compiled, not interpreted)
+- ✅ Navigate to source (Ctrl+Click on function names)
+
+**Same Approach for XTC**!
+
+---
+
+### Scala Example: sbt Build DSL
+
+**Scala's DSL for builds** (similar to what XTC could have):
+
+```scala
+// build.sbt
+name := "my-project"
+version := "1.0.0"
+scalaVersion := "3.3.0"
+
+libraryDependencies ++= Seq(
+  "org.typelevel" %% "cats-core" % "2.9.0",
+  "org.scalatest" %% "scalatest" % "3.2.15" % Test
+)
+
+lazy val root = (project in file("."))
+  .settings(
+    scalacOptions ++= Seq(
+      "-deprecation",
+      "-feature",
+      "-Xfatal-warnings"
+    )
+  )
+```
+
+**Features**:
+- Type-safe settings
+- Composable configuration
+- Custom tasks via DSL
+- Compile-time validation
+
+---
+
+### Ruby Example: RSpec Testing DSL
+
+**Ruby's behavior-driven testing DSL**:
+
+```ruby
+# user_service_spec.rb
+RSpec.describe UserService do
+  let(:service) { UserService.new }
+
+  describe "#create_user" do
+    context "with valid data" do
+      it "creates a user" do
+        user = service.create_user("Alice", "alice@example.com")
+
+        expect(user.name).to eq("Alice")
+        expect(user.email).to eq("alice@example.com")
+      end
+    end
+
+    context "with invalid email" do
+      it "raises an error" do
+        expect {
+          service.create_user("Bob", "invalid-email")
+        }.to raise_error(ValidationError)
+      end
+    end
+  end
+end
+```
+
+**Why This Works**:
+- Ruby's blocks (closures)
+- Metaprogramming (`describe`, `it`, `let` are DSL methods)
+- Method chaining (`expect(...).to`)
+- Natural language-like syntax
+
+**XTC Could Have Similar Testing DSL** (via Kotlin)!
+
+---
+
+### Rust Example: Procedural Macros for DSLs
+
+**Rust's macro-based DSL** (Serde for serialization):
+
+```rust
+use serde::{Serialize, Deserialize};
+
+#[derive(Serialize, Deserialize, Debug)]
+struct User {
+    name: String,
+    email: String,
+    #[serde(default)]
+    age: Option<u32>,
+}
+
+fn main() {
+    let user = User {
+        name: "Alice".to_string(),
+        email: "alice@example.com".to_string(),
+        age: Some(30),
+    };
+
+    let json = serde_json::to_string(&user).unwrap();
+    println!("{}", json);
+}
+```
+
+**How It Works**:
+- `#[derive]` macro generates serialization code at compile time
+- Type-safe, zero-cost abstraction
+- Compile-time errors if structure doesn't match
+
+**XTC Could Use Kotlin Annotations + Code Generation** for similar effects!
+
+---
+
+### Benefits Summary: Why Kotlin DSL for XTC?
+
+| Benefit | Description | Impact |
+|---------|-------------|--------|
+| **Type Safety** | Compile-time validation of XTC structures | ⭐⭐⭐⭐⭐ Critical |
+| **IDE Support** | Full autocomplete, navigation, refactoring | ⭐⭐⭐⭐⭐ Critical |
+| **Readability** | Natural, declarative syntax | ⭐⭐⭐⭐ High |
+| **Maintainability** | Easy to change, test, and evolve | ⭐⭐⭐⭐ High |
+| **Reusability** | Share DSL code across projects | ⭐⭐⭐⭐ High |
+| **Performance** | Compiled Kotlin, no runtime overhead | ⭐⭐⭐ Medium |
+| **Interop** | Works with existing Java/Kotlin tools | ⭐⭐⭐⭐ High |
+| **Testing** | DSL code itself is testable | ⭐⭐⭐⭐ High |
+
+---
+
+### Recommended Approach for XTC
+
+**Phase 1: Build Configuration DSL** (Like Gradle Kotlin DSL)
+- Replace string-based build configs with type-safe DSL
+- Gradle plugin with Kotlin DSL support
+- IDE autocomplete for XTC-specific configuration
+
+**Phase 2: Code Generation DSL** (Like KotlinPoet)
+- Type-safe builders for XTC AST nodes
+- Generate XTC code from templates
+- Use in annotation processors, code generators
+
+**Phase 3: Testing DSL** (Like Kotest)
+- Fluent API for XTC testing
+- Behavior-driven syntax
+- Easy mocking and container setup
+
+**Phase 4: Analysis & Transformation DSL** (Like Detekt)
+- Static analysis rules as DSL
+- Code transformation capabilities
+- Custom linting and refactoring
+
+**Phase 5: Reflection & Introspection DSL** (Like kotlin-reflect)
+- Runtime type information
+- Dynamic invocation
+- Meta-programming capabilities
+
+---
+
+### Implementation Checklist
+
+For creating a Kotlin DSL for XTC:
+
+**Core Infrastructure**:
+- [ ] Kotlin wrapper API around XTC compiler (Java)
+- [ ] DSL marker annotations (`@XtcDsl`)
+- [ ] Builder classes for XTC constructs
+- [ ] Extension functions for common operations
+
+**Type Safety**:
+- [ ] Sealed classes for XTC AST nodes
+- [ ] Type-safe property delegates
+- [ ] Compile-time validation
+
+**IDE Support**:
+- [ ] IntelliJ IDEA plugin for DSL support
+- [ ] Syntax highlighting in DSL blocks
+- [ ] Autocomplete for DSL methods
+
+**Testing**:
+- [ ] Unit tests for DSL builders
+- [ ] Integration tests with XTC compiler
+- [ ] Example projects using DSL
+
+**Documentation**:
+- [ ] API documentation (KDoc)
+- [ ] Tutorial and examples
+- [ ] Migration guide from current approach
 
 ---
 
@@ -1648,7 +3160,7 @@ We can provide a **world-class development experience** for Ecstasy developers a
 - Enables incremental compilation
 - Supports advanced IDE features
 
-**Major Discovery**: The existence of `DebugConsole.java` **significantly reduces** the complexity of Phase 5:
+**The existence of `DebugConsole.java`significantly reduces the complexity of Phase 5**:
 - 60-70% of debugging functionality already implemented
 - Only need DAP protocol adapter (4-6 weeks instead of 8-12 weeks)
 - Saves approximately **6 weeks** of development time
