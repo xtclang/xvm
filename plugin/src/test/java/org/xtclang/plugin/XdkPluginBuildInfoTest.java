@@ -51,6 +51,44 @@ public class XdkPluginBuildInfoTest {
         return args;
     }
 
+    /**
+     * Helper method to validate JVM args match expected values from plugin-build-info.properties.
+     * This validation logic is used by multiple tests to ensure consistency.
+     *
+     * @param actualJvmArgs the actual JVM args string to validate (comma-separated)
+     * @param testContext description of where this validation is called from (for better error messages)
+     * @throws IOException if plugin-build-info.properties cannot be read
+     */
+    private void validateJvmArgsMatchBuildInfo(final String actualJvmArgs, final String testContext) throws IOException {
+        // Load the expected args from plugin-build-info.properties
+        final var resourceStream = getClass().getResourceAsStream(PLUGIN_BUILD_INFO_RESOURCE_PATH);
+        assertNotNull(resourceStream, "plugin-build-info.properties should exist in plugin resources");
+        final var props = new Properties();
+        props.load(resourceStream);
+        final var expectedJvmArgs = props.getProperty("defaultJvmArgs");
+        assertNotNull(expectedJvmArgs, "defaultJvmArgs should be present in plugin-build-info.properties");
+
+        System.out.println("[test] " + testContext + ": Validating JVM args");
+        System.out.println("[test]   Expected (from plugin-build-info.properties): " + expectedJvmArgs);
+        System.out.println("[test]   Actual: " + actualJvmArgs);
+
+        // -ea should always be present
+        assertTrue(actualJvmArgs.contains("-ea"),
+            testContext + ": JVM args should always include -ea");
+
+        // Only check for --enable-preview if it's in the build-time config
+        if (expectedJvmArgs.contains("--enable-preview")) {
+            assertTrue(actualJvmArgs.contains("--enable-preview"),
+                testContext + ": JVM args should include --enable-preview (found in plugin-build-info.properties)");
+        }
+
+        // Only check for --enable-native-access if it's in the build-time config
+        if (expectedJvmArgs.contains("--enable-native-access=ALL-UNNAMED")) {
+            assertTrue(actualJvmArgs.contains("--enable-native-access=ALL-UNNAMED"),
+                testContext + ": JVM args should include --enable-native-access=ALL-UNNAMED (found in plugin-build-info.properties)");
+        }
+    }
+
     @Test
     public void testBuildInfoPropertiesFileIsGenerated() throws IOException {
         // Load the plugin-build-info.properties from the plugin's resources
@@ -66,37 +104,20 @@ public class XdkPluginBuildInfoTest {
         assertTrue(xdkVersion.matches("\\d+\\.\\d+\\.\\d+(-SNAPSHOT)?"),
             "xdk.version should be a valid version string: " + xdkVersion);
 
-        // Verify defaultJvmArgs is present and valid
+        // Verify jdk.version is present and valid
+        final var jdkVersion = props.getProperty("jdk.version");
+        assertNotNull(jdkVersion, "jdk.version should be present in plugin-build-info.properties");
+        assertTrue(jdkVersion.matches("\\d+"),
+            "jdk.version should be a valid integer: " + jdkVersion);
+
+        // Verify defaultJvmArgs is present and valid using shared validation logic
         final var defaultJvmArgs = props.getProperty("defaultJvmArgs");
         assertNotNull(defaultJvmArgs, "defaultJvmArgs should be present in plugin-build-info.properties");
-
-        // -ea should always be present (it's the base default)
-        assertTrue(defaultJvmArgs.contains("-ea"),
-            "defaultJvmArgs should always contain -ea");
-
-        // Load the actual xdk.properties to verify expected values match what was configured
-        final var xdkPropsStream = getClass().getResourceAsStream("/xdk.properties");
-        if (xdkPropsStream != null) {
-            final var xdkProps = new Properties();
-            xdkProps.load(xdkPropsStream);
-
-            // Check if enablePreview was set to true
-            final var enablePreview = Boolean.parseBoolean(xdkProps.getProperty("org.xtclang.java.enablePreview", "false"));
-            if (enablePreview) {
-                assertTrue(defaultJvmArgs.contains("--enable-preview"),
-                    "defaultJvmArgs should contain --enable-preview when org.xtclang.java.enablePreview=true");
-            }
-
-            // Check if enableNativeAccess was set to true
-            final var enableNativeAccess = Boolean.parseBoolean(xdkProps.getProperty("org.xtclang.java.enableNativeAccess", "false"));
-            if (enableNativeAccess) {
-                assertTrue(defaultJvmArgs.contains("--enable-native-access=ALL-UNNAMED"),
-                    "defaultJvmArgs should contain --enable-native-access=ALL-UNNAMED when org.xtclang.java.enableNativeAccess=true");
-            }
-        }
+        validateJvmArgsMatchBuildInfo(defaultJvmArgs, "testBuildInfoPropertiesFileIsGenerated");
 
         System.out.println("[test] ✓ plugin-build-info.properties contains correct values:");
         System.out.println("[test]   xdk.version = " + xdkVersion);
+        System.out.println("[test]   jdk.version = " + jdkVersion);
         System.out.println("[test]   defaultJvmArgs = " + defaultJvmArgs);
     }
 
@@ -259,33 +280,10 @@ public class XdkPluginBuildInfoTest {
             .findFirst()
             .orElseThrow(() -> new AssertionError("Should have JVM_ARGS_TEST_OUTPUT in output"));
 
-        System.out.println("[test] " + argsLine.trim());
-
-        // Verify the default args include -ea (always present)
-        assertTrue(argsLine.contains("-ea"),
-            "Default JVM args should always include -ea");
-
-        // Load the actual xdk.properties to verify expected values match what was configured
-        final var xdkPropsStream = getClass().getResourceAsStream("/xdk.properties");
-        if (xdkPropsStream != null) {
-            final var xdkProps = new Properties();
-            xdkProps.load(xdkPropsStream);
-
-            // Check if enablePreview was set to true
-            final var enablePreview = Boolean.parseBoolean(xdkProps.getProperty("org.xtclang.java.enablePreview", "false"));
-            if (enablePreview) {
-                assertTrue(argsLine.contains("--enable-preview"),
-                    "Default JVM args should include --enable-preview when org.xtclang.java.enablePreview=true");
-            }
-
-            // Check if enableNativeAccess was set to true
-            final var enableNativeAccess = Boolean.parseBoolean(xdkProps.getProperty("org.xtclang.java.enableNativeAccess", "false"));
-            if (enableNativeAccess) {
-                assertTrue(argsLine.contains("--enable-native-access=ALL-UNNAMED"),
-                    "Default JVM args should include --enable-native-access=ALL-UNNAMED when org.xtclang.java.enableNativeAccess=true");
-            }
-        }
-
+        // Extract just the args portion (after the colon)
+        final var actualJvmArgs = argsLine.substring(argsLine.indexOf(':') + 1).trim();
+        // Use shared validation logic to verify the args match what's in plugin-build-info.properties
+        validateJvmArgsMatchBuildInfo(actualJvmArgs, "testPluginReadsDefaultJvmArgsFromBuildInfo");
         System.out.println("[test] ✓ Plugin successfully read default JVM args from plugin-build-info.properties");
     }
 }

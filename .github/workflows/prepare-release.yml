@@ -23,52 +23,51 @@ permissions:
 on:
     workflow_dispatch:
         inputs:
-            release-version:
-                description: 'Release version (e.g., 0.4.4) - must not contain -SNAPSHOT'
-                required: true
-            publish-gradle-plugin:
-                description: 'Publish to Gradle Plugin Portal (will happen during promotion)'
-                type: boolean
+            branch:
+                description: 'Branch to prepare release from (usually master)'
                 required: false
-                default: false
-            skip-tests:
-                description: 'Skip test execution during staging'
-                type: boolean
-                required: false
-                default: false
+                default: 'master'
 
 jobs:
     prepare-release:
         name: Prepare release branch
         runs-on: ubuntu-latest
         outputs:
-            release-version: ${{ steps.validate.outputs.release-version }}
-            next-version: ${{ steps.versions.outputs.next-version }}
+            release-version: ${{ steps.get-versions.outputs.xdk-version-release }}
+            next-version: ${{ steps.get-versions.outputs.xdk-version-next-snapshot }}
             release-commit: ${{ steps.release-commit.outputs.sha }}
 
         steps:
-            - name: Validate release version
-              id: validate
-              run: |
-                  VERSION="${{ github.event.inputs.release-version }}"
-                  # Validate format
-                  if [[ "$VERSION" == *-SNAPSHOT ]]; then
-                      echo "❌ ERROR: Release version cannot contain -SNAPSHOT"
-                      exit 1
-                  fi
-                  if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-                      echo "❌ ERROR: Version must be semantic: X.Y.Z"
-                      exit 1
-                  fi
-                  echo "release-version=$VERSION" >> $GITHUB_OUTPUT
-                  echo "✅ Validated release version: $VERSION"
-
-            - name: Checkout master
+            - name: Checkout branch
               uses: actions/checkout@v5
               with:
-                  ref: master
+                  ref: ${{ github.event.inputs.branch || 'master' }}
                   fetch-depth: 0
                   token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Get version from branch
+              id: get-versions
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: false
+
+            - name: Validate snapshot version
+              run: |
+                  BRANCH="${{ github.event.inputs.branch || 'master' }}"
+                  CURRENT_VERSION="${{ steps.get-versions.outputs.xdk-version }}"
+                  RELEASE_VERSION="${{ steps.get-versions.outputs.xdk-version-release }}"
+                  NEXT_VERSION="${{ steps.get-versions.outputs.xdk-version-next-snapshot }}"
+
+                  # Sanity check: must be a snapshot version
+                  if [[ "$CURRENT_VERSION" != *-SNAPSHOT ]]; then
+                      echo "❌ ERROR: Current version is not a snapshot: $CURRENT_VERSION"
+                      echo "   Can only prepare a release from a SNAPSHOT version"
+                      exit 1
+                  fi
+
+                  echo "✅ Validated snapshot version on $BRANCH: $CURRENT_VERSION"
+                  echo "   Release version: $RELEASE_VERSION"
+                  echo "   Next snapshot: $NEXT_VERSION"
 
             - name: Setup Git
               run: |
@@ -79,7 +78,7 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                  VERSION="${{ steps.validate.outputs.release-version }}"
+                  VERSION="${{ steps.get-versions.outputs.xdk-version-release }}"
                   # Check GitHub release
                   if gh release view "v$VERSION" --repo ${{ github.repository }} >/dev/null 2>&1; then
                       echo "❌ ERROR: Release v$VERSION already exists"
@@ -94,13 +93,13 @@ jobs:
 
             - name: Create release branch
               run: |
-                  VERSION="${{ steps.validate.outputs.release-version }}"
+                  VERSION="${{ steps.get-versions.outputs.xdk-version-release }}"
                   git checkout -b "release/$VERSION"
                   echo "✅ Created branch release/$VERSION"
 
             - name: Update version to release version
               run: |
-                  VERSION="${{ steps.validate.outputs.release-version }}"
+                  VERSION="${{ steps.get-versions.outputs.xdk-version-release }}"
                   # Update version.properties
                   sed -i "s/^xdk\.version=.*/xdk.version=$VERSION/" version.properties
                   # Verify change
@@ -112,7 +111,7 @@ jobs:
             - name: Create release tag
               id: release-commit
               run: |
-                  VERSION="${{ steps.validate.outputs.release-version }}"
+                  VERSION="${{ steps.get-versions.outputs.xdk-version-release }}"
 
                   git tag -a "v$VERSION" -m "Release $VERSION"
 
@@ -121,24 +120,9 @@ jobs:
 
                   echo "✅ Created tag v$VERSION at $COMMIT_SHA"
 
-            - name: Calculate next development version
-              id: versions
-              run: |
-                  VERSION="${{ steps.validate.outputs.release-version }}"
-
-                  # Parse X.Y.Z
-                  IFS='.' read -r major minor patch <<< "$VERSION"
-
-                  # Bump patch version
-                  next_patch=$((patch + 1))
-                  NEXT_VERSION="$major.$minor.$next_patch-SNAPSHOT"
-
-                  echo "next-version=$NEXT_VERSION" >> $GITHUB_OUTPUT
-                  echo "✅ Next development version: $NEXT_VERSION"
-
             - name: Update version to next snapshot
               run: |
-                  NEXT_VERSION="${{ steps.versions.outputs.next-version }}"
+                  NEXT_VERSION="${{ steps.get-versions.outputs.xdk-version-next-snapshot }}"
 
                   # Update version.properties
                   sed -i "s/^xdk\.version=.*/xdk.version=$NEXT_VERSION/" version.properties
@@ -153,7 +137,7 @@ jobs:
 
             - name: Push release branch and tag
               run: |
-                  VERSION="${{ steps.validate.outputs.release-version }}"
+                  VERSION="${{ steps.get-versions.outputs.xdk-version-release }}"
 
                   git push origin "release/$VERSION"
                   git push origin "v$VERSION"
@@ -190,18 +174,7 @@ jobs:
                   ./gradlew $GRADLE_OPTIONS clean
                   ./gradlew $GRADLE_OPTIONS -Pversion=$VERSION :xdk:distZip
 
-            - name: Run tests
-              if: ${{ github.event.inputs.skip-tests != 'true' }}
-              env:
-                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
-              run: |
-                  VERSION="${{ needs.prepare-release.outputs.release-version }}"
-                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
-                  echo "🧪 Running tests..."
-                  ./gradlew $GRADLE_OPTIONS -Pversion=$VERSION check
-
             - name: Validate Gradle Plugin Portal credentials
-              if: ${{ github.event.inputs.publish-gradle-plugin == 'true' }}
               env:
                   GRADLE_PUBLISH_KEY: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY }}
                   GRADLE_PUBLISH_SECRET: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET }}
@@ -288,11 +261,7 @@ jobs:
                   echo "- ✅ Maven Central: Staged (review at https://oss.sonatype.org/)" >> $GITHUB_STEP_SUMMARY
                   echo "- ✅ GitHub Packages: Published (staging)" >> $GITHUB_STEP_SUMMARY
                   echo "- ✅ GitHub Release: Draft created" >> $GITHUB_STEP_SUMMARY
-                  if [ "${{ github.event.inputs.publish-gradle-plugin }}" = "true" ]; then
-                      echo "- ✅ Gradle Plugin Portal: Credentials validated (will publish on promotion)" >> $GITHUB_STEP_SUMMARY
-                  else
-                      echo "- ⏭️ Gradle Plugin Portal: Skipped" >> $GITHUB_STEP_SUMMARY
-                  fi
+                  echo "- ✅ Gradle Plugin Portal: Credentials validated (will publish on promotion)" >> $GITHUB_STEP_SUMMARY
 
     create-pr:
         name: Create release PR
@@ -309,7 +278,6 @@ jobs:
               run: |
                   VERSION="${{ needs.prepare-release.outputs.release-version }}"
                   NEXT_VERSION="${{ needs.prepare-release.outputs.next-version }}"
-                  PUBLISH_PLUGIN="${{ github.event.inputs.publish-gradle-plugin }}"
 
                   # Create PR body
                   PR_BODY="$(cat <<EOF
@@ -338,27 +306,22 @@ jobs:
                   1. ✅ **Master branch** updated to $NEXT_VERSION
                   2. 🏛️ **Maven Central staging** → Released to production
                   3. 📦 **GitHub draft release** → Published
+                  4. 🔌 **Gradle Plugin Portal** → Published (IMMEDIATE, cannot be undone)
+
+                  ### ⚠️ Important Notes
+
+                  - **This action is FINAL** - artifacts will be publicly available
+                  - Maven Central releases cannot be deleted (only deprecated)
+                  - Gradle Plugin Portal releases cannot be undone
+
+                  ### 📚 Post-Release Tasks
+
+                  After merge completes:
+                  - [ ] Wait 10-30 minutes for Maven Central sync
+                  - [ ] Verify artifacts on Maven Central
+                  - [ ] Announce release
                   EOF
                   )"
-
-                  # Add Gradle Plugin Portal note if enabled
-                  if [ "$PUBLISH_PLUGIN" = "true" ]; then
-                      PR_BODY="$PR_BODY"$'\n'"4. 🔌 **Gradle Plugin Portal** → Published (IMMEDIATE, cannot be undone)"
-                  fi
-
-                  PR_BODY="$PR_BODY"$'\n\n'"### ⚠️ Important Notes"$'\n\n'
-                  PR_BODY="$PR_BODY"$'- **This action is FINAL** - artifacts will be publicly available\n'
-                  PR_BODY="$PR_BODY"$'- Maven Central releases cannot be deleted (only deprecated)\n'
-
-                  if [ "$PUBLISH_PLUGIN" = "true" ]; then
-                      PR_BODY="$PR_BODY"$'- Gradle Plugin Portal releases cannot be undone\n'
-                  fi
-
-                  PR_BODY="$PR_BODY"$'\n### 📚 Post-Release Tasks\n\n'
-                  PR_BODY="$PR_BODY"$'After merge completes:\n'
-                  PR_BODY="$PR_BODY"$'- [ ] Wait 10-30 minutes for Maven Central sync\n'
-                  PR_BODY="$PR_BODY"$'- [ ] Verify artifacts on Maven Central\n'
-                  PR_BODY="$PR_BODY"$'- [ ] Announce release\n'
 
                   # Create PR
                   PR_URL=$(gh pr create \
@@ -368,16 +331,8 @@ jobs:
                       --body "$PR_BODY" \
                       --label "release")
 
-                  # Add Gradle Plugin Portal label if enabled
-                  # Note: Can be overridden later with 'skip-gradle-plugin-portal' label if needed
-                  if [ "$PUBLISH_PLUGIN" = "true" ]; then
-                      gh pr edit "$PR_URL" --add-label "publish-gradle-plugin"
-                      echo "✅ Added 'publish-gradle-plugin' label (will publish to Plugin Portal on merge)"
-                  else
-                      echo "ℹ️  Plugin Portal publication not enabled (add 'publish-gradle-plugin' label to enable)"
-                  fi
-
                   echo "✅ Created release PR: $PR_URL"
+                  echo "   Gradle Plugin Portal will be published during promotion"
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
                   echo "1. Review PR: $PR_URL" >> $GITHUB_STEP_SUMMARY

@@ -5,6 +5,7 @@ plugins {
 }
 
 private val defaultJvmArgs: Provider<List<String>> = extensions.getByName<Provider<List<String>>>("defaultJvmArgs")
+private val jdkVersionProvider = xdkProperties.int("org.xtclang.java.jdk")
 
 // Generate resource file with build-time configuration
 val generatePluginResources by tasks.registering {
@@ -13,20 +14,23 @@ val generatePluginResources by tasks.registering {
     val xdkVersionProvider = provider { version.toString() }
     inputs.property("defaultJvmArgs", defaultJvmArgs)
     inputs.property("xdkVersion", xdkVersionProvider)
+    inputs.property("jdkVersion", jdkVersionProvider)
     outputs.file(buildInfoFile)
     doLast {
         val jvmArgs = defaultJvmArgs.get()
         val xdkVersion = xdkVersionProvider.get()
+        val jdkVersion = jdkVersionProvider.get()
         // Generate buildInfo.properties with all build-time configuration
         buildInfoFile.get().asFile.apply {
             parentFile.mkdirs()
             writeText("""
                 # Auto-generated build information
                 xdk.version=$xdkVersion
+                jdk.version=$jdkVersion
                 defaultJvmArgs=${jvmArgs.joinToString(",")}
                 """.trimIndent())
         }
-        logger.info("[plugin] Generated plugin-build-info.properties with xdk.version: $xdkVersion, defaultJvmArgs: $jvmArgs")
+        logger.info("[plugin] Generated plugin-build-info.properties with xdk.version: $xdkVersion, jdk.version: $jdkVersion, defaultJvmArgs: $jvmArgs")
     }
 }
 

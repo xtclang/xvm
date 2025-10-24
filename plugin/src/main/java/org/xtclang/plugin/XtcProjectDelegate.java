@@ -53,6 +53,7 @@ import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Copy;
+import org.gradle.jvm.toolchain.JavaLanguageVersion;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.SourceSetOutput;
@@ -108,6 +109,13 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
     private void applyJavaPlugin() {
         final var pluginManager = project.getPluginManager();
         pluginManager.apply(JavaPlugin.class);
+
+        // Configure Java toolchain to match the JDK version from plugin-build-info.properties
+        final var jdkVersion = readJdkVersion();
+        final var javaExtension = getJavaExtensionContainer(project);
+        javaExtension.getToolchain().getLanguageVersion().set(JavaLanguageVersion.of(jdkVersion));
+        logger.info("[plugin] Configured Java toolchain to JDK {} (from plugin build-info)", jdkVersion);
+
         // At the moment we piggyback on the extended build LifeCycle provided
         // by the JavaPlugin, as well as the source sets, and other things that
         // should really be language independent in Gradle, but arent (yet).
