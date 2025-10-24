@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 //   command line properties, project properties/args to control which tasks to run.
 public class SimpleXtcPluginTest {
 
+    @SuppressWarnings("SameParameterValue")
     private static Project newProject(final String name) {
         final var project = ProjectBuilder.builder().withName(name).build();
         project.setGroup("org.xtclang");

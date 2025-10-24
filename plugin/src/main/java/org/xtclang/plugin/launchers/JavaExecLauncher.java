@@ -112,15 +112,15 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
          * we keep this code here for now. It will very likely go away in the future, and assume and assert that
          * there is only one configuration available to consume, containing the javatools.jar.
          */
+        // NOTE: The projectVersion is resolved to whatever "version" is if we are not building the XKD does that work?
         final String artifactVersion = projectVersion.get();
         final var javaToolsFromConfig = javaToolsConfig.get().filter(file -> FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
         final var javaToolsFromXdk = xdkFileTree.get().filter(file -> FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
 
-        logger.info("""            
-                [plugin] javaToolsFromConfig files: {}
-                [plugin] javaToolsFromXdk files: {}
+        logger.info("""
+                [plugin] [java_exec_launcher] javaToolsFromConfig files: {}
+                [plugin] [java_exec_launcher] javaToolsFromXdk files: {}
                 """.trim(), javaToolsFromConfig.getFiles(), javaToolsFromXdk.getFiles());
-
         final File resolvedFromConfig = javaToolsFromConfig.isEmpty() ? null : javaToolsFromConfig.getSingleFile();
         final File resolvedFromXdk = javaToolsFromXdk.isEmpty() ? null : javaToolsFromXdk.getSingleFile();
         if (resolvedFromConfig == null && resolvedFromXdk == null) {

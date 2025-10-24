@@ -31,6 +31,7 @@ The `-PallowMultipleTasks=true` override exists but is reserved for tested workf
 # Code Style Rules (UNBREAKABLE)
 1. ALWAYS add a newline at the end of every file
 2. NEVER use star imports (import foo.*) - always use explicit imports
+3. NEVER use fully qualified Java package names in the Java code. Always import, so that i.e `org.gradle.api.model.ObjectFactory` is just `ObjectFactory`
 
 ### Safe Approach Options:
 

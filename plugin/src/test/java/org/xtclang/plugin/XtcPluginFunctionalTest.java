@@ -45,34 +45,6 @@ class XtcPluginFunctionalTest {
     }
 
     /**
-     * Test that the plugin can compile a simple XTC module and produce a .xtc file.
-     */
-    @Test
-    void testCompileSimpleXtcModule() throws IOException {
-        setupRealXtcProject();
-        createSimpleXtcModule("HelloWorld", """
-            module HelloWorld {
-                void run() {
-                    @Inject Console console;
-                    console.print("Hello from XTC!");
-                }
-            }
-            """);
-
-        BuildResult result = runGradle("compileXtc", "--info");
-
-        assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(result.task(":compileXtc")).getOutcome(),
-            "Compilation should succeed");
-
-        // Verify the .xtc file was created
-        Path xtcModulePath = testProjectDir.resolve("build/xtc/main/lib/HelloWorld.xtc");
-        assertTrue(Files.exists(xtcModulePath),
-            "Compiled .xtc module should exist at: " + xtcModulePath);
-        assertTrue(Files.size(xtcModulePath) > 0,
-            "Compiled module should not be empty");
-    }
-
-    /**
      * Test that the plugin can compile and run a simple XTC module.
      */
     @Test
@@ -201,10 +173,8 @@ class XtcPluginFunctionalTest {
         assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(result.task(":compileXtc")).getOutcome());
 
         // Verify both modules were compiled
-        assertTrue(Files.exists(testProjectDir.resolve("build/xtc/main/lib/ModuleA.xtc")),
-            "ModuleA.xtc should exist");
-        assertTrue(Files.exists(testProjectDir.resolve("build/xtc/main/lib/ModuleB.xtc")),
-            "ModuleB.xtc should exist");
+        assertTrue(Files.exists(testProjectDir.resolve("build/xtc/main/lib/ModuleA.xtc")), "ModuleA.xtc should exist");
+        assertTrue(Files.exists(testProjectDir.resolve("build/xtc/main/lib/ModuleB.xtc")), "ModuleB.xtc should exist");
     }
 
     /**
@@ -225,8 +195,7 @@ class XtcPluginFunctionalTest {
         // First run - store configuration cache
         BuildResult firstRun = runGradle("compileXtc", "--configuration-cache", "--info");
         assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(firstRun.task(":compileXtc")).getOutcome());
-        assertTrue(firstRun.getOutput().contains("Configuration cache entry stored") ||
-                  firstRun.getOutput().contains("Configuration cache entry reused"),
+        assertTrue(firstRun.getOutput().contains("Configuration cache entry stored") || firstRun.getOutput().contains("Configuration cache entry reused"),
             "Should store or reuse configuration cache");
 
         // Second run - reuse configuration cache

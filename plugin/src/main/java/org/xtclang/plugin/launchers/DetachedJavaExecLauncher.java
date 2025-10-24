@@ -6,9 +6,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.gradle.api.GradleException;
+import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.FileTree;
 import org.gradle.api.logging.Logger;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Provider;
 import org.gradle.process.ExecOperations;
 import org.gradle.process.ExecResult;

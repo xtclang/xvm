@@ -95,6 +95,11 @@ tasks.withType<Javadoc>().configureEach {
     // TODO: Write JavaDocs for plugin.
 }
 
+// Enable lint warnings specifically for the plugin project
+tasks.withType<JavaCompile>().configureEach {
+    options.compilerArgs.add("-Xlint:all")
+}
+
 
 tasks.withType<Jar>().configureEach {
     val taskName = name

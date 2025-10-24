@@ -65,7 +65,7 @@ public class LauncherCommandConstructionTest {
         assertEquals("-cp", command.get(1), "Classpath flag should immediately follow java when no JVM args");
         assertEquals(classpath, command.get(2));
         assertEquals(mainClass, command.get(3));
-        assertEquals(programArgs.get(0), command.get(4));
+        assertEquals(programArgs.getFirst(), command.get(4));
     }
 
     @Test
@@ -123,7 +123,7 @@ public class LauncherCommandConstructionTest {
 
         // Assert
         assertEquals(1, command.size(), "Command should only have executable");
-        assertEquals(commandName, command.get(0));
+        assertEquals(commandName, command.getFirst());
     }
 
     @Test

@@ -8,13 +8,16 @@ import java.util.List;
 
 import org.gradle.api.logging.Logger;
 import org.gradle.process.ExecResult;
-import org.gradle.process.internal.ExecException;
+import org.gradle.process.ProcessExecutionException;
+
 
 /**
  * Base class for launchers that run processes in detached mode.
  * Provides common functionality for starting background processes and managing their lifecycle.
  */
 public abstract class DetachedLauncher {
+
+    protected static final int DETACH_AFTER = 0;
 
     /**
      * Mock ExecResult that indicates successful process start (exit value 0).
@@ -27,12 +30,12 @@ public abstract class DetachedLauncher {
         }
 
         @Override
-        public ExecResult assertNormalExitValue() throws ExecException {
+        public ExecResult assertNormalExitValue() throws ProcessExecutionException {
             return this;
         }
 
         @Override
-        public ExecResult rethrowFailure() throws ExecException {
+        public ExecResult rethrowFailure() throws ProcessExecutionException {
             return this;
         }
     };

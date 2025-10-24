@@ -15,13 +15,9 @@ import java.nio.file.Files;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-
-import org.gradle.api.Project;
-import org.gradle.api.provider.Provider;
 
 /**
  * XTC Plugin Helper methods in a utility class.
@@ -32,16 +28,12 @@ public final class XtcPluginUtils {
     private XtcPluginUtils() {
     }
 
-    public static <T> Provider<? extends Iterable<? extends T>> singleArgumentIterableProvider(final Project project, final Provider<? extends T> arg) {
-        return project.provider(() -> List.of(arg.get()));
-    }
-
     public static List<String> argumentArrayToList(final String... args) {
         return Arrays.stream(ensureNotNull(args)).map(String::valueOf).toList();
     }
 
     private static Object[] ensureNotNull(final String... array) {
-        Arrays.stream(array).forEach(e -> Objects.requireNonNull(e, "Arguments must never be null."));
+        Arrays.stream(array).forEach(e -> requireNonNull(e, "Arguments must never be null."));
         return array;
     }
 
@@ -120,6 +112,7 @@ public final class XtcPluginUtils {
             }
         }
 
+        @SuppressWarnings("unused")
         public static File checkXtcModule(final File file) {
             return checkXtcModule(file, true);
         }

@@ -77,6 +77,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     // Captured at configuration time for configuration cache compatibility
     protected final Provider<@NotNull Directory> xdkContentsDir;
+    protected final Provider<org.gradle.api.file.@NotNull FileTree> xdkFileTree;
     protected final Map<String, Provider<@NotNull Directory>> sourceSetOutputDirs;
     protected final List<String> sourceSetNames;
     protected final Provider<@NotNull FileCollection> javaToolsConfig;
@@ -90,7 +91,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected final boolean forkValue;
     protected final Provider<@NotNull String> toolchainExecutable;
     protected final Provider<@NotNull String> projectVersion;
-    protected final Provider<org.gradle.api.file.@NotNull FileTree> xdkFileTree;
 
     @SuppressWarnings("this-escape") // Suppressed because launchers need task reference in constructor
     protected XtcLauncherTask(final Project project, final E ext) {
@@ -102,6 +102,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         
         // Capture at configuration time
         this.xdkContentsDir = XtcProjectDelegate.getXdkContentsDir(project);
+        this.xdkFileTree = xdkContentsDir.map(dir -> {
+            final var tree = objects.fileTree();
+            tree.setDir(dir);
+            return tree;
+        });
 
         final var sourceSets = XtcProjectDelegate.getSourceSets(project);
         this.sourceSetNames = sourceSets.stream().map(SourceSet::getName).toList();
@@ -173,7 +178,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             return null;
         });
         this.projectVersion = project.provider(() -> project.getVersion().toString());
-        this.xdkFileTree = XtcProjectDelegate.getXdkContentsDir(project).map(project::fileTree);
         
         // Validate configuration-time captures for configuration cache compatibility
         GradlePhaseAssertions.validateConfigurationTimeCapture(this.xdkContentsDir, "XDK contents directory");
