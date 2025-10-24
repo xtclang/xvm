@@ -45,4 +45,14 @@ public class Char extends xConst {
 
         return ch;
     }
+
+    @Override
+    public String toString(Ctx ctx) {
+        return String.of(null, toString());
+    }
+
+    @Override
+    public java.lang.String toString() {
+        return java.lang.Character.toString($value);
+    }
 }

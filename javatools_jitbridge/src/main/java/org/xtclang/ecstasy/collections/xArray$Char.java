@@ -117,7 +117,7 @@ public class xArray$Char
                     // frdc algorithm: https://arxiv.org/abs/1902.01961
                     ? (int) ($storage[(int) ((index *= 0x55555556L) >>> 32)] >>>
                             (21 * (2 - ((int) (((index & 0xFFFFFFFFL) * 3) >>> 32)))))
-                    : (int) ($storage[(int) (index >>> 3)] >> ~(index & 0b111)) & 0xFF;
+                    : (int) ($storage[(int) (index >>> 3)] >>> ((7 - ((int) (index & 0b111))) << 3) & 0xFF);
         } catch (ArrayIndexOutOfBoundsException e) {
             throw $oob(ctx, index);
         }
@@ -192,7 +192,7 @@ public class xArray$Char
             if (!$utf21) {
                 if (ch < 0x100) {
                     int i = size >>> 3;
-                    int s = 8 - (size & 0x3);
+                    int s = (7 - (size & 0x3)) << 3;
                     $storage[i] = $storage[i] & ~(0xFFL << s) | ((ch & 0xFFL) << s);
                     $size(size + 1);
                     return this;

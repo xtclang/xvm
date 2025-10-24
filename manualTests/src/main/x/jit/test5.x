@@ -3,6 +3,7 @@ module test5.examples.org {
 
     void run() {
         test1();
+        test2();
     }
 
     void test1() {
@@ -11,5 +12,12 @@ module test5.examples.org {
 
         console.print(strings);
         console.print(strings[0]);
+    }
+
+    void test2() {
+        Char[] chars = new Array<Char>(3);
+        chars.add('a');
+
+        console.print(chars[0]);
     }
 }

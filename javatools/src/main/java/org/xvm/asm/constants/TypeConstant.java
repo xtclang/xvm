@@ -77,6 +77,9 @@ import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 import org.xvm.util.TransientThreadLocal;
 
+import static org.xvm.javajit.Builder.CD_Char;
+import static org.xvm.javajit.Builder.N_xArrayChar;
+import static org.xvm.javajit.Builder.N_xArrayObj;
 import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
@@ -6435,11 +6438,33 @@ public abstract class TypeConstant
                         }
                     }
                     if (id.equals(pool.clzArray())) {
-                        TypeConstant typeValue = type.getParamType(0);
-                        if (typeValue.isFormalType() || typeValue.equals(pool.typeObject())) {
+                        TypeConstant typeEl = type.getParamType(0);
+                        if (typeEl.isFormalType() || typeEl.equals(pool.typeObject())) {
                             sJitName = Builder.N_Array;
+                        } else if (typeEl.isPrimitive()){
+                            ClassDesc        cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
+                            IdentityConstant idEl = typeEl.getSingleUnderlyingClass(false);
+
+                            sJitName = switch (cdEl.descriptorString()) {
+                                case "Z" -> Builder.N_xArrayObj;
+                                case "J" -> switch (idEl.getName()) {
+                                    case "Int64"  -> Builder.N_xArrayObj;
+                                    case "UInt64" -> Builder.N_xArrayObj;
+                                    default -> throw new IllegalStateException();
+                                };
+                                case "I" -> switch (idEl.getName()) {
+                                    case "Char"   -> N_xArrayChar;
+                                    case "Int8"   -> Builder.N_xArrayObj;
+                                    case "Int16"  -> Builder.N_xArrayObj;
+                                    case "Int32"  -> Builder.N_xArrayObj;
+                                    case "UInt8"  -> Builder.N_xArrayObj;
+                                    case "UInt16" -> Builder.N_xArrayObj;
+                                    case "UInt32" -> Builder.N_xArrayObj;
+                                    default -> throw new IllegalStateException();
+                                };
+                                default -> throw new UnsupportedOperationException();
+                            };
                         } else {
-                            // TODO
                             sJitName = Builder.N_xArrayObj;
                         }
                         break ComputeName;
