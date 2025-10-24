@@ -173,6 +173,43 @@ public abstract class Array
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
+     * Array Constructor: construct(Int capacity = 0)
+     */
+    public static Array $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
+        throw new UnsupportedOperationException(); // must be implemented by all subclasses
+    }
+
+    /**
+     * Array Constructor: construct(Int size, Element | function Element (Int) supply)
+     */
+    public static Array $new$1$p(Ctx ctx, TypeConstant type, long size, xObj supply) {
+        throw new UnsupportedOperationException(); // must be implemented by subclasses
+    }
+
+    /**
+     * Array Constructor: construct(Mutability mutability, Iterable<Element> elements = [])
+     */
+    public static Array $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
+        throw new UnsupportedOperationException(); // must be implemented by subclasses
+    }
+
+    /**
+     * Array Constructor: construct(Array that)
+     */
+    public static Array $new$3$p(Ctx ctx, TypeConstant type, Array that) {
+        throw new UnsupportedOperationException(); // must be implemented by subclasses
+    }
+
+    /**
+     * Array Constructor:
+     *
+     * protected construct(ArrayDelegate<Element> delegate, Mutability mutability)
+     */
+    public static Array $new$4(Ctx ctx, xObj delegate, Mutability mutability) {
+        throw new UnsupportedOperationException(); // must be implemented by subclasses
+    }
+
+    /**
      * @return the current storage capacity of the array; this is the "delegate.capacity" value
      *         referred to by Array.x
      */
