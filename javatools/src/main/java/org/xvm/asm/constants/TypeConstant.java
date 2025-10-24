@@ -77,9 +77,8 @@ import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 import org.xvm.util.TransientThreadLocal;
 
-import static org.xvm.javajit.Builder.CD_Char;
 import static org.xvm.javajit.Builder.N_xArrayChar;
-import static org.xvm.javajit.Builder.N_xArrayObj;
+
 import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
@@ -6446,7 +6445,7 @@ public abstract class TypeConstant
                             IdentityConstant idEl = typeEl.getSingleUnderlyingClass(false);
 
                             sJitName = switch (cdEl.descriptorString()) {
-                                case "Z" -> Builder.N_xArrayObj;
+                                case "Z" ->          Builder.N_xArrayObj;
                                 case "J" -> switch (idEl.getName()) {
                                     case "Int64"  -> Builder.N_xArrayObj;
                                     case "UInt64" -> Builder.N_xArrayObj;

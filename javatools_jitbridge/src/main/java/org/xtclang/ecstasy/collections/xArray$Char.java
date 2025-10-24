@@ -1,12 +1,16 @@
 package org.xtclang.ecstasy.collections;
 
 import java.util.Arrays;
+
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Range$Int64;
+
 import org.xtclang.ecstasy.text.Char;
 import org.xtclang.ecstasy.xObj;
 import org.xtclang.ecstasy.xType;
+
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.Ctx;
 
 import static java.lang.Math.max;
@@ -152,7 +156,7 @@ public class xArray$Char
             if (!$utf21) {
                 if (value < 0x100) {
                     int i = ((int) index) >>> 3;
-                    int s = 8 - (((int) index) & 0x3);
+                    int s = (7 - (((int) index) & 0x3)) << 3;
                     $storage[i] = $storage[i] & ~(0xFFL << s) | ((value & 0xFFL) << s);
                     return;
                 }

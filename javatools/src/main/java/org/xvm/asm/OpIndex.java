@@ -239,7 +239,7 @@ public abstract class OpIndex
                         case OP_I_SET -> {
                             bctx.loadArgument(code, getValueIndex());
                             code.invokevirtual(cd, "setElement$pi",
-                                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_xObj));
+                                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_int));
                         }
                         default -> throw new UnsupportedOperationException(toName(getOpCode()));
                     }
@@ -293,14 +293,17 @@ public abstract class OpIndex
             String        sJitName = method.getJitIdentity().ensureJitMethodName(ts);
             throw new UnsupportedOperationException("TODO");
         }
-        JitParams      result      = computeJitParams(ts, typeEl);
-        JitParamDesc[] apdOptParam = result.apdOptParam();
 
-        JitMethodDesc jmd = new JitMethodDesc(
-            result.apdStdParam(), JitParamDesc.NONE,
-            apdOptParam, apdOptParam == null ? null : JitParamDesc.NONE);
+        if (isAssignOp()) {
+            JitParams      result      = computeJitParams(ts, typeEl);
+            JitParamDesc[] apdOptParam = result.apdOptParam();
 
-        bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue});
+            JitMethodDesc jmd = new JitMethodDesc(
+                result.apdStdParam(), JitParamDesc.NONE,
+                apdOptParam, apdOptParam == null ? null : JitParamDesc.NONE);
+
+            bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue});
+        }
     }
 
     private JitParams computeJitParams(TypeSystem ts, TypeConstant type) {
