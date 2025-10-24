@@ -626,6 +626,7 @@ public abstract class Builder {
 
     // ----- native class names --------------------------------------------------------------------
 
+    public static final String N_Array        = "org.xtclang.ecstasy.collections.Array";
     public static final String N_Boolean      = "org.xtclang.ecstasy.Boolean";
     public static final String N_Char         = "org.xtclang.ecstasy.text.Char";
     public static final String N_Enumeration  = "org.xtclang.ecstasy.reflect.Enumeration";
@@ -643,6 +644,7 @@ public abstract class Builder {
     public static final String N_UInt32       = "org.xtclang.ecstasy.numbers.UInt32";
     public static final String N_UInt64       = "org.xtclang.ecstasy.numbers.UInt64";
 
+    public static final String N_xArrayObj    = "org.xtclang.ecstasy.collections.xArray$Object";
     public static final String N_xClass       = "org.xtclang.ecstasy.xClass";
     public static final String N_xConst       = "org.xtclang.ecstasy.xConst";
     public static final String N_xEnum        = "org.xtclang.ecstasy.xEnum";
@@ -664,11 +666,13 @@ public abstract class Builder {
 
     // ----- well-known class descriptors ----------------------------------------------------------
 
+    public static final ClassDesc CD_Array         = ClassDesc.of(N_Array);
     public static final ClassDesc CD_Enumeration   = ClassDesc.of(N_Enumeration);
     public static final ClassDesc CD_Exception     = ClassDesc.of(N_Exception);
     public static final ClassDesc CD_xFunction     = ClassDesc.of(N_xFunction);
     public static final ClassDesc CD_xModule       = ClassDesc.of(N_xModule);
 
+    public static final ClassDesc CD_xArrayObj     = ClassDesc.of(N_xArrayObj);
     public static final ClassDesc CD_xEnum         = ClassDesc.of(N_xEnum);
     public static final ClassDesc CD_xException    = ClassDesc.of(N_xException);
     public static final ClassDesc CD_xObj          = ClassDesc.of(N_xObj);

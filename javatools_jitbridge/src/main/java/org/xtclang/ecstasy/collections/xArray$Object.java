@@ -12,15 +12,15 @@ import org.xvm.javajit.Ctx;
 import static java.lang.Math.max;
 import static java.lang.System.arraycopy;
 
-public class Array$Object extends Array {
+public class xArray$Object extends Array {
 
-    public Array$Object(Ctx ctx, TypeConstant type) {
+    public xArray$Object(Ctx ctx, TypeConstant type) {
         super(ctx, type);
         $type = type;
     }
 
     public TypeConstant $type;
-    public Array$Object $delegate;
+    public xArray$Object $delegate;
     public xObj[] $storage;
 
     // ----- xObj API ------------------------------------------------------------------------------
@@ -35,26 +35,26 @@ public class Array$Object extends Array {
     /**
      * Array Constructor: construct(Int capacity = 0)
      */
-    public static Array$Object $new$0$p(Ctx ctx, TypeConstant type, long capacity) {
+    public static xArray$Object $new$0$p(Ctx ctx, TypeConstant type, long capacity) {
         assert !type.isImmutable();
 
         ctx.alloc(64); // REVIEW how big?
-        Array$Object array = new Array$Object(ctx, type);
+        xArray$Object array = new xArray$Object(ctx, type);
         array.$capCfg(ctx, capacity);
         return array;
     }
 
-    public static Array$Object $new$1$p(Ctx ctx, TypeConstant type, long size, xObj supply) {
+    public static xArray$Object $new$1$p(Ctx ctx, TypeConstant type, long size, xObj supply) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public static Array$Object $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, org.xtclang.ecstasy.Iterable elements) {
+    public static xArray$Object $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, org.xtclang.ecstasy.Iterable elements) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public static Array$Object $new$3$p(Ctx ctx, TypeConstant type, Array$Object that) {
+    public static xArray$Object $new$3$p(Ctx ctx, TypeConstant type, xArray$Object that) {
         // TODO
         throw new UnsupportedOperationException();
     }
@@ -114,7 +114,34 @@ public class Array$Object extends Array {
         }
     }
 
-// TODO CP
+    @Override
+    public Array add(Ctx ctx, xObj element) {
+        if ($delegate != null) {
+            $delegate.add(ctx, element);
+            return this;
+        }
+
+        if (($sizeEtc >>> $MUT_SHIFT) != $MUTABLE) {
+            // TODO: persistent
+            throw $ro(ctx);
+        }
+
+        int size = $sizeEtc & $SIZE_MASK;
+        if (($storage == null || $storage.length == size) && !$growInPlace(ctx, size+1)) {
+            // we just transitioned to the "huge model"
+            $delegate.add(ctx, element);
+            return this;
+        }
+
+        try {
+            $storage[size+1] = element;
+            return this;
+        } catch (ArrayIndexOutOfBoundsException e) {
+            throw $oob(ctx, size);
+        }
+    }
+
+    // TODO CP
 //
 //    @Override public Array$Object clear(Ctx ctx) {
 //        if (empty$get$p(ctx)) {
@@ -131,7 +158,7 @@ public class Array$Object extends Array {
 //        }
 //    }
 
-    @Override public Array$Object slice$p(Ctx ctx, long n1, long n2) {
+    @Override public xArray$Object slice$p(Ctx ctx, long n1, long n2) {
         // slice must be in-range
         // TODO check lower bound as well
         long upper = Range$Int64.$effectiveUpperBound(ctx, n1, n2);
@@ -150,7 +177,7 @@ public class Array$Object extends Array {
 
     // ----- Array internals -----------------------------------------------------------------------
 
-    @Override protected Array$Object $delegate() {
+    @Override protected xArray$Object $delegate() {
         return $delegate;
     }
 
