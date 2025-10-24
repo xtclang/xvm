@@ -6436,7 +6436,7 @@ public abstract class TypeConstant
                     }
                     if (id.equals(pool.clzArray())) {
                         TypeConstant typeValue = type.getParamType(0);
-                        if (typeValue.isFormalType()) {
+                        if (typeValue.isFormalType() || typeValue.equals(pool.typeObject())) {
                             sJitName = Builder.N_Array;
                         } else {
                             // TODO

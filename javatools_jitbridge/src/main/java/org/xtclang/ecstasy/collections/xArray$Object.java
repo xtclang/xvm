@@ -35,11 +35,12 @@ public class xArray$Object extends Array {
     /**
      * Array Constructor: construct(Int capacity = 0)
      */
-    public static xArray$Object $new$0$p(Ctx ctx, TypeConstant type, long capacity) {
+    public static xArray$Object $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
 
         ctx.alloc(64); // REVIEW how big?
         xArray$Object array = new xArray$Object(ctx, type);
+        array.$mut($MUTABLE);
         array.$capCfg(ctx, capacity);
         return array;
     }
@@ -115,7 +116,7 @@ public class xArray$Object extends Array {
     }
 
     @Override
-    public Array add(Ctx ctx, xObj element) {
+    public xArray$Object add(Ctx ctx, xObj element) {
         if ($delegate != null) {
             $delegate.add(ctx, element);
             return this;

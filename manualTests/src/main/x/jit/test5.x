@@ -7,8 +7,9 @@ module test5.examples.org {
 
     void test1() {
         String[] strings = new Array<String>(3);
-        // strings.add("hello");
+        strings.add("hello");
 
         console.print(strings);
+        console.print(strings[0]);
     }
 }
