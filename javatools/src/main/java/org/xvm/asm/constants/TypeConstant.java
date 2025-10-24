@@ -6434,6 +6434,16 @@ public abstract class TypeConstant
                             break ComputeName;
                         }
                     }
+                    if (id.equals(pool.clzArray())) {
+                        TypeConstant typeValue = type.getParamType(0);
+                        if (typeValue.isFormalType()) {
+                            sJitName = Builder.N_Array;
+                        } else {
+                            // TODO
+                            sJitName = Builder.N_xArrayObj;
+                        }
+                        break ComputeName;
+                    }
                     if (id.equals(pool.clzEnumeration())) {
                         // JIT class name for Enumeration<Enum> is "Enumeration", but
                         // JIT class name for Enumeration<X> is "X$Enumeration"

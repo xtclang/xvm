@@ -1,6 +1,5 @@
 package org.xtclang.ecstasy.collections;
 
-import org.xtclang.ecstasy.Boolean$Enumeration;
 import org.xtclang.ecstasy.Range;
 import org.xtclang.ecstasy.reflect.Enumeration;
 import org.xtclang.ecstasy.text.String;
@@ -174,58 +173,6 @@ public abstract class Array
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
-     * Array Constructor: construct(Int capacity = 0)
-     */
-    public static Array $new$0$p(Ctx ctx, TypeConstant type, long capacity) {
-        assert type != null && !type.isImmutable();
-
-        // peel off all of the primitive-optimized array types
-        // if (type ...)
-        // TODO
-
-        return Array$Object.$new$0$p(ctx, type, capacity);
-    }
-
-    /**
-     * Array Constructor: construct(Int size, Element | function Element (Int) supply)
-     */
-    public static Array $new$1$p(Ctx ctx, TypeConstant type, long size, xObj supply) {
-        assert type != null && !type.isImmutable() && supply != null;
-
-        // peel off all of the primitive-optimized array types
-        // if (type ...)
-        // TODO
-
-        return Array$Object.$new$1$p(ctx, type, size, supply);
-    }
-
-    /**
-     * Array Constructor: construct(Mutability mutability, Iterable<Element> elements = [])
-     */
-    public static Array $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
-        assert type != null && (!type.isImmutable() || mutability == Mutability.Constant) && elements != null;
-
-        // peel off all of the primitive-optimized array types
-        // if (type ...)
-        // TODO
-
-        return Array$Object.$new$2$p(ctx, type, mutability, elements);
-    }
-
-    /**
-     * Array Constructor: construct(Array that)
-     */
-    public static Array $new$3$p(Ctx ctx, TypeConstant type, Array that) {
-        // TODO
-
-        // peel off all of the primitive-optimized array types
-        // if (type ...)
-        // TODO
-
-        return Array$Object.$new$3$p(ctx, type, (Array$Object) that);
-    }
-
-    /**
      * @return the current storage capacity of the array; this is the "delegate.capacity" value
      *         referred to by Array.x
      */
@@ -337,8 +284,17 @@ public abstract class Array
         throw $oob(ctx, index);
     }
 
-    /*
+    /**
+     * Add:
+     *
      *   Array add(Element element)
+     */
+    public Array add(Ctx ctx, xObj element) {
+        throw new UnsupportedOperationException("TODO");
+    }
+
+    /*
+     *
      *   Array addAll(Iterable<Element> values)
      *   Array insert(Int index, Element value)
      *   Array insertAll(Int index, Iterable<Element> values)
