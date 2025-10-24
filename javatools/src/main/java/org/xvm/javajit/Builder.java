@@ -12,6 +12,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ByteConstant;
+import org.xvm.asm.constants.CharConstant;
 import org.xvm.asm.constants.EnumValueConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.LiteralConstant;
@@ -149,6 +150,10 @@ public abstract class Builder {
             code.getstatic(cd, Instance, cd);
             return new SingleSlot(Op.A_STACK, type, cd, "");
         }
+
+        case CharConstant ch:
+            code.loadConstant(ch.getValue());
+            return new SingleSlot(Op.A_STACK, constant.getConstantPool().typeChar(), CD_Char, "");
 
         case NamedCondition cond:
             code.loadConstant(cond.getName());
@@ -644,6 +649,7 @@ public abstract class Builder {
     public static final String N_UInt32       = "org.xtclang.ecstasy.numbers.UInt32";
     public static final String N_UInt64       = "org.xtclang.ecstasy.numbers.UInt64";
 
+    public static final String N_xArrayChar   = "org.xtclang.ecstasy.collections.xArray$Char";
     public static final String N_xArrayObj    = "org.xtclang.ecstasy.collections.xArray$Object";
     public static final String N_xClass       = "org.xtclang.ecstasy.xClass";
     public static final String N_xConst       = "org.xtclang.ecstasy.xConst";
@@ -672,6 +678,7 @@ public abstract class Builder {
     public static final ClassDesc CD_xFunction     = ClassDesc.of(N_xFunction);
     public static final ClassDesc CD_xModule       = ClassDesc.of(N_xModule);
 
+    public static final ClassDesc CD_xArrayChar    = ClassDesc.of(N_xArrayChar);
     public static final ClassDesc CD_xArrayObj     = ClassDesc.of(N_xArrayObj);
     public static final ClassDesc CD_xEnum         = ClassDesc.of(N_xEnum);
     public static final ClassDesc CD_xException    = ClassDesc.of(N_xException);

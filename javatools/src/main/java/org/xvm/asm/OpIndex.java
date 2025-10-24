@@ -29,6 +29,7 @@ import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.Utils;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 
@@ -207,13 +208,46 @@ public abstract class OpIndex
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
+        TypeSystem   ts     = bctx.typeSystem;
         Slot         slot   = bctx.loadArgument(code, m_nTarget);
         TypeConstant type   = slot.type();
         TypeConstant typeEl = type.getParamType(0);
 
         if (type.isArray()) {
             if (typeEl.isPrimitive()) {
-                throw new UnsupportedOperationException("TODO");
+                ClassDesc cd   = type.ensureClassDesc(ts);
+                ClassDesc cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
+
+                bctx.loadCtx(code);
+                bctx.loadArgument(code, m_nIndex);
+                switch (cdEl.descriptorString()) {
+//                case "Z":
+//                    break;
+
+//                case "J": // long
+//                    switch (typeEl.getSingleUnderlyingClass(false).getName()) {
+//                        case "Int64"  ->
+//                        case "UInt64" ->
+//                        default       ->
+//                    }
+//                    break;
+
+                case "I": // int
+                    switch (getOpCode()) {
+                        case OP_I_GET -> code.invokevirtual(cd, "getElement$pi",
+                                MethodTypeDesc.of(CD_int, CD_Ctx, CD_long));
+                        case OP_I_SET -> {
+                            bctx.loadArgument(code, getValueIndex());
+                            code.invokevirtual(cd, "setElement$pi",
+                                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_xObj));
+                        }
+                        default -> throw new UnsupportedOperationException(toName(getOpCode()));
+                    }
+                break;
+
+                default:
+                    throw new UnsupportedOperationException();
+                }
             } else {
                 ClassDesc cd = Builder.CD_xArrayObj;
                 bctx.loadCtx(code);
@@ -256,10 +290,10 @@ public abstract class OpIndex
                 default          -> throw new UnsupportedOperationException(toName(getOpCode()));
             }
             MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, 1);
-            String        sJitName = method.getJitIdentity().ensureJitMethodName(bctx.typeSystem);
+            String        sJitName = method.getJitIdentity().ensureJitMethodName(ts);
             throw new UnsupportedOperationException("TODO");
         }
-        JitParams      result      = computeJitParams(bctx.typeSystem, typeEl);
+        JitParams      result      = computeJitParams(ts, typeEl);
         JitParamDesc[] apdOptParam = result.apdOptParam();
 
         JitMethodDesc jmd = new JitMethodDesc(
