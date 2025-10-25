@@ -227,6 +227,66 @@ public class xArray$Char
         throw $oob(ctx, upper);
     }
 
+    // ----- in-place ops --------------------------------------------------------------------------
+
+    public int preInc$pi(Ctx ctx, long index) {
+        // TODO: optimize in place
+        int codepoint = getElement$pi(ctx, index);
+        if (codepoint == Char.$MaxValue) {
+            throw $oob(ctx, codepoint);
+        }
+        setElement$pi(ctx, index, ++codepoint);
+        return codepoint;
+    }
+
+    public int postInc$pi(Ctx ctx, long index) {
+        // TODO: optimize in place
+        int codepoint = getElement$pi(ctx, index);
+        if (codepoint == Char.$MaxValue) {
+            throw $oob(ctx, codepoint);
+        }
+        setElement$pi(ctx, index, codepoint+1);
+        return codepoint;
+    }
+
+    public int preDec$pi(Ctx ctx, long index) {
+        // TODO: optimize in place
+        int codepoint = getElement$pi(ctx, index);
+        if (codepoint == 0) {
+            throw $oob(ctx, codepoint);
+        }
+        setElement$pi(ctx, index, --codepoint);
+        return codepoint;
+    }
+
+    public int postDec$pi(Ctx ctx, long index) {
+        // TODO: optimize in place
+        int codepoint = getElement$pi(ctx, index);
+        if (codepoint == 0) {
+            throw $oob(ctx, codepoint);
+        }
+        setElement$pi(ctx, index, codepoint-1);
+        return codepoint;
+    }
+
+    public void addInPlace$pi(Ctx ctx, long index, long n) {
+        // TODO: optimize in place
+        int codepoint = getElement$pi(ctx, index) + (int) n;
+        if (codepoint < 0 || codepoint > Char.$MaxValue) {
+            throw $oob(ctx, codepoint);
+        }
+        setElement$pi(ctx, index, codepoint);
+    }
+
+    public void subInPlace$pi(Ctx ctx, long index, long n) {
+        // TODO: optimize in place
+        int codepoint = getElement$pi(ctx, index) - (int) n;
+        if (codepoint < 0 || codepoint > Char.$MaxValue) {
+            throw $oob(ctx, codepoint);
+        }
+        setElement$pi(ctx, index, codepoint);
+    }
+
     // ----- Array internals -----------------------------------------------------------------------
 
     @Override protected xArray$Char $delegate() {
