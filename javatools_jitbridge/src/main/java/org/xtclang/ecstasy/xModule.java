@@ -4,6 +4,8 @@ import org.xtclang.ecstasy.reflect.Module;
 
 import org.xvm.asm.ModuleStructure;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.Ctx;
 
 /**
@@ -22,7 +24,7 @@ public class xModule
     public final ModuleStructure $module;
 
     @Override
-    public xType $type() {
-        return (xType) $module.getIdentityConstant().getType().ensureXType($ctx().container);
+    public TypeConstant $xvmType() {
+        return $module.getIdentityConstant().getType();
     }
 }

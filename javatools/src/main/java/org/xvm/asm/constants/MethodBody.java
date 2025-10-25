@@ -710,10 +710,9 @@ public class MethodBody {
 
             if (isConstructor()) {
                 boolean fAddCtorCtx = true; // TODO: isFinalizerRequired()
-                boolean fAddType    = typeContainer.ensureTypeInfo().hasGenericTypes();
 
                 jmd = new JitCtorDesc(typeContainer.ensureClassDesc(ts),
-                                      fAddCtorCtx, fAddType,
+                                      fAddCtorCtx, /*fAddType*/ false,
                                       apdStdReturn, apdStdParam, apdOptReturn, apdOptParam);
 
             } else {

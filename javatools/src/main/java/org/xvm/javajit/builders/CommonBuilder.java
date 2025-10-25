@@ -330,11 +330,9 @@ public class CommonBuilder
                             // loadConstant() has already loaded the value and the boolean
                             Label ifTrue = code.newLabel();
                             Label endIf  = code.newLabel();
-                            code
-                                .iconst_0()
-                                .if_icmpne(ifTrue);
-                                code.putstatic(CD_this, jitName +EXT, CD_boolean);
-                            code.goto_(endIf)
+                            code.ifne(ifTrue)
+                                .putstatic(CD_this, jitName +EXT, CD_boolean)
+                                .goto_(endIf)
                                 .labelBinding(ifTrue);
                                 pop(code, doubleSlot.cd());
                                 code.putstatic(CD_this, jitName, slot.cd());
@@ -404,10 +402,10 @@ public class CommonBuilder
                                        List<PropertyInfo> props) {
         ClassDesc CD_this = ClassDesc.of(className);
 
-        classBuilder.withMethod(INIT_NAME,
+        classBuilder.withMethodBody(INIT_NAME,
             MD_Initializer,
             ClassFile.ACC_PUBLIC,
-            methodBuilder -> methodBuilder.withCode(code -> {
+            code -> {
                 Label startScope = code.newLabel();
                 Label endScope   = code.newLabel();
                 code.labelBinding(startScope);
@@ -433,8 +431,7 @@ public class CommonBuilder
                             Label ifTrue = code.newLabel();
                             Label endIf  = code.newLabel();
                             code
-                                .iconst_0()
-                                .if_icmpne(ifTrue)
+                                .ifne(ifTrue)
                                 .putfield(CD_this, jitName +EXT, CD_boolean);
                             code.goto_(endIf)
                                 .labelBinding(ifTrue);
@@ -451,7 +448,7 @@ public class CommonBuilder
                 }
                 code.labelBinding(endScope)
                     .return_();
-            })
+            }
         );
     }
 
@@ -744,6 +741,34 @@ public class CommonBuilder
 
             assembleImplMethod(className, classBuilder, method);
         }
+
+        assembleXvmType(className, classBuilder);
+    }
+
+    /**
+     * Assemble the "public TypeConstant $xvmType()" method.
+     */
+    protected void assembleXvmType(String className, ClassBuilder classBuilder) {
+        boolean hasType = typeInfo.hasGenericTypes();
+
+        if (hasType) {
+            classBuilder.withField("$type", CD_TypeConstant, ClassFile.ACC_PUBLIC);
+        }
+
+        classBuilder.withMethodBody("$xvmType", MethodTypeDesc.of(CD_TypeConstant),
+                ClassFile.ACC_PUBLIC, code -> {
+            if (hasType) {
+                code.aload(0)
+                    .getfield(ClassDesc.of(className), "$type", CD_TypeConstant);
+            } else {
+                // this is almost identical to Builder.loadTypeConstant()
+                code.invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
+                    .loadConstant(typeSystem.registerConstant(typeInfo.getType()))
+                    .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant)
+                    .checkcast(CD_TypeConstant);
+            }
+            code.areturn();
+        });
     }
 
     /**
@@ -1015,14 +1040,14 @@ public class CommonBuilder
      *      class C {...}
      *      val o = new C(x, y, z);
      * Java:
-     *      C o = C.$new$17(ctx, x, y, z);
+     *      C o = C.$new$17($ctx, x, y, z);
      *
      * For generic types:
      * Ecstasy:
      *      class C<Element> {...}
      *      val o = new C<A>(x, y, z);
      * Java:
-     *      C o = C.$new$17(ctx, TC, x, y, z);
+     *      C o = C.$new$17($ctx, $type, x, y, z);
      * where TC is a TypeConstant for the actual type C<A>.
      *
      * For singletons, referencing the instance of the singleton for the first time causes it to be
@@ -1034,9 +1059,9 @@ public class CommonBuilder
      * singletons have a non-static "$init()" method that is signature-wise identical to the
      * "$new()" method and performs everything in the following list of steps starting with step 4.
      *
-     * public static C $new$17(Ctx ctx, X x, Y y, Z z)
+     * public static C $new$17(Ctx $ctx, X x, Y y, Z z)
      * or
-     * public static C $new$17(Ctx ctx, TC, X x, Y y, Z z)
+     * public static C $new$17(Ctx $ctx, TC $type, X x, Y y, Z z)
      *    // note: singletons use this signature instead:
      *    public C $init$17(Ctx ctx)
      *
@@ -1054,6 +1079,9 @@ public class CommonBuilder
      *    // note: singletons move this step to the Java static initializer
      *    C thi$ = new C(ctx);
      *
+     *    // step 3a (optional) if the type is specified, assign the "$type" field
+     *    thi$.$type = $type;
+     *
      *    // step 4: a constructor context is required if a “finally” chain will exist
      *    CtorCtx cctx = ctx.ctorCtx();
      *
@@ -1065,8 +1093,6 @@ public class CommonBuilder
      *    //   in the constructor context because we have the arguments right here
      *    // note: cctx argument is optional
      *    construct$17(ctx, cctx, thi$, x, y, z);
-     *      // or for generic types
-     *    construct$17(ctx, cctx, T, thi$, x, y, z);
      *
      *    // step 7: `assert()` is called (may be one on each constituent piece -- e.g.
      *    // base classes, mixins, annotations -- of the composition)
@@ -1174,6 +1200,12 @@ public class CommonBuilder
                 code.localVariable(thisSlot, "thi$", CD_this, startScope, endScope);
                 invokeDefaultConstructor(className, code);
                 code.astore(thisSlot);
+
+                if (hasType) {
+                    code.aload(thisSlot)
+                        .aload(typeSlot)
+                        .putfield(CD_this, "$type", CD_TypeConstant);
+                }
             }
 
             // steps 4: a constructor context is required if a “finally” chain will exist
@@ -1193,11 +1225,8 @@ public class CommonBuilder
             JitMethodDesc ctorDesc = constructor.getJitDesc(typeSystem, typeInfo.getType());
 
             code.aload(ctxSlot)
-                .aload(cctxSlot);
-            if (hasType) {
-                code.aload(typeSlot);
-            }
-            code.aload(thisSlot);
+                .aload(cctxSlot)
+                .aload(thisSlot);
 
             // if this "new$" is optimized, the underlying constructor is optimized and vice versa
             assert isOptimized == ctorDesc.isOptimized;

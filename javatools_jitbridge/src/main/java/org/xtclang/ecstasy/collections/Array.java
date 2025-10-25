@@ -36,7 +36,7 @@ import org.xtclang.ecstasy.reflect.Var;
 public abstract class Array
         extends xObj {
 
-    protected Array(Ctx ctx, TypeConstant type) {
+    protected Array(Ctx ctx) {
         super(ctx);
     }
 
@@ -72,25 +72,24 @@ public abstract class Array
         private Mutability(long ordinal, String name) {
             super(null);
 
-            Container    container = Ctx.get().container;
-            ConstantPool pool      = container.typeSystem.pool();
+            ConstantPool pool = $owner().typeSystem.pool();
 
-            $type    = (xType) (pool.ensureTerminalTypeConstant(pool.ensureEcstasyClassConstant(
-                        "collections.Array.Mutability." + name))).ensureXType(container);
+            $type    = pool.ensureTerminalTypeConstant(pool.ensureEcstasyClassConstant(
+                        "collections.Array.Mutability." + name));
             $ordinal = ordinal;
             $name    = name;
         }
 
-        public final xType  $type;
-        public final long   $ordinal;
-        public final String $name;
+        public final TypeConstant $type;
+        public final long         $ordinal;
+        public final String       $name;
 
         public static Mutability Constant   = new Mutability(0, String.of(null, "Constant"));
         public static Mutability Persistent = new Mutability(1, String.of(null, "Persistent"));
         public static Mutability Fixed      = new Mutability(2, String.of(null, "Fixed"));
         public static Mutability Mutable    = new Mutability(3, String.of(null, "Mutable"));
 
-        @Override public xType $type() {
+        @Override public TypeConstant $xvmType() {
             return $type;
         }
 
@@ -160,7 +159,7 @@ public abstract class Array
      * Note: It's expected that some subclasses (e.g. "Int[]") will know their type implicitly,
      *       while others will need to add a field to hold the type (e.g. "Point[]").
      */
-    @Override public xType $type() {
+    @Override public TypeConstant $xvmType() {
         throw new UnsupportedOperationException("TODO");
     }
 

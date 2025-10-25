@@ -375,8 +375,7 @@ public class BuildContext {
 
                     // if the extension slot is `true`, take the default value
                     code.iload(doubleSlot.extSlot)
-                        .iconst_0()
-                        .if_icmpne(ifTrue)
+                        .ifne(ifTrue)
                         .loadLocal(Builder.toTypeKind(cd), doubleSlot.slot)
                         .goto_(endIf)
                         .labelBinding(ifTrue);
@@ -413,8 +412,7 @@ public class BuildContext {
                 Label ifTrue = code.newLabel();
                 Label endIf  = code.newLabel();
 
-                code.iconst_0()
-                    .if_icmpne(ifTrue);
+                code.ifne(ifTrue);
                 builder.box(code, slot.type().removeNullable(), slot.cd());
                 code.goto_(endIf)
                     .labelBinding(ifTrue);
@@ -751,8 +749,7 @@ public class BuildContext {
                     if (slot.isSingle()) {
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
-                        code.iconst_0()
-                            .if_icmpne(ifTrue);
+                        code.ifne(ifTrue);
                         builder.box(code, typeRet, cdRet);
                         code.goto_(endIf)
                             .labelBinding(ifTrue)

@@ -11,10 +11,8 @@ import static org.xvm.javajit.Builder.CD_TypeConstant;
  * According to the step 6 of the "CommonBuilder.assembleNew" algorithm, the constructor signature
  * is:
  *  {@code construct$17(ctx, cctx, thi$, x, y, z)}, where "cctx" arg is optional,
- *  or
- *  {@code construct$17(ctx, cctx, type, thi$, x, y, z)}, where "type" is an actual XTC type for
- *      the newly constructed class
- * We also use this to create the MethodTypeDesc for {@code new$17(ctx, type, ...)} function.
+ *
+ * We also use this to create the MethodTypeDesc for {@code new$17(ctx, type, x, y, z)} function.
  */
 public class JitCtorDesc
         extends JitMethodDesc {

@@ -4,10 +4,11 @@ import java.util.Arrays;
 
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Range$Int64;
+import org.xtclang.ecstasy.xObj;
 
 import org.xtclang.ecstasy.text.Char;
-import org.xtclang.ecstasy.xObj;
-import org.xtclang.ecstasy.xType;
+
+import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -37,7 +38,7 @@ public class xArray$Char
         extends Array {
 
     public xArray$Char(Ctx ctx, TypeConstant type) {
-        super(ctx, type);
+        super(ctx);
     }
 
     // REVIEW: to save space, we could combine the $storage and $delegate fields into a single field, e.g.
@@ -54,8 +55,10 @@ public class xArray$Char
 
     // ----- xObj API ------------------------------------------------------------------------------
 
-    @Override public xType $type() {
-        return null; // TODO Type<Array<Char>>
+    @Override public TypeConstant $xvmType() {
+        ConstantPool pool = $owner().typeSystem.pool();
+        TypeConstant type = pool.ensureArrayType(pool.typeChar());
+        return $isImmut() ? type.freeze() : type;
     }
 
     // ----- Array API -----------------------------------------------------------------------------
