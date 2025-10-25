@@ -4,6 +4,7 @@ import org.xtclang.ecstasy.reflect.Enumeration;
 
 import org.xtclang.ecstasy.text.String;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.Ctx;
 
 /**
@@ -15,8 +16,8 @@ public abstract class xEnum extends xConst implements Object {
     }
 
     @Override
-    public xType $type() {
-        return null; // TODO
+    public TypeConstant $xvmType() {
+        throw new UnsupportedOperationException("Must be generated");
     }
 
     abstract public Enumeration enumeration$get(Ctx ctx);

@@ -4,20 +4,18 @@ import java.util.Arrays;
 
 import org.xtclang.ecstasy.Range$Int64;
 import org.xtclang.ecstasy.xObj;
-import org.xtclang.ecstasy.xType;
 
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
 
 import static java.lang.Math.max;
-
 import static java.lang.System.arraycopy;
 
 public class xArray$Object extends Array {
 
     public xArray$Object(Ctx ctx, TypeConstant type) {
-        super(ctx, type);
+        super(ctx);
         $type = type;
     }
 
@@ -27,9 +25,9 @@ public class xArray$Object extends Array {
 
     // ----- xObj API ------------------------------------------------------------------------------
 
-    @Override public xType $type() {
-        // TODO in makeImmutable() or when mutability changes to Constant, remember to do: $type = $type.freeze()
-        return (xType) $type.ensureXType(Ctx.get().container);
+    @Override
+    public TypeConstant $xvmType() {
+        return $isImmut() ? $type.freeze() : $type;
     }
 
     // ----- Array API -----------------------------------------------------------------------------

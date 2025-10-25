@@ -29,7 +29,7 @@ public class Boolean
     public static Boolean True  = new Boolean(true, 1, String.of(null, "True"));
 
     @Override public xType $type() {
-        Container    container = Ctx.get().container;
+        Container    container = $owner();
         ConstantPool pool      = container.typeSystem.pool();
         return (xType) ($value ? pool.typeTrue() : pool.typeFalse()).ensureXType(container);
     }

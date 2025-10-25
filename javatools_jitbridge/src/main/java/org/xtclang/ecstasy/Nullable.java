@@ -22,7 +22,7 @@ public class Nullable
     public static final Nullable Null = new Nullable();
 
     @Override public xType $type() {
-        Container container = Ctx.get().container;
+        Container container = $owner();
         return (xType) container.typeSystem.pool().typeNull().ensureXType(container);
     }
 
