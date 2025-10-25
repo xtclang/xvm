@@ -22,12 +22,14 @@ public class Char extends xConst {
      */
     private static final Char[][] $cache = new Char[1088][];
 
+    public static final int $MaxValue = 0x10FFFF;
+
     public final int $value;
 
     public static Char $box(int codepoint) {
         Char ch = null;
 
-        assert codepoint >= 0 && codepoint <= 0x10FFFF;
+        assert codepoint >= 0 && codepoint <= $MaxValue;
 
         // the cache is divided in 0x440 (1088) pages of 0x400 (1024) characters;
         // the pages are lazily created

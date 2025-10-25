@@ -142,7 +142,7 @@ const Char(UInt32 codepoint)
     conditional Char prev() = codepoint > 0 ? (True, new Char(codepoint - 1)) : False;
 
     @Override
-    conditional Char next() = codepoint < MaxValue ? (True, new Char(codepoint + 1)) : False;
+    conditional Char next() = codepoint < 0x10FFFF ? (True, new Char(codepoint + 1)) : False;
 
     @Override
     Int stepsTo(Char that) = that - this;

@@ -21,5 +21,10 @@ module test5.examples.org {
         console.print(chars[0]);
         chars[0] = 'b';
         console.print(chars[0]);
+        chars[0]++;
+        assert chars[0] == 'c';
+        assert ++chars[0] == 'd';
+        chars[0] += 2;
+        assert chars[0] == 'f';
     }
 }

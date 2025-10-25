@@ -29,7 +29,6 @@ import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.Utils;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
-import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 
@@ -215,50 +214,140 @@ public abstract class OpIndex
 
         if (type.isArray()) {
             if (typeEl.isPrimitive()) {
-                ClassDesc cd   = type.ensureClassDesc(ts);
-                ClassDesc cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
+                ClassDesc cdArray = type.ensureClassDesc(ts);
+                ClassDesc cdEl    = JitTypeDesc.getPrimitiveClass(typeEl);
 
                 bctx.loadCtx(code);
                 bctx.loadArgument(code, m_nIndex);
-                switch (cdEl.descriptorString()) {
-//                case "Z":
-//                    break;
 
-//                case "J": // long
-//                    switch (typeEl.getSingleUnderlyingClass(false).getName()) {
-//                        case "Int64"  ->
-//                        case "UInt64" ->
-//                        default       ->
-//                    }
-//                    break;
+                // we assume that all customized implementations have the same names
+                switch (getOpCode()) {
+                    case OP_I_GET ->
+                        code.invokevirtual(cdArray, "getElement$pi",
+                            MethodTypeDesc.of(cdEl, CD_Ctx, CD_long));
 
-                case "I": // int
-                    switch (getOpCode()) {
-                        case OP_I_GET -> code.invokevirtual(cd, "getElement$pi",
-                                MethodTypeDesc.of(CD_int, CD_Ctx, CD_long));
-                        case OP_I_SET -> {
-                            bctx.loadArgument(code, getValueIndex());
-                            code.invokevirtual(cd, "setElement$pi",
-                                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_int));
-                        }
-                        default -> throw new UnsupportedOperationException(toName(getOpCode()));
+                    case OP_I_SET -> {
+                        bctx.loadArgument(code, getValueIndex());
+                        code.invokevirtual(cdArray, "setElement$pi",
+                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, cdEl));
                     }
-                break;
 
-                default:
-                    throw new UnsupportedOperationException();
+                    // IntNumber and Char only
+                    case OP_IIP_INC -> {
+                        code.invokevirtual(cdArray, "preInc$pi",
+                                MethodTypeDesc.of(cdEl, CD_Ctx, CD_long));
+                        Builder.pop(code, cdEl); // ignore the return value
+                    }
+
+                    case OP_IIP_DEC -> {
+                        code.invokevirtual(cdArray, "preDec$pi",
+                                MethodTypeDesc.of(cdEl, CD_Ctx, CD_long));
+                        Builder.pop(code, cdEl); // ignore the return value
+                    }
+
+                    case OP_IIP_INCA ->
+                        code.invokevirtual(cdArray, "postInc$pi",
+                                MethodTypeDesc.of(cdEl, CD_Ctx, CD_long));
+
+                    case OP_IIP_DECA ->
+                        code.invokevirtual(cdArray, "postDec$pi",
+                                MethodTypeDesc.of(cdEl, CD_Ctx, CD_long));
+
+                    case OP_IIP_INCB ->
+                        code.invokevirtual(cdArray, "preInc$pi",
+                                MethodTypeDesc.of(cdEl, CD_Ctx, CD_long));
+
+                    case OP_IIP_DECB ->
+                        code.invokevirtual(cdArray, "preDec$pi",
+                                MethodTypeDesc.of(cdEl, CD_Ctx, CD_long));
+
+                    case OP_IIP_ADD -> {
+                        // @Op(+) Char add(Int n)
+                        ClassDesc cdArg = typeEl.equals(ts.pool().typeChar())
+                            ? CD_long
+                            : cdEl;
+                        bctx.loadArgument(code, getValueIndex());
+                        code.invokevirtual(cdArray, "addInPlace$pi",
+                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, cdArg));
+                        }
+
+                    case OP_IIP_SUB -> {
+                        // @Op(+) Char add(Int n)
+                        ClassDesc cdArg = typeEl.equals(ts.pool().typeChar())
+                            ? CD_long
+                            : cdEl;
+                        bctx.loadArgument(code, getValueIndex());
+                        code.invokevirtual(cdArray, "subInPlace$pi",
+                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, cdArg));
+                        }
+
+                    // IntNumber only
+                    case OP_IIP_MUL -> {
+                        bctx.loadArgument(code, getValueIndex());
+                        code.invokevirtual(cdArray, "mulInPlace$pi",
+                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, cdEl));
+                        }
+
+                    case OP_IIP_DIV -> {
+                        bctx.loadArgument(code, getValueIndex());
+                        code.invokevirtual(cdArray, "divInPlace$pi",
+                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, cdEl));
+                    }
+
+                    case OP_IIP_MOD -> {
+                        bctx.loadArgument(code, getValueIndex());
+                        code.invokevirtual(cdArray, "modInPlace$pi",
+                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, cdEl));
+                    }
+
+                    case OP_IIP_SHL -> {
+                        bctx.loadArgument(code, getValueIndex());
+                        code.invokevirtual(cdArray, "shlInPlace$pi",
+                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_long));
+                    }
+                    case OP_IIP_SHR -> {
+                        bctx.loadArgument(code, getValueIndex());
+                        code.invokevirtual(cdArray, "shrInPlace$pi",
+                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_long));
+                    }
+                    case OP_IIP_USHR -> {
+                        bctx.loadArgument(code, getValueIndex());
+                        code.invokevirtual(cdArray, "shrAllInPlace$pi",
+                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_long));
+                    }
+
+                    // IntNumber and Boolean
+                    case OP_IIP_AND -> {
+                        bctx.loadArgument(code, getValueIndex());
+                        code.invokevirtual(cdArray, "andInPlace$pi",
+                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, cdEl));
+                    }
+                    case OP_IIP_OR -> {
+                        bctx.loadArgument(code, getValueIndex());
+                        code.invokevirtual(cdArray, "orInPlace$pi",
+                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, cdEl));
+                    }
+                    case OP_IIP_XOR -> {
+                        bctx.loadArgument(code, getValueIndex());
+                        code.invokevirtual(cdArray, "xorInPlace$pi",
+                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, cdEl));
+                    }
+
+                    default -> throw new UnsupportedOperationException(toName(getOpCode()));
                 }
             } else {
-                ClassDesc cd = Builder.CD_xArrayObj;
+                ClassDesc cdArray = Builder.CD_xArrayObj;
                 bctx.loadCtx(code);
                 bctx.loadArgument(code, m_nIndex);
                 switch (getOpCode()) {
-                    case OP_I_GET -> code.invokevirtual(cd, "getElement$p",
-                                        MethodTypeDesc.of(CD_xObj, CD_Ctx, CD_long));
+                    case OP_I_GET ->
+                        code.invokevirtual(cdArray, "getElement$p",
+                            MethodTypeDesc.of(CD_xObj, CD_Ctx, CD_long));
+
                     case OP_I_SET -> {
                         bctx.loadArgument(code, getValueIndex());
-                        code.invokevirtual(cd, "setElement$p",
-                                        MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_xObj));
+                        code.invokevirtual(cdArray, "setElement$p",
+                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_xObj));
                     }
 
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));
@@ -340,6 +429,9 @@ public abstract class OpIndex
 
     private record JitParams(JitParamDesc[] apdStdParam, JitParamDesc[] apdOptParam) {}
 
+    /**
+     * @return the index of the argument value for corresponding ops
+     */
     protected int getValueIndex() {
         throw new UnsupportedOperationException("TODO " + getClass().getName());
     }
