@@ -226,7 +226,7 @@ jobs:
 
             - name: Upload XDK distribution artifact
               if: success() && matrix.os == 'ubuntu-latest'
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v5
               with:
                   name: xdk-dist-${{ github.sha }}
                   path: xdk/build/distributions/xdk-*.zip

@@ -235,7 +235,7 @@ jobs:
                   echo "✅ Artifacts staged to Maven Central and GitHub Packages"
 
             - name: Upload XDK distribution artifact
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v5
               with:
                   name: xdk-release-${{ needs.prepare-release.outputs.release-version }}
                   path: xdk/build/distributions/xdk-*.zip
