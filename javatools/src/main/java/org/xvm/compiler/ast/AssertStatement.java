@@ -411,7 +411,7 @@ public class AssertStatement
             if (cond instanceof AssignmentStatement stmtCond) {
                 fNegated    = stmtCond.isNegated();
                 fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
-                argCond = stmtCond.getConditionRegister();
+                argCond = stmtCond.getConditionRegister(code);
 
                 ExprAST astCond = (ExprAST) ctx.getHolder().getAst(stmtCond);
                 aAstCond[i] = fNegated

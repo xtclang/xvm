@@ -281,9 +281,9 @@ public class IfStatement
             if (cond instanceof AssignmentStatement stmtCond) {
                 fCompletes = stmtCond.completes(ctx, fReachable, code, errs);
                 if (stmtCond.isNegated()) {
-                    code.add(new JumpTrue(stmtCond.getConditionRegister(), labelElse));
+                    code.add(new JumpTrue(stmtCond.getConditionRegister(code), labelElse));
                 } else {
-                    code.add(new JumpFalse(stmtCond.getConditionRegister(), labelElse));
+                    code.add(new JumpFalse(stmtCond.getConditionRegister(code), labelElse));
                 }
                 listExprs.add((AssignAST) ctx.getHolder().getAst(stmtCond));
             } else {
