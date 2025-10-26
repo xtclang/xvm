@@ -755,7 +755,7 @@ public class CommonBuilder
             classBuilder.withField("$type", CD_TypeConstant, ClassFile.ACC_PUBLIC);
         }
 
-        classBuilder.withMethodBody("$xvmType", MethodTypeDesc.of(CD_TypeConstant),
+        classBuilder.withMethodBody("$xvmType", MD_xvmType,
                 ClassFile.ACC_PUBLIC, code -> {
             if (hasType) {
                 code.aload(0)

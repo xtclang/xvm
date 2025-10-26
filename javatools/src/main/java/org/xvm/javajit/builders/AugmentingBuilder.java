@@ -118,7 +118,7 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     protected void assembleXvmType(String className, ClassBuilder classBuilder) {
-        MethodModel mm = findMethod("$xvmType", MethodTypeDesc.of(CD_TypeConstant), false);
+        MethodModel mm = findMethod("$xvmType", MD_xvmType, false);
         if (mm == null) {
             super.assembleXvmType(className, classBuilder);
         }
