@@ -685,8 +685,8 @@ public class WhileStatement
             if (cond instanceof AssignmentStatement stmtCond) {
                 fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
                 code.add(stmtCond.isNegated()
-                        ? new JumpTrue (stmtCond.getConditionRegister(), getEndLabel())
-                        : new JumpFalse(stmtCond.getConditionRegister(), getEndLabel()));
+                        ? new JumpTrue (stmtCond.getConditionRegister(code), getEndLabel())
+                        : new JumpFalse(stmtCond.getConditionRegister(code), getEndLabel()));
                 aCondASTs[i] = (ExprAST) holder.getAst(stmtCond);
             } else {
                 Expression exprCond = (Expression) cond;

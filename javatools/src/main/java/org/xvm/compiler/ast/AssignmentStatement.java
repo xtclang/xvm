@@ -239,14 +239,14 @@ public class AssignmentStatement
     /**
      * @return the single-use register that the Boolean condition result is stored in
      */
-    public Register getConditionRegister() {
+    public Register getConditionRegister(Code code) {
         Register reg = m_regCond;
         if (reg == null) {
             switch (op.getId()) {
             case COND_ASN:
             case COND_NN_ASN:
             case COLON:
-                m_regCond = reg = new Register(pool().typeBoolean(), null, Op.A_STACK);
+                m_regCond = reg = code.createRegister(pool().typeBoolean());
                 break;
 
             default:
@@ -724,7 +724,7 @@ public class AssignmentStatement
                 Assignable LVal = lvalueExpr.generateAssignable(ctx, code, errs);
                 LVal.assign(arg, code, errs);
 
-                Register regCond = isConditional() ? getConditionRegister() : null;
+                Register regCond = isConditional() ? getConditionRegister(code) : null;
                 if (regCond != null) {
                     // assignment happened, so the conditional register should be True
                     code.add(new Move(pool.valTrue(), regCond));
@@ -744,7 +744,7 @@ public class AssignmentStatement
                 int          cAll     = cLVals + 1;
                 Assignable[] LValsAll = new Assignable[cAll];
                 boolean      fCond    = isConditional();
-                Register     regCond  = getConditionRegister();
+                Register     regCond  = getConditionRegister(code);
 
                 LValsAll[0] = lvalueExpr.new Assignable(regCond);
                 if (fCompletes &= lvalueExpr.isCompletable()) {
