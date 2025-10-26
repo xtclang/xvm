@@ -308,7 +308,7 @@ public abstract class Builder {
     }
 
     /**
-     * Generate a "get" for an xType.
+     * Generate a "load" for an xType for the specified TypeConstant.
      * Out: xType instance
      */
     public static void loadType(CodeBuilder code, TypeSystem ts, TypeConstant type) {
@@ -726,4 +726,6 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_UInt64_box  = MethodTypeDesc.of(CD_UInt64, CD_long);
     public static final MethodTypeDesc MD_Initializer = MethodTypeDesc.of(CD_void,   CD_Ctx);
     public static final MethodTypeDesc MD_StringOf    = MethodTypeDesc.of(CD_String, CD_Ctx, CD_JavaString);
+    public static final MethodTypeDesc MD_xvmType     = MethodTypeDesc.of(CD_TypeConstant);
+    public static final MethodTypeDesc MD_TypeIsA     = MethodTypeDesc.of(CD_boolean, CD_TypeConstant);
 }

@@ -4,6 +4,8 @@ import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.xConst;
 import org.xtclang.ecstasy.xType;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.Ctx;
 
 import static java.lang.Character.toCodePoint;
@@ -170,6 +172,11 @@ public class String
         this.start      = start;
         this.end        = end;
         this.next       = next;
+    }
+
+    @Override
+    public TypeConstant $xvmType() {
+        return $ctx().container.typeSystem.pool().typeString();
     }
 
     // ----- fields --------------------------------------------------------------------------------
