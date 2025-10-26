@@ -2,6 +2,58 @@
 
 This document describes the automated release workflow for the XVM project.
 
+## TL;DR - How to Manually Trigger the Workflow
+
+### Starting the Workflow
+
+You can start the `prepare-release.yml` workflow using the GitHub CLI:
+
+```bash
+gh workflow run prepare-release.yml --ref your-branch-name -f branch=your-branch-name
+```
+
+Or through the GitHub web UI:
+1. Go to **Actions** tab
+2. Select **Prepare Release** workflow
+3. Click **Run workflow** button
+4. Specify the branch to prepare release from
+
+### What the Workflow Does
+
+The workflow automates the entire release preparation process in 3 jobs:
+
+**1. prepare-release job** - Creates the release branch and version commits:
+- Creates a new branch `release/X.Y.Z` from your specified branch
+- Updates `version.properties` to the release version (removes `-SNAPSHOT`)
+- Commits and tags this as `vX.Y.Z`
+- Bumps `version.properties` to the next snapshot version
+- Pushes the release branch and tag to GitHub
+
+**2. stage-artifacts job** - Builds and stages all release artifacts:
+- Checks out the release tag
+- Builds the XDK distribution using the root `distZip` aggregator task
+- Stages to Maven Central (reviewable at https://central.sonatype.com/)
+- Publishes to GitHub Packages (staging)
+- Validates Gradle Plugin Portal credentials (doesn't publish yet)
+- Creates a draft GitHub release with the XDK zip attached
+
+**3. create-pr job** - Creates a PR to master:
+- Opens a PR from `release/X.Y.Z` → `master`
+- Includes a comprehensive checklist for reviewing staged artifacts
+- **⚠️ Important**: Merging this PR triggers the `promote-release` workflow which **immediately and irreversibly publishes** to:
+  - Maven Central (production)
+  - GitHub Releases (public)
+  - Gradle Plugin Portal (cannot be undone)
+
+### Key Points
+
+- The workflow expects the source branch to have a `-SNAPSHOT` version in `version.properties`
+- Nothing is publicly released until you merge the PR
+- All artifacts are staged/validated first for review
+- The actual publication happens via the separate `promote-release.yml` workflow when you merge the PR
+
+---
+
 ## Quick Reference
 
 ### Normal Release (3 Steps)
@@ -30,7 +82,8 @@ gh workflow run "Promote Release" \
 
 ### Key URLs
 
-- **Maven Central Staging:** https://oss.sonatype.org/#stagingRepositories
+- **Maven Central Search:** https://central.sonatype.com/ (for browsing released artifacts)
+- **Maven Central Staging:** https://oss.sonatype.org/#stagingRepositories (for managing staging repositories)
 - **GitHub Releases:** https://github.com/xtclang/xvm/releases
 - **Plugin Portal:** https://plugins.gradle.org/plugin/org.xtclang.xtc-plugin
 

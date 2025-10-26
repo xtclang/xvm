@@ -172,7 +172,7 @@ jobs:
                   GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
                   echo "🔨 Building XDK release $VERSION..."
                   ./gradlew $GRADLE_OPTIONS clean
-                  ./gradlew $GRADLE_OPTIONS -Pversion=$VERSION :xdk:distZip
+                  ./gradlew $GRADLE_OPTIONS -Pversion=$VERSION distZip
 
             - name: Validate Gradle Plugin Portal credentials
               env:
@@ -258,7 +258,7 @@ jobs:
                   echo "### 🎯 Release $VERSION Staged" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "**Staged Artifacts:**" >> $GITHUB_STEP_SUMMARY
-                  echo "- ✅ Maven Central: Staged (review at https://oss.sonatype.org/)" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ Maven Central: Staged (review at https://central.sonatype.com/)" >> $GITHUB_STEP_SUMMARY
                   echo "- ✅ GitHub Packages: Published (staging)" >> $GITHUB_STEP_SUMMARY
                   echo "- ✅ GitHub Release: Draft created" >> $GITHUB_STEP_SUMMARY
                   echo "- ✅ Gradle Plugin Portal: Credentials validated (will publish on promotion)" >> $GITHUB_STEP_SUMMARY
@@ -289,7 +289,7 @@ jobs:
 
                   **Verify all staged artifacts before merging!**
 
-                  - [ ] **Maven Central Staging**: Review at https://oss.sonatype.org/
+                  - [ ] **Maven Central Staging**: Review at https://central.sonatype.com/
                     - Check all artifacts are present
                     - Verify POM files are correct
                     - Ensure signatures are valid
