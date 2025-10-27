@@ -22,8 +22,6 @@ public interface XtcLauncherTaskExtension extends Named {
      */
     ConfigurableFileCollection getModulePath();
 
-    Property<@NotNull Boolean> getFork();
-
     Property<@NotNull Boolean> getShowVersion();
 
     Property<@NotNull Boolean> getUseNativeLauncher();
@@ -40,7 +38,16 @@ public interface XtcLauncherTaskExtension extends Named {
      *   <li>JIT compilation benefits from warmed-up code paths</li>
      * </ul>
      *
+     * <p>When the daemon is disabled (useCompilerDaemon=false), the plugin falls back
+     * to forking a new Java process for each compilation (JavaExecLauncher), providing
+     * maximum isolation at the cost of JVM startup overhead.
+     *
      * <p>Default: true (recommended for best performance)
+     *
+     * <p><b>Debugging:</b> To debug the compiler, use standard JDWP arguments via jvmArgs:
+     * <pre>
+     * jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
+     * </pre>
      *
      * @return property controlling whether to use the compiler daemon
      */
@@ -55,12 +62,6 @@ public interface XtcLauncherTaskExtension extends Named {
     Property<@NotNull OutputStream> getStdout();
 
     Property<@NotNull OutputStream> getStderr();
-
-    Property<@NotNull Boolean> getDebug();
-
-    Property<@NotNull Integer> getDebugPort();
-
-    Property<@NotNull Boolean> getDebugSuspend();
 
     default void jvmArg(final String arg) {
         jvmArgs(arg);
