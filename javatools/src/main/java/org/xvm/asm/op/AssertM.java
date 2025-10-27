@@ -5,11 +5,15 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 
@@ -79,6 +83,15 @@ public class AssertM
     public String toString() {
         return super.toString() + ' ' + Argument.toIdString(m_constMsg, m_nMsgConstId);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    protected void buildMessage(BuildContext bctx, CodeBuilder code) {
+        bctx.loadConstant(code, m_nMsgConstId);
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     protected int m_nMsgConstId;
 

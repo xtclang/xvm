@@ -182,7 +182,16 @@ public class ConvertExpression
         // create a temporary to hold the Boolean result for a conditional call, if necessary
         boolean  fCond   = isConditionalResult();
         Register regCond = null;
-        Label    lblSkip = new Label("skip_conv");
+        Label    lblSkip;
+        boolean  fLocalSkip;
+        if (checkConditionalJump() instanceof Label lblCond) {
+            lblSkip    = lblCond;
+            fLocalSkip = false;
+        } else {
+            lblSkip    = new Label("skip_conv");
+            fLocalSkip = true;
+        }
+
         if (fCond) {
             Assignable aLValCond = aLValTemp[0];
             if (aLValCond.isNormalVariable()) {
@@ -207,7 +216,7 @@ public class ConvertExpression
         expr.generateAssignments(ctx, code, aLValTemp, errs);
 
         // skip the conversion if the conditional result was False
-        if (fCond) {
+        if (fCond && fLocalSkip) {
             if (aLVal[0] != aLValTemp[0]) {
                 aLVal[0].assign(regCond, code, errs);
             }
@@ -229,7 +238,7 @@ public class ConvertExpression
             }
         }
 
-        if (fCond) {
+        if (fCond && fLocalSkip) {
             code.add(lblSkip);
         }
     }

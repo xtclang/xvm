@@ -1523,7 +1523,7 @@ public abstract class Expression
                 fLocalPropOk &= aLVal[i].supportsLocalPropMode();
             }
 
-            boolean    fCheckArg0 = fCond && cLVals > 1;
+            boolean    fCheckArg0 = fCond && cLVals > 1 && checkConditionalJump() == null;
             Argument[] aArg       = generateArguments(ctx, code, fLocalPropOk, !fCheckArg0, errs);
 
             if (fCheckArg0) {
@@ -1577,6 +1577,38 @@ public abstract class Expression
         code.add(fWhenTrue
                 ? new JumpTrue(arg, label)
                 : new JumpFalse(arg, label));
+    }
+
+    /**
+     * Checks for a conditional assignment label and if present, generate the necessary code that
+     * jumps it upon a conditional test failure.
+     *
+     * @param code   the code block
+     * @param label  the result of the conditional assignment
+     *
+     * @return true iff the conditional jump op has been generated
+     */
+    protected boolean generateConditionalJump(Code code, Argument argCond) {
+        if (checkConditionalJump() instanceof Label lblCond) {
+            code.add(new JumpFalse(argCond, lblCond));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Checks for a conditional assignment label this expression may need to generate a jump for.
+     *
+     * @return the corresponding label or null if none exists
+     */
+    protected Label checkConditionalJump() {
+        return switch (getParent()) {
+            case AssignmentStatement stmtCond ->
+                stmtCond.getConditionalJump() instanceof Label lblCond ? lblCond : null;
+            case Expression expr ->
+                    expr.checkConditionalJump();
+            default -> null;
+        };
     }
 
     /**

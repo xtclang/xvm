@@ -4,11 +4,11 @@ module test3.examples.org {
 
     @Inject Console console;
 
-    void run() {
+    void run( ) {
         testTry1();
         console.print(testTry2());
-
         testAssert1(False);
+        testAssert2(False);
     }
 
     void testTry1() {
@@ -68,8 +68,19 @@ module test3.examples.org {
         try {
             assert flag as "Flag is not set";
         } catch (IllegalState e) {
-            console.print("Assert: ", True);
+            console.print("Assert 1) ", True);
             console.print(e.text);
         }
     }
+
+    void testAssert2(Boolean flag) {
+        try {
+            assert Int i := next(flag), Int j := next(flag);
+        } catch (IllegalState e) {
+            console.print("Assert 2) ", True);
+            console.print(e.text);
+        }
+    }
+
+    conditional Int next(Boolean flag) = False;
 }

@@ -97,12 +97,8 @@ public abstract class Builder {
 
         switch (constant) {
         case StringConstant stringConst:
-            MethodTypeDesc MD_of = MethodTypeDesc.of(CD_String, CD_Ctx, CD_JavaString);
-            // String.of(s)
-            code.aload(code.parameterSlot(0)) // $ctx
-                .ldc(stringConst.getValue())
-                .invokestatic(CD_String, "of", MD_of);
-            return new SingleSlot(Op.A_STACK, constant.getType(), CD_String, "");
+            loadString(code, stringConst.getValue());
+            return new SingleSlot(Op.A_STACK, stringConst.getType(), CD_String, "");
 
         case IntConstant intConstant:// TODO: support all Int/UInt types
             code.ldc(intConstant.getValue().getLong());
@@ -182,6 +178,15 @@ public abstract class Builder {
         }
 
         throw new UnsupportedOperationException(constant.toString());
+    }
+
+    /**
+     * Build the code to load an XTC String value on the Java stack.
+     */
+    public static void loadString(CodeBuilder code, String value) {
+        code.aload(code.parameterSlot(0)) // $ctx
+            .ldc(value)
+            .invokestatic(CD_String, "of", MD_StringOf);
     }
 
     /**

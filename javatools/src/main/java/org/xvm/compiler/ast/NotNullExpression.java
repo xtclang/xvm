@@ -228,7 +228,7 @@ public class NotNullExpression
         }
 
         if (m_fCond) {
-            Assignable   varCond = createTempVar(code, pool().typeBoolean(), true);
+            Assignable   varCond = createTempVar(code, pool().typeBoolean(), false);
             Assignable   varVal  = createTempVar(code, getType(), false);
             Assignable[] LVals   = new Assignable[] {varCond, varVal};
             expr.generateAssignments(ctx, code, LVals, errs);

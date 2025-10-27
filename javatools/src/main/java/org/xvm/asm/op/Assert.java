@@ -22,6 +22,8 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.Builder;
 import org.xvm.javajit.Ctx;
 
 import org.xvm.runtime.ClassComposition;
@@ -36,6 +38,7 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_String;
 import static org.xvm.javajit.Builder.CD_xException;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -186,12 +189,16 @@ public class Assert
             code.loadConstant( "Debugger support for jit is not yet implemented");
             code.invokevirtual(CD_Ctx, "log", Ctx.MD_log);
         } else {
-            buildMessage(bctx, code);
-            MethodConstant idCtor = (MethodConstant) bctx.getConstant(m_nConstructor);
-            TypeConstant   typeEx = idCtor.getNamespace().getType();
-            int[]          anArgs = new int[idCtor.getSignature().getParamCount()];
+            MethodConstant idCtor  = (MethodConstant) bctx.getConstant(m_nConstructor);
+            TypeConstant   typeEx  = idCtor.getNamespace().getType();
+            int[]          anArgs  = new int[idCtor.getSignature().getParamCount()];
 
-            Arrays.fill(anArgs, Op.A_DEFAULT);
+            Slot slotMsg = bctx.pushSlot(bctx.typeSystem.pool().typeString(), CD_String, "");
+            buildMessage(bctx, code);
+            code.astore(slotMsg.slot());
+
+            anArgs[0] = A_STACK;
+            Arrays.fill(anArgs, 1, anArgs.length, Op.A_DEFAULT);
 
             ClassDesc cdEx = bctx.buildNew(code, typeEx, idCtor, anArgs);
             code.getfield(cdEx, "$exception", CD_xException)
@@ -203,10 +210,10 @@ public class Assert
     }
 
     /**
-     * Build the assert message.
+     * Build the assert message and place it onto the Java stack.
      */
     protected void buildMessage(BuildContext bctx, CodeBuilder code) {
-        code.loadConstant("Assertion failed");
+        Builder.loadString(code, "Assertion failed");
     }
 
     // ----- fields --------------------------------------------------------------------------------

@@ -13,7 +13,6 @@ import org.xvm.asm.Assignment;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
@@ -237,24 +236,25 @@ public class AssignmentStatement
     }
 
     /**
-     * @return the single-use register that the Boolean condition result is stored in
+     * Set the label for a conditional assignment to jump to in the negative test case.
      */
-    public Register getConditionRegister(Code code) {
-        Register reg = m_regCond;
-        if (reg == null) {
-            switch (op.getId()) {
-            case COND_ASN:
-            case COND_NN_ASN:
-            case COLON:
-                m_regCond = reg = code.createRegister(pool().typeBoolean());
-                break;
+    public void prepareConditionalJump(Label labelFail) {
+        m_labelCondFail = labelFail;
+    }
 
-            default:
-                throw new IllegalStateException("op=\"" + op.getValueText() + '\"');
-            }
-        }
+    /**
+     * @return the label for a conditional assignment to jump to in the negative test case
+     */
+    public Label getConditionalJump() {
+        m_fCondUsed = true;
+        return m_labelCondFail;
+    }
 
-        return reg;
+    /**
+     * @return true if the conditional jump label has been "consumed". Used for debugging only.
+     */
+    public boolean isConditionalJumpGenerated() {
+        return m_fCondUsed;
     }
 
     /**
@@ -718,23 +718,30 @@ public class AssignmentStatement
                 Argument arg = rvalue.generateArgument(ctx, code, false, false, errs);
                 fCompletes &= rvalue.isCompletable();
 
-                Label labelSkipAssign = new Label("?=Null");
-                code.add(new JumpNull(arg, labelSkipAssign));
+                if (m_labelCondFail == null) {
+                    Label labelSkipAssign = new Label("?=Null");
+                    code.add(new JumpNull(arg, labelSkipAssign));
 
-                Assignable LVal = lvalueExpr.generateAssignable(ctx, code, errs);
-                LVal.assign(arg, code, errs);
+                    Assignable LVal = lvalueExpr.generateAssignable(ctx, code, errs);
+                    LVal.assign(arg, code, errs);
 
-                Register regCond = isConditional() ? getConditionRegister(code) : null;
-                if (regCond != null) {
-                    // assignment happened, so the conditional register should be True
-                    code.add(new Move(pool.valTrue(), regCond));
-                    code.add(new Jump(getEndLabel()));
-                }
+                    Register regCond = isConditional() ? code.createRegister(pool.typeBoolean()) : null;
+                    if (regCond != null) {
+                        // assignment happened, so the conditional register should be True
+                        code.add(new Move(pool.valTrue(), regCond));
+                        code.add(new Jump(getEndLabel()));
+                    }
 
-                code.add(labelSkipAssign);
-                if (regCond != null) {
-                    // assignment did NOT happen, so the conditional register should be False
-                    code.add(new Move(pool.valFalse(), regCond));
+                    code.add(labelSkipAssign);
+                    if (regCond != null) {
+                        // assignment did NOT happen, so the conditional register should be False
+                        code.add(new Move(pool.valFalse(), regCond));
+                    }
+                } else {
+                    m_fCondUsed = true;
+                    code.add(new JumpNull(arg, m_labelCondFail));
+                    Assignable LVal = lvalueExpr.generateAssignable(ctx, code, errs);
+                    LVal.assign(arg, code, errs);
                 }
 
                 operAsn = Operator.AsnIfNotNull;
@@ -744,13 +751,15 @@ public class AssignmentStatement
                 int          cAll     = cLVals + 1;
                 Assignable[] LValsAll = new Assignable[cAll];
                 boolean      fCond    = isConditional();
-                Register     regCond  = getConditionRegister(code);
+                Register     regCond  = code.createRegister(pool.typeBoolean());
 
                 LValsAll[0] = lvalueExpr.new Assignable(regCond);
                 if (fCompletes &= lvalueExpr.isCompletable()) {
                     if (fCond || rvalue.isConditionalResult()) {
                         System.arraycopy(LVals, 0, LValsAll, 1, cLVals);
                         rvalue.generateAssignments(ctx, code, LValsAll, errs);
+
+                        assert m_labelCondFail == null || m_fCondUsed;
                     } else {
                         // neither the parent (e.g. "if" or "for") nor the r-value (invocation)
                         // are conditional; need to generate the conditional check ourselves
@@ -1150,7 +1159,9 @@ public class AssignmentStatement
     protected long       endNegate;
 
     private transient VariableDeclarationStatement[] m_decls;
-    private transient Register                       m_regCond;
+
+    private transient Label m_labelCondFail;
+    private transient boolean m_fCondUsed; // for debugging only
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AssignmentStatement.class, "lvalue", "lvalueExpr", "rvalue");
 }

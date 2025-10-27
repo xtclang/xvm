@@ -350,6 +350,7 @@ public class AssertStatement
         }
 
         boolean   fCompletes   = fReachable;
+        boolean   fAutoMessage = message == null || fDebug;
         Label     labelMessage = new Label("CustomMessage");
         ExprAST[] aAstCond     = new ExprAST[cConds];
         for (int i = 0; i < cConds; ++i) {
@@ -406,17 +407,48 @@ public class AssertStatement
                 cond = getCondition(i);
             }
 
-            Argument argCond;
-            boolean  fNegated = false;
+            Label   labelAssert = fAutoMessage ? new Label("assert_" + i) : labelMessage;
+            boolean fNegated    = false;
             if (cond instanceof AssignmentStatement stmtCond) {
-                fNegated    = stmtCond.isNegated();
+                fNegated = stmtCond.isNegated();
+
+                Label labelNeg = fNegated ? new Label("negated") : null;
+
+                stmtCond.prepareConditionalJump(fNegated ? labelNeg : labelAssert);
+
                 fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
-                argCond = stmtCond.getConditionRegister(code);
+
+                assert stmtCond.isConditionalJumpGenerated();
+
+                if (fNegated) {
+                    code.add(new Jump(labelAssert));
+                    code.add(labelNeg);
+                }
 
                 ExprAST astCond = (ExprAST) ctx.getHolder().getAst(stmtCond);
                 aAstCond[i] = fNegated
                         ? new UnaryOpExprAST(astCond, UnaryOpExprAST.Operator.Not, pool.typeBoolean())
                         : astCond;
+
+                if (fAutoMessage) {
+                    Label labelNext = new Label("next"+i);
+                    code.add(new Jump(labelNext)); // go to the next check
+                    code.add(labelAssert);
+                    if (fDebug) {
+                        code.add(new Assert(pool.valFalse(), null));
+                    } else if (mapTrace.isEmpty()) {
+                        code.add(new AssertM(pool.valFalse(), constNew, constText));
+                    } else {
+                        List<Argument> argV = new ArrayList<>();
+                        for (Expression expr : mapTrace.values()) {
+                            Argument[] aArgs = ((TraceExpression) expr.getParent()).getArguments();
+                            Collections.addAll(argV, aArgs);
+                        }
+                        code.add(new AssertV(pool.valFalse(),
+                            constNew, constText, argV.toArray(Expression.NO_RVALUES)));
+                    }
+                    code.add(labelNext);
+                }
             } else {
                 Expression exprCond = (Expression) cond;
 
@@ -438,47 +470,40 @@ public class AssertStatement
                 }
 
                 fCompletes &= exprCond.isCompletable();
-                argCond = exprCond.generateArgument(ctx, code, true, true, errs);
+                Argument argCond = exprCond.generateArgument(ctx, code, true, true, errs);
 
-                aAstCond[i] = exprCond.getExprAST(ctx);
-            }
-
-            if (message == null || fDebug) {
-                if (fNegated) {
-                    Register regNeg = new Register(pool.typeBoolean(), null, Op.A_STACK);
-                    code.add(new IsNot(argCond, regNeg));
-                    argCond = regNeg;
-                }
-                if (fDebug) {
-                    code.add(new Assert(argCond, null));
-                } else if (mapTrace.isEmpty()) {
-                    code.add(new AssertM(argCond, constNew, constText));
-                } else {
-                    List<Argument> argV = new ArrayList<>();
-                    for (Expression expr : mapTrace.values()) {
-                        Argument[] aArgs = ((TraceExpression) expr.getParent()).getArguments();
-                        Collections.addAll(argV, aArgs);
+                if (fAutoMessage) {
+                    if (fNegated) {
+                        Register regNeg = new Register(pool.typeBoolean(), null, Op.A_STACK);
+                        code.add(new IsNot(argCond, regNeg));
+                        argCond = regNeg;
                     }
-                    code.add(new AssertV(
-                            argCond, constNew, constText, argV.toArray(Expression.NO_RVALUES)));
-                }
-            } else {
-                if (i == cConds - 1) {
-                    // last one, so get out of the assertion if everything was true
-                    code.add(fNegated
-                        ? new JumpFalse(argCond, getEndLabel())
-                        : new JumpTrue(argCond, getEndLabel()));
+                    if (fDebug) {
+                        code.add(new Assert(argCond, null));
+                    } else if (mapTrace.isEmpty()) {
+                        code.add(new AssertM(argCond, constNew, constText));
+                    } else {
+                        List<Argument> argV = new ArrayList<>();
+                        for (Expression expr : mapTrace.values()) {
+                            Argument[] aArgs = ((TraceExpression) expr.getParent()).getArguments();
+                            Collections.addAll(argV, aArgs);
+                        }
+                        code.add(new AssertV(
+                                argCond, constNew, constText, argV.toArray(Expression.NO_RVALUES)));
+                    }
                 } else {
-                    // in the middle, so check for the current condition to have failed
                     code.add(fNegated
                             ? new JumpTrue(argCond, labelMessage)
                             : new JumpFalse(argCond, labelMessage));
                 }
+
+                aAstCond[i] = exprCond.getExprAST(ctx);
             }
         }
 
         ExprAST astMessage = null;
-        if (message != null && !fDebug) {
+        if (!fAutoMessage) {
+            code.add(new Jump(getEndLabel())); // normal completion
             // throw new {sThrow}(message, null)
             code.add(labelMessage);
             Argument argEx  = code.createRegister(constEx.getType());
