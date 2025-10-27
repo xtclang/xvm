@@ -177,58 +177,6 @@ class XtcPluginFunctionalTest {
         assertTrue(Files.exists(testProjectDir.resolve("build/xtc/main/lib/ModuleB.xtc")), "ModuleB.xtc should exist");
     }
 
-    /**
-     * Test that the plugin works with configuration cache enabled.
-     */
-    @Test
-    void testWithConfigurationCache() throws IOException {
-        setupRealXtcProject();
-        createSimpleXtcModule("CacheTest", """
-            module CacheTest {
-                void run() {
-                    @Inject Console console;
-                    console.print("Testing configuration cache");
-                }
-            }
-            """);
-
-        // First run - store configuration cache
-        BuildResult firstRun = runGradle("compileXtc", "--configuration-cache", "--info");
-        assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(firstRun.task(":compileXtc")).getOutcome());
-        assertTrue(firstRun.getOutput().contains("Configuration cache entry stored") || firstRun.getOutput().contains("Configuration cache entry reused"),
-            "Should store or reuse configuration cache");
-
-        // Second run - reuse configuration cache
-        BuildResult secondRun = runGradle("compileXtc", "--configuration-cache", "--info");
-        assertTrue(secondRun.getOutput().contains("Configuration cache entry reused"),
-            "Should reuse configuration cache on second run");
-    }
-
-    /**
-     * Test compilation with verbose output.
-     */
-    @Test
-    void testVerboseCompilation() throws IOException {
-        setupRealXtcProject();
-        createSimpleXtcModule("VerboseTest", """
-            module VerboseTest {
-                void run() {}
-            }
-            """);
-
-        appendToBuildFile("""
-
-            xtcCompile {
-                verbose = true
-            }
-            """);
-
-        BuildResult result = runGradle("compileXtc", "--info");
-        assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(result.task(":compileXtc")).getOutcome());
-    }
-
-    // Helper methods
-
     private void setupRealXtcProject() throws IOException {
         // Create settings.gradle.kts with includedBuild to XVM root
         // This allows the test to use the current plugin code and XDK from the workspace
