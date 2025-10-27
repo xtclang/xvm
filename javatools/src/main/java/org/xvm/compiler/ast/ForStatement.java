@@ -28,8 +28,6 @@ import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.IP_Inc;
 import org.xvm.asm.op.Jump;
-import org.xvm.asm.op.JumpFalse;
-import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Loop;
 import org.xvm.asm.op.LoopEnd;
@@ -602,11 +600,19 @@ public class ForStatement
             for (int i = 0; i < cConds; ++i) {
                 AstNode cond = getCondition(i);
                 if (cond instanceof AssignmentStatement stmtCond) {
+                    boolean fNegated = stmtCond.isNegated();
+                    Label   labelNeg = fNegated ? new Label("negated") : null;
+
+                    stmtCond.prepareConditionalJump(fNegated ? labelNeg : getEndLabel());
+
                     fBlockReachable &= stmtCond.completes(ctx, fCompletes, code, errs);
 
-                    code.add(stmtCond.isNegated()
-                            ? new JumpTrue (stmtCond.getConditionRegister(code), getEndLabel())
-                            : new JumpFalse(stmtCond.getConditionRegister(code), getEndLabel()));
+                    assert stmtCond.isConditionalJumpGenerated();
+
+                    if (fNegated) {
+                        code.add(new Jump(getEndLabel()));
+                        code.add(labelNeg);
+                    }
 
                     aCondAST[i] = (ExprAST) holder.getAst(stmtCond);
                 } else {

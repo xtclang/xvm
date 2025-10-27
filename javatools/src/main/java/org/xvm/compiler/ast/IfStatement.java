@@ -22,8 +22,6 @@ import org.xvm.asm.ast.MultiExprAST;
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Jump;
-import org.xvm.asm.op.JumpFalse;
-import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Token;
@@ -279,12 +277,20 @@ public class IfStatement
         for (AstNode cond : conds) {
             boolean fCompletes;
             if (cond instanceof AssignmentStatement stmtCond) {
+                boolean fNegated = stmtCond.isNegated();
+                Label   labelNeg = fNegated ? new Label("negated") : null;
+
+                stmtCond.prepareConditionalJump(fNegated ? labelNeg : labelElse);
+
                 fCompletes = stmtCond.completes(ctx, fReachable, code, errs);
-                if (stmtCond.isNegated()) {
-                    code.add(new JumpTrue(stmtCond.getConditionRegister(code), labelElse));
-                } else {
-                    code.add(new JumpFalse(stmtCond.getConditionRegister(code), labelElse));
+
+                assert stmtCond.isConditionalJumpGenerated();
+
+                if (fNegated) {
+                    code.add(new Jump(labelElse));
+                    code.add(labelNeg);
                 }
+
                 listExprs.add((AssignAST) ctx.getHolder().getAst(stmtCond));
             } else {
                 Expression exprCond = (Expression) cond;

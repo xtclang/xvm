@@ -256,7 +256,7 @@ public class ElvisExpression
 
         if (m_fCond) {
             Label        labelEnd = getEndLabel();
-            Assignable   varCond  = createTempVar(code, pool().typeBoolean(), true);
+            Assignable   varCond  = createTempVar(code, pool().typeBoolean(), false);
             Assignable   varVal   = createTempVar(code, getType(), false);
             Assignable[] LVals    = new Assignable[] {varCond, varVal};
             expr1.generateAssignments(ctx, code, LVals, errs);
