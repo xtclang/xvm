@@ -106,16 +106,19 @@ public class Compiler
      * @param asArg command line arguments
      */
     public static void main(String[] asArg) {
-        try {
-            launch(asArg);
-        } catch (LauncherException e) {
-            System.exit(e.error ? 1 : 0);
-        }
+        runTool(() -> launch(asArg));
     }
 
+    /**
+     * Programmatic entry point that throws LauncherException instead of calling System.exit().
+     * Use this when calling the compiler from a daemon or other long-running process.
+     *
+     * @param asArg command line arguments
+     * @throws LauncherException if compilation fails or encounters an error
+     */
     public static void launch(String[] asArg) throws LauncherException {
         new Compiler(asArg).run();
-}
+    }
 
     /**
      * Compiler constructor.

@@ -51,11 +51,7 @@ public class Runner
      * @param asArg command line arguments
      */
     public static void main(String[] asArg) {
-        try {
-            launch(asArg);
-        } catch (LauncherException e) {
-            System.exit(e.error ? 1 : 0);
-        }
+        runTool(() -> launch(asArg));
     }
 
     public static void launch(String[] asArg) throws LauncherException {
@@ -322,7 +318,10 @@ public class Runner
 
                 connector.invoke0(method, asArg);
 
-                System.exit(connector.join());
+                int exitCode = connector.join();
+                if (exitCode != 0) {
+                    throw new LauncherException(true, "Execution failed with exit code: " + exitCode);
+                }
             }
         } catch (InterruptedException ignore) {
         } catch (Throwable e) {

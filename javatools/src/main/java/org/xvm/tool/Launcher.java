@@ -102,6 +102,35 @@ public abstract class Launcher
     }
 
     /**
+     * Common entry point wrapper for all XTC tools. Handles conversion of LauncherException
+     * to appropriate exit behavior.
+     *
+     * <p>When running standalone (from command line), LauncherException is converted to
+     * System.exit() with exit code 0 (success) or 1 (error). When running in a daemon
+     * (like Gradle's compiler daemon), the LauncherException propagates to the caller for
+     * proper handling without killing the daemon process.
+     *
+     * @param task the task to execute (typically a lambda calling the tool's run method)
+     */
+    protected static void runTool(ThrowingRunnable task) {
+        try {
+            task.run();
+        } catch (LauncherException e) {
+            // When running standalone, convert to System.exit()
+            // When running in a daemon, the caller will catch this before we get here
+            System.exit(e.error ? 1 : 0);
+        }
+    }
+
+    /**
+     * Functional interface for tasks that can throw LauncherException.
+     */
+    @FunctionalInterface
+    protected interface ThrowingRunnable {
+        void run() throws LauncherException;
+    }
+
+    /**
      * @param asArgs  the Launcher's command-line arguments
      */
     public Launcher(String[] asArgs, Console console) {

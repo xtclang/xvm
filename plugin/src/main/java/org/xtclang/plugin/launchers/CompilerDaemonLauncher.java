@@ -72,26 +72,20 @@ public class CompilerDaemonLauncher<E extends XtcLauncherTaskExtension, T extend
     @Override
     public ExecResult apply(@NotNull final CommandLine cmd) {
         logger.info("[compiler-daemon] Compiling using XTC compiler daemon: {}", task.getName());
-
         validateCommandLine(cmd);
-
         final var builder = resultBuilder(cmd);
-
         try {
             if (task.hasVerboseLogging()) {
                 logger.lifecycle("[compiler-daemon] Compiler command: {}", cmd.toString());
             }
-
             // Get the compiler service instance
             final XtcCompilerService compilerService = compilerServiceProvider.get();
-
             // Compile using the daemon
             final XtcExecResult result = compilerService.compile(
                     cmd,
                     task.getJavaToolsClasspath(),
                     logger
             );
-
             // Transfer result to builder
             builder.exitValue(result.getExitValue());
             if (result.getFailure() != null) {
@@ -103,7 +97,6 @@ public class CompilerDaemonLauncher<E extends XtcLauncherTaskExtension, T extend
             builder.exitValue(-1);
             builder.failure(e);
         }
-
         return createExecResult(builder);
     }
 

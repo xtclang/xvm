@@ -42,7 +42,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     protected DefaultXtcLauncherTaskExtension(final Project project) {
         this.objects = project.getObjects();
         this.logger = project.getLogger();
-        final var providers = project.getProviders();
+
         // Initialize module path as an empty file collection
         this.modulePath = objects.fileCollection();
 
@@ -53,11 +53,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         this.verbose = objects.property(Boolean.class).convention(false);
         this.showVersion = objects.property(Boolean.class).convention(false);
         this.useNativeLauncher = objects.property(Boolean.class).convention(false);
-
-        // Read compiler daemon default from xdk.properties (configuration cache compatible)
-        final boolean compilerDaemonDefault = providers.gradleProperty("org.xtclang.compilerDaemon").map(Boolean::parseBoolean).orElse(false).get();
-        this.useCompilerDaemon = objects.property(Boolean.class).convention(compilerDaemonDefault);
-        logger.lifecycle("[plugin] Compiler daemon enabled: {}", compilerDaemonDefault);
+        this.useCompilerDaemon = objects.property(Boolean.class).convention(false);  // Default disabled until stable
 
         this.stdin = objects.property(InputStream.class);
         this.stdout = objects.property(OutputStream.class);

@@ -103,8 +103,9 @@ public abstract class XtcCompilerService implements BuildService<XtcCompilerServ
         // Load compiler class
         this.compilerClass = compilerClassLoader.loadClass("org.xvm.tool.Compiler");
 
-        // Get the main method that accepts String[] args
-        this.compilerMainMethod = compilerClass.getMethod("main", String[].class);
+        // Get the launch method that accepts String[] args and throws LauncherException
+        // (NOT main(), which would call System.exit() and kill the daemon)
+        this.compilerMainMethod = compilerClass.getMethod("launch", String[].class);
 
         logger.lifecycle("[compiler-daemon] XTC compiler daemon initialized successfully");
         logger.info("[compiler-daemon] Compiler class: {}", compilerClass.getName());
@@ -129,7 +130,6 @@ public abstract class XtcCompilerService implements BuildService<XtcCompilerServ
                 // Note: This runs synchronously in the current thread
                 compilerMainMethod.invoke(null, (Object) args);
 
-                // XTC Compiler uses System.exit() on error, but we catch that in the launcher
                 // If we get here, compilation succeeded
                 final var builder = XtcExecResult.builder(XtcCompilerService.class, commandLine);
                 builder.exitValue(0);
@@ -142,18 +142,30 @@ public abstract class XtcCompilerService implements BuildService<XtcCompilerServ
             }
 
         } catch (final Exception e) {
-            logger.error("[compiler-daemon] Compiler invocation failed", e);
-
-            // Create failure result
-            final var builder = XtcExecResult.builder(XtcCompilerService.class, commandLine);
-
-            // Check if this is a compilation error (expected) vs a daemon error (unexpected)
+            // Check if this is a LauncherException (expected exit request from compiler)
             final Throwable cause = e.getCause();
-            if (cause != null && cause.getMessage() != null && cause.getMessage().contains("compilation")) {
-                builder.exitValue(1);
-            } else {
-                builder.exitValue(-1);
+            if (cause != null && cause.getClass().getName().equals("org.xvm.tool.Launcher$LauncherException")) {
+                try {
+                    // Extract error flag from LauncherException
+                    final boolean isError = (Boolean) cause.getClass().getField("error").get(cause);
+                    final int exitCode = isError ? 1 : 0;
+                    logger.info("[compiler-daemon] Compiler completed with exit code: {}", exitCode);
+
+                    final var builder = XtcExecResult.builder(XtcCompilerService.class, commandLine);
+                    builder.exitValue(exitCode);
+                    if (exitCode != 0) {
+                        builder.failure(cause);
+                    }
+                    return builder.build();
+                } catch (final Exception extractError) {
+                    logger.error("[compiler-daemon] Failed to extract error flag from LauncherException", extractError);
+                }
             }
+
+            // Unexpected error
+            logger.error("[compiler-daemon] Compiler invocation failed with unexpected exception", e);
+            final var builder = XtcExecResult.builder(XtcCompilerService.class, commandLine);
+            builder.exitValue(-1);
             builder.failure(e);
             return builder.build();
         }
