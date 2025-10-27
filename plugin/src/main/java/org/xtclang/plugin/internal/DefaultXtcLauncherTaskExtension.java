@@ -8,8 +8,6 @@ import java.io.OutputStream;
 import java.util.Collections;
 import java.util.List;
 
-import static org.xtclang.plugin.XtcPluginConstants.DEFAULT_DEBUG_PORT;
-
 import org.gradle.api.Project;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.logging.Logger;
@@ -33,11 +31,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
 
     protected final ConfigurableFileCollection modulePath;
     protected final ListProperty<@NotNull String> jvmArgs;
-    protected final Property<@NotNull Boolean> debug;
-    protected final Property<@NotNull Integer> debugPort;
-    protected final Property<@NotNull Boolean> debugSuspend;
     protected final Property<@NotNull Boolean> verbose;
-    protected final Property<@NotNull Boolean> fork;
     protected final Property<@NotNull Boolean> showVersion;
     protected final Property<@NotNull Boolean> useNativeLauncher;
     protected final Property<@NotNull Boolean> useCompilerDaemon;
@@ -48,27 +42,23 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     protected DefaultXtcLauncherTaskExtension(final Project project) {
         this.objects = project.getObjects();
         this.logger = project.getLogger();
-
-        final var env = System.getenv();
-
+        final var providers = project.getProviders();
         // Initialize module path as an empty file collection
         this.modulePath = objects.fileCollection();
-
-        // TODO: Consider replacing the debug configuration with the debug flags inherited directly from its JavaExec extension
-        //   DSL, or at least reimplementing them so that they look the same for different kinds of launchers.
-        this.debug = objects.property(Boolean.class).convention(Boolean.parseBoolean(env.getOrDefault("XTC_DEBUG", "false")));
-        this.debugPort = objects.property(Integer.class).convention(Integer.parseInt(env.getOrDefault("XTC_DEBUG_PORT", String.valueOf(DEFAULT_DEBUG_PORT))));
-        this.debugSuspend = objects.property(Boolean.class).convention(Boolean.parseBoolean(env.getOrDefault("XTC_DEBUG_SUSPEND", "true")));
 
         // Use default JVM args from properties file generated at plugin build time
         this.defaultJvmArgs = loadDefaultJvmArgs();
         logger.info("[plugin] Loaded default JVM args: {}", defaultJvmArgs);
         this.jvmArgs = objects.listProperty(String.class).convention(defaultJvmArgs);
         this.verbose = objects.property(Boolean.class).convention(false);
-        this.fork = objects.property(Boolean.class).convention(true);
         this.showVersion = objects.property(Boolean.class).convention(false);
         this.useNativeLauncher = objects.property(Boolean.class).convention(false);
-        this.useCompilerDaemon = objects.property(Boolean.class).convention(true); // Default to true for best performance
+
+        // Read compiler daemon default from xdk.properties (configuration cache compatible)
+        final boolean compilerDaemonDefault = providers.gradleProperty("org.xtclang.compilerDaemon").map(Boolean::parseBoolean).orElse(false).get();
+        this.useCompilerDaemon = objects.property(Boolean.class).convention(compilerDaemonDefault);
+        logger.lifecycle("[plugin] Compiler daemon enabled: {}", compilerDaemonDefault);
+
         this.stdin = objects.property(InputStream.class);
         this.stdout = objects.property(OutputStream.class);
         this.stderr = objects.property(OutputStream.class);
@@ -97,11 +87,6 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     }
 
     @Override
-    public Property<@NotNull Boolean> getFork() {
-        return fork;
-    }
-
-    @Override
     public Property<@NotNull Boolean> getShowVersion() {
         return showVersion;
     }
@@ -119,21 +104,6 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     @Override
     public Property<@NotNull Boolean> getVerbose() {
         return verbose;
-    }
-
-    @Override
-    public Property<@NotNull Boolean> getDebug() {
-        return debug;
-    }
-
-    @Override
-    public Property<@NotNull Integer> getDebugPort() {
-        return debugPort;
-    }
-
-    @Override
-    public Property<@NotNull Boolean> getDebugSuspend() {
-        return debugSuspend;
     }
 
     @Override

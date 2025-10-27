@@ -25,12 +25,8 @@ public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends 
 
     @Override
     public String toString() {
-        return String.format("[plugin] (launcher='%s', task='%s', fork=%s, native=%s).",
-                getClass().getSimpleName(), taskName, shouldFork(), isNativeLauncher());
-    }
-
-    protected boolean shouldFork() {
-        return task.getFork().get();
+        return String.format("[plugin] (launcher='%s', task='%s', native=%s).",
+                getClass().getSimpleName(), taskName, isNativeLauncher());
     }
 
     protected boolean isNativeLauncher() {

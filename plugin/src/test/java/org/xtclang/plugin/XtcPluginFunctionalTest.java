@@ -254,7 +254,7 @@ class XtcPluginFunctionalTest {
             }
 
             xtcCompile {
-                fork = true
+                useCompilerDaemon = false  // Disable daemon for isolation in tests
                 verbose = false
                 rebuild = false
             }

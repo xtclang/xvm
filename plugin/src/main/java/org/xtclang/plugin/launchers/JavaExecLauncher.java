@@ -7,7 +7,8 @@ import static org.xtclang.plugin.XtcPluginUtils.FileUtils.readXdkVersionFromJar;
 
 import java.io.File;
 import java.io.IOException;
-
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.zip.ZipFile;
 
 import org.gradle.api.GradleException;
@@ -172,5 +173,35 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
         assert file.exists();
         checkIsJarFile(file);
         return file;
+    }
+
+    /**
+     * Execute multiple commands in parallel using concurrent javaexec operations.
+     * This is useful when Gradle's parallel flag is enabled and multiple compilation
+     * units need to be processed concurrently.
+     *
+     * @param commands List of commands to execute in parallel
+     * @return List of execution results
+     */
+    public List<ExecResult> applyParallel(final List<CommandLine> commands) {
+        logger.lifecycle("[plugin] Executing {} Java commands in parallel using javaexec", commands.size());
+
+        // Use CompletableFuture to run multiple javaexec operations concurrently
+        // Note: Gradle's ExecOperations is thread-safe and supports concurrent execution
+        final List<CompletableFuture<ExecResult>> futures = commands.stream()
+            .map(cmd -> CompletableFuture.supplyAsync(() -> apply(cmd)))
+            .toList();
+
+        // Wait for all to complete
+        final CompletableFuture<Void> allOf = CompletableFuture.allOf(
+            futures.toArray(new CompletableFuture<?>[0])
+        );
+
+        try {
+            allOf.get(); // Wait for all processes to complete
+            return futures.stream().map(CompletableFuture::join).toList();
+        } catch (final Exception e) {
+            throw new GradleException("[plugin] Error during parallel execution", e);
+        }
     }
 }

@@ -48,7 +48,6 @@ import org.jetbrains.annotations.NotNull;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.internal.GradlePhaseAssertions;
-import org.xtclang.plugin.launchers.BuildThreadLauncher;
 import org.xtclang.plugin.launchers.CompilerDaemonLauncher;
 import org.xtclang.plugin.launchers.JavaExecLauncher;
 import org.xtclang.plugin.launchers.NativeBinaryLauncher;
@@ -66,11 +65,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected final Property<@NotNull OutputStream> stdout;
     protected final Property<@NotNull OutputStream> stderr;
     protected final ListProperty<@NotNull String> jvmArgs;
-    protected final Property<@NotNull Boolean> debug;
-    protected final Property<@NotNull Integer> debugPort;
-    protected final Property<@NotNull Boolean> debugSuspend;
     protected final Property<@NotNull Boolean> verbose;
-    protected final Property<@NotNull Boolean> fork;
     protected final Property<@NotNull Boolean> showVersion;
     protected final Property<@NotNull Boolean> useNativeLauncher;
 
@@ -86,10 +81,9 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     // Resolved launcher configuration values captured from extension at configuration time.
     // These are used during task execution to avoid Project access (configuration cache compatible).
-    // The Property<Boolean> versions (fork, useNativeLauncher) are for DSL configuration and
+    // The Property<Boolean> versions (useNativeLauncher, useCompilerDaemon) are for DSL configuration and
     // Gradle's input tracking, while these resolved primitives are for execution logic.
     protected final boolean useNativeLauncherValue;
-    protected final boolean forkValue;
     protected final boolean useCompilerDaemonValue;
     protected final Provider<@NotNull String> toolchainExecutable;
     protected final Provider<@NotNull String> projectVersion;
@@ -123,10 +117,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
         this.modulePath = objects.fileCollection().from(ext.getModulePath());
 
-        this.debug = objects.property(Boolean.class).convention(ext.getDebug());
-        this.debugPort = objects.property(Integer.class).convention(ext.getDebugPort());
-        this.debugSuspend = objects.property(Boolean.class).convention(ext.getDebugSuspend());
-
         this.stdin = objects.property(InputStream.class);
         this.stdout = objects.property(OutputStream.class);
         this.stderr = objects.property(OutputStream.class);
@@ -145,13 +135,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         this.jvmArgs = objects.listProperty(String.class).convention(ext.getJvmArgs());
 
         this.verbose = objects.property(Boolean.class).convention(ext.getVerbose());
-        this.fork = objects.property(Boolean.class).convention(ext.getFork());
         this.showVersion = objects.property(Boolean.class).convention(ext.getShowVersion());
         this.useNativeLauncher = objects.property(Boolean.class).convention(ext.getUseNativeLauncher());
 
         // Capture launcher configuration at configuration time to avoid Project access during execution
         this.useNativeLauncherValue = ext.getUseNativeLauncher().get();
-        this.forkValue = ext.getFork().get();
         this.useCompilerDaemonValue = ext.getUseCompilerDaemon().get();
 
         // Register compiler daemon build service if needed
@@ -249,24 +237,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return hasStdoutRedirect() || hasStderrRedirect();
     }
 
-    @Input
-    @Override
-    public Property<@NotNull Boolean> getDebug() {
-        return debug;
-    }
-
-    @Input
-    @Override
-    public Property<@NotNull Integer> getDebugPort() {
-        return debugPort;
-    }
-
-    @Input
-    @Override
-    public Property<@NotNull Boolean> getDebugSuspend() {
-        return debugSuspend;
-    }
-
     @Internal  // Streams are not serializable for configuration cache
     public Property<@NotNull InputStream> getStdin() {
         return stdin;
@@ -318,15 +288,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return verbose;
     }
 
-    /**
-     * Returns the fork property for DSL configuration.
-     * This property allows users to configure whether to fork a new process for execution.
-     * Note: Execution logic uses {@link #getForkValue()} which is captured at configuration time.
-     */
-    @Input
-    public Property<@NotNull Boolean> getFork() {
-        return fork;
-    }
 
     @Input
     public Property<@NotNull Boolean> getShowVersion() {
@@ -367,17 +328,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return useNativeLauncherValue;
     }
 
-    /**
-     * Returns the resolved fork configuration captured from the extension at configuration time.
-     * This primitive value is used during task execution to determine whether to fork without
-     * accessing the Project object, ensuring configuration cache compatibility.
-     * This is an @Input because changes to fork configuration affect task execution.
-     * See {@link #getFork()} for the DSL-configurable Property version.
-     */
-    @Input
-    public boolean getForkValue() {
-        return forkValue;
-    }
 
     /**
      * Returns the resolved compiler daemon configuration captured from the extension at configuration time.
@@ -411,7 +361,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         if (exitValue != 0) {
             final String taskName = getName();
             final String launcherType = useNativeLauncherValue ? "Native" :
-                                       forkValue ? "JavaExec" : "BuildThread";
+                                       useCompilerDaemonValue ? "CompilerDaemon" : "JavaExec";
             final var logger = getLogger();
             logger.error("""
 
@@ -436,20 +386,17 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected XtcLauncher<E, ? extends XtcLauncherTask<E>> createLauncher() {
         // Create launcher on-demand using captured configuration - NO getProject() calls during execution
         if (useNativeLauncherValue) {
-            getLogger().info("[plugin] Created XTC launcher: native executable.");
+            getLogger().info("[plugin] Using native binary launcher");
             return new NativeBinaryLauncher<>(this, getLogger(), getExecOperations());
-        } else if (useCompilerDaemonValue && !forkValue) {
-            // Use compiler daemon for best performance when fork=false (in-process)
-            getLogger().lifecycle("[compiler-daemon] Using XTC compiler daemon for improved performance.");
+        } else if (useCompilerDaemonValue) {
+            // Use compiler daemon for best performance (default)
+            getLogger().lifecycle("[plugin] Using XTC compiler daemon for improved performance");
             return new CompilerDaemonLauncher<>(this, getLogger(), compilerServiceProvider);
-        } else if (forkValue) {
-            getLogger().info("[plugin] Created XTC launcher: Java process forked from build.");
+        } else {
+            // Fallback to forked Java process for maximum isolation
+            getLogger().info("[plugin] Using forked Java process launcher (isolation mode)");
             return new JavaExecLauncher<>(this, getLogger(), getExecOperations(),
                 toolchainExecutable, projectVersion, xdkFileTree, javaToolsConfig);
-        } else {
-            getLogger().warn("{} WARNING: Created XTC launcher: Running launcher in the same thread as the build process. This is not recommended for production",
-                    "[plugin]");
-            return new BuildThreadLauncher<>(this, getLogger());
         }
     }
 
@@ -595,16 +542,10 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return resolveDirectories(resolveFiles(objects.fileCollection().from(dirProvider)));
     }
 
-    private static char yesOrNo(final boolean value) {
-        return value ? 'y' : 'n';
-    }
-
     protected final List<String> resolveJvmArgs() {
         final var list = new ArrayList<>(getJvmArgs().get());
-        if (getDebug().get()) {
-            list.add(String.format("-Xrunjdwp:transport=dt_socket,server=y,suspend=%c,address=%d", yesOrNo(getDebugSuspend().get()), getDebugPort().get()));
-            logger.lifecycle("[plugin] Added debug argument: {}", jvmArgs.get());
-        }
+        // Debug arguments are now specified via jvmArgs() - use standard JDWP format:
+        // jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
         return Collections.unmodifiableList(list);
     }
 
