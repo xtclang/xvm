@@ -193,7 +193,7 @@ public class Assert
             TypeConstant   typeEx  = idCtor.getNamespace().getType();
             int[]          anArgs  = new int[idCtor.getSignature().getParamCount()];
 
-            Slot slotMsg = bctx.pushSlot(bctx.typeSystem.pool().typeString(), CD_String, "");
+            Slot slotMsg = bctx.pushSlot(bctx.pool().typeString(), CD_String, "");
             buildMessage(bctx, code);
             code.astore(slotMsg.slot());
 
