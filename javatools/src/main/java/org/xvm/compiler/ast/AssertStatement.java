@@ -414,11 +414,11 @@ public class AssertStatement
 
                 Label labelNeg = fNegated ? new Label("negated") : null;
 
-                stmtCond.prepareConditionalJump(fNegated ? labelNeg : labelAssert);
+                stmtCond.setConditionFalseLabel(fNegated ? labelNeg : labelAssert);
 
                 fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
 
-                assert stmtCond.isConditionalJumpGenerated();
+                assert stmtCond.isConditionFalseLabelTaken();
 
                 if (fNegated) {
                     code.add(new Jump(labelAssert));
@@ -434,6 +434,9 @@ public class AssertStatement
                     Label labelNext = new Label("next"+i);
                     code.add(new Jump(labelNext)); // go to the next check
                     code.add(labelAssert);
+                    // this code is similar to the auto-message generation below, but in this case
+                    // we already know that the assertion test failed, so these are all "assert
+                    // False" and just relying on the assert op to efficiently build the message
                     if (fDebug) {
                         code.add(new Assert(pool.valFalse(), null));
                     } else if (mapTrace.isEmpty()) {

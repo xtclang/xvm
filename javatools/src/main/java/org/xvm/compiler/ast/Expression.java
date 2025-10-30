@@ -1523,7 +1523,7 @@ public abstract class Expression
                 fLocalPropOk &= aLVal[i].supportsLocalPropMode();
             }
 
-            boolean    fCheckArg0 = fCond && cLVals > 1 && checkConditionalJump() == null;
+            boolean    fCheckArg0 = fCond && cLVals > 1 && getConditionFalseLabel() == null;
             Argument[] aArg       = generateArguments(ctx, code, fLocalPropOk, !fCheckArg0, errs);
 
             if (fCheckArg0) {
@@ -1580,16 +1580,17 @@ public abstract class Expression
     }
 
     /**
-     * Checks for a conditional assignment label and if present, generate the necessary code that
-     * jumps it upon a conditional test failure.
+     * Generate a conditional jump iff this Expression is a condition (produces one or more values
+     * beginning with a Boolean) and is part of a conditional AssignmentStatement that has been
+     * configured with a Label to jump to when the condition is False.
      *
-     * @param code   the code block
-     * @param label  the result of the conditional assignment
+     * @param code     the code block
+     * @param argCond  the condition result
      *
      * @return true iff the conditional jump op has been generated
      */
-    protected boolean generateConditionalJump(Code code, Argument argCond) {
-        if (checkConditionalJump() instanceof Label lblCond) {
+    protected boolean generateConditionFalseJump(Code code, Argument argCond) {
+        if (getConditionFalseLabel() instanceof Label lblCond) {
             code.add(new JumpFalse(argCond, lblCond));
             return true;
         }
@@ -1601,13 +1602,11 @@ public abstract class Expression
      *
      * @return the corresponding label or null if none exists
      */
-    protected Label checkConditionalJump() {
+    protected Label getConditionFalseLabel() {
         return switch (getParent()) {
-            case AssignmentStatement stmtCond ->
-                stmtCond.getConditionalJump() instanceof Label lblCond ? lblCond : null;
-            case Expression expr ->
-                    expr.checkConditionalJump();
-            default -> null;
+            case AssignmentStatement stmtCond -> stmtCond.getConditionFalseLabel();
+            case Expression expr -> expr.getConditionFalseLabel();
+            default  -> null;
         };
     }
 

@@ -1417,7 +1417,7 @@ public class InvocationExpression
 
                             case _0N:
                                 code.add(new Invoke_0N(argTarget, idMethod, aargResult));
-                                generateConditionalJump(code, aargResult[0]);
+                                generateConditionFalseJump(code, aargResult[0]);
                                 break;
 
                             case _1N:
@@ -1426,12 +1426,12 @@ public class InvocationExpression
                                 } else {
                                     code.add(new Invoke_1N(argTarget, idMethod, arg0, aargResult));
                                 }
-                                generateConditionalJump(code, aargResult[0]);
+                                generateConditionFalseJump(code, aargResult[0]);
                                 break;
 
                             case _NN:
                                 code.add(new Invoke_NN(argTarget, idMethod, aArgs, aargResult));
-                                generateConditionalJump(code, aargResult[0]);
+                                generateConditionFalseJump(code, aargResult[0]);
                                 break;
 
                             default:
@@ -1678,7 +1678,7 @@ public class InvocationExpression
 
             case _0N:
                 code.add(new Call_0N(argFn, aargResult));
-                generateConditionalJump(code, aargResult[0]);
+                generateConditionFalseJump(code, aargResult[0]);
                 break;
 
             case _1N:
@@ -1687,12 +1687,12 @@ public class InvocationExpression
                 } else {
                     code.add(new Call_1N(argFn, arg0, aargResult));
                 }
-                generateConditionalJump(code, aargResult[0]);
+                generateConditionFalseJump(code, aargResult[0]);
                 break;
 
             case _NN:
                 code.add(new Call_NN(argFn, aArgs, aargResult));
-                generateConditionalJump(code, aargResult[0]);
+                generateConditionFalseJump(code, aargResult[0]);
                 break;
 
             default:
