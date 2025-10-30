@@ -603,11 +603,11 @@ public class ForStatement
                     boolean fNegated = stmtCond.isNegated();
                     Label   labelNeg = fNegated ? new Label("negated") : null;
 
-                    stmtCond.prepareConditionalJump(fNegated ? labelNeg : getEndLabel());
+                    stmtCond.setConditionFalseLabel(fNegated ? labelNeg : getEndLabel());
 
                     fBlockReachable &= stmtCond.completes(ctx, fCompletes, code, errs);
 
-                    assert stmtCond.isConditionalJumpGenerated();
+                    assert stmtCond.isConditionFalseLabelTaken();
 
                     if (fNegated) {
                         code.add(new Jump(getEndLabel()));

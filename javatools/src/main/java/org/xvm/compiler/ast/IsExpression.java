@@ -219,7 +219,7 @@ public class IsExpression
         if (cLVals > 1) {
             assert !argCond.isStack();
 
-            if (generateConditionalJump(code, argCond)) {
+            if (generateConditionFalseJump(code, argCond)) {
                 aLVal[1].assign(argTarget, code, errs);
             } else {
                 Label label = new Label("skip_assign");

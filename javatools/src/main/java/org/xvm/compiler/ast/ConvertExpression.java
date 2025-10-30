@@ -184,7 +184,7 @@ public class ConvertExpression
         Register regCond = null;
         Label    lblSkip;
         boolean  fLocalSkip;
-        if (checkConditionalJump() instanceof Label lblCond) {
+        if (getConditionFalseLabel() instanceof Label lblCond) {
             lblSkip    = lblCond;
             fLocalSkip = false;
         } else {

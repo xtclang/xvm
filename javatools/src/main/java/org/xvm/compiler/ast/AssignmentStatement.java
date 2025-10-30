@@ -238,23 +238,23 @@ public class AssignmentStatement
     /**
      * Set the label for a conditional assignment to jump to in the negative test case.
      */
-    public void prepareConditionalJump(Label labelFail) {
-        m_labelCondFail = labelFail;
+    public void setConditionFalseLabel(Label labelFail) {
+        m_labelCondFalse = labelFail;
     }
 
     /**
      * @return the label for a conditional assignment to jump to in the negative test case
      */
-    public Label getConditionalJump() {
-        m_fCondUsed = true;
-        return m_labelCondFail;
+    public Label getConditionFalseLabel() {
+        m_fCondFalseLabelTaken = true;
+        return m_labelCondFalse;
     }
 
     /**
-     * @return true if the conditional jump label has been "consumed". Used for debugging only.
+     * @return true iff the conditional jump label has been "consumed". Used for debugging only.
      */
-    public boolean isConditionalJumpGenerated() {
-        return m_fCondUsed;
+    public boolean isConditionFalseLabelTaken() {
+        return m_fCondFalseLabelTaken;
     }
 
     /**
@@ -718,7 +718,7 @@ public class AssignmentStatement
                 Argument arg = rvalue.generateArgument(ctx, code, false, false, errs);
                 fCompletes &= rvalue.isCompletable();
 
-                if (m_labelCondFail == null) {
+                if (m_labelCondFalse == null) {
                     Label labelSkipAssign = new Label("?=Null");
                     code.add(new JumpNull(arg, labelSkipAssign));
 
@@ -738,8 +738,7 @@ public class AssignmentStatement
                         code.add(new Move(pool.valFalse(), regCond));
                     }
                 } else {
-                    m_fCondUsed = true;
-                    code.add(new JumpNull(arg, m_labelCondFail));
+                    code.add(new JumpNull(arg, getConditionFalseLabel()));
                     Assignable LVal = lvalueExpr.generateAssignable(ctx, code, errs);
                     LVal.assign(arg, code, errs);
                 }
@@ -759,7 +758,7 @@ public class AssignmentStatement
                         System.arraycopy(LVals, 0, LValsAll, 1, cLVals);
                         rvalue.generateAssignments(ctx, code, LValsAll, errs);
 
-                        assert m_labelCondFail == null || m_fCondUsed;
+                        assert m_labelCondFalse == null || m_fCondFalseLabelTaken;
                     } else {
                         // neither the parent (e.g. "if" or "for") nor the r-value (invocation)
                         // are conditional; need to generate the conditional check ourselves
@@ -1160,8 +1159,8 @@ public class AssignmentStatement
 
     private transient VariableDeclarationStatement[] m_decls;
 
-    private transient Label m_labelCondFail;
-    private transient boolean m_fCondUsed; // for debugging only
+    private transient Label   m_labelCondFalse;
+    private transient boolean m_fCondFalseLabelTaken; // used for verifying code-gen
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AssignmentStatement.class, "lvalue", "lvalueExpr", "rvalue");
 }

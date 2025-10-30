@@ -280,11 +280,11 @@ public class IfStatement
                 boolean fNegated = stmtCond.isNegated();
                 Label   labelNeg = fNegated ? new Label("negated") : null;
 
-                stmtCond.prepareConditionalJump(fNegated ? labelNeg : labelElse);
+                stmtCond.setConditionFalseLabel(fNegated ? labelNeg : labelElse);
 
                 fCompletes = stmtCond.completes(ctx, fReachable, code, errs);
 
-                assert stmtCond.isConditionalJumpGenerated();
+                assert stmtCond.isConditionFalseLabelTaken();
 
                 if (fNegated) {
                     code.add(new Jump(labelElse));
