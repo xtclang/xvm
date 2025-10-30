@@ -1506,6 +1506,12 @@ public class CommonBuilder
                 }
                 break;
 
+            case org.xvm.asm.op.Label label:
+                // there is a chance we are compiling the same ops multiple times (for different
+                // formal types)
+                label.setLabel(null);
+                break;
+
             default:
                 break;
             }
