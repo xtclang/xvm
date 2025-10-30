@@ -58,7 +58,7 @@ public class TerminalConsole
         if (dfltSuppressEcho) {
             suppressEcho = false;
         }
-        if (prompt.size(ctx) != 0) {
+        if (prompt.size$get$p(ctx) != 0) {
             xTerminalConsole.CONSOLE_OUT.print(prompt);
             xTerminalConsole.CONSOLE_OUT.flush();
         }
