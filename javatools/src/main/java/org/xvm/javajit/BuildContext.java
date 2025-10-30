@@ -268,7 +268,11 @@ public class BuildContext {
         Op[] ops = methodStruct.getOps();
         Op   op  = ops[opAddress];
         if (op instanceof org.xvm.asm.op.Label label) {
-            return label.getLabel();
+            java.lang.classfile.Label javaLabel = label.getLabel();
+            if (javaLabel == null) {
+                label.setLabel(javaLabel = code.newLabel());
+            }
+            return javaLabel;
         }
         // replace the original op with a Label op
         java.lang.classfile.Label javaLabel = code.newLabel();

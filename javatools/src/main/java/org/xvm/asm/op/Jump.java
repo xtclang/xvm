@@ -131,26 +131,27 @@ public class Jump
     public int exchangeJump(BuildContext bctx, CodeBuilder code, int nFinAddr) {
         assert m_fCallFinally;
 
-        int nOrigJumpAddr = getAddress() + m_ofJmp;
+        m_ofJumpFinally = nFinAddr - getAddress();
 
-        m_ofJmp = nFinAddr - getAddress();
-
-        return m_nOrigJump = nOrigJumpAddr;
+        return getAddress() + m_ofJmp;
     }
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
+        int ofJmp = m_ofJmp;
         if (m_fCallFinally) {
             // $jumpN = true;
-            int slotJump = bctx.scope.getSynthetic("$jump" + m_nOrigJump, true);
+            int slotJump = bctx.scope.getSynthetic("$jump" + (getAddress() + ofJmp), true);
             assert slotJump != -1;
             code.iconst_1()
                 .istore(slotJump);
+            ofJmp = m_ofJumpFinally;
         }
-        if (m_ofJmp > 1) {
-            code.goto_(bctx.ensureLabel(code, getAddress() + m_ofJmp));
+
+        if (ofJmp > 1) {
+            code.goto_(bctx.ensureLabel(code, getAddress() + ofJmp));
         } else {
-            assert m_ofJmp == 1;
+            assert ofJmp == 1;
         }
     }
 
@@ -161,5 +162,5 @@ public class Jump
     protected transient int     m_ixBaseGuard;
     protected transient int     m_nJumpToScope;
     protected transient int     m_cPopGuards;
-    protected transient int     m_nOrigJump;
+    protected transient int     m_ofJumpFinally;
 }

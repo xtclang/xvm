@@ -99,7 +99,6 @@ public class Label
      * Ensure there is a Java label associated with this Prefix.
      */
     public void setLabel(java.lang.classfile.Label label) {
-        assert m_label == null;
         m_label = label;
     }
 
