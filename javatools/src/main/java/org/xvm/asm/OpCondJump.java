@@ -32,6 +32,10 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 import static org.xvm.javajit.Builder.CD_Container;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_JavaString;
+import static org.xvm.javajit.Builder.CD_TypeConstant;
+import static org.xvm.javajit.Builder.CD_xType;
+import static org.xvm.javajit.Builder.MD_TypeIsA;
+import static org.xvm.javajit.Builder.MD_xvmType;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -386,6 +390,10 @@ public abstract class OpCondJump
                 code.ifeq(lblJump);
             }
             return;
+
+        case OP_JMP_TYPE, OP_JMP_NTYPE:
+            buildTypeJump(bctx, code);
+            return;
         }
 
         Slot      slot = bctx.loadArgument(code, m_nArg);
@@ -443,6 +451,42 @@ public abstract class OpCondJump
             default:
                 throw new IllegalStateException();
             }
+        }
+    }
+
+    private void buildTypeJump(BuildContext bctx, CodeBuilder code) {
+        Label lblJump = bctx.ensureLabel(code, getAddress() + m_ofJmp);
+
+        // this logic is almost identical to OpTest.buildTypeCheck();
+        TypeConstant typeTarget = bctx.getArgumentType(m_nArg);
+        if (m_nArg2 <= CONSTANT_OFFSET) {
+            TypeConstant typeTest = bctx.getArgumentType(m_nArg2);
+            assert typeTest.isTypeOfType();
+            typeTest = typeTest.getParamType(0);
+
+            if (typeTarget.isPrimitive()) {
+                // we can statically compute the result
+                if ((getOpCode() == OP_IS_TYPE) == typeTarget.isA(typeTest)) {
+                    code.goto_(lblJump);
+                }
+                return;
+            } else {
+                Slot slotTarget = bctx.loadArgument(code, m_nArg);
+                code.invokevirtual(slotTarget.cd(), "$xvmType", MD_xvmType); // target type
+                Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);   // test type
+            }
+        } else {
+            Slot slotType = bctx.loadArgument(code, m_nArg2); // xType
+            assert slotType.type().isTypeOfType();
+            code.getfield(CD_xType, "$type", CD_TypeConstant);
+        }
+
+        code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
+
+        if (getOpCode() == OP_IS_TYPE) {
+            code.ifne(lblJump);
+        } else { // OP_IS_NTYPE
+            code.ifeq(lblJump);
         }
     }
 
