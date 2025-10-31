@@ -98,7 +98,8 @@ public class Scope {
     }
 
     /**
-     * Allocate Java slot(s) for an XVM variable of the specified kind.
+     * Allocate Java slot(s) for an XVM variable of the specified kind. Note, that there could be
+     * multiple Java slots for the same XVM variable.
      *
      * @return the Java slot for the newly allocated local variable
      */
@@ -193,6 +194,11 @@ public class Scope {
     public Scope exit() {
         if (parent == null) {
             throw new IllegalStateException();
+        }
+        if (parent.startLocal == -1) {
+            // the top scope hasn't allocated anything; use this slot's start slot index
+            parent.startLocal = this.startLocal;
+            parent.topLocal   = this.topLocal;
         }
         code.labelBinding(endLabel);
         return parent;
