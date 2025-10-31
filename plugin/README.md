@@ -62,7 +62,7 @@ Key task types:
 
 ### Launcher System
 
-The plugin supports three distinct launcher types, each optimized for different scenarios:
+The plugin supports four distinct launcher types, each optimized for different scenarios:
 
 #### 1. **NativeBinaryLauncher** (Recommended for Production)
 **File**: `org.xtclang.plugin.launchers.NativeBinaryLauncher`
@@ -132,10 +132,55 @@ In a typical multi-module project:
 - **Subsequent compilations**: 30-60% faster (eliminates ~1-2s JVM startup per compilation)
 - **Clean builds**: 40-50% faster in projects with 10+ modules
 
-#### 3. **JavaExecLauncher** (Fallback - Isolation Mode)
+#### 3. **JavaClasspathLauncher** (Default Fallback - Direct Invocation)
+**File**: `org.xtclang.plugin.launchers.JavaClasspathLauncher`
+
+Directly invokes javatools classes in the current thread without forking. This is the **NEW** default fallback when compiler daemon is disabled.
+
+**Advantages:**
+- No process spawning overhead
+- Direct type-safe calls (`Compiler.launch(args)`)
+- Full IDE debugging support
+- Easy ErrorListener attachment
+- Instant startup (~0ms)
+- Same-thread execution simplifies debugging
+
+**Disadvantages:**
+- Shares Gradle daemon JVM
+- Less isolation than forked processes
+
+**Use When:**
+- Compiler daemon is disabled (automatic fallback)
+- Need direct debugging of compiler code
+- Building custom ErrorListener integrations
+- Maximum reliability without performance overhead
+
+**Implementation Details:**
+```java
+// Plugin has compile-time access to javatools types
+XtcJavaToolsRuntime.withJavaTools(javaToolsJar, logger, () -> {
+    Compiler.launch(args);  // Direct invocation, no reflection!
+    return result;
+});
+```
+
+**Configuration:**
+```kotlin
+xtcCompile {
+    useCompilerDaemon.set(false)  // Uses JavaClasspathLauncher by default
+}
+```
+
+**Performance Characteristics:**
+- **Startup**: Instant (no JVM fork)
+- **Memory**: Shared with Gradle daemon
+- **Type Safety**: Full (compile-time + runtime)
+- **Debugging**: Full IDE support (same thread)
+
+#### 4. **JavaExecLauncher** (Legacy - Isolation Mode)
 **File**: `org.xtclang.plugin.launchers.JavaExecLauncher`
 
-Forks a new Java process for each compilation, providing maximum isolation. This is the fallback when the compiler daemon is disabled.
+Forks a new Java process for each compilation, providing maximum isolation. This launcher is no longer the default but can still be used explicitly.
 
 **Advantages:**
 - Complete isolation from Gradle JVM
@@ -144,20 +189,22 @@ Forks a new Java process for each compilation, providing maximum isolation. This
 - Java toolchain integration
 
 **Disadvantages:**
-- Slower than daemon (~1-2s JVM startup per compilation)
+- Slower than alternatives (~1-2s JVM startup per compilation)
 - Higher memory usage (separate JVM)
 - JIT compiler starts cold each time
 
 **Use When:**
-- Compiler daemon is disabled
-- Memory isolation is critical
-- Compiler stability issues need isolation
+- Need complete process isolation
+- Running with custom JVM arguments
+- Debugging with JDWP remote debugging
 
 **Configuration:**
 ```kotlin
 xtcCompile {
-    useCompilerDaemon.set(false)  // Disable daemon, use JavaExec instead
-    jvmArgs("-Xmx2g", "-Xms512m")  // Custom JVM arguments
+    useCompilerDaemon.set(false)
+    // Note: JavaClasspathLauncher is now the default fallback
+    // To explicitly use JavaExecLauncher, you would need to set fork=true
+    // (but this is not currently exposed in the DSL)
 }
 ```
 
@@ -367,10 +414,11 @@ xtcRun {
 **Selection Logic** (in `XtcLauncherTask.createLauncher()`):
 ```
 if (useNativeLauncher) → NativeBinaryLauncher
-else if (useCompilerDaemon && !fork) → CompilerDaemonLauncher
-else if (fork) → JavaExecLauncher
-else → BuildThreadLauncher (not recommended)
+else if (useCompilerDaemon) → CompilerDaemonLauncher (DEFAULT)
+else → JavaClasspathLauncher (NEW default fallback - direct invocation, no fork)
 ```
+
+**Note**: JavaClasspathLauncher has replaced JavaExecLauncher as the default fallback. This means when the compiler daemon is disabled, you get direct in-thread invocation with full type safety instead of process forking.
 
 ## Build Lifecycle
 

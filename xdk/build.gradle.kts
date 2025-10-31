@@ -29,8 +29,9 @@ plugins {
 }
 
 // Read compiler daemon setting from xdk.properties as a Provider (configuration-cache-aware)
-val useCompilerDaemonDefault = xdkProperties.boolean("org.xtclang.compilerDaemon", false)
-logger.lifecycle("Compiler daemon default: ${useCompilerDaemonDefault.get()}")
+// val useCompilerDaemonDefault = xdkProperties.boolean("org.xtclang.compilerDaemon", false)
+val useCompilerDaemonDefault = false
+//logger.lifecycle("Compiler daemon default: ${useCompilerDaemonDefault.get()}")
 
 // Configure all XTC compile tasks to use the compiler daemon setting from xdk.properties
 subprojects {
