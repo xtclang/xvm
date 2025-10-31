@@ -36,6 +36,7 @@ import org.xvm.asm.op.CatchStart;
 import org.xvm.asm.op.FinallyStart;
 import org.xvm.asm.op.Guarded;
 
+import static java.lang.constant.ConstantDescs.CD_Throwable;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
@@ -43,7 +44,8 @@ import static org.xvm.javajit.Builder.CD_Exception;
 import static org.xvm.javajit.Builder.CD_JavaString;
 import static org.xvm.javajit.Builder.CD_xException;
 import static org.xvm.javajit.Builder.EXT;
-import static org.xvm.javajit.Builder.toTypeKind;
+import static org.xvm.javajit.Builder.N_TypeMismatch;
+
 import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 
 /**
@@ -350,7 +352,11 @@ public class BuildContext {
         }
 
         if (argId <= Op.CONSTANT_OFFSET) {
-            return getConstant(argId).getType();
+            TypeConstant type = getConstant(argId).getType();
+            if (type.containsFormalType(true)) {
+                type = type.resolveGenerics(pool(), typeInfo.getType());
+            }
+            return type;
         }
 
         return switch (argId) {
@@ -814,6 +820,30 @@ public class BuildContext {
     }
 
     /**
+     * Throw a "TypeMismatch" exception.
+     */
+    public void throwTypeMismatch(CodeBuilder code, String text) {
+        throwException(code, ClassDesc.of(N_TypeMismatch), text);
+    }
+
+    /**
+     * Throw an Ecstasy exception. The code we produce is equivalent to:
+     * {@code throw new Exception(ctx).$init(ctx, text, null);}
+     *
+     * @param exCD  the ClassDesc for the Ecstasy exception (e.g. TypeMismatch)
+     * @param text  the exception text
+     */
+    public void throwException(CodeBuilder code, ClassDesc exCD, String text) {
+        Builder.invokeDefaultConstructor(code, exCD);
+        loadCtx(code);
+        code.loadConstant(text);
+        code.aconst_null()
+            .invokevirtual(exCD, "$init", MethodTypeDesc.of(
+                        CD_xException, CD_Ctx, CD_JavaString, CD_Throwable))
+            .athrow();
+    }
+
+    /**
      * Adjust the int value on the stack according to its type.
      */
     public void adjustIntValue(CodeBuilder code, TypeConstant type) {
@@ -857,7 +887,7 @@ public class BuildContext {
      */
     public Slot pushSlot(TypeConstant type, ClassDesc cd, String name) {
         Slot slot = new SingleSlot(tailSlot, type, cd, name);
-        tailSlot += toTypeKind(cd).slotSize();
+        tailSlot += Builder.toTypeKind(cd).slotSize();
         tailStack.push(slot);
         return slot;
     }
@@ -867,7 +897,7 @@ public class BuildContext {
      */
     public Slot pushExtSlot(TypeConstant type, ClassDesc cd, JitFlavor flavor, String name) {
         int slotIndex = tailSlot;
-        tailSlot += toTypeKind(cd).slotSize();
+        tailSlot += Builder.toTypeKind(cd).slotSize();
         int slotExt = tailSlot++;
 
         Slot slot = new DoubleSlot(slotIndex, slotExt, flavor, type, cd, name);
@@ -880,7 +910,7 @@ public class BuildContext {
      */
     public Slot popSlot() {
         Slot slot = tailStack.pop();
-        tailSlot -= toTypeKind(slot.cd()).slotSize();
+        tailSlot -= Builder.toTypeKind(slot.cd()).slotSize();
         if (slot instanceof DoubleSlot) {
             tailSlot--;
         }

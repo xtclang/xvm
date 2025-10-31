@@ -1,12 +1,12 @@
 module test1.examples.org {
 
+    @Inject Console console;
+
     Int prop1 = 42;
     String prop2.get() = "hello";
     Int prop3.get() = 43;
 
     void run() {
-        @Inject Console console;
-
         console.print(prop1);
         console.print(prop2);
         console.print(prop3);
@@ -21,12 +21,14 @@ module test1.examples.org {
 
         TestFormal<String> ts = new TestFormal("hello");
         console.print(ts.value);
+        ts.testType();
 
         TestFormal<Int> ti = new TestFormal(7);
         console.print(ti.value + 1);
         ti.setValue(9);
         assert ti.value == 9;
         assert ti.getValue() == 9;
+        ti.testType();
 
         TestFormal<TestBase> to = new TestFormal(t1);
         console.print(to.value);
@@ -52,6 +54,22 @@ module test1.examples.org {
         }
         void setValue(Element value) {
             this.value = value;
+        }
+        void testType() {
+            if (Int i := value.is(Int)) {
+                console.print("it's an Int; next is ", True);
+                console.print(++i);
+            }
+            if (String s := value.is(String)) {
+                console.print("it's a String; size is ", True);
+                console.print(s.size);
+            }
+
+//            Element value = this.value;
+//            if (value.is(String)) {
+//                console.print(value.size);
+//                console.print(value);
+//            }
         }
     }
 }

@@ -4,9 +4,15 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpTest;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Slot;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -50,5 +56,31 @@ public class IsZero
     protected int completeUnaryOp(Frame frame, ObjectHandle hValue) {
         return frame.assignValue(m_nRetValue,
             xBoolean.makeHandle(((JavaLong) hValue).getValue() == 0));
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    protected void buildUnary(BuildContext bctx, CodeBuilder code) {
+        Slot slotArg = bctx.loadArgument(code, m_nValue1);
+
+        assert slotArg.cd().isPrimitive();
+
+        Label labelTrue = code.newLabel();
+        Label labelEnd = code.newLabel();
+        switch (slotArg.cd().descriptorString()) {
+            case "I", "S", "B", "C", "Z" -> {}
+            case "J" -> code.lconst_0().lcmp();
+            case "F" -> code.fconst_0().fcmpl();
+            case "D" -> code.dconst_0().dcmpl();
+            default  -> throw new IllegalStateException();
+        }
+        code.ifeq(labelTrue)
+            .iconst_0() // false
+            .goto_(labelEnd)
+            .labelBinding(labelTrue)
+            .iconst_1() // true
+            .labelBinding(labelEnd);
+        bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, bctx.pool().typeBoolean()));
     }
 }

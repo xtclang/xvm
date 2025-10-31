@@ -17,7 +17,9 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.TypeSystem;
@@ -31,7 +33,10 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Ordered;
+import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_xType;
+import static org.xvm.javajit.Builder.MD_TypeIsA;
+import static org.xvm.javajit.Builder.MD_xvmType;
 import static org.xvm.javajit.Builder.OPT;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -262,6 +267,14 @@ public abstract class OpTest
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
+        if (isBinaryOp()) {
+            buildBinary(bctx, code);
+        } else {
+            buildUnary(bctx, code);
+        }
+    }
+
+    protected void buildBinary(BuildContext bctx, CodeBuilder code) {
         TypeSystem   ts         = bctx.typeSystem;
         TypeConstant type1      = bctx.getArgumentType(m_nValue1);
         TypeConstant type2      = bctx.getArgumentType(m_nValue2);
@@ -399,6 +412,81 @@ public abstract class OpTest
             }
         }
         bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, bctx.pool().typeBoolean()));
+    }
+
+    protected void buildUnary(BuildContext bctx, CodeBuilder code) {
+        switch (getOpCode()) {
+            case OP_IS_NULL, OP_IS_NNULL -> buildNullCheck(bctx, code);
+            case OP_IS_TYPE, OP_IS_NTYPE -> buildTypeCheck(bctx, code);
+            default                      -> throw new IllegalStateException();
+        }
+        bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, bctx.pool().typeBoolean()));
+    }
+
+    private void buildNullCheck(BuildContext bctx, CodeBuilder code) {
+        Slot slotArg = bctx.loadArgument(code, m_nValue1);
+
+        Label   labelTrue = code.newLabel();
+        Label   labelEnd  = code.newLabel();
+        boolean fNot      = getOpCode() == OP_IS_NNULL;
+        if (slotArg instanceof BuildContext.DoubleSlot slotMulti) {
+            assert slotMulti.flavor() == JitFlavor.MultiSlotPrimitive;
+
+            code.iload(slotMulti.extSlot()); // True indicates Null
+            if (fNot) {
+                code.ifeq(labelTrue);
+            } else {
+                code.ifne(labelTrue);
+            }
+        } else {
+            assert slotArg.type().isNullable();
+
+            Builder.loadNull(code);
+            if (fNot) {
+                code.if_acmpne(labelTrue);
+            } else {
+                code.if_acmpeq(labelTrue);
+            }
+        }
+
+        code.iconst_0() // false
+            .goto_(labelEnd)
+            .labelBinding(labelTrue)
+            .iconst_1() // true
+            .labelBinding(labelEnd);
+    }
+
+    private void buildTypeCheck(BuildContext bctx, CodeBuilder code) {
+        TypeConstant typeTarget = bctx.getArgumentType(m_nValue1);
+        if (m_nValue2 <= CONSTANT_OFFSET) {
+            TypeConstant typeTest = bctx.getArgumentType(m_nValue2);
+            assert typeTest.isTypeOfType();
+            typeTest = typeTest.getParamType(0);
+
+            if (typeTarget.isPrimitive()) {
+                // we can statically compute the result
+                if (getOpCode() == OP_IS_TYPE) {
+                    if (typeTarget.isA(typeTest)) {code.iconst_1();} else {code.iconst_0();}
+                } else { // OP_IS_NTYPE
+                    if (typeTarget.isA(typeTest)) {code.iconst_0();} else {code.iconst_1();}
+                }
+                return;
+            } else {
+                Slot slotTarget = bctx.loadArgument(code, m_nValue1);
+                code.invokevirtual(slotTarget.cd(), "$xvmType", MD_xvmType); // target type
+                Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);   // test type
+            }
+        } else {
+            Slot slotType = bctx.loadArgument(code, m_nValue2); // xType
+            assert slotType.type().isTypeOfType();
+            code.getfield(CD_xType, "$type", CD_TypeConstant);
+        }
+
+        code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
+
+        if (getOpCode() == OP_IS_NTYPE) {
+            code.iconst_m1().ixor(); // "not"
+        }
     }
 
     // ----- fields --------------------------------------------------------------------------------

@@ -6,11 +6,15 @@ import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
+import java.lang.constant.ClassDesc;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpMove;
 import org.xvm.asm.Register;
+
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.BuildContext.Slot;
@@ -82,11 +86,34 @@ public class Move
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        Slot slotFrom = bctx.loadArgument(code, m_nFromValue);
-        Slot slotTo   = bctx.ensureSlot(m_nToValue, slotFrom.type(), slotFrom.cd(), "");
+        Slot         slotFrom = bctx.loadArgument(code, m_nFromValue);
+        Slot         slotTo   = bctx.ensureSlot(m_nToValue, slotFrom.type(), slotFrom.cd(), "");
+        TypeConstant typeFrom = slotFrom.type();
+        TypeConstant typeTo   = slotTo.type();
+        ClassDesc    cdFrom   = slotFrom.cd();
+        ClassDesc    cdTo     = slotTo.cd();
 
-        if (!slotFrom.type().isA(slotTo.type())) {
+        if (typeFrom.isA(typeTo)) {
+            if (cdFrom.isPrimitive() ^ cdTo.isPrimitive()) {
+                if (cdFrom.isPrimitive()) {
+                    bctx.builder.box(code, typeFrom, cdFrom);
+                } else {
+                    bctx.builder.unbox(code, typeTo, cdTo);
+                }
+            }
+        } else {
+            if (cdFrom.isPrimitive()) {
+                if (cdTo.isPrimitive()) {
+                    throw new IllegalStateException("Unreconcilable types " +
+                        typeFrom.getValueString() + " -> " + typeTo.getValueString());
+                }
+                bctx.builder.box(code, typeFrom, cdFrom);
+            }
+            // TODO: generateCheckCast()
             code.checkcast(slotTo.type().ensureClassDesc(bctx.typeSystem));
+            if (cdTo.isPrimitive()) {
+                bctx.builder.unbox(code, typeTo, cdTo);
+            }
         }
         bctx.storeValue(code, slotTo);
     }
