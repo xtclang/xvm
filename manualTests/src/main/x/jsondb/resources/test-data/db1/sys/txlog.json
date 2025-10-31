@@ -1,0 +1,4 @@
+[
+{"_op":"created", "_ts":"2025-10-30T07:44:20.942Z", "_prev_v":0, "safepoint":0},
+{"_v":1, "_tx":1, "_name":"autocommit", "_ts":"2025-10-30T07:44:20.965Z", "value":"Bar"}
+]
