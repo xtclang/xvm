@@ -352,7 +352,7 @@ public class CommonBuilder
                     // $INSTANCE.$init($ctx);
                     MethodConstant ctorId  = typeInfo.findConstructor(TypeConstant.NO_TYPES);
                     String         jitInit = ctorId.ensureJitMethodName(ts).replace("construct", INIT);
-                    invokeDefaultConstructor(className, code);
+                    invokeDefaultConstructor(code, CD_this);
                     code.dup()
                         .putstatic(CD_this, Instance, CD_this)
                         .aload(ctxSlot)
@@ -383,17 +383,6 @@ public class CommonBuilder
      */
     protected void augmentStaticInitializer(String className, CodeBuilder code) {
     }
-
-    /**
-     * Call the default constructor.
-     */
-    protected void invokeDefaultConstructor(String className, CodeBuilder code) {
-        ClassDesc CD_this = ClassDesc.of(className);
-        code.new_(CD_this)
-            .dup()
-            .aload(0) // $ctx
-            .invokespecial(CD_this, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx));
-   }
 
     /**
      * Add fields initialization to the Java constructor {@code void <init>(Ctx ctx)}.
@@ -1198,7 +1187,7 @@ public class CommonBuilder
                 // step 3: (initializer)
                 thisSlot = code.allocateLocal(TypeKind.REFERENCE);
                 code.localVariable(thisSlot, "thi$", CD_this, startScope, endScope);
-                invokeDefaultConstructor(className, code);
+                invokeDefaultConstructor(code, CD_this);
                 code.astore(thisSlot);
 
                 if (hasType) {

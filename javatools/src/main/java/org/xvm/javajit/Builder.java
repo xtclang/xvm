@@ -32,6 +32,7 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
+import static java.lang.constant.ConstantDescs.INIT_NAME;
 
 import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 import static org.xvm.javajit.JitFlavor.Specific;
@@ -356,6 +357,18 @@ public abstract class Builder {
     }
 
     /**
+     * Call the default constructor for the target class.
+     *
+     * @param cd the target ClassDesc
+     */
+    public static void invokeDefaultConstructor(CodeBuilder code, ClassDesc cd) {
+        code.new_(cd)
+            .dup()
+            .aload(code.parameterSlot(0)) // ctx
+            .invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx));
+   }
+
+    /**
      * Generate a "pop()" opcode for Java class assuming the corresponding value is already on java
      * stack.
      */
@@ -649,6 +662,7 @@ public abstract class Builder {
     public static final String N_Object       = "org.xtclang.ecstasy.Object";
     public static final String N_Ordered      = "org.xtclang.ecstasy.Ordered";
     public static final String N_String       = "org.xtclang.ecstasy.text.String";
+    public static final String N_TypeMismatch = "org.xtclang.ecstasy.TypeMismatch";
     public static final String N_UInt8        = "org.xtclang.ecstasy.numbers.UInt8";
     public static final String N_UInt16       = "org.xtclang.ecstasy.numbers.UInt16";
     public static final String N_UInt32       = "org.xtclang.ecstasy.numbers.UInt32";
