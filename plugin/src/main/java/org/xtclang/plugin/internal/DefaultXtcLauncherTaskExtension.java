@@ -30,6 +30,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     protected final List<String> defaultJvmArgs;
 
     protected final ConfigurableFileCollection modulePath;
+    protected final Property<@NotNull Boolean> fork;
     protected final ListProperty<@NotNull String> jvmArgs;
     protected final Property<@NotNull Boolean> verbose;
     protected final Property<@NotNull Boolean> showVersion;
@@ -49,6 +50,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         // Use default JVM args from properties file generated at plugin build time
         this.defaultJvmArgs = loadDefaultJvmArgs();
         logger.info("[plugin] Loaded default JVM args: {}", defaultJvmArgs);
+        this.fork = objects.property(Boolean.class).convention(false);  // Default to in-thread execution
         this.jvmArgs = objects.listProperty(String.class).convention(defaultJvmArgs);
         this.verbose = objects.property(Boolean.class).convention(false);
         this.showVersion = objects.property(Boolean.class).convention(false);
@@ -65,6 +67,11 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     @Override
     public ConfigurableFileCollection getModulePath() {
         return modulePath;
+    }
+
+    @Override
+    public Property<@NotNull Boolean> getFork() {
+        return fork;
     }
 
     @Override

@@ -125,7 +125,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         }
 
         // Validate detach mode requirements - fail fast
-        if (!useNativeLauncherValue && useCompilerDaemonValue) {
+        if (!getUseNativeLauncherValue() && getUseCompilerDaemonValue()) {
             throw new GradleException("[plugin] Detach mode requires a forked process. Disable the compiler daemon: useCompilerDaemon.set(false)");
         }
 
@@ -133,7 +133,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         final File buildDir = buildDirectory.get().getAsFile();
         final File projectDir = projectDirectory.get().getAsFile();
 
-        if (useNativeLauncherValue) {
+        if (getUseNativeLauncherValue()) {
             getLogger().info("[plugin] Created XTC launcher: detached native executable.");
             return new DetachedNativeBinaryLauncher<>(this, getLogger(), getExecOperations(), buildDir, projectDir);
         }

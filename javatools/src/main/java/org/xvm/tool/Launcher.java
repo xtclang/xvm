@@ -116,6 +116,7 @@ public abstract class Launcher
         try {
             task.run();
         } catch (LauncherException e) {
+            System.err.println("LAUNCHER EXCEPTION: " + e.getMessage());
             // When running standalone, convert to System.exit()
             // When running in a daemon, the caller will catch this before we get here
             System.exit(e.error ? 1 : 0);

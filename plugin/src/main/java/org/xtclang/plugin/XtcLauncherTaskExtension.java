@@ -22,6 +22,8 @@ public interface XtcLauncherTaskExtension extends Named {
      */
     ConfigurableFileCollection getModulePath();
 
+    Property<@NotNull Boolean> getFork();
+
     Property<@NotNull Boolean> getShowVersion();
 
     Property<@NotNull Boolean> getUseNativeLauncher();

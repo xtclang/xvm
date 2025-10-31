@@ -10,6 +10,7 @@ import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.services.XtcCompilerService;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 
+import java.io.File;
 import java.util.Objects;
 
 /**
@@ -42,14 +43,18 @@ public class CompilerDaemonLauncher<E extends XtcLauncherTaskExtension, T extend
         extends XtcLauncher<E, T> {
 
     private final Provider<XtcCompilerService> compilerServiceProvider;
+    private final File projectDirectory;
 
     public CompilerDaemonLauncher(
             @NotNull final T task,
             @NotNull final Logger logger,
-            @NotNull final Provider<XtcCompilerService> compilerServiceProvider) {
+            @NotNull final Provider<XtcCompilerService> compilerServiceProvider,
+            @NotNull final File projectDirectory) {
         super(task, logger);
         this.compilerServiceProvider = Objects.requireNonNull(compilerServiceProvider,
                 "Compiler service provider cannot be null");
+        this.projectDirectory = Objects.requireNonNull(projectDirectory,
+                "Project directory cannot be null");
     }
 
     @Override
@@ -71,7 +76,7 @@ public class CompilerDaemonLauncher<E extends XtcLauncherTaskExtension, T extend
 
     @Override
     public ExecResult apply(@NotNull final CommandLine cmd) {
-        logger.info("[compiler-daemon] Compiling using XTC compiler daemon: {}", task.getName());
+        logger.lifecycle("[compiler-daemon] Compiling using XTC compiler daemon: {}", task.getName());
         validateCommandLine(cmd);
         final var builder = resultBuilder(cmd);
         try {
@@ -80,10 +85,11 @@ public class CompilerDaemonLauncher<E extends XtcLauncherTaskExtension, T extend
             }
             // Get the compiler service instance
             final XtcCompilerService compilerService = compilerServiceProvider.get();
-            // Compile using the daemon
+            // Compile using the daemon, passing the project directory as working directory
             final XtcExecResult result = compilerService.compile(
                     cmd,
                     task.getJavaToolsClasspath(),
+                    projectDirectory,
                     logger
             );
             // Transfer result to builder

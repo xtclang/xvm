@@ -24,36 +24,30 @@ val xdkJavaToolsProvider by configurations.registering {
     }
 }
 
-val xdkEcstasyResourcesConsumer by configurations.registering {
-    description = "Consumer configuration for ecstasy resources needed by javatools"
-    isCanBeResolved = true
-    isCanBeConsumed = false
-    attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
-        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("ecstasy-resources"))
-    }
-}
-
 dependencies {
     implementation(libs.javatools.utils)
     implementation(libs.jline)
     testImplementation(libs.javatools.utils)
-    // Note: We don't add this to sourceSets to avoid IntelliJ seeing cross-module paths
-    xdkEcstasyResourcesConsumer(libs.xdk.ecstasy)
 }
 
 /**
- * INTELLIJ FIX: Copy resources at build time instead of referencing them directly.
- *
- * Instead of adding lib_ecstasy resources as a source directory (which confuses IntelliJ),
- * we copy them to our build directory and include that. This completely isolates
- * the resource dependency from IntelliJ's module system.
+ * Direct file reference to lib_ecstasy resources using lazy providers.
+ * This avoids creating a configuration dependency (which causes circular deps in composite builds)
+ * and is configuration-cache compatible.
+ */
+val ecstasyResourcesDir = layout.projectDirectory.dir(
+    XdkPropertiesService.compositeRootRelativeFile(projectDir, "lib_ecstasy/src/main/resources").absolutePath
+)
+
+/**
+ * Copy ecstasy resources (implicit.x and unicode data) at build time.
+ * Uses direct file path references instead of configuration dependencies to avoid
+ * circular dependency issues when the plugin tries to use javatools as compileOnly.
  */
 val copyEcstasyResources by tasks.registering(Copy::class) {
-    description = "Copy ecstasy resources to avoid IntelliJ cross-module path issues"
-    from(xdkEcstasyResourcesConsumer)
+    description = "Copy ecstasy resources from lib_ecstasy using direct file reference"
+    from(ecstasyResourcesDir)
     into(layout.buildDirectory.dir("generated/resources/main"))
-    // Remove onlyIf condition - let Gradle handle incremental builds with proper inputs/outputs
 }
 
 // Path to your static base properties
@@ -164,7 +158,7 @@ val jar by tasks.existing(Jar::class) {
 
     // Declare inputs that affect jar content
     inputs.files(configurations.compileClasspath)
-    inputs.files(xdkEcstasyResourcesConsumer)
+    inputs.files(ecstasyResourcesDir)  // Track changes to ecstasy resources
     inputs.property("manifestSemanticVersion", semanticVersion)
     inputs.property("manifestVersion", version.toString())
 

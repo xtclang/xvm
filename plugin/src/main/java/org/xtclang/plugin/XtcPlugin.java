@@ -13,7 +13,7 @@ import org.gradle.api.plugins.JavaBasePlugin;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
-public class XtcPlugin implements Plugin<Project> {
+public class XtcPlugin implements Plugin<@NotNull Project> {
     /** Software component for an XTC project, equivalent to components["java"], used e.g. for publishing */
     private static final Set<Class<?>> REQUIRED_PLUGINS = Set.of(
         JavaBasePlugin.class,
@@ -32,7 +32,8 @@ public class XtcPlugin implements Plugin<Project> {
      * maximize final state, and not have to request project information through
      * the Gradle APIs, everywhere.
      */
-    static class XtcProjectPlugin implements Plugin<Project> {
+    @SuppressWarnings("ClassCanBeRecord")
+    static class XtcProjectPlugin implements Plugin<@NotNull Project> {
         private final AdhocComponentWithVariants xtcComponent;
 
         @Inject
