@@ -408,7 +408,9 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
         if (getUseCompilerDaemonValue()) {
             logger.lifecycle("[plugin] Using XTC compiler daemon for improved performance");
-            return new CompilerDaemonLauncher<>(this, logger, compilerServiceProvider, projectDirectory.get().getAsFile());
+            return new CompilerDaemonLauncher<>(this, logger,
+                projectVersion, xdkFileTree, javaToolsConfig, toolchainExecutable,
+                projectDirectory.get().getAsFile());
         }
 
         final boolean fork = ext.getFork().get();
