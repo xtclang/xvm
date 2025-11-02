@@ -199,10 +199,10 @@ val versionOutputTest by tasks.registering(Test::class) {
     group = VERIFICATION_GROUP
     
     dependsOn(jar, tasks.test)
-    
+
     // Only run the version-related tests
     include("**/BuildInfoTest.class", "**/LauncherVersionTest.class")
-    
+
     doFirst {
         logger.info("[javatools] Verifying version output contains expected git and API information")
     }

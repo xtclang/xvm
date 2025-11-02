@@ -56,8 +56,17 @@ out/
 
 # Tooling and project files
 prj/
-.idea/
 .gradle/
+
+# IntelliJ IDEA - commit core configuration, ignore personal settings
+.idea/*
+!.idea/misc.xml
+!.idea/compiler.xml
+!.idea/gradle.xml
+!.idea/vcs.xml
+!.idea/.gitignore
+!.idea/docs/
+!.idea/test-intellij-setup.sh
 !gradle-wrapper.jar
 !javatools_launcher/src/main/resources/javatools/javatools.jar
 !javatools_launcher/src/main/resources/exe/*

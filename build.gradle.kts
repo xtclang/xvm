@@ -6,6 +6,7 @@ import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
  */
 
 plugins {
+    idea
     alias(libs.plugins.xdk.build.aggregator)
     alias(libs.plugins.xdk.build.properties)
 }
@@ -15,6 +16,21 @@ group = xdkProperties.stringValue("xdk.group")
 version = xdkProperties.stringValue("xdk.version")
 
 logger.info("[xvm] Root aggregator version: $group:$name:$version")
+
+// Configure IntelliJ IDEA to use correct Java version
+// This ensures IntelliJ doesn't default to Java 6 when importing the project
+val jdkVersion = xdkProperties.int("org.xtclang.java.jdk")
+idea {
+    project {
+        jdkName = jdkVersion.get().toString()
+        languageLevel = org.gradle.plugins.ide.idea.model.IdeaLanguageLevel(jdkVersion.get())
+    }
+
+    module {
+        isDownloadJavadoc = false
+        isDownloadSources = true
+    }
+}
 
 /**
  * Print version information for the root aggregator and all included builds.

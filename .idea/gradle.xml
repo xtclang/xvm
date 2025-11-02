@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="GradleSettings">
+    <option name="linkedExternalProjectsSettings">
+      <GradleProjectSettings>
+        <compositeConfiguration>
+          <compositeBuild compositeDefinitionSource="SCRIPT">
+            <builds>
+              <build path="$PROJECT_DIR$/build-logic/aggregator" name="aggregator">
+                <projects>
+                  <project path="$PROJECT_DIR$/build-logic/aggregator" />
+                </projects>
+              </build>
+              <build path="$PROJECT_DIR$/build-logic/common-plugins" name="common-plugins">
+                <projects>
+                  <project path="$PROJECT_DIR$/build-logic/common-plugins" />
+                </projects>
+              </build>
+              <build path="$PROJECT_DIR$/docker" name="docker">
+                <projects>
+                  <project path="$PROJECT_DIR$/docker" />
+                </projects>
+              </build>
+              <build path="$PROJECT_DIR$/javatools" name="javatools">
+                <projects>
+                  <project path="$PROJECT_DIR$/javatools" />
+                </projects>
+              </build>
+              <build path="$PROJECT_DIR$/javatools_jitbridge" name="javatools-jitbridge">
+                <projects>
+                  <project path="$PROJECT_DIR$/javatools_jitbridge" />
+                </projects>
+              </build>
+              <build path="$PROJECT_DIR$/javatools_unicode" name="javatools-unicode">
+                <projects>
+                  <project path="$PROJECT_DIR$/javatools_unicode" />
+                </projects>
+              </build>
+              <build path="$PROJECT_DIR$/javatools_utils" name="javatools-utils">
+                <projects>
+                  <project path="$PROJECT_DIR$/javatools_utils" />
+                </projects>
+              </build>
+              <build path="$PROJECT_DIR$/manualTests" name="manualTests">
+                <projects>
+                  <project path="$PROJECT_DIR$/manualTests" />
+                </projects>
+              </build>
+              <build path="$PROJECT_DIR$/plugin" name="xtc-plugin">
+                <projects>
+                  <project path="$PROJECT_DIR$/plugin" />
+                </projects>
+              </build>
+              <build path="$PROJECT_DIR$/build-logic/settings-plugins" name="settings-plugins">
+                <projects>
+                  <project path="$PROJECT_DIR$/build-logic/settings-plugins" />
+                </projects>
+              </build>
+              <build path="$PROJECT_DIR$/xdk" name="xdk">
+                <projects>
+                  <project path="$PROJECT_DIR$/javatools_bridge" />
+                  <project path="$PROJECT_DIR$/javatools_launcher" />
+                  <project path="$PROJECT_DIR$/javatools_turtle" />
+                  <project path="$PROJECT_DIR$/lib_aggregate" />
+                  <project path="$PROJECT_DIR$/lib_cli" />
+                  <project path="$PROJECT_DIR$/lib_collections" />
+                  <project path="$PROJECT_DIR$/lib_convert" />
+                  <project path="$PROJECT_DIR$/lib_crypto" />
+                  <project path="$PROJECT_DIR$/lib_ecstasy" />
+                  <project path="$PROJECT_DIR$/lib_json" />
+                  <project path="$PROJECT_DIR$/lib_jsondb" />
+                  <project path="$PROJECT_DIR$/lib_net" />
+                  <project path="$PROJECT_DIR$/lib_oodb" />
+                  <project path="$PROJECT_DIR$/lib_sec" />
+                  <project path="$PROJECT_DIR$/lib_web" />
+                  <project path="$PROJECT_DIR$/lib_webauth" />
+                  <project path="$PROJECT_DIR$/lib_webcli" />
+                  <project path="$PROJECT_DIR$/lib_xenia" />
+                  <project path="$PROJECT_DIR$/lib_xml" />
+                  <project path="$PROJECT_DIR$/xdk" />
+                </projects>
+              </build>
+            </builds>
+          </compositeBuild>
+        </compositeConfiguration>
+        <option name="delegatedBuild" value="true" />
+        <option name="testRunner" value="GRADLE" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="gradleJvm" value="#JAVA_HOME" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/build-logic/aggregator" />
+            <option value="$PROJECT_DIR$/build-logic/common-plugins" />
+            <option value="$PROJECT_DIR$/build-logic/settings-plugins" />
+            <option value="$PROJECT_DIR$/docker" />
+            <option value="$PROJECT_DIR$/javatools" />
+            <option value="$PROJECT_DIR$/javatools_bridge" />
+            <option value="$PROJECT_DIR$/javatools_jitbridge" />
+            <option value="$PROJECT_DIR$/javatools_launcher" />
+            <option value="$PROJECT_DIR$/javatools_turtle" />
+            <option value="$PROJECT_DIR$/javatools_unicode" />
+            <option value="$PROJECT_DIR$/javatools_utils" />
+            <option value="$PROJECT_DIR$/lib_aggregate" />
+            <option value="$PROJECT_DIR$/lib_cli" />
+            <option value="$PROJECT_DIR$/lib_collections" />
+            <option value="$PROJECT_DIR$/lib_convert" />
+            <option value="$PROJECT_DIR$/lib_crypto" />
+            <option value="$PROJECT_DIR$/lib_ecstasy" />
+            <option value="$PROJECT_DIR$/lib_json" />
+            <option value="$PROJECT_DIR$/lib_jsondb" />
+            <option value="$PROJECT_DIR$/lib_net" />
+            <option value="$PROJECT_DIR$/lib_oodb" />
+            <option value="$PROJECT_DIR$/lib_sec" />
+            <option value="$PROJECT_DIR$/lib_web" />
+            <option value="$PROJECT_DIR$/lib_webauth" />
+            <option value="$PROJECT_DIR$/lib_webcli" />
+            <option value="$PROJECT_DIR$/lib_xenia" />
+            <option value="$PROJECT_DIR$/lib_xml" />
+            <option value="$PROJECT_DIR$/manualTests" />
+            <option value="$PROJECT_DIR$/plugin" />
+            <option value="$PROJECT_DIR$/xdk" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+    </option>
+  </component>
+</project>
