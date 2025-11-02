@@ -1,0 +1,114 @@
+FROM ubuntu:24.04
+
+# Avoid interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install XRDP, desktop environment, and required packages
+RUN apt-get update && apt-get install -y \
+    xrdp \
+    xfce4 \
+    xfce4-goodies \
+    dbus-x11 \
+    wget \
+    curl \
+    git \
+    software-properties-common \
+    fontconfig \
+    supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and install Amazon Corretto JDK 25
+RUN wget -O /tmp/amazon-corretto-25.tar.gz https://corretto.aws/downloads/latest/amazon-corretto-25-aarch64-linux-jdk.tar.gz && \
+    mkdir -p /usr/lib/jvm && \
+    tar -xzf /tmp/amazon-corretto-25.tar.gz -C /usr/lib/jvm && \
+    rm /tmp/amazon-corretto-25.tar.gz && \
+    mv /usr/lib/jvm/amazon-corretto-25* /usr/lib/jvm/java-25-corretto
+
+# Set up environment variables
+ENV JAVA_HOME=/usr/lib/jvm/java-25-corretto
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
+
+# Download and install IntelliJ IDEA Community Edition 2025.2
+# Try 2025.2 first, fall back to 2024.3 if not available
+RUN wget https://download.jetbrains.com/idea/ideaIC-2025.2.tar.gz -O /tmp/idea.tar.gz || \
+    wget https://download.jetbrains.com/idea/ideaIC-2024.3.2.tar.gz -O /tmp/idea.tar.gz && \
+    tar -xzf /tmp/idea.tar.gz -C /opt && \
+    rm /tmp/idea.tar.gz && \
+    mv /opt/idea-IC-* /opt/idea
+
+# Create a user for running IntelliJ (don't run as root)
+RUN useradd -m -s /bin/bash -G sudo developer && \
+    echo "developer:developer" | chpasswd && \
+    mkdir -p /home/developer/.config/JetBrains && \
+    mkdir -p /home/developer/.gradle && \
+    chown -R developer:developer /home/developer
+
+# Configure XRDP to use Xfce
+RUN echo "xfce4-session" > /home/developer/.xsession && \
+    chown developer:developer /home/developer/.xsession
+
+# Set up working directory
+WORKDIR /home/developer/xvm
+
+# Copy the source tree
+COPY --chown=developer:developer . .
+
+# Create IntelliJ configuration directory structure
+RUN mkdir -p /home/developer/.config/JetBrains/IntelliJIdea2025.2/options && \
+    chown -R developer:developer /home/developer/.config
+
+# Pre-configure Gradle settings for IDEA mode
+RUN cat > /home/developer/.config/JetBrains/IntelliJIdea2025.2/options/gradle.settings.xml << 'EOF'
+<application>
+  <component name="GradleSystemSettings">
+    <option name="serviceDirectoryPath" value="$USER_HOME$/.gradle" />
+  </component>
+  <component name="GradleSettings">
+    <option name="linkedExternalProjectsSettings">
+      <GradleProjectSettings>
+        <option name="delegatedBuild" value="false" />
+        <option name="testRunner" value="PLATFORM" />
+      </GradleProjectSettings>
+    </option>
+  </component>
+</application>
+EOF
+
+# Create desktop shortcut for IntelliJ
+RUN mkdir -p /home/developer/Desktop && \
+    cat > /home/developer/Desktop/IntelliJ.desktop << 'EOF' && \
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=IntelliJ IDEA
+Icon=/opt/idea/bin/idea.png
+Exec=/opt/idea/bin/idea /home/developer/xvm
+Comment=IntelliJ IDEA with XVM Project
+Categories=Development;IDE;
+Terminal=false
+EOF
+    chmod +x /home/developer/Desktop/IntelliJ.desktop && \
+    chown developer:developer /home/developer/Desktop/IntelliJ.desktop
+
+# Configure supervisor to manage XRDP
+RUN mkdir -p /var/log/supervisor
+COPY <<EOF /etc/supervisor/conf.d/xrdp.conf
+[supervisord]
+nodaemon=true
+
+[program:xrdp-sesman]
+command=/usr/sbin/xrdp-sesman --nodaemon
+autorestart=true
+priority=10
+
+[program:xrdp]
+command=/usr/sbin/xrdp --nodaemon
+autorestart=true
+priority=20
+EOF
+
+# Expose RDP port
+EXPOSE 3389
+
+# Start supervisor which will manage XRDP
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]

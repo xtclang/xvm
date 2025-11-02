@@ -1,0 +1,81 @@
+FROM ubuntu:24.04
+
+# Avoid interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install required packages and add Java 25 repository
+RUN apt-get update && apt-get install -y \
+    wget \
+    curl \
+    git \
+    software-properties-common \
+    fontconfig \
+    libx11-6 \
+    libxrender1 \
+    libxtst6 \
+    libxi6 \
+    libfreetype6 \
+    x11-apps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and install Amazon Corretto JDK 25
+RUN wget -O /tmp/amazon-corretto-25.tar.gz https://corretto.aws/downloads/latest/amazon-corretto-25-aarch64-linux-jdk.tar.gz && \
+    mkdir -p /usr/lib/jvm && \
+    tar -xzf /tmp/amazon-corretto-25.tar.gz -C /usr/lib/jvm && \
+    rm /tmp/amazon-corretto-25.tar.gz && \
+    mv /usr/lib/jvm/amazon-corretto-25* /usr/lib/jvm/java-25-corretto
+
+# Set up environment variables
+ENV JAVA_HOME=/usr/lib/jvm/java-25-corretto
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
+
+# Download and install IntelliJ IDEA Community Edition 2025.2
+# Try 2025.2 first, fall back to 2024.3 if not available
+RUN wget https://download.jetbrains.com/idea/ideaIC-2025.2.tar.gz -O /tmp/idea.tar.gz || \
+    wget https://download.jetbrains.com/idea/ideaIC-2024.3.2.tar.gz -O /tmp/idea.tar.gz && \
+    tar -xzf /tmp/idea.tar.gz -C /opt && \
+    rm /tmp/idea.tar.gz && \
+    mv /opt/idea-IC-* /opt/idea
+
+# Create a user for running IntelliJ (don't run as root)
+RUN useradd -m -s /bin/bash developer && \
+    mkdir -p /home/developer/.config/JetBrains && \
+    mkdir -p /home/developer/.gradle && \
+    chown -R developer:developer /home/developer
+
+# Set up working directory
+WORKDIR /home/developer/xvm
+
+# Copy the source tree
+COPY --chown=developer:developer . .
+
+# Create IntelliJ configuration directory structure
+RUN mkdir -p /home/developer/.config/JetBrains/IntelliJIdea2025.2/options && \
+    chown -R developer:developer /home/developer/.config
+
+# Pre-configure Gradle settings for IDEA mode
+# This creates the gradle.settings.xml that configures delegatedBuild=false
+RUN cat > /home/developer/.config/JetBrains/IntelliJIdea2025.2/options/gradle.settings.xml << 'EOF'
+<application>
+  <component name="GradleSystemSettings">
+    <option name="serviceDirectoryPath" value="$USER_HOME$/.gradle" />
+  </component>
+  <component name="GradleSettings">
+    <option name="linkedExternalProjectsSettings">
+      <GradleProjectSettings>
+        <option name="delegatedBuild" value="false" />
+        <option name="testRunner" value="PLATFORM" />
+      </GradleProjectSettings>
+    </option>
+  </component>
+</application>
+EOF
+
+# Set up display environment
+ENV DISPLAY=:0
+
+# Switch to developer user
+USER developer
+
+# Set the entrypoint to launch IntelliJ IDEA
+ENTRYPOINT ["/opt/idea/bin/idea"]
