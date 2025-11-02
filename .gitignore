@@ -56,13 +56,46 @@ out/
 
 # Tooling and project files
 prj/
-.idea/
 .gradle/
 !gradle-wrapper.jar
 !javatools_launcher/src/main/resources/javatools/javatools.jar
 !javatools_launcher/src/main/resources/exe/*
 
-# File-based project format IDEA (legacy)
+# IntelliJ IDEA - track project settings, ignore user-specific files
+.idea/*
+!.idea/.gitignore
+!.idea/vcs.xml
+!.idea/gradle.xml
+!.idea/compiler.xml
+!.idea/misc.xml
+# Uncomment these if you want to share project-level configs:
+# !.idea/codeStyles/
+# !.idea/inspectionProfiles/
+# !.idea/runConfigurations/
+# !.idea/encodings.xml
+# !.idea/copyright/
+# !.idea/dictionaries/
+# !.idea/modules.xml
+
+# IntelliJ IDEA - NEVER commit these user-specific files
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/usage.statistics.xml
+.idea/shelf/
+.idea/libraries/
+.idea/sonarlint/
+.idea/dataSources/
+.idea/dataSources.local.xml
+.idea/dataSources.ids
+.idea/sqlDataSources.xml
+.idea/dynamic.xml
+.idea/uiDesigner.xml
+.idea/dbnavigator.xml
+.idea/httpRequests/
+.idea/*.iml
+.idea/modules/
+
+# File-based project format IDEA (legacy - obsolete since IDEA 13)
 *.iml
 *.ipr
 *.iws

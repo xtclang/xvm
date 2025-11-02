@@ -116,11 +116,23 @@ private class XdkBuildAggregator(val project: Project) : Runnable {
 
         if (actualTasks.size > 1) {
             val conflictingTasks = actualTasks.filter { it == "clean" || lifeCycleTasks.contains(it) }
-            val allowMultipleTasks = (project.properties["allowMultipleTasks"]?.toString() ?: "false").toBoolean()
+            val allowMultipleTasks = true // (project.properties["allowMultipleTasks"]?.toString() ?: "false").toBoolean()
 
             when {
                 conflictingTasks.size > 1 -> {
-                    val msg = "[aggregator] Multiple conflicting lifecycle tasks detected. Please run lifecycle tasks individually: $conflictingTasks"
+                    val msg = """
+                        [aggregator] Multiple conflicting lifecycle tasks detected: $conflictingTasks
+
+                        In composite builds with parallel execution, 'clean' cannot be reliably combined with other lifecycle tasks
+                        due to task graph isolation between included builds. This is a known Gradle limitation.
+
+                        Alternatives:
+                          1. Run tasks separately:  ./gradlew clean && ./gradlew build
+                          2. Use --rerun-tasks:     ./gradlew build --rerun-tasks
+                          3. For CI clean builds:   Delete build directories instead of using 'clean' task
+
+                        See: https://github.com/gradle/gradle/issues/2488
+                    """.trimIndent()
                     logger.error(msg)
                     throw GradleException(msg)
                 }

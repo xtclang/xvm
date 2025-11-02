@@ -1,5 +1,28 @@
 # Claude Configuration
 
+## IntelliJ IDEA Configuration
+
+### Build Delegation
+The project is configured to delegate all build/run/test actions to Gradle instead of using IntelliJ's internal compiler. This is manually configured in `.idea/gradle.xml`:
+```xml
+<option name="delegatedBuild" value="true" />
+<option name="testRunner" value="GRADLE" />
+```
+
+**IMPORTANT**: These settings are tracked in git and should persist across Gradle syncs. If IntelliJ overwrites or removes them:
+1. Open **Settings → Build, Execution, Deployment → Build Tools → Gradle**
+2. Set **Build and run using**: Gradle
+3. Set **Run tests using**: Gradle
+
+IntelliJ will then regenerate the correct settings in `gradle.xml`.
+
+**Note**: The gradle-idea-ext plugin doesn't work for composite builds, so these settings are managed manually.
+
+### Why This Matters
+- Prevents IntelliJ from trying to compile `.gradle.kts` files directly (causing "Unable to make" errors)
+- Ensures consistent build behavior between IDE and command line
+- Required for proper handling of Gradle's configuration cache
+
 ## MOST IMPORTANT RULE: Gradle Task Execution
 
 ### NEVER Run Multiple Tasks in One Command
