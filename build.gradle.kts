@@ -24,12 +24,97 @@ idea {
     project {
         jdkName = jdkVersion.get().toString()
         languageLevel = org.gradle.plugins.ide.idea.model.IdeaLanguageLevel(jdkVersion.get())
+
+        // CRITICAL: Configure compiler settings
+        // IntelliJ overwrites these when switching build modes, so we need to enforce them
+        ipr {
+            withXml {
+                val compilerConfig = asNode().appendNode("component").apply {
+                    attributes()["name"] = "CompilerConfiguration"
+                }
+                compilerConfig.appendNode("bytecodeTargetLevel").apply {
+                    attributes()["target"] = jdkVersion.get().toString()
+                }
+            }
+        }
     }
 
     module {
         isDownloadJavadoc = false
         isDownloadSources = true
     }
+}
+
+// Task to validate and fix IntelliJ settings after preference changes
+// Configuration-cache compatible version
+abstract class FixIdeaSettingsTask : DefaultTask() {
+    @get:InputFile
+    abstract val compilerXml: RegularFileProperty
+
+    @get:InputFile
+    abstract val gradleXml: RegularFileProperty
+
+    @get:Input
+    abstract val jdkVersion: Property<Int>
+
+    @get:Inject
+    abstract val fs: FileSystemOperations
+
+    @TaskAction
+    fun fix() {
+        val jdk = jdkVersion.get()
+        val compiler = compilerXml.get().asFile
+        val gradle = gradleXml.get().asFile
+
+        if (compiler.exists()) {
+            var content = compiler.readText()
+            val wrongTarget = Regex("""<bytecodeTargetLevel target="1\.6" />""")
+            if (wrongTarget.containsMatchIn(content)) {
+                logger.warn("❌ IntelliJ overwrote bytecode target to 1.6! Fixing to $jdk...")
+                content = content.replace(wrongTarget, """<bytecodeTargetLevel target="$jdk" />""")
+                compiler.writeText(content)
+                logger.lifecycle("✅ Fixed compiler.xml bytecode target to $jdk")
+            }
+        }
+
+        if (gradle.exists()) {
+            var content = gradle.readText()
+            var changed = false
+
+            if (content.contains("""<option name="delegatedBuild" value="false" />""")) {
+                logger.warn("❌ IntelliJ switched to IDEA build mode! Switching back to Gradle mode...")
+                content = content.replace(
+                    """<option name="delegatedBuild" value="false" />""",
+                    """<option name="delegatedBuild" value="true" />"""
+                )
+                changed = true
+            }
+
+            if (content.contains("""<option name="testRunner" value="PLATFORM" />""")) {
+                logger.warn("❌ IntelliJ switched to IDEA test runner! Switching back to Gradle...")
+                content = content.replace(
+                    """<option name="testRunner" value="PLATFORM" />""",
+                    """<option name="testRunner" value="GRADLE" />"""
+                )
+                changed = true
+            }
+
+            if (changed) {
+                gradle.writeText(content)
+                logger.lifecycle("✅ Fixed gradle.xml to use Gradle build mode")
+                logger.lifecycle("⚠️  RESTART IntelliJ for changes to take effect!")
+            }
+        }
+    }
+}
+
+tasks.register<FixIdeaSettingsTask>("fixIdeaSettings") {
+    val buildJdkVersion = jdkVersion
+    group = "ide"
+    description = "Fix IntelliJ settings that get overwritten when changing preferences"
+    compilerXml.set(layout.projectDirectory.file(".idea/compiler.xml"))
+    gradleXml.set(layout.projectDirectory.file(".idea/gradle.xml"))
+    jdkVersion.set(buildJdkVersion)
 }
 
 /**

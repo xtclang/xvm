@@ -4,6 +4,6 @@
   <component name="FrameworkDetectionExcludesConfiguration">
     <file type="web" url="file://$PROJECT_DIR$" />
   </component>
-  <component name="KubernetesApiProvider"><![CDATA[{}]]></component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_25" project-jdk-name="temurin-25" project-jdk-type="JavaSDK" />
+  <component name="KubernetesApiProvider">{}</component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_25" default="true" project-jdk-name="temurin-25" project-jdk-type="JavaSDK" />
 </project>

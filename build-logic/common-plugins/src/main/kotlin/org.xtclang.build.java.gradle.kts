@@ -133,7 +133,8 @@ testing {
 tasks.withType<JavaExec>().configureEach {
     inputs.property("jdkVersion", jdkVersion)
     inputs.property("defaultJvmArgs", defaultJvmArgs)
-    javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
+    // Don't set javaLauncher here - let it be configured by the toolchain
+    // Setting it here causes conflicts with IntelliJ's executable property
     jvmArgumentProviders.add(DefaultJvmArgsProvider(defaultJvmArgs))
 }
 

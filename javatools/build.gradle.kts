@@ -9,6 +9,7 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.xdk.build.java)
+    alias(libs.plugins.xdk.build.idea)
     alias(libs.plugins.palantir.git.version)
 }
 
@@ -207,3 +208,4 @@ val versionOutputTest by tasks.registering(Test::class) {
         logger.info("[javatools] Verifying version output contains expected git and API information")
     }
 }
+
