@@ -1,5 +1,7 @@
 package org.xtclang.plugin.launchers;
 
+import org.gradle.api.file.FileCollection;
+import org.gradle.api.file.FileTree;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.provider.Provider;
 import org.gradle.process.ExecResult;
@@ -7,34 +9,15 @@ import org.gradle.process.ExecResult;
 import org.jetbrains.annotations.NotNull;
 
 import org.xtclang.plugin.XtcLauncherTaskExtension;
-import org.xtclang.plugin.services.XtcCompilerService;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 
 import java.io.File;
 import java.util.Objects;
 
 /**
- * Launcher that uses the XTC Compiler Daemon (Build Service) to compile XTC source files
- * without spawning a new Java process for each compilation.
- *
- * <p>This launcher provides significant performance improvements over {@link JavaExecLauncher}
- * by reusing a persistent compiler instance across all compilation tasks in the build.
- *
- * <p><b>Benefits:</b>
- * <ul>
- *   <li>No JVM startup overhead for each compilation</li>
- *   <li>ClassLoader and class metadata reused across compilations</li>
- *   <li>JIT compilation benefits from warmed-up code paths</li>
- *   <li>Thread-safe and configuration-cache compatible</li>
- * </ul>
- *
- * <p><b>vs BuildThreadLauncher:</b> Unlike BuildThreadLauncher which directly invokes the
- * compiler in the current thread, this launcher uses a Build Service for proper lifecycle
- * management and better isolation.
- *
- * <p><b>vs JavaExecLauncher:</b> Unlike JavaExecLauncher which forks a new JVM process for
- * each compilation, this launcher reuses a persistent compiler instance, eliminating process
- * startup overhead.
+ * Launcher that delegates to JavaClasspathLauncher for in-process compilation.
+ * Previously maintained a persistent compiler instance, but now simply uses
+ * JavaClasspathLauncher with fork=false for consistency.
  *
  * @param <E> The extension type
  * @param <T> The task type
@@ -42,19 +25,26 @@ import java.util.Objects;
 public class CompilerDaemonLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>>
         extends XtcLauncher<E, T> {
 
-    private final Provider<XtcCompilerService> compilerServiceProvider;
+    private final Provider<@NotNull String> projectVersion;
+    private final Provider<@NotNull FileTree> xdkFileTree;
+    private final Provider<@NotNull FileCollection> javaToolsConfig;
+    private final Provider<@NotNull String> toolchainExecutable;
     private final File projectDirectory;
 
     public CompilerDaemonLauncher(
             @NotNull final T task,
             @NotNull final Logger logger,
-            @NotNull final Provider<XtcCompilerService> compilerServiceProvider,
+            @NotNull final Provider<@NotNull String> projectVersion,
+            @NotNull final Provider<@NotNull FileTree> xdkFileTree,
+            @NotNull final Provider<@NotNull FileCollection> javaToolsConfig,
+            @NotNull final Provider<@NotNull String> toolchainExecutable,
             @NotNull final File projectDirectory) {
         super(task, logger);
-        this.compilerServiceProvider = Objects.requireNonNull(compilerServiceProvider,
-                "Compiler service provider cannot be null");
-        this.projectDirectory = Objects.requireNonNull(projectDirectory,
-                "Project directory cannot be null");
+        this.projectVersion = projectVersion;
+        this.xdkFileTree = xdkFileTree;
+        this.javaToolsConfig = javaToolsConfig;
+        this.toolchainExecutable = toolchainExecutable;
+        this.projectDirectory = projectDirectory;
     }
 
     @Override
@@ -76,34 +66,22 @@ public class CompilerDaemonLauncher<E extends XtcLauncherTaskExtension, T extend
 
     @Override
     public ExecResult apply(@NotNull final CommandLine cmd) {
-        logger.lifecycle("[compiler-daemon] Compiling using XTC compiler daemon: {}", task.getName());
+        logger.lifecycle("[compiler-daemon] Using in-process compilation (delegates to JavaClasspathLauncher)");
         validateCommandLine(cmd);
-        final var builder = resultBuilder(cmd);
-        try {
-            if (task.hasVerboseLogging()) {
-                logger.lifecycle("[compiler-daemon] Compiler command: {}", cmd.toString());
-            }
-            // Get the compiler service instance
-            final XtcCompilerService compilerService = compilerServiceProvider.get();
-            // Compile using the daemon, passing the project directory as working directory
-            final XtcExecResult result = compilerService.compile(
-                    cmd,
-                    task.getJavaToolsClasspath(),
-                    projectDirectory,
-                    logger
-            );
-            // Transfer result to builder
-            builder.exitValue(result.getExitValue());
-            if (result.getFailure() != null) {
-                builder.failure(result.getFailure());
-            }
 
-        } catch (final Exception e) {
-            logger.error("[compiler-daemon] Compilation failed with unexpected exception", e);
-            builder.exitValue(-1);
-            builder.failure(e);
-        }
-        return createExecResult(builder);
+        // Delegate to JavaClasspathLauncher with fork=false for in-process execution
+        final JavaClasspathLauncher<E, T> launcher = new JavaClasspathLauncher<>(
+            task,
+            logger,
+            projectVersion,
+            xdkFileTree,
+            javaToolsConfig,
+            toolchainExecutable,
+            projectDirectory,
+            false // fork=false for in-process execution
+        );
+
+        return launcher.apply(cmd);
     }
 
     @Override
