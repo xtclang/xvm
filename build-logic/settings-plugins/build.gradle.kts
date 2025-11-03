@@ -27,7 +27,7 @@ logger.lifecycle("[settings] Boostrap properties: ${versionProps.size} direct pr
 // The produced output will still be Java 25.
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(kotlinJdkVersion))
+        languageVersion.set(JavaLanguageVersion.of(jdkVersion))
     }
 }
 
