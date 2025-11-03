@@ -53,11 +53,12 @@ public class xRTCharDelegate
     }
 
     @Override
-    public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cSize,
+    public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cCapacity,
                                          ObjectHandle[] ahContent, Mutability mutability) {
-        char[] ach = new char[cSize];
+        char[] ach   = new char[cCapacity];
+        int    cSize = ahContent.length;
 
-        for (int i = 0, c = ahContent.length; i < c; i++) {
+        for (int i = 0; i < cSize; i++) {
             ach[i] = (char) ((JavaLong) ahContent[i]).getValue();
         }
         return new CharArrayHandle(getCanonicalClass(), ach, cSize, mutability);

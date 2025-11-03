@@ -831,8 +831,8 @@ public class xArray
      */
     public static int createAndFill(Frame frame, TypeComposition clzArray, int cSize,
                                     Utils.ValueSupplier supplier, int iReturn) {
-        // make it "Fixed" first; freeze after filling up
-        ArrayHandle hArray = createEmptyArray(clzArray, cSize, Mutability.Fixed);
+        // make it "Mutable" first; freeze after filling up
+        ArrayHandle hArray = createEmptyArray(clzArray, cSize, Mutability.Mutable);
 
         switch (new Utils.FillArray(hArray, cSize, supplier, iReturn).doNext(frame)) {
         case Op.R_NEXT:
@@ -966,7 +966,7 @@ public class xArray
      * specified array.
      */
     public static ArrayHandle makeArrayHandle(TypeComposition clzArray, int cCapacity,
-                                               ObjectHandle[] ahValue, Mutability mutability) {
+                                              ObjectHandle[] ahValue, Mutability mutability) {
         DelegateHandle hDelegate = makeDelegate(clzArray, cCapacity, ahValue, mutability);
         return new ArrayHandle(clzArray, hDelegate, mutability);
     }
@@ -980,9 +980,6 @@ public class xArray
         TypeConstant typeElement      = clzArray.getType().getParamType(0);
         xRTDelegate  templateDelegate = xRTDelegate.getArrayTemplate(typeElement);
 
-        if (mutability != Mutability.Fixed) {
-            cCapacity = ahValue.length;
-        }
         return templateDelegate.createDelegate(
                 clzArray.getContainer(), typeElement, cCapacity, ahValue, mutability);
     }

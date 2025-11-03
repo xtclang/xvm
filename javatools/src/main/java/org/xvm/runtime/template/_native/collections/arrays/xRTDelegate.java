@@ -151,22 +151,22 @@ public class xRTDelegate
      * Create a delegate for the specified type and content.
      *
      * @param typeElement  the element type
-     * @param cSize        the desired size
+     * @param cCapacity    the desired capacity
      * @param ahContent    the array elements to fill
      * @param mutability   the desired mutability
      *
      * @return the delegate handle
      */
-    public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cSize,
+    public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cCapacity,
                                          ObjectHandle[] ahContent, Mutability mutability) {
         TypeComposition clzDelegate = ensureParameterizedClass(container, typeElement);
 
-        int            cContent = ahContent.length;
+        int            cSize = ahContent.length;
         ObjectHandle[] ahValue;
-        if (cSize > cContent) {
-            ahValue = new ObjectHandle[cSize];
-            if (cContent > 0) {
-                System.arraycopy(ahContent, 0, ahValue, 0, cContent);
+        if (cCapacity > cSize) {
+            ahValue = new ObjectHandle[cCapacity];
+            if (cSize > 0) {
+                System.arraycopy(ahContent, 0, ahValue, 0, cSize);
             }
         } else {
             ahValue = mutability == Mutability.Constant
