@@ -321,7 +321,7 @@ public class ReturnStatement
             // the return statement has a single expression returning a tuple; the caller expects
             // multiple returns
             Expression expr = listExprs.get(0);
-            Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
+            Argument   arg  = expr.generateArgument(ctx, code, true, errs);
             code.add(new Return_T(arg));
 
             astResult = new ReturnStmtAST(new ExprAST[]{
@@ -346,7 +346,7 @@ public class ReturnStatement
                 // return only as many as the caller expects
                 Expression expr   = listExprs.get(0);
                 boolean    fCheck = fConditional && !expr.isConditionalResult();
-                Argument[] aArgs  = expr.generateArguments(ctx, code, true, !fCheck, errs);
+                Argument[] aArgs  = expr.generateArguments(ctx, code, true, errs);
                 int        cArgs  = aArgs.length;
 
                 switch (cRets) {
@@ -414,7 +414,7 @@ public class ReturnStatement
                 ExprAST[]  aASTs = new ExprAST[cRets];
                 for (int i = 0; i < cRets; ++i) {
                     Expression expr = listExprs.get(i);
-                    Argument   arg  = expr.generateArgument(ctx, code, true, !fConditional || i > 0, errs);
+                    Argument   arg  = expr.generateArgument(ctx, code, true, errs);
                     aArgs[i] = expr.ensurePointInTime(code, arg, listExprs, i);
                     aASTs[i] = expr.getExprAST(ctx);
                 }

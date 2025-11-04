@@ -529,11 +529,6 @@ public abstract class Constant
     }
 
     @Override
-    public boolean isStack() {
-        return false;
-    }
-
-    @Override
     public boolean isEffectivelyFinal() {
         return false;
     }

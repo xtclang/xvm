@@ -97,13 +97,8 @@ public class Register
     }
 
     @Override
-    public boolean isStack() {
-        return m_iArg == Op.A_STACK;
-    }
-
-    @Override
     public boolean isEffectivelyFinal() {
-        return m_fEffectivelyFinal || isStack();
+        return m_fEffectivelyFinal;
     }
 
     @Override
@@ -420,8 +415,6 @@ public class Register
      * @return a {@link RegisterAST} (or {@link NarrowedExprAST}) that represents this register
      */
     public ExprAST getRegisterAST() {
-        assert !isStack();
-
         if (isPredefined()) {
             RegisterAST regSpecial = m_astSpecial;
             if (regSpecial == null) {
@@ -509,7 +502,6 @@ public class Register
      */
     protected static boolean isPredefinedRegister(int iArg) {
         switch (iArg) {
-        case Op.A_STACK:
         case Op.A_IGNORE:
         case Op.A_IGNORE_ASYNC:
         case Op.A_DEFAULT:
@@ -629,11 +621,6 @@ public class Register
         @Override
         public boolean isInPlace() {
             return m_fInPlace;
-        }
-
-        @Override
-        public boolean isStack() {
-            return Register.this.isStack();
         }
 
         @Override

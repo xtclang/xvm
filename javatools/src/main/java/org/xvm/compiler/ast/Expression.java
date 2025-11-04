@@ -1349,17 +1349,16 @@ public abstract class Expression
      * If the expression {@link #hasSingleValueImpl()} is {@code true}, then this method or
      * {@link #generateAssignment} must be overridden.
      *
-     * @param ctx           the compilation context for the statement
-     * @param code          the code block
-     * @param fLocalPropOk  true if the resulting arguments can be expressed as property constants
-     *                      if the argument values are local properties
-     * @param fUsedOnce     enables use of the "frame-local stack"
-     * @param errs          the error list to log any errors to
+     * @param ctx          the compilation context for the statement
+     * @param code         the code block
+     * @param fLocalPropOk true if the resulting arguments can be expressed as property constants if
+     *                     the argument values are local properties
+     * @param errs         the error list to log any errors to
      *
      * @return a resulting argument of the validated type
      */
     public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+        Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         assert !isVoid();
 
         if (isConstant()) {
@@ -1367,11 +1366,11 @@ public abstract class Expression
         }
 
         if (hasMultiValueImpl() && (!hasSingleValueImpl() || !isSingle())) {
-            return generateArguments(ctx, code, fLocalPropOk, fUsedOnce, errs)[0];
+            return generateArguments(ctx, code, fLocalPropOk, errs)[0];
         }
 
         if (hasSingleValueImpl() && !isVoid()) {
-            Assignable var = createTempVar(code, getType(), fUsedOnce);
+            Assignable var = createTempVar(code, getType());
             generateAssignment(ctx, code, var, errs);
             return var.getRegister();
         }
@@ -1387,17 +1386,15 @@ public abstract class Expression
      *
      * @param ctx           the compilation context for the statement
      * @param code          the code block
-     * @param fLocalPropOk  true if the resulting arguments can be expressed as property constants
-     *                      if the argument values are local properties
-     * @param fUsedOnce     enables use of the "frame-local stack" (for <b><i>up to one of</i></b>
-     *                      the resulting arguments)
+     * @param fLocalPropOk  true if the resulting arguments can be expressed as property constants if
+     *                      the argument values are local properties
      * @param errs          the error list to log any errors to
      *
-     * @return an array of resulting arguments, which will either be the same length as the value
-     *         count of the expression, or length 1 for a tuple result iff fPack is true
+     * @return an array of  resulting arguments, which will either be the same length as the value
+     * count of the expression, or length 1 for a tuple result iff fPack is true
      */
-    public Argument[] generateArguments(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+    public Argument[] generateArguments(Context ctx, Code code, boolean fLocalPropOk,
+                                        ErrorListener errs) {
         if (isConstant()) {
             return toConstants();
         }
@@ -1410,15 +1407,15 @@ public abstract class Expression
 
         if (hasSingleValueImpl() && isSingle()) {
             // optimize for single argument case
-            return new Argument[] { generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs) };
+            return new Argument[] { generateArgument(ctx, code, fLocalPropOk, errs) };
         }
 
         TypeConstant[] aTypes = getTypes();
         int            cTypes = aTypes.length;
         Assignable[]   aLVals = new Assignable[cTypes];
-        aLVals[0] = createTempVar(code, aTypes[0], false);
+        aLVals[0] = createTempVar(code, aTypes[0]);
         for (int i = 1; i < cTypes; ++i) {
-            aLVals[i] = createTempVar(code, aTypes[i], false);
+            aLVals[i] = createTempVar(code, aTypes[i]);
         }
         generateAssignments(ctx, code, aLVals, errs);
 
@@ -1446,7 +1443,7 @@ public abstract class Expression
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs) {
         if (hasSingleValueImpl()) {
             // this will be overridden by classes that can push down the work
-            Argument arg = generateArgument(ctx, code, LVal.supportsLocalPropMode(), true, errs);
+            Argument arg = generateArgument(ctx, code, LVal.supportsLocalPropMode(), errs);
             LVal.assign(arg, code, errs);
             return;
         }
@@ -1524,11 +1521,10 @@ public abstract class Expression
             }
 
             boolean    fCheckArg0 = fCond && cLVals > 1 && getConditionFalseLabel() == null;
-            Argument[] aArg       = generateArguments(ctx, code, fLocalPropOk, !fCheckArg0, errs);
+            Argument[] aArg       = generateArguments(ctx, code, fLocalPropOk, errs);
 
             if (fCheckArg0) {
                 Argument argCond = aArg[0];
-                assert !argCond.isStack();
 
                 aLVal[0].assign(argCond, code, errs);
 
@@ -1573,7 +1569,7 @@ public abstract class Expression
 
         // this is just a generic implementation; sub-classes should override this to simplify the
         // generated code (e.g. by not having to always generate a separate boolean value)
-        Argument arg = generateArgument(ctx, code, true, true, errs);
+        Argument arg = generateArgument(ctx, code, true, errs);
         code.add(fWhenTrue
                 ? new JumpTrue(arg, label)
                 : new JumpFalse(arg, label));
@@ -1613,21 +1609,15 @@ public abstract class Expression
     /**
      * Produce a temporary variable.
      *
-     * @param code       the code block
-     * @param type       the type of the temporary variable
-     * @param fUsedOnce  true iff the value will be used once and only once (such that the local
-     *                   stack can be utilized for storage)
+     * @param code  the code block
+     * @param type  the type of the temporary variable
+     *
      * @return the Assignable representing the temporary variable; the Assignable will contain a
      *         Register
      */
-    protected Assignable createTempVar(Code code, TypeConstant type, boolean fUsedOnce) {
-        Register reg;
-        if (fUsedOnce) {
-            reg = new Register(type, null, Op.A_STACK);
-        } else {
-            reg = code.createRegister(type);
-            code.add(new Var(reg));
-        }
+    protected Assignable createTempVar(Code code, TypeConstant type) {
+        Register reg = code.createRegister(type);
+        code.add(new Var(reg));
         return new Assignable(reg);
     }
 
@@ -2169,13 +2159,6 @@ public abstract class Expression
         }
 
         /**
-         * @return true iff the lvalue is a local variable register that is on the stack
-         */
-        public boolean isStack() {
-            return m_form == AssignForm.LocalVar && m_arg.isStack();
-        }
-
-        /**
          * @return true iff the lvalue is a register for a LocalVar, the property constant for a
          *         LocalProp, or the black-hole register for a BlackHole
          */
@@ -2286,16 +2269,13 @@ public abstract class Expression
          * @param fLocalPropOk  if no L-value is provided, then this is used to indicate whether the
          *                      resulting argument can be a property constant indicating a local
          *                      property value
-         * @param fUsedOnce     if no L-value is provided, then this is used to indicate whether the
-         *                      result is used only once (e.g. could the temporary stack be used for
-         *                      the result)
          * @param code          the code object to which the assembly is added
          * @param errs          the error listener to log to
          *
          * @return an argument, if an Assignable was not provided
          */
-        public Argument getValue(Assignable LValResult, boolean fLocalPropOk, boolean fUsedOnce,
-                Code code, ErrorListener errs) {
+        public Argument getValue(Assignable LValResult, boolean fLocalPropOk, Code code,
+                                 ErrorListener errs) {
             switch (m_form) {
             case BlackHole:
                 // blackhole has no value
@@ -2316,7 +2296,7 @@ public abstract class Expression
                 // fall through
             case TargetProp: {
                 Assignable LValTemp = LValResult == null || !LValResult.isLocalArgument()
-                        ? createTempVar(code, getType(), fUsedOnce)
+                        ? createTempVar(code, getType())
                         : LValResult;
                 code.add(new P_Get(getProperty(), getTarget(), LValTemp.getLocalArgument()));
                 if (LValResult == null) {
@@ -2332,7 +2312,7 @@ public abstract class Expression
             case Indexed:
             case IndexedProp: {
                 Assignable LValTemp = LValResult == null || !LValResult.isLocalArgument()
-                        ? createTempVar(code, getType(), fUsedOnce)
+                        ? createTempVar(code, getType())
                         : LValResult;
                 Argument argTarget = m_form == AssignForm.Indexed
                         ? getArray()
@@ -2373,13 +2353,12 @@ public abstract class Expression
          * @param code          the code block
          * @param fLocalPropOk  true if the resulting arguments can be expressed as property
          *                      constants if the argument values are local properties
-         * @param fUsedOnce     enables use of the "frame-local stack"
          * @param errs          the error list to log any errors to
          *
          * @return a resulting argument of the validated type
          */
         public Argument generateArgument(
-                Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+            Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
             switch (m_form) {
             case LocalVar:
                 return getRegister();
@@ -2389,37 +2368,21 @@ public abstract class Expression
                     return getProperty();
                 }
 
-                if (fUsedOnce) {
-                    Register reg = new Register(getType(), null, Op.A_STACK);
-                    code.add(new L_Get(getProperty(), reg));
-                    return reg;
-                }
-
                 Register reg = code.createRegister(getType());
                 code.add(new Var_I(reg, getProperty()));
                 return reg;
             }
 
             case TargetProp: {
-                Register reg;
-                if (fUsedOnce) {
-                    reg = new Register(getType(), null, Op.A_STACK);
-                } else {
-                    reg = code.createRegister(getType());
-                    code.add(new Var(reg));
-                }
+                Register reg = code.createRegister(getType());
+                code.add(new Var(reg));
                 code.add(new P_Get(getProperty(), getTarget(), reg));
                 return reg;
             }
 
             case Indexed: {
-                Register reg;
-                if (fUsedOnce) {
-                    reg = new Register(getType(), null, Op.A_STACK);
-                } else {
-                    reg = code.createRegister(getType());
-                    code.add(new Var(reg));
-                }
+                Register reg = code.createRegister(getType());
+                code.add(new Var(reg));
                 code.add(new I_Get(getArray(), getIndex(), reg));
                 return reg;
             }
@@ -2485,17 +2448,14 @@ public abstract class Expression
          *
          * @param seq         the type of sequential operation
          * @param LValResult  the L-value to store the result in, or null
-         * @param fUsedOnce   if no L-value is provided, and the expression has a resulting
-         *                    argument, then this is used to indicate whether the result is used
-         *                    only once (e.g. could the temporary stack be used for the result)
          * @param code        the code object to which the assembly is added
          * @param errs        the error listener to log to
          *
          * @return an argument, if the specified operation produces a value and an Assignable was
          *         not passed
          */
-        public Argument assignSequential(Sequential seq, Assignable LValResult, boolean fUsedOnce,
-                Code code, ErrorListener errs) {
+        public Argument assignSequential(Sequential seq, Assignable LValResult,
+                                         Code code, ErrorListener errs) {
             // a blind operation cannot have a result; all other operations will either assign to
             // the result or return a result
             assert !seq.isBlind() || LValResult == null;
@@ -2528,7 +2488,7 @@ public abstract class Expression
                         return null;
                     }
 
-                    Register regResult = code.createRegister(argTarget.getType(), fUsedOnce);
+                    Register regResult = code.createRegister(argTarget.getType());
                     code.add(seq.isInc()
                             ? new IP_PreInc(argTarget, regResult)
                             : new IP_PreDec(argTarget, regResult));
@@ -2544,7 +2504,7 @@ public abstract class Expression
                 case PostDec: {
                     Assignable LValTemp = LValResult != null && LValResult.isLocalArgument()
                             ? LValResult
-                            : createTempVar(code, getType(), fUsedOnce);
+                            : createTempVar(code, getType());
                     code.add(seq.isInc()
                             ? new IP_PostInc(argTarget, LValTemp.getLocalArgument())
                             : new IP_PostDec(argTarget, LValTemp.getLocalArgument()));
@@ -2571,7 +2531,7 @@ public abstract class Expression
                 } else {
                     Assignable LValTemp = LValResult != null && LValResult.isLocalArgument()
                             ? LValResult
-                            : createTempVar(code, getType(), fUsedOnce);
+                            : createTempVar(code, getType());
 
                     Argument argReturn = LValTemp.getLocalArgument();
                     code.add(seq.isPre()
@@ -2605,7 +2565,7 @@ public abstract class Expression
                 } else {
                     Assignable LValTemp = LValResult != null && LValResult.isLocalArgument()
                             ? LValResult
-                            : createTempVar(code, getType().resolveGenericType("Element"), fUsedOnce);
+                            : createTempVar(code, getType().resolveGenericType("Element"));
 
                     Argument argReturn = LValTemp.getLocalArgument();
                     code.add(seq.isPre()
@@ -2639,13 +2599,13 @@ public abstract class Expression
             switch (seq) {
             case Inc:
             case Dec: {
-                Assignable LValTemp = createTempVar(code, getType(), false);
+                Assignable LValTemp = createTempVar(code, getType());
 
                 // get the original value
-                getValue(LValTemp, false, false, code, errs);
+                getValue(LValTemp, false, code, errs);
 
                 // perform the sequential operation on the temp
-                LValTemp.assignSequential(seq, null, false, code, errs);
+                LValTemp.assignSequential(seq, null, code, errs);
 
                 // store the operation's result
                 assign(LValTemp.getRegister(), code, errs);
@@ -2657,14 +2617,14 @@ public abstract class Expression
             case PreDec: {
                 Assignable LValTemp = LValResult != null && LValResult.isNormalVariable()
                         ? LValResult
-                        : createTempVar(code, getType(), false);
+                        : createTempVar(code, getType());
 
                 // get the original value
-                getValue(LValTemp, false, false, code, errs);
+                getValue(LValTemp, false, code, errs);
 
                 // perform the sequential operation on the temp
                 Sequential seqVoid = seq.isInc() ? Sequential.Inc : Sequential.Dec;
-                LValTemp.assignSequential(seqVoid, null, false, code, errs);
+                LValTemp.assignSequential(seqVoid, null, code, errs);
 
                 // store the operation's result
                 assign(LValTemp.getRegister(), code, errs);
@@ -2682,20 +2642,20 @@ public abstract class Expression
 
             case PostInc:
             case PostDec: {
-                Assignable LValTemp  = createTempVar(code, getType(), false);
+                Assignable LValTemp  = createTempVar(code, getType());
                 Argument   argResult = null;
                 if (LValResult == null) {
-                    LValResult = createTempVar(code, getType(), fUsedOnce);
+                    LValResult = createTempVar(code, getType());
                     argResult  = LValResult.getRegister();
                 }
 
                 // get the original value
-                getValue(LValTemp, false, false, code, errs);
+                getValue(LValTemp, false, code, errs);
                 LValResult.assign(LValTemp.getRegister(), code, errs);
 
                 // perform the sequential operation on the temp
                 Sequential seqVoid = seq.isInc() ? Sequential.Inc : Sequential.Dec;
-                LValTemp.assignSequential(seqVoid, null, false, code, errs);
+                LValTemp.assignSequential(seqVoid, null, code, errs);
 
                 // store the operation's result
                 assign(LValTemp.getRegister(), code, errs);

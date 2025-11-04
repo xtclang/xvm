@@ -23,7 +23,6 @@ import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.MultiMethodStructure;
-import org.xvm.asm.Op;
 import org.xvm.asm.Argument;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
@@ -1020,7 +1019,7 @@ public class NameExpression
                 case Outer: {
                     int          cSteps   = m_targetInfo.getStepsOut();
                     TypeConstant type     = m_targetInfo.getType();
-                    Register     regOuter = new Register(type, null, Op.A_STACK);
+                    Register     regOuter = code.createRegister(type);
                     code.add(new MoveThis(cSteps, regOuter, type.getAccess()));
                     code.add(new P_Get(idProp, regOuter, argLVal));
 
@@ -1041,7 +1040,7 @@ public class NameExpression
 
                 case Left: {
                     assert !idProp.getComponent().isStatic();
-                    Argument argLeft = left.generateArgument(ctx, code, false, true, errs);
+                    Argument argLeft = left.generateArgument(ctx, code, false, errs);
                     code.add(new P_Get(idProp, argLeft, argLVal));
 
                     m_astResult = new PropertyExprAST(left.getExprAST(ctx), idProp);
@@ -1061,7 +1060,7 @@ public class NameExpression
                             ? typeTarget.getParentType()
                             : pool().typeObject();
 
-                    Register regOuter = new Register(typeOuter, null, Op.A_STACK);
+                    Register regOuter = code.createRegister(typeOuter);
                     code.add(new P_Get(idProp, argTarget, regOuter));
                     code.add(new MoveRef(regOuter, argLVal));
                 } else {
@@ -1096,7 +1095,7 @@ public class NameExpression
                     int cSteps = m_targetInfo == null ? 0 : m_targetInfo.getStepsOut();
                     if (cSteps > 0) {
                         TypeConstant typeTarget = m_targetInfo.getTargetType();
-                        argTarget = new Register(typeTarget, null, Op.A_STACK);
+                        argTarget = code.createRegister(typeTarget);
                         code.add(new MoveThis(cSteps, argTarget, typeTarget.getAccess()));
 
                         astTarget = new OuterExprAST(ctx.getThisRegisterAST(), cSteps, typeTarget);
@@ -1105,14 +1104,14 @@ public class NameExpression
                         astTarget = ctx.getThisRegisterAST();
                     }
                 } else {
-                    argTarget = left.generateArgument(ctx, code, true, true, errs);
+                    argTarget = left.generateArgument(ctx, code, true, errs);
                     astTarget = left.getExprAST(ctx);
                 }
 
                 if (m_mapTypeParams == null) {
                     code.add(new MBind(argTarget, idMethod, argLVal));
                 } else {
-                    Register regFn = new Register(pool().typeFunction(), null, Op.A_STACK);
+                    Register regFn = code.createRegister(pool().typeFunction());
                     code.add(new MBind(argTarget, idMethod, regFn));
                     bindTypeParameters(ctx, code, regFn, argLVal);
                 }
@@ -1135,8 +1134,7 @@ public class NameExpression
     }
 
     @Override
-    public Argument generateArgument(Context ctx, Code code,
-                                     boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         if (isConstant()) {
             return toConstant();
         }
@@ -1151,7 +1149,7 @@ public class NameExpression
                             // indicates a "this.C" scenario used inside a "property class" for this
                             // class property
                             TypeConstant typeOuter = argRaw.getType();
-                            Register     regOuter  = code.createRegister(typeOuter, fUsedOnce);
+                            Register     regOuter  = code.createRegister(typeOuter);
                             code.add(new MoveThis(1, regOuter, typeOuter.getAccess()));
 
                             m_astResult = new OuterExprAST(ctx.getThisRegisterAST(), 1, typeOuter);
@@ -1168,7 +1166,7 @@ public class NameExpression
                     }
 
                 if (m_mapTypeParams != null) {
-                    Register regFn = code.createRegister(argRaw.getType(), fUsedOnce);
+                    Register regFn = code.createRegister(argRaw.getType());
                     bindTypeParameters(ctx, code, argRaw, regFn);
                     System.err.println("TODO: AST for " + this);
                     // TODO GG: m_astResult =
@@ -1196,7 +1194,7 @@ public class NameExpression
                     cSteps++;
                 }
 
-                Register regOuter = code.createRegister(typeOuter, fUsedOnce);
+                Register regOuter = code.createRegister(typeOuter);
                 code.add(new MoveThis(cSteps, regOuter, typeOuter.getAccess()));
 
                 m_astResult = new OuterExprAST(ctx.getThisRegisterAST(), cSteps, typeOuter);
@@ -1219,10 +1217,10 @@ public class NameExpression
                                 : 0;
                 }
 
-                Register regOuter = code.createRegister(typeOuter, fUsedOnce);
+                Register regOuter = code.createRegister(typeOuter);
                 code.add(new MoveThis(cSteps, regOuter, typeOuter.getAccess()));
 
-                Register regRef = code.createRegister(typeRef, fUsedOnce);
+                Register regRef = code.createRegister(typeRef);
                 code.add(new MoveRef(regOuter, regRef));
 
                 m_astResult = new UnaryOpExprAST(
@@ -1242,7 +1240,7 @@ public class NameExpression
                 }
 
                 PropertyConstant idProp  = (PropertyConstant) argRaw;
-                Register         regTemp = code.createRegister(getType(), fUsedOnce);
+                Register         regTemp = code.createRegister(getType());
 
                 switch (calculatePropertyAccess(false)) {
                 case SingletonParent: {
@@ -1259,7 +1257,7 @@ public class NameExpression
                 case Outer: {
                     int          cSteps    = m_targetInfo.getStepsOut();
                     TypeConstant typeOuter = m_targetInfo.getType();
-                    Register     regOuter  = new Register(typeOuter, null, Op.A_STACK);
+                    Register     regOuter  = code.createRegister(typeOuter);
 
                     code.add(new MoveThis(cSteps, regOuter, typeOuter.getAccess()));
                     if (idProp.isFuture()) {
@@ -1297,7 +1295,7 @@ public class NameExpression
                     if (idProp.getComponent().isStatic()) {
                         return idProp;
                     }
-                    Argument argLeft = left.generateArgument(ctx, code, false, true, errs);
+                    Argument argLeft = left.generateArgument(ctx, code, false, errs);
                     if (idProp.isFuture()) {
                         TypeConstant typeLeft = argLeft.getType();
                         if (typeLeft instanceof AnnotatedTypeConstant typeAnno &&
@@ -1332,15 +1330,15 @@ public class NameExpression
                         ? typeTarget.getParentType()
                         : pool.typeObject();
 
-                Register regOuter = new Register(typeOuter, null, Op.A_STACK);
+                Register regOuter = code.createRegister(typeOuter);
                 code.add(new P_Get(idProp, argTarget, regOuter));
 
                 TypeConstant typeRef = pool.ensureParameterizedTypeConstant(
                                             pool.typeRef(), typeOuter);
-                regRef = code.createRegister(typeRef, fUsedOnce);
+                regRef = code.createRegister(typeRef);
                 code.add(new MoveRef(regOuter, regRef));
             } else {
-                regRef = code.createRegister(getType(), fUsedOnce);
+                regRef = code.createRegister(getType());
                 code.add(m_fAssignable
                         ? new P_Var(idProp, argTarget, regRef)
                         : new P_Ref(idProp, argTarget, regRef));
@@ -1353,7 +1351,7 @@ public class NameExpression
 
         case RegisterRef: {
             Register regVal = (Register) argRaw;
-            Register regRef = code.createRegister(getType(), fUsedOnce);
+            Register regRef = code.createRegister(getType());
             code.add(m_fAssignable
                     ? new MoveVar(regVal, regRef)
                     : new MoveRef(regVal, regRef));
@@ -1376,8 +1374,8 @@ public class NameExpression
         case TypeOfFormalChild: {
             FormalTypeChildConstant idChild = (FormalTypeChildConstant) argRaw;
 
-            Argument argTarget = left.generateArgument(ctx, code, true, true, errs);
-            Register regType   = code.createRegister(idChild.getType(), fUsedOnce);
+            Argument argTarget = left.generateArgument(ctx, code, true, errs);
+            Register regType   = code.createRegister(idChild.getType());
             code.add(new P_Get(idChild, argTarget, regType));
 
             m_astResult = new PropertyExprAST(left.getExprAST(ctx), idChild);
@@ -1392,7 +1390,7 @@ public class NameExpression
                 int cSteps = m_targetInfo == null ? 0 : m_targetInfo.getStepsOut();
                 if (cSteps > 0) {
                     TypeConstant typeTarget = m_targetInfo.getTargetType();
-                    argTarget = new Register(typeTarget, null, Op.A_STACK);
+                    argTarget = code.createRegister(typeTarget);
                     code.add(new MoveThis(cSteps, argTarget, typeTarget.getAccess()));
 
                     astTarget = new OuterExprAST(ctx.getThisRegisterAST(), cSteps, typeTarget);
@@ -1401,11 +1399,11 @@ public class NameExpression
                     astTarget = ctx.getThisRegisterAST();
                 }
             } else {
-                argTarget = left.generateArgument(ctx, code, true, true, errs);
+                argTarget = left.generateArgument(ctx, code, true, errs);
                 astTarget = left.getExprAST(ctx);
             }
 
-            Register regFn = code.createRegister(idMethod.getType(), fUsedOnce);
+            Register regFn = code.createRegister(idMethod.getType());
             if (m_mapTypeParams == null) {
                 code.add(new MBind(argTarget, idMethod, regFn));
             } else {
@@ -1489,7 +1487,7 @@ public class NameExpression
                 break;
 
             case 1: {
-                Register regRet = new Register(atypeReturn[0], null, Op.A_STACK);
+                Register regRet = code.createRegister(atypeReturn[0]);
                 code.add(new Invoke_01(regTarget, idMethod, regRet));
                 code.add(new Return_1(regRet));
                 break;
@@ -1498,7 +1496,7 @@ public class NameExpression
             default: {
                 Register[] aregRet = new Register[cReturns];
                 for (int i = 0; i < cReturns; i++) {
-                    aregRet[i] = new Register(atypeReturn[i], null, Op.A_STACK);
+                    aregRet[i] = code.createRegister(atypeReturn[i]);
                 }
                 code.add(new Invoke_0N(regTarget, idMethod, aregRet));
                 code.add(new Return_N(aregRet));
@@ -1517,7 +1515,7 @@ public class NameExpression
                 break;
 
             case 1: {
-                Register regRet = new Register(atypeReturn[0], null, Op.A_STACK);
+                Register regRet = code.createRegister(atypeReturn[0]);
                 code.add(new Invoke_11(regTarget, idMethod, regParam, regRet));
                 code.add(new Return_1(regRet));
                 break;
@@ -1526,7 +1524,7 @@ public class NameExpression
             default: {
                 Register[] aregRet = new Register[cReturns];
                 for (int i = 0; i < cReturns; i++) {
-                    aregRet[i] = new Register(atypeReturn[i], null, Op.A_STACK);
+                    aregRet[i] = code.createRegister(atypeReturn[i]);
                 }
                 code.add(new Invoke_1N(regTarget, idMethod, regParam, aregRet));
                 code.add(new Return_N(aregRet));
@@ -1548,7 +1546,7 @@ public class NameExpression
                 break;
 
             case 1: {
-                Register regRet = new Register(atypeReturn[0], null, Op.A_STACK);
+                Register regRet = code.createRegister(atypeReturn[0]);
                 code.add(new Invoke_N1(regTarget, idMethod, aregParam, regRet));
                 code.add(new Return_1(regRet));
                 break;
@@ -1557,7 +1555,7 @@ public class NameExpression
             default: {
                 Register[] aregRet = new Register[cReturns];
                 for (int i = 0; i < cReturns; i++) {
-                    aregRet[i] = new Register(atypeReturn[i], null, Op.A_STACK);
+                    aregRet[i] = code.createRegister(atypeReturn[i]);
                 }
                 code.add(new Invoke_NN(regTarget, idMethod, aregParam, aregRet));
                 code.add(new Return_N(aregRet));
@@ -1607,7 +1605,7 @@ public class NameExpression
 
         Code     code      = lambda.createCode();
         Register regTarget = new Register(typeParam, null, 0);
-        Register regRet    = new Register(typeReturn, null, Op.A_STACK);
+        Register regRet    = code.createRegister(typeReturn);
 
         code.add(new P_Get(idProp, regTarget, regRet));
         code.add(new Return_1(regRet));
@@ -1629,7 +1627,7 @@ public class NameExpression
         case Outer: {
             int          cSteps    = m_targetInfo.getStepsOut();
             TypeConstant typeOuter = m_targetInfo.getTargetType().ensureAccess(Access.PRIVATE);
-            Register     regOuter  = new Register(typeOuter, null, Op.A_STACK);
+            Register     regOuter  = code.createRegister(typeOuter);
             code.add(new MoveThis(cSteps, regOuter, Access.PRIVATE));
 
             m_astRefTarget = new OuterExprAST(ctx.getThisRegisterAST(), cSteps, typeOuter);
@@ -1642,7 +1640,7 @@ public class NameExpression
 
         case Left:
             assert !idProp.getComponent().isStatic();
-            Argument arg = left.generateArgument(ctx, code, true, true, errs);
+            Argument arg = left.generateArgument(ctx, code, true, errs);
             m_astRefTarget = left.getExprAST(ctx);
             return arg;
 
@@ -1669,7 +1667,7 @@ public class NameExpression
                 TypeInfo infoThis = ctx.getThisType().ensureTypeInfo();
 
                 // first type goes on stack
-                Register regType = code.createRegister(pool().typeType(), i == 0);
+                Register regType = code.createRegister(pool().typeType());
                 code.add(new L_Get(infoThis.findProperty(constFormal.getName()).getIdentity(), regType));
 
                 aArgBind[i] = regType;
@@ -1721,7 +1719,7 @@ public class NameExpression
                         for (int i = cSteps; --i >= 0;) {
                             clz = clz.getContainingClass();
                         }
-                        regTarget = new Register(clz.getFormalType(), null, Op.A_STACK);
+                        regTarget = code.createRegister(clz.getFormalType());
                         code.add(new MoveThis(cSteps, regTarget));
 
                         astTarget = new OuterExprAST(ctx.getThisRegisterAST(), cSteps, getType());
@@ -1733,7 +1731,7 @@ public class NameExpression
                     }
                     argTarget = regTarget;
                 } else {
-                    argTarget = left.generateArgument(ctx, code, true, true, errs);
+                    argTarget = left.generateArgument(ctx, code, true, errs);
                     astTarget = left.getExprAST(ctx);
                 }
                 m_astResult = new PropertyExprAST(astTarget, idProp);
@@ -1757,7 +1755,7 @@ public class NameExpression
 
         Argument argRaw = m_arg;
         if ((argRaw instanceof PropertyConstant && m_plan == Plan.PropertyDeref ||
-             argRaw instanceof Register reg && !reg.isStack())
+             argRaw instanceof Register)
                 && !getTypeFit().isConverting()) {
             // for [static] properties we generate a ConstantExprAST based on the property id rather
             // than the property value, leaving an optimization possibility to the BAST compiler

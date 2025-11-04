@@ -124,10 +124,9 @@ public class PropertyConstant
         if (isTypeSequenceTypeParameter()) {
             // the following block is for nothing else, but compilation of Tuple and
             // ConditionalTuple natural classes
-            if (resolver instanceof TypeConstant typeResolver) {
-                if (typeResolver.isTuple() && !typeResolver.isParamsSpecified()) {
-                    return null;
-                }
+            if (resolver instanceof TypeConstant typeResolver &&
+                    typeResolver.isTuple() && !typeResolver.isParamsSpecified()) {
+                return null;
             }
         }
 

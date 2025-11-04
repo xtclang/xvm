@@ -273,7 +273,7 @@ public class VariableDeclarationStatement
                             if (constArg instanceof ExpressionConstant constExpr) {
                                 Expression exprArg = constExpr.getExpression();
 
-                                Argument argArg = exprArg.generateArgument(ctx, code, true, false, errs);
+                                Argument argArg = exprArg.generateArgument(ctx, code, true, errs);
                                 Register regArg;
                                 if (argArg instanceof Register regA) {
                                     regArg = regA;

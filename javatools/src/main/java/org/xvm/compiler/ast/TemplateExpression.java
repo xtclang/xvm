@@ -212,9 +212,9 @@ public class TemplateExpression
 
         TypeConstant   typeStr    = pool.typeStringable();
         TypeInfo       infoStr    = typeStr.ensureTypeInfo(errs);
-        Assignable     lvalStr    = createTempVar(code, typeStr, true);
+        Assignable     lvalStr    = createTempVar(code, typeStr);
         TypeConstant   typeObj    = pool.typeObject();
-        Assignable     lvalObj    = createTempVar(code, typeObj, true);
+        Assignable     lvalObj    = createTempVar(code, typeObj);
         MethodConstant idAppendTo = infoStr.findCallable("appendTo", true, false, null, null);
         MethodConstant idAppend   = infoBuf.findCallable("append"  , true, false, null, null);
         for (Expression expr : exprs) {

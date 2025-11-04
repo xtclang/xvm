@@ -20,7 +20,6 @@ import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.MultiMethodStructure;
-import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
 
@@ -785,7 +784,7 @@ public class LambdaExpression
     }
 
     @Override
-    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         Argument[] aargBind = calculateBindings(ctx, code, errs);
         if (m_lambda.isFunction() && aargBind.length == 0) {
             // if no binding is required (either MBIND or FBIND) then the resulting argument is the
@@ -795,7 +794,7 @@ public class LambdaExpression
             return idLambda;
         }
 
-        return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+        return super.generateArgument(ctx, code, fLocalPropOk, errs);
     }
 
     @Override
@@ -822,8 +821,7 @@ public class LambdaExpression
                 Argument argResult = LVal.getLocalArgument();
                 if (fBindTarget & fBindParams) {
                     Register regThis = ctx.getThisRegister();
-                    Register regTemp = new Register(idLambda.getSignature().asFunctionType(), null,
-                                                    Op.A_STACK);
+                    Register regTemp = code.createRegister(idLambda.getSignature().asFunctionType());
                     code.add(new MBind(regThis, idLambda, regTemp));
                     code.add(new FBind(regTemp, anBind, aBindArgs, argResult));
 
@@ -1034,7 +1032,7 @@ public class LambdaExpression
                     Register     regFormal;
                     if (argFormal instanceof TargetInfo infoGeneric) {
                         typeFormal = infoGeneric.getType(); // type of type
-                        regFormal  = new Register(typeFormal, null, Op.A_STACK);
+                        regFormal  = code.createRegister(typeFormal);
 
                         // make sure that every lambda's parameter of this generic type is redefined
                         // to point to the corresponding lambda's type parameter
@@ -1043,7 +1041,7 @@ public class LambdaExpression
 
                         int cSteps = infoGeneric.getStepsOut();
                         if (cSteps > 0) {
-                            Register regTarget = new Register(infoGeneric.getTargetType(), null, Op.A_STACK);
+                            Register regTarget = code.createRegister(infoGeneric.getTargetType());
                             code.add(new MoveThis(cSteps, regTarget));
                             code.add(new P_Get(idGeneric, regTarget, regFormal));
 
@@ -1103,7 +1101,7 @@ public class LambdaExpression
                                 ? typeVar
                                 : pool.ensureParameterizedTypeConstant(pool.typeVar(), typeCapture);
                         Register regVal = regCapture;
-                        Register regVar = new Register(typeCapture, null, Op.A_STACK);
+                        Register regVar = code.createRegister(typeCapture);
                         code.add(new MoveVar(regVal, regVar));
                         regCapture     = regVar;
                         fImplicitDeref = true;
@@ -1119,7 +1117,7 @@ public class LambdaExpression
                                 ? typeVar
                                 : pool.ensureParameterizedTypeConstant(pool.typeVar(), typeCapture);
                         Register regVal = regCapture;
-                        Register regVar = new Register(typeCapture, null, Op.A_STACK);
+                        Register regVar = code.createRegister(typeCapture, null);
                         code.add(new MoveRef(regVal, regVar));
                         regCapture     = regVar;
                         fImplicitDeref = true;

@@ -58,7 +58,8 @@ public class AssertStatement
         extends Statement {
     // ----- constructors --------------------------------------------------------------------------
 
-    public AssertStatement(Token keyword, Expression exprInterval, List<AstNode> conds, Expression exprMsg, long lEndPos) {
+    public AssertStatement(Token keyword, Expression exprInterval, List<AstNode> conds,
+                           Expression exprMsg, long lEndPos) {
         switch (keyword.getId()) {
         case ASSERT:
         case ASSERT_RND:
@@ -310,7 +311,7 @@ public class AssertStatement
             } else {
                 assert interval != null;
                 code.add(new JumpNSample(
-                    interval.generateArgument(ctx, code, true, true, errs), getEndLabel()));
+                    interval.generateArgument(ctx, code, true, errs), getEndLabel()));
 
                 astInterval = interval.getExprAST(ctx);
             }
@@ -338,7 +339,7 @@ public class AssertStatement
 
                 // throw new {sThrow}(message, null)
                 Argument argEx  = code.createRegister(constEx.getType());
-                Argument argMsg = message.generateArgument(ctx, code, true, true, errs);
+                Argument argMsg = message.generateArgument(ctx, code, true, errs);
                 code.add(new New_N(constNew, new Argument[]{argMsg, pool.valNull()}, argEx));
                 code.add(new Throw(argEx));
 
@@ -473,11 +474,11 @@ public class AssertStatement
                 }
 
                 fCompletes &= exprCond.isCompletable();
-                Argument argCond = exprCond.generateArgument(ctx, code, true, true, errs);
+                Argument argCond = exprCond.generateArgument(ctx, code, true, errs);
 
                 if (fAutoMessage) {
                     if (fNegated) {
-                        Register regNeg = new Register(pool.typeBoolean(), null, Op.A_STACK);
+                        Register regNeg = code.createRegister(pool.typeBoolean());
                         code.add(new IsNot(argCond, regNeg));
                         argCond = regNeg;
                     }
@@ -510,7 +511,7 @@ public class AssertStatement
             // throw new {sThrow}(message, null)
             code.add(labelMessage);
             Argument argEx  = code.createRegister(constEx.getType());
-            Argument argMsg = message.generateArgument(ctx, code, true, true, errs);
+            Argument argMsg = message.generateArgument(ctx, code, true, errs);
             code.add(new New_N(constNew, new Argument[]{argMsg, pool.valNull()}, argEx));
             code.add(new Throw(argEx));
 

@@ -1140,7 +1140,7 @@ public class InvocationExpression
 
     @Override
     public Argument[] generateArguments(Context ctx, Code code, boolean fLocalPropOk,
-                                        boolean fUsedOnce, ErrorListener errs) {
+                                        ErrorListener errs) {
         if (async) {
             TypeConstant[] atype  = getTypes();
             int            cRVals = getValueCount();
@@ -1185,7 +1185,7 @@ public class InvocationExpression
             }
         }
 
-        return super.generateArguments(ctx, code, fLocalPropOk, fUsedOnce & !async, errs);
+        return super.generateArguments(ctx, code, fLocalPropOk, errs);
     }
 
     @Override
@@ -1231,7 +1231,6 @@ public class InvocationExpression
 
         Argument[] aargTypeParams = m_aargTypeParams;
         int        cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
-        boolean    fTargetOnStack = cArgs == 0 || args.stream().allMatch(Expression::isConstant);
 
         if (expr instanceof NameExpression exprName) {
             Expression exprLeft = exprName.left;
@@ -1243,8 +1242,7 @@ public class InvocationExpression
                     if (m_fBindTarget) {
                         // this is a virtual construction, e.g. "map.&new();"
                         assert m_method.isVirtualConstructor();
-                        Argument argTarget = generateTarget(ctx, code, exprLeft, fLocalPropOk,
-                                                fTargetOnStack, errs);
+                        Argument argTarget = generateTarget(ctx, code, exprLeft, fLocalPropOk, errs);
 
                         argFn = code.createRegister(
                                 idMethod.getSignature().asConstructorType(pool, argTarget.getType()));
@@ -1276,7 +1274,7 @@ public class InvocationExpression
                                     }
                                 } else {
                                     Register regType = (Register) exprLeft.generateArgument(
-                                                            ctx, code, fLocalPropOk, false, errs);
+                                                            ctx, code, fLocalPropOk, errs);
                                     m_idFormal = pool.ensureDynamicFormal(ctx.getMethod().getIdentityConstant(),
                                             regType, m_idFormal, exprName.getName());
                                 }
@@ -1288,8 +1286,7 @@ public class InvocationExpression
                 } else {
                     // idMethod is a MethodConstant for a method (including "finally")
                     if (m_fBindTarget) {
-                        Argument argTarget = generateTarget(ctx, code, exprLeft, fLocalPropOk,
-                                                fTargetOnStack, errs);
+                        Argument argTarget = generateTarget(ctx, code, exprLeft, fLocalPropOk, errs);
                         if (m_fCall) {
                             updateLineNumber(code);
 
@@ -1312,7 +1309,7 @@ public class InvocationExpression
                                 chArgs = '1';
                                 if (cArgs == 1) {
                                     Expression expr = args.get(0);
-                                    arg0  = expr.generateArgument(ctx, code, true, true, errs);
+                                    arg0  = expr.generateArgument(ctx, code, true, errs);
                                     aAsts = new ExprAST[] {expr.getExprAST(ctx)};
                                 } else if (cTypeParams == 1) {
                                     arg0  = aargTypeParams[0];
@@ -1335,7 +1332,7 @@ public class InvocationExpression
 
                                 for (int i = 0; i < cArgs; ++i) {
                                     Expression expr = args.get(i);
-                                    Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
+                                    Argument   arg  = expr.generateArgument(ctx, code, true, errs);
                                     int        iArg = cTypeParams + i;
                                     aArgs[iArg] = expr.ensurePointInTime(code, arg, args, i);
                                     aAsts[iArg] = expr.getExprAST(ctx);
@@ -1469,8 +1466,7 @@ public class InvocationExpression
             } else { // it is a NameExpression but _NOT_ a MethodConstant
                 if (m_fBindTarget) {
                     // this is a method call; the method itself is a property or a register
-                    Argument argTarget = generateTarget(ctx, code, exprLeft, fLocalPropOk,
-                                            fTargetOnStack, errs);
+                    Argument argTarget = generateTarget(ctx, code, exprLeft, fLocalPropOk, errs);
                     if (m_argMethod instanceof PropertyConstant idProp) {
                         PropertyStructure prop = (PropertyStructure) idProp.getComponent();
                         if (prop.isConstant() && prop.hasInitialValue()) {
@@ -1494,7 +1490,7 @@ public class InvocationExpression
                         astFn = regFn.getRegisterAST();
                     } else {
                         // evaluate to find the argument (e.g. "var.prop", where prop holds a function)
-                        argFn = exprName.generateArgument(ctx, code, false, fTargetOnStack, errs);
+                        argFn = exprName.generateArgument(ctx, code, false, errs);
                         astFn = exprName.getExprAST(ctx);
                     }
                 }
@@ -1502,7 +1498,7 @@ public class InvocationExpression
         } else { // _NOT_ an InvocationExpression of a NameExpression (i.e. it's just a function)
             // obtain the function that will be bound and/or called
             assert !m_fBindTarget;
-            argFn = expr.generateArgument(ctx, code, false, fTargetOnStack, errs);
+            argFn = expr.generateArgument(ctx, code, false, errs);
             astFn = expr.getExprAST(ctx);
             assert argFn.getType().isA(pool.typeFunction());
         }
@@ -1518,14 +1514,14 @@ public class InvocationExpression
                 // the register); what is left behind is a scenario when argFn is a SingletonConstant
                 // holding a [static] property that holds a function; instead of complicating the
                 // logic there, we simply add the Move op to take care of the transition
-                Register regFn = code.createRegister(typeFn, fTargetOnStack);
+                Register regFn = code.createRegister(typeFn);
                 code.add(new Move(argFn, regFn));
                 argFn = regFn;
             }
         } else {
             // argFn isn't a function; convert whatever-it-is into the desired function
             typeFn = idConv.getRawReturns()[0];
-            Register regFn = code.createRegister(typeFn, fTargetOnStack);
+            Register regFn = code.createRegister(typeFn);
             code.add(new Invoke_01(argFn, idConv, regFn));
             argFn = regFn;
             astFn = new ConvertExprAST(astFn, typeFn, idConv);
@@ -1557,7 +1553,7 @@ public class InvocationExpression
                 chArgs = '1';
                 if (cArgs == 1) {
                     Expression expr = args.get(0);
-                    arg0  = expr.generateArgument(ctx, code, true, true, errs);
+                    arg0  = expr.generateArgument(ctx, code, true, errs);
                     aAsts = new ExprAST[] {expr.getExprAST(ctx)};
                 } else if (cTypeParams == 1) {
                     arg0  = aargTypeParams[0];
@@ -1582,7 +1578,7 @@ public class InvocationExpression
 
                 for (int i = 0; i < cArgs; ++i) {
                     Expression expr = args.get(i);
-                    Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
+                    Argument   arg  = expr.generateArgument(ctx, code, true, errs);
                     int        iArg = cTypeParams + i;
                     aArgs[iArg] = expr.ensurePointInTime(code, arg, args, i);
                     aAsts[iArg] = expr.getExprAST(ctx);
@@ -1743,7 +1739,7 @@ public class InvocationExpression
             for (int i = 0, iBind = cTypeParams; i < cArgs; ++i) {
                 Expression exprArg = args.get(i);
                 if (!exprArg.isNonBinding()) {
-                    Argument arg = exprArg.generateArgument(ctx, code, false, true, errs);
+                    Argument arg = exprArg.generateArgument(ctx, code, false, errs);
                     aiArg[iBind] = cTypeParams + i;
                     aArg [iBind] = exprArg.ensurePointInTime(code, arg, args, i);
                     aAst [iBind] = exprArg.getExprAST(ctx);
@@ -1784,7 +1780,7 @@ public class InvocationExpression
      * @return the Argument for the target and set the {@link #m_astTarget}
      */
     private Argument generateTarget(Context ctx, Code code, Expression exprLeft,
-                                    boolean fLocalPropOk, boolean fTargetOnStack, ErrorListener errs) {
+                                    boolean fLocalPropOk, ErrorListener errs) {
         // the method needs a target (its "this")
         Argument argTarget;
         if (exprLeft == null) {
@@ -1797,7 +1793,7 @@ public class InvocationExpression
                 TypeConstant typeTarget = targetInfo.getTargetType();
                 int          cStepsOut  = targetInfo.getStepsOut();
                 if (cStepsOut > 0) {
-                    regTarget = code.createRegister(typeTarget, fTargetOnStack);
+                    regTarget = code.createRegister(typeTarget);
                     code.add(new MoveThis(cStepsOut, regTarget));
                     m_astTarget = new OuterExprAST(ctx.getThisRegisterAST(), cStepsOut, typeTarget);
                 } else {
@@ -1811,7 +1807,7 @@ public class InvocationExpression
             }
             argTarget = regTarget;
         } else {
-            argTarget   = exprLeft.generateArgument(ctx, code, fLocalPropOk, fTargetOnStack, errs);
+            argTarget   = exprLeft.generateArgument(ctx, code, fLocalPropOk, errs);
             m_astTarget = exprLeft.getExprAST(ctx);
         }
         return argTarget;

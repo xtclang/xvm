@@ -152,13 +152,13 @@ public class ConvertExpression
         }
 
         // get the value to be converted
-        Argument argIn = expr.generateArgument(ctx, code, true, true, errs);
+        Argument argIn = expr.generateArgument(ctx, code, true, errs);
 
         // determine the destination of the conversion
         if (LVal.isLocalArgument()) {
             code.add(new Invoke_01(argIn, idConv, LVal.getLocalArgument()));
         } else {
-            Register regResult = new Register(getType(), null, Op.A_STACK);
+            Register regResult = code.createRegister(getType());
             code.add(new Invoke_01(argIn, idConv, regResult));
             LVal.assign(regResult, code, errs);
         }
@@ -231,7 +231,7 @@ public class ConvertExpression
                 if (LVal.isLocalArgument()) {
                     code.add(new Invoke_01(regTemp, idConv, LVal.getLocalArgument()));
                 } else {
-                    Register regResult = new Register(getTypes()[i], null, Op.A_STACK);
+                    Register regResult = code.createRegister(getTypes()[i]);
                     code.add(new Invoke_01(regTemp, idConv, regResult));
                     LVal.assign(regResult, code, errs);
                 }

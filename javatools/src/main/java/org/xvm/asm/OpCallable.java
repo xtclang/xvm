@@ -543,15 +543,16 @@ public abstract class OpCallable extends Op {
         assert isMultiReturn();
 
         int nMethodId = m_nFunctionId;
-        if (nMethodId == Op.A_SUPER) {
-            nMethodId = frame.poolContext().getConstant(
-                            method.getIdentityConstant()).getPosition();
-        }
 
         int[] anRet = m_anRetValue;
         for (int i = 0, c = anRet.length; i < c; i++) {
             if (frame.isNextRegister(anRet[i])) {
-                frame.introduceMethodReturnVar(anRet[i], nMethodId, i);
+                if (nMethodId == Op.A_SUPER) {
+                    frame.introduceResolvedVar(anRet[i],
+                        frame.resolveType(method.getReturn(i).getType()));
+                } else {
+                    frame.introduceMethodReturnVar(anRet[i], nMethodId, i);
+                }
             }
         }
     }

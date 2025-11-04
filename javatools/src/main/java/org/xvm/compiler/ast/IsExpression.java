@@ -197,7 +197,7 @@ public class IsExpression
         }
 
         Argument   argCond   = aLVal[0].getLocalArgument();
-        Argument   argTarget = expr1.generateArgument(ctx, code, true, cLVals == 1, errs);
+        Argument   argTarget = expr1.generateArgument(ctx, code, true, errs);
         Expression exprTest  = expr2;
         Argument   argType;
 
@@ -209,7 +209,7 @@ public class IsExpression
         if (exprTest.isConstant()) {
             argType = exprTest.getType().getParamType(0).resolveAutoNarrowingBase();
         } else {
-            argType = exprTest.generateArgument(ctx, code, false, true, errs);
+            argType = exprTest.generateArgument(ctx, code, false, errs);
             if (argType instanceof TypeConstant type) {
                 argType = type.getParamType(0);
             }
@@ -217,8 +217,6 @@ public class IsExpression
 
         code.add(new IsType(argTarget, argType, argCond));
         if (cLVals > 1) {
-            assert !argCond.isStack();
-
             if (generateConditionFalseJump(code, argCond)) {
                 aLVal[1].assign(argTarget, code, errs);
             } else {
@@ -233,7 +231,7 @@ public class IsExpression
     @Override
     public void generateConditionalJump(
             Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs) {
-        Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
+        Argument argTarget = expr1.generateArgument(ctx, code, true, errs);
         Argument argType   = expr2.getType().getParamType(0).resolveAutoNarrowingBase();
         code.add(fWhenTrue
                 ? new JumpType(argTarget, argType, label)

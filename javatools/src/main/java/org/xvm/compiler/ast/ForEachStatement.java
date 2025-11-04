@@ -12,7 +12,6 @@ import java.util.Set;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
-import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
@@ -710,7 +709,7 @@ public class ForEachStatement
         Assignable lvalVal  = m_exprLValue.generateAssignable(ctx, code, errs);
         boolean    fTempVal = !lvalVal.isLocalArgument();
         Argument   argVal   = fTempVal
-                ? new Register(lvalVal.getType(), null, Op.A_STACK)
+                ? code.createRegister(lvalVal.getType())
                 : lvalVal.getLocalArgument();
 
         code.add(new Loop());
@@ -720,7 +719,7 @@ public class ForEachStatement
             code.add(new Invoke_0N(regIter, idNext, new Argument[] {regCond, argVal}));
             code.add(new JumpFalse(regCond, getEndLabel()));
         } else {
-            Register regTemp = new Register(m_atypeConv[0], null, Op.A_STACK);
+            Register regTemp = code.createRegister(m_atypeConv[0]);
             code.add(new Invoke_0N(regIter, idNext, new Argument[] {regCond, regTemp}));
             code.add(new JumpFalse(regCond, getEndLabel()));
             code.add(new Invoke_01(regTemp, idConv, argVal));
@@ -857,7 +856,7 @@ public class ForEachStatement
                                       TypeConstant typeSeq, ErrorListener errs) {
         ConstantPool pool = pool();
 
-        Argument argRange = m_exprRValue.generateArgument(ctx, code, true, false, errs);
+        Argument argRange = m_exprRValue.generateArgument(ctx, code, true, errs);
 
         TypeInfo         infoRange = pool.ensureRangeType(typeSeq).ensureTypeInfo(errs);
         MethodConstant   idLimits  = findWellKnownMethod(infoRange, "effectiveLimits", errs);
@@ -1006,7 +1005,7 @@ public class ForEachStatement
             lvalVal  = m_exprLValue.generateAssignable(ctx, code, errs);
             fTempVal = !lvalVal.isLocalArgument();
             argVal   = fTempVal
-                    ? new Register(typeElem, null, Op.A_STACK)
+                    ? code.createRegister(typeElem)
                     : lvalVal.getLocalArgument();
         }
 
@@ -1023,7 +1022,7 @@ public class ForEachStatement
         if (idConv == null) {
             code.add(new I_Get(regList, regCount, argVal));
         } else {
-            Register regTemp = new Register(m_atypeConv[0], null, Op.A_STACK);
+            Register regTemp = code.createRegister(m_atypeConv[0]);
             code.add(new I_Get(regList, regCount, regTemp));
             code.add(new Invoke_01(regTemp, idConv, argVal));
         }
@@ -1082,7 +1081,7 @@ public class ForEachStatement
             return false;
         }
 
-        Argument argMap = m_exprRValue.generateArgument(ctx, code, true, true, errs);
+        Argument argMap = m_exprRValue.generateArgument(ctx, code, true, errs);
 
         if (m_exprLValue.getValueCount() == 2 || m_regEntry != null) {
             MethodConstant idIterator = findWellKnownMethod(infoMap, "iterator", errs);
@@ -1139,14 +1138,14 @@ public class ForEachStatement
             Assignable lvalKey  = aLVal[0];
             boolean    fTempKey = !lvalKey.isLocalArgument();
             Argument   argKey   = fTempKey
-                    ? new Register(typeKey, null, Op.A_STACK)
+                    ? code.createRegister(typeKey)
                     : lvalKey.getLocalArgument();
 
             MethodConstant idConvKey = m_aidConvKey == null ? null : m_aidConvKey[0];
             if (idConvKey == null) {
                 code.add(new P_Get(idKey, regEntry, argKey));
             } else {
-                Register regTemp = new Register(m_atypeConv[0], null, Op.A_STACK);
+                Register regTemp = code.createRegister(m_atypeConv[0]);
                 code.add(new P_Get(idKey, regEntry, regTemp));
                 code.add(new Invoke_01(regTemp, idConvKey, argKey));
             }
@@ -1159,14 +1158,14 @@ public class ForEachStatement
                 Assignable lvalVal  = aLVal[1];
                 boolean    fTempVal = !lvalVal.isLocalArgument();
                 Argument   argVal   = fTempVal
-                        ? new Register(typeValue, null, Op.A_STACK)
+                        ? code.createRegister(typeValue)
                         : lvalVal.getLocalArgument();
 
                 MethodConstant idConvVal = m_aidConvKey == null ? null : m_aidConvKey[1];
                 if (idConvVal == null) {
                     code.add(new P_Get(idValue, regEntry, argVal));
                 } else {
-                    Register regTemp = new Register(m_atypeConv[1], null, Op.A_STACK);
+                    Register regTemp = code.createRegister(m_atypeConv[1]);
                     code.add(new P_Get(idValue, regEntry, regTemp));
                     code.add(new Invoke_01(regTemp, idConvVal, argVal));
                 }
@@ -1200,7 +1199,7 @@ public class ForEachStatement
             // LOOP_END
             // Exit:
             PropertyConstant idKeys = infoMap.findProperty("keys").getIdentity();
-            Register         regSet = new Register(typeSet, null, Op.A_STACK);
+            Register         regSet = code.createRegister(typeSet);
             code.add(new P_Get(idKeys, argMap, regSet));
 
             Register regIter = code.createRegister(typeIter);
@@ -1216,7 +1215,7 @@ public class ForEachStatement
 
             boolean    fTempKey = !lvalKey.isLocalArgument();
             Argument   argKey   = fTempKey
-                    ? new Register(typeKey, null, Op.A_STACK)
+                    ? code.createRegister(typeKey)
                     : lvalKey.getLocalArgument();
 
             MethodConstant idConv = m_aidConvKey == null ? null : m_aidConvKey[0];
@@ -1224,7 +1223,7 @@ public class ForEachStatement
                 code.add(new Invoke_0N(regIter, idNext, new Argument[] {regCond, argKey}));
                 code.add(new JumpFalse(regCond, getEndLabel()));
             } else {
-                Register regTemp = new Register(m_atypeConv[0], null, Op.A_STACK);
+                Register regTemp = code.createRegister(m_atypeConv[0]);
                 code.add(new Invoke_0N(regIter, idNext, new Argument[] {regCond, regTemp}));
                 code.add(new JumpFalse(regCond, getEndLabel()));
                 code.add(new Invoke_01(regTemp, idConv, argKey));
@@ -1265,7 +1264,7 @@ public class ForEachStatement
         Register regIter = code.createRegister(typeIter);
         code.add(new Var(regIter));
 
-        Argument       argAble    = m_exprRValue.generateArgument(ctx, code, true, true, errs);
+        Argument       argAble    = m_exprRValue.generateArgument(ctx, code, true, errs);
         TypeInfo       infoAble   = typeAble.ensureTypeInfo(errs);
         MethodConstant idIterator = findWellKnownMethod(infoAble, "iterator", errs);
         if (idIterator == null) {

@@ -354,8 +354,7 @@ public class MapExpression
     }
 
     @Override
-    public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         if (isConstant()) {
             return toConstant();
         }
@@ -379,7 +378,7 @@ public class MapExpression
 
         for (int i = 0; i < cArgs; ++i) {
             Expression expr = listArgs.get(i);
-            Argument   arg  = expr.generateArgument(ctx, code, true, false, errs);
+            Argument   arg  = expr.generateArgument(ctx, code, true, errs);
             aArg[i] = expr.ensurePointInTime(code, arg, listArgs, i);
             aAST[i] = expr.getExprAST(ctx);
         }

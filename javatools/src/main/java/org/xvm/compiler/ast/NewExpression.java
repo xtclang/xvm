@@ -816,7 +816,7 @@ public class NewExpression
             ExprAST[]        aAstArgs = new ExprAST[cArgs];
             for (int i = 0; i < cArgs; ++i) {
                 Expression expr = listArgs.get(i);
-                Argument   arg  = expr.generateArgument(ctx, code, false, true, errs);
+                Argument   arg  = expr.generateArgument(ctx, code, false, errs);
                 aArgs[i] = expr.ensurePointInTime(code, arg, listArgs, i);
                 aAstArgs[i] = expr.getExprAST(ctx);
             }
@@ -906,12 +906,12 @@ public class NewExpression
                         TypeConstant typeParent = typeTarget.getParentType();
                         int          cSteps     = m_nParentSteps;
 
-                        argOuter = new Register(typeParent, null, Op.A_STACK);
+                        argOuter = code.createRegister(typeParent);
                         code.add(new MoveThis(cSteps, argOuter));
                         astOuter = new OuterExprAST(ctx.getThisRegisterAST(), cSteps, typeParent);
                     }
                 } else {
-                    argOuter = left.generateArgument(ctx, code, true, true, errs);
+                    argOuter = left.generateArgument(ctx, code, true, errs);
                     astOuter = left.getExprAST(ctx);
                 }
             }
@@ -925,11 +925,11 @@ public class NewExpression
                         argTarget = new Register(ctx.getThisType(), null, Op.A_TARGET);
                         astTarget = new ConstantExprAST(argTarget.getType());
                     } else {
-                        argTarget = left.generateArgument(ctx, code, true, true, errs);
+                        argTarget = left.generateArgument(ctx, code, true, errs);
                         astTarget = left.getExprAST(ctx);
                     }
 
-                    regType = new Register(pool().typeType(), null, Op.A_STACK);
+                    regType = code.createRegister(pool().typeType());
 
                     // it's a responsibility of the MoveType op to ensure that the explicit
                     // immutability aspect of the target should not be carried over
@@ -937,7 +937,7 @@ public class NewExpression
                     m_astNew = new NewExprAST(astTarget, idConstruct, aAstArgs);
                 } else {
                     if (typeTarget.isGenericType()) {
-                        regType = new Register(pool().typeType(), null, Op.A_STACK);
+                        regType = code.createRegister(pool().typeType());
                         code.add(new L_Get(m_idFormal, regType));
                     } else {
                         regType = m_regFormal;
@@ -1055,9 +1055,8 @@ public class NewExpression
             Constant constArg = aConst[j];
             if (constArg instanceof ExpressionConstant constExpr) {
                 Expression exprArg = constExpr.getExpression();
-
-                Argument argArg = exprArg.generateArgument(ctx, code, true, false, errs);
-                Register regArg;
+                Argument   argArg  = exprArg.generateArgument(ctx, code, true, errs);
+                Register   regArg;
                 if (argArg instanceof Register regA) {
                     regArg = regA;
                 } else {
@@ -1339,13 +1338,13 @@ public class NewExpression
             if (FVar) {
                 // it's a read/write capture; obtain the Var of the capture
                 type = pool.ensureParameterizedTypeConstant(pool.typeVar(), type);
-                arg  = new Register(type, null, Op.A_STACK);
+                arg  = code.createRegister(type);
                 code.add(new MoveVar(reg, arg));
             } else if (!reg.isEffectivelyFinal()) {
                 // it's a read-only capture, but since we were unable to prove that the
                 // register was effectively final, we need to capture the Ref
                 type = pool.ensureParameterizedTypeConstant(pool.typeRef(), type);
-                arg  = new Register(type, null, Op.A_STACK);
+                arg  = code.createRegister(type);
                 code.add(new MoveRef(reg, arg));
             }
 

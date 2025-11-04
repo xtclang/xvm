@@ -220,23 +220,22 @@ public class NotNullExpression
     }
 
     @Override
-    public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         TypeConstant typeExpr = getType();
         if (isConstant() || !m_fCond && pool().typeNull().isA(typeExpr.resolveConstraints())) {
-            return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+            return super.generateArgument(ctx, code, fLocalPropOk, errs);
         }
 
         if (m_fCond) {
-            Assignable   varCond = createTempVar(code, pool().typeBoolean(), false);
-            Assignable   varVal  = createTempVar(code, getType(), false);
+            Assignable   varCond = createTempVar(code, pool().typeBoolean());
+            Assignable   varVal  = createTempVar(code, getType());
             Assignable[] LVals   = new Assignable[] {varCond, varVal};
             expr.generateAssignments(ctx, code, LVals, errs);
             code.add(new JumpFalse(varCond.getRegister(), m_labelShort));
             return varVal.getRegister();
         } else {
-            Assignable var = createTempVar(code, typeExpr, false);
-            Argument   arg = expr.generateArgument(ctx, code, true, false, errs);
+            Assignable var = createTempVar(code, typeExpr);
+            Argument   arg = expr.generateArgument(ctx, code, true, errs);
             code.add(new JumpNull(arg, m_labelShort));
             var.assign(arg, code, errs);
             return var.getRegister();
@@ -253,7 +252,7 @@ public class NotNullExpression
 
         // generate a temporary argument to avoid overwriting the destination LVal with a potential
         // Null value
-        Argument arg = expr.generateArgument(ctx, code, true, false, errs);
+        Argument arg = expr.generateArgument(ctx, code, true, errs);
         code.add(new JumpNull(arg, m_labelShort));
         LVal.assign(arg, code, errs);
     }

@@ -79,7 +79,7 @@ public class UnaryMinusExpression
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs) {
         if (LVal.isLocalArgument()) {
-            Argument arg = expr.generateArgument(ctx, code, true, true, errs);
+            Argument arg = expr.generateArgument(ctx, code, true, errs);
             code.add(new GP_Neg(arg, LVal.getLocalArgument()));
         } else {
             super.generateAssignment(ctx, code, LVal, errs);

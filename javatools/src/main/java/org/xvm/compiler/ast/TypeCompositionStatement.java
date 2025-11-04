@@ -33,7 +33,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.MultiMethodStructure;
-import org.xvm.asm.Op;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
@@ -2781,7 +2780,7 @@ public class TypeCompositionStatement
                             TypeConstant     typeConstraint = entry.getValue().getType();
                             PropertyConstant idFormal       = propFormal.getIdentity();
 
-                            Register regActualType = new Register(typeConstraint, null, Op.A_STACK);
+                            Register regActualType = code.createRegister(typeConstraint);
                             code.add(new L_Get(idFormal, regActualType));
                             code.add(new JumpNType(regActualType, typeConstraint, labelSkipSuper));
 
@@ -2802,7 +2801,7 @@ public class TypeCompositionStatement
                 for (int i = 0; i < cSuperArgs; i++) {
                     if (i < cArgs) {
                         Expression exprArg = listSuperArgs.get(i);
-                        aSuperArgs[i] = exprArg.generateArgument(ctxEmit, code, true, true, errs);
+                        aSuperArgs[i] = exprArg.generateArgument(ctxEmit, code, true, errs);
 
                         aAstArgs[i] = exprArg.getExprAST(ctxEmit);
                     } else {

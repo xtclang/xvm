@@ -19,7 +19,6 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
@@ -707,8 +706,8 @@ public class PropertyDeclarationStatement
             ConstantPool     pool            = pool();
             PropertyConstant idProp          = (PropertyConstant) exprProp.getIdentity(ctx);
             TypeConstant     typeVar         = idProp.getRefType(ctx.getThisType().ensureAccess(Access.PRIVATE));
-            Register         regPropRef      = new Register(typeVar, null, Op.A_STACK);
-            Register         regAssigned     = new Register(pool.typeBoolean(), null, Op.A_STACK);
+            Register         regPropRef      = code.createRegister(typeVar);
+            Register         regAssigned     = code.createRegister(pool.typeBoolean());
             Label            labelSkipAssign = new Label("skip_assign_" + idProp.getName());
             PropertyConstant idAssigned      = typeVar.ensureTypeInfo(errs)
                                                .findProperty("assigned").getIdentity();

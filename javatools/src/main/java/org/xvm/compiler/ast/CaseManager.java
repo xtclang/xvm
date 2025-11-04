@@ -1168,7 +1168,7 @@ public class CaseManager<CookieType> {
             }
 
             // don't use stack
-            Argument[] aArgsAdd = exprCond.generateArguments(ctx, code, true, false, errs);
+            Argument[] aArgsAdd = exprCond.generateArguments(ctx, code, true, errs);
 
             // ignore unused return values
             int cArgsAdd = Math.min(aArgsAdd.length, aArgVal.length - ofArgVal);

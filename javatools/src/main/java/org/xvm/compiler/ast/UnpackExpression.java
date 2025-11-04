@@ -84,8 +84,7 @@ public class UnpackExpression
     }
 
     @Override
-    public Argument[] generateArguments(Context ctx, Code code, boolean fLocalPropOk,
-                                        boolean fUsedOnce, ErrorListener errs) {
+    public Argument[] generateArguments(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         if (isConstant()) {
             return toConstants();
         }
@@ -96,14 +95,14 @@ public class UnpackExpression
             Argument[]       aArgs     = new Argument[cExprs];
             for (int i = 0; i < cExprs; ++i) {
                 Expression expr = listExprs.get(i);
-                Argument   arg  = expr.generateArgument(ctx, code, false, false, errs);
+                Argument   arg  = expr.generateArgument(ctx, code, false, errs);
                 aArgs[i] = expr.ensurePointInTime(code, arg, listExprs, i);
             }
 
             return aArgs;
         }
 
-        Argument argTuple = expr.generateArgument(ctx, code, true, false, errs);
+        Argument argTuple = expr.generateArgument(ctx, code, true, errs);
 
         ConstantPool   pool    = pool();
         TypeConstant[] aTypes  = getTypes();
@@ -111,7 +110,7 @@ public class UnpackExpression
         Register[]     aRegs   = new Register[cValues];
 
         for (int i = 0; i < cValues; i++) {
-            Assignable LValue   = createTempVar(code, aTypes[i], false);
+            Assignable LValue   = createTempVar(code, aTypes[i]);
             Register   regValue = LValue.getRegister();
             code.add(new I_Get(argTuple, pool.ensureIntConstant(i), regValue));
             aRegs[i] = regValue;

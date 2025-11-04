@@ -715,7 +715,7 @@ public class AssignmentStatement
 
             Operator operAsn;
             if (op.getId() == Id.COND_NN_ASN) {
-                Argument arg = rvalue.generateArgument(ctx, code, false, false, errs);
+                Argument arg = rvalue.generateArgument(ctx, code, false, errs);
                 fCompletes &= rvalue.isCompletable();
 
                 if (m_labelCondFalse == null) {
@@ -791,7 +791,7 @@ public class AssignmentStatement
             // "a ?:= b" -> "if (a == null ) {a = b;}"
             Assignable LVal = lvalueExpr.generateAssignable(ctx, code, errs);
             if (fCompletes &= lvalueExpr.isCompletable()) {
-                Argument argLVal   = LVal.generateArgument(ctx, code, true, true, errs);
+                Argument argLVal   = LVal.generateArgument(ctx, code, true, errs);
                 Label    labelSkip = new Label(op.getValueText() + " _skip_assign");
                 Operator operAsn;
                 switch (op.getId()) {
@@ -825,7 +825,7 @@ public class AssignmentStatement
         case InPlace: {
             Assignable LVal = lvalueExpr.generateAssignable(ctx, code, errs);
             if (fCompletes &= lvalueExpr.isCompletable()) {
-                Argument argRVal = rvalue.generateArgument(ctx, code, true, true, errs);
+                Argument argRVal = rvalue.generateArgument(ctx, code, true, errs);
                 if (fCompletes &= rvalue.isCompletable()) {
                     LVal.assignInPlaceResult(op, argRVal, code, errs);
 

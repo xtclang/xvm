@@ -24,6 +24,7 @@ import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -49,7 +50,10 @@ import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
+import org.xvm.runtime.template._native.collections.arrays.xRTDelegate;
+
 import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 
 
@@ -816,7 +820,7 @@ public class Frame
                     return hDest.getVarSupport().setReferent(this, hDest, hValue);
                 }
 
-                if (ASSERTS_ENABLED && info.isFixedType()) {
+                if (CHECK_TYPES && info.isFixedType()) {
                     checkType(hValue, info);
                 }
             }
@@ -900,6 +904,22 @@ public class Frame
                         // the type specific TypeInfo for Type<T> and the call chains may lose
                         // some type related fidelity. Since it only concerns the code in Type.x
                         // and Class.x, we can ignore that imprecision.
+                        break;
+                    }
+
+                    if (typeTo.containsGenericType(true)) {
+                        // the destination register has not been resolved; trust the compiler
+                        break;
+                    }
+
+                    if (typeFrom instanceof PropertyClassTypeConstant &&
+                            typeTo.isA(poolContext().typeVar())) {
+                        // there is an issue with assignability between PCT<X> and Var<X>;
+                        // trust the compiler
+                        break;
+                    }
+                    if (hValueFrom instanceof xRTDelegate.DelegateHandle) {
+                        // arrays allow to delegate to instances of different types using views
                         break;
                     }
                     System.err.println("WARNING: suspicious assignment at " + this +
@@ -1643,7 +1663,7 @@ public class Frame
      * Note: this method increments the "nextVar" index.
      *
      * @param nVar       the variable index
-     * @param nMethodId  the method id (if negative - frame specific; otherwise - absolute)
+     * @param nMethodId  the method id (if negative - frame specific; otherwise - a register)
      * @param index      the return value index (-1 for a Tuple)
      */
     public void introduceMethodReturnVar(int nVar, int nMethodId, int index) {
@@ -2510,7 +2530,9 @@ public class Frame
             ConstantPool pool = frame.poolContext();
 
             PropertyConstant constProperty = (PropertyConstant) frame.getConstant(iPropId);
-            TypeConstant     typeTarget    = frame.getLocalType(nTargetReg, null);
+            TypeConstant     typeTarget    = nTargetReg >= 0
+                ? frame.f_ahVar[nTargetReg].getType()
+                : frame.getLocalType(nTargetReg, null);
 
             return constProperty.isFormalType()
                 ? constProperty.getFormalType().resolveGenerics(pool, typeTarget).getType()
@@ -2521,16 +2543,16 @@ public class Frame
     protected static final VarTypeResolver METHOD_RESOLVER = new VarTypeResolver() {
         /**
          * @param nTargetReg  the method constant id to use the return signature of
-         *                    (if negative - frame specific; otherwise - absolute)
+         *                    (if negative - frame specific; otherwise - a register)
          * @param iAuxId      the return value index (-1 for a Tuple)
          */
         @Override
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId) {
             ConstantPool pool = frame.poolContext();
 
-            MethodConstant idMethod = (MethodConstant) (nTargetReg < 0
-                ? frame.getConstant(nTargetReg)
-                : pool.getConstant(nTargetReg));
+            MethodConstant idMethod = nTargetReg < 0
+                ? (MethodConstant) frame.getConstant(nTargetReg)
+                : ((FunctionHandle) frame.f_ahVar[nTargetReg]).getMethodId();
 
             return frame.resolveType(iAuxId >= 0
                 ? idMethod.getRawReturns()[iAuxId]
@@ -2670,11 +2692,6 @@ public class Frame
 
     // ----- TEMPORARY -----------------------------------------------------------------------------
 
-    static final boolean REPORT_WRAPPING = System.getProperties().containsKey("DEBUG");
-    static final boolean ASSERTS_ENABLED;
-    static {
-        boolean fEnabled = false;
-        assert  fEnabled = true;
-        ASSERTS_ENABLED  = fEnabled;
-    }
+    static final boolean CHECK_TYPES     = System.getProperties().containsKey("DEBUG");
+    static final boolean REPORT_WRAPPING = "all".equals(System.getProperties().getProperty("DEBUG"));
 }

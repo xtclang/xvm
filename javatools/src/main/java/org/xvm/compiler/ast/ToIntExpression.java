@@ -195,11 +195,11 @@ public class ToIntExpression
     }
 
     @Override
-    public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
-        return !isConstant() && getExtractor() == null && getOffsetConstant() == null && getConvertMethod() == null
-                ? expr.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs)
-                : super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
+        return !isConstant() && getExtractor() == null && getOffsetConstant() == null &&
+            getConvertMethod() == null
+                ? expr.generateArgument(ctx, code, fLocalPropOk, errs)
+                : super.generateArgument(ctx, code, fLocalPropOk, errs);
     }
 
     @Override
@@ -213,11 +213,11 @@ public class ToIntExpression
         MethodConstant   idConvert   = getConvertMethod();
 
         // step 1: extract the value from the underlying expression
-        Argument argExtracted = expr.generateArgument(ctx, code, false, true, errs);
+        Argument argExtracted = expr.generateArgument(ctx, code, false, errs);
         if (idExtract != null) {
             // extract always results in an Int64, which is the type of this expression
             Argument   argExtractFrom = argExtracted;
-            Assignable LValExtractTo  = createTempVar(code, getType(), true);
+            Assignable LValExtractTo  = createTempVar(code, getType());
             argExtracted = LValExtractTo.getLocalArgument();
             code.add(idExtract instanceof PropertyConstant
                     ? new P_Get((PropertyConstant) idExtract, argExtractFrom, argExtracted)
@@ -228,7 +228,7 @@ public class ToIntExpression
         Argument argAdjusted = argExtracted;
         if (constOffset != null) {
             Argument   argAdjustFrom = argAdjusted;
-            Assignable LValAdjustTo  = createTempVar(code, argExtracted.getType(), true);
+            Assignable LValAdjustTo  = createTempVar(code, argExtracted.getType());
             argAdjusted = LValAdjustTo.getLocalArgument();
             code.add(new GP_Sub(argAdjustFrom, constOffset, argAdjusted));
         }
@@ -239,7 +239,7 @@ public class ToIntExpression
         } else {
             Assignable LValConverted = LVal.isLocalArgument()
                     ? LVal
-                    : createTempVar(code, getType(), true);
+                    : createTempVar(code, getType());
 
             code.add(new Invoke_01(argAdjusted, idConvert, LValConverted.getLocalArgument()));
 

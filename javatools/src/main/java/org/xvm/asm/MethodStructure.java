@@ -933,7 +933,7 @@ public class MethodStructure
                 TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
                 if (typeResolved == null) {
                     // save off a resolved constraint
-                    mapTypeGeneric.computeIfAbsent(sName, s ->
+                    mapTypeGeneric.computeIfAbsent(sName, _ ->
                             entry.getValue().resolveGenerics(pool, mapTypeGeneric::get));
                 } else {
                     // take the narrowest type
@@ -2183,7 +2183,7 @@ public class MethodStructure
         }
 
         /**
-         * Produce a regular (not on stack) register.
+         * Produce a register.
          *
          * @param type  the type of the register
          */
@@ -2192,38 +2192,13 @@ public class MethodStructure
         }
 
         /**
-         * Produce a regular (not on stack) register.
+         * Produce a register.
          *
-         * @param type  the type of the register
-         * @param sName  the name of the register (REVIEW GG String or StringConstant)
+         * @param type   the type of the register
+         * @param sName  the name of the register
          */
         public Register createRegister(TypeConstant type, String sName) {
             return new Register(type, sName, getMethodStructure());
-        }
-
-        /**
-         * Produce a register.
-         *
-         * @param type       the type of the register
-         * @param fUsedOnce  true iff the value will be used once and only once (such that the local
-         *                   stack can be utilized for storage)
-         */
-        public Register createRegister(TypeConstant type, boolean fUsedOnce) {
-            return createRegister(type, null, fUsedOnce);
-        }
-
-        /**
-         * Produce a register.
-         *
-         * @param type       the type of the register
-         * @param sName      the name of the register (REVIEW GG String or StringConstant)
-         * @param fUsedOnce  true iff the value will be used once and only once (such that the local
-         *                   stack can be utilized for storage)
-         */
-        public Register createRegister(TypeConstant type, String sName, boolean fUsedOnce) {
-            return fUsedOnce
-                    ? new Register(type, sName, Op.A_STACK)
-                    : new Register(type, sName, getMethodStructure());
         }
 
         /**

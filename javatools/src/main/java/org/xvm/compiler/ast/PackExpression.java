@@ -55,14 +55,13 @@ public class PackExpression
     }
 
     @Override
-    public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         if (isConstant()) {
             return toConstant();
         }
 
         // generate the tuple fields
-        Argument[] args = expr.generateArguments(ctx, code, fLocalPropOk, fUsedOnce, errs);
+        Argument[] args = expr.generateArguments(ctx, code, fLocalPropOk, errs);
         assert args != null && args.length == 1;
 
         // generate the tuple value
