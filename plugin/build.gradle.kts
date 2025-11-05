@@ -57,17 +57,9 @@ dependencies {
     // Compile-only dependency on javatools for type information (not bundled in plugin)
     // At runtime, the plugin resolves javatools.jar from XDK build or distribution
     // This works now because javatools uses direct file references instead of configuration dependencies
-    compileOnly("org.xtclang:javatools")
+    compileOnly(libs.javatools)
 
     testImplementation(libs.junit.jupiter)
-}
-
-tasks.withType<Test>().configureEach {
-    // Pass benchmark configuration to tests as system properties
-    val benchmarkRuns = providers.gradleProperty("xtc.benchmark.runs")
-    if (benchmarkRuns.isPresent) {
-        systemProperty("xtc.benchmark.runs", benchmarkRuns.get())
-    }
 }
 
 // Configure project-specific publishing metadata
