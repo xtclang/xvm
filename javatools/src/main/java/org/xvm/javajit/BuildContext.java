@@ -118,20 +118,14 @@ public class BuildContext {
     public Scope scope;
 
     /**
-     * The Java slot past the last one used by the numbered XTC registers. The slots from this point
-     * up are used for un-numbered XTC registers {@link Op#A_STACK}
-     */
-    private int tailSlot;
-
-    /**
-     * The stack of {@link Slot}s that are kept below the {@link #tailSlot}.
-     */
-    private final Deque<Slot> tailStack = new ArrayDeque<>();
-
-    /**
      * The Map of not-yet-assigned slots.
      */
     private final Map<Slot, Label> unassignedSlots = new IdentityHashMap<>();
+
+    /**
+     * The stack of synthetic {@link Slot}s that are used internally.
+     */
+    private final Deque<Slot> slotStack = new ArrayDeque<>();
 
     /**
      * @return the ConstantPool used by this {@link BuildContext}.
@@ -229,10 +223,6 @@ public class BuildContext {
                 break;
             }
         }
-
-        // compute the tailSlot; we don't mind to overshoot by assuming the worst case - two slots
-        // per var plus ("this", "$ctx", ...) and synthetics
-        tailSlot = (isFunction ? 0 : 1) + extraArgs + methodStruct.getMaxVars() * 2 + synthSlots;
     }
 
     /**
@@ -360,9 +350,8 @@ public class BuildContext {
         }
 
         return switch (argId) {
-            case Op.A_STACK -> tailStack.peek().type();
-            case Op.A_THIS  -> slots.get(Op.A_THIS).type();
-            default -> throw new UnsupportedOperationException("id=" + argId);
+            case Op.A_THIS -> slots.get(Op.A_THIS).type();
+            default        -> throw new UnsupportedOperationException("id=" + argId);
         };
     }
 
@@ -462,8 +451,12 @@ public class BuildContext {
     public Slot loadPredefineArgument(CodeBuilder code, int argId) {
         switch (argId) {
         case Op.A_STACK:
-            Slot slot = popSlot();
-            loadValue(code, slot);
+            // this refers to a synthetic slot created by the pushTempSlot() method
+            Slot slot = slotStack.pop();
+            if (slot instanceof DoubleSlot doubleSlot) {
+                code.iload(doubleSlot.extSlot()); // load the boolean flag
+            }
+            Builder.load(code, slot.cd(), slot.slot());
             return slot;
 
         case Op.A_THIS:
@@ -472,21 +465,6 @@ public class BuildContext {
         default:
             throw new UnsupportedOperationException("id=" + argId);
         }
-    }
-
-    /**
-     * Load one or two values at the specified slot onto the Java stack.
-     */
-    public void loadValue(CodeBuilder code, Slot slot) {
-        if (slot.isIgnore()) {
-            throw new IllegalStateException();
-        }
-
-        if (slot instanceof DoubleSlot doubleSlot) {
-            code.iload(doubleSlot.extSlot()); // load the boolean flag
-        }
-
-        Builder.load(code, slot.cd(), slot.slot());
     }
 
     /**
@@ -809,7 +787,7 @@ public class BuildContext {
     }
 
     /**
-     * Throw an "Unsupported" exception.
+     * Add the code to throw an "Unsupported" exception.
      */
     public void throwUnsupported(CodeBuilder code) {
         loadCtx(code);
@@ -820,14 +798,14 @@ public class BuildContext {
     }
 
     /**
-     * Throw a "TypeMismatch" exception.
+     * Add the code to throw a "TypeMismatch" exception.
      */
     public void throwTypeMismatch(CodeBuilder code, String text) {
         throwException(code, ClassDesc.of(N_TypeMismatch), text);
     }
 
     /**
-     * Throw an Ecstasy exception. The code we produce is equivalent to:
+     * Add the code to throw an Ecstasy exception. The code we produce is equivalent to:
      * {@code throw new Exception(ctx).$init(ctx, text, null);}
      *
      * @param exCD  the ClassDesc for the Ecstasy exception (e.g. TypeMismatch)
@@ -876,61 +854,19 @@ public class BuildContext {
      * Ensure a Slot the specified var index.
      */
     public Slot ensureSlot(int varIndex, TypeConstant type, ClassDesc cd, String name) {
-        return varIndex == Op.A_STACK
-            ? pushSlot(type, cd, name)
-            : slots.computeIfAbsent(varIndex, ix -> new SingleSlot(
-                    scope.allocateLocal(ix, Builder.toTypeKind(cd)), type, cd, name));
+        return slots.computeIfAbsent(varIndex, ix -> new SingleSlot(
+                scope.allocateLocal(ix, Builder.toTypeKind(cd)), type, cd, name));
     }
 
     /**
-     * Push a Slot onto the tail stack.
+     * Create a temporary slot for internal "use once within a scope" scenarios. This slot can only
+     * be addressed via the synthetic register -1, at which point it will be "popped".
      */
-    public Slot pushSlot(TypeConstant type, ClassDesc cd, String name) {
-        Slot slot = new SingleSlot(tailSlot, type, cd, name);
-        tailSlot += Builder.toTypeKind(cd).slotSize();
-        tailStack.push(slot);
+    public Slot pushTempSlot(TypeConstant type, ClassDesc cd) {
+        int  index = scope.allocateJavaSlot(Builder.toTypeKind(cd));
+        Slot slot  = new SingleSlot(index, type, cd, "");
+        slotStack.push(slot);
         return slot;
-    }
-
-    /**
-     * Push an extended Slot onto the tail stack.
-     */
-    public Slot pushExtSlot(TypeConstant type, ClassDesc cd, JitFlavor flavor, String name) {
-        int slotIndex = tailSlot;
-        tailSlot += Builder.toTypeKind(cd).slotSize();
-        int slotExt = tailSlot++;
-
-        Slot slot = new DoubleSlot(slotIndex, slotExt, flavor, type, cd, name);
-        tailStack.push(slot);
-        return slot;
-    }
-
-    /**
-     * Pop a Slot from the tail stack.
-     */
-    public Slot popSlot() {
-        Slot slot = tailStack.pop();
-        tailSlot -= Builder.toTypeKind(slot.cd()).slotSize();
-        if (slot instanceof DoubleSlot) {
-            tailSlot--;
-        }
-        return slot;
-    }
-
-    /**
-     * Load a value from the tail slot onto the Java stack.
-     */
-    public void popTempVar(CodeBuilder code) {
-        Slot slot = popSlot();
-        code.loadLocal(Builder.toTypeKind(slot.cd()), slot.slot());
-    }
-
-    /**
-     * Store a value on the Java stack to the tail slot.
-     */
-    public void pushTempVar(CodeBuilder code, TypeConstant type, ClassDesc cd) {
-        Slot slot = pushSlot(type, cd, "");
-        code.storeLocal(Builder.toTypeKind(cd), slot.slot());
     }
 
     // ----- Slot classes --------------------------------------------------------------------------

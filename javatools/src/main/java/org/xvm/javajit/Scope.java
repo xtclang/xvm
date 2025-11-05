@@ -157,7 +157,7 @@ public class Scope {
         return slot;
     }
 
-    private int allocateJavaSlot(TypeKind kind) {
+    public int allocateJavaSlot(TypeKind kind) {
         int slot;
         if (topLocal >= bctx.maxLocal || startLocal == -1) {
             slot = code.allocateLocal(kind);

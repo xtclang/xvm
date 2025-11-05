@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.TypeKind;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
@@ -14,7 +15,6 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.BuildContext.Slot;
@@ -469,7 +469,6 @@ public abstract class OpInPlace
                                           PropertyConstant idProp) {
         TypeSystem    ts       = bctx.typeSystem;
         PropertyInfo  infoProp = idProp.getPropertyInfo();
-        TypeConstant  type     = infoProp.getType();
         JitMethodDesc jmdGet   = infoProp.getGetterJitDesc(ts);
         JitMethodDesc jmdSet   = infoProp.getSetterJitDesc(ts);
         JitParamDesc  pd       = jmdGet.optimizedReturns[0];
@@ -497,20 +496,22 @@ public abstract class OpInPlace
                 } else {
                     code.iadd();
                 }
-                buildSetProperty(bctx, code, slotTarget, type, cd, sSetName, mdSet);
+                buildSetProperty(bctx, code, slotTarget, cd, sSetName, mdSet);
                 break;
 
             case OP_IP_DECA, OP_IP_INCA:
-                code.dup();
-                bctx.pushTempVar(code, type, cd); // the original value
-                code.iconst_1();
+                int slotTmp = bctx.scope.allocateJavaSlot(TypeKind.INT);
+
+                code.dup()
+                    .istore(slotTmp) // store the original value
+                    .iconst_1();
                 if (op == OP_IP_DECA) {
                     code.isub();
                 } else {
                     code.iadd();
                 }
-                buildSetProperty(bctx, code, slotTarget, type, cd, sSetName, mdSet);
-                bctx.popTempVar(code); // the original value on Java stack
+                buildSetProperty(bctx, code, slotTarget, cd, sSetName, mdSet);
+                code.iload(slotTmp); // load the original value on Java stack
                 break;
 
             case OP_IP_DECB, OP_IP_INCB:
@@ -521,7 +522,7 @@ public abstract class OpInPlace
                     code.iadd();
                 }
                 code.dup();
-                buildSetProperty(bctx, code, slotTarget, type, cd, sSetName, mdSet);
+                buildSetProperty(bctx, code, slotTarget, cd, sSetName, mdSet);
                 break;
 
             default:
@@ -538,20 +539,22 @@ public abstract class OpInPlace
                 } else {
                     code.ladd();
                 }
-                buildSetProperty(bctx, code, slotTarget, type, cd, sSetName, mdSet);
+                buildSetProperty(bctx, code, slotTarget, cd, sSetName, mdSet);
                 break;
 
             case OP_IP_DECA, OP_IP_INCA:
-                code.dup2();
-                bctx.pushTempVar(code, type, cd); // the original value
-                code.lconst_1();
+                int slotTmp = bctx.scope.allocateJavaSlot(TypeKind.LONG);
+
+                code.dup2()
+                    .lstore(slotTmp) // store the original value
+                    .lconst_1();
                 if (op == OP_IP_DECA) {
                     code.lsub();
                 } else {
                     code.ladd();
                 }
-                buildSetProperty(bctx, code, slotTarget, type, cd, sSetName, mdSet);
-                bctx.popTempVar(code); // the original value on Java stack
+                buildSetProperty(bctx, code, slotTarget, cd, sSetName, mdSet);
+                code.lload(slotTmp); // load the original value on Java stack
                 break;
 
             case OP_IP_DECB, OP_IP_INCB:
@@ -562,7 +565,7 @@ public abstract class OpInPlace
                     code.ladd();
                 }
                 code.dup2();
-                buildSetProperty(bctx, code, slotTarget, type, cd, sSetName, mdSet);
+                buildSetProperty(bctx, code, slotTarget, cd, sSetName, mdSet);
                 break;
 
             default:
@@ -579,12 +582,13 @@ public abstract class OpInPlace
      * In: the new value on Java stack.
      */
     private void buildSetProperty(BuildContext bctx, CodeBuilder code, Slot slotTarget,
-                                  TypeConstant type, ClassDesc cd,
-                                  String sSetName, MethodTypeDesc mdSet) {
-        bctx.pushTempVar(code, type, cd); // save the new value
+                                  ClassDesc cd, String sSetName, MethodTypeDesc mdSet) {
+        int slotTmp = bctx.scope.allocateJavaSlot(Builder.toTypeKind(cd));
+
+        Builder.store(code, cd, slotTmp);
         bctx.loadThis(code);
         bctx.loadCtx(code);
-        bctx.popTempVar(code);
+        Builder.load(code, cd, slotTmp);
         code.invokevirtual(slotTarget.cd(), sSetName, mdSet); // set the new value
     }
 
