@@ -280,6 +280,18 @@ val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
     moduleName("TestArray")
 }
 
+// Test task that explicitly uses fork=false to test in-process execution
+val runTestsInProcess by tasks.registering(XtcRunTask::class) {
+    group = "application"
+    fork = false
+    verbose = true
+    module {
+        moduleName = "EchoTest"
+        moduleArg("InProcess")
+    }
+    moduleName("TestArray")
+}
+
 // This allows running a single test, e.g.: ./gradlew manualTests:runOne -PtestName="TestArray"
 val runOne by tasks.registering(XtcRunTask::class) {
     group = "application"

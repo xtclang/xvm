@@ -48,7 +48,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         // Use default JVM args from properties file generated at plugin build time
         this.defaultJvmArgs = loadDefaultJvmArgs();
         logger.info("[plugin] Loaded default JVM args: {}", defaultJvmArgs);
-        this.fork = objects.property(Boolean.class).convention(false);  // Default to in-thread execution
+        this.fork = objects.property(Boolean.class).convention(true);
         this.jvmArgs = objects.listProperty(String.class).convention(defaultJvmArgs);
         this.verbose = objects.property(Boolean.class).convention(false);
         this.showVersion = objects.property(Boolean.class).convention(false);
