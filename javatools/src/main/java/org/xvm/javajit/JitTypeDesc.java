@@ -5,6 +5,7 @@ import java.lang.constant.ClassDesc;
 import org.xvm.asm.constants.TypeConstant;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_float;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 
@@ -44,10 +45,12 @@ public class JitTypeDesc {
     public static ClassDesc getPrimitiveClass(TypeConstant type) {
         if (type.isPrimitive()) {
             return switch (type.getSingleUnderlyingClass(false).getName()) {
-                case "Char", "Int8", "Int16", "Int32", "UInt8", "UInt16", "UInt32"
+                case "Char", "Int8", "Int16", "Int32", "UInt8", "UInt16", "UInt32", "Dec32"
                     -> CD_int;
-                case "Int64", "UInt64"
+                case "Int64", "UInt64", "Dec64"
                     -> CD_long;
+                case "Float16", "Float32", "Float64"
+                     -> CD_float;
                 case "Boolean"
                     -> CD_boolean;
                 default
