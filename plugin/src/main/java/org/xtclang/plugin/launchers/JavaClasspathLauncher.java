@@ -188,9 +188,22 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
                     builder.exitValue(exitCode);
 
                     if (exitCode != 0) {
-                        // IMPORTANT: Don't store LauncherException directly - it's from javatools classloader
-                        // and Gradle can't serialize it. Extract message only, no cause reference!
-                        final String errorMessage = e.getMessage() != null ? e.getMessage() : "Execution failed";
+                        // IMPORTANT: We would ideally wrap LauncherException (and its cause) directly in
+                        // GradleException to preserve the full exception chain. From a Java classloader
+                        // perspective, this is perfectly safe - ensureJavaToolsInClasspath() has loaded
+                        // javatools.jar into the plugin's classloader, so LauncherException is accessible
+                        // and there are no classloader conflicts.
+                        //
+                        // HOWEVER, Gradle's configuration cache cannot serialize arbitrary exception types,
+                        // even when they're from the same classloader. The configuration cache tries to
+                        // serialize the exception graph, and LauncherException (or its causes) may contain
+                        // references to non-serializable javatools types. This causes configuration cache
+                        // serialization to fail.
+                        //
+                        // Therefore, we must extract the exception information as pure strings before
+                        // creating the GradleException. This workaround exists solely due to configuration
+                        // cache serialization constraints, not classloader issues.
+                        final String errorMessage = buildErrorMessage(e);
                         final GradleException gradleException = new GradleException(
                                 "XTC tool execution failed: " + errorMessage);
                         builder.failure(gradleException);
@@ -209,6 +222,39 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
             builder.failure(e);
             return createExecResult(builder);
         }
+    }
+
+    /**
+     * Extracts error message and cause chain from LauncherException.
+     * This is necessary because LauncherException is loaded from javatools classloader
+     * and cannot be serialized by Gradle's configuration cache. We extract all information
+     * as strings instead.
+     *
+     * @param e the LauncherException from javatools classloader
+     * @return a string containing the full error message and cause chain
+     */
+    private String buildErrorMessage(final LauncherException e) {
+        final StringBuilder message = new StringBuilder();
+
+        // Start with the LauncherException message if present
+        if (e.getMessage() != null && !e.getMessage().isEmpty()) {
+            message.append(e.getMessage());
+        } else {
+            message.append("Execution failed");
+        }
+
+        // Walk the cause chain and append each cause's message
+        Throwable cause = e.getCause();
+        while (cause != null) {
+            message.append("\nCaused by: ");
+            message.append(cause.getClass().getSimpleName());
+            if (cause.getMessage() != null && !cause.getMessage().isEmpty()) {
+                message.append(": ").append(cause.getMessage());
+            }
+            cause = cause.getCause();
+        }
+
+        return message.toString();
     }
 
     /**

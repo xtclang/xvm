@@ -1573,11 +1573,15 @@ public abstract class Launcher
          * @param error  true to abort with an error status
          */
         public LauncherException(final boolean error) {
-            this(error, null);
+            this(error, null, null);
         }
 
         public LauncherException(final boolean error, final String msg) {
-            super(msg);
+            this(error, msg, null);
+        }
+
+        public LauncherException(final boolean error, final String msg, final Throwable cause) {
+            super(msg, cause);
             this.error = error;
         }
 
