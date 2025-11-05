@@ -125,8 +125,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         }
 
         // Validate detach mode requirements - fail fast
-        if (!getUseNativeLauncherValue() && getUseCompilerDaemonValue()) {
-            throw new GradleException("[plugin] Detach mode requires a forked process. Disable the compiler daemon: useCompilerDaemon.set(false)");
+        if (!getUseNativeLauncherValue() && !ext.getFork().get()) {
+            throw new GradleException("[plugin] Detach mode requires a forked process. Enable fork: fork.set(true)");
         }
 
         // Extract common directory resolution for detached launchers (DRY)

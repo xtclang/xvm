@@ -48,7 +48,6 @@ import org.jetbrains.annotations.NotNull;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.internal.GradlePhaseAssertions;
-import org.xtclang.plugin.launchers.CompilerDaemonLauncher;
 import org.xtclang.plugin.launchers.JavaClasspathLauncher;
 import org.xtclang.plugin.launchers.JavaExecLauncher;
 import org.xtclang.plugin.launchers.NativeBinaryLauncher;
@@ -85,12 +84,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     // Using Provider ensures values are resolved at execution time, allowing configuration
     // via tasks.configureEach {} to work correctly. Configuration cache compatible.
     protected final Provider<@NotNull Boolean> resolvedUseNativeLauncher;
-    protected final Provider<@NotNull Boolean> resolvedUseCompilerDaemon;
     protected final Provider<@NotNull String> toolchainExecutable;
     protected final Provider<@NotNull String> projectVersion;
-
-    // Compiler daemon service provider
-    private final Provider<org.xtclang.plugin.services.XtcCompilerService> compilerServiceProvider;
 
     @SuppressWarnings("this-escape") // Suppressed because launchers need task reference in constructor
     protected XtcLauncherTask(final Project project, final E ext) {
@@ -142,14 +137,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
         // Capture as Providers for lazy evaluation - allows configuration via tasks.configureEach {}
         this.resolvedUseNativeLauncher = ext.getUseNativeLauncher();
-        this.resolvedUseCompilerDaemon = ext.getUseCompilerDaemon();
 
-        // Register compiler daemon build service if needed
-        this.compilerServiceProvider = project.getGradle().getSharedServices()
-                .registerIfAbsent("xtcCompilerDaemon", org.xtclang.plugin.services.XtcCompilerService.class, spec -> {
-                    // No parameters needed currently
-                });
-        
         // Assert that required configurations exist - they should always be created by this plugin
         final var configurations = project.getConfigurations();
         assert configurations.findByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING) != null : 
@@ -308,12 +296,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @Input
     @Override
-    public Property<@NotNull Boolean> getUseCompilerDaemon() {
-        return ext.getUseCompilerDaemon();
-    }
-
-    @Input
-    @Override
     public Property<@NotNull Boolean> getFork() {
         return ext.getFork();
     }
@@ -337,17 +319,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
 
     /**
-     * Returns the resolved compiler daemon configuration as a lazily evaluated value.
-     * This allows configuration via tasks.configureEach {} to work correctly.
-     * Configuration cache compatible.
-     * See {@link #getUseCompilerDaemon()} for the DSL-configurable Property version.
-     */
-    @Input
-    public boolean getUseCompilerDaemonValue() {
-        return resolvedUseCompilerDaemon.get();
-    }
-
-    /**
      * Returns the source set names captured at configuration time.
      * This is an input because changes to source sets affect the module path.
      */
@@ -369,10 +340,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             final String launcherType;
             if (getUseNativeLauncherValue()) {
                 launcherType = "Native";
-            } else if (getUseCompilerDaemonValue()) {
-                launcherType = "CompilerDaemon";
             } else {
-                launcherType = "JavaClasspath";
+                launcherType = "JavaClasspath (fork=" + ext.getFork().get() + ")";
             }
             logger.error("""
 
@@ -406,15 +375,13 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             return new NativeBinaryLauncher<>(this, logger, getExecOperations());
         }
 
-        if (getUseCompilerDaemonValue()) {
-            logger.lifecycle("[plugin] Using XTC compiler daemon for improved performance");
-            return new CompilerDaemonLauncher<>(this, logger,
-                projectVersion, xdkFileTree, javaToolsConfig, toolchainExecutable,
-                projectDirectory.get().getAsFile());
+        final boolean fork = ext.getFork().get();
+        if (fork) {
+            logger.lifecycle("[plugin] Using JavaClasspathLauncher with fork=true (separate process)");
+        } else {
+            logger.lifecycle("[plugin] Using JavaClasspathLauncher with fork=false (in-process execution)");
         }
 
-        final boolean fork = ext.getFork().get();
-        logger.lifecycle("[plugin] Using direct classpath invocation (fork={})", fork);
         return new JavaClasspathLauncher<>(this, logger,
             projectVersion, xdkFileTree, javaToolsConfig, toolchainExecutable,
             projectDirectory.get().getAsFile(), fork);

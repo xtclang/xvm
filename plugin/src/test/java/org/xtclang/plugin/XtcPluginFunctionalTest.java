@@ -204,7 +204,6 @@ class XtcPluginFunctionalTest {
             }
 
             xtcCompile {
-                useCompilerDaemon = false  // Disable daemon for isolation in tests
                 verbose = false
                 rebuild = false
             }
