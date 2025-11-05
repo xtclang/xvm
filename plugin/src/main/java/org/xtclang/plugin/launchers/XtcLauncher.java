@@ -25,12 +25,8 @@ public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends 
 
     @Override
     public String toString() {
-        return String.format("[plugin] (launcher='%s', task='%s', native=%s).",
-                getClass().getSimpleName(), taskName, isNativeLauncher());
-    }
-
-    protected boolean isNativeLauncher() {
-        return task.getUseNativeLauncher().get();
+        return String.format("[plugin] (launcher='%s', task='%s').",
+                getClass().getSimpleName(), taskName);
     }
 
     protected void redirectIo(final BaseExecSpec spec) {

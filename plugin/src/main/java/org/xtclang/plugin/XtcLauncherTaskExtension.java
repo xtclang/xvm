@@ -26,8 +26,6 @@ public interface XtcLauncherTaskExtension extends Named {
 
     Property<@NotNull Boolean> getShowVersion();
 
-    Property<@NotNull Boolean> getUseNativeLauncher();
-
     Property<@NotNull Boolean> getVerbose();
 
     ListProperty<@NotNull String> getJvmArgs();

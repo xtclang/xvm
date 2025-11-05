@@ -34,7 +34,6 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     protected final ListProperty<@NotNull String> jvmArgs;
     protected final Property<@NotNull Boolean> verbose;
     protected final Property<@NotNull Boolean> showVersion;
-    protected final Property<@NotNull Boolean> useNativeLauncher;
     protected final Property<@NotNull InputStream> stdin;
     protected final Property<@NotNull OutputStream> stdout;
     protected final Property<@NotNull OutputStream> stderr;
@@ -53,7 +52,6 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         this.jvmArgs = objects.listProperty(String.class).convention(defaultJvmArgs);
         this.verbose = objects.property(Boolean.class).convention(false);
         this.showVersion = objects.property(Boolean.class).convention(false);
-        this.useNativeLauncher = objects.property(Boolean.class).convention(false);
 
         this.stdin = objects.property(InputStream.class);
         this.stdout = objects.property(OutputStream.class);
@@ -90,11 +88,6 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     @Override
     public Property<@NotNull Boolean> getShowVersion() {
         return showVersion;
-    }
-
-    @Override
-    public Property<@NotNull Boolean> getUseNativeLauncher() {
-        return useNativeLauncher;
     }
 
     @Override

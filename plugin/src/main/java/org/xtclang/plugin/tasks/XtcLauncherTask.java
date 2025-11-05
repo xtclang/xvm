@@ -49,8 +49,6 @@ import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.internal.GradlePhaseAssertions;
 import org.xtclang.plugin.launchers.JavaClasspathLauncher;
-import org.xtclang.plugin.launchers.JavaExecLauncher;
-import org.xtclang.plugin.launchers.NativeBinaryLauncher;
 import org.xtclang.plugin.launchers.XtcLauncher;
 
 /**
@@ -67,7 +65,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected final ListProperty<@NotNull String> jvmArgs;
     protected final Property<@NotNull Boolean> verbose;
     protected final Property<@NotNull Boolean> showVersion;
-    protected final Property<@NotNull Boolean> useNativeLauncher;
 
     protected final E ext;
 
@@ -83,7 +80,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     // Resolved launcher configuration as Providers for lazy evaluation.
     // Using Provider ensures values are resolved at execution time, allowing configuration
     // via tasks.configureEach {} to work correctly. Configuration cache compatible.
-    protected final Provider<@NotNull Boolean> resolvedUseNativeLauncher;
     protected final Provider<@NotNull String> toolchainExecutable;
     protected final Provider<@NotNull String> projectVersion;
 
@@ -133,10 +129,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
         this.verbose = objects.property(Boolean.class).convention(ext.getVerbose());
         this.showVersion = objects.property(Boolean.class).convention(ext.getShowVersion());
-        this.useNativeLauncher = objects.property(Boolean.class).convention(ext.getUseNativeLauncher());
-
-        // Capture as Providers for lazy evaluation - allows configuration via tasks.configureEach {}
-        this.resolvedUseNativeLauncher = ext.getUseNativeLauncher();
 
         // Assert that required configurations exist - they should always be created by this plugin
         final var configurations = project.getConfigurations();
@@ -284,16 +276,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return showVersion;
     }
 
-    /**
-     * Returns the useNativeLauncher property for DSL configuration.
-     * This property allows users to configure whether to use the native launcher.
-     * Note: Execution logic uses {@link #getUseNativeLauncherValue()} which is captured at configuration time.
-     */
-    @Input
-    public Property<@NotNull Boolean> getUseNativeLauncher() {
-        return useNativeLauncher;
-    }
-
     @Input
     @Override
     public Property<@NotNull Boolean> getFork() {
@@ -307,18 +289,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     }
 
     /**
-     * Returns the resolved launcher type as a lazily evaluated value.
-     * This allows configuration via tasks.configureEach {} to work correctly.
-     * Configuration cache compatible.
-     * See {@link #getUseNativeLauncher()} for the DSL-configurable Property version.
-     */
-    @Input
-    public boolean getUseNativeLauncherValue() {
-        return resolvedUseNativeLauncher.get();
-    }
-
-
-    /**
      * Returns the source set names captured at configuration time.
      * This is an input because changes to source sets affect the module path.
      */
@@ -330,19 +300,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @Internal
     public abstract String getJavaLauncherClassName();
 
-    @Internal
-    public abstract String getNativeLauncherCommandName();
-
     protected <R extends ExecResult> R handleExecResult(final R result) {
         final int exitValue = result.getExitValue();
         if (exitValue != 0) {
             final String taskName = getName();
-            final String launcherType;
-            if (getUseNativeLauncherValue()) {
-                launcherType = "Native";
-            } else {
-                launcherType = "JavaClasspath (fork=" + ext.getFork().get() + ")";
-            }
+            final String launcherType = "JavaClasspath (fork=" + ext.getFork().get() + ")";
             logger.error("""
 
                 [plugin] ==============================================================================
@@ -369,11 +331,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         // the plugin without needing reflection or special classloader handling.
         org.xtclang.plugin.XtcJavaToolsRuntime.ensureJavaToolsInClasspath(
             projectVersion, javaToolsConfig, xdkFileTree, logger);
-
-        if (getUseNativeLauncherValue()) {
-            logger.info("[plugin] Using native binary launcher");
-            return new NativeBinaryLauncher<>(this, logger, getExecOperations());
-        }
 
         final boolean fork = ext.getFork().get();
         if (fork) {

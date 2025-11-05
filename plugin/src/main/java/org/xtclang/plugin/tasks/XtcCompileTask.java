@@ -1,7 +1,6 @@
 package org.xtclang.plugin.tasks;
 
 import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_CLASS_NAME;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_LAUNCHER_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.FileUtils.isValidXtcModuleSafe;
 
 import java.io.File;
@@ -109,12 +108,6 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     // should point out the other source sets as well, for example for a test task, but not for the
     // main task. I suppose the most generic way to do this is to be able to add a source set to the
     // module path in the task, but let's try to work incrementally.
-
-    @Internal
-    @Override
-    public final String getNativeLauncherCommandName() {
-        return XTC_COMPILER_LAUNCHER_NAME;
-    }
 
     @Internal
     @Override

@@ -16,13 +16,11 @@ public final class XtcPluginConstants {
     // XTC Compile time constants
     public static final String XTC_EXTENSION_NAME_COMPILER = "xtcCompile";
     public static final String XTC_COMPILER_CLASS_NAME = "org.xvm.tool.Compiler";
-    public static final String XTC_COMPILER_LAUNCHER_NAME = "xcc";
 
     // XTC Runtime constants:
     public static final String XTC_EXTENSION_NAME_RUNTIME = "xtcRun";
     public static final String XTC_DEFAULT_RUN_METHOD_NAME_PREFIX = "run";
     public static final String XTC_RUNNER_CLASS_NAME = "org.xvm.tool.Runner";
-    public static final String XTC_RUNNER_LAUNCHER_NAME = "xec";
 
     // XDK Distribution constants:
     public static final String XDK_CONFIG_NAME_INCOMING = "xdk";

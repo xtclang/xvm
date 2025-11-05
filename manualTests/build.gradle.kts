@@ -245,13 +245,6 @@ xtcRun {
     verbose = true
 
     /*
-     * Use an XTC native launcher (requires a local XDK installation on the test machine.)
-     *
-     * The default is false.
-     */
-    useNativeLauncher = false
-
-    /*
     * Add a JVM argument to the defaults. Will be ignored if the launch does not spawn a forked JVM for its run.
     */
     jvmArgs("-showversion", "--enable-preview")

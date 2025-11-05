@@ -7,7 +7,6 @@ import static org.gradle.api.logging.LogLevel.INFO;
 import static org.gradle.api.logging.LogLevel.LIFECYCLE;
 
 import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_CLASS_NAME;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_LAUNCHER_NAME;
 
 import java.io.File;
 
@@ -46,7 +45,6 @@ import org.xtclang.plugin.XtcRuntimeExtension;
 import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
 import org.xtclang.plugin.launchers.CommandLine;
 import org.xtclang.plugin.launchers.DetachedJavaExecLauncher;
-import org.xtclang.plugin.launchers.DetachedNativeBinaryLauncher;
 import org.xtclang.plugin.launchers.XtcLauncher;
 
 /**
@@ -107,12 +105,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
     @Internal
     @Override
-    public final String getNativeLauncherCommandName() {
-        return XTC_RUNNER_LAUNCHER_NAME;
-    }
-
-    @Internal
-    @Override
     public final String getJavaLauncherClassName() {
         return XTC_RUNNER_CLASS_NAME;
     }
@@ -125,7 +117,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         }
 
         // Validate detach mode requirements - fail fast
-        if (!getUseNativeLauncherValue() && !ext.getFork().get()) {
+        if (!ext.getFork().get()) {
             throw new GradleException("[plugin] Detach mode requires a forked process. Enable fork: fork.set(true)");
         }
 
@@ -133,12 +125,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         final File buildDir = buildDirectory.get().getAsFile();
         final File projectDir = projectDirectory.get().getAsFile();
 
-        if (getUseNativeLauncherValue()) {
-            getLogger().info("[plugin] Created XTC launcher: detached native executable.");
-            return new DetachedNativeBinaryLauncher<>(this, getLogger(), getExecOperations(), buildDir, projectDir);
-        }
-
-        // Must be fork mode (validated above)
+        // Detach mode always uses forked Java process
         getLogger().info("[plugin] Created XTC launcher: detached Java process.");
         return new DetachedJavaExecLauncher<>(this, getLogger(), getExecOperations(),
             toolchainExecutable, projectVersion, xdkFileTree, javaToolsConfig, buildDir, projectDir);
