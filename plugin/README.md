@@ -2,16 +2,16 @@
 
 A comprehensive Gradle plugin that teaches Gradle the XTC programming language, enabling seamless compilation, testing, and execution of XTC projects.
 This documents describes how it works, and goes into some technical detail, but also serves as a usage guide. There are several XTC project examples
-on GitHub that will show you the basics of setting up and XTC build and executin environemnt with the build DSL. If you are just looking for the
-simplest possible XTC "HellWorld" setup, take a look at the git@
+on GitHub that will show you the basics of setting up and XTC build and execution environment with the build DSL. If you are just looking for the
+simplest possible XTC "HelloWorld" setup, take a look at the examples repository.
 
-## Table of Contents`
-`
+## Table of Contents
+
 - [Overview](#overview)
 - [Architecture](#architecture)
   - [Core Components](#core-components)
   - [Launcher System](#launcher-system)
-  - [Compiler Daemon](#compiler-daemon)
+  - [Programmatic API Access](#programmatic-api-access)
 - [Configuration](#configuration)
   - [Basic Setup](#basic-setup)
   - [Compilation Configuration](#compilation-configuration)
@@ -29,7 +29,8 @@ The XTC Gradle Plugin integrates the XTC language into Gradle's build ecosystem 
 
 - **Source Set Integration**: XTC source directories alongside Java/Kotlin code
 - **Dependency Management**: Transitive dependencies between XTC modules
-- **Multiple Launchers**: Native binaries, forked JVMs, compiler daemon, or in-process execution
+- **Multiple Launchers**: Native binaries, forked JVMs, or in-process execution
+- **Programmatic API Access**: Direct method calls to compiler without reflection
 - **Configuration Cache**: Full support for Gradle's configuration cache
 - **Incremental Compilation**: Smart up-to-date checking for fast rebuilds
 - **Flexible Module Path**: Custom module path resolution for complex project structures
@@ -62,7 +63,7 @@ Key task types:
 
 ### Launcher System
 
-The plugin supports four distinct launcher types, each optimized for different scenarios:
+The plugin supports three distinct launcher types, each optimized for different scenarios:
 
 #### 1. **NativeBinaryLauncher** (Recommended for Production)
 **File**: `org.xtclang.plugin.launchers.NativeBinaryLauncher`
@@ -92,74 +93,42 @@ xtcCompile {
 }
 ```
 
-#### 2. **CompilerDaemonLauncher** (Default - Recommended for Development)
-**File**: `org.xtclang.plugin.launchers.CompilerDaemonLauncher`
+#### 2. **JavaClasspathLauncher** (Default - Recommended for Development)
+**File**: `org.xtclang.plugin.launchers.JavaClasspathLauncher`
 
-Uses a persistent compiler daemon (Gradle Build Service) to eliminate JVM startup overhead. This is the default launcher.
+Invokes javatools classes directly, either in-process or in a forked JVM based on the `fork` setting.
 
 **Advantages:**
-- No JVM startup overhead after first compilation
-- ClassLoader reuse across compilations
-- JIT-compiled hot paths stay warm
-- Thread-safe with proper lifecycle management
+- Direct type-safe calls (`Compiler.launch(args)`) - no reflection
+- Full IDE debugging support
+- Instant startup when fork=false (~0ms)
+- Complete isolation when fork=true
 - Configuration cache compatible
 
 **Disadvantages:**
-- Shares memory with Gradle daemon
-- Less isolation than forked processes
+- When fork=false: shares Gradle daemon JVM
+- When fork=true: slower startup (~1-2s JVM launch)
 
 **Use When:**
-- Iterative development with frequent compilations (default)
-- Multi-module projects with many compilation tasks
-- Build performance is critical
+- Development builds (default)
+- Need direct debugging of compiler code
+- Building custom ErrorListener integrations
+- Balance between performance and isolation
 
-**Configuration:**
+**Implementation Details:**
+The plugin has compile-time access to javatools types through a `compileOnly` dependency:
 ```kotlin
-xtcCompile {
-    useCompilerDaemon.set(true)  // Enable compiler daemon (default)
+// plugin/build.gradle.kts
+dependencies {
+    compileOnly(libs.javatools)  // Type information only, not bundled
 }
 ```
 
-**Implementation Details:**
-The daemon uses Gradle's Build Service API to maintain a single compiler instance across all tasks in a build. The service lifecycle is managed by Gradle:
-- **Created**: On first compilation task
-- **Reused**: Across all subsequent compilation tasks
-- **Destroyed**: When Gradle daemon terminates
-
-**Performance Impact:**
-In a typical multi-module project:
-- **First compilation**: Same as JavaExecLauncher
-- **Subsequent compilations**: 30-60% faster (eliminates ~1-2s JVM startup per compilation)
-- **Clean builds**: 40-50% faster in projects with 10+ modules
-
-#### 3. **JavaClasspathLauncher** (Default Fallback - Direct Invocation)
-**File**: `org.xtclang.plugin.launchers.JavaClasspathLauncher`
-
-Directly invokes javatools classes in the current thread without forking. This is the **NEW** default fallback when compiler daemon is disabled.
-
-**Advantages:**
-- No process spawning overhead
-- Direct type-safe calls (`Compiler.launch(args)`)
-- Full IDE debugging support
-- Easy ErrorListener attachment
-- Instant startup (~0ms)
-- Same-thread execution simplifies debugging
-
-**Disadvantages:**
-- Shares Gradle daemon JVM
-- Less isolation than forked processes
-
-**Use When:**
-- Compiler daemon is disabled (automatic fallback)
-- Need direct debugging of compiler code
-- Building custom ErrorListener integrations
-- Maximum reliability without performance overhead
-
-**Implementation Details:**
+At runtime, the plugin loads javatools.jar dynamically:
 ```java
-// Plugin has compile-time access to javatools types
+// Direct invocation with full type safety
 XtcJavaToolsRuntime.withJavaTools(javaToolsJar, logger, () -> {
-    Compiler.launch(args);  // Direct invocation, no reflection!
+    Compiler.launch(args);  // No reflection!
     return result;
 });
 ```
@@ -167,20 +136,20 @@ XtcJavaToolsRuntime.withJavaTools(javaToolsJar, logger, () -> {
 **Configuration:**
 ```kotlin
 xtcCompile {
-    useCompilerDaemon.set(false)  // Uses JavaClasspathLauncher by default
+    fork.set(false)  // In-process (fast, default)
+    // OR
+    fork.set(true)   // Separate process (isolation)
 }
 ```
 
 **Performance Characteristics:**
-- **Startup**: Instant (no JVM fork)
-- **Memory**: Shared with Gradle daemon
-- **Type Safety**: Full (compile-time + runtime)
-- **Debugging**: Full IDE support (same thread)
+- **fork=false**: Instant startup, shared memory with Gradle daemon
+- **fork=true**: ~1.5s JVM startup, complete isolation
 
-#### 4. **JavaExecLauncher** (Legacy - Isolation Mode)
+#### 3. **JavaExecLauncher** (Legacy - Explicit Isolation)
 **File**: `org.xtclang.plugin.launchers.JavaExecLauncher`
 
-Forks a new Java process for each compilation, providing maximum isolation. This launcher is no longer the default but can still be used explicitly.
+Forks a new Java process for each execution using Gradle's `javaexec`. This launcher is less commonly used but available for explicit isolation needs.
 
 **Advantages:**
 - Complete isolation from Gradle JVM
@@ -189,7 +158,7 @@ Forks a new Java process for each compilation, providing maximum isolation. This
 - Java toolchain integration
 
 **Disadvantages:**
-- Slower than alternatives (~1-2s JVM startup per compilation)
+- Slower than alternatives (~1-2s JVM startup)
 - Higher memory usage (separate JVM)
 - JIT compiler starts cold each time
 
@@ -198,96 +167,52 @@ Forks a new Java process for each compilation, providing maximum isolation. This
 - Running with custom JVM arguments
 - Debugging with JDWP remote debugging
 
-**Configuration:**
-```kotlin
-xtcCompile {
-    useCompilerDaemon.set(false)
-    // Note: JavaClasspathLauncher is now the default fallback
-    // To explicitly use JavaExecLauncher, you would need to set fork=true
-    // (but this is not currently exposed in the DSL)
-}
-```
+### Programmatic API Access
 
-### Compiler Daemon
-
-The Compiler Daemon is a persistent XTC compiler instance that eliminates JVM startup overhead by reusing the same compiler across all compilation tasks in a build.
+The plugin can directly call javatools methods without reflection, providing significant benefits:
 
 #### Architecture
 
-**Build Service Registration**:
-```java
-// Registered in XtcLauncherTask constructor
-this.compilerServiceProvider = project.getGradle().getSharedServices()
-    .registerIfAbsent("xtcCompilerDaemon", XtcCompilerService.class, spec -> {
-        // Service is shared across all projects in build
-    });
-```
-
-**Service Lifecycle**:
-1. **Initialization**: First compilation task creates the service
-2. **Compilation**: Service loads XTC compiler from javatools classpath
-3. **Reuse**: Subsequent tasks reuse the same compiler instance
-4. **Cleanup**: Service destroyed when Gradle daemon terminates
-
-**Thread Safety**:
-The service uses proper synchronization to handle parallel compilation tasks:
-```java
-public synchronized XtcCompileResult compile(
-    List<String> args,
-    FileCollection javaToolsClasspath,
-    OutputStream stdout,
-    OutputStream stderr
-) {
-    // Thread-safe compilation execution
-}
-```
-
-#### Configuration Cache Support
-
-The daemon is fully compatible with Gradle's configuration cache:
-- Service provider captured as `Provider<XtcCompilerService>` at configuration time
-- ClassLoader and configuration stored in serialized task state
-- Service automatically restored from cache on subsequent builds
-
-#### Performance Characteristics
-
-**Startup Overhead** (per compilation):
-- **JavaExecLauncher**: ~1.5s (JVM startup + classloading)
-- **CompilerDaemonLauncher**: ~0.05s (no startup, warm JIT)
-- **Improvement**: ~1.45s saved per compilation
-
-**Memory Usage**:
-- **Shared**: Service shares Gradle daemon heap (~50-100MB for compiler)
-- **Isolated**: JavaExecLauncher creates separate JVM (~200-400MB each)
-
-**JIT Compilation**:
-- **First Compilation**: Interpreted mode (slower)
-- **Subsequent**: JIT-compiled hot paths (30-50% faster execution)
-
-#### Usage Guidelines
-
-**When to Enable**:
-- Multi-module projects (5+ XTC modules)
-- Frequent recompilations during development
-- Build performance is a priority
-
-**When to Disable**:
-- Compiler instability (crashes affecting build)
-- Memory constraints on build machine
-- Debugging compiler-specific issues
-
-**Configuration**:
+**Compile-Time Types**:
 ```kotlin
-// Enable daemon (default)
-xtcCompile {
-    useCompilerDaemon.set(true)
-}
-
-// Disable for isolation
-xtcCompile {
-    useCompilerDaemon.set(false)  // Use JavaExecLauncher instead
+// Plugin declares compile-only dependency
+dependencies {
+    compileOnly(libs.javatools)  // Provides types at compile time
 }
 ```
+
+**Runtime Loading**:
+```java
+// Plugin loads javatools.jar dynamically at runtime
+XtcJavaToolsRuntime.ensureJavaToolsInClasspath(
+    projectVersion, javaToolsConfig, xdkFileTree, logger);
+```
+
+**Direct Invocation**:
+```java
+// Call compiler directly - no reflection!
+Compiler.launch(args);
+Runner.launch(args);
+Disassembler.launch(args);
+```
+
+#### Benefits
+
+**Developer Experience**:
+- **IDE Integration**: Full autocomplete and type checking for javatools APIs
+- **Compile-Time Safety**: Catches API misuse at compile time
+- **Refactoring**: Safe renames across plugin and javatools
+- **Debugging**: Step through compiler code directly in IDE
+
+**Performance**:
+- **No Reflection Overhead**: Direct method calls
+- **JIT Optimization**: HotSpot can inline across plugin/javatools boundary
+- **In-Process Execution**: Zero overhead when fork=false
+
+**Maintainability**:
+- **Clear API Surface**: Explicit dependencies make architecture obvious
+- **Type Safety**: Compiler verifies all javatools calls
+- **Easy Testing**: Direct method calls simplify unit tests
 
 ## Configuration
 
@@ -303,7 +228,7 @@ plugins {
 // Optional: Configure compilation
 xtcCompile {
     verbose.set(true)
-    useCompilerDaemon.set(true)
+    fork.set(false)  // In-process execution (default)
 }
 ```
 
@@ -321,11 +246,11 @@ xtcCompile {
     // Show XTC version during compilation
     showVersion.set(true)
 
-    // Launcher configuration (defaults are usually fine)
-    useNativeLauncher.set(false)
-    useCompilerDaemon.set(true)  // Default - recommended for development
+    // Launcher configuration
+    useNativeLauncher.set(false)  // Use JavaClasspathLauncher (default)
+    fork.set(false)                // In-process execution (default)
 
-    // JVM arguments (for JavaExecLauncher when daemon is disabled)
+    // JVM arguments (only used when fork=true)
     jvmArgs("-Xmx2g", "-Xms512m")
 }
 
@@ -370,31 +295,11 @@ xtcRun {
     // Custom module path (only if you need to override automatic resolution)
     modulePath.from(files("runtime/modules"))
 
-     // JVM arguments (for JavaExecLauncher when daemon is disabled)
+    // JVM arguments (only used when fork=true)
     jvmArgs("-Xmx1g")
-}
-```
 
-**Composite Build Example**:
-For a composite build with multiple projects, the default configuration just works:
-```kotlin
-// In project A that depends on project B and C
-dependencies {
-    xtcModule(project(":projectB"))
-    xtcModule(project(":projectC"))
-    xtcModule("org.xtclang:lib-json:1.0.0")
-}
-
-// Default xtcRun configuration automatically includes:
-// - XDK core libraries (ecstasy.xtc, etc.)
-// - lib-json.xtc from Maven
-// - All .xtc files from projectB's build/xtc/main/
-// - All .xtc files from projectC's build/xtc/main/
-// - All .xtc files from this project's build/xtc/main/
-xtcRun {
-    module.set("projectA.xtc")
-    method.set("run")
-    // That's it! No module path configuration needed.
+    // Execution mode
+    fork.set(false)  // In-process (default)
 }
 ```
 
@@ -404,21 +309,19 @@ xtcRun {
 
 | Scenario | Launcher | Configuration |
 |----------|----------|---------------|
-| Fast development builds | CompilerDaemon | `useCompilerDaemon=true, fork=false` |
+| Fast development builds | JavaClasspath | `fork=false` (default) |
 | CI/CD production builds | Native | `useNativeLauncher=true` |
-| Debugging compiler | JavaExec | `fork=true` |
-| Memory isolation | JavaExec | `fork=true` |
+| Debugging compiler | JavaClasspath | `fork=false` |
+| Memory isolation | JavaClasspath | `fork=true` |
 | Fastest startup | Native | `useNativeLauncher=true` |
-| Multi-module optimization | CompilerDaemon | `useCompilerDaemon=true` |
 
 **Selection Logic** (in `XtcLauncherTask.createLauncher()`):
 ```
 if (useNativeLauncher) → NativeBinaryLauncher
-else if (useCompilerDaemon) → CompilerDaemonLauncher (DEFAULT)
-else → JavaClasspathLauncher (NEW default fallback - direct invocation, no fork)
+else → JavaClasspathLauncher (with fork setting)
+    if (fork=false) → In-process execution (DEFAULT)
+    if (fork=true) → Separate process
 ```
-
-**Note**: JavaClasspathLauncher has replaced JavaExecLauncher as the default fallback. This means when the compiler daemon is disabled, you get direct in-thread invocation with full type safety instead of process forking.
 
 ## Build Lifecycle
 
@@ -427,10 +330,11 @@ else → JavaClasspathLauncher (NEW default fallback - direct invocation, no for
 1. **Configuration Phase**:
    - Plugin creates source sets and tasks
    - Captures configuration-time data for cache compatibility
-   - Registers compiler daemon service
+   - Registers javatools dependency
 
 2. **Compilation Phase** (`compileXtc`):
    - Resolves full module path (XDK + dependencies + source sets)
+   - Loads javatools.jar into plugin classloader
    - Selects appropriate launcher
    - Compiles XTC sources to `build/xtc/main/`
    - Validates module dependencies
@@ -524,69 +428,13 @@ dependencies {
 **Module Path** (test compilation):
 ```
 [
-  xdk/contents/lib/ecstasy.xtc,1wa 
+  xdk/contents/lib/ecstasy.xtc,
   build/dependencies/lib-json.xtc,
   build/dependencies/lib-test.xtc,
   build/xtc/main/,
   build/xtc/test/
 ]
 ```
-
-### Composite Build Module Path
-
-**Example**: Multi-project build with shared dependencies
-
-```
-root/
-  ├── projectA/
-  │   ├── src/main/xtc/
-  │   └── build.gradle.kts
-  ├── projectB/
-  │   ├── src/main/xtc/
-  │   └── build.gradle.kts
-  └── projectC/
-      ├── src/main/xtc/
-      └── build.gradle.kts
-```
-
-**Project A's build.gradle.kts**:
-```kotlin
-dependencies {
-    xtcModule(project(":projectB"))
-    xtcModule(project(":projectC"))
-}
-
-// No module path configuration needed!
-// Automatically includes:
-// - XDK core libraries
-// - projectB/build/xtc/main/*.xtc
-// - projectC/build/xtc/main/*.xtc
-// - projectA/build/xtc/main/*.xtc (this project)
-```
-
-**Running the application**:
-```bash
-# Compiles all dependencies and runs projectA
-./gradlew :projectA:runXtc
-
-# Module path automatically includes all three projects
-```
-
-### Custom Module Path (Advanced)
-
-**Only use this for special cases** like aggregator projects or non-standard layouts:
-
-```kotlin
-xtcCompile {
-    // Provide custom module directories
-    modulePath.from(
-        files("custom/modules"),
-        layout.buildDirectory.dir("collected-modules")
-    )
-}
-```
-
-**Warning**: This **disables** automatic `xtcModule` dependency resolution. You must manually ensure all required modules are in the specified paths.
 
 ## Configuration Cache Compatibility
 
@@ -614,13 +462,11 @@ The plugin is fully compatible with Gradle's configuration cache through careful
 // Captured at construction (configuration phase)
 this.xdkContentsDir = XtcProjectDelegate.getXdkContentsDir(project);
 this.sourceSetNames = sourceSets.stream().map(SourceSet::getName).toList();
-this.useCompilerDaemonValue = ext.getUseCompilerDaemon().get();
 
 // Used at execution (no Project access)
 @TaskAction
 public void executeTask() {
     File xdkDir = xdkContentsDir.get().getAsFile();
-    boolean useDaemon = useCompilerDaemonValue;
     // ... compilation logic
 }
 ```
@@ -641,10 +487,10 @@ public void executeTask() {
 
 ### Validation
 
-Run with `--configuration-cache` to enable. Note that configuration cache should *always* be eanbled
+Run with `--configuration-cache` to enable. Note that configuration cache should *always* be enabled
 in the gradle.properties for all projects, including the XVM build, to ensure a much faster build
 process, and to force the programmer (or your AI) to create compatible code.
-1 
+
 ```bash
 ./gradlew compileXtc --configuration-cache
 ```
@@ -656,64 +502,42 @@ Gradle will report any violations:
 
 ## Performance Optimization
 
-### Build Time Optimization
+The XTC Gradle Plugin is fully compatible with Gradle's standard performance features:
 
-1. **Use Compiler Daemon** (default):
-   ```kotlin
-   xtcCompile {
-       useCompilerDaemon.set(true)
-   }
-   ```
-   - **Impact**: 30-60% faster multi-module builds
+- **Configuration Cache**: Dramatically speeds up subsequent builds by caching configuration phase
+- **Build Cache**: Reuses outputs from previous builds or shared across machines
+- **Parallel Execution**: Compiles multiple modules concurrently
 
-2. **Enable Configuration Cache**:
-   ```bash
-   ./gradlew build --configuration-cache
-   ```
-   - **Impact**: 2-10x faster subsequent builds (no configuration phase)
+These features are fully supported and should be enabled in your `gradle.properties`:
+```properties
+org.gradle.configuration-cache=true
+org.gradle.caching=true
+org.gradle.parallel=true
+```
 
-3. **Enable Build Cache**:
-   ```bash
-   ./gradlew build --build-cache
-   ```
-   - **Impact**: Reuse outputs from previous builds or other machines
+### XTC-Specific Optimizations
 
-4. **Parallel Execution**:
-   ```bash
-   ./gradlew build --parallel
-   ```
-   - **Impact**: Compile multiple modules concurrently
+**Use In-Process Execution** (default):
+```kotlin
+xtcCompile {
+    fork.set(false)  // In-process execution - instant startup
+}
+```
 
-5. **Use Native Launcher for CI**:
-   ```kotlin
-   if (System.getenv("CI") != null) {
-       xtcCompile {
-           useNativeLauncher.set(true)
-       }
-   }
-   ```
+**Use Native Launcher for CI**:
+```kotlin
+if (System.getenv("CI") != null) {
+    xtcCompile {
+        useNativeLauncher.set(true)  // Fastest cold startup
+    }
+}
+```
 
-### Memory Optimization
-
-1. **Increase Gradle Daemon Memory**:
-   ```properties
-   # gradle.properties
-   org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=512m
-   ```
-
-2. **Limit Parallel Workers**:
-   ```properties
-   # gradle.properties
-   org.gradle.workers.max=4
-   ```
-
-3. **Disable Daemon for Memory-Constrained Environments**:
-   ```kotlin
-   xtcCompile {
-       useCompilerDaemon.set(false)
-       fork.set(true)
-   }
-   ```
+**Adjust Memory for Large Projects**:
+```properties
+# gradle.properties
+org.gradle.jvmargs=-Xmx4g
+```
 
 ## Troubleshooting
 
@@ -742,21 +566,6 @@ Gradle will report any violations:
 3. Capture configuration at task creation time
 4. Report issues to plugin maintainers
 
-### Compiler Daemon Issues
-
-**Symptom**: Build fails with "Could not create service"
-
-**Solution**:
-1. Disable daemon temporarily:
-   ```kotlin
-   xtcCompile {
-       useCompilerDaemon.set(false)
-       fork.set(true)
-   }
-   ```
-2. Check Gradle daemon memory (`gradle.properties`)
-3. Restart Gradle daemon: `./gradlew --stop`
-
 ### Native Launcher Not Found
 
 **Error**: `Native launcher executable not found`
@@ -764,11 +573,11 @@ Gradle will report any violations:
 **Solution**:
 1. Verify XDK distribution includes native binaries
 2. Check platform compatibility
-3. Fallback to JavaExec launcher:
+3. Fallback to JavaClasspath launcher:
    ```kotlin
    xtcCompile {
        useNativeLauncher.set(false)
-       fork.set(true)
+       fork.set(false)  // Or true for isolation
    }
    ```
 
@@ -795,10 +604,10 @@ When modifying the plugin, follow these guidelines:
 ### Code Style
 
 1. **Configuration Cache First**: Always design for configuration cache compatibility
-2. **Capture Early**: Capture all configuration state in task constructors, but it's better to find a way where this doesn't matter.
+2. **Capture Early**: Capture all configuration state in task constructors, but it's better to find a way where this doesn't matter
 3. **No Project in Actions**: Never access `Project` in `@TaskAction` methods
 4. **Newlines**: Always add newline at end of files (enforced by `CLAUDE.md`)
-5. **Final State**: Fields are final if they don't MUST be anything else. Try to create all state as final during construction.
+5. **Final State**: Fields are final if they don't MUST be anything else. Try to create all state as final during construction
 
 ### Testing
 
