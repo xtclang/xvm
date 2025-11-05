@@ -16,7 +16,10 @@ import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 
 import org.xvm.tool.Compiler;
+import org.xvm.tool.Disassembler;
 import org.xvm.tool.Launcher;
+import org.xvm.tool.Launcher.LauncherException;
+import org.xvm.tool.Runner;
 
 import java.io.File;
 import java.io.IOException;
@@ -140,42 +143,56 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
                 // Convert command line to string array
                 final String[] args = absoluteCmd.toList().toArray(new String[0]);
 
-                // Now javatools classes are available - we can call them directly!
-                if ("org.xvm.tool.Compiler".equals(cmd.getMainClassName())) {
-                    try {
-                        // Direct call - NO REFLECTION! The compileOnly dependency gives us the types,
-                        // and withJavaTools() sets up the classloader so exceptions work correctly
-                        Compiler.launch(args);
+                try {
+                    // Direct call - NO REFLECTION! The compileOnly dependency gives us the types,
+                    // and withJavaTools() sets up the classloader so exceptions work correctly
+                    final String mainClass = cmd.getMainClassName();
 
-                        // If we get here, compilation succeeded
-                        builder.exitValue(0);
-                        logger.lifecycle("[plugin] Compilation completed successfully");
-                        return createExecResult(builder);
+                    // Assert we're calling a known javatools Launcher subclass
+                    assert mainClass.equals("org.xvm.tool.Compiler") ||
+                           mainClass.equals("org.xvm.tool.Runner") ||
+                           mainClass.equals("org.xvm.tool.Disassembler") :
+                           "Unknown main class: " + mainClass;
 
-                    } catch (final Launcher.LauncherException e) {
-                        // Expected exit mechanism from compiler - this works because we're in the
-                        // same classloader context thanks to withJavaTools()
-                        final int exitCode = e.error ? 1 : 0;
-                        builder.exitValue(exitCode);
-
-                        if (exitCode != 0) {
-                            // IMPORTANT: Don't store LauncherException directly - it's from javatools classloader
-                            // and Gradle can't serialize it. Extract message only, no cause reference!
-                            final String errorMessage = e.getMessage() != null ? e.getMessage() : "Compilation failed";
-                            final GradleException gradleException = new GradleException(
-                                    "XTC compilation failed: " + errorMessage);
-                            builder.failure(gradleException);
-                            logger.error("[plugin] Compilation failed with exit code: {}", exitCode);
-                        } else {
-                            logger.lifecycle("[plugin] Compilation completed with exit code: {}", exitCode);
-                        }
-
-                        return createExecResult(builder);
+                    // Call the appropriate launcher - all extend Launcher and have the same launch() signature
+                    switch (mainClass) {
+                        case "org.xvm.tool.Compiler":
+                            Compiler.launch(args);
+                            break;
+                        case "org.xvm.tool.Runner":
+                            Runner.launch(args);
+                            break;
+                        case "org.xvm.tool.Disassembler":
+                            Disassembler.launch(args);
+                            break;
+                        default:
+                            throw new GradleException("Unsupported tool: " + mainClass);
                     }
-                } else {
-                    // For other tools, fall back to forked execution
-                    logger.warn("[plugin] Non-compiler tool '{}' - falling back to forked execution", cmd.getMainClassName());
-                    return invokeForked(cmd, javaToolsJar, builder);
+
+                    // If we get here, the tool succeeded
+                    builder.exitValue(0);
+                    logger.lifecycle("[plugin] {} completed successfully", mainClass);
+                    return createExecResult(builder);
+
+                } catch (final LauncherException e) {
+                    // Expected exit mechanism from launcher - this works because we're in the
+                    // same classloader context thanks to withJavaTools()
+                    final int exitCode = e.error ? 1 : 0;
+                    builder.exitValue(exitCode);
+
+                    if (exitCode != 0) {
+                        // IMPORTANT: Don't store LauncherException directly - it's from javatools classloader
+                        // and Gradle can't serialize it. Extract message only, no cause reference!
+                        final String errorMessage = e.getMessage() != null ? e.getMessage() : "Execution failed";
+                        final GradleException gradleException = new GradleException(
+                                "XTC tool execution failed: " + errorMessage);
+                        builder.failure(gradleException);
+                        logger.error("[plugin] {} failed with exit code: {}", cmd.getMainClassName(), exitCode);
+                    } else {
+                        logger.lifecycle("[plugin] {} completed with exit code: {}", cmd.getMainClassName(), exitCode);
+                    }
+
+                    return createExecResult(builder);
                 }
             });
 
