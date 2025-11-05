@@ -292,6 +292,14 @@ val runTestsInProcess by tasks.registering(XtcRunTask::class) {
     }
 }
 
+// Test running TestArray alone with fork=false to debug the crash
+val runTestArrayInProcess by tasks.registering(XtcRunTask::class) {
+    group = "application"
+    fork = false
+    verbose = true
+    moduleName("TestArray")
+}
+
 // This allows running a single test, e.g.: ./gradlew manualTests:runOne -PtestName="TestArray"
 val runOne by tasks.registering(XtcRunTask::class) {
     group = "application"
