@@ -70,15 +70,18 @@ import org.xtclang.plugin.launchers.XtcLauncher;
 // TODO: Add WorkerExecutor and the Gradle Worker API to execute in parallel if there are no dependencies.
 //   Any task with zero defined outputs is not cacheable, which should be enough for all run tasks.
 // TODO: Make the module path/set pattern filterable for the module DSL.
+@SuppressWarnings("this-escape") // Initializer block safely accesses parent's getOutputs()
 public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> implements XtcRuntimeExtension {
     private static final String XEC_ARG_RUN_METHOD = "--method";
 
     private final Map<XtcRunModule, ExecResult> executedModules; // TODO we can cache output here to if we want.
     private final Property<@NotNull DefaultXtcRuntimeExtension> taskLocalModules;
 
-    // Captured at configuration time for configuration cache compatibility
-    private final DirectoryProperty buildDirectory;
-    private final DirectoryProperty projectDirectory;
+    // Run tasks have side effects and should never be UP-TO-DATE or cached
+    // This matches the behavior of Gradle's JavaExec task
+    {
+        getOutputs().upToDateWhen(task -> false);
+    }
 
     /**
      * Create an XTC run task, currently delegating instead of inheriting the plugin project
@@ -94,12 +97,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         super(project, XtcProjectDelegate.resolveXtcRuntimeExtension(project));
         this.executedModules = new LinkedHashMap<>();
         this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class, project));
-
-        // Capture directories at configuration time for configuration cache compatibility
-        this.buildDirectory = objects.directoryProperty();
-        this.buildDirectory.set(project.getLayout().getBuildDirectory());
-        this.projectDirectory = objects.directoryProperty();
-        this.projectDirectory.set(project.getLayout().getProjectDirectory());
     }
 
 

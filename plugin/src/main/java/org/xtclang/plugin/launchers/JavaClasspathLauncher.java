@@ -108,6 +108,20 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
                     getClass().getSimpleName(), fork, launchLine);
         }
 
+        // ALWAYS log the exact execution details
+        logger.lifecycle("[plugin] ===== EXACT EXECUTION DETAILS =====");
+        logger.lifecycle("[plugin] Fork mode: {}", fork);
+        logger.lifecycle("[plugin] Main class: {}", cmd.getMainClassName());
+        logger.lifecycle("[plugin] JVM args: {}", cmd.getJvmArgs());
+        logger.lifecycle("[plugin] Classpath: {}", javaToolsJar.getAbsolutePath());
+        logger.lifecycle("[plugin] Working directory: {}", workingDirectory.getAbsolutePath());
+        logger.lifecycle("[plugin] Program arguments ({} total):", cmd.toList().size());
+        int idx = 0;
+        for (final String arg : cmd.toList()) {
+            logger.lifecycle("[plugin]   [{}] = '{}'", idx++, arg);
+        }
+        logger.lifecycle("[plugin] ===== END EXECUTION DETAILS =====");
+
         final var builder = resultBuilder(cmd);
 
         if (fork) {
