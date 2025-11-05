@@ -44,7 +44,7 @@ import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.XtcRuntimeExtension;
 import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
 import org.xtclang.plugin.launchers.CommandLine;
-import org.xtclang.plugin.launchers.DetachedJavaExecLauncher;
+import org.xtclang.plugin.launchers.JavaClasspathLauncher;
 import org.xtclang.plugin.launchers.XtcLauncher;
 
 /**
@@ -111,24 +111,25 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
     @Override
     protected XtcLauncher<XtcRuntimeExtension, ? extends XtcLauncherTask<XtcRuntimeExtension>> createLauncher() {
+        final boolean detach = getDetach().get();
+        final boolean fork = ext.getFork().get();
+
         // Use parent's createLauncher for normal mode
-        if (!getDetach().get()) {
+        if (!detach) {
             return super.createLauncher();
         }
 
-        // Validate detach mode requirements - fail fast
-        if (!ext.getFork().get()) {
-            throw new GradleException("[plugin] Detach mode requires a forked process. Enable fork: fork.set(true)");
-        }
+        // Detach mode: use JavaClasspathLauncher with detach=true
+        // JavaClasspathLauncher will automatically set fork=true when detach=true
+        org.xtclang.plugin.XtcJavaToolsRuntime.ensureJavaToolsInClasspath(
+            projectVersion, javaToolsConfig, xdkFileTree, getLogger());
 
-        // Extract common directory resolution for detached launchers (DRY)
-        final File buildDir = buildDirectory.get().getAsFile();
-        final File projectDir = projectDirectory.get().getAsFile();
+        getLogger().lifecycle("[plugin] Using JavaClasspathLauncher with detach=true (background process, fork will be enabled)");
 
-        // Detach mode always uses forked Java process
-        getLogger().info("[plugin] Created XTC launcher: detached Java process.");
-        return new DetachedJavaExecLauncher<>(this, getLogger(), getExecOperations(),
-            toolchainExecutable, projectVersion, xdkFileTree, javaToolsConfig, buildDir, projectDir);
+        return new JavaClasspathLauncher<>(
+            this, getLogger(),
+            projectVersion, xdkFileTree, javaToolsConfig, toolchainExecutable,
+            projectDirectory.get().getAsFile(), fork, true);
     }
 
     // XTC modules needed to resolve module path (the contents of the XDK required to build and run this project)

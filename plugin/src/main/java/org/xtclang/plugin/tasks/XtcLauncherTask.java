@@ -341,7 +341,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
         return new JavaClasspathLauncher<>(this, logger,
             projectVersion, xdkFileTree, javaToolsConfig, toolchainExecutable,
-            projectDirectory.get().getAsFile(), fork);
+            projectDirectory.get().getAsFile(), fork, false);
     }
 
     protected List<File> resolveFullModulePath() {

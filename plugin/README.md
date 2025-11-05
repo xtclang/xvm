@@ -11,6 +11,7 @@ simplest possible XTC "HelloWorld" setup, take a look at the examples repository
 - [Architecture](#architecture)
   - [Core Components](#core-components)
   - [Launcher System](#launcher-system)
+  - [Debugging](#debugging)
   - [Programmatic API Access](#programmatic-api-access)
 - [Configuration](#configuration)
   - [Basic Setup](#basic-setup)
@@ -63,57 +64,32 @@ Key task types:
 
 ### Launcher System
 
-The plugin supports three distinct launcher types, each optimized for different scenarios:
+The plugin uses **JavaClasspathLauncher** for all XTC tool execution, providing optimal performance and flexibility.
 
-#### 1. **NativeBinaryLauncher** (Recommended for Production)
-**File**: `org.xtclang.plugin.launchers.NativeBinaryLauncher`
-
-Executes XTC tools using native platform binaries (GraalVM-compiled).
-
-**Advantages:**
-- Fastest startup time (~10-50ms)
-- Minimal memory overhead
-- No JVM warmup required
-- Native OS integration
-
-**Disadvantages:**
-- Platform-specific binaries required
-- Limited debugging capabilities
-- Must be pre-built for each platform
-
-**Use When:**
-- Building production artifacts
-- CI/CD pipelines with time constraints
-- Cross-platform builds (with proper binaries)
-
-**Configuration:**
-```kotlin
-xtcCompile {
-    useNativeLauncher.set(true)  // Enable native launcher
-}
-```
-
-#### 2. **JavaClasspathLauncher** (Default - Recommended for Development)
+#### JavaClasspathLauncher
 **File**: `org.xtclang.plugin.launchers.JavaClasspathLauncher`
 
-Invokes javatools classes directly, either in-process or in a forked JVM based on the `fork` setting.
+Invokes javatools classes directly, either in-process or in a forked JVM based on the `fork` setting. Supports detached background processes for long-running applications.
 
-**Advantages:**
-- Direct type-safe calls (`Compiler.launch(args)`) - no reflection
-- Full IDE debugging support
-- Instant startup when fork=false (~0ms)
-- Complete isolation when fork=true
-- Configuration cache compatible
+**Execution Modes:**
 
-**Disadvantages:**
-- When fork=false: shares Gradle daemon JVM
-- When fork=true: slower startup (~1-2s JVM launch)
+1. **In-Process (fork=false)** - Default for compilation
+   - Instant startup (~0ms)
+   - Shares Gradle daemon JVM
+   - Full IDE debugging support
+   - Configuration cache compatible
 
-**Use When:**
-- Development builds (default)
-- Need direct debugging of compiler code
-- Building custom ErrorListener integrations
-- Balance between performance and isolation
+2. **Forked Process (fork=true)** - For runtime isolation
+   - Complete isolation from Gradle JVM
+   - Independent JVM arguments
+   - ~1-2s JVM startup time
+   - Supports JDWP remote debugging
+
+3. **Detached Process (detach=true)** - For background services
+   - Automatically enables forking
+   - Process continues after Gradle exits
+   - Output redirected to timestamped log file
+   - Returns immediately without waiting
 
 **Implementation Details:**
 The plugin has compile-time access to javatools types through a `compileOnly` dependency:
@@ -137,35 +113,84 @@ XtcJavaToolsRuntime.withJavaTools(javaToolsJar, logger, () -> {
 ```kotlin
 xtcCompile {
     fork.set(false)  // In-process (fast, default)
+}
+
+xtcRun {
+    fork.set(true)    // Separate process (isolation)
     // OR
-    fork.set(true)   // Separate process (isolation)
+    detach.set(true)  // Background process (fork automatically enabled)
 }
 ```
 
-**Performance Characteristics:**
-- **fork=false**: Instant startup, shared memory with Gradle daemon
-- **fork=true**: ~1.5s JVM startup, complete isolation
+**Benefits:**
+- Direct type-safe calls (`Compiler.launch(args)`) - no reflection
+- Full IDE debugging support (fork=false)
+- JDWP remote debugging support (fork=true)
+- Configuration cache compatible
+- Single launcher for all scenarios
 
-#### 3. **JavaExecLauncher** (Legacy - Explicit Isolation)
-**File**: `org.xtclang.plugin.launchers.JavaExecLauncher`
+### Debugging
 
-Forks a new Java process for each execution using Gradle's `javaexec`. This launcher is less commonly used but available for explicit isolation needs.
+The plugin supports debugging XTC code through standard Java debugging tools.
 
-**Advantages:**
-- Complete isolation from Gradle JVM
-- Independent JVM arguments and classpath
-- Supports debugging with JDWP
-- Java toolchain integration
+#### In-Process Debugging (fork=false)
 
-**Disadvantages:**
-- Slower than alternatives (~1-2s JVM startup)
-- Higher memory usage (separate JVM)
-- JIT compiler starts cold each time
+When using `fork=false` (default for compilation), you can debug directly in your IDE by attaching to the Gradle daemon:
 
-**Use When:**
-- Need complete process isolation
-- Running with custom JVM arguments
-- Debugging with JDWP remote debugging
+1. Start Gradle with debug enabled:
+   ```bash
+   ./gradlew compileXtc --no-daemon -Dorg.gradle.debug=true
+   ```
+
+2. Gradle will wait for debugger connection on port 5005
+
+3. Attach your IDE debugger to `localhost:5005`
+
+This allows stepping through both plugin code and javatools (compiler/runtime) code.
+
+#### Remote Debugging (fork=true)
+
+For forked processes, use standard JDWP arguments with `jvmArgs`:
+
+```kotlin
+xtcRun {
+    fork.set(true)
+    jvmArgs(
+        "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
+    )
+
+    module {
+        moduleName = "MyApp"
+    }
+}
+```
+
+**JDWP Parameters:**
+- `transport=dt_socket`: Use TCP/IP sockets
+- `server=y`: Listen for debugger connection
+- `suspend=y`: Wait for debugger before starting (use `suspend=n` to start immediately)
+- `address=5005`: Port number for debugger connection
+
+**Steps:**
+1. Run the task: `./gradlew runXtc`
+2. The process will suspend and wait for debugger
+3. Attach your IDE debugger to `localhost:5005`
+4. Debug your XTC code as it executes
+
+**Example with Different Port:**
+```kotlin
+xtcCompile {
+    fork.set(true)
+    jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=8000")
+}
+```
+
+#### Debugging Tips
+
+- **In-Process (fork=false)**: Best for debugging plugin code and compiler internals
+- **Forked (fork=true)**: Best for debugging XTC application code in isolation
+- **Detached Mode**: Not recommended for debugging (process runs in background)
+- **Multiple Modules**: When running multiple modules sequentially, debugger will attach to each execution
 
 ### Programmatic API Access
 
@@ -247,8 +272,7 @@ xtcCompile {
     showVersion.set(true)
 
     // Launcher configuration
-    useNativeLauncher.set(false)  // Use JavaClasspathLauncher (default)
-    fork.set(false)                // In-process execution (default)
+    fork.set(false)  // In-process execution (default)
 
     // JVM arguments (only used when fork=true)
     jvmArgs("-Xmx2g", "-Xms512m")
@@ -305,22 +329,23 @@ xtcRun {
 
 ### Launcher Configuration
 
-**Decision Matrix**:
+**Common Scenarios**:
 
-| Scenario | Launcher | Configuration |
-|----------|----------|---------------|
-| Fast development builds | JavaClasspath | `fork=false` (default) |
-| CI/CD production builds | Native | `useNativeLauncher=true` |
-| Debugging compiler | JavaClasspath | `fork=false` |
-| Memory isolation | JavaClasspath | `fork=true` |
-| Fastest startup | Native | `useNativeLauncher=true` |
+| Scenario | Configuration | Description |
+|----------|---------------|-------------|
+| Fast development builds | `fork=false` (default) | In-process, instant startup |
+| Debugging compiler/plugin | `fork=false` | Attach to Gradle daemon |
+| Debugging XTC code | `fork=true` + jvmArgs | JDWP remote debugging |
+| Memory isolation | `fork=true` | Separate JVM process |
+| Background services | `detach=true` | Runs after Gradle exits |
+| CI/CD builds | `fork=false` | Fastest for compilation |
 
-**Selection Logic** (in `XtcLauncherTask.createLauncher()`):
+**Execution Flow**:
 ```
-if (useNativeLauncher) → NativeBinaryLauncher
-else → JavaClasspathLauncher (with fork setting)
-    if (fork=false) → In-process execution (DEFAULT)
-    if (fork=true) → Separate process
+JavaClasspathLauncher
+  ├─ if (fork=false) → In-process execution (DEFAULT)
+  ├─ if (fork=true, detach=false) → Forked process, wait for completion
+  └─ if (detach=true) → Forked process, background execution
 ```
 
 ## Build Lifecycle
@@ -524,12 +549,12 @@ xtcCompile {
 }
 ```
 
-**Use Native Launcher for CI**:
+**Optimize for CI Builds**:
 ```kotlin
-if (System.getenv("CI") != null) {
-    xtcCompile {
-        useNativeLauncher.set(true)  // Fastest cold startup
-    }
+// CI/CD builds work best with default settings (fork=false)
+xtcCompile {
+    fork.set(false)  // In-process, fastest compilation
+    verbose.set(false)  // Reduce log noise
 }
 ```
 
@@ -566,20 +591,24 @@ org.gradle.jvmargs=-Xmx4g
 3. Capture configuration at task creation time
 4. Report issues to plugin maintainers
 
-### Native Launcher Not Found
+### Fork Mode Issues
 
-**Error**: `Native launcher executable not found`
+**Error**: Forked process fails or hangs
 
 **Solution**:
-1. Verify XDK distribution includes native binaries
-2. Check platform compatibility
-3. Fallback to JavaClasspath launcher:
+1. Check JVM arguments are valid:
    ```kotlin
-   xtcCompile {
-       useNativeLauncher.set(false)
-       fork.set(false)  // Or true for isolation
+   xtcRun {
+       fork.set(true)
+       jvmArgs("-Xmx1g")  // Verify memory settings
    }
    ```
+2. Enable verbose logging to see process output
+3. Try in-process mode first to isolate the issue:
+   ```kotlin
+   fork.set(false)
+   ```
+4. For debugging, add JDWP args and attach debugger
 
 ### Module Path Conflicts
 
