@@ -151,7 +151,9 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
     // TODO: We may need to keep track of all input, even though we only resolve one out of three possible run configurations.
     //   XTC Modules declared in run configurations in project, or overridden in task, that we want to run.
-    @Input
+    // Note: @Input removed because this task is never up-to-date (see getOutputs().upToDateWhen above)
+    // and the XtcRunModule objects are not serializable for configuration cache.
+    @Internal
     @Override
     public ListProperty<@NotNull XtcRunModule> getModules() {
         if (taskLocalModules.get().isEmpty()) {
