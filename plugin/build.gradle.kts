@@ -60,6 +60,7 @@ dependencies {
     compileOnly(libs.javatools)
 
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.javatools)  // For reentrancy tests
 }
 
 // Configure project-specific publishing metadata
