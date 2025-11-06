@@ -73,46 +73,38 @@ private class XdkBuildAggregator(val project: Project) : Runnable {
         """.trimIndent()
         )
 
-        // Gradle options that take arguments (we need to skip both the option and its argument)
-        val optionsWithArgs = setOf(
-            "--build-file",
-            "--console",
-            "--exclude-task",
-            "--gradle-user-home",
-            "--init-script",
-            "--max-workers",
-            "--parallel",
-            "--profile",
-            "--project-cache-dir",
-            "--project-dir",
-            "--rerun-tasks",
-            "--settings-file",
-            "--tests"
-        )
+        // Use Gradle's TaskExecutionRequest API to extract task names
+        // Since Gradle doesn't expose a clean API to distinguish task names from option values,
+        // we use a heuristic: skip arguments that start with '-' AND skip the next argument
+        // if the previous one was a long option (--xxx) without '='
+        val actualTasks = startParameter.taskRequests.flatMap { request ->
+            val tasks = mutableListOf<String>()
+            var skipNext = false
 
-        // Filter out command-line options and their arguments to get actual tasks
-        val actualTasks = mutableListOf<String>()
-        val taskNames = startParameter.taskNames
-        var i = 0
-        while (i < taskNames.size) {
-            val current = taskNames[i]
-            when {
-                // Skip all flags (both - and --)
-                current.startsWith("-") -> {
-                    // If this flag takes an argument, skip the next item too
-                    if (optionsWithArgs.contains(current)) {
-                        // Only skip the next item if the argument is not provided inline with '='
-                        if (!current.contains("=")) {
-                            i++ // Skip the argument
-                        }
+            for (arg in request.args) {
+                when {
+                    skipNext -> {
+                        // This is the value for a previous --option, skip it
+                        skipNext = false
+                    }
+                    arg.startsWith("--") -> {
+                        // Long option: if it doesn't contain '=', the next arg might be its value
+                        skipNext = !arg.contains("=")
+                    }
+                    arg.startsWith("-") -> {
+                        // Short option (like -x): these typically don't take separate value args
+                        // or use attached format (-Pkey=value), so don't skip next
+                    }
+                    else -> {
+                        // Not an option, this is a task name
+                        tasks.add(arg)
                     }
                 }
-                else -> actualTasks.add(current)
             }
-            i++
+            tasks
         }
 
-        logger.info("[aggregator] Filtered actual tasks (excluding command-line options): $actualTasks")
+        logger.info("[aggregator] Resolved actual tasks from TaskExecutionRequest API: $actualTasks")
 
         if (actualTasks.size > 1) {
             val conflictingTasks = actualTasks.filter { it == "clean" || lifeCycleTasks.contains(it) }
