@@ -1902,6 +1902,9 @@ public class TerminalTypeConstant
 
     @Override
     public boolean isPrimitive() {
+        if (isAutoNarrowing()) {
+            return removeAutoNarrowing().isPrimitive();
+        }
         if (isSingleDefiningConstant() && getDefiningConstant() instanceof ClassConstant id
                 && id.getModuleConstant().isEcstasyModule()) {
             return switch (id.getName()) {

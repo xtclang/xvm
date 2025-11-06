@@ -4,6 +4,8 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 import java.lang.classfile.TypeKind;
 
+import java.lang.constant.ClassDesc;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +25,7 @@ public class Scope {
         this.code       = code;
         this.startLocal = -1;
         this.topLocal   = -1;
-        this.topVar     = 0;
+        this.topReg     = 0;
 
         startLabel = code.newLabel();
         endLabel   = code.newLabel();
@@ -38,7 +40,7 @@ public class Scope {
         this.parent     = parent;
         this.startLocal = parent.startLocal;
         this.topLocal   = parent.topLocal;
-        this.topVar     = parent.topVar;
+        this.topReg     = parent.topReg;
         this.depth      = parent.depth + 1;
     }
 
@@ -71,9 +73,9 @@ public class Scope {
     public int topLocal;
 
     /**
-     * The top index of the XVM var for this scope (exclusive).
+     * The top index of the XVM register for this scope (exclusive).
      */
-    public int topVar;
+    public int topReg;
 
     /**
      * The depth of this scope.
@@ -98,15 +100,25 @@ public class Scope {
     }
 
     /**
-     * Allocate Java slot(s) for an XVM variable of the specified kind. Note, that there could be
+     * Allocate Java slot(s) for an XVM register of the specified ClassDesc. Note, that there could
+     * be multiple Java slots for the same XVM variable.
+     *
+     * @return the Java slot for the newly allocated local variable
+     */
+    public int allocateLocal(int regId, ClassDesc cd) {
+        return allocateLocal(regId, Builder.toTypeKind(cd));
+    }
+
+    /**
+     * Allocate Java slot(s) for an XVM register of the specified kind. Note, that there could be
      * multiple Java slots for the same XVM variable.
      *
      * @return the Java slot for the newly allocated local variable
      */
-    public int allocateLocal(int varIndex, TypeKind kind) {
+    public int allocateLocal(int regId, TypeKind kind) {
         int slot = allocateJavaSlot(kind);
-        assert parent == null || varIndex >= parent.topVar;
-        topVar = Math.max(topVar, varIndex + 1);
+        assert parent == null || regId >= parent.topReg;
+        topReg = Math.max(topReg, regId + 1);
         return slot;
     }
 
@@ -122,14 +134,14 @@ public class Scope {
     }
 
     /**
-     * Retrieve the slot for an exception to be rethrown by the {@link FinallyEnd}.
+     * Retrieve the Java slot for an exception to be rethrown by the {@link FinallyEnd}.
      */
     public int getRethrow() {
         return getSynthetic("$rethrow", false);
     }
 
     /**
-     * Allocate slots for conditional jumps by the {@link FinallyEnd}.
+     * Allocate Java slots for conditional jumps by the {@link FinallyEnd}.
      */
     public void allocateJumps(CodeBuilder code, List<Integer> jumps) {
         for (Integer jump : jumps) {
@@ -157,6 +169,16 @@ public class Scope {
         return slot;
     }
 
+    /**
+     * @return a Java slot(s) of the specified class within this scope
+     */
+    public int allocateJavaSlot(ClassDesc cd) {
+        return allocateJavaSlot(Builder.toTypeKind(cd));
+    }
+
+    /**
+     * @return a Java slot(s) of the specified kind within this scope
+     */
     public int allocateJavaSlot(TypeKind kind) {
         int slot;
         if (topLocal >= bctx.maxLocal || startLocal == -1) {

@@ -49,7 +49,6 @@ import org.xvm.asm.op.GuardAll;
 import org.xvm.asm.op.Jump;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.BuildContext.DoubleSlot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.Ctx;
@@ -57,6 +56,7 @@ import org.xvm.javajit.JitCtorDesc;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitTypeDesc;
+import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.ShallowSizeOf;
@@ -323,9 +323,9 @@ public class CommonBuilder
                 TypeSystem ts = typeSystem;
                 for (PropertyInfo prop : props) {
                     if (prop.getInitializer() == null) {
-                        Slot   slot    = loadConstant(code, prop.getInitialValue());
-                        String jitName = prop.getIdentity().ensureJitPropertyName(ts);
-                        if (slot instanceof DoubleSlot doubleSlot) {
+                        RegisterInfo reg     = loadConstant(code, prop.getInitialValue());
+                        String       jitName = prop.getIdentity().ensureJitPropertyName(ts);
+                        if (reg instanceof DoubleSlot doubleSlot) {
                             assert doubleSlot.flavor() == MultiSlotPrimitive;
                             // loadConstant() has already loaded the value and the boolean
                             Label ifTrue = code.newLabel();
@@ -335,11 +335,11 @@ public class CommonBuilder
                                 .goto_(endIf)
                                 .labelBinding(ifTrue);
                                 pop(code, doubleSlot.cd());
-                                code.putstatic(CD_this, jitName, slot.cd());
+                                code.putstatic(CD_this, jitName, reg.cd());
                             code.labelBinding(endIf);
                         } else {
-                            assert slot.isSingle();
-                            code.putstatic(CD_this, jitName, slot.cd());
+                            assert reg.isSingle();
+                            code.putstatic(CD_this, jitName, reg.cd());
                         }
                     } else {
                         throw new UnsupportedOperationException("Static field initializer");
@@ -412,9 +412,9 @@ public class CommonBuilder
                     if (prop.getInitializer() == null) {
                         code.aload(0); // Stack: { this }
 
-                        Slot   slot    = loadConstant(code, prop.getInitialValue());
-                        String jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
-                        if (slot instanceof DoubleSlot doubleSlot) {
+                        RegisterInfo reg     = loadConstant(code, prop.getInitialValue());
+                        String       jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
+                        if (reg instanceof DoubleSlot doubleSlot) {
                             assert doubleSlot.flavor() == MultiSlotPrimitive;
                             // loadConstant() has already loaded the value and the boolean
                             Label ifTrue = code.newLabel();
@@ -428,8 +428,8 @@ public class CommonBuilder
                                 code.putfield(CD_this, jitName, doubleSlot.cd());
                             code.labelBinding(endIf);
                         } else {
-                            assert slot.isSingle();
-                            code.putfield(CD_this, jitName, slot.cd());
+                            assert reg.isSingle();
+                            code.putfield(CD_this, jitName, reg.cd());
                         }
                     } else {
                         throw new UnsupportedOperationException("Field initializer");
@@ -731,7 +731,9 @@ public class CommonBuilder
             assembleImplMethod(className, classBuilder, method);
         }
 
-        assembleXvmType(className, classBuilder);
+        if (typeInfo.getClassStructure().getFormat() != Component.Format.INTERFACE) {
+            assembleXvmType(className, classBuilder);
+        }
     }
 
     /**
@@ -1313,6 +1315,14 @@ public class CommonBuilder
 
             for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
                 try {
+                    while (true) {
+                        int skipTo = bctx.prepareOp(code, iPC);
+                        if (skipTo < 0) {
+                            break;
+                        }
+                        assert skipTo > iPC;
+                        iPC = skipTo;
+                    }
                     ops[iPC].build(bctx, code);
                 } catch (Throwable e) {
                     MethodStructure struct = bctx.methodStruct;

@@ -17,7 +17,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -86,12 +86,12 @@ public class Move
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        Slot         slotFrom = bctx.loadArgument(code, m_nFromValue);
-        Slot         slotTo   = bctx.ensureSlot(m_nToValue, slotFrom.type(), slotFrom.cd(), "");
-        TypeConstant typeFrom = slotFrom.type();
-        TypeConstant typeTo   = slotTo.type();
-        ClassDesc    cdFrom   = slotFrom.cd();
-        ClassDesc    cdTo     = slotTo.cd();
+        RegisterInfo regFrom  = bctx.loadArgument(code, m_nFromValue);
+        RegisterInfo regTo    = bctx.ensureRegInfo(m_nToValue, regFrom.type(), regFrom.cd(), "");
+        TypeConstant typeFrom = regFrom.type();
+        TypeConstant typeTo   = regTo.type();
+        ClassDesc    cdFrom   = regFrom.cd();
+        ClassDesc    cdTo     = regTo.cd();
 
         if (typeFrom.isA(typeTo)) {
             if (cdFrom.isPrimitive() ^ cdTo.isPrimitive()) {
@@ -110,11 +110,11 @@ public class Move
                 bctx.builder.box(code, typeFrom, cdFrom);
             }
             // TODO: generateCheckCast()
-            code.checkcast(slotTo.type().ensureClassDesc(bctx.typeSystem));
+            code.checkcast(regTo.type().ensureClassDesc(bctx.typeSystem));
             if (cdTo.isPrimitive()) {
                 bctx.builder.unbox(code, typeTo, cdTo);
             }
         }
-        bctx.storeValue(code, slotTo);
+        bctx.storeValue(code, regTo);
     }
 }

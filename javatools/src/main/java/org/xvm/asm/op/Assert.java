@@ -22,9 +22,9 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.Ctx;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
@@ -193,9 +193,9 @@ public class Assert
             TypeConstant   typeEx  = idCtor.getNamespace().getType();
             int[]          anArgs  = new int[idCtor.getSignature().getParamCount()];
 
-            Slot slotMsg = bctx.pushTempSlot(bctx.pool().typeString(), CD_String);
+            RegisterInfo regMsg = bctx.pushTempRegister(bctx.pool().typeString(), CD_String);
             buildMessage(bctx, code);
-            code.astore(slotMsg.slot());
+            code.astore(regMsg.slot());
 
             anArgs[0] = A_STACK;
             Arrays.fill(anArgs, 1, anArgs.length, Op.A_DEFAULT);

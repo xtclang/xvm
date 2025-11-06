@@ -9,7 +9,7 @@ module test1.examples.org {
     void run() {
         console.print(prop1);
         console.print(prop2);
-        console.print(prop3);
+        assert prop3 - 1 == prop1;
 
         TestBase t0 = new TestBase(5);
         console.print(t0);
@@ -24,7 +24,7 @@ module test1.examples.org {
         ts.testType();
 
         TestFormal<Int> ti = new TestFormal(7);
-        console.print(ti.value + 1);
+        assert ti.value == 7;
         ti.setValue(9);
         assert ti.value == 9;
         assert ti.getValue() == 9;
@@ -32,10 +32,6 @@ module test1.examples.org {
 
         TestFormal<TestBase> to = new TestFormal(t1);
         console.print(to.value);
-
-//        StringBuffer buf = new StringBuffer();
-//        buf.add('c');
-//        console.print(buf.toString());
     }
 
     class TestBase(Int x) {
@@ -65,11 +61,16 @@ module test1.examples.org {
                 console.print(s.size);
             }
 
-//            Element value = this.value;
-//            if (value.is(String)) {
-//                console.print(value.size);
-//                console.print(value);
-//            }
+            Element value = this.value;
+            if (value.is(Int)) {
+                console.print(++value);
+            } else {
+                console.print("Not an Int");
+            }
+
+            if (value.is(String), value.size > 0) {
+                assert value.size == 5;
+            }
         }
     }
 }

@@ -11,7 +11,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -56,12 +56,12 @@ public class GP_Mod
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, Slot slotTarget) {
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         // TODO: convert remainder to a modulo
-        switch (slotTarget.cd().descriptorString()) {
+        switch (regTarget.cd().descriptorString()) {
             case "I" -> {
                 code.irem();
-                bctx.adjustIntValue(code, slotTarget.type());
+                bctx.adjustIntValue(code, regTarget.type());
             }
             case "J" -> code.lrem();
             case "F" -> code.frem();

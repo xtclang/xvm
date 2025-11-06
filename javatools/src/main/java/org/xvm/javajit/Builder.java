@@ -25,7 +25,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext.SingleSlot;
-import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
@@ -93,7 +92,7 @@ public abstract class Builder {
      *
      * We **always** load a primitive value if possible.
      */
-    public Slot loadConstant(CodeBuilder code, Constant constant) {
+    public RegisterInfo loadConstant(CodeBuilder code, Constant constant) {
         // see NativeContainer#getConstType()
 
         switch (constant) {

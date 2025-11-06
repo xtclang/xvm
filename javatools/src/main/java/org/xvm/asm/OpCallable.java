@@ -22,9 +22,9 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
+import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.runtime.ClassTemplate;
@@ -589,9 +589,9 @@ public abstract class OpCallable extends Op {
             jmdCall  = infoMethod.getJitDesc(ts, typeTarget);
             fSpecial = false;
         } else {
-            Slot slotFn = bctx.getSlot(m_nFunctionId);
+            RegisterInfo regFn = bctx.getRegisterInfo(m_nFunctionId);
             // TODO: call "invoke(Ctx ctx, Tuple args)"
-            throw new UnsupportedOperationException("function call " + slotFn.type());
+            throw new UnsupportedOperationException("function call " + regFn.type());
         }
 
         String         sJitName = idMethod.ensureJitMethodName(ts);
@@ -628,7 +628,7 @@ public abstract class OpCallable extends Op {
         TypeConstant   typeTarget = idCtor.getNamespace().getType();
         ClassDesc      cdTarget   = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
 
-        bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, typeTarget, cdTarget, ""));
+        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget, cdTarget, ""));
     }
 
     /**
@@ -644,15 +644,15 @@ public abstract class OpCallable extends Op {
             }
         } else {
             assert nTypeArg >= 0;
-            Slot slotXType = bctx.loadArgument(code, nTypeArg);
-            assert slotXType.type().isTypeOfType();
+            RegisterInfo regXType = bctx.loadArgument(code, nTypeArg);
+            assert regXType.type().isTypeOfType();
             throw new UnsupportedOperationException("ToDo dynamic type");
         }
 
         MethodConstant idCtor   = (MethodConstant) bctx.getConstant(m_nFunctionId);
         ClassDesc      cdTarget = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
 
-        bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, typeTarget, cdTarget, ""));
+        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget, cdTarget, ""));
     }
 
     /**

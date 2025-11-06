@@ -14,11 +14,11 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitTypeDesc;
+import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.runtime.CallChain;
@@ -208,8 +208,8 @@ public abstract class OpIndex
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         TypeSystem   ts     = bctx.typeSystem;
-        Slot         slot   = bctx.loadArgument(code, m_nTarget);
-        TypeConstant type   = slot.type();
+        RegisterInfo reg    = bctx.loadArgument(code, m_nTarget);
+        TypeConstant type   = reg.type();
         TypeConstant typeEl = type.getParamType(0);
 
         if (type.isArray()) {

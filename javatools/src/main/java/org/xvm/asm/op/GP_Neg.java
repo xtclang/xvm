@@ -11,7 +11,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -60,12 +60,12 @@ public class GP_Neg
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected void buildOptimizedUnary(BuildContext bctx, CodeBuilder code, Slot slotTarget) {
-        switch (slotTarget.cd().descriptorString()) {
+    protected void buildOptimizedUnary(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
+        switch (regTarget.cd().descriptorString()) {
             case "I" -> {
                 code.ineg();
 
-                switch (slotTarget.type().getSingleUnderlyingClass(false).getName()) {
+                switch (regTarget.type().getSingleUnderlyingClass(false).getName()) {
                     case "Int8"  -> code.i2b();
                     case "Int16" -> code.i2s();
                     case "Int32" -> {}

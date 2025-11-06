@@ -12,7 +12,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpTest;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -62,13 +62,13 @@ public class IsZero
 
     @Override
     protected void buildUnary(BuildContext bctx, CodeBuilder code) {
-        Slot slotArg = bctx.loadArgument(code, m_nValue1);
+        RegisterInfo regArg = bctx.loadArgument(code, m_nValue1);
 
-        assert slotArg.cd().isPrimitive();
+        assert regArg.cd().isPrimitive();
 
         Label labelTrue = code.newLabel();
         Label labelEnd = code.newLabel();
-        switch (slotArg.cd().descriptorString()) {
+        switch (regArg.cd().descriptorString()) {
             case "I", "S", "B", "C", "Z" -> {}
             case "J" -> code.lconst_0().lcmp();
             case "F" -> code.fconst_0().fcmpl();
@@ -81,6 +81,6 @@ public class IsZero
             .labelBinding(labelTrue)
             .iconst_1() // true
             .labelBinding(labelEnd);
-        bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, bctx.pool().typeBoolean()));
+        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, bctx.pool().typeBoolean()));
     }
 }

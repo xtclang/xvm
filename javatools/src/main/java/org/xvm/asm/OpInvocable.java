@@ -20,9 +20,9 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.CallChain.VirtualConstructorChain;
@@ -304,13 +304,13 @@ public abstract class OpInvocable extends Op {
     // ----- JIT support ---------------------------------------------------------------------------
 
     protected void buildInvoke(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
-        Slot targetSlot = bctx.loadArgument(code, m_nTarget);
-        if (!targetSlot.isSingle()) {
+        RegisterInfo regTarget = bctx.loadArgument(code, m_nTarget);
+        if (!regTarget.isSingle()) {
             throw new UnsupportedOperationException("Multislot invoke");
         }
 
-        ClassDesc      cdTarget   = targetSlot.cd();
-        TypeConstant   typeTarget = targetSlot.type();
+        ClassDesc      cdTarget   = regTarget.cd();
+        TypeConstant   typeTarget = regTarget.type();
         MethodConstant idMethod   = (MethodConstant) bctx.getConstant(m_nMethodId);
         MethodInfo     infoMethod = typeTarget.ensureTypeInfo().getMethodById(idMethod);
         JitMethodDesc  jmd        = infoMethod.getJitDesc(bctx.typeSystem, typeTarget);
@@ -319,8 +319,8 @@ public abstract class OpInvocable extends Op {
         MethodTypeDesc md;
 
         if (cdTarget.isPrimitive()) {
-            bctx.builder.box(code, targetSlot.type(), cdTarget);
-            cdTarget = targetSlot.type().ensureClassDesc(bctx.typeSystem);
+            bctx.builder.box(code, regTarget.type(), cdTarget);
+            cdTarget = regTarget.type().ensureClassDesc(bctx.typeSystem);
         }
 
         if (fOptimized) {

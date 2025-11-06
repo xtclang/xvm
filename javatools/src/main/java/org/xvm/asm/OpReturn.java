@@ -8,10 +8,10 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.constant.ClassDesc;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
+import org.xvm.javajit.RegisterInfo;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 
@@ -87,11 +87,11 @@ public abstract class OpReturn
 
             // $retN = ...
             for (int i = 0; i < cRets; i++) {
-                int          iOpt  = fOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
-                JitParamDesc pdRet = fOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
-                Slot         slot  = bctx.loadArgument(code, anRet[i], pdRet);
-                ClassDesc    cd    = slot.cd();
-                int          slotR = bctx.scope.getSynthetic(sRetVal + i, true);
+                int          iOpt   = fOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
+                JitParamDesc pdRet  = fOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
+                RegisterInfo regRet = bctx.loadArgument(code, anRet[i], pdRet);
+                ClassDesc    cd     = regRet.cd();
+                int          slotR  = bctx.scope.getSynthetic(sRetVal + i, true);
 
                 switch (pdRet.flavor) {
                 case MultiSlotPrimitive:
@@ -103,7 +103,7 @@ public abstract class OpReturn
                         code.iconst_0();
                         Builder.store(code, CD_boolean, slotValEx);
                     } else {
-                        assert slot.type().isOnlyNullable();
+                        assert regRet.type().isOnlyNullable();
 
                         // iSynth - the default primitive value and `true` at iSynth+1
                         Builder.defaultLoad(code, pdRet.cd);
@@ -123,10 +123,10 @@ public abstract class OpReturn
             code.goto_(bctx.ensureLabel(code, m_nFinallyAddr));
         } else {
             for (int i = cRets - 1; i >= 0; i--) {
-                int          iOpt  = fOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
-                JitParamDesc pdRet = fOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
-                Slot         slot  = bctx.loadArgument(code, anRet[i], pdRet);
-                ClassDesc    cd    = slot.cd();
+                int          iOpt   = fOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
+                JitParamDesc pdRet  = fOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
+                RegisterInfo regRet = bctx.loadArgument(code, anRet[i], pdRet);
+                ClassDesc    cd     = regRet.cd();
                 if (i == 0) {
                     switch (pdRet.flavor) {
                     case MultiSlotPrimitive:
@@ -137,7 +137,7 @@ public abstract class OpReturn
                             Builder.storeToContext(code, CD_boolean, 0);
                             Builder.addReturn(code, cd);
                         } else {
-                            assert slot.type().isOnlyNullable();
+                            assert regRet.type().isOnlyNullable();
 
                             // throw away Null; `true` at Ctx.i0 and return the default value
                             code.pop().iconst_1();
@@ -162,7 +162,7 @@ public abstract class OpReturn
                             code.iconst_0();
                             Builder.storeToContext(code, CD_boolean, pdExt.altIndex);
                         } else {
-                            assert slot.type().isOnlyNullable();
+                            assert regRet.type().isOnlyNullable();
 
                             // the default primitive value and `true` at Ctx
                             Builder.defaultLoad(code, pdRet.cd);

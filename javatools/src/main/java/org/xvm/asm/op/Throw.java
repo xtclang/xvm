@@ -12,7 +12,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -97,7 +97,7 @@ public class Throw
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        Slot target = bctx.loadArgument(code, m_nArgValue);
+        RegisterInfo target = bctx.loadArgument(code, m_nArgValue);
         assert target.type().isA(bctx.pool().typeException());
         code.getfield(CD_Exception, "$exception", CD_xException)
             .athrow();

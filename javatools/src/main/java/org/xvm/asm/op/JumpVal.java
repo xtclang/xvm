@@ -31,8 +31,8 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.ConstHeap;
 import org.xvm.runtime.Frame;
@@ -387,7 +387,7 @@ public class JumpVal
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        Slot slotArg = bctx.loadArgument(code, m_nArgCond);
+        RegisterInfo regArg = bctx.loadArgument(code, m_nArgCond);
 
         int[] aofCase = m_aofCase;
         int   cRows   = aofCase.length;
@@ -400,18 +400,18 @@ public class JumpVal
         }
 
         switch (constant) {
-        case ByteConstant _       -> buildByteSwitch(bctx, code, slotArg);
-        case CharConstant _       -> buildCharSwitch(bctx, code, slotArg);
-        case IntConstant _        -> buildLongSwitch(bctx, code, slotArg);
-        case StringConstant _     -> buildStringSwitch(bctx, code, slotArg);
-        case EnumValueConstant _  -> buildEnumSwitch(bctx, code, slotArg);
-        default                   -> buildIfLadder(bctx, code, slotArg);
+        case ByteConstant _       -> buildByteSwitch(bctx, code, regArg);
+        case CharConstant _       -> buildCharSwitch(bctx, code, regArg);
+        case IntConstant _        -> buildLongSwitch(bctx, code, regArg);
+        case StringConstant _     -> buildStringSwitch(bctx, code, regArg);
+        case EnumValueConstant _  -> buildEnumSwitch(bctx, code, regArg);
+        default                   -> buildIfLadder(bctx, code, regArg);
         }
     }
 
-    private void buildByteSwitch(BuildContext bctx, CodeBuilder code, Slot slotArg) {
-        assert slotArg.cd().isPrimitive() &&
-               Builder.toTypeKind(slotArg.cd()).slotSize() == 1;
+    private void buildByteSwitch(BuildContext bctx, CodeBuilder code, RegisterInfo regArg) {
+        assert regArg.cd().isPrimitive() &&
+               Builder.toTypeKind(regArg.cd()).slotSize() == 1;
 
         int[] aofCase = m_aofCase;
         int   cRows   = aofCase.length;
@@ -447,12 +447,12 @@ public class JumpVal
         code.tableswitch(iMin, iMax, labelDflt, listCases);
     }
 
-    private void buildCharSwitch(BuildContext bctx, CodeBuilder code, Slot slotArg) {
+    private void buildCharSwitch(BuildContext bctx, CodeBuilder code, RegisterInfo regArg) {
         throw new UnsupportedOperationException();
     }
 
-    private void buildLongSwitch(BuildContext bctx, CodeBuilder code, Slot slotArg) {
-        assert slotArg.cd().descriptorString().equals("J");
+    private void buildLongSwitch(BuildContext bctx, CodeBuilder code, RegisterInfo regArg) {
+        assert regArg.cd().descriptorString().equals("J");
 
         int[] aofCase = m_aofCase;
         int   cRows   = aofCase.length;
@@ -529,7 +529,7 @@ public class JumpVal
         break;
 
         case IfLadder:
-            int nSlotArg = slotArg.slot();
+            int nSlotArg = regArg.slot();
             for (int iRow = 0; iRow < cRows; iRow++) {
                 if (iRow > 0) {
                     // copy the argument for the next cycle
@@ -560,13 +560,13 @@ public class JumpVal
         code.goto_(labelDflt);
     }
 
-    private void buildStringSwitch(BuildContext bctx, CodeBuilder code, Slot slotArg) {
+    private void buildStringSwitch(BuildContext bctx, CodeBuilder code, RegisterInfo regArg) {
         // TODO: optimize
-        buildIfLadder(bctx, code, slotArg);
+        buildIfLadder(bctx, code, regArg);
     }
 
-    private void buildEnumSwitch(BuildContext bctx, CodeBuilder code, Slot slotArg) {
-        assert slotArg.type().isEnum();
+    private void buildEnumSwitch(BuildContext bctx, CodeBuilder code, RegisterInfo regArg) {
+        assert regArg.type().isEnum();
 
         int[] aofCase = m_aofCase;
         int   cRows   = aofCase.length;
@@ -600,14 +600,14 @@ public class JumpVal
 
         // enumValue -> enumValue.ordinal;
         bctx.loadCtx(code);
-        code.invokevirtual(slotArg.cd(), "ordinal$get$p", MethodTypeDesc.of(CD_long, CD_Ctx))
+        code.invokevirtual(regArg.cd(), "ordinal$get$p", MethodTypeDesc.of(CD_long, CD_Ctx))
             .l2i();
 
         Label labelDflt = bctx.ensureLabel(code, nThis + m_ofDefault);
         code.tableswitch(iMin, iMax, labelDflt, listCases);
     }
 
-    private void buildIfLadder(BuildContext bctx, CodeBuilder code, Slot slotArg) {
+    private void buildIfLadder(BuildContext bctx, CodeBuilder code, RegisterInfo regArg) {
         throw new UnsupportedOperationException();
     }
 
