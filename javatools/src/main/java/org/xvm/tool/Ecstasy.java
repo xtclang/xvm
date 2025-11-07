@@ -18,7 +18,7 @@ public class Ecstasy
      */
     public static void main(String[] asArg) {
         try {
-            new Ecstasy(asArg).run();
+            System.exit(new Ecstasy(asArg).run());
         } catch (LauncherException e) {
             System.exit(e.error ? 1 : 0);
         }
@@ -44,7 +44,7 @@ public class Ecstasy
     }
 
     @Override
-    protected void process() {
+    protected int process() {
         // repository setup
         Options          options = options();
         ModuleRepository repo    = configureLibraryRepo(options.getModulePath());
@@ -57,6 +57,7 @@ public class Ecstasy
             displayHelp();
         }
         // TODO JK
+        return 0;
     }
 
     // ----- text output and error handling --------------------------------------------------------

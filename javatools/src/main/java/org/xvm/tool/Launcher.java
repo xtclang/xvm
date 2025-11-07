@@ -55,7 +55,7 @@ import static org.xvm.util.Handy.toPathString;
  * </li></ul>
  */
 public abstract class Launcher
-        implements ErrorListener, Runnable {
+        implements ErrorListener {
     /**
      * Entry point from the OS.
      *
@@ -84,15 +84,15 @@ public abstract class Launcher
 
         switch (cmd) {
         case "xtc":
-            Ecstasy.main(argv);
+            new Ecstasy(argv).run();
             break;
 
         case "xcc":
-            Compiler.main(argv);
+            Compiler.launch(argv);
             break;
 
         case "xec":
-            Runner.main(argv);
+            Runner.launch(argv);
             break;
 
         default:
@@ -111,9 +111,10 @@ public abstract class Launcher
 
     /**
      * Execute the Launcher tool.
+     *
+     * @return the result of the {@process} call.
      */
-    @Override
-    public void run() {
+    public int run() {
         Options opts = options();
 
         boolean fHelp = opts.parse(m_asArgs);
@@ -127,7 +128,6 @@ public abstract class Launcher
             log(Severity.INFO, "Java assertions are " + (fAssertsEnabled ? "enabled" : "disabled"));
         }
 
-
         checkErrors(fHelp);
 
         if (opts.verbose()) {
@@ -139,14 +139,20 @@ public abstract class Launcher
         opts.validate();
         checkErrors();
 
-        process();
+        int result = process();
 
         if (opts.verbose()) {
             out();
         }
+        return result;
     }
 
-    protected abstract void process();
+    /**
+     * The tool processing entry point.
+     *
+     * @return the execution status; most commonly 0-success; 1-failure
+     */
+    protected abstract int process();
 
 
     // ----- text output and error handling --------------------------------------------------------

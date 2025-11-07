@@ -54,7 +54,7 @@ public class Disassembler
      */
     public static void main(String[] asArg) {
         try {
-            new Disassembler(asArg).run();
+            System.exit(new Disassembler(asArg).run());
         } catch (LauncherException e) {
             System.exit(e.error ? 1 : 0);
         }
@@ -80,7 +80,7 @@ public class Disassembler
     }
 
     @Override
-    protected void process() {
+    protected int process() {
         File      fileModule = options().getTarget();
         String    sModule    = fileModule.getName();
         Component component  = null;
@@ -116,7 +116,7 @@ public class Disassembler
         } else {
             component.visitChildren(this::dump, false, true);
         }
-        ConstantPool pool = component.getConstantPool();
+        return hasSeriousErrors() ? 1 : 0;
     }
 
     public void dump(Component component) {

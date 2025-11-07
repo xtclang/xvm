@@ -107,14 +107,23 @@ public class Compiler
      */
     public static void main(String[] asArg) {
         try {
-            launch(asArg);
+            System.exit(launch(asArg));
         } catch (LauncherException e) {
             System.exit(e.error ? 1 : 0);
         }
     }
 
-    public static void launch(String[] asArg) throws LauncherException {
-        new Compiler(asArg).run();
+    /**
+     * Helper method for external launchers.
+
+     * @param asArg  command line arguments
+     *
+     * @return the result of the {@link #process()} call
+     *
+     * @throws LauncherException if an unrecoverable exception occurs
+     */
+    public static int launch(String[] asArg) throws LauncherException {
+        return new Compiler(asArg).run();
 }
 
     /**
@@ -137,7 +146,7 @@ public class Compiler
     }
 
     @Override
-    protected void process() {
+    protected int process() {
         if (options().showVersion()) {
             showSystemVersion(ensureLibraryRepo());
         }
@@ -155,7 +164,7 @@ public class Compiler
             if (!options().showVersion()) {
                 displayHelp();
             }
-            return;
+            return 1;
         }
 
         if (outputLoc != null) {
@@ -244,7 +253,7 @@ public class Compiler
 
         if (mapTargets.isEmpty()) {
             log(Severity.INFO, "All modules are up to date; terminating compiler");
-            return;
+            return 0;
         }
 
         Node[] allNodes = mapTargets.values().toArray(new Node[0]);
@@ -302,6 +311,7 @@ public class Compiler
         flushAndCheckErrors(allNodes);
 
         log(Severity.INFO, "Finished; terminating compiler");
+        return hasSeriousErrors() ? 1 : 0;
     }
 
     /**

@@ -475,9 +475,8 @@ public class xRTCompiler
         }
 
         @Override
-        public void run() {
-            // use partialRun() instead
-            throw new IllegalStateException();
+        public int run() {
+            throw new IllegalStateException("use partialCompile() instead");
         }
 
         @Override
