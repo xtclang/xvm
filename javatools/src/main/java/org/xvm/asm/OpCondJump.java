@@ -17,10 +17,10 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.BuildContext.DoubleSlot;
-import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitTypeDesc;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -32,6 +32,10 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 import static org.xvm.javajit.Builder.CD_Container;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_JavaString;
+import static org.xvm.javajit.Builder.CD_TypeConstant;
+import static org.xvm.javajit.Builder.CD_xType;
+import static org.xvm.javajit.Builder.MD_TypeIsA;
+import static org.xvm.javajit.Builder.MD_xvmType;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -320,9 +324,9 @@ public abstract class OpCondJump
     }
 
     protected void buildBinary(BuildContext bctx, CodeBuilder code) {
-        Slot         slot1      = bctx.loadArgument(code, m_nArg);
-        Slot         slot2      = bctx.loadArgument(code, m_nArg2);
-        TypeConstant typeCommon = selectCommonType(slot1.type(), slot2.type(), ErrorListener.BLACKHOLE);
+        RegisterInfo reg1       = bctx.loadArgument(code, m_nArg);
+        RegisterInfo reg2       = bctx.loadArgument(code, m_nArg2);
+        TypeConstant typeCommon = selectCommonType(reg1.type(), reg2.type(), ErrorListener.BLACKHOLE);
         ClassDesc    cdCommon   = JitTypeDesc.getPrimitiveClass(typeCommon);
 
         // TODO: remove the assert
@@ -386,12 +390,16 @@ public abstract class OpCondJump
                 code.ifeq(lblJump);
             }
             return;
+
+        case OP_JMP_TYPE, OP_JMP_NTYPE:
+            buildTypeJump(bctx, code);
+            return;
         }
 
-        Slot      slot = bctx.loadArgument(code, m_nArg);
-        ClassDesc cd   = slot.cd();
+        RegisterInfo reg = bctx.loadArgument(code, m_nArg);
+        ClassDesc    cd  = reg.cd();
         if (cd.isPrimitive()) {
-            if (slot instanceof DoubleSlot doubleSlot) {
+            if (reg instanceof DoubleSlot doubleSlot) {
                 assert doubleSlot.flavor() == JitFlavor.MultiSlotPrimitive;
                 code.iload(doubleSlot.extSlot()); // boolean Null indication
                 switch (op) {
@@ -446,6 +454,55 @@ public abstract class OpCondJump
         }
     }
 
+    private void buildTypeJump(BuildContext bctx, CodeBuilder code) {
+        int   nAddrThis = getAddress();
+        int   nAddrJump = nAddrThis + m_ofJmp;
+        Label lblJump   = bctx.ensureLabel(code, nAddrJump);
+
+        // this logic is almost identical to OpTest.buildTypeCheck();
+        TypeConstant typeTarget = bctx.getArgumentType(m_nArg);
+        if (m_nArg2 <= CONSTANT_OFFSET) {
+            TypeConstant typeTest = bctx.getArgumentType(m_nArg2);
+            assert typeTest.isTypeOfType();
+            typeTest = typeTest.getParamType(0);
+
+            if (typeTarget.isPrimitive()) {
+                // we can statically compute the result, which most probably means that a formal
+                // type was narrowed for a particular class flavor and the corresponding code
+                // can be safely eliminated
+                boolean isA = typeTarget.isA(typeTest);
+                if ((getOpCode() == OP_JMP_TYPE) == isA) {
+                    bctx.markDeadCode(nAddrThis + 1, nAddrJump);
+                } else {
+                    bctx.markDeadCode(nAddrJump, -1);
+                }
+                return;
+            } else {
+                RegisterInfo regTarget = bctx.loadArgument(code, m_nArg);
+                code.invokevirtual(regTarget.cd(), "$xvmType", MD_xvmType); // target type
+                Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);   // test type
+            }
+            if (getOpCode() == OP_JMP_TYPE) {
+                bctx.narrowTarget(code, m_nArg, nAddrJump, -1, typeTest);
+            } else {
+                bctx.narrowTarget(code, m_nArg, nAddrThis + 1, nAddrJump, typeTest);
+            }
+        } else {
+            // dynamic types
+            RegisterInfo regType = bctx.loadArgument(code, m_nArg2); // xType
+            assert regType.type().isTypeOfType();
+            code.getfield(CD_xType, "$type", CD_TypeConstant);
+        }
+
+        code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
+
+        if (getOpCode() == OP_IS_TYPE) {
+            code.ifne(lblJump);
+        } else { // OP_IS_NTYPE
+            code.ifeq(lblJump);
+        }
+    }
+
     // ----- fields --------------------------------------------------------------------------------
 
     protected int m_nType;
@@ -453,7 +510,7 @@ public abstract class OpCondJump
     protected int m_nArg2;
     protected int m_ofJmp;
 
-    protected TypeConstant m_typeCommon;    // the type to use for the comparison
+    protected TypeConstant m_typeCommon; // the type to use for the comparison
     private   Argument     m_argVal;
     private   Argument     m_argVal2;
     private   Op           m_opDest;

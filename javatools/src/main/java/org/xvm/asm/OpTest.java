@@ -11,14 +11,17 @@ import java.lang.classfile.Label;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitTypeDesc;
+import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.runtime.Frame;
@@ -30,7 +33,10 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Ordered;
+import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_xType;
+import static org.xvm.javajit.Builder.MD_TypeIsA;
+import static org.xvm.javajit.Builder.MD_xvmType;
 import static org.xvm.javajit.Builder.OPT;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -261,6 +267,14 @@ public abstract class OpTest
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
+        if (isBinaryOp()) {
+            buildBinary(bctx, code);
+        } else {
+            buildUnary(bctx, code);
+        }
+    }
+
+    protected void buildBinary(BuildContext bctx, CodeBuilder code) {
         TypeSystem   ts         = bctx.typeSystem;
         TypeConstant type1      = bctx.getArgumentType(m_nValue1);
         TypeConstant type2      = bctx.getArgumentType(m_nValue2);
@@ -282,7 +296,7 @@ public abstract class OpTest
                 switch (getOpCode()) {
                     case OP_CMP -> {
                         code.isub();
-                        bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, typeCommon));
+                        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeCommon));
                         return;
                     }
                     case OP_IS_EQ  -> code.if_icmpeq(lblTrue);
@@ -303,7 +317,7 @@ public abstract class OpTest
                 }
                 switch (getOpCode()) {
                     case OP_CMP -> {
-                        bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, typeCommon));
+                        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeCommon));
                         return;
                     }
                     case OP_IS_EQ  -> code.ifeq(lblTrue);
@@ -333,21 +347,21 @@ public abstract class OpTest
                 case OP_IS_GT, OP_IS_GTE, OP_IS_LT, OP_IS_LTE -> pool.sigCompare();
                 default                                       -> throw new IllegalStateException();
             };
-            MethodInfo    method  = typeCommon.ensureTypeInfo().getMethodBySignature(sig);
-            JitMethodDesc jmd     = method.getJitDesc(ts);
-            ClassDesc     cd      = method.getJitIdentity().getNamespace().ensureClassDesc(ts);
-            String        jitName = sig.getName(); // function
+            MethodInfo     method   = typeCommon.ensureTypeInfo().getMethodBySignature(sig);
+            JitMethodDesc  jmd      = method.getJitDesc(ts, typeCommon);
+            MethodConstant idFn     = method.getJitIdentity();
+            ClassDesc      cd       = idFn.getNamespace().ensureClassDesc(ts);
+            String         sJitName = idFn.ensureJitMethodName(ts);
 
             bctx.loadCtx(code);
             switch (nOp) {
             case OP_IS_EQ, OP_IS_NEQ:
                 assert jmd.isOptimized;
                 // Boolean equals(Ctx,xType,xObj,xObj)
-                code.dup();
                 Builder.loadType(code, ts, typeCommon);
                 bctx.loadArgument(code, m_nValue1);
                 bctx.loadArgument(code, m_nValue2);
-                code.invokestatic(cd, jitName+OPT, MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_xType, cd, cd));
+                code.invokestatic(cd, sJitName +OPT, MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_xType, cd, cd));
                 if (nOp == OP_IS_NEQ) {
                     code.iconst_1()
                         .ixor();
@@ -356,28 +370,27 @@ public abstract class OpTest
 
             case OP_IS_GT, OP_IS_GTE, OP_IS_LT, OP_IS_LTE:
                 // Ordered compare(Ctx,Type,xObj,xObj)
-                code.dup();
                 Builder.loadType(code, ts, typeCommon);
                 bctx.loadArgument(code, m_nValue1);
                 bctx.loadArgument(code, m_nValue2);
-                code.invokestatic(cd, jitName, MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_xType, cd, cd));
+                code.invokestatic(cd, sJitName, MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_xType, cd, cd));
 
                 boolean fInverse;
                 switch (nOp) {
                 case OP_IS_GT:
-                    bctx.builder.loadConstant(code, pool.valGreater());
+                    bctx.loadConstant(code, pool.valGreater());
                     fInverse = false;
                     break;
                 case OP_IS_GTE:
-                    bctx.builder.loadConstant(code, pool.valLesser());
+                    bctx.loadConstant(code, pool.valLesser());
                     fInverse = true;
                     break;
                 case OP_IS_LT:
-                    bctx.builder.loadConstant(code, pool.valLesser());
+                    bctx.loadConstant(code, pool.valLesser());
                     fInverse = false;
                     break;
                 case OP_IS_LTE:
-                    bctx.builder.loadConstant(code, pool.valGreater());
+                    bctx.loadConstant(code, pool.valGreater());
                     fInverse = true;
                     break;
                 default:
@@ -398,7 +411,82 @@ public abstract class OpTest
                     .labelBinding(labelEnd);
             }
         }
-        bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, bctx.pool().typeBoolean()));
+        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, bctx.pool().typeBoolean()));
+    }
+
+    protected void buildUnary(BuildContext bctx, CodeBuilder code) {
+        switch (getOpCode()) {
+            case OP_IS_NULL, OP_IS_NNULL -> buildNullCheck(bctx, code);
+            case OP_IS_TYPE, OP_IS_NTYPE -> buildTypeCheck(bctx, code);
+            default                      -> throw new IllegalStateException();
+        }
+        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, bctx.pool().typeBoolean()));
+    }
+
+    private void buildNullCheck(BuildContext bctx, CodeBuilder code) {
+        RegisterInfo regArg = bctx.loadArgument(code, m_nValue1);
+
+        Label   labelTrue = code.newLabel();
+        Label   labelEnd  = code.newLabel();
+        boolean fNot      = getOpCode() == OP_IS_NNULL;
+        if (regArg instanceof BuildContext.DoubleSlot slotMulti) {
+            assert slotMulti.flavor() == JitFlavor.MultiSlotPrimitive;
+
+            code.iload(slotMulti.extSlot()); // True indicates Null
+            if (fNot) {
+                code.ifeq(labelTrue);
+            } else {
+                code.ifne(labelTrue);
+            }
+        } else {
+            assert regArg.type().isNullable();
+
+            Builder.loadNull(code);
+            if (fNot) {
+                code.if_acmpne(labelTrue);
+            } else {
+                code.if_acmpeq(labelTrue);
+            }
+        }
+
+        code.iconst_0() // false
+            .goto_(labelEnd)
+            .labelBinding(labelTrue)
+            .iconst_1() // true
+            .labelBinding(labelEnd);
+    }
+
+    private void buildTypeCheck(BuildContext bctx, CodeBuilder code) {
+        TypeConstant typeTarget = bctx.getArgumentType(m_nValue1);
+        if (m_nValue2 <= CONSTANT_OFFSET) {
+            TypeConstant typeTest = bctx.getArgumentType(m_nValue2);
+            assert typeTest.isTypeOfType();
+            typeTest = typeTest.getParamType(0);
+
+            if (typeTarget.isPrimitive()) {
+                // we can statically compute the result
+                if (getOpCode() == OP_IS_TYPE) {
+                    if (typeTarget.isA(typeTest)) {code.iconst_1();} else {code.iconst_0();}
+                } else { // OP_IS_NTYPE
+                    if (typeTarget.isA(typeTest)) {code.iconst_0();} else {code.iconst_1();}
+                }
+                return;
+            } else {
+                RegisterInfo regTarget = bctx.loadArgument(code, m_nValue1);
+                code.invokevirtual(regTarget.cd(), "$xvmType", MD_xvmType); // target type
+                Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);   // test type
+            }
+        } else {
+            RegisterInfo regType = bctx.loadArgument(code, m_nValue2); // xType
+            assert regType.type().isTypeOfType();
+            code.getfield(CD_xType, "$type", CD_TypeConstant);
+        }
+
+        code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
+
+        if (getOpCode() == OP_IS_NTYPE) {
+            code.iconst_m1().ixor(); // "not"
+        }
     }
 
     // ----- fields --------------------------------------------------------------------------------

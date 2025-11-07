@@ -902,8 +902,8 @@ public class RelOpExpression
         // Note: all the ops used below know to inverse the order of args on the stack
         // Note2: only the first expression can cause a side effect
         Argument arg1 = expr1.ensurePointInTime(code,
-                        expr1.generateArgument(ctx, code, true, true, errs), expr2);
-        Argument arg2 = expr2.generateArgument(ctx, code, true, true, errs);
+                        expr1.generateArgument(ctx, code, true, errs), expr2);
+        Argument arg2 = expr2.generateArgument(ctx, code, true, errs);
 
         // generate the op that combines the two sub-expressions
         switch (operator.getId()) {
@@ -992,8 +992,8 @@ public class RelOpExpression
 
             if (aLVal[0].isLocalArgument() && aLVal[1].isLocalArgument()) {
                 Argument arg1 = expr1.ensurePointInTime(code,
-                                expr1.generateArgument(ctx, code, true, true, errs), expr2);
-                Argument arg2 = expr2.generateArgument(ctx, code, true, true, errs);
+                                expr1.generateArgument(ctx, code, true, errs), expr2);
+                Argument arg2 = expr2.generateArgument(ctx, code, true, errs);
                 code.add(new GP_DivRem(arg1, arg2, new Argument[] {aLVal[0].getLocalArgument(), aLVal[1].getLocalArgument()}));
             } else {
                 super.generateAssignments(ctx, code, aLVal, errs);

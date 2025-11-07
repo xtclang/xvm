@@ -437,7 +437,7 @@ public class TryStatement
                 code.add(new GuardStart(new CatchStart[] {opCatch}));
 
                 Argument argResource      = resources.get(i).getLValueExpression()
-                                          .generateArgument(ctx, code, false, false, errs);
+                                                .generateArgument(ctx, code, false, errs);
                 Label    labelSkipClose   = new Label("skip_close");
                 Label    labelFallThrough = new Label(getCodeContainerCounter());
                 if (!argResource.getType().isA(typeCloseable)) {

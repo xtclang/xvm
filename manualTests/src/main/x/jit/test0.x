@@ -16,8 +16,8 @@ module test0.examples.org {
         console.print(i2);
 
         (Int? i1N, Int i2N) = call2N(10);
+        assert i1N == Null;
         console.print(i2N);
-        console.print(i1N);
 
         if (Int i3 := call3(30)) {
             console.print(i3);

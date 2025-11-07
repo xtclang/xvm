@@ -18,14 +18,13 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
+import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.runtime.ClassTemplate;
@@ -544,15 +543,16 @@ public abstract class OpCallable extends Op {
         assert isMultiReturn();
 
         int nMethodId = m_nFunctionId;
-        if (nMethodId == Op.A_SUPER) {
-            nMethodId = frame.poolContext().getConstant(
-                            method.getIdentityConstant()).getPosition();
-        }
 
         int[] anRet = m_anRetValue;
         for (int i = 0, c = anRet.length; i < c; i++) {
             if (frame.isNextRegister(anRet[i])) {
-                frame.introduceMethodReturnVar(anRet[i], nMethodId, i);
+                if (nMethodId == Op.A_SUPER) {
+                    frame.introduceResolvedVar(anRet[i],
+                        frame.resolveType(method.getReturn(i).getType()));
+                } else {
+                    frame.introduceMethodReturnVar(anRet[i], nMethodId, i);
+                }
             }
         }
     }
@@ -565,38 +565,40 @@ public abstract class OpCallable extends Op {
     protected void buildCall(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         TypeSystem ts = bctx.typeSystem;
 
-        ClassDesc         cdTarget;
-        JitMethodDesc     jmdCall;
-        SignatureConstant sigCall;
-        MethodTypeDesc    mdCall;
-        boolean           fSpecial;
+        MethodConstant idMethod;
+        ClassDesc      cdTarget;
+        JitMethodDesc  jmdCall;
+        boolean        fSpecial;
 
         if (m_nFunctionId == A_SUPER) {
             MethodBody body = bctx.callChain[1];
 
-            cdTarget = body.getIdentity().ensureClassDesc(ts);
-            jmdCall  = body.getJitDesc(bctx.typeSystem);
-            sigCall  = body.getSignature();
+            idMethod = body.getIdentity();
+            cdTarget = bctx.getSuperCD();
+            jmdCall  = body.getJitDesc(ts, bctx.typeInfo.getType());
             fSpecial = true;
+            code.aload(0); // super() can only be on "this"
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
-            MethodConstant   idMethod   = (MethodConstant) bctx.getConstant(m_nFunctionId);
-            IdentityConstant idTarget   = idMethod.getClassIdentity();
-            MethodInfo       infoMethod = idTarget.getType().ensureTypeInfo().getMethodById(idMethod);
+            idMethod = (MethodConstant) bctx.getConstant(m_nFunctionId);
 
-            cdTarget = idTarget.ensureClassDesc(ts);
-            jmdCall  = infoMethod.getJitDesc(ts);
-            sigCall  = infoMethod.getSignature();
+            IdentityConstant idTarget   = idMethod.getClassIdentity();
+            TypeConstant     typeTarget = idTarget.getType();
+            MethodInfo       infoMethod = typeTarget.ensureTypeInfo().getMethodById(idMethod);
+
+            cdTarget = idTarget.ensureClassDesc(ts); // function; no formal types applicable
+            jmdCall  = infoMethod.getJitDesc(ts, typeTarget);
             fSpecial = false;
         } else {
-            Slot slotFn = bctx.getSlot(m_nFunctionId);
+            RegisterInfo regFn = bctx.getRegisterInfo(m_nFunctionId);
             // TODO: call "invoke(Ctx ctx, Tuple args)"
-            throw new UnsupportedOperationException("function call " + slotFn.type());
+            throw new UnsupportedOperationException("function call " + regFn.type());
         }
 
-        String methodName = sigCall.getName(); // function names don't have to be unique
+        String         sJitName = idMethod.ensureJitMethodName(ts);
+        MethodTypeDesc mdCall;
         if (jmdCall.isOptimized) {
-            mdCall      = jmdCall.optimizedMD;
-            methodName += Builder.OPT;
+            mdCall  = jmdCall.optimizedMD;
+            sJitName += Builder.OPT;
         }
         else {
             mdCall = jmdCall.standardMD;
@@ -606,12 +608,12 @@ public abstract class OpCallable extends Op {
         bctx.loadArguments(code, jmdCall, anArgValue);
 
         if (fSpecial) {
-            code.invokespecial(cdTarget, methodName, mdCall);
+            code.invokespecial(cdTarget, sJitName, mdCall);
         } else {
-            code.invokestatic(cdTarget, methodName, mdCall);
+            code.invokestatic(cdTarget, sJitName, mdCall);
         }
 
-        int cReturns = sigCall.getReturnCount();
+        int cReturns = idMethod.getSignature().getReturnCount();
         if (cReturns > 0) {
             int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
             bctx.assignReturns(code, jmdCall, cReturns, anVar);
@@ -626,7 +628,31 @@ public abstract class OpCallable extends Op {
         TypeConstant   typeTarget = idCtor.getNamespace().getType();
         ClassDesc      cdTarget   = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
 
-        bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, typeTarget, cdTarget, ""));
+        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget, cdTarget, ""));
+    }
+
+    /**
+     * Support for NEW_G ops.
+     */
+    protected void buildNewG(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
+        TypeConstant typeTarget;
+        if (nTypeArg <= CONSTANT_OFFSET) {
+            typeTarget = bctx.getType(nTypeArg);
+            if (typeTarget.containsFormalType(true)) {
+                // resolve the type against "this.$type()"
+                throw new UnsupportedOperationException("ToDo resolve formal type");
+            }
+        } else {
+            assert nTypeArg >= 0;
+            RegisterInfo regXType = bctx.loadArgument(code, nTypeArg);
+            assert regXType.type().isTypeOfType();
+            throw new UnsupportedOperationException("ToDo dynamic type");
+        }
+
+        MethodConstant idCtor   = (MethodConstant) bctx.getConstant(m_nFunctionId);
+        ClassDesc      cdTarget = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
+
+        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget, cdTarget, ""));
     }
 
     /**
@@ -646,7 +672,7 @@ public abstract class OpCallable extends Op {
         }
         String        sJitTarget = typeTarget.ensureJitClassName(ts);
         ClassDesc     cdTarget   = ClassDesc.of(sJitTarget);
-        JitMethodDesc jmdCtor    = infoCtor.getJitDesc(ts);
+        JitMethodDesc jmdCtor    = infoCtor.getJitDesc(ts, typeTarget);
 
         boolean fOptimized = jmdCtor.isOptimized;
         String  sJitCtor   = idCtor.ensureJitMethodName(ts);

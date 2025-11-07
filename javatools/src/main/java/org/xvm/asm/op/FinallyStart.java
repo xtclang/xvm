@@ -13,8 +13,8 @@ import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 
@@ -134,7 +134,7 @@ public class FinallyStart
 
         // initialize "try.exception" synthetic variable
         // (TODO: we only need it if the m_nVar variable is used)
-        Slot slotEx = bctx.introduceVar(code, m_nVar, bctx.pool().typeException१(), "");
+        RegisterInfo regEx = bctx.introduceVar(code, m_nVar, bctx.pool().typeException१(), "");
 
         java.lang.classfile.Label labelNull = code.newLabel();
         java.lang.classfile.Label labelEnd  = code.newLabel();
@@ -143,12 +143,12 @@ public class FinallyStart
             .ifnull(labelNull)
             .checkcast(CD_xException)
             .getfield(CD_xException, "exception", CD_Exception);
-        bctx.storeValue(code, slotEx);
+        bctx.storeValue(code, regEx);
         code.goto_(labelEnd)
             .labelBinding(labelNull)
             .pop();
         Builder.loadNull(code);
-        bctx.storeValue(code, slotEx);
+        bctx.storeValue(code, regEx);
         code.labelBinding(labelEnd);
     }
 }

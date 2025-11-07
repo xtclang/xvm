@@ -249,15 +249,15 @@ public class ElvisExpression
 
     @Override
     public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+        Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         if (isConstant()) {
-            return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+            return super.generateArgument(ctx, code, fLocalPropOk, errs);
         }
 
         if (m_fCond) {
             Label        labelEnd = getEndLabel();
-            Assignable   varCond  = createTempVar(code, pool().typeBoolean(), true);
-            Assignable   varVal   = createTempVar(code, getType(), false);
+            Assignable   varCond  = createTempVar(code, pool().typeBoolean());
+            Assignable   varVal   = createTempVar(code, getType());
             Assignable[] LVals    = new Assignable[] {varCond, varVal};
             expr1.generateAssignments(ctx, code, LVals, errs);
             code.add(new JumpTrue(varCond.getRegister(), labelEnd));
@@ -266,7 +266,7 @@ public class ElvisExpression
             return varVal.getRegister();
         } else {
             TypeConstant typeTemp = getType().ensureNullable();
-            Assignable var = createTempVar(code, typeTemp, false);
+            Assignable var = createTempVar(code, typeTemp);
             generateAssignment(ctx, code, var, errs);
 
         /*  Alternatively, and particularly if there were a way to ask expr1 if it can provide us an
@@ -299,7 +299,7 @@ public class ElvisExpression
 
         Label labelEnd = getEndLabel();
         if (m_fCond) {
-            Assignable   varCond = createTempVar(code, pool().typeBoolean(), true);
+            Assignable   varCond = createTempVar(code, pool().typeBoolean());
             Assignable[] LVals   = new Assignable[] {varCond, LVal};
             expr1.generateAssignments(ctx, code, LVals, errs);
             code.add(new JumpTrue(varCond.getRegister(), labelEnd));

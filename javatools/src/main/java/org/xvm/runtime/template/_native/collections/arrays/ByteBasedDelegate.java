@@ -39,11 +39,12 @@ public abstract class ByteBasedDelegate
     }
 
     @Override
-    public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cSize,
+    public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cCapacity,
                                          ObjectHandle[] ahContent, Mutability mutability) {
-        byte[] ab = new byte[cSize];
+        byte[] ab    = new byte[cCapacity];
+        int    cSize = ahContent.length;
 
-        for (int i = 0, c = ahContent.length; i < c; i++) {
+        for (int i = 0; i < cSize; i++) {
             ab[i] = (byte) ((JavaLong) ahContent[i]).getValue();
         }
         return makeHandle(ab, cSize, mutability);

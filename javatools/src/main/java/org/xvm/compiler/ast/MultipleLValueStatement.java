@@ -394,7 +394,7 @@ public class MultipleLValueStatement
         }
 
         @Override
-        public Argument[] generateArguments(Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+        public Argument[] generateArguments(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
             throw new IllegalStateException();
         }
 

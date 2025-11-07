@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.TypeKind;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
@@ -14,13 +15,12 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
+import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.runtime.Frame;
@@ -216,17 +216,17 @@ public abstract class OpInPlace
         int nTarget = m_nTarget;
         if (nTarget >= 0) {
             // operation on a register
-            Slot slot = bctx.getSlot(nTarget);
-            if (slot.cd().isPrimitive()) {
-                assert slot.isSingle();
+            RegisterInfo reg = bctx.getRegisterInfo(nTarget);
+            if (reg.cd().isPrimitive()) {
+                assert reg.isSingle();
 
-                buildPrimitiveLocal(code, slot);
+                buildPrimitiveLocal(code, reg);
                 if (isAssignOp()) {
-                    bctx.storeValue(code, bctx.ensureSlot(m_nRetValue, slot.type()));
+                    bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, reg.type()));
                 }
             } else {
                 // call the corresponding op method
-                JitMethodDesc jmd = buildOpCallLocal(bctx, code, slot);
+                JitMethodDesc jmd = buildOpCallLocal(bctx, code, reg);
                 if (isAssignOp()) {
                     bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue});
                 }
@@ -238,7 +238,7 @@ public abstract class OpInPlace
             if (typeProp.isPrimitive()) {
                 buildPrimitiveProperty(bctx, code, idProp);
                 if (isAssignOp()) {
-                    bctx.ensureSlot(m_nRetValue, idProp.getType());
+                    bctx.ensureRegInfo(m_nRetValue, idProp.getType());
                 }
             } else {
                 // call the corresponding op method
@@ -256,36 +256,36 @@ public abstract class OpInPlace
      * In:  nothing on the Java stack
      * Out: the result on Java stack
      */
-    protected void buildPrimitiveLocal(CodeBuilder code, Slot slot) {
-        switch (slot.cd().descriptorString()) {
+    protected void buildPrimitiveLocal(CodeBuilder code, RegisterInfo reg) {
+        switch (reg.cd().descriptorString()) {
         case "I", "S", "B", "C", "Z":
             switch (getOpCode()) {
             case OP_IP_DEC:
-                code.iinc(slot.slot(), -1);
+                code.iinc(reg.slot(), -1);
                 break;
 
             case OP_IP_INC:
-                code.iinc(slot.slot(), +1);
+                code.iinc(reg.slot(), +1);
                 break;
 
             case OP_IP_DECA:
-                code.iload(slot.slot())
-                    .iinc(slot.slot(), -1); // leaves the old value on Java stack
+                code.iload(reg.slot())
+                    .iinc(reg.slot(), -1); // leaves the old value on Java stack
                 break;
 
             case OP_IP_INCA:
-                code.iload(slot.slot())
-                    .iinc(slot.slot(), +1);
+                code.iload(reg.slot())
+                    .iinc(reg.slot(), +1);
                 break;
 
             case OP_IP_DECB:
-                code.iinc(slot.slot(), -1)
-                    .iload(slot.slot());
+                code.iinc(reg.slot(), -1)
+                    .iload(reg.slot());
                 break;
 
             case OP_IP_INCB:
-                code.iinc(slot.slot(), +1)
-                    .iload(slot.slot());
+                code.iinc(reg.slot(), +1)
+                    .iload(reg.slot());
                 break;
 
             default:
@@ -294,7 +294,7 @@ public abstract class OpInPlace
             break;
 
         case "J":
-            code.lload(slot.slot());
+            code.lload(reg.slot());
             switch (getOpCode()) {
             case OP_IP_DEC:
                 code.lconst_1()
@@ -333,11 +333,11 @@ public abstract class OpInPlace
             default:
                 throw new IllegalStateException();
             }
-            code.lstore(slot.slot());
+            code.lstore(reg.slot());
             break;
 
         case "F":
-            code.fload(slot.slot());
+            code.fload(reg.slot());
             switch (getOpCode()) {
             case OP_IP_DEC:
                 code.fconst_1()
@@ -376,11 +376,11 @@ public abstract class OpInPlace
             default:
                 throw new IllegalStateException();
             }
-            code.fstore(slot.slot());
+            code.fstore(reg.slot());
             break;
 
         case "D":
-            code.dload(slot.slot());
+            code.dload(reg.slot());
             switch (getOpCode()) {
             case OP_IP_DEC:
                 code.dconst_1()
@@ -419,7 +419,7 @@ public abstract class OpInPlace
             default:
                 throw new IllegalStateException();
             }
-            code.dstore(slot.slot());
+            code.dstore(reg.slot());
             break;
 
         default:
@@ -433,7 +433,7 @@ public abstract class OpInPlace
      * In:  nothing on the Java stack
      * Out: the result on Java stack
      */
-    protected JitMethodDesc buildOpCallLocal(BuildContext bctx, CodeBuilder code, Slot slot) {
+    protected JitMethodDesc buildOpCallLocal(BuildContext bctx, CodeBuilder code, RegisterInfo reg) {
         String sName;
         String sOp;
         switch (getOpCode()) {
@@ -446,16 +446,16 @@ public abstract class OpInPlace
             default         -> throw new IllegalStateException();
             }
 
-        TypeInfo       info     = slot.type().ensureTypeInfo();
-        MethodInfo     method   = info.findOpMethod(sName, sOp, 0);
-        String         sJitName = method.getJitIdentity().ensureJitMethodName(bctx.typeSystem);
-        JitMethodDesc  jmd      = method.getJitDesc(bctx.typeSystem);
+        TypeConstant  type     = reg.type();
+        MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, 0);
+        String        sJitName = method.getJitIdentity().ensureJitMethodName(bctx.typeSystem);
+        JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, type);
 
         assert !jmd.isOptimized;
 
-        code.aload(slot.slot());
+        code.aload(reg.slot());
         bctx.loadCtx(code);
-        code.invokevirtual(slot.cd(), sJitName, jmd.standardMD);
+        code.invokevirtual(reg.cd(), sJitName, jmd.standardMD);
         return jmd;
     }
 
@@ -469,7 +469,6 @@ public abstract class OpInPlace
                                           PropertyConstant idProp) {
         TypeSystem    ts       = bctx.typeSystem;
         PropertyInfo  infoProp = idProp.getPropertyInfo();
-        TypeConstant  type     = infoProp.getType();
         JitMethodDesc jmdGet   = infoProp.getGetterJitDesc(ts);
         JitMethodDesc jmdSet   = infoProp.getSetterJitDesc(ts);
         JitParamDesc  pd       = jmdGet.optimizedReturns[0];
@@ -479,12 +478,12 @@ public abstract class OpInPlace
 
         MethodTypeDesc mdGet    = jmdGet.optimizedMD;
         MethodTypeDesc mdSet    = jmdSet.optimizedMD;
-        String         sGetName = infoProp.getGetterId().ensureJitMethodName(ts) + Builder.OPT;
-        String         sSetName = infoProp.getSetterId().ensureJitMethodName(ts) + Builder.OPT;
+        String         sGetName = infoProp.ensureGetterJitMethodName(ts) + Builder.OPT;
+        String         sSetName = infoProp.ensureSetterJitMethodName(ts) + Builder.OPT;
 
-        Slot slotTarget = bctx.loadThis(code);
+        RegisterInfo regTarget = bctx.loadThis(code);
         bctx.loadCtx(code);
-        code.invokevirtual(slotTarget.cd(), sGetName, mdGet);
+        code.invokevirtual(regTarget.cd(), sGetName, mdGet);
 
         int op = getOpCode();
         switch (cd.descriptorString()) {
@@ -497,20 +496,22 @@ public abstract class OpInPlace
                 } else {
                     code.iadd();
                 }
-                buildSetProperty(bctx, code, slotTarget, type, cd, sSetName, mdSet);
+                buildSetProperty(bctx, code, regTarget, cd, sSetName, mdSet);
                 break;
 
             case OP_IP_DECA, OP_IP_INCA:
-                code.dup();
-                bctx.pushTempVar(code, type, cd); // the original value
-                code.iconst_1();
+                int slotTmp = bctx.scope.allocateJavaSlot(TypeKind.INT);
+
+                code.dup()
+                    .istore(slotTmp) // store the original value
+                    .iconst_1();
                 if (op == OP_IP_DECA) {
                     code.isub();
                 } else {
                     code.iadd();
                 }
-                buildSetProperty(bctx, code, slotTarget, type, cd, sSetName, mdSet);
-                bctx.popTempVar(code); // the original value on Java stack
+                buildSetProperty(bctx, code, regTarget, cd, sSetName, mdSet);
+                code.iload(slotTmp); // load the original value on Java stack
                 break;
 
             case OP_IP_DECB, OP_IP_INCB:
@@ -521,7 +522,7 @@ public abstract class OpInPlace
                     code.iadd();
                 }
                 code.dup();
-                buildSetProperty(bctx, code, slotTarget, type, cd, sSetName, mdSet);
+                buildSetProperty(bctx, code, regTarget, cd, sSetName, mdSet);
                 break;
 
             default:
@@ -538,20 +539,22 @@ public abstract class OpInPlace
                 } else {
                     code.ladd();
                 }
-                buildSetProperty(bctx, code, slotTarget, type, cd, sSetName, mdSet);
+                buildSetProperty(bctx, code, regTarget, cd, sSetName, mdSet);
                 break;
 
             case OP_IP_DECA, OP_IP_INCA:
-                code.dup2();
-                bctx.pushTempVar(code, type, cd); // the original value
-                code.lconst_1();
+                int slotTmp = bctx.scope.allocateJavaSlot(TypeKind.LONG);
+
+                code.dup2()
+                    .lstore(slotTmp) // store the original value
+                    .lconst_1();
                 if (op == OP_IP_DECA) {
                     code.lsub();
                 } else {
                     code.ladd();
                 }
-                buildSetProperty(bctx, code, slotTarget, type, cd, sSetName, mdSet);
-                bctx.popTempVar(code); // the original value on Java stack
+                buildSetProperty(bctx, code, regTarget, cd, sSetName, mdSet);
+                code.lload(slotTmp); // load the original value on Java stack
                 break;
 
             case OP_IP_DECB, OP_IP_INCB:
@@ -562,7 +565,7 @@ public abstract class OpInPlace
                     code.ladd();
                 }
                 code.dup2();
-                buildSetProperty(bctx, code, slotTarget, type, cd, sSetName, mdSet);
+                buildSetProperty(bctx, code, regTarget, cd, sSetName, mdSet);
                 break;
 
             default:
@@ -578,14 +581,15 @@ public abstract class OpInPlace
     /**
      * In: the new value on Java stack.
      */
-    private void buildSetProperty(BuildContext bctx, CodeBuilder code, Slot slotTarget,
-                                  TypeConstant type, ClassDesc cd,
-                                  String sSetName, MethodTypeDesc mdSet) {
-        bctx.pushTempVar(code, type, cd); // save the new value
+    private void buildSetProperty(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget,
+                                  ClassDesc cd, String sSetName, MethodTypeDesc mdSet) {
+        int slotTmp = bctx.scope.allocateJavaSlot(cd);
+
+        Builder.store(code, cd, slotTmp);
         bctx.loadThis(code);
         bctx.loadCtx(code);
-        bctx.popTempVar(code);
-        code.invokevirtual(slotTarget.cd(), sSetName, mdSet); // set the new value
+        Builder.load(code, cd, slotTmp);
+        code.invokevirtual(regTarget.cd(), sSetName, mdSet); // set the new value
     }
 
     /**

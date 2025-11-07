@@ -18,7 +18,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.OpJump;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -205,9 +205,9 @@ public class JumpInt
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        Slot slotArg = bctx.loadArgument(code, m_nArg);
+        RegisterInfo regArg = bctx.loadArgument(code, m_nArg);
 
-        switch (slotArg.cd().descriptorString()) {
+        switch (regArg.cd().descriptorString()) {
         case "I", "S", "B", "C", "Z":
             break;
 

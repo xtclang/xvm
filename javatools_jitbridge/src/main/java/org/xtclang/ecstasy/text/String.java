@@ -4,6 +4,8 @@ import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.xConst;
 import org.xtclang.ecstasy.xType;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.Ctx;
 
 import static java.lang.Character.toCodePoint;
@@ -172,6 +174,11 @@ public class String
         this.next       = next;
     }
 
+    @Override
+    public TypeConstant $xvmType() {
+        return $ctx().container.typeSystem.pool().typeString();
+    }
+
     // ----- fields --------------------------------------------------------------------------------
 
     /**
@@ -223,8 +230,8 @@ public class String
     /**
      * @return the length of the string in characters
      */
-    public long size(Ctx ctx) {
-        return end - start + (next == null ? 0 : next.size(ctx));
+    public long size$get$p(Ctx ctx) {
+        return end - start + (next == null ? 0 : next.size$get$p(ctx));
     }
 
     /**
@@ -281,7 +288,7 @@ public class String
 
     @Override
     public java.lang.String toString() {
-        long len = size(null);
+        long len = size$get$p(null);
         if (len == 0) {
             return "";
         }

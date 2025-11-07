@@ -30,8 +30,7 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.IP_Inc;
-import org.xvm.asm.op.JumpFalse;
-import org.xvm.asm.op.JumpTrue;
+import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Loop;
 import org.xvm.asm.op.LoopEnd;
@@ -683,10 +682,20 @@ public class WhileStatement
         for (int i = 0; i < cConds; ++i) {
             AstNode cond  = getCondition(i);
             if (cond instanceof AssignmentStatement stmtCond) {
+                boolean fNegated = stmtCond.isNegated();
+                Label   labelNeg = fNegated ? new Label("negated") : null;
+
+                stmtCond.setConditionFalseLabel(fNegated ? labelNeg : getEndLabel());
+
                 fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
-                code.add(stmtCond.isNegated()
-                        ? new JumpTrue (stmtCond.getConditionRegister(), getEndLabel())
-                        : new JumpFalse(stmtCond.getConditionRegister(), getEndLabel()));
+
+                assert stmtCond.isConditionFalseLabelTaken();
+
+                if (fNegated) {
+                    code.add(new Jump(getEndLabel()));
+                    code.add(labelNeg);
+                }
+
                 aCondASTs[i] = (ExprAST) holder.getAst(stmtCond);
             } else {
                 Expression exprCond = (Expression) cond;

@@ -2942,7 +2942,7 @@ public class ClassStructure
             code.add(new L_Get(propTarget.getIdentityConstant(), regTarget));
 
             if (fGet) {
-                Register regReturn = new Register(typeProp, prop.getIdentityConstant().getName(), Op.A_STACK);
+                Register regReturn = code.createRegister(typeProp, prop.getIdentityConstant().getName());
 
                 code.add(new P_Get(idDelegate, regTarget, regReturn));
                 code.add(new Return_1(regReturn));
@@ -3056,7 +3056,7 @@ public class ClassStructure
                     regReturn = code.createRegister(pool.ensureFuture(typeReturn));
                     code.add(new Var_D(regReturn));
                 } else {
-                    regReturn = new Register(typeReturn, "result", Op.A_STACK);
+                    regReturn = code.createRegister(typeReturn, "result");
                 }
 
                 switch (cParams) {
@@ -3246,8 +3246,8 @@ public class ClassStructure
                     //}
                     Register regThis     = new Register(typeAppender, "this"    , Op.A_THIS);
                     Register regAppender = new Register(typeAppender, "appender", 0);
-                    Register regString   = new Register(typeAppender, "toString", Op.A_STACK);
-                    Register regResult   = new Register(typeAppender, "result"  , Op.A_STACK);
+                    Register regString   = code.createRegister(typeAppender, "toString");
+                    Register regResult   = code.createRegister(typeAppender, "result");
 
                     MethodConstant idToString = methToString.getIdentityConstant();
                     MethodConstant idAppendTo = methAppendTo.getIdentityConstant();

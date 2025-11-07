@@ -522,8 +522,8 @@ public class CmpExpression
         if (LVal.isLocalArgument()) {
             // evaluate the sub-expressions
             Argument arg1      = expr1.ensurePointInTime(code,
-                                 expr1.generateArgument(ctx, code, true, true, errs), expr2);
-            Argument arg2      = expr2.generateArgument(ctx, code, true, true, errs);
+                                 expr1.generateArgument(ctx, code, true, errs), expr2);
+            Argument arg2      = expr2.generateArgument(ctx, code, true, errs);
             Argument argResult = LVal.getLocalArgument();
             OpTest   op = switch (operator.getId()) {
                 case COMP_EQ ->
@@ -559,8 +559,8 @@ public class CmpExpression
         if (!isConstant() && producesBoolean()) {
             // evaluate the sub-expressions
             Argument   arg1 = expr1.ensurePointInTime(code,
-                              expr1.generateArgument(ctx, code, true, true, errs), expr2);
-            Argument   arg2 = expr2.generateArgument(ctx, code, true, true, errs);
+                              expr1.generateArgument(ctx, code, true, errs), expr2);
+            Argument   arg2 = expr2.generateArgument(ctx, code, true, errs);
             // generate the op that combines the two sub-expressions
             code.add(switch (operator.getId()) {
                 case COMP_EQ ->

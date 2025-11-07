@@ -51,11 +51,12 @@ public class xRTFloat64Delegate
     }
 
     @Override
-    public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cSize,
+    public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cCapacity,
                                          ObjectHandle[] ahContent, xArray.Mutability mutability) {
-        double[] adValue = new double[cSize];
+        double[] adValue = new double[cCapacity];
+        int      cSize   = ahContent.length;
 
-        for (int i = 0, c = ahContent.length; i < c; i++) {
+        for (int i = 0; i < cSize; i++) {
             adValue[i] = ((FloatHandle) ahContent[i]).getValue();
         }
         return makeHandle(adValue, cSize, mutability);

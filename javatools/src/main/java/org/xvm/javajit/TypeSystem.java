@@ -8,13 +8,11 @@ import java.lang.classfile.attribute.SourceFileAttribute;
 
 import java.lang.constant.ClassDesc;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
@@ -31,8 +29,6 @@ import org.xvm.javajit.builders.EnumerationBuilder;
 import org.xvm.javajit.builders.ExceptionBuilder;
 import org.xvm.javajit.builders.FunctionBuilder;
 import org.xvm.javajit.builders.ModuleBuilder;
-
-import org.xvm.util.ListMap;
 
 import static org.xvm.javajit.Builder.ENUMERATION;
 import static org.xvm.javajit.Builder.MODULE;
@@ -163,15 +159,11 @@ public class TypeSystem {
     protected final Map<String, TypeConstant> functionTypes = new ConcurrentHashMap<>();
 
     /**
-     * A list of constants that are registered by the JIT compiler to be accessed by the run-time.
-     */
-    protected final ListMap<Constant, Integer> constantsRegistry = new ListMap<>(1024);
-
-    /**
      * @return the ConstantPool associated with this TypeSystem
      */
     public ConstantPool pool() {
-        // TODO should there be a separate ConstantPool created for this type system when there are only shared modules? i.e. is there a FileStructure?
+        // TODO should there be a separate ConstantPool created for this type system when there are
+        //      only shared modules? i.e. is there a FileStructure?
         return owned.length == 0 ? xvm.ecstasyPool /* <-- TODO wrong */ : owned[0].module.getConstantPool();
     }
 
@@ -309,40 +301,36 @@ public class TypeSystem {
 
         Artifact art = deduceArtifact(module, name);
         if (art != null) {
-            if (art.id.getComponent() instanceof ClassStructure clz) {
-                TypeConstant type       = clz.getCanonicalType();
-                Builder      jitBuilder = ensureBuilder(type);
-                Consumer<? super ClassBuilder> handler = classBuilder -> {
-                    switch (art.shape) {
-                        case Impl:
-                            classBuilder.with(SourceFileAttribute.of(clz.getSourceFileName()));
-                            jitBuilder.assembleImpl(className, classBuilder);
-                            break;
+            Builder builder = ensureBuilder(art.type);
+            Consumer<? super ClassBuilder> handler = classBuilder -> {
+                switch (art.shape) {
+                    case Impl:
+                        classBuilder.with(SourceFileAttribute.of(art.clz.getSourceFileName()));
+                        builder.assembleImpl(className, classBuilder);
+                        break;
 
-                        case Exception:
-                            ((ExceptionBuilder) jitBuilder).
-                                assembleJavaException(className, classBuilder);
-                            break;
+                    case Exception:
+                        ((ExceptionBuilder) builder).assembleJavaException(className, classBuilder);
+                        break;
 
-                        default:
-                            throw new UnsupportedOperationException();
-                    }
-                };
+                    default:
+                        throw new UnsupportedOperationException();
+                }
+            };
 
-                // There are other options that can be useful:
-                //     DeadCodeOption.PATCH_DEAD_CODE
-                //     DebugElementsOption.DROP_DEBUG
-                //     LineNumbersOption.DROP_LINE_NUMBERS
-                // TODO: force some of them or make configurable
-                ClassFile classFile = ClassFile.of(
-                    ClassFile.ClassHierarchyResolverOption.of(
-                        ClassHierarchyResolver.ofClassLoading(loader)),
-                    ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
-                    ClassFile.StackMapsOption.GENERATE_STACK_MAPS
-                );
+            // There are other options that can be useful:
+            //     DeadCodeOption.PATCH_DEAD_CODE
+            //     DebugElementsOption.DROP_DEBUG
+            //     LineNumbersOption.DROP_LINE_NUMBERS
+            // TODO: force some of them or make configurable
+            ClassFile classFile = ClassFile.of(
+                ClassFile.ClassHierarchyResolverOption.of(
+                    ClassHierarchyResolver.ofClassLoading(loader)),
+                ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
+                ClassFile.StackMapsOption.GENERATE_STACK_MAPS
+            );
 
-                return classFile.build(ClassDesc.of(className), handler);
-            }
+            return classFile.build(ClassDesc.of(className), handler);
         }
         return null;
     }
@@ -388,13 +376,14 @@ public class TypeSystem {
      * Jit class shapes.
      */
     public enum ClassfileShape {
+        Class    ("c$"),  // used to prefix a class name only when a collision would otherwise occur
         Pure     ("i$"),
         Proxy    ("p$"),
         Duck     ("d$"),
         Mask     ("m$"),
         Future   ("f$"),
-        Exception("e$"),
-        Impl     (""), // needs to be last
+        Exception("e$"), // RuntimeException "entangled" with the corresponding XTC Exception class
+        Impl     (""),   // needs to be last
         ;
 
         ClassfileShape(String prefix) {
@@ -404,11 +393,11 @@ public class TypeSystem {
         public final String prefix;
     }
 
-    public record Artifact(IdentityConstant id, ClassfileShape shape) {}
+    public record Artifact(TypeConstant type, ClassStructure clz, ClassfileShape shape) {}
 
     public Artifact deduceArtifact(ModuleStructure module, String name) {
         if (name.equals(MODULE)) {
-            return new Artifact(module.getIdentityConstant(), ClassfileShape.Impl);
+            return new Artifact(module.getCanonicalType(), module, ClassfileShape.Impl);
         }
 
         ClassfileShape shape  = ClassfileShape.Impl;
@@ -428,8 +417,21 @@ public class TypeSystem {
                 }
             }
         }
+
+        // TEMPORARY; TODO REPLACE
+        TypeConstant type = null;
+        int idOffset = name.indexOf("$$");
+        if (idOffset > 0) {
+            // the name represents a parameterized type with primitive actual type(s)
+            type = (TypeConstant) pool().getConstant(Integer.valueOf(name.substring(idOffset+2)));
+            name = name.substring(0, idOffset);
+        }
+
         if (module.getChildByPath(name.replace('$', '.')) instanceof ClassStructure struct) {
-            return new Artifact(struct.getIdentityConstant(), shape);
+            if (type == null) {
+                type = struct.getCanonicalType();
+            }
+            return new Artifact(type, struct, shape);
         }
         return null;
     }
@@ -453,20 +455,7 @@ public class TypeSystem {
                 return name;
             }
 
-            ClassStructure structure = (ClassStructure)
-                type.getSingleUnderlyingClass(true).getComponent();
-
-            List<Contribution> condIncorporates = structure.collectConditionalIncorporates(type);
-            TypeConstant       canonicalType;
-            if (condIncorporates == null) {
-                canonicalType = structure.getCanonicalType();
-            } else {
-                // TODO: implement conditional class name computation
-                // System.err.println("Not implemented: conditional incorporates for " + type);
-                canonicalType = structure.getCanonicalType();
-            }
-
-            return canonicalType.ensureJitClassName(this);
+            return type.ensureJitClassName(this);
         }
         throw new IllegalArgumentException("No JIT class for " + type.getValueString());
     }
@@ -479,16 +468,8 @@ public class TypeSystem {
      *
      * @return the index of the constant
      */
-    public synchronized int registerConstant(Constant constant) {
-        ListMap<Constant, Integer> registry = constantsRegistry;
-        Integer                    index    = registry.get(constant);
-        if (index == null) {
-            int size = registry.size();
-            registry.put(constant, size);
-            return size;
-        } else {
-            return index;
-        }
+    public int registerConstant(Constant constant) {
+        return pool().register(constant).getPosition();
     }
 
     /**
@@ -498,7 +479,7 @@ public class TypeSystem {
      * growth occurs, the old list still contains the corresponding entry at the right place.
      */
     public Constant getConstant(int index) {
-        return constantsRegistry.entryAt(index).getKey();
+        return pool().getConstant(index);
     }
 }
 

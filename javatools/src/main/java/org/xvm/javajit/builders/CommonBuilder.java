@@ -49,14 +49,14 @@ import org.xvm.asm.op.GuardAll;
 import org.xvm.asm.op.Jump;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.BuildContext.DoubleSlot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.Ctx;
-import org.xvm.javajit.JitFlavor;
+import org.xvm.javajit.JitCtorDesc;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitTypeDesc;
+import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.ShallowSizeOf;
@@ -65,6 +65,8 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
+
+import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 
 /**
  * Generic Java class builder.
@@ -106,6 +108,20 @@ public class CommonBuilder
         // assemblePureMethods(className, classBuilder);
     }
 
+    @Override
+    protected TypeConstant getThisType() {
+        return typeInfo.getType();
+    }
+
+    /**
+     * Compute the ClassDesc for the super class.
+     */
+    protected ClassDesc getSuperCD() {
+        TypeConstant superType = typeInfo.getExtends();
+        return superType == null
+            ? CD_xObj
+            : ClassDesc.of(typeSystem.ensureJitClassName(superType));
+    }
 
     /**
      * Compute the instance size of the generated class(es). If more than one class gets generated,
@@ -163,16 +179,6 @@ public class CommonBuilder
     }
 
     /**
-     * Compute the ClassDesc for the super class.
-     */
-    protected ClassDesc getSuperDesc() {
-        TypeConstant superType = typeInfo.getExtends();
-        return superType == null
-            ? CD_xObj
-            : ClassDesc.of(typeSystem.ensureJitClassName(superType));
-    }
-
-    /**
      * Assemble the class specific info for the "Impl" shape.
      */
     protected void assembleImplClass(String className, ClassBuilder classBuilder) {
@@ -181,7 +187,7 @@ public class CommonBuilder
         switch (classStruct.getFormat()) {
             case CLASS, CONST, SERVICE, ENUMVALUE:
                 flags |= ClassFile.ACC_SUPER; // see JLS 4.1
-                classBuilder.withSuperclass(getSuperDesc());
+                classBuilder.withSuperclass(getSuperCD());
                 break;
 
             case INTERFACE, MIXIN, ENUM:
@@ -317,25 +323,23 @@ public class CommonBuilder
                 TypeSystem ts = typeSystem;
                 for (PropertyInfo prop : props) {
                     if (prop.getInitializer() == null) {
-                        Slot   slot    = loadConstant(code, prop.getInitialValue());
-                        String jitName = prop.getIdentity().ensureJitPropertyName(ts);
-                        if (slot instanceof DoubleSlot doubleSlot) {
-                            assert doubleSlot.flavor() == JitFlavor.MultiSlotPrimitive;
+                        RegisterInfo reg     = loadConstant(code, prop.getInitialValue());
+                        String       jitName = prop.getIdentity().ensureJitPropertyName(ts);
+                        if (reg instanceof DoubleSlot doubleSlot) {
+                            assert doubleSlot.flavor() == MultiSlotPrimitive;
                             // loadConstant() has already loaded the value and the boolean
                             Label ifTrue = code.newLabel();
                             Label endIf  = code.newLabel();
-                            code
-                                .iconst_0()
-                                .if_icmpne(ifTrue);
-                                code.putstatic(CD_this, jitName +EXT, CD_boolean);
-                            code.goto_(endIf)
+                            code.ifne(ifTrue)
+                                .putstatic(CD_this, jitName +EXT, CD_boolean)
+                                .goto_(endIf)
                                 .labelBinding(ifTrue);
                                 pop(code, doubleSlot.cd());
-                                code.putstatic(CD_this, jitName, slot.cd());
+                                code.putstatic(CD_this, jitName, reg.cd());
                             code.labelBinding(endIf);
                         } else {
-                            assert slot.isSingle();
-                            code.putstatic(CD_this, jitName, slot.cd());
+                            assert reg.isSingle();
+                            code.putstatic(CD_this, jitName, reg.cd());
                         }
                     } else {
                         throw new UnsupportedOperationException("Static field initializer");
@@ -348,7 +352,7 @@ public class CommonBuilder
                     // $INSTANCE.$init($ctx);
                     MethodConstant ctorId  = typeInfo.findConstructor(TypeConstant.NO_TYPES);
                     String         jitInit = ctorId.ensureJitMethodName(ts).replace("construct", INIT);
-                    invokeDefaultConstructor(className, code);
+                    invokeDefaultConstructor(code, CD_this);
                     code.dup()
                         .putstatic(CD_this, Instance, CD_this)
                         .aload(ctxSlot)
@@ -381,27 +385,16 @@ public class CommonBuilder
     }
 
     /**
-     * Call the default constructor.
-     */
-    protected void invokeDefaultConstructor(String className, CodeBuilder code) {
-        ClassDesc CD_this = ClassDesc.of(className);
-        code.new_(CD_this)
-            .dup()
-            .aload(0) // $ctx
-            .invokespecial(CD_this, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx));
-   }
-
-    /**
      * Add fields initialization to the Java constructor {@code void <init>(Ctx ctx)}.
      */
     protected void assembleInitializer(String className, ClassBuilder classBuilder,
                                        List<PropertyInfo> props) {
         ClassDesc CD_this = ClassDesc.of(className);
 
-        classBuilder.withMethod(INIT_NAME,
+        classBuilder.withMethodBody(INIT_NAME,
             MD_Initializer,
             ClassFile.ACC_PUBLIC,
-            methodBuilder -> methodBuilder.withCode(code -> {
+            code -> {
                 Label startScope = code.newLabel();
                 Label endScope   = code.newLabel();
                 code.labelBinding(startScope);
@@ -412,23 +405,22 @@ public class CommonBuilder
                 // super($ctx);
                 code.aload(0)
                     .aload(ctxSlot)
-                    .invokespecial(getSuperDesc(), INIT_NAME, MD_Initializer);
+                    .invokespecial(getSuperCD(), INIT_NAME, MD_Initializer);
 
                 // add field initialization
                 for (PropertyInfo prop : props) {
                     if (prop.getInitializer() == null) {
                         code.aload(0); // Stack: { this }
 
-                        Slot   slot    = loadConstant(code, prop.getInitialValue());
-                        String jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
-                        if (slot instanceof DoubleSlot doubleSlot) {
-                            assert doubleSlot.flavor() == JitFlavor.MultiSlotPrimitive;
+                        RegisterInfo reg     = loadConstant(code, prop.getInitialValue());
+                        String       jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
+                        if (reg instanceof DoubleSlot doubleSlot) {
+                            assert doubleSlot.flavor() == MultiSlotPrimitive;
                             // loadConstant() has already loaded the value and the boolean
                             Label ifTrue = code.newLabel();
                             Label endIf  = code.newLabel();
                             code
-                                .iconst_0()
-                                .if_icmpne(ifTrue)
+                                .ifne(ifTrue)
                                 .putfield(CD_this, jitName +EXT, CD_boolean);
                             code.goto_(endIf)
                                 .labelBinding(ifTrue);
@@ -436,8 +428,8 @@ public class CommonBuilder
                                 code.putfield(CD_this, jitName, doubleSlot.cd());
                             code.labelBinding(endIf);
                         } else {
-                            assert slot.isSingle();
-                            code.putfield(CD_this, jitName, slot.cd());
+                            assert reg.isSingle();
+                            code.putfield(CD_this, jitName, reg.cd());
                         }
                     } else {
                         throw new UnsupportedOperationException("Field initializer");
@@ -445,7 +437,7 @@ public class CommonBuilder
                 }
                 code.labelBinding(endScope)
                     .return_();
-            })
+            }
         );
     }
 
@@ -468,7 +460,7 @@ public class CommonBuilder
                 generateTrivialGetter(className, classBuilder, prop);
                 break;
             case Explicit:
-                String         jitName = prop.getGetterId().ensureJitMethodName(typeSystem);
+                String         jitName = prop.ensureGetterJitMethodName(typeSystem);
                 JitMethodDesc  jmDesc  = prop.getGetterJitDesc(typeSystem);
                 boolean        isOpt   = jmDesc.isOptimized;
                 MethodTypeDesc md      = isOpt ? jmDesc.optimizedMD : jmDesc.standardMD;
@@ -492,7 +484,7 @@ public class CommonBuilder
                 break;
 
             case Explicit:
-                String         jitName = prop.getSetterId().ensureJitMethodName(typeSystem);
+                String         jitName = prop.ensureSetterJitMethodName(typeSystem);
                 JitMethodDesc  jmDesc  = prop.getSetterJitDesc(typeSystem);
                 boolean        isOpt   = jmDesc.isOptimized;
                 MethodTypeDesc md      = isOpt ? jmDesc.optimizedMD : jmDesc.standardMD;
@@ -506,7 +498,7 @@ public class CommonBuilder
     }
 
     private void generateTrivialGetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
-        String jitGetterName = prop.getGetterId().ensureJitMethodName(typeSystem);
+        String jitGetterName = prop.ensureGetterJitMethodName(typeSystem);
         String jitFieldName  = prop.getIdentity().ensureJitPropertyName(typeSystem);
 
         ClassDesc CD_this = ClassDesc.of(className);
@@ -570,7 +562,7 @@ public class CommonBuilder
     }
 
     private void generateTrivialSetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
-        String jitSetterName = prop.getSetterId().ensureJitMethodName(typeSystem);
+        String jitSetterName = prop.ensureSetterJitMethodName(typeSystem);
         String jitFieldName  = prop.getIdentity().ensureJitPropertyName(typeSystem);
 
         ClassDesc CD_this = ClassDesc.of(className);
@@ -584,7 +576,7 @@ public class CommonBuilder
         String         jitName = isOpt ? jitSetterName+OPT : jitSetterName;
 
         classBuilder.withMethodBody(jitName, md, flags, code -> {
-            int argSlot = code.parameterSlot(1); // compensate for ctx$
+            int argSlot = code.parameterSlot(1); // compensate for $ctx
             if (isOpt) {
                 JitParamDesc pdOpt = jmd.optimizedParams[0];
                 ClassDesc    cdOpt = pdOpt.cd;
@@ -645,7 +637,7 @@ public class CommonBuilder
     private void generateInjected(String className, ClassBuilder classBuilder, PropertyInfo prop) {
         assert !prop.isConstant();
 
-        String jitGetterName = prop.getGetterId().ensureJitMethodName(typeSystem);
+        String jitGetterName = prop.ensureGetterJitMethodName(typeSystem);
         String jitFieldName  = prop.getIdentity().ensureJitPropertyName(typeSystem);
 
         ClassDesc CD_this = ClassDesc.of(className);
@@ -674,7 +666,7 @@ public class CommonBuilder
         classBuilder.withMethodBody(jitName, md, flags, code -> {
             // generate the following:
             // T value = this.prop;
-            // if (value == null} { value = this.prop = ctx$.inject(type, name, opts);}
+            // if (value == null} { value = this.prop = $ctx.inject(type, name, opts);}
             // return value;
 
             if (isOpt) {
@@ -704,8 +696,7 @@ public class CommonBuilder
                     .dup()
                     .astore(valueSlot)
                     .ifnonnull(endLbl)
-                    .aload(1) // ctx$
-                    .dup();
+                    .aload(1); // $ctx
                 Builder.loadTypeConstant(code, typeSystem, resourceType);
                 code.ldc(resourceName)
                     .aconst_null() // opts
@@ -739,6 +730,36 @@ public class CommonBuilder
 
             assembleImplMethod(className, classBuilder, method);
         }
+
+        if (typeInfo.getClassStructure().getFormat() != Component.Format.INTERFACE) {
+            assembleXvmType(className, classBuilder);
+        }
+    }
+
+    /**
+     * Assemble the "public TypeConstant $xvmType()" method.
+     */
+    protected void assembleXvmType(String className, ClassBuilder classBuilder) {
+        boolean hasType = typeInfo.hasGenericTypes();
+
+        if (hasType) {
+            classBuilder.withField("$type", CD_TypeConstant, ClassFile.ACC_PUBLIC);
+        }
+
+        classBuilder.withMethodBody("$xvmType", MD_xvmType,
+                ClassFile.ACC_PUBLIC, code -> {
+            if (hasType) {
+                code.aload(0)
+                    .getfield(ClassDesc.of(className), "$type", CD_TypeConstant);
+            } else {
+                // this is almost identical to Builder.loadTypeConstant()
+                code.invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
+                    .loadConstant(typeSystem.registerConstant(typeInfo.getType()))
+                    .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant)
+                    .checkcast(CD_TypeConstant);
+            }
+            code.areturn();
+        });
     }
 
     /**
@@ -768,7 +789,7 @@ public class CommonBuilder
             assert targetMethod != null;
             assembleRoutingMethod(className, classBuilder, method, targetMethod);
         } else {
-            JitMethodDesc jmDesc = method.getJitDesc(typeSystem);
+            JitMethodDesc jmDesc = method.getJitDesc(typeSystem, typeInfo.getType());
             if (jmDesc.isOptimized) {
                 assembleMethod(className, classBuilder, method, jitName+OPT, jmDesc.optimizedMD, true);
                 assembleMethodWrapper(className, classBuilder, jitName, jmDesc,
@@ -779,7 +800,7 @@ public class CommonBuilder
 
             if (method.isConstructor()) {
                 String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
-                JitMethodDesc newDesc = Builder.convertConstructToNew(typeInfo, className, jmDesc);
+                JitMethodDesc newDesc = Builder.convertConstructToNew(typeInfo, className, (JitCtorDesc) jmDesc);
                 if (newDesc.isOptimized) {
                     assembleNew(className, classBuilder, method, newName+OPT, newDesc.optimizedMD, true);
                     assembleMethodWrapper(className, classBuilder, newName, newDesc, true, false);
@@ -1007,9 +1028,18 @@ public class CommonBuilder
      *
      * <code><pre>
      * Ecstasy:
+     *      class C {...}
      *      val o = new C(x, y, z);
      * Java:
-     *      C o = C.$new$0(ctx, x, y, z);
+     *      C o = C.$new$17($ctx, x, y, z);
+     *
+     * For generic types:
+     * Ecstasy:
+     *      class C<Element> {...}
+     *      val o = new C<A>(x, y, z);
+     * Java:
+     *      C o = C.$new$17($ctx, $type, x, y, z);
+     * where TC is a TypeConstant for the actual type C<A>.
      *
      * For singletons, referencing the instance of the singleton for the first time causes it to be
      * created using the well-known "Java singleton pattern" that leverages the Java ClassLoader
@@ -1020,9 +1050,11 @@ public class CommonBuilder
      * singletons have a non-static "$init()" method that is signature-wise identical to the
      * "$new()" method and performs everything in the following list of steps starting with step 4.
      *
-     * public static C $new$0(Ctx ctx, X x, Y y, Z z) {
+     * public static C $new$17(Ctx $ctx, X x, Y y, Z z)
+     * or
+     * public static C $new$17(Ctx $ctx, TC $type, X x, Y y, Z z)
      *    // note: singletons use this signature instead:
-     *    public C $init$0(Ctx ctx)
+     *    public C $init$17(Ctx ctx)
      *
      *    // step 1: ONLY FOR "anonymous inner classes": a "wrapper constructor" (in lieu
      *    //   of steps 3 and 5) (TODO GG)
@@ -1038,6 +1070,9 @@ public class CommonBuilder
      *    // note: singletons move this step to the Java static initializer
      *    C thi$ = new C(ctx);
      *
+     *    // step 3a (optional) if the type is specified, assign the "$type" field
+     *    thi$.$type = $type;
+     *
      *    // step 4: a constructor context is required if a “finally” chain will exist
      *    CtorCtx cctx = ctx.ctorCtx();
      *
@@ -1048,7 +1083,7 @@ public class CommonBuilder
      *    // - we do NOT have to save off the arguments for the `finally()` call
      *    //   in the constructor context because we have the arguments right here
      *    // note: cctx argument is optional
-     *    construct$0(ctx, cctx, thi$, x, y, z);
+     *    construct$17(ctx, cctx, thi$, x, y, z);
      *
      *    // step 7: `assert()` is called (may be one on each constituent piece -- e.g.
      *    // base classes, mixins, annotations -- of the composition)
@@ -1075,11 +1110,11 @@ public class CommonBuilder
      *    // from #3 and #4 are executed, in reverse order of what the constructors
      *    // were called in
      *    // note: cctx argument is optional
-     *    finally$0(ctx, cctx, thi$, x, y, z);
+     *    finally$17(ctx, cctx, thi$, x, y, z);
      * }
      *
      * // assuming C extends B and B has a finally that takes some (P p, Q q):
-     * public static construct$0(CtorCtx cctx, C thi$, X x, Y y, Z z) {
+     * public static construct$17(CtorCtx cctx, C thi$, X x, Y y, Z z) {
      *    // user logic before the `construct B(p,q);`
      *    P p;
      *    Q q;
@@ -1094,7 +1129,7 @@ public class CommonBuilder
      *    // ...
      * }
      *
-     * public static finally$0(CtorCtx cctx, C thi$, X x, Y y, Z z) {
+     * public static finally$17(CtorCtx cctx, C thi$, X x, Y y, Z z) {
      *    // run the `finally` on B before running the `finally` on D
      *    // (we saved off the args in the constructor .. it's basically
      *    // a hand-rolled closure)
@@ -1112,6 +1147,7 @@ public class CommonBuilder
     protected void assembleNew(String className, ClassBuilder classBuilder, MethodInfo constructor,
                                String jitName, MethodTypeDesc md, boolean isOptimized) {
         boolean   isSingleton = typeInfo.isSingleton();
+        boolean   hasType     = typeInfo.hasGenericTypes();
         ClassDesc CD_this     = ClassDesc.of(className);
 
         // Note: the "$init" is a virtual method for singletons and "$new" is static otherwise
@@ -1127,8 +1163,15 @@ public class CommonBuilder
 
             code.labelBinding(startScope);
 
-            int ctxSlot = code.parameterSlot(0);
+            int ctxSlot    = code.parameterSlot(0);
+            int extraSlots = 1;
             code.localVariable(ctxSlot, "$ctx", CD_Ctx, startScope, endScope);
+
+            int typeSlot = -1;
+            if (hasType) {
+                typeSlot = code.parameterSlot(1);
+                extraSlots++;
+            }
 
             // for singleton classes the steps 0-2 are performed by the static initializer;
             // see "assembleStaticInitializer()"
@@ -1146,8 +1189,14 @@ public class CommonBuilder
                 // step 3: (initializer)
                 thisSlot = code.allocateLocal(TypeKind.REFERENCE);
                 code.localVariable(thisSlot, "thi$", CD_this, startScope, endScope);
-                invokeDefaultConstructor(className, code);
+                invokeDefaultConstructor(code, CD_this);
                 code.astore(thisSlot);
+
+                if (hasType) {
+                    code.aload(thisSlot)
+                        .aload(typeSlot)
+                        .putfield(CD_this, "$type", CD_TypeConstant);
+                }
             }
 
             // steps 4: a constructor context is required if a “finally” chain will exist
@@ -1162,9 +1211,9 @@ public class CommonBuilder
             ;
 
             // step 6: call the constructor
-            // construct$0(ctx, cctx, thi$, x, y, z);
+            // construct$17(ctx, cctx, [type], thi$, x, y, z);
             String        ctorName = constructor.getIdentity().ensureJitMethodName(typeSystem);
-            JitMethodDesc ctorDesc = constructor.getJitDesc(typeSystem);
+            JitMethodDesc ctorDesc = constructor.getJitDesc(typeSystem, typeInfo.getType());
 
             code.aload(ctxSlot)
                 .aload(cctxSlot)
@@ -1186,7 +1235,7 @@ public class CommonBuilder
 
             for (int i = 0, c = ctorPds.length; i < c; i++) {
                 JitParamDesc pd = ctorPds[i];
-                load(code, pd.cd, code.parameterSlot(1 + i));
+                load(code, pd.cd, code.parameterSlot(extraSlots + i));
             }
 
             code.invokestatic(CD_this, ctorName, ctorMd);
@@ -1266,6 +1315,14 @@ public class CommonBuilder
 
             for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
                 try {
+                    while (true) {
+                        int skipTo = bctx.prepareOp(code, iPC);
+                        if (skipTo < 0) {
+                            break;
+                        }
+                        assert skipTo > iPC;
+                        iPC = skipTo;
+                    }
                     ops[iPC].build(bctx, code);
                 } catch (Throwable e) {
                     MethodStructure struct = bctx.methodStruct;
@@ -1448,6 +1505,12 @@ public class CommonBuilder
                 }
                 break;
 
+            case org.xvm.asm.op.Label label:
+                // there is a chance we are compiling the same ops multiple times (for different
+                // formal types)
+                label.setLabel(null);
+                break;
+
             default:
                 break;
             }
@@ -1464,7 +1527,7 @@ public class CommonBuilder
     private final static String[] TEST_SET = new String[] {
         "Test", "test",
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
-         "Boolean", "Ordered",
+        "Boolean", "Ordered",
         "TerminalConsole",
     };
     private final static HashSet<String> SKIP_SET = new HashSet<>();

@@ -36,12 +36,12 @@ public class EnumBuilder extends CommonBuilder {
 
     @Override
     protected void assembleImplClass(String className, ClassBuilder classBuilder) {
-        classBuilder.withSuperclass(getSuperDesc())
+        classBuilder.withSuperclass(getSuperCD())
                     .withFlags(ClassFile.ACC_PUBLIC | ClassFile.ACC_ABSTRACT);
     }
 
     @Override
-    protected ClassDesc getSuperDesc() {
+    protected ClassDesc getSuperCD() {
         return CD_xEnum;
     }
 
@@ -54,7 +54,7 @@ public class EnumBuilder extends CommonBuilder {
 
     private void assembleEnumerationProp(ClassBuilder classBuilder) {
         PropertyInfo  prop       = typeInfo.findProperty("enumeration");
-        String        getterName = prop.getGetterId().ensureJitMethodName(typeSystem);
+        String        getterName = prop.ensureGetterJitMethodName(typeSystem);
         JitMethodDesc jmDesc     = prop.getGetterJitDesc(typeSystem);
         TypeConstant  enumType   = thisId.getValueType(typeSystem.pool(), null);
         ClassDesc     cdEnum     = enumType.ensureClassDesc(typeSystem);
@@ -70,7 +70,7 @@ public class EnumBuilder extends CommonBuilder {
         // generate "equals" and "compare" functions
         SignatureConstant eqSig    = typeSystem.pool().sigEquals();
         MethodInfo        eqMethod = typeInfo.getMethodBySignature(eqSig);
-        JitMethodDesc     eqJmd    = eqMethod.getJitDesc(typeSystem);
+        JitMethodDesc     eqJmd    = eqMethod.getJitDesc(typeSystem, typeInfo.getType());
 
         assert eqMethod != null;
 
@@ -80,7 +80,7 @@ public class EnumBuilder extends CommonBuilder {
 
         SignatureConstant cmpSig    = typeSystem.pool().sigCompare();
         MethodInfo        cmpMethod = typeInfo.getMethodBySignature(cmpSig);
-        JitMethodDesc     cmpJmd    = cmpMethod.getJitDesc(typeSystem);
+        JitMethodDesc     cmpJmd    = cmpMethod.getJitDesc(typeSystem, typeInfo.getType());
 
         assert cmpMethod != null;
 

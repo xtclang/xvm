@@ -66,7 +66,7 @@ public class JitMethodDesc {
     protected MethodTypeDesc computeMethodDesc(JitParamDesc[] returns, JitParamDesc[] params) {
         int         extraCount = getImplicitParamCount();
         int         paramCount = params.length;
-        ClassDesc[] paramCDs   = new ClassDesc[paramCount + extraCount];
+        ClassDesc[] paramCDs   = new ClassDesc[extraCount + paramCount];
 
         fillExtraClassDesc(paramCDs);
 
@@ -84,9 +84,13 @@ public class JitMethodDesc {
         return 1;
     }
 
-    protected void fillExtraClassDesc(ClassDesc[] paramCDs) {
+    /**
+     * @return the number of added arguments
+     */
+    protected int fillExtraClassDesc(ClassDesc[] paramCDs) {
         // the argument zero is **always** the Ctx
         paramCDs[0] = CD_Ctx;
+        return 1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 package org.xtclang.ecstasy;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.Container;
 import org.xvm.javajit.Ctx;
 import org.xvm.javajit.Xvm;
@@ -54,8 +55,15 @@ public abstract class xObj implements Object {
         return $meta; // TODO: ($meta & ID_MASK)
     }
 
+    /**
+     * Auto-generated for all classes.
+     */
+    public TypeConstant $xvmType() {
+        return $type().$type;
+    }
+
     public xType $type() {
-        throw new UnsupportedOperationException("Must be generated");
+        return (xType) $xvmType().ensureXType($owner());
     }
 
     public abstract boolean $isImmut();

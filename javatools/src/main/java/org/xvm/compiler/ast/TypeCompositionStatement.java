@@ -33,7 +33,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.MultiMethodStructure;
-import org.xvm.asm.Op;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
@@ -1837,7 +1836,7 @@ public class TypeCompositionStatement
         boolean                fExplicitDefault   = false;
         boolean                fExplicitShorthand = false;
 
-        if (listParams == null || listParams.isEmpty()) {
+        if (listParams == null) {
             // there is no "shorthand" declaration; there must be no more than one explicit
             // no-parameters constructor
             if (constructors != null) {
@@ -1911,18 +1910,18 @@ public class TypeCompositionStatement
             if (constructors != null) {
                 NextConstructor:
                 for (MethodStructure constructor : constructors.methods()) {
-                    org.xvm.asm.Parameter[] aConsParams = constructor.getParamArray();
-                    int                     cConsParams = aConsParams.length;
+                    org.xvm.asm.Parameter[] aConstParams = constructor.getParamArray();
+                    int                     cConstParams = aConstParams.length;
 
-                    if (cParams > cConsParams ||
-                        cParams < cConsParams - constructor.getDefaultParamCount()) {
+                    if (cParams > cConstParams ||
+                        cParams < cConstParams - constructor.getDefaultParamCount()) {
                         continue;
                     }
 
                     // parameters are allowed to widen from the abbreviated declaration to the
                     // explicit declaration
                     for (int i = 0; i < cParams; ++i) {
-                        TypeConstant typeConsParam = aConsParams[i].getType();
+                        TypeConstant typeConsParam = aConstParams[i].getType();
                         if (typeConsParam.containsUnresolved()) {
                             mgr.requestRevisit();
                             return;
@@ -1988,7 +1987,7 @@ public class TypeCompositionStatement
         }
 
         // all non-interfaces must have at least one constructor, even if the class is abstract
-        if (format != Format.INTERFACE && !mapChildren.containsKey("construct")) {
+        if (format != Format.INTERFACE && constructors == null) {
             // add a default constructor that will invoke the necessary super class and mixin
             // constructors (if any)
             MethodStructure constructor = component.createMethod(true, Access.PUBLIC,
@@ -2781,7 +2780,7 @@ public class TypeCompositionStatement
                             TypeConstant     typeConstraint = entry.getValue().getType();
                             PropertyConstant idFormal       = propFormal.getIdentity();
 
-                            Register regActualType = new Register(typeConstraint, null, Op.A_STACK);
+                            Register regActualType = code.createRegister(typeConstraint);
                             code.add(new L_Get(idFormal, regActualType));
                             code.add(new JumpNType(regActualType, typeConstraint, labelSkipSuper));
 
@@ -2802,7 +2801,7 @@ public class TypeCompositionStatement
                 for (int i = 0; i < cSuperArgs; i++) {
                     if (i < cArgs) {
                         Expression exprArg = listSuperArgs.get(i);
-                        aSuperArgs[i] = exprArg.generateArgument(ctxEmit, code, true, true, errs);
+                        aSuperArgs[i] = exprArg.generateArgument(ctxEmit, code, true, errs);
 
                         aAstArgs[i] = exprArg.getExprAST(ctxEmit);
                     } else {

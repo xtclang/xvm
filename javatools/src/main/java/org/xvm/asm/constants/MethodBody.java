@@ -569,17 +569,20 @@ public class MethodBody {
     /**
      * @return the JitMethodDesc
      */
-    public JitMethodDesc getJitDesc(TypeSystem ts) {
+    public JitMethodDesc getJitDesc(TypeSystem ts, TypeConstant typeContainer) {
         JitMethodDesc jmd = m_jmd;
         if (jmd == null) {
             List<JitParamDesc> listParamsStd = new ArrayList<>();
             List<JitParamDesc> listParamsOpt = new ArrayList<>();
             boolean            fOptimized    = false;
-            SignatureConstant  signature     = getSignature();
             MethodStructure    method        = getMethodStructure();
+            SignatureConstant  sigFormal     = getIdentity().getSignature();
+            SignatureConstant  sigActual     = getSignature();
+            TypeConstant[]     atypeFormal   = sigFormal.getRawParams();
+            TypeConstant[]     atypeActual   = sigActual.getRawParams();
 
             for (int iOrig = 0, iStd = 0, iOpt = 0, c = method.getParamCount(); iOrig < c; iOrig++) {
-                TypeConstant type  = signature.getRawParams()[iOrig];
+                TypeConstant type  = atypeActual[iOrig];
                 boolean      fDflt = method.getParam(iOrig).hasDefaultValue();
                 ClassDesc cd;
 
@@ -599,14 +602,14 @@ public class MethodBody {
                         listParamsOpt.add(new JitParamDesc(type, Primitive, cd, iOrig, iOpt++, false));
                     }
                 } else if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null) {
-                    JitFlavor flavor = fDflt ? WidenedWithDefault : Widened;
+                    JitFlavor flavorStd = fDflt ? WidenedWithDefault : Widened;
                     listParamsStd.add(
-                        new JitParamDesc(type, flavor, CD_xObj, iOrig, iStd++, false));
+                        new JitParamDesc(type, flavorStd, CD_xObj, iOrig, iStd++, false));
 
                     if (fDflt) {
                         // TODO: we can further optimize to a three-slot (multi-primitive with default)
                         listParamsOpt.add(
-                            new JitParamDesc(type, flavor, CD_xObj, iOrig, iOpt++, false));
+                            new JitParamDesc(type, flavorStd, CD_xObj, iOrig, iOpt++, false));
                     } else {
                         fOptimized = true;
                         listParamsOpt.add(
@@ -620,6 +623,14 @@ public class MethodBody {
                     listParamsOpt.add(new JitParamDesc(type, flavor, cd, iOrig, iOpt++, false));
                 } else {
                     assert type.isSingleUnderlyingClass(true);
+
+                    // the possibilities are:
+                    // 1) the formal type is Element and the actual is String; take the formal constraint
+                    // 2) the formal type is String or Array<Element>; take the actual type
+                    TypeConstant typeFormal = atypeFormal[iOrig];
+                    if (typeFormal.isGenericType()) {
+                        type = typeFormal;
+                    }
 
                     cd = ClassDesc.of(ts.ensureJitClassName(type));
 
@@ -639,11 +650,14 @@ public class MethodBody {
             listParamsStd.clear();
             listParamsOpt.clear();
 
+            atypeFormal = sigFormal.getRawReturns();
+            atypeActual = sigActual.getRawReturns();
+
             int ixLong   = -1; // an index of the long return value in the Ctx (only for optimized)
             int ixOptObj = -1; // an index of the Object return value in the Ctx for optimized
             int ixStdObj = -1; // an index of the Object return value in the Ctx for standard
             for (int iOrig = 0, c = method.getReturnCount(); iOrig < c; iOrig++) {
-                TypeConstant type = signature.getRawReturns()[iOrig];
+                TypeConstant type = atypeActual[iOrig];
                 ClassDesc    cd;
 
                 if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
@@ -668,6 +682,12 @@ public class MethodBody {
                 } else {
                     assert type.isSingleUnderlyingClass(true);
 
+                    // see the comment above
+                    TypeConstant typeFormal = atypeFormal[iOrig];
+                    if (typeFormal.isGenericType()) {
+                        type = typeFormal;
+                    }
+
                     cd = ClassDesc.of(ts.ensureJitClassName(type));
 
                     listParamsStd.add(new JitParamDesc(type, Specific, cd, iOrig, ixStdObj++, false));
@@ -688,9 +708,17 @@ public class MethodBody {
                     ? listParamsOpt.toArray(JitParamDesc.NONE)
                     : null;
 
-            m_jmd = jmd = isConstructor()
-                ? new JitCtorDesc(ts, this, apdStdReturn, apdStdParam, apdOptReturn, apdOptParam)
-                : new JitMethodDesc(apdStdReturn, apdStdParam, apdOptReturn, apdOptParam);
+            if (isConstructor()) {
+                boolean fAddCtorCtx = true; // TODO: isFinalizerRequired()
+
+                jmd = new JitCtorDesc(typeContainer.ensureClassDesc(ts),
+                                      fAddCtorCtx, /*fAddType*/ false,
+                                      apdStdReturn, apdStdParam, apdOptReturn, apdOptParam);
+
+            } else {
+                jmd = new JitMethodDesc(apdStdReturn, apdStdParam, apdOptReturn, apdOptParam);
+            }
+            m_jmd = jmd;
         }
         return jmd;
     }

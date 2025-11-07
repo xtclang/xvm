@@ -4,6 +4,7 @@ import org.xtclang.ecstasy.reflect.Enumeration;
 
 import org.xtclang.ecstasy.text.String;
 
+import org.xvm.javajit.Container;
 import org.xvm.javajit.Ctx;
 
 /**
@@ -20,6 +21,11 @@ public class Nullable
 
     public static final Nullable Null = new Nullable();
 
+    @Override public xType $type() {
+        Container container = $owner();
+        return (xType) container.typeSystem.pool().typeNull().ensureXType(container);
+    }
+
     public Enumeration enumeration$get(Ctx ctx) {
         return Nullable$Enumeration.$INSTANCE;
     }
@@ -30,5 +36,4 @@ public class Nullable
     public long ordinal$get$p(Ctx ctx) {
         return 0;
     }
-
 }

@@ -77,6 +77,8 @@ import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 import org.xvm.util.TransientThreadLocal;
 
+import static org.xvm.javajit.Builder.N_xArrayChar;
+
 import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
@@ -6403,7 +6405,6 @@ public abstract class TypeConstant
         return null;
     }
 
-
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
@@ -6435,14 +6436,48 @@ public abstract class TypeConstant
                             break ComputeName;
                         }
                     }
+                    if (id.equals(pool.clzArray())) {
+                        TypeConstant typeEl = type.getParamType(0);
+                        if (typeEl.isFormalType() || typeEl.equals(pool.typeObject())) {
+                            sJitName = Builder.N_Array;
+                        } else if (typeEl.isPrimitive()){
+                            ClassDesc        cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
+                            IdentityConstant idEl = typeEl.getSingleUnderlyingClass(false);
+
+                            sJitName = switch (cdEl.descriptorString()) {
+                                case "Z" ->          Builder.N_xArrayObj;
+                                case "J" -> switch (idEl.getName()) {
+                                    case "Int64"  -> Builder.N_xArrayObj;
+                                    case "UInt64" -> Builder.N_xArrayObj;
+                                    default -> throw new IllegalStateException();
+                                };
+                                case "I" -> switch (idEl.getName()) {
+                                    case "Char"   -> N_xArrayChar;
+                                    case "Int8"   -> Builder.N_xArrayObj;
+                                    case "Int16"  -> Builder.N_xArrayObj;
+                                    case "Int32"  -> Builder.N_xArrayObj;
+                                    case "UInt8"  -> Builder.N_xArrayObj;
+                                    case "UInt16" -> Builder.N_xArrayObj;
+                                    case "UInt32" -> Builder.N_xArrayObj;
+                                    default -> throw new IllegalStateException();
+                                };
+                                default -> throw new UnsupportedOperationException();
+                            };
+                        } else {
+                            sJitName = Builder.N_xArrayObj;
+                        }
+                        break ComputeName;
+                    }
                     if (id.equals(pool.clzEnumeration())) {
                         // JIT class name for Enumeration<Enum> is "Enumeration", but
                         // JIT class name for Enumeration<X> is "X$Enumeration"
                         TypeConstant typeValue = type.getParamType(0);
-                        if (!typeValue.isFormalType() && !typeValue.equals(pool.clzEnum().getType())) {
+                        if (typeValue.isFormalType() || typeValue.equals(pool.clzEnum().getType())) {
+                            sJitName = Builder.N_Enumeration;
+                        } else {
                             sJitName = typeValue.ensureJitClassName(ts) + Builder.ENUMERATION;
-                            break ComputeName;
                         }
+                        break ComputeName;
                     } else if (id.equals(pool.clzClass())) {
                         TypeConstant typePublic = this.getParamType(0);
                         if (!typePublic.isFormalType() && typePublic.isEnum() &&
@@ -6457,6 +6492,11 @@ public abstract class TypeConstant
                     }
                     sJitName = loader.prefix + id.getJitName(ts);
 
+                    TypeConstant typeCanonical = getCanonicalJitType();
+                    if (typeCanonical.getParamsCount() > 0) {
+                        // TEMPORARY: TODO REPLACE the naming
+                        sJitName += "$$" + typeCanonical.getPosition();
+                    }
                     // TODO: check for collisions, reserved keywords etc.
                 }
                 type.m_sJitName = sJitName;
@@ -6478,19 +6518,34 @@ public abstract class TypeConstant
     public JitTypeDesc getJitDesc(TypeSystem ts) {
         ClassDesc cd;
         if ((cd = JitTypeDesc.getPrimitiveClass(this)) != null) {
-            return new JitTypeDesc(this, Primitive, cd);
+            return new JitTypeDesc(getCanonicalJitType(), Primitive, cd);
         }
         if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(this)) != null) {
-            return new JitTypeDesc(this.removeNullable(), MultiSlotPrimitive, cd);
+            return new JitTypeDesc(this.removeNullable().getCanonicalJitType(), MultiSlotPrimitive, cd);
         }
         if ((cd = JitTypeDesc.getWidenedClass(this)) != null) {
-            return new JitTypeDesc(this, Widened, cd);
+            return new JitTypeDesc(getCanonicalJitType(), Widened, cd);
         }
         assert isSingleUnderlyingClass(true);
 
-        return new JitTypeDesc(this, Specific, ClassDesc.of(ts.ensureJitClassName(this)));
+        return new JitTypeDesc(getCanonicalJitType(), Specific, ClassDesc.of(ts.ensureJitClassName(this)));
     }
 
+    /**
+     * @return a canonical Jit type where all the type parameters are either primitive types
+     *         or corresponding formal type constraint types
+     */
+    public TypeConstant getCanonicalJitType() {
+        if (!isModifyingType()) {
+            return this;
+        }
+
+        TypeConstant constOriginal = getUnderlyingType();
+        TypeConstant constResolved = constOriginal.getCanonicalJitType();
+        return constResolved == constOriginal
+                ? this
+                : cloneSingle(getConstantPool(), constResolved);
+    }
 
     // ----- run-time support ----------------------------------------------------------------------
 

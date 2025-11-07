@@ -4,6 +4,7 @@
  */
 class CompoundIterator<Element>
         implements Iterator<Element> {
+
     construct(Iterator<Element> iter1, Iterator<Element> iter2) {
         iter = iter1;
         tail = iter2;
@@ -18,15 +19,14 @@ class CompoundIterator<Element>
      * @param iterator  the Iterator to add
      */
     protected void add(Iterator<Element> iter) {
-        if (tail == Null) {
-            tail = iter;
-        } else {
-            val nonNullTail = tail ?: assert; // TODO CP assumptions project - get rid of this val
-            if (nonNullTail.is(CompoundIterator)) {
-                nonNullTail.add(iter);
+        if (Iterator<Element> tail ?= tail) {
+            if (tail.is(CompoundIterator)) {
+                tail.add(iter);
             } else {
-                tail = new CompoundIterator(nonNullTail, iter);
+                this.tail = new CompoundIterator(tail, iter);
             }
+        } else {
+            tail = iter;
         }
     }
 
@@ -36,41 +36,33 @@ class CompoundIterator<Element>
             return True, el;
         }
 
-        if (tail == Null) {
-            return False;
+        if (Iterator<Element> tail ?= tail) {
+            this.iter = tail;
+            this.tail = Null;
+            return iter.next();
         }
 
-        iter = tail ?: assert;  // TODO CP assumptions project - get rid of assert
-        tail = Null;
-        return iter.next();
+        return False;
     }
 
     @Override
-    Boolean knownDistinct() {
-        return tail == Null && iter.knownDistinct();
-    }
+    Boolean knownDistinct() = tail == Null && iter.knownDistinct();
 
     @Override
-    conditional Orderer knownOrder() {
-        return tail == Null
-                 ? iter.knownOrder()
-                 : False;
-    }
+    conditional Orderer knownOrder() = tail == Null ? iter.knownOrder() : False;
 
     @Override
-    Boolean knownEmpty() {
-        return iter.knownEmpty() && (tail?.knownEmpty() : True);
-    }
+    Boolean knownEmpty() = iter.knownEmpty() && (tail?.knownEmpty() : True);
 
     @Override
     conditional Int knownSize() {
-        if (Int size1 := iter.knownSize()) {
-            if (tail == Null) {
-                return True, size1;
-            }
-
-            if (Int size2 := tail?.knownSize()) {  // TODO CP assumptions project - get rid of '?'
-                return True, size1 + size2;
+        if (Int iterSize := iter.knownSize()) {
+            if (Iterator<Element> tail ?= tail) {
+                if (Int tailSize := tail.knownSize()) {
+                    return True, iterSize + tailSize;
+                }
+            } else {
+                return True, iterSize;
             }
         }
         return False;

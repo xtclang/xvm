@@ -136,14 +136,14 @@ public abstract class DelegatingExpression
 
     @Override
     public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
-        return expr.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+        Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
+        return expr.generateArgument(ctx, code, fLocalPropOk, errs);
     }
 
     @Override
     public Argument[] generateArguments(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
-        return expr.generateArguments(ctx, code, fLocalPropOk, fUsedOnce, errs);
+        Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
+        return expr.generateArguments(ctx, code, fLocalPropOk, errs);
     }
 
     @Override

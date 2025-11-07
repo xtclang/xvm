@@ -81,24 +81,11 @@ public class P_Get
     @Override
     public int process(Frame frame, int iPC) {
         try {
-            ObjectHandle hTarget = frame.getArgument(m_nTarget);
-
+            ObjectHandle     hTarget       = frame.getArgument(m_nTarget);
             PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
 
             if (frame.isNextRegister(m_nRetValue)) {
-                // OLD TODO GG: the actual type needs to be injected by the compiler/verifier
-                // NEW TODO GG: change code emission to never generate "next register" with "A_STACK" combination
-                if (m_nTarget == A_STACK) {
-                    TypeConstant typeTarget = hTarget.getType();
-                    ConstantPool pool       = frame.poolContext();
-                    TypeConstant typeProp   = typeTarget.containsGenericParam(constProperty.getName())
-                            ? constProperty.getFormalType().resolveGenerics(pool, typeTarget).getType()
-                            : constProperty.getType().resolveGenerics(pool, typeTarget);
-
-                    frame.introduceResolvedVar(m_nRetValue, typeProp);
-                } else {
-                    frame.introducePropertyVar(m_nRetValue, m_nTarget, m_nPropId);
-                }
+                frame.introducePropertyVar(m_nRetValue, m_nTarget, m_nPropId);
             }
 
             return isDeferred(hTarget)

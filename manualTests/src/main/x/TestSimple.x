@@ -1,13 +1,15 @@
 module TestSimple {
-
     @Inject Console console;
 
     void run() {
-        String? s = "hello";
-        console.print(s);
-        s.makeImmutable();
-        s = Null;
-        console.print(s);
-        s.makeImmutable(); // used to fail
+        console.print(new Test().value); // that used to fail to compile
+    }
+
+    class Test() {
+        String value = "hello";
+
+        construct(String s) {
+            value = s;
+        }
     }
 }

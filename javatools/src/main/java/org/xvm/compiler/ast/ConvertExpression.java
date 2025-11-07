@@ -152,13 +152,13 @@ public class ConvertExpression
         }
 
         // get the value to be converted
-        Argument argIn = expr.generateArgument(ctx, code, true, true, errs);
+        Argument argIn = expr.generateArgument(ctx, code, true, errs);
 
         // determine the destination of the conversion
         if (LVal.isLocalArgument()) {
             code.add(new Invoke_01(argIn, idConv, LVal.getLocalArgument()));
         } else {
-            Register regResult = new Register(getType(), null, Op.A_STACK);
+            Register regResult = code.createRegister(getType());
             code.add(new Invoke_01(argIn, idConv, regResult));
             LVal.assign(regResult, code, errs);
         }
@@ -182,7 +182,16 @@ public class ConvertExpression
         // create a temporary to hold the Boolean result for a conditional call, if necessary
         boolean  fCond   = isConditionalResult();
         Register regCond = null;
-        Label    lblSkip = new Label("skip_conv");
+        Label    lblSkip;
+        boolean  fLocalSkip;
+        if (getConditionFalseLabel() instanceof Label lblCond) {
+            lblSkip    = lblCond;
+            fLocalSkip = false;
+        } else {
+            lblSkip    = new Label("skip_conv");
+            fLocalSkip = true;
+        }
+
         if (fCond) {
             Assignable aLValCond = aLValTemp[0];
             if (aLValCond.isNormalVariable()) {
@@ -207,7 +216,7 @@ public class ConvertExpression
         expr.generateAssignments(ctx, code, aLValTemp, errs);
 
         // skip the conversion if the conditional result was False
-        if (fCond) {
+        if (fCond && fLocalSkip) {
             if (aLVal[0] != aLValTemp[0]) {
                 aLVal[0].assign(regCond, code, errs);
             }
@@ -222,14 +231,14 @@ public class ConvertExpression
                 if (LVal.isLocalArgument()) {
                     code.add(new Invoke_01(regTemp, idConv, LVal.getLocalArgument()));
                 } else {
-                    Register regResult = new Register(getTypes()[i], null, Op.A_STACK);
+                    Register regResult = code.createRegister(getTypes()[i]);
                     code.add(new Invoke_01(regTemp, idConv, regResult));
                     LVal.assign(regResult, code, errs);
                 }
             }
         }
 
-        if (fCond) {
+        if (fCond && fLocalSkip) {
             code.add(lblSkip);
         }
     }

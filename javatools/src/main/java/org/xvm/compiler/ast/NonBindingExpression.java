@@ -102,8 +102,7 @@ public class NonBindingExpression
     }
 
     @Override
-    public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         // we use synthetic NonBindingExpressions to mark non-specified default arguments in a
         // presence of other named arguments (see AstNode.rearrangeNamedArgs);
         // note that "generateArgument" is never called when a method binding is performed

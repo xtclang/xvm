@@ -18,8 +18,8 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
@@ -146,15 +146,15 @@ public class CatchStart
     public void build(BuildContext bctx, CodeBuilder code, org.xvm.javajit.Scope scopeGuarded) {
         org.xvm.javajit.Scope scopeThis = bctx.enterScope(code);
 
-        TypeSystem   ts         = bctx.typeSystem;
-        Slot         slotEx     = bctx.introduceVar(code, m_nVar, m_nType, m_nNameId);
-        TypeConstant typeEx     = slotEx.type();
+        TypeSystem   ts     = bctx.typeSystem;
+        RegisterInfo regEx  = bctx.introduceVar(code, m_nVar, m_nType, m_nNameId);
+        TypeConstant typeEx = regEx.type();
         assert typeEx.isA(ts.pool().typeException());
 
         ClassDesc cdEx = Builder.getShapeDesc(typeEx.ensureJitClassName(ts), ClassfileShape.Exception);
 
         code.getfield(cdEx, "exception", CD_Exception);
-        bctx.storeValue(code, slotEx);
+        bctx.storeValue(code, regEx);
 
         // add to the exception table
         code.exceptionCatch(scopeGuarded.startLabel, scopeGuarded.endLabel, scopeThis.startLabel, cdEx);

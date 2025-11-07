@@ -124,6 +124,15 @@ public class I_Set
         m_argValue = registerArgument(m_argValue, registry);
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    protected int getValueIndex() {
+        return m_nValue;
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
+
     protected int m_nValue;
 
     private Argument m_argValue;

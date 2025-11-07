@@ -590,13 +590,13 @@ public class ArrayAccessExpression
             // M_GET  rvalue-target, #:(rvalue-ix), lvalue    ; T = T[ix*]
             Argument         argResult      = LVal.isLocalArgument()
                                             ? LVal.getLocalArgument()
-                                            : createTempVar(code, getType(), true).getRegister();
+                                            : createTempVar(code, getType()).getRegister();
             // the target argument for Invoke must not be on stack
-            Argument         argArray       = expr.generateArgument(ctx, code, true, !m_fSlice, errs);
+            Argument         argArray       = expr.generateArgument(ctx, code, true, errs);
             List<Expression> listIndexExprs = indexes;
             int              cIndexes       = listIndexExprs.size();
             if (cIndexes == 1) {
-                Argument argIndex = listIndexExprs.get(0).generateArgument(ctx, code, true, true, errs);
+                Argument argIndex = listIndexExprs.get(0).generateArgument(ctx, code, true, errs);
                 if (m_fSlice) {
                     code.add(new Invoke_11(argArray, m_idGet, argIndex, argResult));
                 } else {
@@ -606,7 +606,7 @@ public class ArrayAccessExpression
                 Argument[] aIndexArgs = new Argument[cIndexes];
                 for (int i = 0; i < cIndexes; ++i) {
                     Expression expr = listIndexExprs.get(i);
-                    Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
+                    Argument   arg  = expr.generateArgument(ctx, code, true, errs);
                     aIndexArgs[i] = expr.ensurePointInTime(code, arg, listIndexExprs, i);
                 }
 
@@ -628,17 +628,17 @@ public class ArrayAccessExpression
 
     @Override
     public Assignable generateAssignable(Context ctx, Code code, ErrorListener errs) {
-        Argument         argArray  = expr.generateArgument(ctx, code, true, true, errs);
+        Argument         argArray  = expr.generateArgument(ctx, code, true, errs);
         List<Expression> listIndex = indexes;
         int              cIndexes  = listIndex.size();
         if (cIndexes == 1) {
-            Argument argIndex = listIndex.get(0).generateArgument(ctx, code, true, false, errs);
+            Argument argIndex = listIndex.get(0).generateArgument(ctx, code, true, errs);
             return new Assignable(argArray, argIndex);
         } else {
             Argument[] aArgIndexes = new Argument[cIndexes];
             for (int i = 0; i < cIndexes; ++i) {
                 Expression expr = listIndex.get(i);
-                Argument   arg  = expr.generateArgument(ctx, code, true, false, errs);
+                Argument   arg  = expr.generateArgument(ctx, code, true, errs);
                 aArgIndexes[i] = expr.ensurePointInTime(code, arg, listIndex, i);
             }
             return new Assignable(argArray, aArgIndexes);

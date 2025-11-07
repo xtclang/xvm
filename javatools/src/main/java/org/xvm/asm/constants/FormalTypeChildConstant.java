@@ -118,6 +118,14 @@ public class FormalTypeChildConstant
     public TypeConstant resolve(GenericTypeResolver resolver) {
         TypeConstant typeResolved = super.resolve(resolver);
         if (typeResolved == null) {
+            if (resolver instanceof TypeConstant typeType && typeType.isTypeOfType()) {
+                // this is a formal child (e.g. SubType.Element) resolving against a type of type;
+                // resolve the underlying type and return the corresponding type of type
+                TypeConstant type = typeType.getParamType(0).resolveFormalType(this);
+                if (type != null) {
+                    return type.getType();
+                }
+            }
             FormalConstant idParent   = getParentConstant();
             TypeConstant   typeParent = idParent.resolve(resolver);
 

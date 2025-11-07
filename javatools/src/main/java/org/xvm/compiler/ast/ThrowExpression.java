@@ -273,15 +273,13 @@ public class ThrowExpression
     }
 
     @Override
-    public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         generateThrow(ctx, code, errs);
         return generateBlackHole(getValueCount() == 0 ? pool().typeObject() : getType());
     }
 
     @Override
-    public Argument[] generateArguments(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+    public Argument[] generateArguments(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         generateThrow(ctx, code, errs);
 
         TypeConstant[] aTypes = getTypes();
@@ -310,7 +308,7 @@ public class ThrowExpression
         Argument argEx;
         if (keyword.getId() == Token.Id.THROW) {
             assert message == null;
-            argEx = expr.generateArgument(ctx, code, true, true, errs);
+            argEx = expr.generateArgument(ctx, code, true, errs);
         } else {
             assert expr == null;
 
@@ -320,7 +318,7 @@ public class ThrowExpression
             MethodConstant constNew = constEx.findConstructor(pool.typeString१(), pool.typeException१());
             Argument       argMsg   = message == null
                     ? pool.ensureStringConstant(computeMessage())
-                    : message.generateArgument(ctx, code, false, false, errs);
+                    : message.generateArgument(ctx, code, false, errs);
 
             argEx = code.createRegister(constEx.getType());
             code.add(new New_N(constNew, new Argument[] {argMsg, pool.valNull()}, argEx));

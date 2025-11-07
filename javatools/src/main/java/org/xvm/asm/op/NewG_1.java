@@ -5,12 +5,16 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
 import org.xvm.asm.constants.MethodConstant;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -125,6 +129,15 @@ public class NewG_1
         return Argument.toIdString(m_argType, m_nTypeValue) + ": " +
                Argument.toIdString(m_argValue, m_nArgValue);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        buildNewG(bctx, code, m_nTypeValue, new int[] {m_nArgValue});
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int m_nTypeValue;
     private int m_nArgValue;

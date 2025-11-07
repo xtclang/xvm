@@ -93,13 +93,12 @@ public class AsExpression
     }
 
     @Override
-    public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
-        Argument     argBefore = expr1.generateArgument(ctx, code, true, true, errs);
+    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
+        Argument     argBefore = expr1.generateArgument(ctx, code, true, errs);
         TypeConstant type      = getTargetType();
 
         if (m_fCastRequired || !argBefore.getType().equals(type)) {
-            Argument argAfter = code.createRegister(type, fUsedOnce);
+            Argument argAfter = code.createRegister(type);
 
             code.add(new MoveCast(argBefore, argAfter, type));
             return argAfter;
@@ -111,7 +110,7 @@ public class AsExpression
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs) {
         if (LVal.isLocalArgument()) {
-            Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
+            Argument argTarget = expr1.generateArgument(ctx, code, true, errs);
             if (m_fCastRequired) {
                 code.add(new MoveCast(argTarget, LVal.getLocalArgument(), getTargetType()));
             } else {

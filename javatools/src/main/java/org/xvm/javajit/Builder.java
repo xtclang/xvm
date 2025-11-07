@@ -12,24 +12,28 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ByteConstant;
+import org.xvm.asm.constants.CharConstant;
 import org.xvm.asm.constants.EnumValueConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.NamedCondition;
+import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext.SingleSlot;
-import org.xvm.javajit.BuildContext.Slot;
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
+import static java.lang.constant.ConstantDescs.INIT_NAME;
 
+import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 
 /**
@@ -53,6 +57,13 @@ public abstract class Builder {
      * Assemble the java class for the "pure" shape.
      */
     public void assemblePure(String className, ClassBuilder classBuilder) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * @return TypeConstant for "this" type
+     */
+    protected TypeConstant getThisType() {
         throw new UnsupportedOperationException();
     }
 
@@ -81,17 +92,13 @@ public abstract class Builder {
      *
      * We **always** load a primitive value if possible.
      */
-    public Slot loadConstant(CodeBuilder code, Constant constant) {
+    public RegisterInfo loadConstant(CodeBuilder code, Constant constant) {
         // see NativeContainer#getConstType()
 
         switch (constant) {
         case StringConstant stringConst:
-            MethodTypeDesc MD_of = MethodTypeDesc.of(CD_String, CD_Ctx, CD_JavaString);
-            // String.of(s)
-            code.aload(code.parameterSlot(0)) // $ctx
-                .ldc(stringConst.getValue())
-                .invokestatic(CD_String, "of", MD_of);
-            return new SingleSlot(Op.A_STACK, constant.getType(), CD_String, "");
+            loadString(code, stringConst.getValue());
+            return new SingleSlot(Op.A_STACK, stringConst.getType(), CD_String, "");
 
         case IntConstant intConstant:// TODO: support all Int/UInt types
             code.ldc(intConstant.getValue().getLong());
@@ -112,7 +119,7 @@ public abstract class Builder {
             }
             break;
 
-        case SingletonConstant singleton:
+        case SingletonConstant singleton: {
             if (singleton instanceof EnumValueConstant enumConstant) {
                 ConstantPool pool = constant.getConstantPool();
                 if (enumConstant.getType().isOnlyNullable()) {
@@ -132,22 +139,81 @@ public abstract class Builder {
 
             TypeConstant type = singleton.getType();
             JitTypeDesc  jtd  = type.getJitDesc(typeSystem);
-            assert jtd.flavor == JitFlavor.Specific;
+            assert jtd.flavor == Specific;
 
             // retrieve from Singleton.$INSTANCE (see CommonBuilder.assembleStaticInitializer)
             ClassDesc cd = jtd.cd;
             code.getstatic(cd, Instance, cd);
             return new SingleSlot(Op.A_STACK, type, cd, "");
+        }
+
+        case CharConstant ch:
+            code.loadConstant(ch.getValue());
+            return new SingleSlot(Op.A_STACK, constant.getConstantPool().typeChar(), CD_Char, "");
 
         case NamedCondition cond:
             code.loadConstant(cond.getName());
             return new SingleSlot(Op.A_STACK, cond.getConstantPool().typeString(), CD_String, "");
+
+        case TypeConstant type:
+            Builder.loadTypeConstant(code, typeSystem, type);
+            return new SingleSlot(Op.A_STACK, type.getType(), CD_TypeConstant, "");
+
+        case PropertyConstant propId:
+            // support for the "local property" mode
+            code.aload(0);
+            JitMethodDesc jmd = loadProperty(code, getThisType(), propId);
+
+            TypeConstant type = jmd.isOptimized
+                    ? jmd.optimizedReturns[0].type
+                    : jmd.standardReturns[0].type;
+            JitTypeDesc jtd = type.getJitDesc(typeSystem);
+            if (jtd.flavor == MultiSlotPrimitive) {
+                throw new UnsupportedOperationException("TODO multislot property");
+            }
+            return new SingleSlot(Op.A_STACK, type, jtd.cd, "");
 
         default:
             break;
         }
 
         throw new UnsupportedOperationException(constant.toString());
+    }
+
+    /**
+     * Build the code to load an XTC String value on the Java stack.
+     */
+    public static void loadString(CodeBuilder code, String value) {
+        code.aload(code.parameterSlot(0)) // $ctx
+            .ldc(value)
+            .invokestatic(CD_String, "of", MD_StringOf);
+    }
+
+    /**
+     * Build the code to load a local property on the Java stack.
+     *
+     * This method assumes the "owner" ref is loaded on Java stack.
+     *
+     * @return the JitMethodDesc for the "get" method
+     */
+    public JitMethodDesc loadProperty(CodeBuilder code, TypeConstant typeContainer,
+                                      PropertyConstant propId) {
+        PropertyInfo     propInfo   = propId.getPropertyInfo(typeContainer);
+        ClassDesc        cdOwner    = propInfo.getOwnerClassDesc(typeSystem, typeContainer);
+        JitMethodDesc    jmdGet     = propInfo.getGetterJitDesc(typeSystem);
+        String           getterName = propInfo.ensureGetterJitMethodName(typeSystem);
+
+        MethodTypeDesc md;
+        if (jmdGet.isOptimized) {
+            md         = jmdGet.optimizedMD;
+            getterName += Builder.OPT;
+        } else {
+            md = jmdGet.standardMD;
+        }
+
+        code.aload(code.parameterSlot(0)); // $ctx
+        code.invokevirtual(cdOwner, getterName, md);
+        return jmdGet;
     }
 
     /**
@@ -237,24 +303,22 @@ public abstract class Builder {
 
     /**
      * Generate a "load" for the specified TypeConstant.
-     * In:  Ctx
      * Out: TypeConstant
      */
     public static void loadTypeConstant(CodeBuilder code, TypeSystem ts, TypeConstant type) {
-        code.loadConstant(ts.registerConstant(type))
+        code.aload(code.parameterSlot(0)) // $ctx
+            .loadConstant(ts.registerConstant(type))
             .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
             .checkcast(CD_TypeConstant);                              // <- type
     }
 
     /**
-     * Generate a "get" for an xType.
-     * In:  Ctx
+     * Generate a "load" for an xType for the specified TypeConstant.
      * Out: xType instance
      */
     public static void loadType(CodeBuilder code, TypeSystem ts, TypeConstant type) {
-        code.dup(); // ctx
         loadTypeConstant(code, ts, type);
-        code.swap() // [ctx, type] -> [type, ctx]
+        code.aload(code.parameterSlot(0)) // $ctx
             .getfield(CD_Ctx, "container", CD_Container)
             .invokevirtual(CD_TypeConstant, "ensureXType",
                     MethodTypeDesc.of(CD_JavaObject, CD_Container))
@@ -290,6 +354,18 @@ public abstract class Builder {
             code.areturn();
         }
     }
+
+    /**
+     * Call the default constructor for the target class.
+     *
+     * @param cd the target ClassDesc
+     */
+    public static void invokeDefaultConstructor(CodeBuilder code, ClassDesc cd) {
+        code.new_(cd)
+            .dup()
+            .aload(code.parameterSlot(0)) // ctx
+            .invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx));
+   }
 
     /**
      * Generate a "pop()" opcode for Java class assuming the corresponding value is already on java
@@ -338,7 +414,7 @@ public abstract class Builder {
 
         case "I": // int
             switch (type.getSingleUnderlyingClass(false).getName()) {
-                case "Char"   -> code.getfield(CD_Char, "codepoint", cd);
+                case "Char"   -> code.getfield(CD_Char,   "$value", cd);
                 case "Int8"   -> code.getfield(CD_Int8,   "$value", cd);
                 case "Int16"  -> code.getfield(CD_Int16,  "$value", cd);
                 case "Int32"  -> code.getfield(CD_Int32,  "$value", cd);
@@ -422,7 +498,7 @@ public abstract class Builder {
     public static void loadFromContext(CodeBuilder code, ClassDesc cd, int returnIndex) {
         assert returnIndex >= 0;
 
-        code.aload(code.parameterSlot(0));
+        code.aload(code.parameterSlot(0)); // $ctx
 
         if (cd.isPrimitive()) {
             if (returnIndex < 8) {
@@ -471,7 +547,7 @@ public abstract class Builder {
     public static void storeToContext(CodeBuilder code, ClassDesc cd, int returnIndex) {
         assert returnIndex >= 0;
 
-        code.aload(code.parameterSlot(0));
+        code.aload(code.parameterSlot(0)); // $ctx
         if (cd.isPrimitive() && cd.descriptorString().equals("J")) {
              // the value is a "long" that occupies two slots
              // stack (lvalue, lvalue2, $ctx) -> ($ctx, lvalue, lvalue2)
@@ -524,17 +600,22 @@ public abstract class Builder {
     }
 
     /**
-     * Convert the "void construct$0(...)" to "This new$0(...)"
+     * Convert the "void construct$17(...)" to "This new$17(...)"
      */
     public static JitMethodDesc convertConstructToNew(TypeInfo typeInfo, String className,
-                                                      JitMethodDesc jmdCtor) {
+                                                      JitCtorDesc jmdCtor) {
         JitParamDesc retDesc = new JitParamDesc(typeInfo.getType(), Specific,
                 ClassDesc.of(className), 0, -1, false);
 
         JitParamDesc[] standardReturns  = new JitParamDesc[] {retDesc};
         JitParamDesc[] optimizedReturns = jmdCtor.isOptimized ? standardReturns : null;
-        return new JitMethodDesc(standardReturns,  jmdCtor.standardParams,
-                                 optimizedReturns, jmdCtor.optimizedParams);
+        return typeInfo.hasGenericTypes()
+            ? new JitCtorDesc(null, /*addCtorCtx*/ false, /*addType*/ true,
+                    standardReturns,  jmdCtor.standardParams,
+                    optimizedReturns, jmdCtor.optimizedParams)
+            : new JitMethodDesc(
+                    standardReturns,  jmdCtor.standardParams,
+                    optimizedReturns, jmdCtor.optimizedParams);
     }
 
     /**
@@ -567,8 +648,10 @@ public abstract class Builder {
 
     // ----- native class names --------------------------------------------------------------------
 
+    public static final String N_Array        = "org.xtclang.ecstasy.collections.Array";
     public static final String N_Boolean      = "org.xtclang.ecstasy.Boolean";
     public static final String N_Char         = "org.xtclang.ecstasy.text.Char";
+    public static final String N_Enumeration  = "org.xtclang.ecstasy.reflect.Enumeration";
     public static final String N_Exception    = "org.xtclang.ecstasy.Exception";
     public static final String N_Int8         = "org.xtclang.ecstasy.numbers.Int8";
     public static final String N_Int16        = "org.xtclang.ecstasy.numbers.Int16";
@@ -578,15 +661,17 @@ public abstract class Builder {
     public static final String N_Object       = "org.xtclang.ecstasy.Object";
     public static final String N_Ordered      = "org.xtclang.ecstasy.Ordered";
     public static final String N_String       = "org.xtclang.ecstasy.text.String";
+    public static final String N_TypeMismatch = "org.xtclang.ecstasy.TypeMismatch";
     public static final String N_UInt8        = "org.xtclang.ecstasy.numbers.UInt8";
     public static final String N_UInt16       = "org.xtclang.ecstasy.numbers.UInt16";
     public static final String N_UInt32       = "org.xtclang.ecstasy.numbers.UInt32";
     public static final String N_UInt64       = "org.xtclang.ecstasy.numbers.UInt64";
 
+    public static final String N_xArrayChar   = "org.xtclang.ecstasy.collections.xArray$Char";
+    public static final String N_xArrayObj    = "org.xtclang.ecstasy.collections.xArray$Object";
     public static final String N_xClass       = "org.xtclang.ecstasy.xClass";
     public static final String N_xConst       = "org.xtclang.ecstasy.xConst";
     public static final String N_xEnum        = "org.xtclang.ecstasy.xEnum";
-    public static final String N_xEnumeration = "org.xtclang.ecstasy.reflect.Enumeration";
     public static final String N_xException   = "org.xtclang.ecstasy.xException";
     public static final String N_xFunction    = "org.xtclang.ecstasy.xFunction";
     public static final String N_xModule      = "org.xtclang.ecstasy.xModule";
@@ -605,12 +690,15 @@ public abstract class Builder {
 
     // ----- well-known class descriptors ----------------------------------------------------------
 
+    public static final ClassDesc CD_Array         = ClassDesc.of(N_Array);
+    public static final ClassDesc CD_Enumeration   = ClassDesc.of(N_Enumeration);
     public static final ClassDesc CD_Exception     = ClassDesc.of(N_Exception);
     public static final ClassDesc CD_xFunction     = ClassDesc.of(N_xFunction);
     public static final ClassDesc CD_xModule       = ClassDesc.of(N_xModule);
 
+    public static final ClassDesc CD_xArrayChar    = ClassDesc.of(N_xArrayChar);
+    public static final ClassDesc CD_xArrayObj     = ClassDesc.of(N_xArrayObj);
     public static final ClassDesc CD_xEnum         = ClassDesc.of(N_xEnum);
-    public static final ClassDesc CD_xEnumeration  = ClassDesc.of(N_xEnumeration);
     public static final ClassDesc CD_xException    = ClassDesc.of(N_xException);
     public static final ClassDesc CD_xObj          = ClassDesc.of(N_xObj);
     public static final ClassDesc CD_xType         = ClassDesc.of(N_xType);
@@ -656,4 +744,6 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_UInt64_box  = MethodTypeDesc.of(CD_UInt64, CD_long);
     public static final MethodTypeDesc MD_Initializer = MethodTypeDesc.of(CD_void,   CD_Ctx);
     public static final MethodTypeDesc MD_StringOf    = MethodTypeDesc.of(CD_String, CD_Ctx, CD_JavaString);
+    public static final MethodTypeDesc MD_xvmType     = MethodTypeDesc.of(CD_TypeConstant);
+    public static final MethodTypeDesc MD_TypeIsA     = MethodTypeDesc.of(CD_boolean, CD_TypeConstant);
 }

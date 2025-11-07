@@ -16,11 +16,6 @@ public interface Argument {
     TypeConstant getType();
 
     /**
-     * @return true iff the argument refers to the local stack in the frame
-     */
-    boolean isStack();
-
-    /**
      * @return true iff this argument is known to represent an effectively final value
      */
     boolean isEffectivelyFinal();

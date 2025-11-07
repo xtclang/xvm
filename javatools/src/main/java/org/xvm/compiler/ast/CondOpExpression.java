@@ -165,7 +165,7 @@ public class CondOpExpression
 
     @Override
     public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+        Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         if (isConstant()) {
             return toConstant();
         }
@@ -174,12 +174,12 @@ public class CondOpExpression
         case UorF:
         case UandT:
             // result is the same as the result of the first expression
-            return expr1.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+            return expr1.generateArgument(ctx, code, fLocalPropOk, errs);
 
         case ForU:
         case TandU:
             // result is the same as the result of the second expression
-            return expr2.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+            return expr2.generateArgument(ctx, code, fLocalPropOk, errs);
 
         case UorU:
         case UandU:
@@ -200,7 +200,7 @@ public class CondOpExpression
 
         case UorT:
             // ensure side effects are in play
-            expr1.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+            expr1.generateArgument(ctx, code, fLocalPropOk, errs);
             // fall through
         case ForT:
             return pool().valTrue();

@@ -24,8 +24,8 @@ public class EnumerationBuilder extends CommonBuilder {
     }
 
     @Override
-    protected ClassDesc getSuperDesc() {
-        return CD_xEnumeration;
+    protected ClassDesc getSuperCD() {
+        return CD_Enumeration;
     }
 
     @Override
@@ -37,7 +37,7 @@ public class EnumerationBuilder extends CommonBuilder {
 
     private void assembleNamesProp(ClassBuilder classBuilder) {
         PropertyInfo  prop       = typeInfo.findProperty("names");
-        String        getterName = prop.getGetterId().ensureJitMethodName(typeSystem);
+        String        getterName = prop.ensureGetterJitMethodName(typeSystem);
         JitMethodDesc jmDesc     = prop.getGetterJitDesc(typeSystem);
         TypeConstant  enumType   = typeInfo.getType().getParamType(0);
         ClassDesc     cdEnum     = enumType.ensureClassDesc(typeSystem);

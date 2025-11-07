@@ -1,8 +1,6 @@
 package org.xvm.asm.constants;
 
 
-import java.lang.constant.ClassDesc;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,7 +33,6 @@ import org.xvm.asm.constants.TypeConstant.Origin;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Constants;
 
-import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitTypeDesc;
 
 import org.xvm.util.ListMap;
@@ -130,6 +127,11 @@ public class TypeInfo {
         f_cacheById  = new ConcurrentHashMap<>(mapMethods);
         f_cacheByNid = new ConcurrentHashMap<>(mapVirtMethods);
 
+        // mapTypeParams has two types of entries:
+        //  - actual generic types keyed by the generic type name
+        //  - exploded Ref types keyed by the corresponding NestedIdentity
+        m_fHasGenerics = mapTypeParams.keySet().stream().anyMatch(k -> k instanceof String);
+
         m_fExplicitAbstract = fSynthetic || !isClass() || struct.isExplicitlyAbstract() ||
                 containsAnnotation(aannoClass, "Abstract");
 
@@ -170,8 +172,9 @@ public class TypeInfo {
         f_setDepends          = null;
         f_progress            = Progress.Complete;
 
-        f_cacheById  = infoConstraint.f_cacheById;
-        f_cacheByNid = infoConstraint.f_cacheByNid;
+        f_cacheById    = infoConstraint.f_cacheById;
+        f_cacheByNid   = infoConstraint.f_cacheByNid;
+        m_fHasGenerics = infoConstraint.m_fHasGenerics;
 
         m_fExplicitAbstract = true;
         m_fImplicitAbstract = false;
@@ -745,6 +748,13 @@ public class TypeInfo {
      */
     public Map<Object, ParamInfo> getTypeParams() {
         return f_mapTypeParams;
+    }
+
+    /**
+     * @return true iff this type has any formal type parameters
+     */
+    public boolean hasGenericTypes() {
+        return m_fHasGenerics;
     }
 
     /**
@@ -2150,32 +2160,6 @@ public class TypeInfo {
 
     // ----- JIT support ---------------------------------------------------------------------------
 
-    /**
-     * @return the JitTypeDesc
-     */
-    public JitTypeDesc getJitDesc() {
-        JitTypeDesc jtd = m_jtd;
-        if (jtd == null) {
-            TypeConstant type = getType();
-            ClassDesc    cd;
-
-            if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
-                jtd = m_jtd = new JitTypeDesc(type, JitFlavor.Primitive, cd);
-            } else if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null) {
-                jtd = m_jtd = new JitTypeDesc(type, JitFlavor.MultiSlotPrimitive, cd);
-            } else if ((cd = JitTypeDesc.getWidenedClass(type)) != null) {
-                jtd = m_jtd = new JitTypeDesc(type, JitFlavor.Widened, cd);
-            } else {
-                assert type.isSingleUnderlyingClass(true);
-                cd  = ClassDesc.of(type.getSingleUnderlyingClass(true).getPathString());
-                jtd = m_jtd = new JitTypeDesc(type, JitFlavor.Specific, cd);
-            }
-        }
-
-        return jtd;
-    }
-
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -2485,6 +2469,11 @@ public class TypeInfo {
      * Whether this type is abstract due to a presence of abstract properties or methods.
      */
     private boolean m_fImplicitAbstract;
+
+    /**
+     * Whether this type defines has any underlying generic types.
+     */
+    private boolean m_fHasGenerics;
 
     /**
      * The type parameters for this TypeInfo key'ed by a String or Nid.

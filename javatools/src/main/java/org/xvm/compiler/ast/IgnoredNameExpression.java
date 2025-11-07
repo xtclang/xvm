@@ -72,8 +72,7 @@ public class IgnoredNameExpression
     }
 
     @Override
-    public Argument generateArgument(Context ctx, Code code,
-                                     boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         return generateBlackHole(null);
     }
 

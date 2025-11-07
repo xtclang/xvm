@@ -6,14 +6,18 @@ import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
+import java.lang.constant.ClassDesc;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpMove;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -82,12 +86,35 @@ public class Move
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        Slot slotFrom = bctx.loadArgument(code, m_nFromValue);
-        Slot slotTo   = bctx.ensureSlot(m_nToValue, slotFrom.type(), slotFrom.cd(), "");
+        RegisterInfo regFrom  = bctx.loadArgument(code, m_nFromValue);
+        RegisterInfo regTo    = bctx.ensureRegInfo(m_nToValue, regFrom.type(), regFrom.cd(), "");
+        TypeConstant typeFrom = regFrom.type();
+        TypeConstant typeTo   = regTo.type();
+        ClassDesc    cdFrom   = regFrom.cd();
+        ClassDesc    cdTo     = regTo.cd();
 
-        if (!slotFrom.type().isA(slotTo.type())) {
-            code.checkcast(slotTo.type().ensureClassDesc(bctx.typeSystem));
+        if (typeFrom.isA(typeTo)) {
+            if (cdFrom.isPrimitive() ^ cdTo.isPrimitive()) {
+                if (cdFrom.isPrimitive()) {
+                    bctx.builder.box(code, typeFrom, cdFrom);
+                } else {
+                    bctx.builder.unbox(code, typeTo, cdTo);
+                }
+            }
+        } else {
+            if (cdFrom.isPrimitive()) {
+                if (cdTo.isPrimitive()) {
+                    throw new IllegalStateException("Unreconcilable types " +
+                        typeFrom.getValueString() + " -> " + typeTo.getValueString());
+                }
+                bctx.builder.box(code, typeFrom, cdFrom);
+            }
+            // TODO: generateCheckCast()
+            code.checkcast(regTo.type().ensureClassDesc(bctx.typeSystem));
+            if (cdTo.isPrimitive()) {
+                bctx.builder.unbox(code, typeTo, cdTo);
+            }
         }
-        bctx.storeValue(code, slotTo);
+        bctx.storeValue(code, regTo);
     }
 }

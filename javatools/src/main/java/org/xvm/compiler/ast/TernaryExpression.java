@@ -383,7 +383,7 @@ public class TernaryExpression
 
             cond.generateConditionalJump(ctx, code, labelElse, true, errs);
 
-            Argument[] aArg = exprElse.generateArguments(ctx, code, true, !fCheck, errs);
+            Argument[] aArg = exprElse.generateArguments(ctx, code, true, errs);
 
             if (fCheck) {
                 addTrueCheck(code, aArg[0], labelElse);
@@ -399,7 +399,7 @@ public class TernaryExpression
 
             cond.generateConditionalJump(ctx, code, labelElse, false, errs);
 
-            Argument[] aArg = exprThen.generateArguments(ctx, code, true, !fCheck, errs);
+            Argument[] aArg = exprThen.generateArguments(ctx, code, true, errs);
 
             if (fCheck) {
                 addTrueCheck(code, aArg[0], labelElse);
@@ -418,7 +418,7 @@ public class TernaryExpression
 
             cond.generateConditionalJump(ctx, code, labelElse, false, errs);
 
-            Argument[] aArgThen = exprThen.generateArguments(ctx, code, true, !fCheckThen, errs);
+            Argument[] aArgThen = exprThen.generateArguments(ctx, code, true, errs);
 
             if (fCheckThen) {
                 fCheckThen = addTrueCheck(code, aArgThen[0], labelFalse);
@@ -426,7 +426,7 @@ public class TernaryExpression
             code.add(new Return_N(aArgThen));
             code.add(labelElse);
 
-            Argument[] aArgElse = exprElse.generateArguments(ctx, code, true, !fCheckElse, errs);
+            Argument[] aArgElse = exprElse.generateArguments(ctx, code, true, errs);
 
             if (fCheckElse) {
                 fCheckElse = addTrueCheck(code, aArgElse[0], labelFalse);

@@ -14,7 +14,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Slot;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -116,9 +116,9 @@ public class Var_IN
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        Slot slot = bctx.introduceVar(code, m_nVar, m_nType, m_nNameId);
+        RegisterInfo reg = bctx.introduceVar(code, m_nVar, m_nType, m_nNameId);
         bctx.loadArgument(code, m_nValueId);
-        bctx.storeValue(code, slot);
+        bctx.storeValue(code, reg);
     }
 
     // ----- fields --------------------------------------------------------------------------------

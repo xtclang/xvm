@@ -83,15 +83,13 @@ public class TraceExpression
     }
 
     @Override
-    public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         genCode(ctx, code, errs);
         return m_aArgs[0];
     }
 
     @Override
-    public Argument[] generateArguments(Context ctx, Code code, boolean fLocalPropOk,
-            boolean fUsedOnce, ErrorListener errs) {
+    public Argument[] generateArguments(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         genCode(ctx, code, errs);
         return m_aArgs;
     }
@@ -120,7 +118,7 @@ public class TraceExpression
             Register[]     aRegs  = new Register[cTypes];
             for (int i = 0; i < cTypes; ++i) {
                 TypeConstant type = aTypes[i];
-                Assignable   LVal = createTempVar(code, type, false);
+                Assignable   LVal = createTempVar(code, type);
 
                 aLVals[i] = LVal;
                 aRegs [i] = LVal.getRegister();

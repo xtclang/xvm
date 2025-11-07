@@ -686,6 +686,8 @@ TypeDefStatement
 #   !               logical NOT
 #   ~               bitwise NOT
 #
+# REVIEW: could/should this be in (part of) level 2? that would simplify the table and ensure that:
+#         (a? : b) === (a ?: b)
 #   ?:              conditional elvis         4     right to left
 #
 #   *               multiplicative            5     left to right

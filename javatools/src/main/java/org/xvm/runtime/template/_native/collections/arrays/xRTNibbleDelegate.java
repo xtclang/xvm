@@ -57,11 +57,12 @@ public class xRTNibbleDelegate
     }
 
     @Override
-    public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cSize,
+    public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cCapacity,
                                          ObjectHandle[] ahContent, Mutability mutability) {
-        byte[] ab = new byte[storage(cSize)];
+        byte[] ab    = new byte[storage(cCapacity)];
+        int    cSize = ahContent.length;
 
-        for (int i = 0, c = ahContent.length; i < c; i++) {
+        for (int i = 0; i < cSize; i++) {
             int nNibble = getValue((GenericHandle) ahContent[i]);
 
             // the very first call to Nibble.of(Int) initializes the "Nibble.values" array, which

@@ -983,10 +983,9 @@ public class NamedTypeExpression
     }
 
     @Override
-    public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs) {
+    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         return isDynamic()
-                ? m_exprDynamic.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs)
+                ? m_exprDynamic.generateArgument(ctx, code, fLocalPropOk, errs)
                 : getType().resolveAutoNarrowingBase();
     }
 

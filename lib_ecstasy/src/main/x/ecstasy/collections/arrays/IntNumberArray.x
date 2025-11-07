@@ -129,7 +129,7 @@ mixin IntNumberArray<Element extends IntNumber>
      * @param inPlace (optional) pass True to specify that the operation should occur using `this`
      *                to hold the result, if possible
      *
-     * @return the array containing the resulting sums
+     * @return the array containing the resulting `AND`'d values
      */
     IntNumberArray andScalar(Element scalar, Boolean inPlace = False) {
         if (inPlace && this.inPlace) {
@@ -172,7 +172,7 @@ mixin IntNumberArray<Element extends IntNumber>
      * @param inPlace (optional) pass True to specify that the operation should occur using `this`
      *                to hold the result, if possible
      *
-     * @return the array containing the resulting sums
+     * @return the array containing the resulting `OR`'d values
      */
     IntNumberArray orScalar(Element scalar, Boolean inPlace = False) {
         if (inPlace && this.inPlace) {
@@ -215,7 +215,7 @@ mixin IntNumberArray<Element extends IntNumber>
      * @param inPlace (optional) pass True to specify that the operation should occur using `this`
      *                to hold the result, if possible
      *
-     * @return the array containing the resulting sums
+     * @return the array containing the resulting `XOR`'d values
      */
     IntNumberArray xorScalar(Element scalar, Boolean inPlace = False) {
         if (inPlace && this.inPlace) {

@@ -124,10 +124,9 @@ public class PropertyConstant
         if (isTypeSequenceTypeParameter()) {
             // the following block is for nothing else, but compilation of Tuple and
             // ConditionalTuple natural classes
-            if (resolver instanceof TypeConstant typeResolver) {
-                if (typeResolver.isTuple() && !typeResolver.isParamsSpecified()) {
-                    return null;
-                }
+            if (resolver instanceof TypeConstant typeResolver &&
+                    typeResolver.isTuple() && !typeResolver.isParamsSpecified()) {
+                return null;
             }
         }
 
@@ -244,13 +243,15 @@ public class PropertyConstant
             typeTarget = getConstantPool().ensureAccessTypeConstant(
                 getClassIdentity().getType(), Access.PRIVATE);
         } else {
-            Access access = getComponent().getAccess();
-            if (access.isLessAccessibleThan(typeTarget.getAccess())) {
-                typeTarget = typeTarget.getConstantPool().ensureAccessTypeConstant(typeTarget, access);
+            Access accessProp   = getComponent().getAccess();
+            Access accessTarget = typeTarget.getAccess();
+            if (accessTarget != Access.STRUCT &&
+                    accessProp.isLessAccessibleThan(accessTarget)) {
+                typeTarget = getConstantPool().ensureAccessTypeConstant(typeTarget, accessProp);
             }
         }
 
-        PropertyInfo infoThis = typeTarget.ensureTypeInfo().findProperty(this);
+        PropertyInfo infoThis = typeTarget.ensureTypeInfo().findProperty(this, true);
         assert infoThis != null;
         return infoThis;
     }

@@ -1638,11 +1638,6 @@ public class StatementBlock
         }
 
         @Override
-        public boolean isStack() {
-            return false;
-        }
-
-        @Override
         public boolean isEffectivelyFinal() {
             return false;
         }

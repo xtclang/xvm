@@ -685,7 +685,7 @@ const Version
                 --length;
             }
 
-            length += 1 + (form == Number ? number.estimateStringLength() : form.text.size);
+            length += 1 + (version.form == Number ? version.number.estimateStringLength() : version.form.text.size);
 
             version = version.parent;
         }

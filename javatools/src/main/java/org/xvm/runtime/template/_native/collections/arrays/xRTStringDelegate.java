@@ -56,11 +56,12 @@ public class xRTStringDelegate
     }
 
     @Override
-    public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cSize,
+    public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cCapacity,
                                          ObjectHandle[] ahContent, Mutability mutability) {
-        String[] as = new String[cSize];
+        String[] as    = new String[cCapacity];
+        int      cSize = ahContent.length;
 
-        for (int i = 0, c = ahContent.length; i < c; i++) {
+        for (int i = 0; i < cSize; i++) {
             as[i] = ((StringHandle) ahContent[i]).getStringValue();
         }
         return makeHandle(as, cSize, mutability);

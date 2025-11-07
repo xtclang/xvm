@@ -10,6 +10,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -54,11 +55,11 @@ public class GP_Add
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, BuildContext.Slot slotTarget) {
-        switch (slotTarget.cd().descriptorString()) {
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
+        switch (regTarget.cd().descriptorString()) {
             case "I" -> {
                 code.iadd();
-                bctx.adjustIntValue(code, slotTarget.type());
+                bctx.adjustIntValue(code, regTarget.type());
             }
             case "J" -> code.ladd();
             case "F" -> code.fadd();

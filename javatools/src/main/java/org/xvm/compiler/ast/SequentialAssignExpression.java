@@ -114,20 +114,19 @@ public class SequentialAssignExpression
     @Override
     public void generateVoid(Context ctx, Code code, ErrorListener errs) {
         Assignable LValTarget = ensureTarget(ctx, code, errs);
-        LValTarget.assignSequential(isInc() ? Sequential.Inc : Sequential.Dec, null, false, code, errs);
+        LValTarget.assignSequential(isInc() ? Sequential.Inc : Sequential.Dec, null, code, errs);
     }
 
     @Override
-    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce,
-                                     ErrorListener errs) {
+    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         Assignable LValTarget = ensureTarget(ctx, code, errs);
-        return LValTarget.assignSequential(getSeq(), null, fUsedOnce, code, errs);
+        return LValTarget.assignSequential(getSeq(), null, code, errs);
     }
 
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs) {
         Assignable LValTarget = ensureTarget(ctx, code, errs);
-        LValTarget.assignSequential(getSeq(), LVal, false, code, errs);
+        LValTarget.assignSequential(getSeq(), LVal, code, errs);
     }
 
     @Override
