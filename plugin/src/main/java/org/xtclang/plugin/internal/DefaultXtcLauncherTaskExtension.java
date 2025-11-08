@@ -1,6 +1,7 @@
 package org.xtclang.plugin.internal;
 
 import static org.xtclang.plugin.XtcPluginConstants.PLUGIN_BUILD_INFO_RESOURCE_PATH;
+import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_LAUNCHER_FORK;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -47,7 +48,11 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         // Use default JVM args from properties file generated at plugin build time
         this.defaultJvmArgs = loadDefaultJvmArgs();
         logger.info("[plugin] Loaded default JVM args: {}", defaultJvmArgs);
-        this.fork = objects.property(Boolean.class).convention(true);
+
+        // Check for global fork property override: org.xtclang.plugin.launcher.fork
+        final Boolean forkPropertyValue = resolveForkProperty(project);
+        this.fork = objects.property(Boolean.class).convention(forkPropertyValue);
+
         this.jvmArgs = objects.listProperty(String.class).convention(defaultJvmArgs);
         this.verbose = objects.property(Boolean.class).convention(false);
         this.showVersion = objects.property(Boolean.class).convention(false);
@@ -130,6 +135,29 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
             userArgs.forEach(combinedArgs::add);
             return combinedArgs;
         }));
+    }
+
+    /**
+     * Resolves the fork property from Gradle project properties.
+     * Checks for the property {@link org.xtclang.plugin.XtcPluginConstants#PROPERTY_LAUNCHER_FORK} which can be set:
+     * - In gradle.properties file
+     * - Via command line: -Porg.xtclang.plugin.launcher.fork=false
+     * - Via system property: -Dorg.gradle.project.org.xtclang.plugin.launcher.fork=false
+     *
+     * @param project The Gradle project
+     * @return The fork value from property, or true (default) if not specified
+     */
+    private static Boolean resolveForkProperty(final Project project) {
+        final Object propertyValue = project.findProperty(PROPERTY_LAUNCHER_FORK);
+
+        if (propertyValue != null) {
+            final boolean fork = Boolean.parseBoolean(propertyValue.toString());
+            //project.getLogger().lifecycle("[plugin] Global fork property override detected: {}={}", PROPERTY_LAUNCHER_FORK, fork);
+            return fork;
+        }
+
+        // Default: fork=true
+        return true;
     }
 
     private static List<String> loadDefaultJvmArgs() {

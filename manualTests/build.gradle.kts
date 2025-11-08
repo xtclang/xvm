@@ -176,6 +176,16 @@ sourceSets {
 // Defaults inherited and overridable by all xtcCompile tasks
 xtcCompile {
     /*
+     * Fork behavior can be controlled globally via gradle.properties:
+     *   org.xtclang.plugin.launcher.fork=false
+     *
+     * Or overridden per-task here:
+     *   fork = false
+     *
+     * Default is true (fork to separate JVM). Set to false for in-process execution.
+     */
+
+    /*
      * Displays XTC runtime version (should be semanticVersion of this XDK), default is "false"
      */
     showVersion = false
