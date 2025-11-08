@@ -13,6 +13,9 @@ import java.io.IOException;
 
 import java.nio.file.Files;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.jar.Attributes;
@@ -39,6 +42,22 @@ public final class XtcPluginUtils {
 
     public static String capitalize(final String string) {
         return Character.toUpperCase(string.charAt(0)) + string.substring(1);
+    }
+
+    /**
+     * Expands %TIMESTAMP% placeholder in a file path pattern to yyyyMMddHHmmss format.
+     * This format matches the timestamp used throughout the XTC plugin for log files.
+     *
+     * @param pathPattern The path pattern that may contain %TIMESTAMP% (must not be null)
+     * @return The path with timestamp placeholder expanded, or the original path if no placeholder found
+     */
+    public static String expandTimestampPlaceholder(final String pathPattern) {
+        requireNonNull(pathPattern, "Path pattern must not be null");
+        if (!pathPattern.contains("%TIMESTAMP%")) {
+            return pathPattern;
+        }
+        final String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        return pathPattern.replace("%TIMESTAMP%", timestamp);
     }
 
     public static final class FileUtils {

@@ -11,8 +11,6 @@ import static org.xtclang.plugin.XtcPluginUtils.argumentArrayToList;
 import static org.xtclang.plugin.XtcPluginUtils.capitalize;
 
 import java.io.File;
-import java.io.InputStream;
-import java.io.OutputStream;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -58,9 +56,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     // All inherited from launcher task extension and turned into input
     protected final ConfigurableFileCollection modulePath;
-    protected final Property<@NotNull InputStream> stdin;
-    protected final Property<@NotNull OutputStream> stdout;
-    protected final Property<@NotNull OutputStream> stderr;
+    protected final Property<@NotNull String> stdoutPath;
+    protected final Property<@NotNull String> stderrPath;
     protected final ListProperty<@NotNull String> jvmArgs;
     protected final Property<@NotNull Boolean> verbose;
     protected final Property<@NotNull Boolean> showVersion;
@@ -109,19 +106,14 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
         this.modulePath = objects.fileCollection().from(ext.getModulePath());
 
-        this.stdin = objects.property(InputStream.class);
-        this.stdout = objects.property(OutputStream.class);
-        this.stderr = objects.property(OutputStream.class);
+        this.stdoutPath = objects.property(String.class);
+        this.stderrPath = objects.property(String.class);
 
-        if (ext.getStdin().isPresent()) {
-            stdin.set(ext.getStdin());
+        if (ext.getStdoutPath().isPresent()) {
+            stdoutPath.set(ext.getStdoutPath());
         }
-        if (ext.getStdout().isPresent()) {
-            stdout.set(ext.getStdout());
-        }
-        if (ext.getStderr().isPresent()) {
-            stderr.set(ext.getStderr()); // TODO maybe rename the properties to standardOutput, errorOutput etc to conform to Gradle name standard. Right now
-            // we clearly want them to be separated from any defaults, though, so we know our launcher tasks pick the correct configured streams.
+        if (ext.getStderrPath().isPresent()) {
+            stderrPath.set(ext.getStderrPath());
         }
 
         this.jvmArgs = objects.listProperty(String.class).convention(ext.getJvmArgs());
@@ -192,16 +184,12 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return javaToolsConfig.get();
     }
 
-    public boolean hasStdinRedirect() {
-        return stdin.isPresent();
-    }
-
     public boolean hasStdoutRedirect() {
-        return stdout.isPresent();
+        return stdoutPath.isPresent();
     }
 
     public boolean hasStderrRedirect() {
-        return stderr.isPresent();
+        return stderrPath.isPresent();
     }
 
     @SuppressWarnings("unused")
@@ -209,19 +197,16 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return hasStdoutRedirect() || hasStderrRedirect();
     }
 
-    @Internal  // Streams are not serializable for configuration cache
-    public Property<@NotNull InputStream> getStdin() {
-        return stdin;
+    @Input
+    @Optional
+    public Property<@NotNull String> getStdoutPath() {
+        return stdoutPath;
     }
 
-    @Internal  // Streams are not serializable for configuration cache
-    public Property<@NotNull OutputStream> getStdout() {
-        return stdout;
-    }
-
-    @Internal  // Streams are not serializable for configuration cache
-    public Property<@NotNull OutputStream> getStderr() {
-        return stderr;
+    @Input
+    @Optional
+    public Property<@NotNull String> getStderrPath() {
+        return stderrPath;
     }
 
     @Override

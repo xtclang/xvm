@@ -218,17 +218,43 @@ xtcCompile {
     rebuild = false
 
     /*
-     * By default, a Gradle task swallows stdin, but it's possible to override standard input and
-     * output for any XTC launcher task.
+     * ============================================================================
+     * STDOUT/STDERR REDIRECTION (Configuration Cache Compatible)
+     * ============================================================================
      *
-     * To redirect any I/O stream, for example if you want to input data to the XTC debugger or
-     * to the console, such as credentials/interactive prompts, the error, output and input streams
-     * can be redirected to a custom source.
+     * By default, forked processes inherit I/O from the parent (console output).
+     * You can redirect stdout/stderr to files using several approaches:
      *
-     * This should at least enable the "ugly" use case of breaking into the debugger on the
-     * console when an "assert:debug" statement is evaluated.
+     * 1. Simple string path with timestamp placeholder (= for simple types):
+     *    stdoutPath = "build/logs/compiler-%TIMESTAMP%.log"
+     *    stderrPath = "build/logs/compiler-errors-%TIMESTAMP%.log"
+     *
+     *    The %TIMESTAMP% placeholder expands to yyyyMMddHHmmss format at execution time.
+     *
+     * 2. Provider with .set() (recommended - lazy and configuration cache compatible):
+     *    stdoutPath.set(layout.buildDirectory.file("logs/compiler.log").map { it.asFile.absolutePath })
+     *    stderrPath.set(layout.buildDirectory.file("logs/errors.log").map { it.asFile.absolutePath })
+     *
+     * 3. Provider with timestamp in path:
+     *    stdoutPath.set(layout.buildDirectory.file("logs/compile-%TIMESTAMP%.log")
+     *        .map { it.asFile.absolutePath })
+     *
+     * 4. File-based (convenience method):
+     *    stdoutPath(project.file("my-output.log"))
+     *    stderrPath(project.file("my-errors.log"))
+     *
+     * 5. Dynamic provider logic:
+     *    stdoutPath.set(provider {
+     *        val env = findProperty("buildEnv") ?: "dev"
+     *        "build/logs/${env}/compiler-%TIMESTAMP%.log"
+     *    })
+     *
+     * Convention: Use = for simple types, .set() for Property/Provider types
+     *
+     * Example usage (commented out):
      */
-    // stdin = System.`in`
+    // stdoutPath.set(layout.buildDirectory.file("logs/compiler-%TIMESTAMP%.log").map { it.asFile.absolutePath })
+    // stderrPath.set(layout.buildDirectory.file("logs/compiler-errors-%TIMESTAMP%.log").map { it.asFile.absolutePath })
 }
 
 // Defaults inherited and overridable by all runXtc tasks you chose to create. The default xtcRun task
@@ -248,6 +274,35 @@ xtcRun {
     * Add a JVM argument to the defaults. Will be ignored if the launch does not spawn a forked JVM for its run.
     */
     jvmArgs("-showversion", "--enable-preview")
+
+    /*
+     * ============================================================================
+     * STDOUT/STDERR REDIRECTION FOR RUN TASKS
+     * ============================================================================
+     *
+     * Same options as xtcCompile (see above), plus special defaults for detached mode:
+     *
+     * NORMAL MODE (detach = false):
+     *   Default: stdout/stderr inherit from console
+     *   Override: Use any of the approaches shown in xtcCompile section
+     *
+     * DETACHED MODE (detach = true):
+     *   Default: stdout/stderr redirect to "{toolname}_pid_{timestamp}.log"
+     *   Override: Specify custom paths to change the default
+     *
+     * Example for detached mode with simple string path:
+     *   detach = true
+     *   stdoutPath = "build/logs/server-%TIMESTAMP%.log"
+     *   stderrPath = "build/logs/server-errors-%TIMESTAMP%.log"
+     *
+     * Example for detached mode using layout provider:
+     *   detach = true
+     *   stdoutPath.set(layout.buildDirectory.file("logs/server-%TIMESTAMP%.log")
+     *       .map { it.asFile.absolutePath })
+     *
+     * Note: In detached mode, the process continues running after Gradle exits.
+     *       Use 'kill <PID>' to stop it (PID is logged on startup).
+     */
 
     /**
      * The default runXtc task is configured to run what is here in the xtcRun configuration.

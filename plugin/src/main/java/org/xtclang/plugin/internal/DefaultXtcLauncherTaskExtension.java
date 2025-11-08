@@ -34,9 +34,8 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     protected final ListProperty<@NotNull String> jvmArgs;
     protected final Property<@NotNull Boolean> verbose;
     protected final Property<@NotNull Boolean> showVersion;
-    protected final Property<@NotNull InputStream> stdin;
-    protected final Property<@NotNull OutputStream> stdout;
-    protected final Property<@NotNull OutputStream> stderr;
+    protected final Property<@NotNull String> stdoutPath;
+    protected final Property<@NotNull String> stderrPath;
 
     protected DefaultXtcLauncherTaskExtension(final Project project) {
         this.objects = project.getObjects();
@@ -53,9 +52,8 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         this.verbose = objects.property(Boolean.class).convention(false);
         this.showVersion = objects.property(Boolean.class).convention(false);
 
-        this.stdin = objects.property(InputStream.class);
-        this.stdout = objects.property(OutputStream.class);
-        this.stderr = objects.property(OutputStream.class);
+        this.stdoutPath = objects.property(String.class);
+        this.stderrPath = objects.property(String.class);
     }
 
     // TODO: Sort public methods in alphabetical order for all these files, remove where just inheritance that has
@@ -71,18 +69,13 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     }
 
     @Override
-    public Property<@NotNull InputStream> getStdin() {
-        return stdin;
+    public Property<@NotNull String> getStdoutPath() {
+        return stdoutPath;
     }
 
     @Override
-    public Property<@NotNull OutputStream> getStdout() {
-        return stdout;
-    }
-
-    @Override
-    public Property<@NotNull OutputStream> getStderr() {
-        return stderr;
+    public Property<@NotNull String> getStderrPath() {
+        return stderrPath;
     }
 
     @Override

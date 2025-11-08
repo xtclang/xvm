@@ -3,7 +3,6 @@ package org.xtclang.plugin.launchers;
 import static org.xtclang.plugin.launchers.XtcExecResult.XtcExecResultBuilder;
 
 import org.gradle.api.logging.Logger;
-import org.gradle.process.BaseExecSpec;
 import org.gradle.process.ExecResult;
 
 import org.xtclang.plugin.XtcLauncherTaskExtension;
@@ -27,19 +26,6 @@ public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends 
     public String toString() {
         return String.format("[plugin] (launcher='%s', task='%s').",
                 getClass().getSimpleName(), taskName);
-    }
-
-    protected void redirectIo(final BaseExecSpec spec) {
-        // TODO, simplify, just send a stream setter for the various streams or our own class based on the existing ExecResult.contentsOfOutput* or something.
-        if (task.hasStdinRedirect()) {
-            spec.setStandardInput(task.getStdin().get());
-        }
-        if (task.hasStdoutRedirect()) {
-            spec.setStandardOutput(task.getStdout().get());
-        }
-        if (task.hasStderrRedirect()) {
-            spec.setErrorOutput(task.getStderr().get());
-        }
     }
 
     protected static XtcExecResult createExecResult(final XtcExecResultBuilder builder) {

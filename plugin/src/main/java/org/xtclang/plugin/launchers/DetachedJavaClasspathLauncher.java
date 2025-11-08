@@ -80,30 +80,47 @@ public class DetachedJavaClasspathLauncher<E extends XtcLauncherTaskExtension, T
         logger.lifecycle("[plugin] Invoking {} in detached mode", cmd.getIdentifier());
 
         final List<String> command = buildForkedCommand(cmd, javaToolsJar);
+        final ProcessBuilder processBuilder = new ProcessBuilder(command).directory(workingDirectory);
 
-        final ProcessBuilder processBuilder = new ProcessBuilder(command);
-        processBuilder.directory(workingDirectory);
-
-        // Detach mode: redirect output to log files and don't wait for completion
-        final String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        final String logFileName = cmd.getIdentifier().toLowerCase() + "_pid_" + timestamp + ".log";
-        final File logFile = new File(workingDirectory, logFileName);
-
-        processBuilder.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile));
-        processBuilder.redirectError(ProcessBuilder.Redirect.appendTo(logFile));
+        // Configure I/O redirection (use parent's method but with detached defaults)
+        configureIoRedirection(processBuilder, cmd);
 
         logger.info("[plugin] Starting detached process: {}", String.join(" ", command));
         final Process process = processBuilder.start();
         final long pid = process.pid();
 
         logger.lifecycle("""
-            [plugin] Started {} with PID: {}
+            [plugin] Detached XTC runner Started {} with PID: {}
             [plugin] Stop with: kill {} (unless there is a graceful way to exit)
-            [plugin] Logs: {}
-            """.trim(), cmd.getIdentifier(), pid, pid, logFile.getAbsolutePath());
+            """.trim(), cmd.getIdentifier(), pid, pid);
 
         // Return success immediately without waiting
         builder.exitValue(0);
         return createExecResult(builder);
+    }
+
+    /**
+     * Returns the default log file path for detached mode.
+     * This is used when no custom stdout/stderr paths are specified in the DSL.
+     *
+     * @param cmd The command being executed
+     * @return The default timestamped log file path
+     */
+    @Override
+    protected String getDefaultStdoutPath(final CommandLine cmd) {
+        final String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        return cmd.getIdentifier().toLowerCase() + "_pid_" + timestamp + ".log";
+    }
+
+    /**
+     * Returns the default stderr path for detached mode.
+     * By default, stderr goes to the same file as stdout.
+     *
+     * @param cmd The command being executed
+     * @return The default stderr path (same as stdout for detached mode)
+     */
+    @Override
+    protected String getDefaultStderrPath(final CommandLine cmd) {
+        return getDefaultStdoutPath(cmd);
     }
 }

@@ -2,12 +2,14 @@ package org.xtclang.plugin.launchers;
 
 import static org.xtclang.plugin.XtcJavaToolsRuntime.*;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_JAR;
+import static org.xtclang.plugin.XtcPluginUtils.expandTimestampPlaceholder;
 import static org.xtclang.plugin.launchers.XtcExecResult.XtcExecResultBuilder;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.FileTree;
 import org.gradle.api.logging.Logger;
+import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.process.ExecResult;
 
@@ -335,8 +337,9 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
         final var command = buildForkedCommand(cmd, javaToolsJar);
         final var processBuilder = new ProcessBuilder(command).directory(workingDirectory);
 
-        // Normal fork mode: inherit IO and wait for completion
-        processBuilder.inheritIO();
+        // Configure I/O redirection based on DSL settings
+        configureIoRedirection(processBuilder, cmd);
+
         logger.info("[plugin] Starting forked process: {}", String.join(" ", command));
         final Process process = processBuilder.start();
         final int exitCode = process.waitFor();
@@ -350,5 +353,66 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
             logger.info("[plugin] Forked process completed successfully");
         }
         return createExecResult(builder);
+    }
+
+    /**
+     * Configures I/O redirection for the process builder based on DSL settings.
+     * Subclasses can override getDefaultStdoutPath() and getDefaultStderrPath() to customize defaults.
+     *
+     * @param processBuilder The process builder to configure
+     * @param cmd The command line being executed
+     */
+    protected void configureIoRedirection(final ProcessBuilder processBuilder, final CommandLine cmd) {
+        final String stdoutPath = resolveOutputPath(task.hasStdoutRedirect(), task.getStdoutPath(), getDefaultStdoutPath(cmd));
+        final String stderrPath = resolveOutputPath(task.hasStderrRedirect(), task.getStderrPath(), getDefaultStderrPath(cmd));
+
+        configureStream(processBuilder::redirectOutput, stdoutPath, "stdout");
+        configureStream(processBuilder::redirectError, stderrPath, "stderr");
+        processBuilder.redirectInput(ProcessBuilder.Redirect.INHERIT);
+
+        if (stdoutPath == null && stderrPath == null) {
+            logger.info("[plugin] Using inherited I/O (console output)");
+        }
+    }
+
+    private String resolveOutputPath(final boolean hasCustomPath, final Property<@NotNull String> customPath, final String defaultPath) {
+        return hasCustomPath ? expandTimestampPlaceholder(customPath.get()) : defaultPath;
+    }
+
+    private void configureStream(
+            final Consumer<ProcessBuilder.Redirect> redirectSetter,
+            final String path,
+            final String streamName) {
+        if (path != null) {
+            final File file = new File(workingDirectory, path);
+            redirectSetter.accept(ProcessBuilder.Redirect.appendTo(file));
+            logger.lifecycle("[plugin] Redirecting {} to: {}", streamName, file.getAbsolutePath());
+        } else {
+            redirectSetter.accept(ProcessBuilder.Redirect.INHERIT);
+        }
+    }
+
+    /**
+     * Returns the default stdout path when no DSL configuration is specified.
+     * Default implementation returns null (inherit from parent process).
+     * Subclasses (like DetachedJavaClasspathLauncher) can override to provide file-based defaults.
+     *
+     * @param cmd The command being executed
+     * @return The default stdout path, or null to inherit from parent process
+     */
+    protected String getDefaultStdoutPath(final CommandLine cmd) {
+        return null; // Normal fork mode: inherit stdout by default
+    }
+
+    /**
+     * Returns the default stderr path when no DSL configuration is specified.
+     * Default implementation returns null (inherit from parent process).
+     * Subclasses (like DetachedJavaClasspathLauncher) can override to provide file-based defaults.
+     *
+     * @param cmd The command being executed
+     * @return The default stderr path, or null to inherit from parent process
+     */
+    protected String getDefaultStderrPath(final CommandLine cmd) {
+        return null; // Normal fork mode: inherit stderr by default
     }
 }
